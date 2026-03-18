@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/tangle-network/sandbox-ui/main/.github/banner.svg" alt="Tangle Sandbox UI" width="100%" />
-</p>
+![Tangle Network Banner](https://raw.githubusercontent.com/tangle-network/tangle/refs/heads/main/assets/Tangle%20%20Banner.png)
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@tangle-network/sandbox-ui"><img src="https://img.shields.io/npm/v/@tangle-network/sandbox-ui?color=8E59FF&label=npm" alt="npm" /></a>

@@ -91,3 +91,8 @@ export type { EmptyStateProps } from "./empty-state";
 
 export { StatCard } from "./stat-card";
 export type { StatCardProps } from "./stat-card";
+
+export { Logo, TangleKnot } from "./logo";
+export type { LogoProps } from "./logo";
+
+export { TerminalDisplay, TerminalLine, TerminalInput, TerminalCursor } from "./terminal-display";

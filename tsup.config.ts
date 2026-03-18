@@ -1,0 +1,47 @@
+import { defineConfig } from "tsup";
+
+export default defineConfig({
+  entry: {
+    index: "src/index.ts",
+    primitives: "src/primitives/index.ts",
+    chat: "src/chat/index.ts",
+    run: "src/run/index.ts",
+    workspace: "src/workspace/index.ts",
+    files: "src/files/index.ts",
+    dashboard: "src/dashboard/index.ts",
+    editor: "src/editor/index.ts",
+    terminal: "src/terminal/index.ts",
+    markdown: "src/markdown/index.ts",
+    auth: "src/auth/index.ts",
+    pages: "src/pages/index.ts",
+    hooks: "src/hooks/index.ts",
+    stores: "src/stores/index.ts",
+    types: "src/types/index.ts",
+    utils: "src/utils/index.ts",
+  },
+  format: ["esm"],
+  dts: true,
+  splitting: true,
+  clean: true,
+  external: [
+    "react",
+    "react-dom",
+    // Optional peer deps — external so consumers provide them
+    "@xterm/xterm",
+    "@xterm/addon-fit",
+    "@xterm/addon-web-links",
+    "@tanstack/react-query",
+    "nanostores",
+    "@nanostores/react",
+    "@hocuspocus/provider",
+    "@tiptap/core",
+    "@tiptap/react",
+    "@tiptap/starter-kit",
+    "@tiptap/extension-collaboration",
+    "@tiptap/extension-collaboration-cursor",
+    "yjs",
+  ],
+  esbuildOptions(options) {
+    options.jsx = "automatic";
+  },
+});

@@ -1,0 +1,73 @@
+/* Tangle Design System Tokens */
+
+:root {
+  /* Brand gradient */
+  --tangle-gradient: linear-gradient(135deg, #8E59FF, #6888F9);
+  --tangle-gradient-text: linear-gradient(45deg, #5f5bee, #465cd2);
+
+  /* Backgrounds */
+  --bg-root: #000000;
+  --bg-dark: #1f1d2b;
+  --bg-card: #161425;
+  --bg-elevated: #1e1c30;
+  --bg-section: #171528;
+  --bg-input: #141428;
+  --bg-hover: #1a1a30;
+
+  /* Text */
+  --text-primary: #ffffff;
+  --text-secondary: #aab0bc;
+  --text-muted: #6b7094;
+
+  /* Brand */
+  --brand-primary: #605dba;
+  --brand-strong: #6941c6;
+  --brand-cool: #6172f3;
+  --brand-glow: #9e77ed;
+  --brand-purple: #7f56d9;
+  --brand-vibrant: #4a3aff;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.1);
+  --border-accent: rgba(142, 89, 255, 0.2);
+  --border-accent-hover: rgba(142, 89, 255, 0.4);
+
+  /* Buttons */
+  --btn-primary-bg: #1e116e;
+  --btn-primary-hover: #281ca5;
+  --btn-cta-bg: #ffffff;
+  --btn-cta-text: #1d1d1d;
+
+  /* Code syntax */
+  --code-keyword: #c084fc;
+  --code-string: #a78bfa;
+  --code-function: #60a5fa;
+  --code-number: #fcd34d;
+  --code-success: #4ade80;
+  --code-comment: rgba(255, 255, 255, 0.25);
+  --code-error: #f87171;
+
+  /* Shadows */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(142, 89, 255, 0.1);
+  --shadow-dropdown: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 40px rgba(130, 99, 255, 0.15);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.5rem;
+  --radius-pill: 48px;
+  --radius-full: 62.5rem;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-default: 0.2s ease;
+  --transition-medium: 0.3s ease;
+
+  /* Fonts */
+  --font-sans: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}

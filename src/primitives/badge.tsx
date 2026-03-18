@@ -29,9 +29,16 @@ const badgeVariants = cva(
   },
 );
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface BadgeProps {
   variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "error" | "info" | "sandbox" | null;
+  className?: string;
   children?: React.ReactNode;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
+  style?: React.CSSProperties;
+  id?: string;
+  role?: React.AriaRole;
+  title?: string;
+  [key: string]: unknown;
 }
 
 function Badge({ className, variant, ...props }: BadgeProps) {

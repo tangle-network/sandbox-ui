@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import type { ToolPart } from "../types/parts";
+import { PreviewCard, PreviewError, PreviewLoading } from "./preview-primitives";
 
 export interface CommandPreviewProps {
   part: ToolPart;
@@ -51,64 +52,65 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
 
   const isError = output ? output.exitCode !== 0 : part.state.status === "error";
   const errorText = part.state.error;
+  const lineCount = output?.stdout ? output.stdout.split("\n").length : 0;
 
   return (
-    <div className="rounded-lg overflow-hidden border border-neutral-200/50 dark:border-neutral-700/50">
-      {/* Command header */}
-      <button
-        onClick={() => setExpanded((e) => !e)}
-        className="w-full flex items-center gap-2 px-3 py-2 bg-neutral-100/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-left"
-      >
-        <Terminal className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-        <code className="text-xs font-mono text-neutral-800 dark:text-neutral-200 truncate flex-1">
-          {command}
-        </code>
-        {output && (
+    <PreviewCard
+      icon={<Terminal className="h-4 w-4" />}
+      title="Command"
+      description={command}
+      meta={
+        output ? (
           <span
             className={cn(
-              "text-xs font-mono px-1.5 py-0.5 rounded",
+              "inline-flex items-center rounded-full border px-2 py-0.5 font-[var(--font-mono)]",
               isError
-                ? "bg-red-100/50 dark:bg-red-900/50 text-red-500 dark:text-red-400"
-                : "bg-green-100/50 dark:bg-green-900/50 text-green-600 dark:text-green-400",
+                ? "border-red-500/30 bg-red-500/10 text-red-200"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
             )}
           >
-            {output.exitCode}
+            exit {output.exitCode}
           </span>
-        )}
+        ) : null
+      }
+    >
+      <button
+        onClick={() => setExpanded((value) => !value)}
+        className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/60 px-3 py-2 text-left transition-colors hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/45"
+      >
+        <code className="min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-[var(--text-secondary)]">
+          {command}
+        </code>
+        {lineCount > 0 ? (
+          <span className="shrink-0 text-xs text-[var(--text-muted)]">
+            {lineCount} line{lineCount === 1 ? "" : "s"}
+          </span>
+        ) : null}
         {expanded ? (
-          <ChevronDown className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+          <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
         ) : (
-          <ChevronRight className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+          <ChevronRight className="h-3.5 w-3.5 text-[var(--text-muted)]" />
         )}
       </button>
 
-      {/* Output body */}
-      {expanded && (
-        <div className="max-h-80 overflow-y-auto bg-neutral-50/60 dark:bg-neutral-900/60">
-          {output?.stdout && (
-            <pre className="p-3 text-xs font-mono text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap break-all">
+      {part.state.status === "running" ? <PreviewLoading /> : null}
+      {errorText ? <PreviewError error={errorText} /> : null}
+
+      {expanded && output ? (
+        <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/55">
+          {output.stdout ? (
+            <pre className="max-h-80 overflow-auto px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-[var(--text-secondary)]">
               {output.stdout}
             </pre>
-          )}
-          {output?.stderr && (
-            <pre className="p-3 text-xs font-mono text-red-500/80 dark:text-red-400/80 whitespace-pre-wrap break-all border-t border-neutral-200/30 dark:border-neutral-700/30">
+          ) : null}
+          {output.stderr ? (
+            <pre className="max-h-80 overflow-auto border-t border-[var(--border-subtle)] px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-red-200">
               {output.stderr}
             </pre>
-          )}
-          {errorText && (
-            <pre className="p-3 text-xs font-mono text-red-500 dark:text-red-400 whitespace-pre-wrap break-all">
-              {errorText}
-            </pre>
-          )}
-          {part.state.status === "running" && (
-            <div className="p-3 flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Running…
-            </div>
-          )}
+          ) : null}
         </div>
-      )}
-    </div>
+      ) : null}
+    </PreviewCard>
   );
 });
 CommandPreview.displayName = "CommandPreview";

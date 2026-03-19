@@ -8,7 +8,7 @@
 
 # @tangle-network/sandbox-ui
 
-React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — 100+ components for building AI agent interfaces with chat, terminal, file browser, tool call feeds, and dashboard views.
+React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a shadcn-style primitive layer plus higher-order sandbox surfaces for agent chat, files, runtime state, artifacts, and dashboard views.
 
 ## Install
 
@@ -21,9 +21,12 @@ npm install @tangle-network/sandbox-ui
 ## Usage
 
 ```tsx
-import { Button, Badge, Card } from "@tangle-network/sandbox-ui/primitives";
-import { ChatContainer } from "@tangle-network/sandbox-ui/chat";
-import { WorkspaceLayout } from "@tangle-network/sandbox-ui/workspace";
+import {
+  SandboxWorkbench,
+  type FileNode,
+  type SessionMessage,
+  type SessionPart,
+} from "@tangle-network/sandbox-ui";
 ```
 
 Import styles in your app root:
@@ -32,15 +35,194 @@ Import styles in your app root:
 import "@tangle-network/sandbox-ui/styles";
 ```
 
+If you are building on the sandbox SDK directly, use `useSdkSession` to turn raw SDK/session-gateway events into the `messages + partMap` model that `ChatContainer` and `SandboxWorkbench` expect:
+
+```tsx
+import {
+  SandboxWorkbench,
+} from "@tangle-network/sandbox-ui";
+import { useSdkSession } from "@tangle-network/sandbox-ui/hooks";
+
+function App() {
+  const {
+    messages,
+    partMap,
+    isStreaming,
+    appendUserMessage,
+    beginAssistantMessage,
+    applySdkEvent,
+    completeAssistantMessage,
+    failAssistantMessage,
+  } = useSdkSession();
+
+  async function runTurn(text: string) {
+    appendUserMessage({ content: text });
+    const assistantMessageId = beginAssistantMessage();
+
+    try {
+      for await (const event of sdk.streamPrompt(text)) {
+        applySdkEvent(event, { messageId: assistantMessageId });
+      }
+      completeAssistantMessage({ messageId: assistantMessageId });
+    } catch (error) {
+      failAssistantMessage(
+        error instanceof Error ? error.message : "Agent run failed",
+        { messageId: assistantMessageId },
+      );
+    }
+  }
+
+  return (
+    <SandboxWorkbench
+      session={{
+        messages,
+        partMap,
+        isStreaming,
+        onSend: runTurn,
+      }}
+    />
+  );
+}
+```
+
+Compose sandbox applications around `SandboxWorkbench` when you want the library’s default operating model:
+
+```tsx
+const root: FileNode = {
+  name: "agent",
+  path: "/home/agent",
+  type: "directory",
+  children: [],
+};
+
+const messages: SessionMessage[] = [];
+const partMap: Record<string, SessionPart[]> = {};
+
+<SandboxWorkbench
+  title="Tax filing workspace"
+  directory={{
+    root,
+    visibility: {
+      hiddenPathPrefixes: ["/home/agent/tax_toolkit"],
+    },
+  }}
+  session={{
+    messages,
+    partMap,
+    isStreaming: false,
+    presentation: "timeline",
+    onSend: console.log,
+  }}
+  runtime={{
+    title: "Runtime",
+  }}
+/>;
+```
+
+`FileTreeVisibilityOptions` is a UI-layer policy only. Sensitive paths still need to be hidden and denied by the app/backend layer.
+
+## Theming And Retheming
+
+There is a built-in Tangle default theme, but consumers can restyle the library in three layers:
+
+1. Pick a built-in surface theme
+2. Override semantic tokens
+3. Wrap higher-level components when you want a different product composition
+
+### 1. Pick a Built-in Theme
+
+`WorkspaceLayout` and `SandboxWorkbench` support:
+
+- `theme="operator"`
+- `theme="builder"`
+- `theme="consumer"`
+
+They also support `density="comfortable"` and `density="compact"`.
+
+```tsx
+<SandboxWorkbench
+  layout={{
+    theme: "consumer",
+    density: "comfortable",
+  }}
+  session={{ ... }}
+/>
+```
+
+If you are not using `SandboxWorkbench`, you can set the same attributes yourself:
+
+```tsx
+<div data-sandbox-ui data-sandbox-theme="consumer" data-density="compact">
+  <YourSandboxApp />
+</div>
+```
+
+### 2. Override Semantic Tokens
+
+The shared visual contract lives in [src/styles/tokens.css](./src/styles/tokens.css). The important tokens are:
+
+- surfaces: `--bg-root`, `--bg-card`, `--bg-elevated`, `--bg-section`, `--bg-input`
+- text: `--text-primary`, `--text-secondary`, `--text-muted`
+- brand: `--brand-cool`, `--brand-glow`, `--brand-purple`
+- borders: `--border-subtle`, `--border-default`, `--border-accent`
+- radii/shadows: `--radius-*`, `--shadow-card`, `--shadow-dropdown`
+
+App-level overrides can be scoped to a wrapper:
+
+```css
+.tax-theme {
+  --brand-cool: hsl(187 75% 54%);
+  --brand-glow: hsl(164 74% 56%);
+  --bg-root: hsl(222 18% 9%);
+  --bg-card: hsl(223 20% 12%);
+  --border-accent: hsl(187 75% 48% / 0.35);
+  --font-sans: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+}
+```
+
+```tsx
+<div className="tax-theme">
+  <SandboxWorkbench ... />
+</div>
+```
+
+### 3. Know When To Wrap Instead Of Override
+
+Token overrides are the right tool when you want:
+
+- a different brand color system
+- different typography
+- tighter or roomier density
+- a more consumer-facing or operator-facing tone
+
+Wrap or compose on lower-level exports when you want:
+
+- a different page shell
+- different header chrome
+- a different artifact tab model
+- app-specific empty states and actions
+
+For that, compose directly from:
+
+- `/workspace`
+- `/chat`
+- `/run`
+- `/files`
+
+### Current Reality
+
+Retheming is absolutely supported, but the documentation was thinner than it should be. The token layer is strong; the higher-level surfaces are themeable, but more opinionated. For a radically different product look, prefer keeping the token contract and wrapping the higher-level workbench/chat surfaces rather than fighting every internal class.
+
 ## Subpath Exports
 
 | Subpath | Description |
 |---------|-------------|
 | `/primitives` | Button, Card, Dialog, Badge, Input, Select, Table, Tabs, Toast, etc. |
-| `/chat` | ChatContainer, ChatInput, ChatMessage, MessageList |
+| `/chat` | ChatContainer, ChatInput, ChatMessage, AgentTimeline, ThinkingIndicator |
 | `/run` | ToolCallFeed, RunGroup, InlineToolItem, ExpandedToolDetail |
-| `/workspace` | WorkspaceLayout, StatusBar, StatusBanner, TerminalPanel |
-| `/files` | FileTree, FilePreview, FileTabs |
+| `/workspace` | SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
+| `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
+| `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane |
 | `/dashboard` | DashboardLayout, BillingDashboard, UsageChart, ProfileSelector |
 | `/editor` | TipTap collaborative editor (requires optional peers) |
 | `/terminal` | xterm.js terminal view (requires optional peers) |
@@ -59,6 +241,7 @@ import "@tangle-network/sandbox-ui/styles";
 - [Tailwind CSS](https://tailwindcss.com/) v4
 - [Lucide](https://lucide.dev/) icons
 - [CVA](https://cva.style/) for variant management
+- Shared semantic tokens for `operator`, `builder`, and `consumer` sandbox themes
 - ESM-only, tree-shakeable, fully typed
 
 ## License

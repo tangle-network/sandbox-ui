@@ -43,20 +43,52 @@ function getPreviewType(filename: string, mimeType?: string): string {
   return "unknown";
 }
 
+function getPreviewLabel(previewType: string) {
+  switch (previewType) {
+    case "pdf":
+      return "PDF";
+    case "image":
+      return "Image";
+    case "csv":
+      return "CSV";
+    case "spreadsheet":
+      return "Spreadsheet";
+    case "code":
+      return "Code";
+    case "json":
+      return "JSON";
+    case "yaml":
+      return "YAML";
+    case "markdown":
+      return "Markdown";
+    case "text":
+      return "Text";
+    default:
+      return "File";
+  }
+}
+
 function CodePreview({ content, filename }: { content: string; filename: string }) {
   const lines = content.split("\n");
+  const language = filename.split(".").pop()?.toUpperCase() || "TXT";
+
   return (
     <div className="relative bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] overflow-hidden">
-      {/* Window chrome */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--border-subtle)]">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-2.5">
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
           <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
           <div className="w-3 h-3 rounded-full bg-[#8E59FF]" />
         </div>
-        <span className="text-xs text-[var(--text-muted)] font-[var(--font-mono)] ml-2">{filename}</span>
+        <div className="ml-2 min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">
+          {filename}
+        </div>
+        <div className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <span>{language}</span>
+          <span className="h-1 w-1 rounded-full bg-[var(--border-hover)]" />
+          <span>{lines.length} lines</span>
+        </div>
       </div>
-      {/* Code content */}
       <div className="overflow-auto max-h-[70vh]">
         <table className="w-full">
           <tbody>
@@ -77,13 +109,50 @@ function CodePreview({ content, filename }: { content: string; filename: string 
   );
 }
 
+function parseCsvRow(line: string) {
+  const cells: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === "\"") {
+      if (inQuotes && next === "\"") {
+        current += "\"";
+        index += 1;
+        continue;
+      }
+
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      cells.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  cells.push(current.trim());
+  return cells;
+}
+
 function CsvPreview({ content }: { content: string }) {
-  const lines = content.trim().split("\n");
+  const lines = content
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean);
+
   if (lines.length === 0) return null;
 
-  const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
-  const rows = lines.slice(1).map(line =>
-    line.split(",").map(cell => cell.trim().replace(/^"|"$/g, ""))
+  const headers = parseCsvRow(lines[0]).map((header) => header.replace(/^"|"$/g, ""));
+  const rows = lines.slice(1).map((line) =>
+    parseCsvRow(line).map((cell) => cell.replace(/^"|"$/g, "")),
   );
 
   return (
@@ -150,6 +219,25 @@ function TextPreview({ content }: { content: string }) {
   );
 }
 
+function UnsupportedPreview({
+  filename,
+  title,
+  description,
+}: {
+  filename: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-input)] px-6 py-16 text-center text-[var(--text-muted)]">
+      <FileText className="mb-3 h-12 w-12 opacity-30" />
+      <p className="text-sm text-[var(--text-secondary)]">{title}</p>
+      <p className="mt-1 max-w-md text-xs">{description}</p>
+      <p className="mt-4 text-[11px] uppercase tracking-[0.12em]">{filename}</p>
+    </div>
+  );
+}
+
 function MarkdownPreview({ content }: { content: string }) {
   return (
     <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] p-5">
@@ -179,16 +267,26 @@ export function FilePreview({
   className,
 }: FilePreviewProps) {
   const previewType = getPreviewType(filename, mimeType);
+  const previewLabel = getPreviewLabel(previewType);
+  const hasRenderableSource =
+    Boolean(content) ||
+    Boolean(blobUrl) ||
+    previewType === "unknown" ||
+    previewType === "spreadsheet";
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {!hideHeader && (
         <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-subtle)] shrink-0">
-          <span className="text-sm font-medium text-[var(--text-primary)] truncate flex-1">
-            {filename}
-          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium text-[var(--text-primary)]">{filename}</div>
+            <div className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              {previewLabel}
+            </div>
+          </div>
           {onDownload && (
             <button
+              type="button"
               onClick={onDownload}
               aria-label={`Download ${filename}`}
               className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
@@ -198,6 +296,7 @@ export function FilePreview({
           )}
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
               aria-label={`Close ${filename}`}
               className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
@@ -208,20 +307,30 @@ export function FilePreview({
         </div>
       )}
 
-      {/* Content */}
       <div className="flex-1 overflow-auto p-3">
         {previewType === "pdf" && blobUrl && <PdfPreview blobUrl={blobUrl} filename={filename} />}
-        {previewType === "image" && (blobUrl || content) && (
-          <ImagePreview src={blobUrl || `data:image/*;base64,${content}`} filename={filename} />
-        )}
+        {previewType === "image" && blobUrl && <ImagePreview src={blobUrl} filename={filename} />}
         {previewType === "csv" && content && <CsvPreview content={content} />}
         {(previewType === "code" || previewType === "json" || previewType === "yaml") && content && (
           <CodePreview content={content} filename={filename} />
         )}
         {previewType === "text" && content && <TextPreview content={content} />}
         {previewType === "markdown" && content && <MarkdownPreview content={content} />}
+        {previewType === "spreadsheet" && (
+          <UnsupportedPreview
+            filename={filename}
+            title="Spreadsheet preview is not available in this surface"
+            description="Download the workbook or convert it to CSV when you need an inline preview."
+          />
+        )}
         {previewType === "unknown" && <EmptyPreview filename={filename} />}
-        {!content && !blobUrl && <EmptyPreview filename={filename} />}
+        {!hasRenderableSource && (
+          <UnsupportedPreview
+            filename={filename}
+            title="Preview data is not available yet"
+            description="This artifact can be shown once the app provides inline content or a downloadable blob."
+          />
+        )}
       </div>
     </div>
   );

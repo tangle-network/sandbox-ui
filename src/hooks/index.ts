@@ -46,5 +46,18 @@ export type {
   BotStreamEvent,
 } from "./use-sse-stream";
 
+export { useSdkSession } from "./use-sdk-session";
+export type {
+  SdkSessionAttachment,
+  SdkSessionEvent,
+  SdkSessionSeed,
+  UseSdkSessionOptions,
+  UseSdkSessionReturn,
+  BeginAssistantMessageOptions,
+  AppendUserMessageOptions,
+  CompleteAssistantMessageOptions,
+  ApplySdkEventOptions,
+} from "./use-sdk-session";
+
 export { useToolCallStream } from "./use-tool-call-stream";
 export type { UseToolCallStreamReturn } from "./use-tool-call-stream";

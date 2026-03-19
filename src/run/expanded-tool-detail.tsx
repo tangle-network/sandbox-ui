@@ -4,12 +4,19 @@ import {
   ArrowLeft,
   AlertCircle,
   Loader2,
+  FileText,
 } from "lucide-react";
 import type { ToolPart } from "../types/parts";
 import { getToolDisplayMetadata } from "../utils/tool-display";
 import { CommandPreview } from "../tool-previews/command-preview";
 import { WriteFilePreview } from "../tool-previews/write-file-preview";
 import { CodeBlock } from "../markdown/code-block";
+import { GrepResultsPreview } from "../tool-previews/grep-results-preview";
+import { GlobResultsPreview } from "../tool-previews/glob-results-preview";
+import { WebSearchPreview } from "../tool-previews/web-search-preview";
+import { QuestionPreview } from "../tool-previews/question-preview";
+import { DiffPreview } from "../tool-previews/diff-preview";
+import { cn } from "../lib/utils";
 
 export interface ExpandedToolDetailProps {
   part: ToolPart;
@@ -44,31 +51,83 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
     return <WriteFilePreview part={part} />;
   }
 
+  if (meta.displayVariant === "grep") {
+    return <GrepResultsPreview part={part} />;
+  }
+
+  if (meta.displayVariant === "glob") {
+    return <GlobResultsPreview part={part} />;
+  }
+
+  if (meta.displayVariant === "web-search") {
+    return <WebSearchPreview part={part} />;
+  }
+
+  if (meta.displayVariant === "question") {
+    return <QuestionPreview part={part} />;
+  }
+
+  if (meta.displayVariant === "diff") {
+    return <DiffPreview part={part} />;
+  }
+
+  if (meta.displayVariant === "read-file") {
+    return (
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
+        <div className="flex items-center gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/70 px-4 py-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-accent)] bg-[var(--bg-section)] text-[var(--brand-cool)]">
+            <FileText className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-[var(--text-primary)]">Read file</div>
+            {meta.targetPath ? (
+              <div className="mt-1 text-xs text-[var(--text-muted)]">{meta.targetPath}</div>
+            ) : null}
+          </div>
+        </div>
+        <div className="space-y-3 px-4 py-4">
+          {typeof output === "string" ? (
+            <CodeBlock code={output} language="text" className="rounded-[var(--radius-md)]" />
+          ) : (
+            <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)]/60 px-3 py-4 text-sm text-[var(--text-muted)]">
+              No readable file content was returned.
+            </div>
+          )}
+          {error ? (
+            <div className="rounded-[var(--radius-md)] border border-red-500/30 bg-red-500/8 px-3 py-3 text-sm text-red-200">
+              {error}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   // Generic fallback — show input/output/error
   const inputStr = formatOutput(input);
   const outputStr = formatOutput(output);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Input */}
       {inputStr && (
-        <div className="rounded-lg overflow-hidden border border-neutral-200/50 dark:border-neutral-700/50">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-100/80 dark:bg-neutral-800/80">
-            <ArrowRight className="w-3 h-3 text-neutral-400" />
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]">
+          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/70 px-3 py-2">
+            <ArrowRight className="h-3 w-3 text-[var(--brand-cool)]" />
+            <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
               Input
             </span>
           </div>
-          <CodeBlock code={inputStr} language="json" className="rounded-none" />
+          <CodeBlock code={inputStr} language="json" className="rounded-none border-0" />
         </div>
       )}
 
       {/* Output */}
       {status === "completed" && outputStr && (
-        <div className="rounded-lg overflow-hidden border border-neutral-200/50 dark:border-neutral-700/50">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-100/80 dark:bg-neutral-800/80">
-            <ArrowLeft className="w-3 h-3 text-neutral-400" />
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]">
+          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/70 px-3 py-2">
+            <ArrowLeft className="h-3 w-3 text-[var(--brand-cool)]" />
+            <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
               Output
             </span>
           </div>
@@ -79,21 +138,21 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
                 : outputStr
             }
             language="json"
-            className="rounded-none"
+            className="rounded-none border-0"
           />
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="rounded-lg overflow-hidden border border-red-300/50 dark:border-red-900/50">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-red-100/30 dark:bg-red-900/30">
-            <AlertCircle className="w-3 h-3 text-red-500 dark:text-red-400" />
-            <span className="text-xs text-red-500 dark:text-red-400">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-red-500/30">
+          <div className="flex items-center gap-2 border-b border-red-500/20 bg-red-500/10 px-3 py-2">
+            <AlertCircle className="h-3 w-3 text-red-300" />
+            <span className="text-xs font-medium uppercase tracking-[0.08em] text-red-200">
               Error
             </span>
           </div>
-          <pre className="p-3 text-xs font-mono text-red-600 dark:text-red-300 whitespace-pre-wrap break-all bg-neutral-50/60 dark:bg-neutral-900/60">
+          <pre className="bg-red-500/6 p-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-red-100">
             {error}
           </pre>
         </div>
@@ -101,8 +160,8 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
 
       {/* Running state */}
       {(status === "pending" || status === "running") && (
-        <div className="flex items-center gap-2 px-3 py-2 text-xs text-neutral-400 dark:text-neutral-500">
-          <Loader2 className="w-3 h-3 animate-spin" />
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/60 px-3 py-3 text-xs text-[var(--text-muted)]">
+          <Loader2 className={cn("h-3 w-3 animate-spin text-[var(--brand-cool)]")} />
           Running…
         </div>
       )}

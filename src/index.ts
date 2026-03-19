@@ -82,11 +82,11 @@ export {
 
 // --- Chat ---
 export { ChatMessage, type ChatMessageProps, type MessageRole } from "./chat/chat-message";
-export { ChatMessageList, ThinkingIndicator, type ChatMessageListProps, type Message } from "./chat/chat-message-list";
 export { ChatInput, type ChatInputProps, type PendingFile } from "./chat/chat-input";
 export { ChatContainer } from "./chat/chat-container";
 export { MessageList } from "./chat/message-list";
 export { UserMessage } from "./chat/user-message";
+export { ThinkingIndicator, type ThinkingIndicatorProps } from "./chat/thinking-indicator";
 export {
   AgentTimeline,
   type AgentTimelineProps,
@@ -111,6 +111,11 @@ export { ExpandedToolDetail } from "./run/expanded-tool-detail";
 // --- Tool Previews ---
 export { CommandPreview } from "./tool-previews/command-preview";
 export { WriteFilePreview } from "./tool-previews/write-file-preview";
+export { GrepResultsPreview } from "./tool-previews/grep-results-preview";
+export { GlobResultsPreview } from "./tool-previews/glob-results-preview";
+export { WebSearchPreview } from "./tool-previews/web-search-preview";
+export { QuestionPreview } from "./tool-previews/question-preview";
+export { DiffPreview } from "./tool-previews/diff-preview";
 
 // --- Files ---
 export {
@@ -144,6 +149,18 @@ export { CodeBlock, CopyButton } from "./markdown/code-block";
 export { useToolCallStream, type UseToolCallStreamReturn } from "./hooks/use-tool-call-stream";
 export { useAuth, createAuthFetcher, useApiKey } from "./hooks/use-auth";
 export { useSSEStream } from "./hooks/use-sse-stream";
+export {
+  useSdkSession,
+  type SdkSessionAttachment,
+  type SdkSessionEvent,
+  type SdkSessionSeed,
+  type UseSdkSessionOptions,
+  type UseSdkSessionReturn,
+  type BeginAssistantMessageOptions,
+  type AppendUserMessageOptions,
+  type CompleteAssistantMessageOptions,
+  type ApplySdkEventOptions,
+} from "./hooks/use-sdk-session";
 export { useRunGroups } from "./hooks/use-run-groups";
 export { useRunCollapseState } from "./hooks/use-run-collapse-state";
 export { useAutoScroll } from "./hooks/use-auto-scroll";

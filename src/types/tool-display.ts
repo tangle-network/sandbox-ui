@@ -8,6 +8,8 @@ import type { ReactNode } from "react";
 export type DisplayVariant =
   | "command"
   | "write-file"
+  | "read-file"
+  | "diff"
   | "question"
   | "web-search"
   | "grep"

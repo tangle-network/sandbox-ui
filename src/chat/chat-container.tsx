@@ -42,6 +42,7 @@ export interface ChatContainerProps {
   pendingFiles?: PendingFile[];
   onRemoveFile?: (id: string) => void;
   onAttach?: (files: FileList) => void;
+  disabled?: boolean;
 }
 
 function formatUnknown(value: unknown): string | undefined {
@@ -103,6 +104,26 @@ function buildTimelineItems(
 ): { items: AgentTimelineItem[]; showThinking: boolean } {
   const items: AgentTimelineItem[] = [];
   const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
+  const toToolCall = (part: ToolPart) => {
+    const meta = getToolDisplayMetadata(part as ToolPart);
+    const start = part.state.time?.start;
+    const end = part.state.time?.end;
+
+    return {
+      id: part.id,
+      type: mapToolPartToTimelineType(part),
+      label: meta.description ? `${meta.title}: ${meta.description}` : meta.title,
+      status:
+        part.state.status === "completed"
+          ? "success"
+          : part.state.status === "error"
+            ? "error"
+            : "running",
+      detail: formatUnknown(part.state.input),
+      output: formatUnknown(part.state.output),
+      duration: start && end ? end - start : undefined,
+    } as const;
+  };
 
   for (const message of messages) {
     const parts = partMap[message.id] ?? [];
@@ -126,8 +147,37 @@ function buildTimelineItems(
       continue;
     }
 
+    const toolBuffer: ToolPart[] = [];
+    const flushToolBuffer = (index: number) => {
+      if (toolBuffer.length === 0) return;
+
+      if (toolBuffer.length === 1) {
+        items.push({
+          id: `${message.id}-tool-${toolBuffer[0].id}`,
+          kind: "tool",
+          call: toToolCall(toolBuffer[0]),
+        });
+      } else {
+        items.push({
+          id: `${message.id}-tool-group-${index}`,
+          kind: "tool_group",
+          title: "Tool activity",
+          calls: toolBuffer.map((part) => toToolCall(part)),
+        });
+      }
+
+      toolBuffer.length = 0;
+    };
+
     parts.forEach((part, index) => {
       const itemId = `${message.id}-${index}`;
+
+      if (part.type === "tool") {
+        toolBuffer.push(part);
+        return;
+      }
+
+      flushToolBuffer(index);
 
       if (part.type === "text" && !part.synthetic && part.text.trim()) {
         items.push({
@@ -145,36 +195,13 @@ function buildTimelineItems(
         items.push({
           id: itemId,
           kind: "custom",
-          content: <InlineThinkingItem part={part} />,
+          content: <InlineThinkingItem part={part} defaultOpen={isStreaming && lastAssistantMessage?.id === message.id} />,
         });
         return;
       }
-
-      if (part.type === "tool") {
-        const meta = getToolDisplayMetadata(part as ToolPart);
-        const start = part.state.time?.start;
-        const end = part.state.time?.end;
-
-        items.push({
-          id: itemId,
-          kind: "tool",
-          call: {
-            id: part.id,
-            type: mapToolPartToTimelineType(part),
-            label: meta.description ? `${meta.title}: ${meta.description}` : meta.title,
-            status:
-              part.state.status === "completed"
-                ? "success"
-                : part.state.status === "error"
-                  ? "error"
-                  : "running",
-            detail: formatUnknown(part.state.input),
-            output: formatUnknown(part.state.output),
-            duration: start && end ? end - start : undefined,
-          },
-        });
-      }
     });
+
+    flushToolBuffer(parts.length);
   }
 
   const showThinking =
@@ -212,6 +239,7 @@ export const ChatContainer = memo(
     pendingFiles,
     onRemoveFile,
     onAttach,
+    disabled = false,
   }: ChatContainerProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -244,22 +272,32 @@ export const ChatContainer = memo(
     return (
       <div className={cn("flex flex-col h-full", className)}>
         {/* Message area */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 py-4 [scrollbar-gutter:stable]"
+        >
           {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-              No messages yet
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-md rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-6 py-8 text-center shadow-[var(--shadow-card)]">
+                <div className="text-sm font-semibold text-[var(--text-primary)]">Start the filing workflow</div>
+                <div className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                  Ask the agent to analyze documents, generate forms, explain a calculation, or review the current filing package.
+                </div>
+              </div>
             </div>
           ) : presentation === "timeline" ? (
             <AgentTimeline items={timeline.items} isThinking={timeline.showThinking} />
           ) : (
-            <MessageList
-              groups={groups}
-              partMap={partMap}
-              isCollapsed={isCollapsed}
-              onToggleCollapse={toggleCollapse}
-              branding={branding}
-              renderToolDetail={renderToolDetail}
-            />
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-3">
+              <MessageList
+                groups={groups}
+                partMap={partMap}
+                isCollapsed={isCollapsed}
+                onToggleCollapse={toggleCollapse}
+                branding={branding}
+                renderToolDetail={renderToolDetail}
+              />
+            </div>
           )}
         </div>
 
@@ -272,6 +310,7 @@ export const ChatContainer = memo(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full",
                 "border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]",
                 "text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-hover)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60",
               )}
             >
               <ArrowDown className="w-3 h-3" />
@@ -292,6 +331,7 @@ export const ChatContainer = memo(
             pendingFiles={pendingFiles}
             onRemoveFile={onRemoveFile}
             onAttach={onAttach}
+            disabled={disabled}
             className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-dark)]"
           />
         )}

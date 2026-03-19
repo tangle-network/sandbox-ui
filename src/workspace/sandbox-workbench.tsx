@@ -6,6 +6,7 @@ import {
   FileText,
   FolderTree,
   LayoutPanelTop,
+  X,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Badge } from "../primitives/badge";
@@ -170,9 +171,9 @@ function ArtifactTabs({
                 type="button"
                 aria-label={`Close ${artifactTabLabel(artifact)}`}
                 onClick={() => onClose(artifact.id)}
-                className="mr-1 rounded px-1.5 py-1 text-[10px] opacity-0 transition-opacity hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60 group-hover:opacity-100"
+                className="mr-1 rounded p-1 opacity-0 transition-opacity hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60 group-hover:opacity-100"
               >
-                Close
+                <X className="h-3 w-3" />
               </button>
             )}
           </div>
@@ -302,15 +303,15 @@ export function SandboxWorkbench({
   };
 
   const centerHeader = (
-    <div className="flex min-w-0 items-center justify-between gap-3">
+    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[linear-gradient(135deg,rgba(98,114,243,0.12),rgba(255,255,255,0.02)_38%,transparent_72%)] px-4 py-3 shadow-[var(--shadow-card)]">
       <div className="min-w-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-          Sandbox UI Prime
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-cool)]">
+          Tangle Sandbox
         </div>
-        <div className="truncate text-sm font-semibold text-[var(--text-primary)]">{title}</div>
-        {subtitle && <div className="truncate text-xs text-[var(--text-muted)]">{subtitle}</div>}
+        <div className="truncate text-base font-semibold text-[var(--text-primary)]">{title}</div>
+        {subtitle && <div className="truncate text-sm text-[var(--text-muted)]">{subtitle}</div>}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
         {status}
         {artifacts.length > 0 && <Badge variant="outline">{artifacts.length} artifacts</Badge>}
       </div>
@@ -325,7 +326,7 @@ export function SandboxWorkbench({
       meta={session.meta}
       headerActions={session.headerActions}
       className="h-full"
-      contentClassName="bg-[radial-gradient(circle_at_top,rgba(82,164,255,0.08),transparent_40%)]"
+      contentClassName="bg-[radial-gradient(circle_at_top,rgba(82,164,255,0.1),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_22%)]"
     >
       <ChatContainer
         {...session}
@@ -397,7 +398,7 @@ export function SandboxWorkbench({
       minRightWidth={layout?.minRightWidth}
       maxRightWidth={layout?.maxRightWidth}
       resizable={layout?.resizable}
-      className={className}
+      className={cn("p-3 lg:p-4", className)}
     />
   );
 }

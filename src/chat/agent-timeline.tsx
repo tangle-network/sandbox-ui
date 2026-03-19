@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ChatMessage, type MessageRole } from "./chat-message";
-import { ThinkingIndicator } from "./chat-message-list";
+import { ThinkingIndicator } from "./thinking-indicator";
 import { type ToolCallData } from "../run/tool-call-feed";
 import { ToolCallGroup, ToolCallStep } from "../run/tool-call-step";
 
@@ -254,16 +254,14 @@ export function AgentTimeline({
               isLast={isLast}
               accentClassName="bg-[var(--brand-cool)]/80"
             >
-              <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-2 shadow-[var(--shadow-card)]">
-                <ToolCallStep
-                  type={item.call.type}
-                  label={item.call.label}
-                  status={item.call.status}
-                  detail={item.call.detail}
-                  output={item.call.output}
-                  duration={item.call.duration}
-                />
-              </div>
+              <ToolCallStep
+                type={item.call.type}
+                label={item.call.label}
+                status={item.call.status}
+                detail={item.call.detail}
+                output={item.call.output}
+                duration={item.call.duration}
+              />
             </AgentTimelineRow>
           );
         }
@@ -275,21 +273,19 @@ export function AgentTimeline({
               isLast={isLast}
               accentClassName="bg-[var(--brand-cool)]/80"
             >
-              <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-3 shadow-[var(--shadow-card)]">
-                <ToolCallGroup title={item.title}>
-                  {item.calls.map((call) => (
-                    <ToolCallStep
-                      key={call.id}
-                      type={call.type}
-                      label={call.label}
-                      status={call.status}
-                      detail={call.detail}
-                      output={call.output}
-                      duration={call.duration}
-                    />
-                  ))}
-                </ToolCallGroup>
-              </div>
+              <ToolCallGroup title={item.title}>
+                {item.calls.map((call) => (
+                  <ToolCallStep
+                    key={call.id}
+                    type={call.type}
+                    label={call.label}
+                    status={call.status}
+                    detail={call.detail}
+                    output={call.output}
+                    duration={call.duration}
+                  />
+                ))}
+              </ToolCallGroup>
             </AgentTimelineRow>
           );
         }

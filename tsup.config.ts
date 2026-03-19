@@ -42,6 +42,7 @@ export default defineConfig({
     "@tiptap/extension-collaboration-cursor",
     "yjs",
   ],
+  onSuccess: "node scripts/copy-styles.mjs",
   esbuildOptions(options) {
     options.jsx = "automatic";
   },

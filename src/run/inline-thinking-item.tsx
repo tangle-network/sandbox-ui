@@ -1,4 +1,4 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { Brain, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -9,76 +9,119 @@ import { LiveDuration } from "./run-item-primitives";
 
 export interface InlineThinkingItemProps {
   part: ReasoningPart;
+  defaultOpen?: boolean;
+  autoCollapse?: boolean;
+  className?: string;
+  contentClassName?: string;
 }
 
 /**
  * Minimal collapsible display for thinking/reasoning parts.
  * Shows "Thinking..." with optional preview text and duration.
  */
-export const InlineThinkingItem = memo(({ part }: InlineThinkingItemProps) => {
-  const [open, setOpen] = useState(false);
+export const InlineThinkingItem = memo(
+  ({
+    part,
+    defaultOpen = false,
+    autoCollapse = true,
+    className,
+    contentClassName,
+  }: InlineThinkingItemProps) => {
+    const [open, setOpen] = useState(defaultOpen);
+    const autoCollapsedRef = useRef(false);
 
-  const startTime = part.time?.start;
-  const endTime = part.time?.end;
-  const durationMs =
-    startTime && endTime ? endTime - startTime : undefined;
-  const isActive = startTime != null && endTime == null;
-  const preview = part.text ? truncateText(part.text, 100) : undefined;
+    const startTime = part.time?.start;
+    const endTime = part.time?.end;
+    const durationMs = startTime && endTime ? endTime - startTime : undefined;
+    const isActive = startTime != null && endTime == null;
+    const preview = part.text ? truncateText(part.text, 120) : undefined;
 
-  return (
-    <Collapsible.Root open={open} onOpenChange={setOpen}>
-      <Collapsible.Trigger asChild>
-        <button
-          className={cn(
-            "w-full flex items-center gap-2 px-3 py-1.5 text-left",
-            "rounded-md transition-colors text-xs",
-            "hover:bg-neutral-100/60 dark:hover:bg-neutral-800/60",
-            open && "bg-neutral-100/40 dark:bg-neutral-800/40",
-          )}
-        >
-          <Brain
+    useEffect(() => {
+      if (isActive) {
+        autoCollapsedRef.current = false;
+        setOpen(true);
+        return;
+      }
+
+      if (autoCollapse && !autoCollapsedRef.current && durationMs != null) {
+        const timer = window.setTimeout(() => {
+          setOpen(false);
+          autoCollapsedRef.current = true;
+        }, 900);
+
+        return () => window.clearTimeout(timer);
+      }
+    }, [autoCollapse, durationMs, isActive]);
+
+    return (
+      <Collapsible.Root open={open} onOpenChange={setOpen}>
+        <Collapsible.Trigger asChild>
+          <button
             className={cn(
-              "w-4 h-4 shrink-0",
-              isActive
-                ? "text-purple-500 dark:text-purple-400 animate-pulse"
-                : "text-neutral-400 dark:text-neutral-400",
+              "w-full rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] text-left transition-colors",
+              "hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/35",
+              open && "border-[var(--border-accent)] bg-[var(--bg-hover)]/30",
+              className,
             )}
-          />
+          >
+            <div className="flex items-center gap-3 px-3 py-3">
+              <div
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
+                  isActive
+                    ? "border-[var(--brand-purple)]/35 bg-[var(--brand-purple)]/12 text-[var(--brand-purple)] shadow-[var(--shadow-glow)]"
+                    : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)]",
+                )}
+              >
+                <Brain className={cn("h-4 w-4", isActive && "animate-pulse")} />
+              </div>
 
-          <span className="font-medium text-neutral-800 dark:text-neutral-200 shrink-0">
-            {isActive ? "Thinking..." : "Thought"}
-          </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-[var(--text-primary)]">
+                    {isActive ? "Thinking…" : "Reasoning"}
+                  </span>
+                  {!isActive && durationMs != null ? (
+                    <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2 py-0.5 text-[11px] font-[var(--font-mono)] text-[var(--text-muted)]">
+                      {formatDuration(durationMs)}
+                    </span>
+                  ) : null}
+                  {isActive && startTime ? <LiveDuration startTime={startTime} /> : null}
+                </div>
+                {preview && !open ? (
+                  <div className="mt-1 truncate text-xs text-[var(--text-muted)]">
+                    {preview}
+                  </div>
+                ) : null}
+              </div>
 
-          {preview && !open && (
-            <span className="text-neutral-400 dark:text-neutral-500 truncate flex-1">
-              {preview}
-            </span>
-          )}
-          {!preview && <span className="flex-1" />}
+              {open ? (
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
+              )}
+            </div>
+          </button>
+        </Collapsible.Trigger>
 
-          {isActive && startTime && <LiveDuration startTime={startTime} />}
-          {!isActive && durationMs != null && (
-            <span className="text-xs font-mono text-neutral-400 dark:text-neutral-500 tabular-nums">
-              {formatDuration(durationMs)}
-            </span>
-          )}
-
-          {open ? (
-            <ChevronDown className="w-3 h-3 text-neutral-400 dark:text-neutral-500 shrink-0" />
+        <Collapsible.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
+          {part.text ? (
+            <div
+              className={cn(
+                "border-t border-[var(--border-subtle)] px-4 py-4 text-sm text-[var(--text-secondary)]",
+                contentClassName,
+              )}
+            >
+              <Markdown>{part.text}</Markdown>
+            </div>
           ) : (
-            <ChevronRight className="w-3 h-3 text-neutral-400 dark:text-neutral-500 shrink-0" />
+            <div className="border-t border-[var(--border-subtle)] px-4 py-3 text-sm text-[var(--text-muted)]">
+              No reasoning text was provided.
+            </div>
           )}
-        </button>
-      </Collapsible.Trigger>
-
-      <Collapsible.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
-        {part.text && (
-          <div className="ml-6 mt-1 mb-2 p-3 rounded-md bg-neutral-100/40 dark:bg-neutral-800/40 text-xs text-neutral-600 dark:text-neutral-300">
-            <Markdown>{part.text}</Markdown>
-          </div>
-        )}
-      </Collapsible.Content>
-    </Collapsible.Root>
-  );
-});
+        </Collapsible.Content>
+      </Collapsible.Root>
+    );
+  },
+);
 InlineThinkingItem.displayName = "InlineThinkingItem";

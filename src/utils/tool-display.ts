@@ -38,7 +38,8 @@ function extractFilePath(input: unknown): string | undefined {
   return (
     extractString(input, "file_path") ??
     extractString(input, "path") ??
-    extractString(input, "filePath")
+    extractString(input, "filePath") ??
+    extractString(input, "file")
   );
 }
 
@@ -150,6 +151,7 @@ export function getToolDisplayMetadata(part: ToolPart): ToolDisplayMetadata {
         description: filePath,
         hasDiffOutput: true,
         diffFilePath: filePath,
+        displayVariant: "diff",
         targetPath: filePath,
       };
 
@@ -159,6 +161,7 @@ export function getToolDisplayMetadata(part: ToolPart): ToolDisplayMetadata {
       return {
         title: filePath ? `Read ${cleanPath(filePath)}` : "Read file",
         description: filePath,
+        displayVariant: "read-file",
         targetPath: filePath,
       };
 
@@ -211,6 +214,11 @@ export function getToolDisplayMetadata(part: ToolPart): ToolDisplayMetadata {
     default:
       return {
         title: part.tool || "Tool",
+        description:
+          command ??
+          filePath ??
+          extractString(input, "pattern") ??
+          extractString(input, "query"),
       };
   }
 }

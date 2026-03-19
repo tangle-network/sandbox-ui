@@ -103,7 +103,7 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
           {part.state.status === "running" && (
             <div className="p-3 flex items-center gap-2 text-xs text-neutral-400 dark:text-neutral-500">
               <Loader2 className="w-3 h-3 animate-spin" />
-              Running...
+              Running…
             </div>
           )}
         </div>

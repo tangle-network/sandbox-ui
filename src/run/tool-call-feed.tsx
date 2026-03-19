@@ -9,7 +9,7 @@
  */
 
 import { type ReactNode } from "react";
-import { SimpleMarkdown } from "../markdown/simple-markdown";
+import { Markdown } from "../markdown/markdown";
 import { ToolCallStep, ToolCallGroup, type ToolCallType, type ToolCallStatus } from "./tool-call-step";
 import { cn } from "../lib/utils";
 
@@ -44,7 +44,7 @@ export function ToolCallFeed({ segments, className }: ToolCallFeedProps) {
       {segments.map((segment, i) => {
         if (segment.kind === "text") {
           return segment.content.trim() ? (
-            <SimpleMarkdown key={i} content={segment.content} />
+            <Markdown key={i}>{segment.content}</Markdown>
           ) : null;
         }
 

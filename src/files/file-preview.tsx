@@ -2,25 +2,21 @@
  * FilePreview — universal file renderer.
  *
  * Renders any file type beautifully:
- * - PDF: react-pdf paginated viewer
- * - CSV/XLSX: sortable table
- * - Code (py/json/yaml/ts/js): syntax highlighted
+ * - PDF: embedded viewer
+ * - CSV/XLSX: tabular preview
+ * - Code (py/json/yaml/ts/js): line-numbered viewer
  * - Markdown: rendered prose
  * - Images: inline display
- * - Text: monospace pre
+ * - Text: monospace preview
  */
 
-import { useState, useEffect, type ReactNode } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut,
   Download,
   X,
   FileText,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { Markdown } from "../markdown/markdown";
 
 export interface FilePreviewProps {
   filename: string;
@@ -29,6 +25,7 @@ export interface FilePreviewProps {
   mimeType?: string;
   onClose?: () => void;
   onDownload?: () => void;
+  hideHeader?: boolean;
   className?: string;
 }
 
@@ -44,26 +41,6 @@ function getPreviewType(filename: string, mimeType?: string): string {
   if (["md", "markdown"].includes(ext)) return "markdown";
   if (["txt", "log", "text"].includes(ext)) return "text";
   return "unknown";
-}
-
-// Language mapping for syntax highlighting class names
-function getLanguageClass(filename: string): string {
-  const ext = filename.split(".").pop()?.toLowerCase() || "";
-  const map: Record<string, string> = {
-    py: "language-python",
-    ts: "language-typescript",
-    tsx: "language-tsx",
-    js: "language-javascript",
-    jsx: "language-jsx",
-    json: "language-json",
-    yaml: "language-yaml",
-    yml: "language-yaml",
-    sh: "language-bash",
-    bash: "language-bash",
-    csv: "language-csv",
-    sql: "language-sql",
-  };
-  return map[ext] || "language-text";
 }
 
 function CodePreview({ content, filename }: { content: string; filename: string }) {
@@ -173,6 +150,14 @@ function TextPreview({ content }: { content: string }) {
   );
 }
 
+function MarkdownPreview({ content }: { content: string }) {
+  return (
+    <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] p-5">
+      <Markdown className="prose-sm max-w-none">{content}</Markdown>
+    </div>
+  );
+}
+
 function EmptyPreview({ filename }: { filename: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)]">
@@ -190,34 +175,38 @@ export function FilePreview({
   mimeType,
   onClose,
   onDownload,
+  hideHeader = false,
   className,
 }: FilePreviewProps) {
   const previewType = getPreviewType(filename, mimeType);
 
   return (
     <div className={cn("flex flex-col h-full", className)}>
-      {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-subtle)] shrink-0">
-        <span className="text-sm font-medium text-[var(--text-primary)] truncate flex-1">
-          {filename}
-        </span>
-        {onDownload && (
-          <button
-            onClick={onDownload}
-            className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-          >
-            <Download className="h-4 w-4" />
-          </button>
-        )}
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-subtle)] shrink-0">
+          <span className="text-sm font-medium text-[var(--text-primary)] truncate flex-1">
+            {filename}
+          </span>
+          {onDownload && (
+            <button
+              onClick={onDownload}
+              aria-label={`Download ${filename}`}
+              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+            >
+              <Download className="h-4 w-4" />
+            </button>
+          )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              aria-label={`Close ${filename}`}
+              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-3">
@@ -230,7 +219,7 @@ export function FilePreview({
           <CodePreview content={content} filename={filename} />
         )}
         {previewType === "text" && content && <TextPreview content={content} />}
-        {previewType === "markdown" && content && <TextPreview content={content} />}
+        {previewType === "markdown" && content && <MarkdownPreview content={content} />}
         {previewType === "unknown" && <EmptyPreview filename={filename} />}
         {!content && !blobUrl && <EmptyPreview filename={filename} />}
       </div>

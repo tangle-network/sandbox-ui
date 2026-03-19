@@ -7,6 +7,7 @@ export default defineConfig({
     chat: "src/chat/index.ts",
     run: "src/run/index.ts",
     workspace: "src/workspace/index.ts",
+    openui: "src/openui/index.ts",
     files: "src/files/index.ts",
     dashboard: "src/dashboard/index.ts",
     editor: "src/editor/index.ts",

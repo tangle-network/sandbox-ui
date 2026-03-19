@@ -37,26 +37,33 @@ export function FileTabs({ tabs, activeId, onSelect, onClose, className }: FileT
         const Icon = getTabIcon(tab.name);
 
         return (
-          <button
+          <div
             key={tab.id}
-            onClick={() => onSelect(tab.id)}
             className={cn(
-              "group flex items-center gap-1.5 px-3 py-1.5 text-xs border-r border-[var(--border-subtle)] shrink-0 transition-colors",
+              "group flex items-center border-r border-[var(--border-subtle)] shrink-0",
               isActive
                 ? "bg-[var(--bg-card)] text-[var(--text-primary)] border-b-2 border-b-[var(--brand-cool)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
+                : "text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]",
             )}
           >
-            <Icon className="h-3 w-3 shrink-0" />
-            <span className="truncate max-w-[120px]">{tab.name}</span>
-            {tab.dirty && <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand-cool)]" />}
-            <span
-              onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}
-              className="p-0.5 rounded hover:bg-[var(--bg-hover)] opacity-0 group-hover:opacity-100 transition-opacity"
+            <button
+              type="button"
+              onClick={() => onSelect(tab.id)}
+              className="flex min-w-0 items-center gap-1.5 px-3 py-1.5 text-xs transition-colors hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand-cool)]/60"
+            >
+              <Icon className="h-3 w-3 shrink-0" />
+              <span className="max-w-[120px] truncate">{tab.name}</span>
+              {tab.dirty && <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-cool)]" />}
+            </button>
+            <button
+              type="button"
+              aria-label={`Close ${tab.name}`}
+              onClick={() => onClose(tab.id)}
+              className="mr-1 rounded p-0.5 opacity-0 transition-opacity hover:bg-[var(--bg-hover)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60 group-hover:opacity-100"
             >
               <X className="h-2.5 w-2.5" />
-            </span>
-          </button>
+            </button>
+          </div>
         );
       })}
     </div>

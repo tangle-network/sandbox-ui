@@ -22,8 +22,11 @@ export const UserMessage = memo(({ message, parts }: UserMessageProps) => {
 
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-2xl rounded-br-md px-4 py-2.5 bg-blue-600/10 dark:bg-blue-600/20 border border-blue-500/15 dark:border-blue-500/20">
-        <div className="text-sm text-neutral-900 dark:text-neutral-100">
+      <div className="max-w-[85%] rounded-[var(--radius-xl)] rounded-br-[var(--radius-sm)] border border-[var(--border-accent)] bg-[linear-gradient(135deg,rgba(98,114,243,0.16),rgba(98,114,243,0.06))] px-4 py-3 shadow-[var(--shadow-card)]">
+        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-cool)]">
+          You
+        </div>
+        <div className="text-sm text-[var(--text-primary)]">
           <Markdown>{textContent}</Markdown>
         </div>
       </div>

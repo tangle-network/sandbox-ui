@@ -272,22 +272,32 @@ export const ChatContainer = memo(
     return (
       <div className={cn("flex flex-col h-full", className)}>
         {/* Message area */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 py-4 [scrollbar-gutter:stable]"
+        >
           {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
-              No messages yet
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-md rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-6 py-8 text-center shadow-[var(--shadow-card)]">
+                <div className="text-sm font-semibold text-[var(--text-primary)]">Start the filing workflow</div>
+                <div className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+                  Ask the agent to analyze documents, generate forms, explain a calculation, or review the current filing package.
+                </div>
+              </div>
             </div>
           ) : presentation === "timeline" ? (
             <AgentTimeline items={timeline.items} isThinking={timeline.showThinking} />
           ) : (
-            <MessageList
-              groups={groups}
-              partMap={partMap}
-              isCollapsed={isCollapsed}
-              onToggleCollapse={toggleCollapse}
-              branding={branding}
-              renderToolDetail={renderToolDetail}
-            />
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-3">
+              <MessageList
+                groups={groups}
+                partMap={partMap}
+                isCollapsed={isCollapsed}
+                onToggleCollapse={toggleCollapse}
+                branding={branding}
+                renderToolDetail={renderToolDetail}
+              />
+            </div>
           )}
         </div>
 
@@ -300,6 +310,7 @@ export const ChatContainer = memo(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full",
                 "border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]",
                 "text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-hover)]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60",
               )}
             >
               <ArrowDown className="w-3 h-3" />

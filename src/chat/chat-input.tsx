@@ -93,13 +93,13 @@ export function ChatInput({
     <div className={cn("px-4 py-3", className)}>
       {/* Pending file chips */}
       {pendingFiles.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-2">
+        <div className="mb-3 flex flex-wrap gap-2">
           {pendingFiles.map((f) => (
             <span
               key={f.id}
               className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-full)] text-xs",
-                "bg-[var(--bg-input)] border border-[var(--border-subtle)]",
+                "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs shadow-[var(--shadow-card)]",
+                "border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)]",
                 f.status === "error" && "border-[var(--code-error)]/30 text-[var(--code-error)]",
                 f.status !== "error" && "text-[var(--text-secondary)]",
               )}
@@ -124,7 +124,8 @@ export function ChatInput({
       )}
 
       {/* Input row */}
-      <div className="flex items-end gap-2 bg-[var(--bg-card)] border border-[var(--border-default)] rounded-[var(--radius-lg)] px-3 py-2 focus-within:border-[var(--border-accent)] transition-colors">
+      <div className="rounded-[calc(var(--radius-xl)+2px)] border border-[var(--border-subtle)] bg-[linear-gradient(135deg,rgba(98,114,243,0.08),rgba(255,255,255,0.02)_40%,transparent)] p-[1px] shadow-[var(--shadow-card)]">
+        <div className="flex items-end gap-2 rounded-[var(--radius-xl)] border border-white/4 bg-[var(--bg-card)] px-3 py-3 transition-colors focus-within:border-[var(--border-accent)]">
         {/* Attach button */}
         {onAttach && (
           <>
@@ -133,7 +134,7 @@ export function ChatInput({
               onClick={handleAttachClick}
               disabled={isStreaming}
               aria-label="Attach files"
-              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 shrink-0 mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -158,7 +159,7 @@ export function ChatInput({
           disabled={isStreaming || disabled}
           rows={1}
           aria-label="Message input"
-          className="flex-1 bg-transparent text-[var(--text-primary)] text-sm placeholder:text-[var(--text-muted)] resize-none min-h-[24px] max-h-[160px] leading-relaxed disabled:opacity-50 focus-visible:outline-none"
+          className="min-h-[28px] max-h-[160px] flex-1 resize-none bg-transparent text-sm leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
         />
 
         {/* Send / Cancel */}
@@ -167,7 +168,7 @@ export function ChatInput({
             type="button"
             onClick={onCancel}
             aria-label="Stop response"
-            className="p-1.5 rounded-[var(--radius-sm)] bg-[var(--code-error)]/15 hover:bg-[var(--code-error)]/25 text-[var(--code-error)] transition-colors shrink-0 mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--code-error)]/50"
+            className="mb-0.5 shrink-0 rounded-[var(--radius-md)] bg-[var(--code-error)]/15 p-2 text-[var(--code-error)] transition-colors hover:bg-[var(--code-error)]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--code-error)]/50"
           >
             <Square className="h-4 w-4" />
           </button>
@@ -177,22 +178,23 @@ export function ChatInput({
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
-            className="p-1.5 rounded-[var(--radius-sm)] bg-[var(--brand-cool)]/15 hover:bg-[var(--brand-cool)]/25 text-[var(--brand-cool)] transition-colors disabled:opacity-30 shrink-0 mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+            className="mb-0.5 shrink-0 rounded-[var(--radius-md)] bg-[var(--brand-cool)]/15 p-2 text-[var(--brand-cool)] transition-colors hover:bg-[var(--brand-cool)]/25 disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
           >
             <Send className="h-4 w-4" />
           </button>
         )}
+        </div>
       </div>
 
       {/* Footer: model selector + shortcuts */}
-      <div className="flex items-center justify-between mt-1.5 px-1">
+      <div className="mt-2 flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           {modelLabel && (
             <button
               type="button"
               onClick={onModelClick}
               aria-label={`Select model, current model ${modelLabel}`}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-full)] border border-[var(--border-subtle)] text-xs text-[var(--text-muted)] hover:border-[var(--border-accent)] hover:text-[var(--text-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="inline-flex items-center gap-1 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/55 px-2.5 py-1 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--border-accent)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--code-success)]" />
               {modelLabel}

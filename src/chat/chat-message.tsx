@@ -35,14 +35,22 @@ export function ChatMessage({
   const isUser = role === "user";
 
   return (
-    <div className={cn("flex gap-3 px-4 py-3", className)}>
+    <div
+      className={cn(
+        "flex gap-3 rounded-[var(--radius-xl)] border px-4 py-4 shadow-[var(--shadow-card)]",
+        isUser
+          ? "border-[var(--border-accent)] bg-[linear-gradient(135deg,rgba(98,114,243,0.14),rgba(98,114,243,0.05))]"
+          : "border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_32%),var(--bg-card)]",
+        className,
+      )}
+    >
       {/* Avatar */}
       <div
         className={cn(
-          "w-7 h-7 rounded-lg shrink-0 flex items-center justify-center mt-0.5",
+          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
           isUser
-            ? "bg-[var(--brand-cool)]/15 text-[var(--brand-cool)]"
-            : "bg-[var(--brand-glow)]/15 text-[var(--brand-glow)]",
+            ? "border-[var(--border-accent)] bg-[var(--brand-cool)]/15 text-[var(--brand-cool)]"
+            : "border-[var(--border-subtle)] bg-[var(--brand-glow)]/12 text-[var(--brand-glow)]",
         )}
       >
         {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
@@ -64,12 +72,12 @@ export function ChatMessage({
 
         {/* Message body */}
         {isUser ? (
-          <div className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
+          <div className="text-sm leading-relaxed text-[var(--text-primary)] whitespace-pre-wrap">
             {content}
           </div>
         ) : (
           <>
-            {content && <Markdown>{content}</Markdown>}
+            {content && <Markdown className="tangle-prose">{content}</Markdown>}
             {/* Streaming cursor */}
             {isStreaming && (
               <span className="inline-block w-2 h-4 bg-[var(--brand-cool)] animate-pulse rounded-sm ml-0.5 align-text-bottom" />

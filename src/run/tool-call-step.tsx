@@ -83,10 +83,10 @@ export function ToolCallStep({
   return (
     <div
       className={cn(
-        "group border-l-2 pl-3 py-1.5 transition-colors",
-        status === "running" && "border-[var(--brand-cool)] bg-[var(--brand-cool)]/5",
+        "group overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--bg-card)] transition-colors",
+        status === "running" && "border-[var(--border-accent)]",
         status === "success" && "border-[var(--border-subtle)] hover:border-[var(--border-accent)]",
-        status === "error" && "border-[var(--code-error)]/40",
+        status === "error" && "border-red-500/30",
         className,
       )}
     >
@@ -94,25 +94,46 @@ export function ToolCallStep({
         onClick={() => hasExpandable && setExpanded(!expanded)}
         disabled={!hasExpandable}
         className={cn(
-          "flex items-center gap-2 w-full text-left text-sm",
+          "flex w-full items-center gap-3 px-3 py-3 text-left text-sm",
           hasExpandable && "cursor-pointer",
         )}
       >
-        {/* Status indicator */}
-        {status === "running" ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--brand-cool)] shrink-0" />
-        ) : (
-          <Icon className={cn("h-3.5 w-3.5 shrink-0", STATUS_COLORS[status])} />
-        )}
+        <div
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
+            status === "running" && "border-[var(--border-accent)] bg-[var(--brand-cool)]/12 text-[var(--brand-cool)]",
+            status === "success" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+            status === "error" && "border-red-500/30 bg-red-500/10 text-red-200",
+          )}
+        >
+          {status === "running" ? (
+            <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          ) : (
+            <Icon className={cn("h-4 w-4 shrink-0", STATUS_COLORS[status])} />
+          )}
+        </div>
 
         {/* Label */}
-        <span className="text-[var(--text-secondary)] truncate flex-1 font-[var(--font-sans)]">
+        <span className="truncate flex-1 font-[var(--font-sans)] text-[var(--text-secondary)]">
           {label}
+        </span>
+
+        <span
+          className={cn(
+            "rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em]",
+            status === "running" &&
+              "border-[var(--border-accent)] bg-[var(--brand-cool)]/10 text-[var(--brand-cool)]",
+            status === "success" &&
+              "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+            status === "error" && "border-red-500/30 bg-red-500/10 text-red-200",
+          )}
+        >
+          {status}
         </span>
 
         {/* Duration */}
         {duration !== undefined && status !== "running" && (
-          <span className="text-[var(--text-muted)] text-xs tabular-nums shrink-0">
+          <span className="shrink-0 text-xs tabular-nums text-[var(--text-muted)]">
             {duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`}
           </span>
         )}
@@ -130,14 +151,14 @@ export function ToolCallStep({
 
       {/* Expandable content */}
       {expanded && (detail || output) && (
-        <div className="mt-1.5 ml-5.5 space-y-1">
+        <div className="space-y-2 border-t border-[var(--border-subtle)] bg-[var(--bg-section)]/50 px-4 py-4">
           {detail && (
-            <div className="text-xs text-[var(--text-muted)] font-[var(--font-mono)]">
+            <div className="text-xs font-[var(--font-mono)] text-[var(--text-muted)]">
               {detail}
             </div>
           )}
           {output && (
-            <pre className="text-xs text-[var(--text-secondary)] bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-[var(--radius-sm)] p-2 overflow-x-auto max-h-48 font-[var(--font-mono)]">
+            <pre className="max-h-48 overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] p-3 text-xs font-[var(--font-mono)] text-[var(--text-secondary)]">
               {output}
             </pre>
           )}
@@ -158,9 +179,9 @@ export interface ToolCallGroupProps {
 
 export function ToolCallGroup({ title, children, className }: ToolCallGroupProps) {
   return (
-    <div className={cn("space-y-0.5 my-2", className)}>
+    <div className={cn("my-2 space-y-2", className)}>
       {title && (
-        <div className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-1 px-1">
+        <div className="mb-1 px-1 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
           {title}
         </div>
       )}

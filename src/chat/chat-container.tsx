@@ -104,6 +104,26 @@ function buildTimelineItems(
 ): { items: AgentTimelineItem[]; showThinking: boolean } {
   const items: AgentTimelineItem[] = [];
   const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
+  const toToolCall = (part: ToolPart) => {
+    const meta = getToolDisplayMetadata(part as ToolPart);
+    const start = part.state.time?.start;
+    const end = part.state.time?.end;
+
+    return {
+      id: part.id,
+      type: mapToolPartToTimelineType(part),
+      label: meta.description ? `${meta.title}: ${meta.description}` : meta.title,
+      status:
+        part.state.status === "completed"
+          ? "success"
+          : part.state.status === "error"
+            ? "error"
+            : "running",
+      detail: formatUnknown(part.state.input),
+      output: formatUnknown(part.state.output),
+      duration: start && end ? end - start : undefined,
+    } as const;
+  };
 
   for (const message of messages) {
     const parts = partMap[message.id] ?? [];
@@ -127,8 +147,37 @@ function buildTimelineItems(
       continue;
     }
 
+    const toolBuffer: ToolPart[] = [];
+    const flushToolBuffer = (index: number) => {
+      if (toolBuffer.length === 0) return;
+
+      if (toolBuffer.length === 1) {
+        items.push({
+          id: `${message.id}-tool-${toolBuffer[0].id}`,
+          kind: "tool",
+          call: toToolCall(toolBuffer[0]),
+        });
+      } else {
+        items.push({
+          id: `${message.id}-tool-group-${index}`,
+          kind: "tool_group",
+          title: "Tool activity",
+          calls: toolBuffer.map((part) => toToolCall(part)),
+        });
+      }
+
+      toolBuffer.length = 0;
+    };
+
     parts.forEach((part, index) => {
       const itemId = `${message.id}-${index}`;
+
+      if (part.type === "tool") {
+        toolBuffer.push(part);
+        return;
+      }
+
+      flushToolBuffer(index);
 
       if (part.type === "text" && !part.synthetic && part.text.trim()) {
         items.push({
@@ -146,36 +195,13 @@ function buildTimelineItems(
         items.push({
           id: itemId,
           kind: "custom",
-          content: <InlineThinkingItem part={part} />,
+          content: <InlineThinkingItem part={part} defaultOpen={isStreaming && lastAssistantMessage?.id === message.id} />,
         });
         return;
       }
-
-      if (part.type === "tool") {
-        const meta = getToolDisplayMetadata(part as ToolPart);
-        const start = part.state.time?.start;
-        const end = part.state.time?.end;
-
-        items.push({
-          id: itemId,
-          kind: "tool",
-          call: {
-            id: part.id,
-            type: mapToolPartToTimelineType(part),
-            label: meta.description ? `${meta.title}: ${meta.description}` : meta.title,
-            status:
-              part.state.status === "completed"
-                ? "success"
-                : part.state.status === "error"
-                  ? "error"
-                  : "running",
-            detail: formatUnknown(part.state.input),
-            output: formatUnknown(part.state.output),
-            duration: start && end ? end - start : undefined,
-          },
-        });
-      }
     });
+
+    flushToolBuffer(parts.length);
   }
 
   const showThinking =

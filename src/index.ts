@@ -111,6 +111,11 @@ export { ExpandedToolDetail } from "./run/expanded-tool-detail";
 // --- Tool Previews ---
 export { CommandPreview } from "./tool-previews/command-preview";
 export { WriteFilePreview } from "./tool-previews/write-file-preview";
+export { GrepResultsPreview } from "./tool-previews/grep-results-preview";
+export { GlobResultsPreview } from "./tool-previews/glob-results-preview";
+export { WebSearchPreview } from "./tool-previews/web-search-preview";
+export { QuestionPreview } from "./tool-previews/question-preview";
+export { DiffPreview } from "./tool-previews/diff-preview";
 
 // --- Files ---
 export {

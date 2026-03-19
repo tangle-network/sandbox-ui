@@ -2,6 +2,7 @@ import { memo } from "react";
 import { FileEdit } from "lucide-react";
 import type { ToolPart } from "../types/parts";
 import { CodeBlock, CopyButton } from "../markdown/code-block";
+import { PreviewCard, PreviewError, PreviewLoading } from "./preview-primitives";
 
 export interface WriteFilePreviewProps {
   part: ToolPart;
@@ -58,20 +59,22 @@ export const WriteFilePreview = memo(({ part }: WriteFilePreviewProps) => {
   const language = getLanguageFromPath(write.path);
 
   return (
-    <div className="rounded-lg overflow-hidden border border-neutral-200/50 dark:border-neutral-700/50">
-      <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100/80 dark:bg-neutral-800/80">
-        <FileEdit className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-        <span className="text-xs font-mono text-neutral-600 dark:text-neutral-300 truncate flex-1">
-          {write.path}
-        </span>
-        <span className="text-xs text-neutral-400 dark:text-neutral-500">
+    <PreviewCard
+      icon={<FileEdit className="h-4 w-4" />}
+      title="Write file"
+      description={write.path}
+      meta={
+        <span className="text-xs text-[var(--text-muted)]">
           +{lineCount} line{lineCount !== 1 ? "s" : ""}
         </span>
-      </div>
-      <CodeBlock code={write.content} language={language} className="rounded-none">
+      }
+    >
+      {part.state.status === "running" ? <PreviewLoading label="Writing file…" /> : null}
+      {part.state.error ? <PreviewError error={part.state.error} /> : null}
+      <CodeBlock code={write.content} language={language} className="rounded-[var(--radius-md)]">
         <CopyButton text={write.content} />
       </CodeBlock>
-    </div>
+    </PreviewCard>
   );
 });
 WriteFilePreview.displayName = "WriteFilePreview";

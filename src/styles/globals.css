@@ -1,77 +1,24 @@
+@import "./tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 270 80% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 94%;
-    --secondary-foreground: 0 0% 20%;
-    --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 40%;
-    --accent: 0 0% 94%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 88%;
-    --input: 0 0% 88%;
-    --ring: 270 80% 55%;
-    --radius: 0.625rem;
-
-    /* Product accent colors -- Tangle purple */
-    --sandbox: 270 80% 55%;
-    --sandbox-glow: 270 75% 58%;
-
-    /* Status colors */
-    --success: 142 71% 40%;
-    --warning: 38 92% 45%;
-    --error: 0 84% 55%;
-    --info: 217 91% 55%;
-  }
-
-  .dark {
-    --background: 0 0% 5%;
-    --foreground: 0 0% 96%;
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 96%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 0 0% 96%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 96%;
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 72%;
-    --accent: 0 0% 16%;
-    --accent-foreground: 0 0% 96%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 96%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 0% 83.1%;
-
-    --sandbox: 270 95% 65%;
-    --sandbox-glow: 270 90% 66%;
-
-    --success: 142 71% 45%;
-    --warning: 38 92% 50%;
-    --error: 0 84% 60%;
-    --info: 217 91% 60%;
+    --sandbox: var(--primary);
+    --sandbox-glow: var(--info);
   }
 
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply antialiased;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
@@ -99,7 +46,8 @@
 @layer utilities {
   /* Gradient text -- Tangle purple */
   .text-gradient-sandbox {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-violet-400;
+    background-image: var(--tangle-gradient);
+    @apply bg-clip-text text-transparent;
   }
 
   /* Glow effects */
@@ -109,7 +57,9 @@
 
   /* Glass effect */
   .glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+    backdrop-filter: blur(24px);
+    background-color: hsl(var(--card) / 0.8);
+    border: 1px solid hsl(var(--border) / 0.5);
   }
 
   /* Subtle noise texture */
@@ -184,8 +134,7 @@
   }
 }
 
-/* Fonts -- Inter (UI) + JetBrains Mono (code).
-   Using @font-face with font-display: swap to avoid render-blocking. */
+/* Fonts -- Inter (UI) + JetBrains Mono (code). */
 @font-face {
   font-family: "Inter";
   src: url("https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiA.woff2") format("woff2");

@@ -38,10 +38,47 @@ export { TerminalDisplay, TerminalLine as TerminalDisplayLine, TerminalInput as 
 
 // --- Workspace ---
 export { WorkspaceLayout, type WorkspaceLayoutProps } from "./workspace/workspace-layout";
+export { ArtifactPane, type ArtifactPaneProps } from "./workspace/artifact-pane";
+export { DirectoryPane, type DirectoryPaneProps } from "./workspace/directory-pane";
+export { RuntimePane, type RuntimePaneProps } from "./workspace/runtime-pane";
+export {
+  SandboxWorkbench,
+  AgentWorkbench,
+  type SandboxWorkbenchProps,
+  type SandboxWorkbenchLayoutOptions,
+  type SandboxWorkbenchSessionProps,
+  type SandboxWorkbenchArtifact,
+  type SandboxWorkbenchFileArtifact,
+  type SandboxWorkbenchMarkdownArtifact,
+  type SandboxWorkbenchOpenUIArtifact,
+  type SandboxWorkbenchCustomArtifact,
+} from "./workspace/sandbox-workbench";
 export { StatusBar, type StatusBarProps, type ContextBadge } from "./workspace/status-bar";
 export { StatusBanner, type StatusBannerProps, type BannerType } from "./workspace/status-banner";
 export { AuditResults, type AuditResultsProps, type FormAudit, type AuditCheck } from "./workspace/audit-results";
 export { TerminalPanel, type TerminalProps, type TerminalLine } from "./workspace/terminal-panel";
+
+// --- OpenUI ---
+export {
+  OpenUIArtifactRenderer,
+  type OpenUIArtifactRendererProps,
+  type OpenUIAction,
+  type OpenUIPrimitive,
+  type OpenUIComponentNode,
+  type OpenUIHeadingNode,
+  type OpenUITextNode,
+  type OpenUIBadgeNode,
+  type OpenUIStatNode,
+  type OpenUIKeyValueNode,
+  type OpenUICodeNode,
+  type OpenUIMarkdownNode,
+  type OpenUITableNode,
+  type OpenUIActionsNode,
+  type OpenUISeparatorNode,
+  type OpenUIStackNode,
+  type OpenUIGridNode,
+  type OpenUICardNode,
+} from "./openui/openui-artifact-renderer";
 
 // --- Chat ---
 export { ChatMessage, type ChatMessageProps, type MessageRole } from "./chat/chat-message";
@@ -50,6 +87,18 @@ export { ChatInput, type ChatInputProps, type PendingFile } from "./chat/chat-in
 export { ChatContainer } from "./chat/chat-container";
 export { MessageList } from "./chat/message-list";
 export { UserMessage } from "./chat/user-message";
+export {
+  AgentTimeline,
+  type AgentTimelineProps,
+  type AgentTimelineItem,
+  type AgentTimelineMessageItem,
+  type AgentTimelineToolItem,
+  type AgentTimelineToolGroupItem,
+  type AgentTimelineStatusItem,
+  type AgentTimelineArtifactItem,
+  type AgentTimelineCustomItem,
+  type AgentTimelineTone,
+} from "./chat/agent-timeline";
 
 // --- Run / Tool Calls ---
 export { ToolCallStep, ToolCallGroup, type ToolCallStepProps, type ToolCallGroupProps, type ToolCallType, type ToolCallStatus } from "./run/tool-call-step";
@@ -64,9 +113,16 @@ export { CommandPreview } from "./tool-previews/command-preview";
 export { WriteFilePreview } from "./tool-previews/write-file-preview";
 
 // --- Files ---
-export { FileTree, type FileTreeProps, type FileNode } from "./files/file-tree";
+export {
+  FileTree,
+  filterFileTree,
+  type FileTreeProps,
+  type FileNode,
+  type FileTreeVisibilityOptions,
+} from "./files/file-tree";
 export { FilePreview, type FilePreviewProps } from "./files/file-preview";
 export { FileTabs, type FileTabsProps, type FileTabData } from "./files/file-tabs";
+export { FileArtifactPane, type FileArtifactPaneProps } from "./files/file-artifact-pane";
 
 // --- Dashboard ---
 export { DashboardLayout, type DashboardLayoutProps, type DashboardUser, type NavItem } from "./dashboard/dashboard-layout";
@@ -81,7 +137,6 @@ export { VariantList, type VariantListProps } from "./dashboard/variant-list";
 export { AuthHeader, GitHubLoginButton, UserMenu } from "./auth/auth";
 
 // --- Markdown ---
-export { SimpleMarkdown, simpleMarkdownStyles, type SimpleMarkdownProps } from "./markdown/simple-markdown";
 export { Markdown, type MarkdownProps } from "./markdown/markdown";
 export { CodeBlock, CopyButton } from "./markdown/code-block";
 

@@ -40,7 +40,7 @@ export function ChatInput({
   onCancel,
   isStreaming,
   disabled,
-  placeholder = "Ask about your taxes, build a model, or give instructions...",
+  placeholder = "Ask the agent to inspect files, run commands, or explain results…",
   modelLabel,
   onModelClick,
   pendingFiles = [],
@@ -110,8 +110,10 @@ export function ChatInput({
               )}
               {onRemoveFile && (
                 <button
+                  type="button"
+                  aria-label={`Remove ${f.name}`}
                   onClick={() => onRemoveFile(f.id)}
-                  className="hover:text-[var(--text-primary)] transition-colors"
+                  className="rounded p-0.5 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -127,9 +129,11 @@ export function ChatInput({
         {onAttach && (
           <>
             <button
+              type="button"
               onClick={handleAttachClick}
               disabled={isStreaming}
-              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 shrink-0 mb-0.5"
+              aria-label="Attach files"
+              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50 shrink-0 mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -153,22 +157,27 @@ export function ChatInput({
           placeholder={placeholder}
           disabled={isStreaming || disabled}
           rows={1}
-          className="flex-1 bg-transparent text-[var(--text-primary)] text-sm placeholder:text-[var(--text-muted)] resize-none outline-none min-h-[24px] max-h-[160px] leading-relaxed disabled:opacity-50"
+          aria-label="Message input"
+          className="flex-1 bg-transparent text-[var(--text-primary)] text-sm placeholder:text-[var(--text-muted)] resize-none min-h-[24px] max-h-[160px] leading-relaxed disabled:opacity-50 focus-visible:outline-none"
         />
 
         {/* Send / Cancel */}
         {isStreaming ? (
           <button
+            type="button"
             onClick={onCancel}
-            className="p-1.5 rounded-[var(--radius-sm)] bg-[var(--code-error)]/15 hover:bg-[var(--code-error)]/25 text-[var(--code-error)] transition-colors shrink-0 mb-0.5"
+            aria-label="Stop response"
+            className="p-1.5 rounded-[var(--radius-sm)] bg-[var(--code-error)]/15 hover:bg-[var(--code-error)]/25 text-[var(--code-error)] transition-colors shrink-0 mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--code-error)]/50"
           >
             <Square className="h-4 w-4" />
           </button>
         ) : (
           <button
+            type="button"
             onClick={handleSend}
             disabled={!value.trim() || disabled}
-            className="p-1.5 rounded-[var(--radius-sm)] bg-[var(--brand-cool)]/15 hover:bg-[var(--brand-cool)]/25 text-[var(--brand-cool)] transition-colors disabled:opacity-30 shrink-0 mb-0.5"
+            aria-label="Send message"
+            className="p-1.5 rounded-[var(--radius-sm)] bg-[var(--brand-cool)]/15 hover:bg-[var(--brand-cool)]/25 text-[var(--brand-cool)] transition-colors disabled:opacity-30 shrink-0 mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -180,8 +189,10 @@ export function ChatInput({
         <div className="flex items-center gap-2">
           {modelLabel && (
             <button
+              type="button"
               onClick={onModelClick}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-full)] border border-[var(--border-subtle)] text-xs text-[var(--text-muted)] hover:border-[var(--border-accent)] hover:text-[var(--text-secondary)] transition-colors"
+              aria-label={`Select model, current model ${modelLabel}`}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-full)] border border-[var(--border-subtle)] text-xs text-[var(--text-muted)] hover:border-[var(--border-accent)] hover:text-[var(--text-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--code-success)]" />
               {modelLabel}

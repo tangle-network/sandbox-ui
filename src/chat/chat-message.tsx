@@ -8,7 +8,7 @@
 import { type ReactNode } from "react";
 import { User, Bot } from "lucide-react";
 import { cn } from "../lib/utils";
-import { SimpleMarkdown } from "../markdown/simple-markdown";
+import { Markdown } from "../markdown/markdown";
 
 export type MessageRole = "user" | "assistant" | "system";
 
@@ -69,7 +69,7 @@ export function ChatMessage({
           </div>
         ) : (
           <>
-            {content && <SimpleMarkdown content={content} />}
+            {content && <Markdown>{content}</Markdown>}
             {/* Streaming cursor */}
             {isStreaming && (
               <span className="inline-block w-2 h-4 bg-[var(--brand-cool)] animate-pulse rounded-sm ml-0.5 align-text-bottom" />

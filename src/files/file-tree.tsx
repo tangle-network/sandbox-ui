@@ -34,6 +34,54 @@ export interface FileTreeProps {
   onSelect?: (path: string, node: FileNode) => void;
   className?: string;
   defaultExpanded?: boolean;
+  visibility?: FileTreeVisibilityOptions;
+}
+
+export interface FileTreeVisibilityOptions {
+  hiddenPaths?: string[];
+  hiddenPathPrefixes?: string[];
+  isVisible?: (node: FileNode) => boolean;
+}
+
+function isNodeVisible(node: FileNode, visibility?: FileTreeVisibilityOptions) {
+  if (!visibility) return true;
+
+  if (visibility.hiddenPaths?.includes(node.path)) {
+    return false;
+  }
+
+  if (
+    visibility.hiddenPathPrefixes?.some(
+      (prefix) => node.path === prefix || node.path.startsWith(`${prefix}/`),
+    )
+  ) {
+    return false;
+  }
+
+  return visibility.isVisible ? visibility.isVisible(node) : true;
+}
+
+export function filterFileTree(root: FileNode, visibility?: FileTreeVisibilityOptions): FileNode | null {
+  if (!isNodeVisible(root, visibility)) {
+    return null;
+  }
+
+  if (root.type === "file") {
+    return root;
+  }
+
+  const children = (root.children ?? [])
+    .map((child) => filterFileTree(child, visibility))
+    .filter((child): child is FileNode => child !== null);
+
+  if (root.children && root.children.length > 0 && children.length === 0) {
+    return null;
+  }
+
+  return {
+    ...root,
+    children,
+  };
 }
 
 const FILE_ICONS: Record<string, typeof File> = {
@@ -162,11 +210,24 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}M`;
 }
 
-export function FileTree({ root, selectedPath, onSelect, className, defaultExpanded = true }: FileTreeProps) {
+export function FileTree({
+  root,
+  selectedPath,
+  onSelect,
+  className,
+  defaultExpanded = true,
+  visibility,
+}: FileTreeProps) {
+  const visibleRoot = filterFileTree(root, visibility);
+
+  if (!visibleRoot) {
+    return null;
+  }
+
   return (
     <div className={cn("text-sm font-[var(--font-sans)]", className)}>
-      {root.children ? (
-        root.children
+      {visibleRoot.children ? (
+        visibleRoot.children
           .sort((a, b) => {
             if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
             return a.name.localeCompare(b.name);
@@ -183,7 +244,7 @@ export function FileTree({ root, selectedPath, onSelect, className, defaultExpan
           ))
       ) : (
         <TreeNode
-          node={root}
+          node={visibleRoot}
           depth={0}
           selectedPath={selectedPath}
           onSelect={onSelect}

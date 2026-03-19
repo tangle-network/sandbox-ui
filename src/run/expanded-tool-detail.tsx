@@ -103,7 +103,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
       {(status === "pending" || status === "running") && (
         <div className="flex items-center gap-2 px-3 py-2 text-xs text-neutral-400 dark:text-neutral-500">
           <Loader2 className="w-3 h-3 animate-spin" />
-          Running...
+          Running…
         </div>
       )}
     </div>

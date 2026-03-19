@@ -1,27 +1,33 @@
 import {
   memo,
   useCallback,
+  useMemo,
   useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
 } from "react";
-import { ArrowDown, SendHorizonal } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 import { cn } from "../lib/utils";
 import type { SessionMessage } from "../types/message";
-import type { SessionPart } from "../types/parts";
+import type { SessionPart, TextPart, ToolPart } from "../types/parts";
 import type { AgentBranding } from "../types/branding";
 import type { CustomToolRenderer } from "../types/tool-display";
 import { useRunGroups } from "../hooks/use-run-groups";
 import { useRunCollapseState } from "../hooks/use-run-collapse-state";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
 import { MessageList } from "./message-list";
+import {
+  AgentTimeline,
+  type AgentTimelineItem,
+} from "./agent-timeline";
+import { ChatInput, type PendingFile } from "./chat-input";
+import { InlineThinkingItem } from "../run/inline-thinking-item";
+import { getToolDisplayMetadata } from "../utils/tool-display";
 
 export interface ChatContainerProps {
   messages: SessionMessage[];
   partMap: Record<string, SessionPart[]>;
   isStreaming: boolean;
   onSend?: (text: string) => void;
+  onCancel?: () => void;
   branding?: AgentBranding;
   placeholder?: string;
   className?: string;
@@ -29,6 +35,159 @@ export interface ChatContainerProps {
   hideInput?: boolean;
   /** Custom renderer for tool details. Return ReactNode to override, null to use default. */
   renderToolDetail?: CustomToolRenderer;
+  /** Presentation mode for the session view. */
+  presentation?: "runs" | "timeline";
+  modelLabel?: string;
+  onModelClick?: () => void;
+  pendingFiles?: PendingFile[];
+  onRemoveFile?: (id: string) => void;
+  onAttach?: (files: FileList) => void;
+}
+
+function formatUnknown(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") return value;
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function createdAtFromMessage(message: SessionMessage) {
+  return message.time?.created ? new Date(message.time.created) : undefined;
+}
+
+function mapToolPartToTimelineType(part: ToolPart) {
+  const name = part.tool.toLowerCase().replace(/^tool:/, "");
+
+  switch (name) {
+    case "bash":
+    case "shell":
+    case "command":
+    case "execute":
+      return "bash" as const;
+    case "write":
+    case "write_file":
+    case "create_file":
+      return "write" as const;
+    case "read":
+    case "read_file":
+    case "cat":
+      return "read" as const;
+    case "edit":
+    case "patch":
+    case "sed":
+      return "edit" as const;
+    case "glob":
+    case "find":
+      return "glob" as const;
+    case "ls":
+      return "list" as const;
+    case "grep":
+    case "search":
+    case "rg":
+      return "grep" as const;
+    case "inspect":
+      return "inspect" as const;
+    default:
+      return "unknown" as const;
+  }
+}
+
+function buildTimelineItems(
+  messages: SessionMessage[],
+  partMap: Record<string, SessionPart[]>,
+  isStreaming: boolean,
+): { items: AgentTimelineItem[]; showThinking: boolean } {
+  const items: AgentTimelineItem[] = [];
+  const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
+
+  for (const message of messages) {
+    const parts = partMap[message.id] ?? [];
+
+    if (message.role === "user") {
+      const content = parts
+        .filter((part): part is TextPart => part.type === "text")
+        .map((part) => part.text)
+        .join("\n")
+        .trim();
+
+      if (!content) continue;
+
+      items.push({
+        id: message.id,
+        kind: "message",
+        role: "user",
+        content,
+        timestamp: createdAtFromMessage(message),
+      });
+      continue;
+    }
+
+    parts.forEach((part, index) => {
+      const itemId = `${message.id}-${index}`;
+
+      if (part.type === "text" && !part.synthetic && part.text.trim()) {
+        items.push({
+          id: itemId,
+          kind: "message",
+          role: "assistant",
+          content: part.text,
+          timestamp: createdAtFromMessage(message),
+          isStreaming: isStreaming && lastAssistantMessage?.id === message.id && index === parts.length - 1,
+        });
+        return;
+      }
+
+      if (part.type === "reasoning") {
+        items.push({
+          id: itemId,
+          kind: "custom",
+          content: <InlineThinkingItem part={part} />,
+        });
+        return;
+      }
+
+      if (part.type === "tool") {
+        const meta = getToolDisplayMetadata(part as ToolPart);
+        const start = part.state.time?.start;
+        const end = part.state.time?.end;
+
+        items.push({
+          id: itemId,
+          kind: "tool",
+          call: {
+            id: part.id,
+            type: mapToolPartToTimelineType(part),
+            label: meta.description ? `${meta.title}: ${meta.description}` : meta.title,
+            status:
+              part.state.status === "completed"
+                ? "success"
+                : part.state.status === "error"
+                  ? "error"
+                  : "running",
+            detail: formatUnknown(part.state.input),
+            output: formatUnknown(part.state.output),
+            duration: start && end ? end - start : undefined,
+          },
+        });
+      }
+    });
+  }
+
+  const showThinking =
+    isStreaming &&
+    lastAssistantMessage != null &&
+    !items.some(
+      (item) =>
+        item.kind === "message" &&
+        item.role === "assistant" &&
+        item.id.startsWith(lastAssistantMessage.id),
+    );
+
+  return { items, showThinking };
 }
 
 /**
@@ -41,15 +200,20 @@ export const ChatContainer = memo(
     partMap,
     isStreaming,
     onSend,
+    onCancel,
     branding,
     placeholder = "Type a message...",
     className,
     hideInput = false,
     renderToolDetail,
+    presentation = "runs",
+    modelLabel,
+    onModelClick,
+    pendingFiles,
+    onRemoveFile,
+    onAttach,
   }: ChatContainerProps) => {
-    const [inputValue, setInputValue] = useState("");
     const scrollRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     // Group messages into runs
     const groups = useRunGroups({ messages, partMap, isStreaming });
@@ -65,26 +229,16 @@ export const ChatContainer = memo(
       isStreaming,
     ]);
 
-    const handleSubmit = useCallback(
-      (e?: FormEvent) => {
-        e?.preventDefault();
-        const text = inputValue.trim();
-        if (!text || !onSend) return;
-        onSend(text);
-        setInputValue("");
-        inputRef.current?.focus();
-      },
-      [inputValue, onSend],
+    const timeline = useMemo(
+      () => buildTimelineItems(messages, partMap, isStreaming),
+      [messages, partMap, isStreaming],
     );
 
-    const handleKeyDown = useCallback(
-      (e: KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          handleSubmit();
-        }
+    const handleSend = useCallback(
+      (text: string) => {
+        onSend?.(text);
       },
-      [handleSubmit],
+      [onSend],
     );
 
     return (
@@ -92,9 +246,11 @@ export const ChatContainer = memo(
         {/* Message area */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
           {messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-sm text-neutral-400 dark:text-neutral-500">
+            <div className="flex h-full items-center justify-center text-sm text-[var(--text-muted)]">
               No messages yet
             </div>
+          ) : presentation === "timeline" ? (
+            <AgentTimeline items={timeline.items} isThinking={timeline.showThinking} />
           ) : (
             <MessageList
               groups={groups}
@@ -114,8 +270,8 @@ export const ChatContainer = memo(
               onClick={scrollToBottom}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                "bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-lg",
-                "text-xs text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors",
+                "border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]",
+                "text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-hover)]",
               )}
             >
               <ArrowDown className="w-3 h-3" />
@@ -126,42 +282,18 @@ export const ChatContainer = memo(
 
         {/* Input area */}
         {!hideInput && onSend && (
-          <form
-            onSubmit={handleSubmit}
-            className="shrink-0 border-t border-neutral-200/50 dark:border-neutral-700/50 p-3"
-          >
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={inputRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={placeholder}
-                rows={1}
-                disabled={isStreaming}
-                className={cn(
-                  "flex-1 resize-none rounded-lg px-3 py-2",
-                  "bg-neutral-50/60 dark:bg-neutral-800/60 border border-neutral-200/50 dark:border-neutral-700/50",
-                  "text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500",
-                  "focus:outline-none focus:border-blue-500/50",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "max-h-32",
-                )}
-                style={{ minHeight: "2.5rem" }}
-              />
-              <button
-                type="submit"
-                disabled={isStreaming || !inputValue.trim()}
-                className={cn(
-                  "flex items-center justify-center w-9 h-9 rounded-lg",
-                  "bg-blue-600 hover:bg-blue-500 transition-colors",
-                  "disabled:opacity-30 disabled:cursor-not-allowed",
-                )}
-              >
-                <SendHorizonal className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          </form>
+          <ChatInput
+            onSend={handleSend}
+            onCancel={onCancel}
+            isStreaming={isStreaming}
+            placeholder={placeholder}
+            modelLabel={modelLabel}
+            onModelClick={onModelClick}
+            pendingFiles={pendingFiles}
+            onRemoveFile={onRemoveFile}
+            onAttach={onAttach}
+            className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-dark)]"
+          />
         )}
       </div>
     );

@@ -42,6 +42,7 @@ export interface ChatContainerProps {
   pendingFiles?: PendingFile[];
   onRemoveFile?: (id: string) => void;
   onAttach?: (files: FileList) => void;
+  disabled?: boolean;
 }
 
 function formatUnknown(value: unknown): string | undefined {
@@ -212,6 +213,7 @@ export const ChatContainer = memo(
     pendingFiles,
     onRemoveFile,
     onAttach,
+    disabled = false,
   }: ChatContainerProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -292,6 +294,7 @@ export const ChatContainer = memo(
             pendingFiles={pendingFiles}
             onRemoveFile={onRemoveFile}
             onAttach={onAttach}
+            disabled={disabled}
             className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-dark)]"
           />
         )}

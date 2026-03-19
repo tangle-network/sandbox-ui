@@ -35,6 +35,56 @@ Import styles in your app root:
 import "@tangle-network/sandbox-ui/styles";
 ```
 
+If you are building on the sandbox SDK directly, use `useSdkSession` to turn raw SDK/session-gateway events into the `messages + partMap` model that `ChatContainer` and `SandboxWorkbench` expect:
+
+```tsx
+import {
+  SandboxWorkbench,
+} from "@tangle-network/sandbox-ui";
+import { useSdkSession } from "@tangle-network/sandbox-ui/hooks";
+
+function App() {
+  const {
+    messages,
+    partMap,
+    isStreaming,
+    appendUserMessage,
+    beginAssistantMessage,
+    applySdkEvent,
+    completeAssistantMessage,
+    failAssistantMessage,
+  } = useSdkSession();
+
+  async function runTurn(text: string) {
+    appendUserMessage({ content: text });
+    const assistantMessageId = beginAssistantMessage();
+
+    try {
+      for await (const event of sdk.streamPrompt(text)) {
+        applySdkEvent(event, { messageId: assistantMessageId });
+      }
+      completeAssistantMessage({ messageId: assistantMessageId });
+    } catch (error) {
+      failAssistantMessage(
+        error instanceof Error ? error.message : "Agent run failed",
+        { messageId: assistantMessageId },
+      );
+    }
+  }
+
+  return (
+    <SandboxWorkbench
+      session={{
+        messages,
+        partMap,
+        isStreaming,
+        onSend: runTurn,
+      }}
+    />
+  );
+}
+```
+
 Compose sandbox applications around `SandboxWorkbench` when you want the library’s default operating model:
 
 ```tsx

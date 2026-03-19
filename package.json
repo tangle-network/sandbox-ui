@@ -75,12 +75,11 @@
       "types": "./dist/utils.d.ts"
     },
     "./styles": "./dist/styles.css",
-    "./globals.css": "./src/styles/globals.css",
+    "./globals.css": "./dist/globals.css",
     "./tailwind": "./tailwind.config.cjs"
   },
   "files": [
     "dist",
-    "src/styles",
     "tailwind.config.cjs"
   ],
   "scripts": {

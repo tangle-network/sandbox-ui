@@ -149,6 +149,18 @@ export { CodeBlock, CopyButton } from "./markdown/code-block";
 export { useToolCallStream, type UseToolCallStreamReturn } from "./hooks/use-tool-call-stream";
 export { useAuth, createAuthFetcher, useApiKey } from "./hooks/use-auth";
 export { useSSEStream } from "./hooks/use-sse-stream";
+export {
+  useSdkSession,
+  type SdkSessionAttachment,
+  type SdkSessionEvent,
+  type SdkSessionSeed,
+  type UseSdkSessionOptions,
+  type UseSdkSessionReturn,
+  type BeginAssistantMessageOptions,
+  type AppendUserMessageOptions,
+  type CompleteAssistantMessageOptions,
+  type ApplySdkEventOptions,
+} from "./hooks/use-sdk-session";
 export { useRunGroups } from "./hooks/use-run-groups";
 export { useRunCollapseState } from "./hooks/use-run-collapse-state";
 export { useAutoScroll } from "./hooks/use-auto-scroll";

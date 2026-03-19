@@ -8,7 +8,7 @@
 
 # @tangle-network/sandbox-ui
 
-React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — 100+ components for building AI agent interfaces with chat, terminal, file browser, tool call feeds, and dashboard views.
+React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a shadcn-style primitive layer plus higher-order sandbox surfaces for agent chat, files, runtime state, artifacts, and dashboard views.
 
 ## Install
 
@@ -21,9 +21,12 @@ npm install @tangle-network/sandbox-ui
 ## Usage
 
 ```tsx
-import { Button, Badge, Card } from "@tangle-network/sandbox-ui/primitives";
-import { ChatContainer } from "@tangle-network/sandbox-ui/chat";
-import { WorkspaceLayout } from "@tangle-network/sandbox-ui/workspace";
+import {
+  SandboxWorkbench,
+  type FileNode,
+  type SessionMessage,
+  type SessionPart,
+} from "@tangle-network/sandbox-ui";
 ```
 
 Import styles in your app root:
@@ -32,15 +35,52 @@ Import styles in your app root:
 import "@tangle-network/sandbox-ui/styles";
 ```
 
+Compose sandbox applications around `SandboxWorkbench` when you want the library’s default operating model:
+
+```tsx
+const root: FileNode = {
+  name: "agent",
+  path: "/home/agent",
+  type: "directory",
+  children: [],
+};
+
+const messages: SessionMessage[] = [];
+const partMap: Record<string, SessionPart[]> = {};
+
+<SandboxWorkbench
+  title="Tax filing workspace"
+  directory={{
+    root,
+    visibility: {
+      hiddenPathPrefixes: ["/home/agent/tax_toolkit"],
+    },
+  }}
+  session={{
+    messages,
+    partMap,
+    isStreaming: false,
+    presentation: "timeline",
+    onSend: console.log,
+  }}
+  runtime={{
+    title: "Runtime",
+  }}
+/>;
+```
+
+`FileTreeVisibilityOptions` is a UI-layer policy only. Sensitive paths still need to be hidden and denied by the app/backend layer.
+
 ## Subpath Exports
 
 | Subpath | Description |
 |---------|-------------|
 | `/primitives` | Button, Card, Dialog, Badge, Input, Select, Table, Tabs, Toast, etc. |
-| `/chat` | ChatContainer, ChatInput, ChatMessage, MessageList |
+| `/chat` | ChatContainer, ChatInput, ChatMessage, AgentTimeline, ThinkingIndicator |
 | `/run` | ToolCallFeed, RunGroup, InlineToolItem, ExpandedToolDetail |
-| `/workspace` | WorkspaceLayout, StatusBar, StatusBanner, TerminalPanel |
-| `/files` | FileTree, FilePreview, FileTabs |
+| `/workspace` | SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
+| `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
+| `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane |
 | `/dashboard` | DashboardLayout, BillingDashboard, UsageChart, ProfileSelector |
 | `/editor` | TipTap collaborative editor (requires optional peers) |
 | `/terminal` | xterm.js terminal view (requires optional peers) |
@@ -59,6 +99,7 @@ import "@tangle-network/sandbox-ui/styles";
 - [Tailwind CSS](https://tailwindcss.com/) v4
 - [Lucide](https://lucide.dev/) icons
 - [CVA](https://cva.style/) for variant management
+- Shared semantic tokens for `operator`, `builder`, and `consumer` sandbox themes
 - ESM-only, tree-shakeable, fully typed
 
 ## License

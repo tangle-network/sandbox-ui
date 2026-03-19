@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ChatMessage, type MessageRole } from "./chat-message";
-import { ThinkingIndicator } from "./chat-message-list";
+import { ThinkingIndicator } from "./thinking-indicator";
 import { type ToolCallData } from "../run/tool-call-feed";
 import { ToolCallGroup, ToolCallStep } from "../run/tool-call-step";
 

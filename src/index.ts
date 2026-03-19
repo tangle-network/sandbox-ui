@@ -82,11 +82,11 @@ export {
 
 // --- Chat ---
 export { ChatMessage, type ChatMessageProps, type MessageRole } from "./chat/chat-message";
-export { ChatMessageList, ThinkingIndicator, type ChatMessageListProps, type Message } from "./chat/chat-message-list";
 export { ChatInput, type ChatInputProps, type PendingFile } from "./chat/chat-input";
 export { ChatContainer } from "./chat/chat-container";
 export { MessageList } from "./chat/message-list";
 export { UserMessage } from "./chat/user-message";
+export { ThinkingIndicator, type ThinkingIndicatorProps } from "./chat/thinking-indicator";
 export {
   AgentTimeline,
   type AgentTimelineProps,

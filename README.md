@@ -71,6 +71,98 @@ const partMap: Record<string, SessionPart[]> = {};
 
 `FileTreeVisibilityOptions` is a UI-layer policy only. Sensitive paths still need to be hidden and denied by the app/backend layer.
 
+## Theming And Retheming
+
+There is a built-in Tangle default theme, but consumers can restyle the library in three layers:
+
+1. Pick a built-in surface theme
+2. Override semantic tokens
+3. Wrap higher-level components when you want a different product composition
+
+### 1. Pick a Built-in Theme
+
+`WorkspaceLayout` and `SandboxWorkbench` support:
+
+- `theme="operator"`
+- `theme="builder"`
+- `theme="consumer"`
+
+They also support `density="comfortable"` and `density="compact"`.
+
+```tsx
+<SandboxWorkbench
+  layout={{
+    theme: "consumer",
+    density: "comfortable",
+  }}
+  session={{ ... }}
+/>
+```
+
+If you are not using `SandboxWorkbench`, you can set the same attributes yourself:
+
+```tsx
+<div data-sandbox-ui data-sandbox-theme="consumer" data-density="compact">
+  <YourSandboxApp />
+</div>
+```
+
+### 2. Override Semantic Tokens
+
+The shared visual contract lives in [src/styles/tokens.css](./src/styles/tokens.css). The important tokens are:
+
+- surfaces: `--bg-root`, `--bg-card`, `--bg-elevated`, `--bg-section`, `--bg-input`
+- text: `--text-primary`, `--text-secondary`, `--text-muted`
+- brand: `--brand-cool`, `--brand-glow`, `--brand-purple`
+- borders: `--border-subtle`, `--border-default`, `--border-accent`
+- radii/shadows: `--radius-*`, `--shadow-card`, `--shadow-dropdown`
+
+App-level overrides can be scoped to a wrapper:
+
+```css
+.tax-theme {
+  --brand-cool: hsl(187 75% 54%);
+  --brand-glow: hsl(164 74% 56%);
+  --bg-root: hsl(222 18% 9%);
+  --bg-card: hsl(223 20% 12%);
+  --border-accent: hsl(187 75% 48% / 0.35);
+  --font-sans: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+}
+```
+
+```tsx
+<div className="tax-theme">
+  <SandboxWorkbench ... />
+</div>
+```
+
+### 3. Know When To Wrap Instead Of Override
+
+Token overrides are the right tool when you want:
+
+- a different brand color system
+- different typography
+- tighter or roomier density
+- a more consumer-facing or operator-facing tone
+
+Wrap or compose on lower-level exports when you want:
+
+- a different page shell
+- different header chrome
+- a different artifact tab model
+- app-specific empty states and actions
+
+For that, compose directly from:
+
+- `/workspace`
+- `/chat`
+- `/run`
+- `/files`
+
+### Current Reality
+
+Retheming is absolutely supported, but the documentation was thinner than it should be. The token layer is strong; the higher-level surfaces are themeable, but more opinionated. For a radically different product look, prefer keeping the token contract and wrapping the higher-level workbench/chat surfaces rather than fighting every internal class.
+
 ## Subpath Exports
 
 | Subpath | Description |

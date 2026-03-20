@@ -98,8 +98,8 @@ export function ChatInput({
             <span
               key={f.id}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs shadow-[var(--shadow-card)]",
-                "border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)]",
+                "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs shadow-[var(--shadow-card)] backdrop-blur-sm",
+                "border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))]",
                 f.status === "error" && "border-[var(--code-error)]/30 text-[var(--code-error)]",
                 f.status !== "error" && "text-[var(--text-secondary)]",
               )}
@@ -124,8 +124,17 @@ export function ChatInput({
       )}
 
       {/* Input row */}
-      <div className="rounded-[calc(var(--radius-xl)+2px)] border border-[var(--border-subtle)] bg-[linear-gradient(135deg,rgba(98,114,243,0.08),rgba(255,255,255,0.02)_40%,transparent)] p-[1px] shadow-[var(--shadow-card)]">
-        <div className="flex items-end gap-2 rounded-[var(--radius-xl)] border border-white/4 bg-[var(--bg-card)] px-3 py-3 transition-colors focus-within:border-[var(--border-accent)]">
+      <div className="rounded-[28px] border border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.16),transparent_42%),linear-gradient(135deg,rgba(98,114,243,0.12),rgba(255,255,255,0.03)_42%,transparent)] p-[1px] shadow-[var(--shadow-accent)]">
+        <div className="rounded-[26px] border border-white/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_35%),var(--bg-card)] px-3 py-3.5 transition-colors focus-within:border-[var(--border-accent)]">
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+              Agent Command Deck
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)]">
+              {isStreaming ? "Streaming response" : "Ready for next instruction"}
+            </div>
+          </div>
+          <div className="flex items-end gap-2">
         {/* Attach button */}
         {onAttach && (
           <>
@@ -134,7 +143,7 @@ export function ChatInput({
               onClick={handleAttachClick}
               disabled={isStreaming}
               aria-label="Attach files"
-              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -159,7 +168,7 @@ export function ChatInput({
           disabled={isStreaming || disabled}
           rows={1}
           aria-label="Message input"
-          className="min-h-[28px] max-h-[160px] flex-1 resize-none bg-transparent text-sm leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
+          className="min-h-[36px] max-h-[160px] flex-1 resize-none bg-transparent text-[15px] leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
         />
 
         {/* Send / Cancel */}
@@ -168,7 +177,7 @@ export function ChatInput({
             type="button"
             onClick={onCancel}
             aria-label="Stop response"
-            className="mb-0.5 shrink-0 rounded-[var(--radius-md)] bg-[var(--code-error)]/15 p-2 text-[var(--code-error)] transition-colors hover:bg-[var(--code-error)]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--code-error)]/50"
+            className="mb-0.5 shrink-0 rounded-[var(--radius-lg)] border border-[var(--code-error)]/20 bg-[var(--code-error)]/14 p-2.5 text-[var(--code-error)] transition-colors hover:bg-[var(--code-error)]/24 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--code-error)]/50"
           >
             <Square className="h-4 w-4" />
           </button>
@@ -178,11 +187,12 @@ export function ChatInput({
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
-            className="mb-0.5 shrink-0 rounded-[var(--radius-md)] bg-[var(--brand-cool)]/15 p-2 text-[var(--brand-cool)] transition-colors hover:bg-[var(--brand-cool)]/25 disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+            className="mb-0.5 shrink-0 rounded-[var(--radius-lg)] border border-[var(--border-accent)] bg-[linear-gradient(135deg,rgba(82,164,255,0.24),rgba(82,164,255,0.08))] p-2.5 text-[var(--brand-cool)] transition-colors hover:translate-y-[-1px] hover:bg-[linear-gradient(135deg,rgba(82,164,255,0.28),rgba(82,164,255,0.12))] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
           >
             <Send className="h-4 w-4" />
           </button>
         )}
+          </div>
         </div>
       </div>
 
@@ -194,7 +204,7 @@ export function ChatInput({
               type="button"
               onClick={onModelClick}
               aria-label={`Select model, current model ${modelLabel}`}
-              className="inline-flex items-center gap-1 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/55 px-2.5 py-1 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--border-accent)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2.5 py-1 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--border-accent)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--code-success)]" />
               {modelLabel}

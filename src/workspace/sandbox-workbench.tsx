@@ -21,6 +21,9 @@ import { DirectoryPane, type DirectoryPaneProps } from "./directory-pane";
 import { RuntimePane, type RuntimePaneProps } from "./runtime-pane";
 import { WorkspaceLayout, type WorkspaceLayoutProps } from "./workspace-layout";
 
+export type SandboxWorkbenchPlacement = "left" | "right" | "bottom" | "hidden";
+type SandboxWorkbenchRegion = Exclude<SandboxWorkbenchPlacement, "hidden">;
+
 interface SandboxWorkbenchArtifactBase {
   id: string;
   title: ReactNode;
@@ -74,11 +77,15 @@ export interface SandboxWorkbenchSessionProps extends Omit<ChatContainerProps, "
   subtitle?: ReactNode;
   meta?: ReactNode;
   headerActions?: ReactNode;
+  renderRunActions?: ChatContainerProps["renderRunActions"];
+  renderUserMessageActions?: ChatContainerProps["renderUserMessageActions"];
+  renderToolActions?: ChatContainerProps["renderToolActions"];
 }
 
 export interface SandboxWorkbenchLayoutOptions
   extends Pick<
     WorkspaceLayoutProps,
+    | "bottomHeader"
     | "defaultBottomOpen"
     | "defaultLeftOpen"
     | "defaultLeftWidth"
@@ -92,7 +99,11 @@ export interface SandboxWorkbenchLayoutOptions
     | "persistenceKey"
     | "resizable"
     | "theme"
-  > {}
+  > {
+  directoryPlacement?: SandboxWorkbenchPlacement;
+  artifactPlacement?: SandboxWorkbenchPlacement;
+  runtimePlacement?: SandboxWorkbenchPlacement;
+}
 
 export interface SandboxWorkbenchProps {
   title?: ReactNode;
@@ -254,6 +265,69 @@ function renderArtifact(artifact: SandboxWorkbenchArtifact) {
   }
 }
 
+interface WorkbenchRegionSection {
+  key: "directory" | "artifacts" | "runtime";
+  content: ReactNode;
+}
+
+function regionHeader(
+  sections: WorkbenchRegionSection[],
+  fallback: ReactNode,
+) {
+  if (sections.length !== 1) {
+    return fallback;
+  }
+
+  switch (sections[0]?.key) {
+    case "directory":
+      return (
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <FolderTree className="h-3.5 w-3.5" />
+          Directory
+        </div>
+      );
+    case "artifacts":
+      return (
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <LayoutPanelTop className="h-3.5 w-3.5" />
+          Artifacts
+        </div>
+      );
+    case "runtime":
+      return (
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <Bot className="h-3.5 w-3.5" />
+          Runtime
+        </div>
+      );
+    default:
+      return fallback;
+  }
+}
+
+function renderRegion(
+  sections: WorkbenchRegionSection[],
+  region: SandboxWorkbenchRegion,
+) {
+  if (sections.length === 0) return undefined;
+  if (sections.length === 1) return sections[0]?.content;
+
+  return (
+    <div
+      className={cn(
+        "flex min-h-0 h-full gap-3 p-3",
+        region === "bottom" ? "flex-col" : "flex-col",
+      )}
+    >
+      {sections.map((section) => (
+        <div key={section.key} className="min-h-0 flex-1 overflow-hidden">
+          {section.content}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * SandboxWorkbench — high-level composition that turns sandbox-ui primitives
  * into a complete session surface: directory, agent timeline, artifacts, and
@@ -303,12 +377,12 @@ export function SandboxWorkbench({
   };
 
   const centerHeader = (
-    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[linear-gradient(135deg,rgba(98,114,243,0.12),rgba(255,255,255,0.02)_38%,transparent_72%)] px-4 py-3 shadow-[var(--shadow-card)]">
+    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[calc(var(--radius-xl)+2px)] border border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(135deg,rgba(98,114,243,0.14),rgba(255,255,255,0.03)_42%,transparent_76%)] px-4 py-3.5 shadow-[var(--shadow-accent)] backdrop-blur-sm">
       <div className="min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-cool)]">
           Tangle Sandbox
         </div>
-        <div className="truncate text-base font-semibold text-[var(--text-primary)]">{title}</div>
+        <div className="truncate text-[17px] font-semibold tracking-[0.01em] text-[var(--text-primary)]">{title}</div>
         {subtitle && <div className="truncate text-sm text-[var(--text-muted)]">{subtitle}</div>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
@@ -336,7 +410,7 @@ export function SandboxWorkbench({
     </ArtifactPane>
   );
 
-  const right = artifacts.length > 0 ? (
+  const artifactPanel = artifacts.length > 0 ? (
     <section className="flex h-full min-h-0 flex-col bg-[var(--bg-dark)]">
       <ArtifactTabs
         artifacts={artifacts}
@@ -362,35 +436,63 @@ export function SandboxWorkbench({
     </section>
   ) : null;
 
+  const directoryPlacement = layout?.directoryPlacement ?? (directory ? "left" : "hidden");
+  const artifactPlacement = layout?.artifactPlacement ?? (artifacts.length > 0 ? "right" : "hidden");
+  const runtimePlacement = layout?.runtimePlacement ?? (runtime ? "bottom" : "hidden");
+
+  const regionSections: Record<SandboxWorkbenchRegion, WorkbenchRegionSection[]> = {
+    left: [],
+    right: [],
+    bottom: [],
+  };
+
+  if (directory && directoryPlacement !== "hidden") {
+    regionSections[directoryPlacement].push({
+      key: "directory",
+      content: <DirectoryPane {...directory} className="h-full" />,
+    });
+  }
+
+  if (artifactPanel && artifactPlacement !== "hidden") {
+    regionSections[artifactPlacement].push({
+      key: "artifacts",
+      content: artifactPanel,
+    });
+  }
+
+  if (runtime && runtimePlacement !== "hidden") {
+    regionSections[runtimePlacement].push({
+      key: "runtime",
+      content: <RuntimePane {...runtime} className="h-full" />,
+    });
+  }
+
+  const left = renderRegion(regionSections.left, "left");
+  const right = renderRegion(regionSections.right, "right");
+  const bottom = renderRegion(regionSections.bottom, "bottom");
+
+  const genericPanelsHeader = (
+    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      Workspace Panels
+    </span>
+  );
+
   return (
     <WorkspaceLayout
-      left={directory ? <DirectoryPane {...directory} className="h-full" /> : undefined}
-      leftHeader={
-        directory ? (
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-            <FolderTree className="h-3.5 w-3.5" />
-            Directory
-          </div>
-        ) : undefined
-      }
+      left={left}
+      leftHeader={left ? regionHeader(regionSections.left, genericPanelsHeader) : undefined}
       center={center}
       centerHeader={centerHeader}
       right={right}
-      rightHeader={
-        right ? (
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-            <LayoutPanelTop className="h-3.5 w-3.5" />
-            Artifacts
-          </div>
-        ) : undefined
-      }
-      bottom={runtime ? <RuntimePane {...runtime} className="h-full" /> : undefined}
+      rightHeader={right ? regionHeader(regionSections.right, genericPanelsHeader) : undefined}
+      bottom={bottom}
+      bottomHeader={bottom ? regionHeader(regionSections.bottom, genericPanelsHeader) : undefined}
       theme={layout?.theme ?? "operator"}
       density={layout?.density ?? "comfortable"}
       persistenceKey={layout?.persistenceKey}
-      defaultLeftOpen={layout?.defaultLeftOpen ?? Boolean(directory)}
-      defaultRightOpen={layout?.defaultRightOpen ?? artifacts.length > 0}
-      defaultBottomOpen={layout?.defaultBottomOpen ?? Boolean(runtime)}
+      defaultLeftOpen={layout?.defaultLeftOpen ?? Boolean(left)}
+      defaultRightOpen={layout?.defaultRightOpen ?? Boolean(right)}
+      defaultBottomOpen={layout?.defaultBottomOpen ?? Boolean(bottom)}
       defaultLeftWidth={layout?.defaultLeftWidth}
       defaultRightWidth={layout?.defaultRightWidth}
       minLeftWidth={layout?.minLeftWidth}

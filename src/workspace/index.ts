@@ -3,6 +3,15 @@ export { ArtifactPane, type ArtifactPaneProps } from "./artifact-pane";
 export { DirectoryPane, type DirectoryPaneProps } from "./directory-pane";
 export { RuntimePane, type RuntimePaneProps } from "./runtime-pane";
 export {
+  SessionSidebar,
+  type SessionSidebarProps,
+  type SessionSidebarItem,
+  type SessionSidebarLink,
+  type SessionSidebarFilter,
+  type SessionSidebarBadge,
+} from "./session-sidebar";
+export { SessionActivityMonitor, type SessionActivityMonitorProps } from "./session-activity-monitor";
+export {
   SandboxWorkbench,
   AgentWorkbench,
   type SandboxWorkbenchProps,

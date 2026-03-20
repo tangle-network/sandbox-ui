@@ -15,6 +15,13 @@ export type {
   CompleteAssistantMessageOptions,
   ApplySdkEventOptions,
 } from "./hooks/use-sdk-session";
+export { useRealtimeSession, RealtimeSessionRegistry } from "./hooks/use-realtime-session";
+export type {
+  RealtimeSessionOptions,
+  RealtimeSessionState,
+  RealtimeSessionTarget,
+  RealtimeSessionRegistryProps,
+} from "./hooks/use-realtime-session";
 export { useSessionStream } from "./hooks/use-session-stream";
 export type {
   SessionInfo,

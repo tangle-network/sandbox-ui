@@ -192,3 +192,8 @@ export { copyText } from "./utils/copy-text";
 export { formatDuration, truncateText } from "./utils/format";
 export { timeAgo } from "./utils/time-ago";
 export { getToolCategory, getToolDisplayMetadata, getToolErrorText, TOOL_CATEGORY_ICONS } from "./utils/tool-display";
+
+export { DropZone } from "./primitives/drop-zone";
+export type { DropZoneProps } from "./primitives/drop-zone";
+export { UploadProgress } from "./primitives/upload-progress";
+export type { UploadProgressProps, UploadFile } from "./primitives/upload-progress";

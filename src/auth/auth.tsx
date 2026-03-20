@@ -105,7 +105,7 @@ export function UserMenu({
     : user.email.slice(0, 2).toUpperCase();
 
   const avatarGradient = {
-    sandbox: "from-purple-500 to-violet-500",
+    sandbox: "bg-[image:var(--accent-gradient-strong)]",
   }[variant];
 
   const handleLogout = () => {
@@ -126,7 +126,7 @@ export function UserMenu({
             <AvatarImage src={undefined} alt={user.name ?? user.email} />
             <AvatarFallback
               className={cn(
-                "bg-gradient-to-r text-white text-xs",
+                "text-white text-xs",
                 avatarGradient,
               )}
             >

@@ -1,6 +1,6 @@
 {
   "name": "@tangle-network/sandbox-ui",
-  "version": "0.3.0",
+  "version": "0.3.3",
   "description": "Unified UI component library for Tangle Sandbox — primitives, chat, dashboard, terminal, editor, and workspace components",
   "type": "module",
   "main": "dist/index.js",
@@ -61,6 +61,10 @@
     "./hooks": {
       "import": "./dist/hooks.js",
       "types": "./dist/hooks.d.ts"
+    },
+    "./sdk-hooks": {
+      "import": "./dist/sdk-hooks.js",
+      "types": "./dist/sdk-hooks.d.ts"
     },
     "./stores": {
       "import": "./dist/stores.js",

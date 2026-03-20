@@ -44,7 +44,7 @@
 }
 
 @layer utilities {
-  /* Gradient text -- Tangle purple */
+  /* Gradient text -- Tangle default accent */
   .text-gradient-sandbox {
     background-image: var(--tangle-gradient);
     @apply bg-clip-text text-transparent;

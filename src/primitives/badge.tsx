@@ -20,7 +20,7 @@ const badgeVariants = cva(
           "border-red-500/20 border-transparent bg-red-500/10 text-red-400",
         info: "border-blue-500/20 border-transparent bg-blue-500/10 text-blue-400",
         sandbox:
-          "border-purple-500/20 border-transparent bg-purple-500/10 text-purple-400",
+          "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
       },
     },
     defaultVariants: {

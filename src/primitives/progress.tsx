@@ -15,7 +15,7 @@ const Progress = React.forwardRef<
   ) => {
     const indicatorVariants = {
       default: "bg-primary",
-      sandbox: "bg-gradient-to-r from-purple-500 to-violet-500",
+      sandbox: "bg-[image:var(--accent-gradient-strong)]",
     };
 
     return (

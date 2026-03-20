@@ -85,7 +85,7 @@ export interface WorkspaceLayoutProps {
   /** Disable resize handles */
   resizable?: boolean;
   /** Visual theme for sandbox surfaces */
-  theme?: "operator" | "builder" | "consumer";
+  theme?: "operator" | "builder" | "consumer" | "vault";
   /** Density mode for control sizing */
   density?: "comfortable" | "compact";
   /** Accessible label for the left panel */
@@ -334,7 +334,7 @@ export function WorkspaceLayout({
       data-sandbox-theme={theme}
       data-density={density}
       className={cn(
-        "flex h-screen flex-col overflow-hidden bg-[radial-gradient(circle_at_top,rgba(98,114,243,0.14),transparent_34%),linear-gradient(180deg,var(--bg-root),var(--bg-dark)_82%)] text-[var(--text-primary)] font-[var(--font-sans)]",
+        "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-[var(--text-primary)] font-[var(--font-sans)]",
         className,
       )}
     >

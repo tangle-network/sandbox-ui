@@ -29,14 +29,16 @@ export interface PricingPageProps {
   onSelectTier: (tierId: string) => void;
   variant?: "sandbox";
   loading?: boolean;
+  className?: string;
+  cardClassName?: string;
 }
 
 const variantColors = {
   sandbox: {
-    accent: "text-purple-400",
-    border: "border-purple-500",
-    bg: "bg-purple-500/10",
-    ring: "ring-purple-500/50",
+    accent: "text-[var(--accent-text)]",
+    border: "border-[var(--border-accent)]",
+    bg: "bg-[var(--accent-surface-soft)]",
+    ring: "ring-[hsl(var(--primary)/0.35)]",
   },
 };
 
@@ -75,11 +77,13 @@ export function PricingPage({
   onSelectTier,
   variant = "sandbox",
   loading = false,
+  className,
+  cardClassName,
 }: PricingPageProps) {
   const colors = variantColors[variant];
 
   return (
-    <div className="w-full space-y-8">
+    <div className={cn("w-full space-y-8", className)}>
       {/* Billing Period Toggle */}
       <div className="flex items-center justify-center gap-4">
         <button
@@ -126,6 +130,7 @@ export function PricingPage({
               variant={variant}
               className={cn(
                 "relative flex flex-col",
+                cardClassName,
                 tier.recommended &&
                   cn(colors.border, "border-2 ring-2", colors.ring),
                 isCurrentTier && "ring-2 ring-offset-2 ring-offset-background",

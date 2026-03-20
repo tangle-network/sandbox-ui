@@ -16,6 +16,7 @@ export default defineConfig({
     auth: "src/auth/index.ts",
     pages: "src/pages/index.ts",
     hooks: "src/hooks/index.ts",
+    "sdk-hooks": "src/sdk-hooks.ts",
     stores: "src/stores/index.ts",
     types: "src/types/index.ts",
     utils: "src/utils/index.ts",

@@ -69,7 +69,7 @@ export const InlineThinkingItem = memo(
                 className={cn(
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
                   isActive
-                    ? "border-[var(--brand-purple)]/35 bg-[var(--brand-purple)]/12 text-[var(--brand-purple)] shadow-[var(--shadow-glow)]"
+                    ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)] shadow-[var(--shadow-glow)]"
                     : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)]",
                 )}
               >

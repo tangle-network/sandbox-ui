@@ -54,9 +54,13 @@
   /* Brand gradients */
   --tangle-gradient: linear-gradient(135deg, hsl(226 84% 66%), hsl(199 89% 60%));
   --tangle-gradient-text: linear-gradient(45deg, hsl(226 84% 72%), hsl(199 89% 66%));
+  --accent-gradient-strong: linear-gradient(135deg, hsl(var(--hsl-primary)), var(--brand-glow));
+  --accent-surface-soft: hsl(var(--hsl-primary) / 0.12);
+  --accent-surface-strong: hsl(var(--hsl-primary) / 0.18);
+  --accent-text: var(--brand-cool);
 
   /* Surfaces */
-  --bg-root: hsl(var(--hsl-background));
+  --bg-root: radial-gradient(circle at top, rgba(98, 114, 243, 0.14), transparent 34%), linear-gradient(180deg, hsl(var(--hsl-background)), hsl(246 19% 9%) 82%);
   --bg-dark: hsl(246 19% 9%);
   --bg-card: hsl(var(--hsl-card));
   --bg-elevated: hsl(245 20% 12%);
@@ -104,6 +108,7 @@
   --shadow-card: 0 18px 60px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(118, 146, 255, 0.08);
   --shadow-dropdown: 0 24px 80px rgba(0, 0, 0, 0.45);
   --shadow-glow: 0 0 40px rgba(96, 165, 250, 0.14);
+  --shadow-accent: 0 18px 48px rgba(0, 0, 0, 0.24), 0 0 0 1px hsl(var(--hsl-primary) / 0.12);
 
   /* Radii */
   --radius-sm: 10px;
@@ -135,6 +140,7 @@
   --brand-cool: hsl(214 90% 68%);
   --brand-glow: hsl(190 92% 62%);
   --tangle-gradient: linear-gradient(135deg, hsl(214 90% 63%), hsl(190 92% 62%));
+  --accent-gradient-strong: linear-gradient(135deg, hsl(214 90% 63%), hsl(190 92% 62%));
 }
 
 [data-sandbox-theme="consumer"] {
@@ -146,6 +152,83 @@
   --brand-cool: hsl(187 75% 54%);
   --brand-glow: hsl(164 74% 56%);
   --tangle-gradient: linear-gradient(135deg, hsl(187 75% 48%), hsl(164 74% 56%));
+  --accent-gradient-strong: linear-gradient(135deg, hsl(187 75% 48%), hsl(164 74% 56%));
+}
+
+[data-sandbox-theme="vault"] {
+  /* Vault AI — navy/emerald fintech palette matching tangle.tools/taxes */
+  --hsl-background: 210 17% 97%;
+  --hsl-foreground: 210 20% 10%;
+  --hsl-card: 0 0% 100%;
+  --hsl-card-foreground: 210 20% 10%;
+  --hsl-popover: 0 0% 100%;
+  --hsl-popover-foreground: 210 20% 10%;
+  --hsl-primary: 212 100% 10%;
+  --hsl-primary-foreground: 0 0% 100%;
+  --hsl-secondary: 152 100% 22%;
+  --hsl-secondary-foreground: 0 0% 100%;
+  --hsl-muted: 210 14% 95%;
+  --hsl-muted-foreground: 215 10% 40%;
+  --hsl-accent: 210 20% 94%;
+  --hsl-accent-foreground: 210 20% 10%;
+  --hsl-destructive: 0 72% 41%;
+  --hsl-destructive-foreground: 0 0% 100%;
+  --hsl-border: 214 18% 88%;
+  --hsl-input: 214 18% 90%;
+  --hsl-ring: 152 100% 22%;
+  --hsl-success: 152 82% 34%;
+  --hsl-warning: 41 96% 50%;
+  --hsl-info: 212 80% 50%;
+
+  --bg-root: #f8f9fa;
+  --bg-dark: #f3f4f5;
+  --bg-card: #ffffff;
+  --bg-elevated: #edeeef;
+  --bg-section: #f3f4f5;
+  --bg-input: #f3f4f5;
+  --bg-hover: #e7e8e9;
+  --bg-selection: rgba(0, 110, 42, 0.08);
+
+  --text-primary: #001831;
+  --text-secondary: #43474e;
+  --text-muted: #73777f;
+
+  --brand-primary: #001831;
+  --brand-strong: #002d54;
+  --brand-cool: #006e2a;
+  --brand-glow: #3ce36a;
+  --brand-purple: #001831;
+  --brand-vibrant: #006e2a;
+
+  --border-subtle: rgba(0, 24, 49, 0.06);
+  --border-default: rgba(0, 24, 49, 0.1);
+  --border-hover: rgba(0, 24, 49, 0.15);
+  --border-accent: rgba(0, 110, 42, 0.2);
+  --border-accent-hover: rgba(0, 110, 42, 0.4);
+
+  --btn-primary-bg: #001831;
+  --btn-primary-hover: #002d54;
+  --btn-cta-bg: #006e2a;
+  --btn-cta-text: #ffffff;
+
+  --code-keyword: #002d54;
+  --code-string: #006e2a;
+  --code-function: #001831;
+  --code-number: #b45309;
+  --code-success: #006e2a;
+  --code-comment: #73777f;
+  --code-error: #ba1a1a;
+
+  --shadow-card: 0 20px 48px rgba(0, 24, 49, 0.06);
+  --shadow-dropdown: 0 24px 64px rgba(0, 24, 49, 0.12);
+  --shadow-glow: 0 0 40px rgba(0, 110, 42, 0.08);
+
+  --tangle-gradient: linear-gradient(135deg, #001831, #002d54);
+  --tangle-gradient-text: linear-gradient(135deg, #001831, #006e2a);
+  --accent-gradient-strong: linear-gradient(135deg, #001831, #002d54);
+
+  --font-sans: "Inter", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 [data-density="compact"] {

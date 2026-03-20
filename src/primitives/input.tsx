@@ -19,7 +19,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const variants = {
       default: "border-input focus:ring-ring",
       sandbox:
-        "border-purple-500/20 focus:border-purple-500/50 focus:ring-purple-500/20",
+        "border-[var(--border-accent)] focus:border-[var(--border-accent-hover)] focus:ring-[var(--border-accent)]",
     };
 
     const input = (
@@ -81,7 +81,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const variants = {
       default: "border-input focus:ring-ring",
       sandbox:
-        "border-purple-500/20 focus:border-purple-500/50 focus:ring-purple-500/20",
+        "border-[var(--border-accent)] focus:border-[var(--border-accent-hover)] focus:ring-[var(--border-accent)]",
     };
 
     const textarea = (

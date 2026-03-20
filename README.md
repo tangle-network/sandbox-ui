@@ -41,7 +41,7 @@ If you are building on the sandbox SDK directly, use `useSdkSession` to turn raw
 import {
   SandboxWorkbench,
 } from "@tangle-network/sandbox-ui";
-import { useSdkSession } from "@tangle-network/sandbox-ui/hooks";
+import { useSdkSession } from "@tangle-network/sandbox-ui/sdk-hooks";
 
 function App() {
   const {
@@ -164,8 +164,9 @@ The shared visual contract lives in [src/styles/tokens.css](./src/styles/tokens.
 - surfaces: `--bg-root`, `--bg-card`, `--bg-elevated`, `--bg-section`, `--bg-input`
 - text: `--text-primary`, `--text-secondary`, `--text-muted`
 - brand: `--brand-cool`, `--brand-glow`, `--brand-purple`
+- accent surfaces: `--accent-gradient-strong`, `--accent-surface-soft`, `--accent-surface-strong`, `--accent-text`
 - borders: `--border-subtle`, `--border-default`, `--border-accent`
-- radii/shadows: `--radius-*`, `--shadow-card`, `--shadow-dropdown`
+- radii/shadows: `--radius-*`, `--shadow-card`, `--shadow-dropdown`, `--shadow-accent`
 
 App-level overrides can be scoped to a wrapper:
 
@@ -202,6 +203,14 @@ Wrap or compose on lower-level exports when you want:
 - a different artifact tab model
 - app-specific empty states and actions
 
+The higher-order dashboard/billing surfaces are now accent-token driven rather than hardcoded to the default Tangle look. The main seams are:
+
+- `DashboardLayout.className`, `sidebarClassName`, `contentClassName`
+- `BillingDashboard.className`, `cardClassName`
+- `PricingCards.className`, `cardClassName`
+- `UsageChart.className`
+- `StandalonePricingPage.className`
+
 For that, compose directly from:
 
 - `/workspace`
@@ -230,6 +239,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/auth` | AuthHeader, GitHubLoginButton, UserMenu |
 | `/pages` | Pre-built billing, pricing, profiles pages |
 | `/hooks` | useSSEStream, useAuth, usePtySession, useRunGroups, etc. |
+| `/sdk-hooks` | Lightweight session/stream hooks without the React Query CRUD hook bundle |
 | `/stores` | Session and chat nanostores |
 | `/types` | TypeScript types for messages, parts, runs, sessions |
 | `/utils` | cn, formatDuration, timeAgo, tool display helpers |

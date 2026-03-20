@@ -40,6 +40,9 @@ export interface DashboardLayoutProps {
   onLogout?: () => void;
   onSettingsClick?: () => void;
   settingsHref?: string;
+  className?: string;
+  sidebarClassName?: string;
+  contentClassName?: string;
   /** Custom link component (e.g., Next.js Link). Use any type to support various router implementations. */
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>;
@@ -47,8 +50,8 @@ export interface DashboardLayoutProps {
 
 const variantStyles = {
   sandbox: {
-    activeNav: "bg-purple-500/10 text-purple-400",
-    userGradient: "from-purple-500 to-violet-500",
+    activeNav: "bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
+    userGradient: "bg-[image:var(--accent-gradient-strong)]",
   },
 };
 
@@ -197,6 +200,9 @@ export function DashboardLayout({
   onLogout,
   onSettingsClick,
   settingsHref = "/dashboard/settings",
+  className,
+  sidebarClassName,
+  contentClassName,
   LinkComponent = DefaultLink,
 }: DashboardLayoutProps) {
   const styles = variantStyles[variant];
@@ -252,7 +258,7 @@ export function DashboardLayout({
             >
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r",
+                  "flex h-8 w-8 items-center justify-center rounded-full",
                   styles.userGradient,
                 )}
               >
@@ -310,7 +316,7 @@ export function DashboardLayout({
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className={cn("flex min-h-screen bg-background", className)}>
       {/* Mobile header */}
       <header className="fixed top-0 right-0 left-0 z-40 flex h-16 items-center justify-between border-border border-b bg-card/95 px-4 backdrop-blur-xl md:hidden">
         <Logo variant={variant} size="sm" />
@@ -342,6 +348,7 @@ export function DashboardLayout({
       <aside
         className={cn(
           "fixed top-16 bottom-0 left-0 z-30 flex w-64 flex-col border-border border-r bg-card/95 backdrop-blur-xl transition-transform duration-200 md:hidden",
+          sidebarClassName,
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -349,12 +356,17 @@ export function DashboardLayout({
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="fixed top-0 bottom-0 left-0 hidden w-64 flex-col border-border border-r bg-card/50 backdrop-blur-xl md:flex">
+      <aside
+        className={cn(
+          "fixed top-0 bottom-0 left-0 hidden w-64 flex-col border-border border-r bg-card/50 backdrop-blur-xl md:flex",
+          sidebarClassName,
+        )}
+      >
         <SidebarContent />
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 pt-16 md:ml-64 md:pt-0">
+      <main className={cn("flex-1 pt-16 md:ml-64 md:pt-0", contentClassName)}>
         <div className="p-4 md:p-8">
           <div className="mx-auto max-w-6xl">{children}</div>
         </div>

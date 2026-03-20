@@ -34,13 +34,16 @@ export interface BillingDashboardProps {
   onManageSubscription: () => void;
   onAddCredits: () => void;
   variant?: "sandbox";
+  className?: string;
+  cardClassName?: string;
 }
 
 const variantColors = {
   sandbox: {
-    accent: "text-purple-400",
-    accentBg: "bg-purple-500/10",
-    border: "border-purple-500/20",
+    accent: "text-[var(--accent-text)]",
+    accentBg: "bg-[var(--accent-surface-soft)]",
+    border: "border-[var(--border-accent)]",
+    progress: "bg-[image:var(--accent-gradient-strong)]",
   },
 };
 
@@ -146,6 +149,8 @@ export function BillingDashboard({
   onManageSubscription,
   onAddCredits,
   variant = "sandbox",
+  className,
+  cardClassName,
 }: BillingDashboardProps) {
   const colors = variantColors[variant];
   const totalCredits = balance.available + balance.used;
@@ -156,9 +161,9 @@ export function BillingDashboard({
   );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className={cn("grid gap-6 lg:grid-cols-3", className)}>
       {/* Current Plan Card */}
-      <Card variant={variant} className="lg:col-span-1">
+      <Card variant={variant} className={cn("lg:col-span-1", cardClassName)}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -214,7 +219,7 @@ export function BillingDashboard({
       </Card>
 
       {/* Credit Balance Card */}
-      <Card variant={variant} className="lg:col-span-1">
+      <Card variant={variant} className={cn("lg:col-span-1", cardClassName)}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CoinsIcon className={colors.accent} />
@@ -245,7 +250,7 @@ export function BillingDashboard({
       </Card>
 
       {/* Usage Breakdown Card */}
-      <Card variant={variant} className="lg:col-span-1">
+      <Card variant={variant} className={cn("lg:col-span-1", cardClassName)}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <ChartIcon className={colors.accent} />
@@ -284,7 +289,7 @@ export function BillingDashboard({
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
-                          variant === "sandbox" && "bg-purple-500",
+                          variant === "sandbox" && colors.progress,
                         )}
                         style={{ width: `${modelPercent}%` }}
                       />

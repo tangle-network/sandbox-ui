@@ -12,7 +12,7 @@ const Card = React.forwardRef<
     default: "bg-card border-border",
     glass: "bg-card/60 backdrop-blur-xl border-border/50",
     sandbox:
-      "bg-card/80 backdrop-blur-xl border-purple-500/20 shadow-lg shadow-purple-500/5",
+      "bg-card/80 backdrop-blur-xl border-[var(--border-accent)] shadow-[var(--shadow-accent)]",
   };
 
   return (

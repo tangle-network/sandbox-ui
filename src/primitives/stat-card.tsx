@@ -30,7 +30,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
   ) => {
     const iconColors = {
       default: "text-muted-foreground",
-      sandbox: "text-purple-400",
+      sandbox: "text-[var(--accent-text)]",
     };
 
     const trendColors = {
@@ -78,7 +78,11 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
           </div>
           {icon && (
             <div
-              className={cn("rounded-lg bg-muted/50 p-2", iconColors[variant])}
+              className={cn(
+                "rounded-lg bg-muted/50 p-2",
+                variant === "sandbox" && "bg-[var(--accent-surface-soft)]",
+                iconColors[variant],
+              )}
             >
               {icon}
             </div>

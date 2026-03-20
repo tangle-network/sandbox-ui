@@ -16,6 +16,7 @@ export interface StandalonePricingPageProps {
   fetchTiers?: () => Promise<PricingTier[]>;
   title?: string;
   subtitle?: string;
+  className?: string;
 }
 
 interface PricingPageState {
@@ -28,9 +29,8 @@ interface PricingPageState {
 
 const variantColors = {
   sandbox: {
-    accent: "text-purple-400",
-    gradientFrom: "from-purple-600",
-    gradientTo: "to-purple-400",
+    accent: "text-[var(--accent-text)]",
+    gradient: "bg-[image:var(--accent-gradient-strong)]",
   },
 };
 
@@ -110,6 +110,7 @@ export function StandalonePricingPage({
   fetchTiers,
   title = "Simple, transparent pricing",
   subtitle = "Choose the plan that fits your needs. Upgrade or downgrade at any time.",
+  className,
 }: StandalonePricingPageProps) {
   const colors = variantColors[variant];
 
@@ -191,15 +192,14 @@ export function StandalonePricingPage({
   );
 
   return (
-    <div className="w-full space-y-12">
+    <div className={cn("w-full space-y-12", className)}>
       {/* Header Section */}
       <div className="space-y-4 text-center">
         <h1
           className={cn(
             "font-bold text-4xl tracking-tight sm:text-5xl",
-            "bg-gradient-to-r bg-clip-text text-transparent",
-            colors.gradientFrom,
-            colors.gradientTo,
+            "bg-clip-text text-transparent",
+            colors.gradient,
           )}
         >
           {title}

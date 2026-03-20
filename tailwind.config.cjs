@@ -49,6 +49,45 @@ module.exports = {
         warning: "hsl(var(--warning))",
         error: "hsl(var(--error))",
         info: "hsl(var(--info))",
+        // MD3 surface hierarchy (Stitch design system)
+        "surface": "var(--md3-surface)",
+        "surface-dim": "var(--md3-surface-dim)",
+        "surface-bright": "var(--md3-surface-bright)",
+        "surface-container-lowest": "var(--md3-surface-container-lowest)",
+        "surface-container-low": "var(--md3-surface-container-low)",
+        "surface-container": "var(--md3-surface-container)",
+        "surface-container-high": "var(--md3-surface-container-high)",
+        "surface-container-highest": "var(--md3-surface-container-highest)",
+        "surface-variant": "var(--md3-surface-variant)",
+        "on-surface": "var(--md3-on-surface)",
+        "on-surface-variant": "var(--md3-on-surface-variant)",
+        // MD3 primary tokens
+        "md3-primary": "var(--md3-primary)",
+        "primary-container": "var(--md3-primary-container)",
+        "on-primary": "var(--md3-on-primary)",
+        "on-primary-container": "var(--md3-on-primary-container)",
+        "primary-fixed": "var(--md3-primary-fixed)",
+        "primary-fixed-dim": "var(--md3-primary-fixed-dim)",
+        // MD3 secondary tokens
+        "md3-secondary": "var(--md3-secondary)",
+        "secondary-container": "var(--md3-secondary-container)",
+        "on-secondary": "var(--md3-on-secondary)",
+        "on-secondary-container": "var(--md3-on-secondary-container)",
+        "secondary-fixed": "var(--md3-secondary-fixed)",
+        "secondary-fixed-dim": "var(--md3-secondary-fixed-dim)",
+        // MD3 tertiary tokens
+        "md3-tertiary": "var(--md3-tertiary)",
+        "tertiary-container": "var(--md3-tertiary-container)",
+        // MD3 outline tokens
+        "outline": "var(--md3-outline)",
+        "outline-variant": "var(--md3-outline-variant)",
+        // MD3 error tokens
+        "md3-error": "var(--md3-error)",
+        "error-container": "var(--md3-error-container)",
+        "on-error": "var(--md3-on-error)",
+        // MD3 inverse tokens
+        "inverse-surface": "var(--md3-inverse-surface)",
+        "inverse-primary": "var(--md3-inverse-primary)",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -34,12 +34,12 @@ const TerminalDisplay = React.forwardRef<HTMLDivElement, TerminalDisplayProps>(
 
     const variants = {
       default: "border-border",
-      sandbox: "border-purple-500/20 shadow-lg shadow-purple-500/5",
+      sandbox: "border-[var(--border-accent)] shadow-[var(--shadow-accent)]",
     };
 
     const dotColors = {
       default: ["bg-red-500", "bg-yellow-500", "bg-green-500"],
-      sandbox: ["bg-red-500", "bg-yellow-500", "bg-purple-500"],
+      sandbox: ["bg-red-500", "bg-yellow-500", "bg-[var(--brand-cool)]"],
     };
 
     return (
@@ -171,7 +171,7 @@ const TerminalInput = React.forwardRef<HTMLInputElement, TerminalInputProps>(
 
     const variants = {
       default: "border-border focus-within:border-muted-foreground",
-      sandbox: "border-purple-500/20 focus-within:border-purple-500/50",
+      sandbox: "border-[var(--border-accent)] focus-within:border-[var(--border-accent-hover)]",
     };
 
     return (

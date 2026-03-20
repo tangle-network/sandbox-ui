@@ -118,7 +118,7 @@ function getFileColor(name: string): string {
     case "js": return "text-blue-400";
     case "json": return "text-green-400";
     case "yaml":
-    case "yml": return "text-purple-400";
+    case "yml": return "text-[var(--accent-text)]";
     case "csv":
     case "xlsx": return "text-emerald-400";
     case "md": return "text-[var(--text-secondary)]";

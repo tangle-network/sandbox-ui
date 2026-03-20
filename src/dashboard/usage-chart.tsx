@@ -12,6 +12,7 @@ export interface UsageChartProps {
   title: string;
   unit: string;
   variant?: "agentrun" | "automateai" | "tradingbots" | "sandbox";
+  className?: string;
 }
 
 const variantColors = {
@@ -21,9 +22,9 @@ const variantColors = {
     text: "text-blue-400",
   },
   automateai: {
-    bar: "bg-gradient-to-t from-violet-600 to-violet-400",
-    barHover: "hover:from-violet-500 hover:to-violet-300",
-    text: "text-violet-400",
+    bar: "bg-[image:linear-gradient(to_top,var(--brand-purple),var(--brand-cool))]",
+    barHover: "hover:brightness-110",
+    text: "text-[var(--brand-purple)]",
   },
   tradingbots: {
     bar: "bg-gradient-to-t from-green-600 to-green-400",
@@ -31,9 +32,9 @@ const variantColors = {
     text: "text-green-400",
   },
   sandbox: {
-    bar: "bg-gradient-to-t from-purple-600 to-purple-400",
-    barHover: "hover:from-purple-500 hover:to-purple-300",
-    text: "text-purple-400",
+    bar: "bg-[image:var(--accent-gradient-strong)]",
+    barHover: "hover:brightness-110",
+    text: "text-[var(--accent-text)]",
   },
 };
 
@@ -57,6 +58,7 @@ export function UsageChart({
   title,
   unit,
   variant = "agentrun",
+  className,
 }: UsageChartProps) {
   const colors = variantColors[variant];
   const maxValue = Math.max(...data.map((d) => d.value), 1);
@@ -64,7 +66,7 @@ export function UsageChart({
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="font-medium text-base">{title}</CardTitle>
         <div className="text-right">

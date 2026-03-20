@@ -21,6 +21,11 @@ import {
 import { ChatInput, type PendingFile } from "./chat-input";
 import { InlineThinkingItem } from "../run/inline-thinking-item";
 import { getToolDisplayMetadata } from "../utils/tool-display";
+import {
+  OpenUIArtifactRenderer,
+  type OpenUIAction,
+  type OpenUIComponentNode,
+} from "../openui/openui-artifact-renderer";
 
 export interface ChatContainerProps {
   messages: SessionMessage[];
@@ -43,6 +48,61 @@ export interface ChatContainerProps {
   onRemoveFile?: (id: string) => void;
   onAttach?: (files: FileList) => void;
   disabled?: boolean;
+  /** Callback when an OpenUI action button is pressed within inline OpenUI blocks. */
+  onOpenUIAction?: (action: OpenUIAction) => void;
+  /** Enable rendering OpenUI schemas inline in the chat timeline. Defaults to true. */
+  enableOpenUI?: boolean;
+}
+
+const OPENUI_NODE_TYPES = new Set([
+  "heading", "text", "badge", "stat", "key_value", "code",
+  "markdown", "table", "actions", "separator", "stack", "grid", "card",
+]);
+
+function isOpenUINode(value: unknown): value is OpenUIComponentNode {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    typeof (value as Record<string, unknown>).type === "string" &&
+    OPENUI_NODE_TYPES.has((value as Record<string, unknown>).type as string)
+  );
+}
+
+function extractOpenUISchema(output: unknown): OpenUIComponentNode[] | null {
+  if (output == null) return null;
+
+  // Direct node or array of nodes
+  if (isOpenUINode(output)) return [output];
+  if (Array.isArray(output) && output.length > 0 && output.every(isOpenUINode)) {
+    return output as OpenUIComponentNode[];
+  }
+
+  // Wrapped in { openui: ... } or { schema: ... } or { ui: ... }
+  if (typeof output === "object" && !Array.isArray(output)) {
+    const obj = output as Record<string, unknown>;
+    for (const key of ["openui", "schema", "ui"]) {
+      if (obj[key]) {
+        const inner = obj[key];
+        if (isOpenUINode(inner)) return [inner];
+        if (Array.isArray(inner) && inner.length > 0 && inner.every(isOpenUINode)) {
+          return inner as OpenUIComponentNode[];
+        }
+      }
+    }
+  }
+
+  // Try to parse string as JSON containing OpenUI
+  if (typeof output === "string") {
+    try {
+      const parsed = JSON.parse(output);
+      return extractOpenUISchema(parsed);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 }
 
 function formatUnknown(value: unknown): string | undefined {
@@ -101,6 +161,8 @@ function buildTimelineItems(
   messages: SessionMessage[],
   partMap: Record<string, SessionPart[]>,
   isStreaming: boolean,
+  onOpenUIAction?: (action: OpenUIAction) => void,
+  enableOpenUI = true,
 ): { items: AgentTimelineItem[]; showThinking: boolean } {
   const items: AgentTimelineItem[] = [];
   const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
@@ -166,6 +228,24 @@ function buildTimelineItems(
         });
       }
 
+      // Render OpenUI schemas from completed tool outputs inline
+      if (enableOpenUI) {
+        for (const part of toolBuffer) {
+          if (part.state.status !== "completed" || !part.state.output) continue;
+          const schema = extractOpenUISchema(part.state.output);
+          if (!schema) continue;
+          items.push({
+            id: `${message.id}-openui-${part.id}`,
+            kind: "custom",
+            content: (
+              <div className="my-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
+                <OpenUIArtifactRenderer schema={schema} onAction={onOpenUIAction} />
+              </div>
+            ),
+          });
+        }
+      }
+
       toolBuffer.length = 0;
     };
 
@@ -180,6 +260,48 @@ function buildTimelineItems(
       flushToolBuffer(index);
 
       if (part.type === "text" && !part.synthetic && part.text.trim()) {
+        // Check if the text itself contains an OpenUI JSON block
+        if (enableOpenUI) {
+          const jsonMatch = part.text.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+          if (jsonMatch) {
+            const schema = extractOpenUISchema(jsonMatch[1]);
+            if (schema) {
+              // Render the text before the JSON block (if any)
+              const beforeJson = part.text.slice(0, part.text.indexOf("```")).trim();
+              if (beforeJson) {
+                items.push({
+                  id: `${itemId}-text`,
+                  kind: "message",
+                  role: "assistant",
+                  content: beforeJson,
+                  timestamp: createdAtFromMessage(message),
+                });
+              }
+              items.push({
+                id: `${itemId}-openui`,
+                kind: "custom",
+                content: (
+                  <div className="my-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
+                    <OpenUIArtifactRenderer schema={schema} onAction={onOpenUIAction} />
+                  </div>
+                ),
+              });
+              // Render text after the JSON block (if any)
+              const afterJson = part.text.slice(part.text.lastIndexOf("```") + 3).trim();
+              if (afterJson) {
+                items.push({
+                  id: `${itemId}-after`,
+                  kind: "message",
+                  role: "assistant",
+                  content: afterJson,
+                  timestamp: createdAtFromMessage(message),
+                });
+              }
+              return;
+            }
+          }
+        }
+
         items.push({
           id: itemId,
           kind: "message",
@@ -240,6 +362,8 @@ export const ChatContainer = memo(
     onRemoveFile,
     onAttach,
     disabled = false,
+    onOpenUIAction,
+    enableOpenUI = true,
   }: ChatContainerProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -258,8 +382,8 @@ export const ChatContainer = memo(
     ]);
 
     const timeline = useMemo(
-      () => buildTimelineItems(messages, partMap, isStreaming),
-      [messages, partMap, isStreaming],
+      () => buildTimelineItems(messages, partMap, isStreaming, onOpenUIAction, enableOpenUI),
+      [messages, partMap, isStreaming, onOpenUIAction, enableOpenUI],
     );
 
     const handleSend = useCallback(

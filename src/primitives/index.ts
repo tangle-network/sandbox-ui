@@ -96,3 +96,9 @@ export { Logo, TangleKnot } from "./logo";
 export type { LogoProps } from "./logo";
 
 export { TerminalDisplay, TerminalLine, TerminalInput, TerminalCursor } from "./terminal-display";
+
+export { DropZone } from "./drop-zone";
+export type { DropZoneProps } from "./drop-zone";
+
+export { UploadProgress } from "./upload-progress";
+export type { UploadProgressProps, UploadFile } from "./upload-progress";

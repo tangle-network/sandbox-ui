@@ -1,8 +1,10 @@
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 import type { GroupedMessage } from "../types/run";
 import type { SessionPart } from "../types/parts";
+import type { SessionMessage } from "../types/message";
 import type { AgentBranding } from "../types/branding";
 import type { CustomToolRenderer } from "../types/tool-display";
+import type { ToolPart } from "../types/parts";
 import { RunGroup } from "../run/run-group";
 import { UserMessage } from "./user-message";
 
@@ -13,6 +15,16 @@ export interface MessageListProps {
   onToggleCollapse: (runId: string) => void;
   branding?: AgentBranding;
   renderToolDetail?: CustomToolRenderer;
+  renderRunActions?: (group: Extract<GroupedMessage, { type: "run" }>["run"]) => ReactNode;
+  renderUserMessageActions?: (message: SessionMessage, parts: SessionPart[]) => ReactNode;
+  renderToolActions?: (
+    part: ToolPart,
+    options: {
+      run: Extract<GroupedMessage, { type: "run" }>["run"];
+      messageId: string;
+      partIndex: number;
+    },
+  ) => ReactNode;
 }
 
 /**
@@ -27,16 +39,21 @@ export const MessageList = memo(
     onToggleCollapse,
     branding,
     renderToolDetail,
+    renderRunActions,
+    renderUserMessageActions,
+    renderToolActions,
   }: MessageListProps) => {
     return (
       <div className="space-y-3">
         {groups.map((group) => {
           if (group.type === "user") {
+            const messageParts = partMap[group.message.id] ?? [];
             return (
               <UserMessage
                 key={group.message.id}
                 message={group.message}
-                parts={partMap[group.message.id] ?? []}
+                parts={messageParts}
+                actions={renderUserMessageActions?.(group.message, messageParts)}
               />
             );
           }
@@ -50,6 +67,8 @@ export const MessageList = memo(
               onToggle={() => onToggleCollapse(group.run.id)}
               branding={branding}
               renderToolDetail={renderToolDetail}
+              headerActions={renderRunActions?.(group.run)}
+              renderToolActions={renderToolActions}
             />
           );
         })}

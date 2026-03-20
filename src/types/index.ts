@@ -24,3 +24,16 @@ export type {
   ToolDisplayMetadata,
 } from './tool-display';
 export type { AgentBranding } from './branding';
+export type {
+  SessionProjectKey,
+  ActiveSessionStatus,
+  ActiveSessionReconnectState,
+  ActiveSessionConnectionState,
+  ActiveSessionTransportMode,
+  ActiveSessionRecord,
+  ActiveSessionsState,
+  RegisterActiveSessionOptions,
+  ActiveSessionConnectionOptions,
+  ActiveSessionActivityOptions,
+  ActiveProjectActivity,
+} from '../stores/active-sessions-store';

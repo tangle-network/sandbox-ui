@@ -59,5 +59,13 @@ export type {
   ApplySdkEventOptions,
 } from "./use-sdk-session";
 
+export { useRealtimeSession, RealtimeSessionRegistry } from "./use-realtime-session";
+export type {
+  RealtimeSessionOptions,
+  RealtimeSessionState,
+  RealtimeSessionTarget,
+  RealtimeSessionRegistryProps,
+} from "./use-realtime-session";
+
 export { useToolCallStream } from "./use-tool-call-stream";
 export type { UseToolCallStreamReturn } from "./use-tool-call-stream";

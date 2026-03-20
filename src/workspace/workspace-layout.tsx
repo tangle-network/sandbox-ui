@@ -62,6 +62,8 @@ export interface WorkspaceLayoutProps {
   rightHeader?: ReactNode;
   /** Bottom panel (terminal) */
   bottom?: ReactNode;
+  /** Bottom panel header */
+  bottomHeader?: ReactNode;
   /** Default left panel state */
   defaultLeftOpen?: boolean;
   /** Default right panel state */
@@ -224,6 +226,7 @@ export function WorkspaceLayout({
   right,
   rightHeader,
   bottom,
+  bottomHeader,
   defaultLeftOpen = true,
   defaultRightOpen = false,
   defaultBottomOpen = false,
@@ -416,9 +419,13 @@ export function WorkspaceLayout({
               className="border-t border-[var(--border-subtle)] bg-[var(--bg-card)]"
             >
               <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                  Runtime
-                </span>
+                <div className="min-w-0 flex-1">
+                  {bottomHeader ?? (
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                      Runtime
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   aria-label="Collapse bottom panel"

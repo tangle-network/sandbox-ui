@@ -1,4 +1,4 @@
-import { memo, useMemo, type ComponentType } from "react";
+import { memo, useMemo, type ComponentType, type ReactNode } from "react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import {
   Bot,
@@ -79,6 +79,15 @@ export interface RunGroupProps {
   onToggle: () => void;
   branding?: AgentBranding;
   renderToolDetail?: CustomToolRenderer;
+  headerActions?: ReactNode;
+  renderToolActions?: (
+    part: ToolPart,
+    options: {
+      run: Run;
+      messageId: string;
+      partIndex: number;
+    },
+  ) => ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,16 +102,17 @@ function CategoryBadges({ categories }: { categories: Set<ToolCategory> }) {
   if (sorted.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       {sorted.map((cat) => {
         const Icon = CATEGORY_ICON_MAP[cat] ?? Settings;
         return (
           <span
             key={cat}
             title={cat}
-            className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)]"
+            className="flex h-7 items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2 text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]"
           >
             <Icon className="h-3.5 w-3.5" />
+            <span>{cat}</span>
           </span>
         );
       })}
@@ -159,6 +169,8 @@ export const RunGroup = memo(
     onToggle,
     branding = DEFAULT_BRANDING,
     renderToolDetail,
+    headerActions,
+    renderToolActions,
   }: RunGroupProps) => {
     // Flatten all parts from all messages in this run
     const allParts = useMemo(() => {
@@ -192,66 +204,74 @@ export const RunGroup = memo(
     return (
       <Collapsible.Root open={!collapsed} onOpenChange={() => onToggle()}>
         {/* Header */}
-        <Collapsible.Trigger asChild>
-          <button
-            className={cn(
-              "w-full rounded-[var(--radius-xl)] border px-4 py-3 text-left transition-colors",
-              "bg-[var(--bg-card)] hover:bg-[var(--bg-hover)]/28",
-              collapsed ? branding.borderClass : "border-[var(--border-subtle)]",
-              branding.bgClass,
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border bg-[var(--bg-section)]",
-                  branding.borderClass,
-                )}
-              >
-                <Bot className={cn("h-4 w-4", branding.accentClass)} />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={cn("text-sm font-semibold", branding.textClass)}>
-                    {branding.label}
-                  </span>
-                  {isStreaming ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-accent)] bg-[var(--brand-cool)]/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-cool)]">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Running
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                      <Sparkles className="h-3 w-3" />
-                      Complete
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                  {renderSummary(run) ? <span>{renderSummary(run)}</span> : null}
-                  {collapsed && run.summaryText ? (
-                    <span className="min-w-0 truncate text-[var(--text-secondary)]">
-                      {run.summaryText}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-
-              <CategoryBadges categories={stats.toolCategories} />
-
-              {!collapsed ? (
-                <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
-              ) : (
-                <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+        <div className="flex items-start gap-3">
+          <Collapsible.Trigger asChild>
+            <button
+              className={cn(
+                "w-full rounded-[calc(var(--radius-xl)+2px)] border px-4 py-3.5 text-left transition-colors shadow-[var(--shadow-card)] backdrop-blur-sm",
+                "bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_30%),var(--bg-card)] hover:bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_30%),var(--bg-card)]",
+                collapsed ? branding.borderClass : "border-[var(--border-subtle)]",
+                branding.bgClass,
               )}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-[calc(var(--radius-lg)+2px)] border bg-[linear-gradient(135deg,rgba(82,164,255,0.22),rgba(82,164,255,0.06))] shadow-[var(--shadow-accent)]",
+                    branding.borderClass,
+                  )}
+                >
+                  <Bot className={cn("h-4 w-4", branding.accentClass)} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={cn("text-sm font-semibold tracking-[0.01em]", branding.textClass)}>
+                      {branding.label}
+                    </span>
+                    {isStreaming ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-accent)] bg-[linear-gradient(135deg,rgba(82,164,255,0.22),rgba(82,164,255,0.08))] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-cool)]">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Running
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        <Sparkles className="h-3 w-3" />
+                        Complete
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                    {renderSummary(run) ? <span>{renderSummary(run)}</span> : null}
+                    {collapsed && run.summaryText ? (
+                      <span className="min-w-0 truncate text-[var(--text-secondary)]">
+                        {run.summaryText}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                <CategoryBadges categories={stats.toolCategories} />
+
+                {!collapsed ? (
+                  <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+                )}
+              </div>
+            </button>
+          </Collapsible.Trigger>
+
+          {headerActions ? (
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 pt-1">
+              {headerActions}
             </div>
-          </button>
-        </Collapsible.Trigger>
+          ) : null}
+        </div>
 
         {/* Summary text when collapsed */}
         {collapsed && run.summaryText && (
-          <div className="px-4 py-2 text-sm text-[var(--text-muted)] line-clamp-2">
+          <div className="px-4 py-2 text-sm leading-6 text-[var(--text-muted)] line-clamp-2">
             {run.summaryText}
           </div>
         )}
@@ -260,7 +280,7 @@ export const RunGroup = memo(
         <Collapsible.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
           <div
             className={cn(
-              "mt-2 space-y-2 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] p-3",
+              "mt-2 space-y-3 rounded-[calc(var(--radius-xl)+2px)] border border-[var(--border-subtle)] p-3.5 shadow-[var(--shadow-card)]",
               branding.containerBgClass,
             )}
           >
@@ -274,6 +294,11 @@ export const RunGroup = memo(
                     part={part as ToolPart}
                     renderToolDetail={renderToolDetail}
                     groupPosition={getToolGroupPosition(partIndex, allParts)}
+                    actions={renderToolActions?.(part as ToolPart, {
+                      run,
+                      messageId: msgId,
+                      partIndex: index,
+                    })}
                   />
                 );
               }
@@ -296,7 +321,7 @@ export const RunGroup = memo(
                 return (
                   <div
                     key={key}
-                    className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-4"
+                    className="rounded-[calc(var(--radius-lg)+2px)] border border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.08),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_30%),var(--bg-card)] px-4 py-4"
                   >
                     <Markdown>{part.text}</Markdown>
                   </div>

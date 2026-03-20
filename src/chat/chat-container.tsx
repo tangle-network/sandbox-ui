@@ -1,5 +1,6 @@
 import {
   memo,
+  type ReactNode,
   useCallback,
   useMemo,
   useRef,
@@ -10,6 +11,7 @@ import type { SessionMessage } from "../types/message";
 import type { SessionPart, TextPart, ToolPart } from "../types/parts";
 import type { AgentBranding } from "../types/branding";
 import type { CustomToolRenderer } from "../types/tool-display";
+import type { Run } from "../types/run";
 import { useRunGroups } from "../hooks/use-run-groups";
 import { useRunCollapseState } from "../hooks/use-run-collapse-state";
 import { useAutoScroll } from "../hooks/use-auto-scroll";
@@ -52,6 +54,19 @@ export interface ChatContainerProps {
   onOpenUIAction?: (action: OpenUIAction) => void;
   /** Enable rendering OpenUI schemas inline in the chat timeline. Defaults to true. */
   enableOpenUI?: boolean;
+  /** Optional actions rendered beside each grouped assistant run. */
+  renderRunActions?: (run: Run) => ReactNode;
+  /** Optional actions rendered below each user message bubble. */
+  renderUserMessageActions?: (message: SessionMessage, parts: SessionPart[]) => ReactNode;
+  /** Optional actions rendered beside individual tool items. */
+  renderToolActions?: (
+    part: ToolPart,
+    options: {
+      run: Run;
+      messageId: string;
+      partIndex: number;
+    },
+  ) => ReactNode;
 }
 
 const OPENUI_NODE_TYPES = new Set([
@@ -364,6 +379,9 @@ export const ChatContainer = memo(
     disabled = false,
     onOpenUIAction,
     enableOpenUI = true,
+    renderRunActions,
+    renderUserMessageActions,
+    renderToolActions,
   }: ChatContainerProps) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -420,6 +438,9 @@ export const ChatContainer = memo(
                 onToggleCollapse={toggleCollapse}
                 branding={branding}
                 renderToolDetail={renderToolDetail}
+                renderRunActions={renderRunActions}
+                renderUserMessageActions={renderUserMessageActions}
+                renderToolActions={renderToolActions}
               />
             </div>
           )}

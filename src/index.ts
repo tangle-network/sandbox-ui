@@ -42,6 +42,15 @@ export { ArtifactPane, type ArtifactPaneProps } from "./workspace/artifact-pane"
 export { DirectoryPane, type DirectoryPaneProps } from "./workspace/directory-pane";
 export { RuntimePane, type RuntimePaneProps } from "./workspace/runtime-pane";
 export {
+  SessionSidebar,
+  type SessionSidebarProps,
+  type SessionSidebarItem,
+  type SessionSidebarLink,
+  type SessionSidebarFilter,
+  type SessionSidebarBadge,
+} from "./workspace/session-sidebar";
+export { SessionActivityMonitor, type SessionActivityMonitorProps } from "./workspace/session-activity-monitor";
+export {
   SandboxWorkbench,
   AgentWorkbench,
   type SandboxWorkbenchProps,
@@ -83,9 +92,9 @@ export {
 // --- Chat ---
 export { ChatMessage, type ChatMessageProps, type MessageRole } from "./chat/chat-message";
 export { ChatInput, type ChatInputProps, type PendingFile } from "./chat/chat-input";
-export { ChatContainer } from "./chat/chat-container";
-export { MessageList } from "./chat/message-list";
-export { UserMessage } from "./chat/user-message";
+export { ChatContainer, type ChatContainerProps } from "./chat/chat-container";
+export { MessageList, type MessageListProps } from "./chat/message-list";
+export { UserMessage, type UserMessageProps } from "./chat/user-message";
 export { ThinkingIndicator, type ThinkingIndicatorProps } from "./chat/thinking-indicator";
 export {
   AgentTimeline,
@@ -103,7 +112,7 @@ export {
 // --- Run / Tool Calls ---
 export { ToolCallStep, ToolCallGroup, type ToolCallStepProps, type ToolCallGroupProps, type ToolCallType, type ToolCallStatus } from "./run/tool-call-step";
 export { ToolCallFeed, parseToolEvent, type ToolCallFeedProps, type ToolCallData, type FeedSegment } from "./run/tool-call-feed";
-export { RunGroup } from "./run/run-group";
+export { RunGroup, type RunGroupProps } from "./run/run-group";
 export { InlineToolItem } from "./run/inline-tool-item";
 export { InlineThinkingItem } from "./run/inline-thinking-item";
 export { ExpandedToolDetail } from "./run/expanded-tool-detail";
@@ -170,6 +179,14 @@ export {
   type CompleteAssistantMessageOptions,
   type ApplySdkEventOptions,
 } from "./hooks/use-sdk-session";
+export {
+  useRealtimeSession,
+  RealtimeSessionRegistry,
+  type RealtimeSessionOptions,
+  type RealtimeSessionState,
+  type RealtimeSessionTarget,
+  type RealtimeSessionRegistryProps,
+} from "./hooks/use-realtime-session";
 export { useRunGroups } from "./hooks/use-run-groups";
 export { useRunCollapseState } from "./hooks/use-run-collapse-state";
 export { useAutoScroll } from "./hooks/use-auto-scroll";
@@ -185,6 +202,19 @@ export type { Run, RunStats, GroupedMessage, ToolCategory } from "./types/run";
 export type { Session } from "./types/sidecar";
 export type { ToolDisplayMetadata, DisplayVariant, CustomToolRenderer } from "./types/tool-display";
 export type { AgentBranding } from "./types/branding";
+export type {
+  SessionProjectKey,
+  ActiveSessionStatus,
+  ActiveSessionReconnectState,
+  ActiveSessionConnectionState,
+  ActiveSessionTransportMode,
+  ActiveSessionRecord,
+  ActiveSessionsState,
+  RegisterActiveSessionOptions,
+  ActiveSessionConnectionOptions,
+  ActiveSessionActivityOptions,
+  ActiveProjectActivity,
+} from "./stores/active-sessions-store";
 
 // --- Utils ---
 export { cn } from "./lib/utils";

@@ -1,7 +1,41 @@
 /* Tangle Sandbox UI design tokens */
 
+/* MD3 surface hierarchy — Stitch design system */
 :root,
 [data-sandbox-ui] {
+  --md3-surface: #12131a;
+  --md3-surface-dim: #12131a;
+  --md3-surface-bright: #383841;
+  --md3-surface-container-lowest: #0d0e15;
+  --md3-surface-container-low: #1a1b23;
+  --md3-surface-container: #1e1f27;
+  --md3-surface-container-high: #292931;
+  --md3-surface-container-highest: #34343c;
+  --md3-surface-variant: #34343c;
+  --md3-on-surface: #e3e1ec;
+  --md3-on-surface-variant: #ccc3d7;
+  --md3-primary: #d1bcff;
+  --md3-primary-container: #a178ff;
+  --md3-on-primary: #3c0090;
+  --md3-on-primary-container: #34007f;
+  --md3-primary-fixed: #e9ddff;
+  --md3-primary-fixed-dim: #d1bcff;
+  --md3-secondary: #b6c4ff;
+  --md3-secondary-container: #133eae;
+  --md3-on-secondary: #00277f;
+  --md3-on-secondary-container: #a3b5ff;
+  --md3-secondary-fixed: #dce1ff;
+  --md3-secondary-fixed-dim: #b6c4ff;
+  --md3-tertiary: #c7c5d0;
+  --md3-tertiary-container: #90909a;
+  --md3-outline: #958da1;
+  --md3-outline-variant: #4a4455;
+  --md3-error: #ffb4ab;
+  --md3-error-container: #93000a;
+  --md3-on-error: #690005;
+  --md3-inverse-surface: #e3e1ec;
+  --md3-inverse-primary: #6f35df;
+  --md3-surface-tint: #d1bcff;
   /* Semantic HSL bridge for shadcn/radix primitives */
   --hsl-background: 245 18% 7%;
   --hsl-foreground: 220 20% 96%;

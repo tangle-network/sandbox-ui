@@ -130,7 +130,15 @@ export { FileTabs, type FileTabsProps, type FileTabData } from "./files/file-tab
 export { FileArtifactPane, type FileArtifactPaneProps } from "./files/file-artifact-pane";
 
 // --- Dashboard ---
-export { DashboardLayout, type DashboardLayoutProps, type DashboardUser, type NavItem } from "./dashboard/dashboard-layout";
+export { AppSidebar, type AppSidebarProps, type SidebarNavItem, type SidebarSandbox } from "./dashboard/app-sidebar";
+export { ClusterStatusBar, type ClusterStatusBarProps, type ClusterStatusItem } from "./dashboard/cluster-status-bar";
+export { CreditBalance, type CreditBalanceProps } from "./dashboard/credit-balance";
+export { InvoiceTable, type InvoiceTableProps, type Invoice } from "./dashboard/invoice-table";
+export { PlanCards, type PlanCardsProps, type PlanCardData } from "./dashboard/plan-cards";
+export { DashboardLayout, type DashboardLayoutProps, type DashboardUser, type NavItem, type TopNavLink } from "./dashboard/dashboard-layout";
+export { ResourceMeter, type ResourceMeterProps } from "./dashboard/resource-meter";
+export { SandboxCard, NewSandboxCard, type SandboxCardProps, type SandboxCardData, type SandboxStatus, type NewSandboxCardProps } from "./dashboard/sandbox-card";
+export { SandboxTable, type SandboxTableProps } from "./dashboard/sandbox-table";
 export { BillingDashboard, type BillingDashboardProps } from "./dashboard/billing-dashboard";
 export { PricingPage as PricingCards, type PricingPageProps } from "./dashboard/pricing-page";
 export { UsageChart, type UsageChartProps, type UsageDataPoint } from "./dashboard/usage-chart";
@@ -140,6 +148,7 @@ export { VariantList, type VariantListProps } from "./dashboard/variant-list";
 
 // --- Auth ---
 export { AuthHeader, GitHubLoginButton, UserMenu } from "./auth/auth";
+export { LoginLayout, type LoginLayoutProps } from "./auth/login-layout";
 
 // --- Markdown ---
 export { Markdown, type MarkdownProps } from "./markdown/markdown";

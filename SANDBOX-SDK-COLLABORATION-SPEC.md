@@ -680,6 +680,8 @@ Tests:
 
 ### Milestone 0: Contract Lock
 
+Status: done
+
 Deliverables:
 
 - approve this spec
@@ -692,6 +694,8 @@ Exit criteria:
 - no unresolved contract questions
 
 ### Milestone 1: SDK Auth And Types
+
+Status: done
 
 Deliverables:
 
@@ -706,6 +710,8 @@ Exit criteria:
 
 ### Milestone 2: Bootstrap Path
 
+Status: done
+
 Deliverables:
 
 - bootstrap endpoint or product-facing contract
@@ -718,6 +724,8 @@ Exit criteria:
 - client can open a document in collaborative mode with valid config
 
 ### Milestone 3: File Bridge
+
+Status: done
 
 Deliverables:
 
@@ -732,6 +740,8 @@ Exit criteria:
 
 ### Milestone 4: Product Adoption
 
+Status: done
+
 Deliverables:
 
 - GTM vault uses `DocumentEditorPane` with `backend="collaborative"`
@@ -744,6 +754,8 @@ Exit criteria:
 
 ### Milestone 5: Multiplayer Enhancements
 
+Status: next
+
 Deliverables:
 
 - invites
@@ -754,6 +766,16 @@ Deliverables:
 Exit criteria:
 
 - collaborative workspace story beyond single shared docs
+
+### Immediate Follow-Up
+
+Before Milestone 5 expands scope, finish these hardening steps:
+
+- publish `@tangle-network/sandbox-ui` with the editor packaging fix
+- publish `@tangle-network/sandbox`
+- move GTM off vendored tarballs onto published package versions
+- add end-to-end collaboration coverage for bootstrap/token/connect/edit/snapshot
+- tighten reconnect/auth-failure coverage and UX polish
 
 ## Checklist
 

@@ -1,6 +1,6 @@
+import { lazy, Suspense } from "react";
 import { Download, X } from "lucide-react";
 import {
-  DocumentEditorPane,
   type DocumentEditorBackend,
   type DocumentEditorMode,
   type DocumentEditorPaneCollaborationConfig,
@@ -8,6 +8,11 @@ import {
 import { ArtifactPane, type ArtifactPaneProps } from "../workspace/artifact-pane";
 import { FilePreview, type FilePreviewProps } from "./file-preview";
 import { FileTabs, type FileTabData } from "./file-tabs";
+
+const LazyDocumentEditorPane = lazy(async () => {
+  const module = await import("../editor/document-editor-pane");
+  return { default: module.DocumentEditorPane };
+});
 
 export interface FileArtifactPaneEditorOptions {
   enabled?: boolean;
@@ -105,32 +110,52 @@ export function FileArtifactPane({
 
   if (isEditableMarkdown) {
     return (
-      <DocumentEditorPane
-        eyebrow={eyebrow}
-        title={filename}
-        subtitle={path}
-        meta={meta}
-        toolbar={toolbar}
-        footer={footer}
-        className={className}
-        tabs={paneTabs}
-        headerActions={headerActions}
-        markdown={content ?? ""}
-        mode={editor.mode}
-        defaultMode={editor.defaultMode}
-        onModeChange={editor.onModeChange}
-        backend={editor.backend}
-        collaboration={editor.collaboration}
-        placeholder={editor.placeholder}
-        autoFocus={editor.autoFocus}
-        readOnly={editor.readOnly}
-        saving={editor.saving}
-        saveLabel={editor.saveLabel}
-        onChange={editor.onChange}
-        onSave={editor.onSave}
-        previewClassName={editor.previewClassName}
-        editorClassName={editor.editorClassName}
-      />
+      <Suspense
+        fallback={(
+          <ArtifactPane
+            eyebrow={eyebrow}
+            title={filename}
+            subtitle={path}
+            meta={meta}
+            toolbar={toolbar}
+            footer={footer}
+            className={className}
+            tabs={paneTabs}
+            headerActions={headerActions}
+          >
+            <div className="flex min-h-[20rem] items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)]/40 text-sm text-[var(--text-muted)]">
+              Loading editor…
+            </div>
+          </ArtifactPane>
+        )}
+      >
+        <LazyDocumentEditorPane
+          eyebrow={eyebrow}
+          title={filename}
+          subtitle={path}
+          meta={meta}
+          toolbar={toolbar}
+          footer={footer}
+          className={className}
+          tabs={paneTabs}
+          headerActions={headerActions}
+          markdown={content ?? ""}
+          mode={editor.mode}
+          defaultMode={editor.defaultMode}
+          onModeChange={editor.onModeChange}
+          backend={editor.backend}
+          collaboration={editor.collaboration}
+          placeholder={editor.placeholder}
+          autoFocus={editor.autoFocus}
+          readOnly={editor.readOnly}
+          saving={editor.saving}
+          saveLabel={editor.saveLabel}
+          onChange={editor.onChange}
+          onSave={editor.onSave}
+          previewClassName={editor.previewClassName}
+          editorClassName={editor.editorClassName}
+        />
+      </Suspense>
     );
   }
 

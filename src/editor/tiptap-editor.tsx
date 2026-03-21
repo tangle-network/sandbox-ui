@@ -2,7 +2,7 @@
 
 import type { AnyExtension } from "@tiptap/core";
 import Collaboration from "@tiptap/extension-collaboration";
-import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
+import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useMemo } from "react";
@@ -97,7 +97,7 @@ export function TiptapEditor({
     // Add collaboration cursor if provider is available
     if (provider?.awareness) {
       baseExtensions.push(
-        CollaborationCursor.configure({
+        CollaborationCaret.configure({
           provider,
           user: provider.awareness.getLocalState()?.user ?? {
             name: "Anonymous",

@@ -162,6 +162,13 @@ export { LoginLayout, type LoginLayoutProps } from "./auth/login-layout";
 // --- Markdown ---
 export { Markdown, type MarkdownProps } from "./markdown/markdown";
 export { CodeBlock, CopyButton } from "./markdown/code-block";
+export {
+  DocumentEditorPane,
+  type DocumentEditorPaneProps,
+  type DocumentEditorMode,
+  type DocumentEditorBackend,
+  type DocumentEditorPaneCollaborationConfig,
+} from "./editor/document-editor-pane";
 
 // --- Hooks ---
 export { useToolCallStream, type UseToolCallStreamReturn } from "./hooks/use-tool-call-stream";

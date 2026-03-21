@@ -14,6 +14,13 @@ export {
   type TiptapEditorProps,
 } from "./tiptap-editor";
 export {
+  DocumentEditorPane,
+  type DocumentEditorPaneProps,
+  type DocumentEditorMode,
+  type DocumentEditorBackend,
+  type DocumentEditorPaneCollaborationConfig,
+} from "./document-editor-pane";
+export {
   useEditorConnection,
   useCollaborators,
   useCollaboratorPresence,

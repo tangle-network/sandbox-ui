@@ -3,6 +3,7 @@ export {
   useEditorContext,
   type EditorProviderProps,
   type EditorContextValue,
+  type EditorTokenRefreshResult,
   type EditorUser,
   type ConnectionState,
   type Collaborator,

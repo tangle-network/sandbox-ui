@@ -65,6 +65,11 @@ export interface EditorUser {
   userId?: string;
 }
 
+export interface EditorTokenRefreshResult {
+  token: string;
+  expiresAt?: number;
+}
+
 /**
  * Props for EditorProvider.
  */
@@ -75,6 +80,8 @@ export interface EditorProviderProps {
   documentName: string;
   /** JWT token for authentication */
   token: string;
+  /** Unix timestamp (seconds) when the current token expires */
+  tokenExpiresAt?: number;
   /** Current user information for awareness */
   user: EditorUser;
   /** Auto-connect on mount (default: true) */
@@ -89,6 +96,8 @@ export interface EditorProviderProps {
   onSync?: () => void;
   /** Callback on authentication error */
   onAuthError?: (error: Error) => void;
+  /** Optional token refresh callback used before reconnect/auth retry */
+  onRefreshToken?: () => Promise<EditorTokenRefreshResult | string>;
   /** Children components */
   children: ReactNode;
 }
@@ -120,6 +129,7 @@ export function EditorProvider({
   websocketUrl,
   documentName,
   token,
+  tokenExpiresAt,
   user,
   autoConnect = true,
   autoReconnect = true,
@@ -127,6 +137,7 @@ export function EditorProvider({
   onConnectionChange,
   onSync,
   onAuthError,
+  onRefreshToken,
   children,
 }: EditorProviderProps) {
   const [connectionState, setConnectionState] =
@@ -138,6 +149,13 @@ export function EditorProvider({
   const docRef = useRef<Y.Doc | null>(null);
   const providerRef = useRef<HocuspocusProvider | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  const tokenRef = useRef(token);
+  const tokenExpiryRef = useRef<number | undefined>(tokenExpiresAt);
+  const refreshPromiseRef = useRef<Promise<string | null> | null>(null);
+  const refreshTimerRef = useRef<number | null>(null);
+
+  tokenRef.current = token;
+  tokenExpiryRef.current = tokenExpiresAt;
 
   // Initialize Y.Doc once
   if (!docRef.current) {
@@ -185,6 +203,70 @@ export function EditorProvider({
     [],
   );
 
+  const clearRefreshTimer = useCallback(() => {
+    if (refreshTimerRef.current != null) {
+      window.clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+  }, []);
+
+  const refreshToken = useCallback(async (): Promise<string | null> => {
+    if (!onRefreshToken) {
+      return null;
+    }
+
+    if (refreshPromiseRef.current) {
+      return refreshPromiseRef.current;
+    }
+
+    const refreshPromise = (async () => {
+      const next = await onRefreshToken();
+      const resolvedToken = typeof next === "string" ? next : next.token;
+      const resolvedExpiry =
+        typeof next === "string" ? undefined : next.expiresAt;
+
+      tokenRef.current = resolvedToken;
+      tokenExpiryRef.current = resolvedExpiry;
+      return resolvedToken;
+    })()
+      .catch((error) => {
+        onAuthError?.(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+        return null;
+      })
+      .finally(() => {
+        refreshPromiseRef.current = null;
+      });
+
+    refreshPromiseRef.current = refreshPromise;
+    return refreshPromise;
+  }, [onAuthError, onRefreshToken]);
+
+  const scheduleTokenRefresh = useCallback(() => {
+    clearRefreshTimer();
+
+    if (
+      !tokenExpiryRef.current ||
+      !onRefreshToken ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    const refreshAtMs = tokenExpiryRef.current * 1000 - 60_000;
+    const delay = refreshAtMs - Date.now();
+
+    if (delay <= 0) {
+      void refreshToken();
+      return;
+    }
+
+    refreshTimerRef.current = window.setTimeout(() => {
+      void refreshToken();
+    }, delay);
+  }, [clearRefreshTimer, onRefreshToken, refreshToken]);
+
   // Connect to the collaboration server
   const connect = useCallback(() => {
     if (providerRef.current) {
@@ -198,13 +280,14 @@ export function EditorProvider({
       url: websocketUrl,
       name: documentName,
       document: doc,
-      token,
+      token: async () => tokenRef.current,
       // @ts-expect-error -- connect is valid at runtime but missing from type defs
       connect: true,
 
       onConnect: () => {
         reconnectAttemptsRef.current = 0;
         updateConnectionState("connected");
+        scheduleTokenRefresh();
       },
 
       onSynced: () => {
@@ -216,6 +299,7 @@ export function EditorProvider({
       onDisconnect: () => {
         updateConnectionState("disconnected");
         setIsSynced(false);
+        clearRefreshTimer();
 
         // Auto-reconnect logic
         if (
@@ -237,8 +321,22 @@ export function EditorProvider({
 
       onAuthenticationFailed: ({ reason }: { reason?: string }) => {
         const error = new Error(reason ?? "Authentication failed");
-        onAuthError?.(error);
         updateConnectionState("disconnected");
+        clearRefreshTimer();
+
+        if (onRefreshToken) {
+          void refreshToken().then((nextToken) => {
+            if (nextToken && providerRef.current) {
+              providerRef.current.connect();
+              return;
+            }
+
+            onAuthError?.(error);
+          });
+          return;
+        }
+
+        onAuthError?.(error);
       },
 
       onAwarenessUpdate: () => {
@@ -258,16 +356,19 @@ export function EditorProvider({
     websocketUrl,
     documentName,
     doc,
-    token,
     user.name,
     user.userId,
     userColor,
     autoReconnect,
     maxReconnectAttempts,
+    clearRefreshTimer,
     updateConnectionState,
     updateCollaborators,
     onSync,
     onAuthError,
+    onRefreshToken,
+    refreshToken,
+    scheduleTokenRefresh,
   ]);
 
   // Disconnect from the collaboration server
@@ -286,12 +387,13 @@ export function EditorProvider({
 
     return () => {
       // Cleanup on unmount
+      clearRefreshTimer();
       if (providerRef.current) {
         providerRef.current.destroy();
         providerRef.current = null;
       }
     };
-  }, [autoConnect, connect]);
+  }, [autoConnect, clearRefreshTimer, connect]);
 
   // Context value
   const contextValue = useMemo<EditorContextValue>(

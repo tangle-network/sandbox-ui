@@ -265,7 +265,7 @@ export function DocumentEditorPane({
   );
 
   const collaborativeEditor = collaboration ? (
-    <EditorProvider {...collaboration}>
+    <EditorProvider key={collaboration.documentName} {...collaboration}>
       <CollaborativeDocumentSurface
         markdown={draft}
         placeholder={placeholder}

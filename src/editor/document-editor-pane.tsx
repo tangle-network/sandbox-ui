@@ -78,6 +78,33 @@ function connectionLabel(state: ConnectionState) {
   }
 }
 
+function connectionDescription(
+  state: ConnectionState,
+  collaborators: number,
+  readOnly?: boolean,
+) {
+  if (readOnly) {
+    return state === "disconnected"
+      ? "Live access is paused. You can keep reading while the editor reconnects."
+      : "You are viewing the live document in read-only mode.";
+  }
+
+  switch (state) {
+    case "synced":
+      return collaborators > 0
+        ? `You and ${collaborators} collaborator${
+            collaborators === 1 ? "" : "s"
+          } are editing the same document.`
+        : "You are editing the live document. Changes sync automatically.";
+    case "connected":
+    case "connecting":
+      return "Connecting the live document. Local edits stay in place while sync catches up.";
+    case "disconnected":
+    default:
+      return "Live updates are paused. You can keep editing and reconnect when the transport is healthy again.";
+  }
+}
+
 function CollaborativeDocumentSurface({
   markdown,
   placeholder,
@@ -96,28 +123,34 @@ function CollaborativeDocumentSurface({
   const { state } = useEditorConnection();
   const { collaborators } = useCollaborators();
   const initialContent = useMemo(() => markdownToHtml(markdown), [markdown]);
+  const collaboratorCount = collaborators.length + 1;
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col gap-3", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 px-3 py-2">
-        <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium",
-              connectionTone(state),
-            )}
-          >
-            {state === "disconnected" ? (
-              <WifiOff className="h-3.5 w-3.5" />
-            ) : (
-              <Wifi className="h-3.5 w-3.5" />
-            )}
-            {connectionLabel(state)}
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2.5 py-1">
-            <Users className="h-3.5 w-3.5" />
-            {collaborators.length === 0 ? "Solo editing" : `${collaborators.length + 1} active`}
-          </span>
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium",
+                connectionTone(state),
+              )}
+            >
+              {state === "disconnected" ? (
+                <WifiOff className="h-3.5 w-3.5" />
+              ) : (
+                <Wifi className="h-3.5 w-3.5" />
+              )}
+              {connectionLabel(state)}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2.5 py-1">
+              <Users className="h-3.5 w-3.5" />
+              {collaborators.length === 0 ? "Solo editing" : `${collaboratorCount} active`}
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-muted)]">
+            {connectionDescription(state, collaborators.length, readOnly)}
+          </p>
         </div>
         <CollaboratorsList collaborators={collaborators} />
       </div>
@@ -173,6 +206,15 @@ export function DocumentEditorPane({
   const activeMode = mode ?? uncontrolledMode;
   const isCollaborative = backend === "collaborative" && Boolean(collaboration);
   const isDirty = normalizeMarkdown(draft) !== normalizeMarkdown(markdown);
+  const saveStateLabel = readOnly
+    ? "Read only"
+    : isCollaborative
+      ? isDirty
+        ? "Snapshot pending"
+        : "Live document current"
+      : isDirty
+        ? "Unsaved changes"
+        : "Saved";
 
   useEffect(() => {
     setDraft(markdown);
@@ -222,9 +264,11 @@ export function DocumentEditorPane({
       <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
         {toolbar}
         <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1 font-medium">
-          {isCollaborative ? "Collaborative" : "Local draft"}
+          {isCollaborative ? "Live document" : "Local draft"}
         </span>
-        {isDirty && <span>Unsaved changes</span>}
+        <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2.5 py-1">
+          {saveStateLabel}
+        </span>
         {onSave && !readOnly && (
           <button
             type="button"

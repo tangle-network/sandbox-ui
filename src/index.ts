@@ -109,6 +109,38 @@ export {
   type AgentTimelineTone,
 } from "./chat/agent-timeline";
 
+// --- Editor / Collaboration ---
+export {
+  EditorProvider,
+  useEditorContext,
+  type EditorProviderProps,
+  type EditorContextValue,
+  type EditorUser,
+  type ConnectionState,
+  type Collaborator,
+} from "./editor/editor-provider";
+export {
+  TiptapEditor,
+  CollaboratorsList,
+  EditorToolbar,
+  type TiptapEditorProps,
+} from "./editor/tiptap-editor";
+export {
+  DocumentEditorPane,
+  type DocumentEditorPaneProps,
+  type DocumentEditorMode,
+  type DocumentEditorBackend,
+  type DocumentEditorPaneCollaborationConfig,
+} from "./editor/document-editor-pane";
+export {
+  useEditorConnection,
+  useCollaborators,
+  useCollaboratorPresence,
+  useYjsState,
+  useDocumentChanges,
+  useAwareness,
+} from "./editor/use-editor";
+
 // --- Run / Tool Calls ---
 export { ToolCallStep, ToolCallGroup, type ToolCallStepProps, type ToolCallGroupProps, type ToolCallType, type ToolCallStatus } from "./run/tool-call-step";
 export { ToolCallFeed, parseToolEvent, type ToolCallFeedProps, type ToolCallData, type FeedSegment } from "./run/tool-call-feed";

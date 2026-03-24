@@ -222,6 +222,12 @@ For that, compose directly from:
 
 Retheming is absolutely supported, but the documentation was thinner than it should be. The token layer is strong; the higher-level surfaces are themeable, but more opinionated. For a radically different product look, prefer keeping the token contract and wrapping the higher-level workbench/chat surfaces rather than fighting every internal class.
 
+## Docs
+
+| Guide | Description |
+|-------|-------------|
+| [Sidebar](./docs/sidebar.md) | Composable Rail + Panel sidebar system (architecture, components, full API) |
+
 ## Subpath Exports
 
 | Subpath | Description |
@@ -232,7 +238,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/workspace` | SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
 | `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
 | `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane |
-| `/dashboard` | DashboardLayout, BillingDashboard, UsageChart, ProfileSelector |
+| `/dashboard` | [Sidebar](./docs/sidebar.md), DashboardLayout, BillingDashboard, UsageChart, ProfileSelector |
 | `/editor` | TipTap collaborative editor (requires optional peers) |
 | `/terminal` | xterm.js terminal view (requires optional peers) |
 | `/markdown` | Markdown renderer with GFM, code blocks, copy button |

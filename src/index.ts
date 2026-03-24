@@ -171,12 +171,22 @@ export { FileTabs, type FileTabsProps, type FileTabData } from "./files/file-tab
 export { FileArtifactPane, type FileArtifactPaneProps } from "./files/file-artifact-pane";
 
 // --- Dashboard ---
-export { AppSidebar, type AppSidebarProps, type SidebarNavItem, type SidebarSandbox } from "./dashboard/app-sidebar";
+export {
+  Sidebar, SidebarRail, SidebarRailHeader, SidebarRailNav, SidebarRailFooter,
+  SidebarPanel, SidebarPanelHeader, SidebarPanelContent, SidebarContent,
+  RailButton, RailModeButton, RailSeparator, ProfileAvatar,
+  type SidebarProps, type SidebarRailProps, type SidebarRailHeaderProps,
+  type SidebarRailNavProps, type SidebarRailFooterProps,
+  type SidebarPanelProps, type SidebarPanelHeaderProps, type SidebarPanelContentProps,
+  type SidebarContentProps, type RailButtonProps, type RailModeButtonProps,
+  type RailSeparatorProps, type ProfileAvatarProps, type SidebarUser,
+} from "./dashboard/app-sidebar";
+export { SidebarProvider, useSidebar, SIDEBAR_RAIL_WIDTH, SIDEBAR_PANEL_WIDTH, SIDEBAR_TOTAL_WIDTH, type SidebarProviderProps } from "./dashboard/sidebar-context";
 export { ClusterStatusBar, type ClusterStatusBarProps, type ClusterStatusItem } from "./dashboard/cluster-status-bar";
 export { CreditBalance, type CreditBalanceProps } from "./dashboard/credit-balance";
 export { InvoiceTable, type InvoiceTableProps, type Invoice } from "./dashboard/invoice-table";
 export { PlanCards, type PlanCardsProps, type PlanCardData } from "./dashboard/plan-cards";
-export { DashboardLayout, type DashboardLayoutProps, type DashboardUser, type NavItem, type TopNavLink } from "./dashboard/dashboard-layout";
+export { DashboardLayout, type DashboardLayoutProps, type DashboardUser, type NavItem, type TopNavLink, type ProductVariant, type PanelConfig } from "./dashboard/dashboard-layout";
 export { ResourceMeter, type ResourceMeterProps } from "./dashboard/resource-meter";
 export { SandboxCard, NewSandboxCard, type SandboxCardProps, type SandboxCardData, type SandboxStatus, type NewSandboxCardProps } from "./dashboard/sandbox-card";
 export { SandboxTable, type SandboxTableProps } from "./dashboard/sandbox-table";

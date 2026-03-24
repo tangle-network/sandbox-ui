@@ -36,6 +36,7 @@ interface WorkspaceLayoutStorage {
   bottomOpen?: boolean;
   leftWidth?: number;
   rightWidth?: number;
+  bottomHeight?: number;
 }
 
 interface ResizeHandleProps {
@@ -74,6 +75,8 @@ export interface WorkspaceLayoutProps {
   defaultLeftWidth?: number;
   /** Default right panel width in px */
   defaultRightWidth?: number;
+  /** Default bottom panel height in px */
+  defaultBottomHeight?: number;
   /** Minimum left panel width in px */
   minLeftWidth?: number;
   /** Maximum left panel width in px */
@@ -82,6 +85,10 @@ export interface WorkspaceLayoutProps {
   minRightWidth?: number;
   /** Maximum right panel width in px */
   maxRightWidth?: number;
+  /** Minimum bottom panel height in px */
+  minBottomHeight?: number;
+  /** Maximum bottom panel height in px */
+  maxBottomHeight?: number;
   /** Persist panel state and sizes in localStorage */
   persistenceKey?: string;
   /** Disable resize handles */
@@ -177,6 +184,52 @@ function ResizeHandle({ label, onDragStart, onStep, className }: ResizeHandlePro
   );
 }
 
+interface HorizontalResizeHandleProps {
+  label: string;
+  onDragStart: (clientY: number) => void;
+  onStep: (delta: number) => void;
+  className?: string;
+}
+
+function HorizontalResizeHandle({ label, onDragStart, onStep, className }: HorizontalResizeHandleProps) {
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    onDragStart(event.clientY);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      onStep(24);
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      onStep(-24);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      role="separator"
+      aria-orientation="horizontal"
+      onPointerDown={handlePointerDown}
+      onKeyDown={handleKeyDown}
+      className={cn(
+        "relative hidden h-3 shrink-0 cursor-row-resize lg:flex",
+        "items-center justify-center bg-transparent touch-none w-full",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60",
+        className,
+      )}
+    >
+      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--border-subtle)] transition-colors" />
+      <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-transparent hover:bg-[var(--brand-cool)]/30 focus-visible:bg-[var(--brand-cool)]/40" />
+    </button>
+  );
+}
+
 interface MobileDrawerProps {
   side: "left" | "right";
   title: string;
@@ -232,10 +285,13 @@ export function WorkspaceLayout({
   defaultBottomOpen = false,
   defaultLeftWidth = 280,
   defaultRightWidth = 480,
+  defaultBottomHeight = 224,
   minLeftWidth = 220,
   maxLeftWidth = 420,
   minRightWidth = 320,
   maxRightWidth = 720,
+  minBottomHeight = 100,
+  maxBottomHeight = 500,
   persistenceKey,
   resizable = true,
   theme = "operator",
@@ -247,9 +303,11 @@ export function WorkspaceLayout({
 }: WorkspaceLayoutProps) {
   const desktop = useDesktopMediaQuery(DESKTOP_BREAKPOINT);
   const dragStateRef = useRef<{
-    side: "left" | "right";
+    side: "left" | "right" | "bottom";
     pointerStartX: number;
+    pointerStartY: number;
     widthStart: number;
+    heightStart: number;
   } | null>(null);
 
   const storedLayout = useMemo(
@@ -266,6 +324,9 @@ export function WorkspaceLayout({
   const [rightWidth, setRightWidth] = useState(
     clamp(storedLayout?.rightWidth ?? defaultRightWidth, minRightWidth, maxRightWidth),
   );
+  const [bottomHeight, setBottomHeight] = useState(
+    clamp(storedLayout?.bottomHeight ?? defaultBottomHeight, minBottomHeight, maxBottomHeight),
+  );
 
   useEffect(() => {
     if (!persistenceKey || typeof window === "undefined") return;
@@ -276,10 +337,11 @@ export function WorkspaceLayout({
       bottomOpen,
       leftWidth,
       rightWidth,
+      bottomHeight,
     };
 
     window.localStorage.setItem(persistenceKey, JSON.stringify(payload));
-  }, [bottomOpen, leftOpen, leftWidth, persistenceKey, rightOpen, rightWidth]);
+  }, [bottomHeight, bottomOpen, leftOpen, leftWidth, persistenceKey, rightOpen, rightWidth]);
 
   useEffect(() => {
     if (!desktop) return;
@@ -288,7 +350,10 @@ export function WorkspaceLayout({
       const dragState = dragStateRef.current;
       if (!dragState) return;
 
-      if (dragState.side === "left") {
+      if (dragState.side === "bottom") {
+        const delta = dragState.pointerStartY - event.clientY;
+        setBottomHeight(clamp(dragState.heightStart + delta, minBottomHeight, maxBottomHeight));
+      } else if (dragState.side === "left") {
         const delta = event.clientX - dragState.pointerStartX;
         setLeftWidth(clamp(dragState.widthStart + delta, minLeftWidth, maxLeftWidth));
       } else {
@@ -310,7 +375,7 @@ export function WorkspaceLayout({
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerUp);
     };
-  }, [desktop, maxLeftWidth, maxRightWidth, minLeftWidth, minRightWidth]);
+  }, [desktop, maxBottomHeight, maxLeftWidth, maxRightWidth, minBottomHeight, minLeftWidth, minRightWidth]);
 
   const leftStyle = useMemo<CSSProperties>(() => ({ width: `${leftWidth}px` }), [leftWidth]);
   const rightStyle = useMemo<CSSProperties>(() => ({ width: `${rightWidth}px` }), [rightWidth]);
@@ -319,7 +384,19 @@ export function WorkspaceLayout({
     dragStateRef.current = {
       side,
       pointerStartX,
+      pointerStartY: 0,
       widthStart: side === "left" ? leftWidth : rightWidth,
+      heightStart: 0,
+    };
+  };
+
+  const startBottomResize = (pointerStartY: number) => {
+    dragStateRef.current = {
+      side: "bottom",
+      pointerStartX: 0,
+      pointerStartY,
+      widthStart: 0,
+      heightStart: bottomHeight,
     };
   };
 
@@ -329,6 +406,10 @@ export function WorkspaceLayout({
 
   const stepRightWidth = (delta: number) => {
     setRightWidth((current) => clamp(current + delta, minRightWidth, maxRightWidth));
+  };
+
+  const stepBottomHeight = (delta: number) => {
+    setBottomHeight((current) => clamp(current + delta, minBottomHeight, maxBottomHeight));
   };
 
   return (
@@ -414,29 +495,41 @@ export function WorkspaceLayout({
           <div className="min-h-0 flex-1 overflow-auto">{center}</div>
 
           {bottom && bottomOpen && (
-            <section
-              aria-label={bottomLabel}
-              className="border-t border-[var(--border-subtle)] bg-[var(--bg-card)]"
-            >
-              <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2">
-                <div className="min-w-0 flex-1">
-                  {bottomHeader ?? (
-                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-                      Runtime
-                    </span>
-                  )}
+            <>
+              {resizable && (
+                <HorizontalResizeHandle
+                  label="Resize bottom panel"
+                  onDragStart={startBottomResize}
+                  onStep={stepBottomHeight}
+                />
+              )}
+              <section
+                aria-label={bottomLabel}
+                className="border-t border-[var(--border-subtle)] bg-[var(--bg-card)] shrink-0"
+                style={{ height: `${bottomHeight}px` }}
+              >
+                <div className="flex h-full flex-col">
+                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2 shrink-0">
+                    <div className="min-w-0 flex-1">
+                      {bottomHeader ?? (
+                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                          Runtime
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="Collapse bottom panel"
+                      onClick={() => setBottomOpen(false)}
+                      className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                    >
+                      <PanelBottomClose className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-auto">{bottom}</div>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Collapse bottom panel"
-                  onClick={() => setBottomOpen(false)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
-                >
-                  <PanelBottomClose className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="max-h-56 overflow-auto">{bottom}</div>
-            </section>
+              </section>
+            </>
           )}
 
           {centerFooter && (

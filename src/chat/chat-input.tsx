@@ -1,21 +1,26 @@
 /**
- * ChatInput — message input bar with file attach, send/cancel, model selector.
+ * ChatInput — message input bar with file attach, drag-and-drop, send/cancel.
  *
  * - Auto-resizing textarea (up to max height)
  * - Enter to send, Shift+Enter for newline
- * - File attachment button with pending file chips
+ * - Drag-and-drop files onto the input with styled overlay
+ * - File attachment button (files) + folder attachment button
+ * - Pending file/folder chips
  * - Cancel button when streaming
  * - Optional model selector pill
  */
 
-import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent } from "react";
-import { Send, Square, Paperclip, X } from "lucide-react";
+import { useState, useRef, useCallback, type KeyboardEvent, type ChangeEvent, type DragEvent } from "react";
+import { Send, Square, Paperclip, FolderUp, X, Upload } from "lucide-react";
 import { cn } from "../lib/utils";
 
 export interface PendingFile {
   id: string;
   name: string;
   size: number;
+  type: "file" | "folder";
+  /** Number of files inside (for folders) */
+  fileCount?: number;
   status: "pending" | "uploading" | "ready" | "error";
 }
 
@@ -31,7 +36,16 @@ export interface ChatInputProps {
   /** Pending uploaded files */
   pendingFiles?: PendingFile[];
   onRemoveFile?: (id: string) => void;
+  /** Called when files are attached (via button or drag-and-drop) */
   onAttach?: (files: FileList) => void;
+  /** Called when a folder is selected via the folder button */
+  onAttachFolder?: (files: FileList) => void;
+  /** Accepted file types for the file input (e.g. ".pdf,.csv") */
+  accept?: string;
+  /** Drop zone overlay title */
+  dropTitle?: string;
+  /** Drop zone overlay description */
+  dropDescription?: string;
   className?: string;
 }
 
@@ -46,18 +60,24 @@ export function ChatInput({
   pendingFiles = [],
   onRemoveFile,
   onAttach,
+  onAttachFolder,
+  accept,
+  dropTitle = "Drop files to add context",
+  dropDescription = "Files will be attached to your next message.",
   className,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const dragCounter = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const handleSend = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed || isStreaming || disabled) return;
     onSend(trimmed);
     setValue("");
-    // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
@@ -72,7 +92,6 @@ export function ChatInput({
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setValue(e.target.value);
-    // Auto-resize
     const el = e.target;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
@@ -82,19 +101,89 @@ export function ChatInput({
     fileInputRef.current?.click();
   };
 
+  const handleFolderClick = () => {
+    folderInputRef.current?.click();
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       onAttach?.(e.target.files);
-      e.target.value = ""; // Reset so same file can be re-selected
+      e.target.value = "";
     }
   };
 
+  const handleFolderChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) {
+      (onAttachFolder ?? onAttach)?.(e.target.files);
+      e.target.value = "";
+    }
+  };
+
+  // Drag-and-drop handlers
+  const handleDragEnter = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer?.types.includes("Files")) {
+      setDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setDragOver(false);
+
+    const files = e.dataTransfer?.files;
+    if (files?.length && onAttach) {
+      onAttach(files);
+    }
+  }, [onAttach]);
+
+  const fileChips = pendingFiles.filter((f) => f.type === "file" || !f.type);
+  const folderChips = pendingFiles.filter((f) => f.type === "folder");
+
   return (
-    <div className={cn("px-4 py-3", className)}>
+    <div
+      className={cn("px-4 py-3 relative", className)}
+      onDragEnter={onAttach ? handleDragEnter : undefined}
+      onDragLeave={onAttach ? handleDragLeave : undefined}
+      onDragOver={onAttach ? handleDragOver : undefined}
+      onDrop={onAttach ? handleDrop : undefined}
+    >
+      {/* Drop zone overlay */}
+      {dragOver && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[28px] border-2 border-dashed border-[var(--brand-cool)] bg-[var(--brand-cool)]/8 backdrop-blur-sm pointer-events-none">
+          <div className="text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-cool)]/15">
+              <Upload className="h-6 w-6 text-[var(--brand-cool)]" />
+            </div>
+            <p className="text-sm font-semibold text-[var(--text-primary)]">{dropTitle}</p>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">{dropDescription}</p>
+          </div>
+        </div>
+      )}
+
       {/* Pending file chips */}
       {pendingFiles.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
-          {pendingFiles.map((f) => (
+          {folderChips.map((f) => (
             <span
               key={f.id}
               className={cn(
@@ -104,6 +193,37 @@ export function ChatInput({
                 f.status !== "error" && "text-[var(--text-secondary)]",
               )}
             >
+              <FolderUp className="h-3 w-3 shrink-0" />
+              <span className="truncate max-w-[150px]">{f.name}</span>
+              {f.fileCount !== undefined && (
+                <span className="text-[var(--text-muted)]">({f.fileCount})</span>
+              )}
+              {f.status === "uploading" && (
+                <span className="w-3 h-3 border-2 border-[var(--brand-cool)] border-t-transparent rounded-full animate-spin" />
+              )}
+              {onRemoveFile && (
+                <button
+                  type="button"
+                  aria-label={`Remove ${f.name}`}
+                  onClick={() => onRemoveFile(f.id)}
+                  className="rounded p-0.5 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </span>
+          ))}
+          {fileChips.map((f) => (
+            <span
+              key={f.id}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs shadow-[var(--shadow-card)] backdrop-blur-sm",
+                "border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))]",
+                f.status === "error" && "border-[var(--code-error)]/30 text-[var(--code-error)]",
+                f.status !== "error" && "text-[var(--text-secondary)]",
+              )}
+            >
+              <Paperclip className="h-3 w-3 shrink-0" />
               <span className="truncate max-w-[150px]">{f.name}</span>
               {f.status === "uploading" && (
                 <span className="w-3 h-3 border-2 border-[var(--brand-cool)] border-t-transparent rounded-full animate-spin" />
@@ -135,7 +255,7 @@ export function ChatInput({
             </div>
           </div>
           <div className="flex items-end gap-2">
-        {/* Attach button */}
+        {/* Attach buttons */}
         {onAttach && (
           <>
             <button
@@ -143,6 +263,7 @@ export function ChatInput({
               onClick={handleAttachClick}
               disabled={isStreaming}
               aria-label="Attach files"
+              title="Attach files"
               className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
             >
               <Paperclip className="h-4 w-4" />
@@ -153,7 +274,30 @@ export function ChatInput({
               multiple
               className="hidden"
               onChange={handleFileChange}
-              accept=".pdf,.csv,.xlsx,.xls,.jpg,.jpeg,.png,.gif,.txt,.json,.yaml,.yml"
+              accept={accept ?? ".pdf,.csv,.xlsx,.xls,.jpg,.jpeg,.png,.gif,.txt,.json,.yaml,.yml"}
+            />
+          </>
+        )}
+        {(onAttachFolder ?? onAttach) && (
+          <>
+            <button
+              type="button"
+              onClick={handleFolderClick}
+              disabled={isStreaming}
+              aria-label="Attach folder"
+              title="Attach folder"
+              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+            >
+              <FolderUp className="h-4 w-4" />
+            </button>
+            <input
+              ref={folderInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFolderChange}
+              // @ts-ignore webkitdirectory is non-standard but widely supported
+              webkitdirectory=""
             />
           </>
         )}

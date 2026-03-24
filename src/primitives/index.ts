@@ -102,3 +102,6 @@ export type { DropZoneProps } from "./drop-zone";
 
 export { UploadProgress } from "./upload-progress";
 export type { UploadProgressProps, UploadFile } from "./upload-progress";
+
+export { SidebarDropZone } from "./sidebar-drop-zone";
+export type { SidebarDropZoneProps } from "./sidebar-drop-zone";

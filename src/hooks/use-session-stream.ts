@@ -145,6 +145,7 @@ export function useSessionStream({
 
   const abortRef = useRef<AbortController | null>(null);
   const streamingMsgIdRef = useRef<string | null>(null);
+  const handleSSEEventRef = useRef<((type: string, raw: Record<string, unknown>) => void) | null>(null);
 
   // ── Fetch full message history ──────────────────────────────────────
 
@@ -231,7 +232,7 @@ export function useSessionStream({
             continue;
           }
 
-          handleSSEEvent(eventType, parsed);
+          handleSSEEventRef.current?.(eventType, parsed);
         }
       }
     } catch (err) {
@@ -351,6 +352,8 @@ export function useSessionStream({
       refetch();
     }
   }, [refetch]);
+
+  handleSSEEventRef.current = handleSSEEvent;
 
   // ── Send message ───────────────────────────────────────────────────
 

@@ -48,6 +48,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   const mountedRef = useRef(true);
   const onDataRef = useRef(onData);
   onDataRef.current = onData;
+  const connectStreamRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
 
   // -- Abort SSE stream only (does NOT delete the terminal session) ----------
 
@@ -155,7 +156,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
           retryCountRef.current++;
           retryTimerRef.current = setTimeout(() => {
             if (mountedRef.current && sessionIdRef.current) {
-              connectStream(sessionIdRef.current);
+              connectStreamRef.current?.(sessionIdRef.current);
             }
           }, delay);
         }
@@ -163,10 +164,13 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     }
   }, [apiUrl, token, abortStream]);
 
+  connectStreamRef.current = connectStream;
+
   // -- Full connect: create terminal + open SSE stream -----------------------
 
   const connect = useCallback(async () => {
     cleanup();
+    retryCountRef.current = 0;
     setError(null);
 
     try {

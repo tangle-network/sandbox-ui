@@ -78,8 +78,6 @@ export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
   brightWhite: "#fafafa",
 };
 
-const DEFAULT_PROMPT = "\x1b[38;5;48m$\x1b[0m ";
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -90,7 +88,6 @@ export default function TerminalView({
   theme,
   title = "Terminal",
   subtitle = "Connected to PTY session",
-  prompt = DEFAULT_PROMPT,
 }: TerminalViewProps) {
   const resolvedTheme = { ...DEFAULT_TERMINAL_THEME, ...theme };
 
@@ -150,7 +147,11 @@ export default function TerminalView({
     // The PTY echoes input back via SSE, so xterm only writes what
     // arrives from onData. This avoids double-displayed characters.
     term.onData((data) => {
-      sendCommand(data).catch(() => {});
+      sendCommand(data).catch((err) => {
+        termRef.current?.writeln(
+          `\r\n\x1b[31m${err instanceof Error ? err.message : 'Send failed'}\x1b[0m`,
+        );
+      });
     });
 
     // Resize observer

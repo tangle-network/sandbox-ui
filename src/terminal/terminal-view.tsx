@@ -45,7 +45,7 @@ export interface TerminalViewProps {
   title?: string;
   /** Subtitle shown in the welcome box. Default: "Connected to PTY session". */
   subtitle?: string;
-  /** ANSI-escaped prompt string. Default: green "$ ". */
+  /** @deprecated No longer used — the PTY provides its own prompt. */
   prompt?: string;
 }
 
@@ -97,11 +97,6 @@ export default function TerminalView({
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const lineBufferRef = useRef("");
-
-  const writePrompt = useCallback(() => {
-    termRef.current?.write("\r\n" + prompt);
-  }, [prompt]);
 
   const onData = useCallback((data: string) => {
     termRef.current?.write(data);
@@ -150,40 +145,12 @@ export default function TerminalView({
     term.writeln(`\x1b[38;5;48m\u2502\x1b[0m  \x1b[1m${padTitle}\x1b[0m\x1b[38;5;48m\u2502\x1b[0m`);
     term.writeln(`\x1b[38;5;48m\u2502\x1b[0m  ${padSubtitle}\x1b[38;5;48m\u2502\x1b[0m`);
     term.writeln(`\x1b[38;5;48m\u2570${"\u2500".repeat(41)}\u256f\x1b[0m`);
-    term.write(prompt);
 
-    // Handle keyboard input -- line-buffer mode
+    // Forward all keyboard input to the PTY — no local echo.
+    // The PTY echoes input back via SSE, so xterm only writes what
+    // arrives from onData. This avoids double-displayed characters.
     term.onData((data) => {
-      const code = data.charCodeAt(0);
-
-      if (data === "\r") {
-        const cmd = lineBufferRef.current;
-        lineBufferRef.current = "";
-        term.write("\r\n");
-        if (cmd.trim()) {
-          sendCommand(cmd).catch((err) => {
-            term.writeln(`\x1b[31mError: ${err instanceof Error ? err.message : String(err)}\x1b[0m`);
-            writePrompt();
-          });
-        } else {
-          term.write(prompt);
-        }
-      } else if (data === "\x7f" || data === "\b") {
-        if (lineBufferRef.current.length > 0) {
-          lineBufferRef.current = lineBufferRef.current.slice(0, -1);
-          term.write("\b \b");
-        }
-      } else if (data === "\x03") {
-        lineBufferRef.current = "";
-        term.write("^C");
-        writePrompt();
-      } else if (data === "\x0c") {
-        term.clear();
-        term.write(prompt);
-      } else if (code >= 32) {
-        lineBufferRef.current += data;
-        term.write(data);
-      }
+      sendCommand(data).catch(() => {});
     });
 
     // Resize observer
@@ -200,7 +167,7 @@ export default function TerminalView({
       termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [sendCommand, writePrompt, prompt, resolvedTheme, title, subtitle]);
+  }, [sendCommand, resolvedTheme, title, subtitle]);
 
   return (
     <div className="relative h-full w-full">

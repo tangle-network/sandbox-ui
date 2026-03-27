@@ -97,7 +97,7 @@ export function SandboxCard({ sandbox, onOpenIDE, onOpenTerminal, onWake, onRest
           <span className={cn("w-2 h-2 rounded-full", status.dotClass)} />
           {status.label}
         </span>
-        {!isProvisioning && (
+        {!isProvisioning && (onSSH || onDelete) && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button

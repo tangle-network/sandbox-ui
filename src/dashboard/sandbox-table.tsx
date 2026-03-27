@@ -160,28 +160,30 @@ export function SandboxTable({
                             Wake Up
                           </button>
                         )}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button type="button" className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90">
-                              <MaterialIcon name="more_vert" className="text-[20px]" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="min-w-[160px]">
-                            {isActive && onSSH && (
-                              <DropdownMenuItem onClick={() => onSSH(sb.id)}>
-                                <MaterialIcon name="vpn_key" className="text-base mr-2" />
-                                SSH Info
-                              </DropdownMenuItem>
-                            )}
-                            {isActive && onSSH && handleDelete && <DropdownMenuSeparator />}
-                            {handleDelete && (
-                              <DropdownMenuItem onClick={() => handleDelete(sb.id)} className="text-red-400 focus:text-red-400">
-                                <MaterialIcon name="delete" className="text-base mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {(onSSH || handleDelete) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90">
+                                <MaterialIcon name="more_vert" className="text-[20px]" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-[160px]">
+                              {isActive && onSSH && (
+                                <DropdownMenuItem onClick={() => onSSH(sb.id)}>
+                                  <MaterialIcon name="vpn_key" className="text-base mr-2" />
+                                  SSH Info
+                                </DropdownMenuItem>
+                              )}
+                              {isActive && onSSH && handleDelete && <DropdownMenuSeparator />}
+                              {handleDelete && (
+                                <DropdownMenuItem onClick={() => handleDelete(sb.id)} className="text-red-400 focus:text-red-400">
+                                  <MaterialIcon name="delete" className="text-base mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </td>
                   </tr>

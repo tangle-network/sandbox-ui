@@ -115,7 +115,7 @@ function mapApiMessage(msg: ApiMessage): { message: SessionMessage; parts: Sessi
 async function fetchJson<T>(url: string, token: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
   if (init?.body) headers['Content-Type'] = 'application/json';
-  const res = await fetch(url, { ...init, headers: { ...headers, ...init?.headers } });
+  const res = await fetch(url, { ...init, headers: { ...headers, ...init?.headers }, credentials: 'include' });
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   return res.json();
 }
@@ -145,6 +145,7 @@ export function useSessionStream({
 
   const abortRef = useRef<AbortController | null>(null);
   const streamingMsgIdRef = useRef<string | null>(null);
+  const handleSSEEventRef = useRef<((type: string, raw: Record<string, unknown>) => void) | null>(null);
 
   // ── Fetch full message history ──────────────────────────────────────
 
@@ -187,6 +188,7 @@ export function useSessionStream({
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal,
+        credentials: 'include',
       });
 
       if (!res.ok) throw new Error(`SSE connection failed: ${res.status}`);
@@ -230,7 +232,7 @@ export function useSessionStream({
             continue;
           }
 
-          handleSSEEvent(eventType, parsed);
+          handleSSEEventRef.current?.(eventType, parsed);
         }
       }
     } catch (err) {
@@ -248,7 +250,14 @@ export function useSessionStream({
 
   // ── SSE event handler ──────────────────────────────────────────────
 
-  const handleSSEEvent = useCallback((type: string, props: Record<string, unknown>) => {
+  const handleSSEEvent = useCallback((type: string, raw: Record<string, unknown>) => {
+    // Unwrap sidecar event envelope — sidecar sends { type, properties: { info|part } }
+    const envelope = raw?.properties as Record<string, unknown> | undefined;
+    const props: Record<string, unknown> = envelope?.info as Record<string, unknown>
+      ?? envelope?.part as Record<string, unknown>
+      ?? envelope
+      ?? raw;
+
     if (type === 'message.updated') {
       // A new or updated message — create/update the message entry
       const id = (props.id as string) ?? (props.messageId as string) ?? '';
@@ -343,6 +352,8 @@ export function useSessionStream({
       refetch();
     }
   }, [refetch]);
+
+  handleSSEEventRef.current = handleSSEEvent;
 
   // ── Send message ───────────────────────────────────────────────────
 

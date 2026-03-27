@@ -2,6 +2,13 @@
 
 import * as React from "react"
 import { cn } from "../lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../primitives/dropdown-menu"
 import { ResourceMeter } from "./resource-meter"
 
 export type SandboxStatus = "running" | "hibernating" | "provisioning" | "stopped" | "failed" | "archived"
@@ -27,6 +34,9 @@ export interface SandboxCardProps {
   onOpenTerminal?: (id: string) => void
   onWake?: (id: string) => void
   onRestore?: (id: string) => void
+  /** Called when the user clicks "Delete". The consuming app should show a confirmation dialog before performing the deletion. */
+  onDelete?: (id: string) => void
+  onSSH?: (id: string) => void
   className?: string
 }
 
@@ -62,13 +72,15 @@ function getGlow(image?: string): string {
   return ""
 }
 
-export function SandboxCard({ sandbox, onOpenIDE, onOpenTerminal, onWake, onRestore, className }: SandboxCardProps) {
+export function SandboxCard({ sandbox, onOpenIDE, onOpenTerminal, onWake, onRestore, onDelete, onSSH, className }: SandboxCardProps) {
   const status = statusConfig[sandbox.status] ?? statusConfig.stopped
   const glow = getGlow(sandbox.image)
   const isActive = sandbox.status === "running"
   const isHibernating = sandbox.status === "hibernating"
+  const isStopped = sandbox.status === "stopped"
   const isProvisioning = sandbox.status === "provisioning"
   const isArchived = sandbox.status === "archived"
+  const isWakeable = isHibernating || isStopped
 
   return (
     <div
@@ -79,12 +91,39 @@ export function SandboxCard({ sandbox, onOpenIDE, onOpenTerminal, onWake, onRest
         className,
       )}
     >
-      {/* Status badge */}
-      <div className="absolute top-0 right-0 p-4">
+      {/* Status badge + overflow menu */}
+      <div className="absolute top-0 right-0 p-4 flex items-center gap-2">
         <span className={cn("flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border", status.bgColor, status.color, status.borderColor)}>
           <span className={cn("w-2 h-2 rounded-full", status.dotClass)} />
           {status.label}
         </span>
+        {!isProvisioning && (onSSH || onDelete) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="p-1 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all opacity-0 group-hover:opacity-100"
+              >
+                <MaterialIcon name="more_vert" className="text-lg" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[160px]">
+              {isActive && onSSH && (
+                <DropdownMenuItem onClick={() => onSSH(sandbox.id)}>
+                  <MaterialIcon name="vpn_key" className="text-base mr-2" />
+                  SSH Info
+                </DropdownMenuItem>
+              )}
+              {isActive && onSSH && onDelete && <DropdownMenuSeparator />}
+              {onDelete && (
+                <DropdownMenuItem onClick={() => onDelete(sandbox.id)} className="text-red-400 focus:text-red-400">
+                  <MaterialIcon name="delete" className="text-base mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Header */}
@@ -160,7 +199,7 @@ export function SandboxCard({ sandbox, onOpenIDE, onOpenTerminal, onWake, onRest
         </div>
       )}
 
-      {isHibernating && (
+      {isWakeable && (
         <button
           type="button"
           onClick={() => onWake?.(sandbox.id)}

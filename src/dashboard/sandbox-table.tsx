@@ -2,6 +2,13 @@
 
 import * as React from "react"
 import { cn } from "../lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../primitives/dropdown-menu"
 import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
 
 export interface SandboxTableProps {
@@ -14,6 +21,9 @@ export interface SandboxTableProps {
   onOpenTerminal?: (id: string) => void
   onSSH?: (id: string) => void
   onWake?: (id: string) => void
+  /** Called when the user clicks "Delete". The consuming app should show a confirmation dialog before performing the deletion. */
+  onDelete?: (id: string) => void
+  /** @deprecated Use `onDelete` instead. */
   onMore?: (id: string) => void
   className?: string
 }
@@ -59,9 +69,11 @@ export function SandboxTable({
   onOpenTerminal,
   onSSH,
   onWake,
+  onDelete,
   onMore,
   className,
 }: SandboxTableProps) {
+  const handleDelete = onDelete ?? onMore;
   const totalCount = total ?? sandboxes.length
   const totalPages = Math.ceil(totalCount / pageSize)
 
@@ -84,7 +96,9 @@ export function SandboxTable({
                 const sc = statusColors[sb.status] ?? statusColors.stopped
                 const isActive = sb.status === "running"
                 const isHibernating = sb.status === "hibernating"
+                const isStopped = sb.status === "stopped"
                 const isProvisioning = sb.status === "provisioning"
+                const isWakeable = isHibernating || isStopped
                 return (
                   <tr key={sb.id} className="hover:bg-surface-container-highest/20 transition-colors group relative">
                     <td className="px-6 py-5 whitespace-nowrap">
@@ -122,7 +136,7 @@ export function SandboxTable({
                           <MaterialIcon name="refresh" className="text-[14px] animate-spin" />
                           {sb.provisioningMessage ?? "Allocating nodes..."}
                         </div>
-                      ) : isHibernating ? (
+                      ) : (isHibernating || isStopped) ? (
                         <div className="space-y-3 w-48 opacity-30">
                           <MiniMeter label="CPU" percent={0} />
                           <MiniMeter label="RAM" percent={0} />
@@ -134,24 +148,42 @@ export function SandboxTable({
                         {isActive && (
                           <>
                             <button type="button" onClick={() => onOpenIDE?.(sb.id)} className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90" title="Open IDE">
-                              <MaterialIcon name="terminal" className="text-[20px]" />
+                              <MaterialIcon name="code" className="text-[20px]" />
                             </button>
                             <button type="button" onClick={() => onOpenTerminal?.(sb.id)} className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90" title="Terminal">
-                              <MaterialIcon name="tab" className="text-[20px]" />
-                            </button>
-                            <button type="button" onClick={() => onSSH?.(sb.id)} className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90" title="SSH">
-                              <MaterialIcon name="vpn_key" className="text-[20px]" />
+                              <MaterialIcon name="terminal" className="text-[20px]" />
                             </button>
                           </>
                         )}
-                        {isHibernating && (
+                        {isWakeable && (
                           <button type="button" onClick={() => onWake?.(sb.id)} className="px-3 py-1.5 rounded-lg border border-md3-primary/30 text-md3-primary text-[10px] font-bold uppercase tracking-wider hover:bg-md3-primary/10 active:scale-95 transition-all">
                             Wake Up
                           </button>
                         )}
-                        <button type="button" onClick={() => onMore?.(sb.id)} className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90">
-                          <MaterialIcon name="more_vert" className="text-[20px]" />
-                        </button>
+                        {(onSSH || handleDelete) && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90">
+                                <MaterialIcon name="more_vert" className="text-[20px]" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-[160px]">
+                              {isActive && onSSH && (
+                                <DropdownMenuItem onClick={() => onSSH(sb.id)}>
+                                  <MaterialIcon name="vpn_key" className="text-base mr-2" />
+                                  SSH Info
+                                </DropdownMenuItem>
+                              )}
+                              {isActive && onSSH && handleDelete && <DropdownMenuSeparator />}
+                              {handleDelete && (
+                                <DropdownMenuItem onClick={() => handleDelete(sb.id)} className="text-red-400 focus:text-red-400">
+                                  <MaterialIcon name="delete" className="text-base mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </td>
                   </tr>

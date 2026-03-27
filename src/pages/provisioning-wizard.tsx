@@ -110,12 +110,15 @@ export function ProvisioningWizard({
   const [step, setStep] = React.useState(0)
   const [selectedEnv, setSelectedEnv] = React.useState(environments[0]?.id ?? "")
 
+  const onLoadRef = React.useRef(onLoadEnvironments)
+  onLoadRef.current = onLoadEnvironments
+
   React.useEffect(() => {
-    if (environmentsProp || !onLoadEnvironments) return
+    if (environmentsProp || !onLoadRef.current) return
 
     let cancelled = false
 
-    onLoadEnvironments()
+    onLoadRef.current()
       .then((entries) => {
         if (cancelled || !entries?.length) return
         const resolved = entries.map(resolveEnvironment)
@@ -130,7 +133,7 @@ export function ProvisioningWizard({
       })
 
     return () => { cancelled = true }
-  }, [onLoadEnvironments, environmentsProp])
+  }, [environmentsProp])
   const [cpuCores, setCpuCores] = React.useState(4)
   const [ramGB, setRamGB] = React.useState(16)
   const [storageGB, setStorageGB] = React.useState(128)

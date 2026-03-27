@@ -96,7 +96,9 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       });
 
       if (!streamRes.ok || !streamRes.body) {
-        throw new Error(`SSE stream failed: ${streamRes.status}`);
+        const err = new Error(`SSE stream failed: ${streamRes.status}`);
+        (err as Error & { httpStatus?: number }).httpStatus = streamRes.status;
+        throw err;
       }
 
       if (mountedRef.current) {
@@ -141,6 +143,16 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
           }
         }
       }
+
+      // Stream ended cleanly (server closed connection) — reconnect to existing session
+      if (mountedRef.current) {
+        setIsConnected(false);
+        retryTimerRef.current = setTimeout(() => {
+          if (mountedRef.current && sessionIdRef.current) {
+            connectStreamRef.current?.(sessionIdRef.current);
+          }
+        }, 1000);
+      }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       if (mountedRef.current) {
@@ -149,7 +161,8 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         setIsConnected(false);
 
         // Don't retry on client errors (4xx) — they won't resolve on retry
-        const is4xx = /\b4\d{2}\b/.test(message);
+        const httpStatus = (err as Error & { httpStatus?: number }).httpStatus;
+        const is4xx = httpStatus !== undefined && httpStatus >= 400 && httpStatus < 500;
         const MAX_RETRIES = 8;
         if (!is4xx && retryCountRef.current < MAX_RETRIES) {
           const delay = Math.min(3000 * Math.pow(2, retryCountRef.current), 30000);

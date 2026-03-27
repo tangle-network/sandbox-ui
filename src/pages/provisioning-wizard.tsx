@@ -42,27 +42,38 @@ function MaterialIcon({ name, className }: { name: string; className?: string })
   )
 }
 
-const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string }> = {
-  universal: { name: "Universal", abbr: "U", color: "violet" },
-  ethereum: { name: "Ethereum", abbr: "Ξ", color: "blue" },
-  solana: { name: "Solana", abbr: "S", color: "green" },
-  tangle: { name: "Tangle", abbr: "T", color: "purple" },
-  "ai-sdk": { name: "AI SDK", abbr: "AI", color: "cyan" },
-  rust: { name: "Rust", abbr: "Rs", color: "orange" },
+const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string; bgClass: string }> = {
+  universal: { name: "Universal", abbr: "U", color: "violet", textClass: "text-violet-400", bgClass: "bg-violet-500/10" },
+  ethereum: { name: "Ethereum", abbr: "Ξ", color: "blue", textClass: "text-blue-400", bgClass: "bg-blue-500/10" },
+  solana: { name: "Solana", abbr: "S", color: "green", textClass: "text-green-400", bgClass: "bg-green-500/10" },
+  tangle: { name: "Tangle", abbr: "T", color: "purple", textClass: "text-purple-400", bgClass: "bg-purple-500/10" },
+  "ai-sdk": { name: "AI SDK", abbr: "AI", color: "cyan", textClass: "text-cyan-400", bgClass: "bg-cyan-500/10" },
+  rust: { name: "Rust", abbr: "Rs", color: "orange", textClass: "text-orange-400", bgClass: "bg-orange-500/10" },
 }
 
 export function resolveEnvironment(env: { id: string; description?: string }): EnvironmentOption {
   const display = STACK_DISPLAY[env.id]
-  const name = display?.name ?? env.id.charAt(0).toUpperCase() + env.id.slice(1).replace(/-/g, " ")
-  const abbr = display?.abbr ?? env.id[0].toUpperCase()
+  const name = display?.name ?? (env.id.length > 0 ? env.id.charAt(0).toUpperCase() + env.id.slice(1).replace(/-/g, " ") : "Unknown")
+  const abbr = display?.abbr ?? (env.id.length > 0 ? env.id[0].toUpperCase() : "?")
   const color = display?.color ?? "slate"
+  const textClass = display?.textClass ?? "text-slate-400"
   return {
     id: env.id,
     name,
     description: env.description ?? `${name} development environment`,
-    icon: <span className={`text-${color}-400 text-2xl font-bold`}>{abbr}</span>,
+    icon: <span className={`${textClass} text-2xl font-bold`}>{abbr}</span>,
     color,
   }
+}
+
+const COLOR_BG_CLASS: Record<string, string> = {
+  green: "bg-green-500/10",
+  blue: "bg-blue-500/10",
+  orange: "bg-orange-500/10",
+  violet: "bg-violet-500/10",
+  purple: "bg-purple-500/10",
+  cyan: "bg-cyan-500/10",
+  slate: "bg-slate-500/10",
 }
 
 const defaultEnvironments: EnvironmentOption[] = [
@@ -190,7 +201,7 @@ export function ProvisioningWizard({
                     )}
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", `bg-${env.color}-500/10`)}>
+                      <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", COLOR_BG_CLASS[env.color] ?? "bg-slate-500/10")}>
                         {env.icon}
                       </div>
                       <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center", selectedEnv === env.id ? "border-md3-primary" : "border-outline-variant/30")}>

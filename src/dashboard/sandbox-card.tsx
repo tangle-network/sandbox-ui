@@ -34,6 +34,7 @@ export interface SandboxCardProps {
   onOpenTerminal?: (id: string) => void
   onWake?: (id: string) => void
   onRestore?: (id: string) => void
+  /** Called when the user clicks "Delete". The consuming app should show a confirmation dialog before performing the deletion. */
   onDelete?: (id: string) => void
   onSSH?: (id: string) => void
   className?: string

@@ -21,7 +21,10 @@ export interface SandboxTableProps {
   onOpenTerminal?: (id: string) => void
   onSSH?: (id: string) => void
   onWake?: (id: string) => void
+  /** Called when the user clicks "Delete". The consuming app should show a confirmation dialog before performing the deletion. */
   onDelete?: (id: string) => void
+  /** @deprecated Use `onDelete` instead. */
+  onMore?: (id: string) => void
   className?: string
 }
 
@@ -67,8 +70,10 @@ export function SandboxTable({
   onSSH,
   onWake,
   onDelete,
+  onMore,
   className,
 }: SandboxTableProps) {
+  const handleDelete = onDelete ?? onMore;
   const totalCount = total ?? sandboxes.length
   const totalPages = Math.ceil(totalCount / pageSize)
 
@@ -168,9 +173,9 @@ export function SandboxTable({
                                 SSH Info
                               </DropdownMenuItem>
                             )}
-                            {isActive && onSSH && onDelete && <DropdownMenuSeparator />}
-                            {onDelete && (
-                              <DropdownMenuItem onClick={() => onDelete(sb.id)} className="text-red-400 focus:text-red-400">
+                            {isActive && onSSH && handleDelete && <DropdownMenuSeparator />}
+                            {handleDelete && (
+                              <DropdownMenuItem onClick={() => handleDelete(sb.id)} className="text-red-400 focus:text-red-400">
                                 <MaterialIcon name="delete" className="text-base mr-2" />
                                 Delete
                               </DropdownMenuItem>

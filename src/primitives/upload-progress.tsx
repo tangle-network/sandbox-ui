@@ -5,6 +5,7 @@
  * completion checkmarks, and error states.
  */
 
+import { AlertCircle, CheckCircle2, FileText, Loader2, RefreshCw, X } from "lucide-react";
 import { cn } from "../lib/utils";
 
 export interface UploadFile {
@@ -40,71 +41,65 @@ export function UploadProgress({ files, onRemove, onRetry, className }: UploadPr
           className={cn(
             "flex items-center gap-3 rounded-lg border px-3 py-2 text-sm",
             file.status === "error"
-              ? "border-[hsl(var(--destructive))]/20 bg-[hsl(var(--destructive))]/5"
+              ? "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)]"
               : file.status === "complete"
-                ? "border-[hsl(var(--success))]/20 bg-[hsl(var(--success))]/5"
-                : "border-[hsl(var(--border))] bg-[hsl(var(--card))]",
+                ? "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]"
+                : "border-[var(--border-subtle)] bg-[var(--depth-2)]",
           )}
         >
           {/* Icon */}
-          <span
-            className={cn(
-              "material-symbols-outlined text-base shrink-0",
-              file.status === "complete" && "text-[hsl(var(--success))]",
-              file.status === "error" && "text-[hsl(var(--destructive))]",
-              file.status === "uploading" && "text-[hsl(var(--primary))] animate-pulse",
-              file.status === "pending" && "text-[hsl(var(--muted-foreground))]",
-            )}
-            style={file.status === "complete" ? { fontVariationSettings: "'FILL' 1" } : undefined}
-          >
-            {file.status === "complete"
-              ? "check_circle"
-              : file.status === "error"
-                ? "error"
-                : file.status === "uploading"
-                  ? "progress_activity"
-                  : "description"}
-          </span>
+          {file.status === "complete" && (
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--surface-success-text)]" />
+          )}
+          {file.status === "error" && (
+            <AlertCircle className="h-4 w-4 shrink-0 text-[var(--surface-danger-text)]" />
+          )}
+          {file.status === "uploading" && (
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--brand-cool)]" />
+          )}
+          {file.status === "pending" && (
+            <FileText className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+          )}
 
           {/* Name + size */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="truncate font-medium text-[hsl(var(--foreground))]">{file.name}</span>
-              <span className="shrink-0 text-xs text-[hsl(var(--muted-foreground))]">{formatSize(file.size)}</span>
+              <span className="truncate font-medium text-[var(--text-primary)]">{file.name}</span>
+              <span className="shrink-0 text-xs text-[var(--text-muted)]">{formatSize(file.size)}</span>
             </div>
             {/* Progress bar */}
             {file.status === "uploading" && file.progress !== undefined && (
-              <div className="mt-1 h-1 w-full rounded-full bg-[hsl(var(--muted))] overflow-hidden">
+              <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-[var(--depth-3)]">
                 <div
-                  className="h-full rounded-full bg-[hsl(var(--primary))] transition-all"
+                  className="h-full rounded-full bg-[var(--brand-cool)] transition-all"
                   style={{ width: `${file.progress}%` }}
                 />
               </div>
             )}
             {/* Error message */}
             {file.status === "error" && file.error && (
-              <p className="mt-0.5 text-xs text-[hsl(var(--destructive))]">{file.error}</p>
+              <p className="mt-0.5 text-xs text-[var(--surface-danger-text)]">{file.error}</p>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
             {file.status === "error" && onRetry && (
               <button
                 type="button"
                 onClick={() => onRetry(file.id)}
-                className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] transition-colors"
+                className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
               >
-                <span className="material-symbols-outlined text-sm">refresh</span>
+                <RefreshCw className="h-3.5 w-3.5" />
               </button>
             )}
             {onRemove && (
               <button
                 type="button"
                 onClick={() => onRemove(file.id)}
-                className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] transition-colors"
+                className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
               >
-                <span className="material-symbols-outlined text-sm">close</span>
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>

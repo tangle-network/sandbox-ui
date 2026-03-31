@@ -162,7 +162,7 @@ export function UserMenu({
         {links.length > 0 && <DropdownMenuSeparator />}
         <DropdownMenuItem
           onClick={handleLogout}
-          className="text-red-500 focus:text-red-500"
+          className="text-[var(--surface-danger-text)] focus:text-[var(--surface-danger-text)]"
         >
           Sign out
         </DropdownMenuItem>

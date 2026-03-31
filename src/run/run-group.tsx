@@ -33,8 +33,8 @@ import { Markdown } from "../markdown/markdown";
 const DEFAULT_BRANDING: AgentBranding = {
   label: "Agent",
   accentClass: "text-[var(--brand-cool)]",
-  bgClass: "bg-[var(--brand-cool)]/8",
-  containerBgClass: "bg-[var(--bg-section)]/60",
+  bgClass: "bg-[var(--accent-surface-soft)]",
+  containerBgClass: "bg-[var(--bg-section)]",
   borderClass: "border-[var(--border-accent)]",
   iconClass: "",
   textClass: "text-[var(--brand-cool)]",
@@ -208,8 +208,8 @@ export const RunGroup = memo(
           <Collapsible.Trigger asChild>
             <button
               className={cn(
-                "w-full rounded-[calc(var(--radius-xl)+2px)] border px-4 py-3.5 text-left transition-colors shadow-[var(--shadow-card)] backdrop-blur-sm",
-                "bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_30%),var(--bg-card)] hover:bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent_30%),var(--bg-card)]",
+                "w-full rounded-[var(--radius-xl)] border px-4 py-3.5 text-left transition-colors",
+                "bg-[var(--depth-2)] hover:bg-[var(--depth-3)]",
                 collapsed ? branding.borderClass : "border-[var(--border-subtle)]",
                 branding.bgClass,
               )}
@@ -217,7 +217,7 @@ export const RunGroup = memo(
               <div className="flex items-center gap-3">
                 <div
                   className={cn(
-                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-[calc(var(--radius-lg)+2px)] border bg-[linear-gradient(135deg,rgba(82,164,255,0.22),rgba(82,164,255,0.06))] shadow-[var(--shadow-accent)]",
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-[calc(var(--radius-lg)+2px)] border bg-[var(--accent-surface-soft)] shadow-[var(--shadow-accent)]",
                     branding.borderClass,
                   )}
                 >
@@ -230,7 +230,7 @@ export const RunGroup = memo(
                       {branding.label}
                     </span>
                     {isStreaming ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-accent)] bg-[linear-gradient(135deg,rgba(82,164,255,0.22),rgba(82,164,255,0.08))] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-cool)]">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--accent-text)]">
                         <Loader2 className="h-3 w-3 animate-spin" />
                         Running
                       </span>
@@ -321,7 +321,7 @@ export const RunGroup = memo(
                 return (
                   <div
                     key={key}
-                    className="rounded-[calc(var(--radius-lg)+2px)] border border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.08),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_30%),var(--bg-card)] px-4 py-4"
+                    className="rounded-[calc(var(--radius-lg)+2px)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-4"
                   >
                     <Markdown>{part.text}</Markdown>
                   </div>

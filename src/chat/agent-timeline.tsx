@@ -7,7 +7,8 @@ import {
   Info,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { ChatMessage, type MessageRole } from "./chat-message";
+import { type MessageRole } from "./chat-message";
+import { Markdown } from "../markdown/markdown";
 import { ThinkingIndicator } from "./thinking-indicator";
 import { type ToolCallData } from "../run/tool-call-feed";
 import { ToolCallGroup, ToolCallStep } from "../run/tool-call-step";
@@ -87,30 +88,34 @@ const TONE_STYLES: Record<AgentTimelineTone, { dot: string; card: string; text: 
     icon: CircleDot,
   },
   info: {
-    dot: "bg-sky-400",
-    card: "border-sky-500/20 bg-sky-500/5",
-    text: "text-sky-200",
+    dot: "bg-[var(--surface-info-text)]",
+    card: "border-[var(--surface-info-border)] bg-[var(--surface-info-bg)]",
+    text: "text-[var(--surface-info-text)]",
     icon: Info,
   },
   success: {
-    dot: "bg-[var(--code-success)]",
-    card: "border-emerald-500/20 bg-emerald-500/5",
-    text: "text-emerald-200",
+    dot: "bg-[var(--surface-success-text)]",
+    card: "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]",
+    text: "text-[var(--surface-success-text)]",
     icon: CheckCircle2,
   },
   warning: {
-    dot: "bg-amber-400",
-    card: "border-amber-500/20 bg-amber-500/5",
-    text: "text-amber-100",
+    dot: "bg-[var(--surface-warning-text)]",
+    card: "border-[var(--surface-warning-border)] bg-[var(--surface-warning-bg)]",
+    text: "text-[var(--surface-warning-text)]",
     icon: AlertTriangle,
   },
   error: {
-    dot: "bg-[var(--code-error)]",
-    card: "border-red-500/20 bg-red-500/5",
-    text: "text-red-200",
+    dot: "bg-[var(--surface-danger-text)]",
+    card: "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)]",
+    text: "text-[var(--surface-danger-text)]",
     icon: AlertTriangle,
   },
 };
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
 
 interface AgentTimelineRowProps {
   isLast: boolean;
@@ -120,14 +125,57 @@ interface AgentTimelineRowProps {
 
 function AgentTimelineRow({ isLast, accentClassName, children }: AgentTimelineRowProps) {
   return (
-    <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-4">
+    <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-4">
       <div className="relative flex justify-center">
         {!isLast && (
-          <span className="absolute top-4 bottom-[-1rem] left-1/2 w-px -translate-x-1/2 bg-[var(--border-subtle)]" />
+          <span className="absolute top-4 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2 bg-[var(--border-subtle)]" />
         )}
         <span className={cn("relative mt-2 h-2.5 w-2.5 rounded-full ring-4 ring-[var(--bg-root)]", accentClassName)} />
       </div>
-      <div className="min-w-0 pb-4">{children}</div>
+      <div className="min-w-0 pb-3">{children}</div>
+    </div>
+  );
+}
+
+function UserMessage({ item }: { item: AgentTimelineMessageItem }) {
+  return (
+    <div className="mb-3 flex justify-end">
+      <div className="max-w-[72%]">
+        <div className="rounded-2xl border border-[var(--border-accent)] bg-[var(--depth-3)] px-4 py-3">
+          {item.timestamp && (
+            <div className="mb-1.5 text-right text-[11px] text-[var(--text-muted)]">
+              {formatTime(item.timestamp)}
+            </div>
+          )}
+          <div className="whitespace-pre-wrap text-[15px] leading-7 text-[var(--text-primary)]">
+            {item.content}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AssistantMessage({ item }: { item: AgentTimelineMessageItem }) {
+  return (
+    <div className="-mt-0.5">
+      {item.timestamp && (
+        <div className="mb-2 text-[11px] text-[var(--text-muted)]">
+          {formatTime(item.timestamp)}
+        </div>
+      )}
+      {item.content && (
+        <Markdown className="tangle-prose text-[15px] leading-7">{item.content}</Markdown>
+      )}
+      {item.isStreaming && (
+        <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-[var(--brand-cool)] align-text-bottom" />
+      )}
+      {item.toolCalls && <div className="mt-3">{item.toolCalls}</div>}
+      {item.after && (
+        <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
+          {item.after}
+        </div>
+      )}
     </div>
   );
 }
@@ -137,13 +185,13 @@ function StatusCard({ item }: { item: AgentTimelineStatusItem }) {
   const Icon = tone.icon;
 
   return (
-    <div className={cn("rounded-[var(--radius-lg)] border px-4 py-3 shadow-[var(--shadow-card)]", tone.card)}>
+    <div className={cn("rounded-[var(--radius-lg)] border px-4 py-3", tone.card)}>
       <div className="flex items-start gap-3">
         <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", tone.text)} />
         <div className="min-w-0">
           <div className={cn("text-sm font-medium", tone.text)}>{item.label}</div>
           {item.detail && (
-            <div className="mt-1 text-sm text-[var(--text-muted)]">{item.detail}</div>
+            <div className="mt-0.5 text-sm text-[var(--text-muted)]">{item.detail}</div>
           )}
         </div>
       </div>
@@ -154,9 +202,9 @@ function StatusCard({ item }: { item: AgentTimelineStatusItem }) {
 function ArtifactCard({ item }: { item: AgentTimelineArtifactItem }) {
   const tone = TONE_STYLES[item.tone ?? "default"];
   const content = (
-    <div className={cn("rounded-[var(--radius-lg)] border px-4 py-3 shadow-[var(--shadow-card)]", tone.card)}>
+    <div className={cn("rounded-[var(--radius-lg)] border px-4 py-3", tone.card)}>
       <div className="flex items-start gap-3">
-        <div className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]")}>
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
           {item.icon ?? <FileText className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">
@@ -218,42 +266,32 @@ export function AgentTimeline({
     ? [...items, { id: "__thinking__", kind: "custom", content: <ThinkingIndicator /> }]
     : items;
 
+  // Determine which items participate in the timeline connector (non-user-message items)
+  // User messages are rendered outside the timeline grid
+  const timelineItems = renderedItems.filter((item) => !(item.kind === "message" && item.role === "user"));
+
   return (
     <div className={cn("mx-auto w-full max-w-5xl px-4 py-4", className)}>
       {renderedItems.map((item, index) => {
-        const isLast = index === renderedItems.length - 1;
+        // User messages: right-aligned bubble, no connector
+        if (item.kind === "message" && item.role === "user") {
+          return <UserMessage key={item.id} item={item} />;
+        }
+
+        const timelineIndex = timelineItems.indexOf(item);
+        const isLast = timelineIndex === timelineItems.length - 1;
 
         if (item.kind === "message") {
-          const accentClassName =
-            item.role === "user" ? "bg-[var(--brand-cool)]" : "bg-[var(--brand-glow)]";
-
           return (
-            <AgentTimelineRow key={item.id} isLast={isLast} accentClassName={accentClassName}>
-              <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
-                <ChatMessage
-                  role={item.role}
-                  content={item.content}
-                  toolCalls={item.toolCalls}
-                  isStreaming={item.isStreaming}
-                  timestamp={item.timestamp}
-                />
-                {item.after && (
-                  <div className="border-t border-[var(--border-subtle)] px-4 py-3">
-                    {item.after}
-                  </div>
-                )}
-              </div>
+            <AgentTimelineRow key={item.id} isLast={isLast} accentClassName="bg-[var(--brand-glow)]">
+              <AssistantMessage item={item} />
             </AgentTimelineRow>
           );
         }
 
         if (item.kind === "tool") {
           return (
-            <AgentTimelineRow
-              key={item.id}
-              isLast={isLast}
-              accentClassName="bg-[var(--brand-cool)]/80"
-            >
+            <AgentTimelineRow key={item.id} isLast={isLast} accentClassName="bg-[var(--border-hover)]">
               <ToolCallStep
                 type={item.call.type}
                 label={item.call.label}
@@ -268,11 +306,7 @@ export function AgentTimeline({
 
         if (item.kind === "tool_group") {
           return (
-            <AgentTimelineRow
-              key={item.id}
-              isLast={isLast}
-              accentClassName="bg-[var(--brand-cool)]/80"
-            >
+            <AgentTimelineRow key={item.id} isLast={isLast} accentClassName="bg-[var(--border-hover)]">
               <ToolCallGroup title={item.title}>
                 {item.calls.map((call) => (
                   <ToolCallStep
@@ -314,13 +348,10 @@ export function AgentTimeline({
           );
         }
 
+        // custom
         return (
-          <AgentTimelineRow
-            key={item.id}
-            isLast={isLast}
-            accentClassName="bg-[var(--border-hover)]"
-          >
-            {item.content}
+          <AgentTimelineRow key={item.id} isLast={isLast} accentClassName="bg-[var(--border-hover)]">
+            {(item as AgentTimelineCustomItem).content}
           </AgentTimelineRow>
         );
       })}

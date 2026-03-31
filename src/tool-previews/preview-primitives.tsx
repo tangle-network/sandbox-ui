@@ -26,7 +26,7 @@ export function PreviewCard({
         className,
       )}
     >
-      <div className="flex items-start gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/70 px-4 py-3">
+      <div className="flex items-start gap-3 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-4 py-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-accent)] bg-[var(--bg-section)] text-[var(--brand-cool)]">
           {icon}
         </div>
@@ -59,7 +59,7 @@ export function PreviewEmpty({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)]/60 px-3 py-4 text-sm text-[var(--text-muted)]",
+        "rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-4 text-sm text-[var(--text-muted)]",
         className,
       )}
     >
@@ -70,7 +70,7 @@ export function PreviewEmpty({
 
 export function PreviewError({ error }: { error: string }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-red-500/30 bg-red-500/8 px-3 py-3 text-sm text-red-200">
+    <div className="rounded-[var(--radius-md)] border border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] px-3 py-3 text-sm text-[var(--surface-danger-text)]">
       {error}
     </div>
   );
@@ -78,7 +78,7 @@ export function PreviewError({ error }: { error: string }) {
 
 export function PreviewLoading({ label = "Running…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/60 px-3 py-3 text-sm text-[var(--text-muted)]">
+    <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-3 text-sm text-[var(--text-muted)]">
       <Loader2 className="h-4 w-4 animate-spin text-[var(--brand-cool)]" />
       <span>{label}</span>
     </div>

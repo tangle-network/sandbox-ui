@@ -1,14 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { Terminal, Code2, Key, MoreVertical, RefreshCw, ChevronLeft, ChevronRight, FileText } from "lucide-react"
 import { cn } from "../lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../primitives/dropdown-menu"
 import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
 
 export interface SandboxTableProps {
@@ -21,39 +15,28 @@ export interface SandboxTableProps {
   onOpenTerminal?: (id: string) => void
   onSSH?: (id: string) => void
   onWake?: (id: string) => void
-  /** Called when the user clicks "Delete". The consuming app should show a confirmation dialog before performing the deletion. */
-  onDelete?: (id: string) => void
-  /** @deprecated Use `onDelete` instead. */
   onMore?: (id: string) => void
   className?: string
 }
 
-function MaterialIcon({ name, className }: { name: string; className?: string }) {
-  return (
-    <span className={cn("material-symbols-outlined", className)} style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>
-      {name}
-    </span>
-  )
-}
-
 const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: string }> = {
-  running: { dot: "bg-green-400 animate-pulse", text: "text-green-400", bar: "bg-green-400" },
-  hibernating: { dot: "bg-slate-500", text: "text-on-surface-variant", bar: "bg-slate-500" },
-  provisioning: { dot: "bg-secondary-fixed animate-pulse", text: "text-secondary-fixed", bar: "bg-secondary-fixed" },
-  stopped: { dot: "bg-slate-500", text: "text-slate-400", bar: "bg-slate-500" },
-  failed: { dot: "bg-red-500", text: "text-red-400", bar: "bg-red-500" },
-  archived: { dot: "bg-slate-600", text: "text-slate-500", bar: "bg-slate-600" },
+  running: { dot: "bg-[var(--code-success)] animate-pulse", text: "text-[var(--code-success)]", bar: "bg-[var(--code-success)]" },
+  hibernating: { dot: "bg-[var(--text-muted)]", text: "text-[var(--text-muted)]", bar: "bg-[var(--text-muted)]" },
+  provisioning: { dot: "bg-[var(--brand-cool)] animate-pulse", text: "text-[var(--brand-cool)]", bar: "bg-[var(--brand-cool)]" },
+  stopped: { dot: "bg-[var(--text-muted)]", text: "text-[var(--text-secondary)]", bar: "bg-[var(--text-muted)]" },
+  failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--code-error)]", bar: "bg-[var(--code-error)]" },
+  archived: { dot: "bg-[var(--border-default)]", text: "text-[var(--text-muted)]", bar: "bg-[var(--border-default)]" },
 }
 
 function MiniMeter({ label, percent, className }: { label: string; percent: number; className?: string }) {
   return (
     <div className={cn("space-y-1", className)}>
-      <div className="flex justify-between text-[10px] font-mono text-on-surface-variant">
+      <div className="flex justify-between text-[10px] font-mono text-[var(--text-muted)]">
         <span className="font-bold">{label}</span>
-        <span className="text-primary-fixed">{percent}%</span>
+        <span className="text-[var(--brand-cool)]">{percent}%</span>
       </div>
-      <div className="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-        <div className="h-full bg-md3-primary rounded-full" style={{ width: `${percent}%` }} />
+      <div className="h-1.5 w-full bg-[var(--depth-1)] rounded-full overflow-hidden">
+        <div className="h-full bg-[var(--brand-cool)] rounded-full" style={{ width: `${percent}%` }} />
       </div>
     </div>
   )
@@ -69,38 +52,34 @@ export function SandboxTable({
   onOpenTerminal,
   onSSH,
   onWake,
-  onDelete,
   onMore,
   className,
 }: SandboxTableProps) {
-  const handleDelete = onDelete ?? onMore;
   const totalCount = total ?? sandboxes.length
   const totalPages = Math.ceil(totalCount / pageSize)
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="w-full bg-surface-container-low rounded-2xl overflow-hidden shadow-2xl border border-outline-variant/10">
+      <div className="w-full bg-[var(--depth-2)] rounded-2xl overflow-hidden border border-[var(--border-subtle)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-surface-container-high/50 border-b border-outline-variant/10">
-                <th className="px-6 py-4 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Sandbox Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Environment</th>
-                <th className="px-6 py-4 text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Resources</th>
-                <th className="px-6 py-4 text-xs font-semibold text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+              <tr className="bg-[var(--depth-1)] border-b border-[var(--border-subtle)]">
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Sandbox Name</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Environment</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Resources</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/5">
+            <tbody className="divide-y divide-[var(--border-subtle)]">
               {sandboxes.map((sb) => {
                 const sc = statusColors[sb.status] ?? statusColors.stopped
                 const isActive = sb.status === "running"
                 const isHibernating = sb.status === "hibernating"
-                const isStopped = sb.status === "stopped"
                 const isProvisioning = sb.status === "provisioning"
-                const isWakeable = isHibernating || isStopped
                 return (
-                  <tr key={sb.id} className="hover:bg-surface-container-highest/20 transition-colors group relative">
+                  <tr key={sb.id} className="hover:bg-[var(--depth-3)] transition-colors group relative">
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span className={cn("flex h-2.5 w-2.5 rounded-full", sc.dot)} />
@@ -111,18 +90,18 @@ export function SandboxTable({
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-white group-hover:text-md3-primary transition-colors">{sb.name}</span>
-                        {sb.nodeId && <span className="text-[10px] font-mono text-on-surface-variant">{sb.nodeId}</span>}
+                        <span className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--brand-cool)] transition-colors">{sb.name}</span>
+                        {sb.nodeId && <span className="text-[10px] font-mono text-[var(--text-muted)]">{sb.nodeId}</span>}
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         {sb.imageIcon && (
-                          <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg bg-[var(--depth-3)] flex items-center justify-center">
                             {sb.imageIcon}
                           </div>
                         )}
-                        {sb.image && <span className="text-xs font-bold text-white">{sb.image}</span>}
+                        {sb.image && <span className="text-xs font-bold text-[var(--text-primary)]">{sb.image}</span>}
                       </div>
                     </td>
                     <td className="px-6 py-5">
@@ -132,11 +111,11 @@ export function SandboxTable({
                           <MiniMeter label="RAM" percent={sb.ramTotal ? Math.round(((sb.ramUsed ?? 0) / sb.ramTotal) * 100) : 0} />
                         </div>
                       ) : isProvisioning ? (
-                        <div className="flex items-center gap-2 text-md3-primary/80 italic text-[10px] font-bold">
-                          <MaterialIcon name="refresh" className="text-[14px] animate-spin" />
+                        <div className="flex items-center gap-2 text-[var(--brand-cool)] italic text-[10px] font-bold">
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                           {sb.provisioningMessage ?? "Allocating nodes..."}
                         </div>
-                      ) : (isHibernating || isStopped) ? (
+                      ) : isHibernating ? (
                         <div className="space-y-3 w-48 opacity-30">
                           <MiniMeter label="CPU" percent={0} />
                           <MiniMeter label="RAM" percent={0} />
@@ -147,43 +126,25 @@ export function SandboxTable({
                       <div className="flex items-center justify-end gap-1">
                         {isActive && (
                           <>
-                            <button type="button" onClick={() => onOpenIDE?.(sb.id)} className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90" title="Open IDE">
-                              <MaterialIcon name="code" className="text-[20px]" />
+                            <button type="button" onClick={() => onOpenIDE?.(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90" title="Open IDE">
+                              <Code2 className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={() => onOpenTerminal?.(sb.id)} className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90" title="Terminal">
-                              <MaterialIcon name="terminal" className="text-[20px]" />
+                            <button type="button" onClick={() => onOpenTerminal?.(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90" title="Terminal">
+                              <Terminal className="h-4 w-4" />
+                            </button>
+                            <button type="button" onClick={() => onSSH?.(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90" title="SSH">
+                              <Key className="h-4 w-4" />
                             </button>
                           </>
                         )}
-                        {isWakeable && (
-                          <button type="button" onClick={() => onWake?.(sb.id)} className="px-3 py-1.5 rounded-lg border border-md3-primary/30 text-md3-primary text-[10px] font-bold uppercase tracking-wider hover:bg-md3-primary/10 active:scale-95 transition-all">
+                        {isHibernating && (
+                          <button type="button" onClick={() => onWake?.(sb.id)} className="px-3 py-1.5 rounded-lg border border-[var(--border-accent)] text-[var(--brand-cool)] text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all">
                             Wake Up
                           </button>
                         )}
-                        {(onSSH || handleDelete) && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button type="button" className="p-2 rounded-lg hover:bg-surface-container-highest text-on-surface-variant hover:text-white transition-all active:scale-90">
-                                <MaterialIcon name="more_vert" className="text-[20px]" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="min-w-[160px]">
-                              {isActive && onSSH && (
-                                <DropdownMenuItem onClick={() => onSSH(sb.id)}>
-                                  <MaterialIcon name="vpn_key" className="text-base mr-2" />
-                                  SSH Info
-                                </DropdownMenuItem>
-                              )}
-                              {isActive && onSSH && handleDelete && <DropdownMenuSeparator />}
-                              {handleDelete && (
-                                <DropdownMenuItem onClick={() => handleDelete(sb.id)} className="text-red-400 focus:text-red-400">
-                                  <MaterialIcon name="delete" className="text-base mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
+                        <button type="button" onClick={() => onMore?.(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -196,11 +157,11 @@ export function SandboxTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-on-surface-variant text-xs font-medium gap-4">
+        <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-[var(--text-muted)] text-xs font-medium gap-4">
           <p>Showing {sandboxes.length} of {totalCount} active sandboxes</p>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => onPageChange?.(page - 1)} disabled={page <= 1} className="p-2 rounded-lg border border-outline-variant/10 hover:bg-surface-container-high transition-colors disabled:opacity-30">
-              <MaterialIcon name="chevron_left" className="text-[18px]" />
+            <button type="button" onClick={() => onPageChange?.(page - 1)} disabled={page <= 1} className="p-2 rounded-lg border border-[var(--border-subtle)] hover:bg-[var(--depth-3)] transition-colors disabled:opacity-30">
+              <ChevronLeft className="h-4 w-4" />
             </button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
               <button
@@ -209,14 +170,14 @@ export function SandboxTable({
                 onClick={() => onPageChange?.(p)}
                 className={cn(
                   "px-3 py-1 rounded-lg transition-colors",
-                  p === page ? "bg-md3-primary/10 text-md3-primary border border-md3-primary/20" : "hover:bg-surface-container-high",
+                  p === page ? "bg-[var(--accent-surface-soft)] text-[var(--brand-cool)] border border-[var(--border-accent)]" : "hover:bg-[var(--depth-3)]",
                 )}
               >
                 {p}
               </button>
             ))}
-            <button type="button" onClick={() => onPageChange?.(page + 1)} disabled={page >= totalPages} className="p-2 rounded-lg border border-outline-variant/10 hover:bg-surface-container-high transition-colors disabled:opacity-30">
-              <MaterialIcon name="chevron_right" className="text-[18px]" />
+            <button type="button" onClick={() => onPageChange?.(page + 1)} disabled={page >= totalPages} className="p-2 rounded-lg border border-[var(--border-subtle)] hover:bg-[var(--depth-3)] transition-colors disabled:opacity-30">
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>

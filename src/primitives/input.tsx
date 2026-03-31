@@ -27,12 +27,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         id={inputId}
         className={cn(
-          "flex h-11 w-full rounded-lg border bg-card/50 px-4 py-2 text-sm transition-all duration-200",
+          "flex h-11 w-full rounded-lg border bg-[var(--depth-2)] px-4 py-2 text-sm transition-all duration-200",
           "placeholder:text-muted-foreground",
           "focus:outline-none focus:ring-2 focus:ring-offset-0",
           "disabled:cursor-not-allowed disabled:opacity-50",
           "file:border-0 file:bg-transparent file:font-medium file:text-sm",
-          error ? "border-red-500/50 focus:ring-red-500/20" : variants[variant],
+          error ? "border-[var(--surface-danger-border)] focus:ring-[var(--surface-danger-border)]" : variants[variant],
           className,
         )}
         ref={ref}
@@ -53,7 +53,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           </label>
         )}
         {input}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-[var(--surface-danger-text)] text-sm">{error}</p>}
         {hint && !error && (
           <p className="text-muted-foreground/70 text-sm">{hint}</p>
         )}
@@ -88,11 +88,11 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         id={textareaId}
         className={cn(
-          "flex min-h-[120px] w-full resize-y rounded-lg border bg-card/50 px-4 py-3 text-sm transition-all duration-200",
+          "flex min-h-[120px] w-full resize-y rounded-lg border bg-[var(--depth-2)] px-4 py-3 text-sm transition-all duration-200",
           "placeholder:text-muted-foreground",
           "focus:outline-none focus:ring-2 focus:ring-offset-0",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          error ? "border-red-500/50 focus:ring-red-500/20" : variants[variant],
+          error ? "border-[var(--surface-danger-border)] focus:ring-[var(--surface-danger-border)]" : variants[variant],
           className,
         )}
         ref={ref}
@@ -113,7 +113,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           </label>
         )}
         {textarea}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-[var(--surface-danger-text)] text-sm">{error}</p>}
         {hint && !error && (
           <p className="text-muted-foreground/70 text-sm">{hint}</p>
         )}

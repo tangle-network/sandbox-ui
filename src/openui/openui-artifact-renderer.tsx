@@ -239,9 +239,9 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
           className={cn(
             "text-sm leading-6 text-[var(--text-secondary)]",
             node.tone === "muted" && "text-[var(--text-muted)]",
-            node.tone === "success" && "text-emerald-300",
-            node.tone === "warning" && "text-amber-200",
-            node.tone === "error" && "text-red-200",
+            node.tone === "success" && "text-[var(--surface-success-text)]",
+            node.tone === "warning" && "text-[var(--surface-warning-text)]",
+            node.tone === "error" && "text-[var(--surface-danger-text)]",
             node.mono && "font-[var(--font-mono)] text-[13px]",
           )}
         >
@@ -266,10 +266,10 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
               <div
                 className={cn(
                   "text-xs",
-                  node.tone === "success" && "text-emerald-300",
-                  node.tone === "warning" && "text-amber-200",
-                  node.tone === "error" && "text-red-200",
-                  node.tone === "info" && "text-sky-200",
+                  node.tone === "success" && "text-[var(--surface-success-text)]",
+                  node.tone === "warning" && "text-[var(--surface-warning-text)]",
+                  node.tone === "error" && "text-[var(--surface-danger-text)]",
+                  node.tone === "info" && "text-[var(--surface-info-text)]",
                   !node.tone || node.tone === "default" ? "text-[var(--text-muted)]" : undefined,
                 )}
               >

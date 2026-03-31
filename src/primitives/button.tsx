@@ -4,29 +4,30 @@ import * as React from "react";
 import { cn } from "../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-[0.98]",
+          "bg-[var(--btn-primary-bg)] text-primary-foreground shadow-[var(--shadow-accent)] hover:bg-[var(--btn-primary-hover)] active:scale-[0.97] duration-[var(--transition-fast)]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:scale-[0.98]",
+          "bg-destructive/15 border border-destructive/25 text-destructive hover:bg-destructive/22 active:scale-[0.97] duration-[var(--transition-fast)]",
         outline:
-          "border border-border bg-transparent hover:bg-accent hover:text-accent-foreground active:scale-[0.98]",
+          "border border-[var(--border-default)] bg-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] active:scale-[0.97] duration-[var(--transition-fast)]",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 active:scale-[0.98]",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/70 active:scale-[0.97] duration-[var(--transition-fast)]",
+        ghost:
+          "hover:bg-[var(--bg-hover)] hover:text-foreground duration-[var(--transition-fast)]",
         link: "text-primary underline-offset-4 hover:underline",
         sandbox:
-          "bg-[image:var(--accent-gradient-strong)] text-white shadow-[var(--shadow-accent)] hover:brightness-110 active:scale-[0.98]",
+          "bg-[image:var(--accent-gradient-strong)] text-white shadow-[var(--shadow-accent)] hover:brightness-110 active:scale-[0.97] duration-[var(--transition-fast)]",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3 text-xs",
-        lg: "h-12 rounded-lg px-8 text-base",
-        xl: "h-14 rounded-xl px-10 text-lg",
-        icon: "h-10 w-10",
+        default: "h-[var(--control-height)] px-4 py-2",
+        sm: "h-8 rounded-md px-3 text-xs",
+        lg: "h-11 rounded-lg px-7 text-sm",
+        xl: "h-13 rounded-xl px-9 text-base",
+        icon: "h-[var(--control-height)] w-[var(--control-height)]",
       },
     },
     defaultVariants: {

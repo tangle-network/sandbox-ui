@@ -56,42 +56,48 @@ const statusConfig: Record<
     icon: typeof Clock;
     color: string;
     bg: string;
+    border: string;
     label: string;
     animate: boolean;
   }
 > = {
   pending: {
     icon: Clock,
-    color: "text-yellow-400",
-    bg: "bg-yellow-500/10",
+    color: "text-[var(--surface-warning-text)]",
+    bg: "bg-[var(--surface-warning-bg)]",
+    border: "border-[var(--surface-warning-border)]",
     label: "Pending",
     animate: false,
   },
   running: {
     icon: Loader2,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
+    color: "text-[var(--brand-cool)]",
+    bg: "bg-[var(--accent-surface-soft)]",
+    border: "border-[var(--border-accent)]",
     label: "Running",
     animate: true,
   },
   completed: {
     icon: CheckCircle2,
-    color: "text-green-400",
-    bg: "bg-green-500/10",
+    color: "text-[var(--surface-success-text)]",
+    bg: "bg-[var(--surface-success-bg)]",
+    border: "border-[var(--surface-success-border)]",
     label: "Completed",
     animate: false,
   },
   failed: {
     icon: XCircle,
-    color: "text-red-400",
-    bg: "bg-red-500/10",
+    color: "text-[var(--surface-danger-text)]",
+    bg: "bg-[var(--surface-danger-bg)]",
+    border: "border-[var(--surface-danger-border)]",
     label: "Failed",
     animate: false,
   },
   cancelled: {
     icon: XCircle,
-    color: "text-gray-400",
-    bg: "bg-gray-500/10",
+    color: "text-[var(--surface-neutral-text)]",
+    bg: "bg-[var(--surface-neutral-bg)]",
+    border: "border-[var(--surface-neutral-border)]",
     label: "Cancelled",
     animate: false,
   },
@@ -99,31 +105,36 @@ const statusConfig: Record<
 
 const outcomeConfig: Record<
   VariantOutcome,
-  { color: string; bg: string; label: string }
+  { color: string; bg: string; border: string; label: string }
 > = {
   pending_review: {
-    color: "text-amber-400",
-    bg: "bg-amber-500/10",
+    color: "text-[var(--surface-warning-text)]",
+    bg: "bg-[var(--surface-warning-bg)]",
+    border: "border-[var(--surface-warning-border)]",
     label: "Pending Review",
   },
   accepted: {
-    color: "text-green-400",
-    bg: "bg-green-500/10",
+    color: "text-[var(--surface-success-text)]",
+    bg: "bg-[var(--surface-success-bg)]",
+    border: "border-[var(--surface-success-border)]",
     label: "Accepted",
   },
   rejected: {
-    color: "text-red-400",
-    bg: "bg-red-500/10",
+    color: "text-[var(--surface-danger-text)]",
+    bg: "bg-[var(--surface-danger-bg)]",
+    border: "border-[var(--surface-danger-border)]",
     label: "Rejected",
   },
   merged_with_conflicts: {
-    color: "text-orange-400",
-    bg: "bg-orange-500/10",
+    color: "text-[var(--surface-orange-text)]",
+    bg: "bg-[var(--surface-orange-bg)]",
+    border: "border-[var(--surface-orange-border)]",
     label: "Merged (conflicts)",
   },
   expired: {
-    color: "text-gray-400",
-    bg: "bg-gray-500/10",
+    color: "text-[var(--surface-neutral-text)]",
+    bg: "bg-[var(--surface-neutral-bg)]",
+    border: "border-[var(--surface-neutral-border)]",
     label: "Expired",
   },
 };
@@ -149,27 +160,27 @@ export function VariantList({
             key={variant.id}
             className={`cursor-pointer rounded-lg border p-4 transition-colors ${
               isSelected
-                ? "border-blue-500 bg-blue-500/5"
-                : "border-border hover:border-muted-foreground/50"
+                ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)]"
+                : "border-[var(--border-subtle)] bg-[var(--depth-2)] hover:border-[var(--border-default)] hover:bg-[var(--depth-3)]"
             }`}
             onClick={() => onSelect?.(variant.id)}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Badge className={`${status.bg} ${status.color} border-0`}>
+                <Badge className={`${status.bg} ${status.border} ${status.color}`}>
                   <StatusIcon
                     className={`mr-1 h-3 w-3 ${status.animate ? "animate-spin" : ""}`}
                   />
                   {status.label}
                 </Badge>
-                <span className="font-medium">{variant.label}</span>
+                <span className="font-medium text-[var(--text-primary)]">{variant.label}</span>
                 {variant.sublabel && (
-                  <span className="text-muted-foreground text-sm">
+                  <span className="text-sm text-[var(--text-muted)]">
                     ({variant.sublabel})
                   </span>
                 )}
                 {variant.durationMs && (
-                  <span className="flex items-center gap-1 text-muted-foreground text-sm">
+                  <span className="flex items-center gap-1 text-sm text-[var(--text-muted)]">
                     <Timer className="h-3 w-3" />
                     {(variant.durationMs / 1000).toFixed(2)}s
                   </span>
@@ -178,7 +189,7 @@ export function VariantList({
               <div className="flex items-center gap-2">
                 {variant.outcome && (
                   <Badge
-                    className={`${outcomeConfig[variant.outcome].bg} ${outcomeConfig[variant.outcome].color} border-0`}
+                    className={`${outcomeConfig[variant.outcome].bg} ${outcomeConfig[variant.outcome].border} ${outcomeConfig[variant.outcome].color}`}
                   >
                     {outcomeConfig[variant.outcome].label}
                   </Badge>
@@ -191,7 +202,7 @@ export function VariantList({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-green-400 hover:bg-green-500/10"
+                        className="border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)] hover:bg-[var(--surface-success-border)]"
                         onClick={(e) => {
                           e.stopPropagation();
                           onAccept(variant.id);
@@ -204,7 +215,7 @@ export function VariantList({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-red-400 hover:bg-red-500/10"
+                        className="border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)] hover:bg-[var(--surface-danger-border)]"
                         onClick={(e) => {
                           e.stopPropagation();
                           onReject(variant.id);
@@ -220,7 +231,7 @@ export function VariantList({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-muted-foreground"
+                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.open(variant.detailsUrl, "_blank");
@@ -232,10 +243,10 @@ export function VariantList({
               </div>
             </div>
             {variant.error && (
-              <p className="mt-2 text-red-400 text-sm">{variant.error}</p>
+              <p className="mt-2 text-sm text-[var(--surface-danger-text)]">{variant.error}</p>
             )}
             {variant.summary && (
-              <p className="mt-2 line-clamp-2 text-muted-foreground text-sm">
+              <p className="mt-2 line-clamp-2 text-sm text-[var(--text-muted)]">
                 {variant.summary}
               </p>
             )}

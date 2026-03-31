@@ -1,44 +1,173 @@
 import {
   memo,
   useCallback,
+  useEffect,
   useState,
   type HTMLAttributes,
   type ReactNode,
 } from "react";
+import SyntaxHighlighter from "react-syntax-highlighter";
 import { Check, Copy } from "lucide-react";
 import { cn } from "../lib/utils";
+
+// Tangle brand dark theme — maps to our design tokens
+const tangleDark: { [key: string]: React.CSSProperties } = {
+  "hljs-comment":           { color: "#6B7094", fontStyle: "italic" },
+  "hljs-quote":             { color: "#6B7094", fontStyle: "italic" },
+  "hljs-doctag":            { color: "#6B7094" },
+  "hljs-keyword":           { color: "#A78FFF" },
+  "hljs-selector-tag":      { color: "#A78FFF" },
+  "hljs-literal":           { color: "#A78FFF" },
+  "hljs-type":              { color: "#A78FFF" },
+  "hljs-class":             { color: "#A78FFF" },
+  "hljs-string":            { color: "#10b981" },
+  "hljs-template-tag":      { color: "#10b981" },
+  "hljs-template-variable": { color: "#10b981" },
+  "hljs-addition":          { color: "#10b981" },
+  "hljs-regexp":            { color: "#10b981" },
+  "hljs-title":             { color: "#6D9FFF" },
+  "hljs-section":           { color: "#6D9FFF" },
+  "hljs-built_in":          { color: "#6D9FFF" },
+  "hljs-name":              { color: "#6D9FFF" },
+  "hljs-function":          { color: "#6D9FFF" },
+  "hljs-selector-id":       { color: "#6D9FFF" },
+  "hljs-selector-class":    { color: "#6D9FFF" },
+  "hljs-attribute":         { color: "#6D9FFF" },
+  "hljs-number":            { color: "#FFB347" },
+  "hljs-symbol":            { color: "#FFB347" },
+  "hljs-bullet":            { color: "#FFB347" },
+  "hljs-link":              { color: "#FFB347", textDecoration: "underline" },
+  "hljs-meta":              { color: "#8263FF" },
+  "hljs-selector-pseudo":   { color: "#8263FF" },
+  "hljs-deletion":          { color: "#FF4D6D" },
+  "hljs-params":            { color: "#C4C0D8" },
+  "hljs-variable":          { color: "#C4C0D8" },
+  "hljs-tag":               { color: "#C4C0D8" },
+  "hljs-attr":              { color: "#C4C0D8" },
+  "hljs-subst":             { color: "#C4C0D8" },
+  "hljs-strong":            { fontWeight: "bold" },
+  "hljs-emphasis":          { fontStyle: "italic" },
+  "hljs":                   { color: "#E8E6F6", background: "transparent" },
+};
+
+// Light theme for vault/light contexts
+const tangleLight: { [key: string]: React.CSSProperties } = {
+  "hljs-comment":           { color: "#8B92B8", fontStyle: "italic" },
+  "hljs-quote":             { color: "#8B92B8", fontStyle: "italic" },
+  "hljs-doctag":            { color: "#8B92B8" },
+  "hljs-keyword":           { color: "#5B3FCC" },
+  "hljs-selector-tag":      { color: "#5B3FCC" },
+  "hljs-literal":           { color: "#5B3FCC" },
+  "hljs-type":              { color: "#5B3FCC" },
+  "hljs-class":             { color: "#5B3FCC" },
+  "hljs-string":            { color: "#0D7A57" },
+  "hljs-template-tag":      { color: "#0D7A57" },
+  "hljs-template-variable": { color: "#0D7A57" },
+  "hljs-addition":          { color: "#0D7A57" },
+  "hljs-regexp":            { color: "#0D7A57" },
+  "hljs-title":             { color: "#1B5EBF" },
+  "hljs-section":           { color: "#1B5EBF" },
+  "hljs-built_in":          { color: "#1B5EBF" },
+  "hljs-name":              { color: "#1B5EBF" },
+  "hljs-function":          { color: "#1B5EBF" },
+  "hljs-selector-id":       { color: "#1B5EBF" },
+  "hljs-selector-class":    { color: "#1B5EBF" },
+  "hljs-attribute":         { color: "#1B5EBF" },
+  "hljs-number":            { color: "#B85C00" },
+  "hljs-symbol":            { color: "#B85C00" },
+  "hljs-bullet":            { color: "#B85C00" },
+  "hljs-link":              { color: "#B85C00", textDecoration: "underline" },
+  "hljs-meta":              { color: "#6940C4" },
+  "hljs-selector-pseudo":   { color: "#6940C4" },
+  "hljs-deletion":          { color: "#CC1A3A" },
+  "hljs-params":            { color: "#2D2D4A" },
+  "hljs-variable":          { color: "#2D2D4A" },
+  "hljs-tag":               { color: "#2D2D4A" },
+  "hljs-attr":              { color: "#2D2D4A" },
+  "hljs-subst":             { color: "#2D2D4A" },
+  "hljs-strong":            { fontWeight: "bold" },
+  "hljs-emphasis":          { fontStyle: "italic" },
+  "hljs":                   { color: "#1A1A2E", background: "transparent" },
+};
 
 export interface CodeBlockProps extends HTMLAttributes<HTMLDivElement> {
   code: string;
   language?: string;
+  showLineNumbers?: boolean;
+  /** Force light theme; defaults to dark */
+  light?: boolean;
   children?: ReactNode;
 }
 
-/**
- * Syntax-highlighted code block with copy button.
- *
- * Falls back to plain `<pre><code>` — syntax highlighting can be provided
- * by the consuming app via CSS (e.g. Shiki themes applied externally).
- */
+function useIsVaultTheme(): boolean {
+  const detect = () =>
+    typeof document !== "undefined" &&
+    document.documentElement.getAttribute("data-sandbox-theme") === "vault";
+
+  const [isVault, setIsVault] = useState(detect);
+
+  useEffect(() => {
+    setIsVault(detect());
+    const observer = new MutationObserver(() => setIsVault(detect()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-sandbox-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  return isVault;
+}
+
 export const CodeBlock = memo(
-  ({ code, language, className, children, ...props }: CodeBlockProps) => {
+  ({ code, language, showLineNumbers = false, light: lightProp, className, children, ...props }: CodeBlockProps) => {
+    const isVault = useIsVaultTheme();
+    const light = lightProp ?? isVault;
+    const theme = light ? tangleLight : tangleDark;
+    const bg = "bg-[var(--depth-2)] border-[var(--border-subtle)]";
+    const headerBg = light ? "bg-[var(--depth-3)] border-[var(--border-subtle)]" : "bg-[var(--depth-1)] border-[var(--border-subtle)]";
+    const langColor = "text-[var(--text-muted)]";
+
     return (
       <div
-        className={cn("relative overflow-hidden rounded-lg", className)}
+        className={cn("group relative overflow-hidden rounded-lg border font-mono", bg, className)}
         {...props}
       >
-        <div className="relative">
-          <pre className="m-0 p-4 overflow-x-auto text-sm font-mono bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-100">
-            <code className={language ? `language-${language}` : undefined}>
-              {code}
-            </code>
-          </pre>
-          {children && (
-            <div className="absolute top-2 right-2 flex items-center gap-2">
-              {children}
-            </div>
-          )}
-        </div>
+        {language && (
+          <div className={cn("flex items-center justify-between border-b px-4 py-1.5", headerBg)}>
+            <span className={cn("text-[11px] font-mono font-medium uppercase tracking-widest", langColor)}>
+              {language}
+            </span>
+            {children}
+          </div>
+        )}
+        {!language && children && (
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+            {children}
+          </div>
+        )}
+        <SyntaxHighlighter
+          language={language ?? "text"}
+          style={theme}
+          showLineNumbers={showLineNumbers}
+          lineNumberStyle={{
+            color: light ? "#8B92B8" : "#4A4D6A",
+            minWidth: "2.5em",
+            paddingRight: "1em",
+          }}
+          customStyle={{
+            margin: 0,
+            padding: "1rem",
+            background: "transparent",
+            fontSize: "0.8125rem",
+            lineHeight: "1.65",
+            overflowX: "auto",
+          }}
+          codeTagProps={{ style: { fontFamily: "var(--font-mono, 'JetBrains Mono', ui-monospace, monospace)" } }}
+          wrapLines={false}
+        >
+          {code}
+        </SyntaxHighlighter>
       </div>
     );
   },
@@ -54,21 +183,19 @@ export const CopyButton = memo(({ text }: { text: string }) => {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* noop */
-    }
+    } catch {}
   }, [text]);
 
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center justify-center w-7 h-7 rounded-md bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20 transition-colors"
+      className="flex items-center justify-center w-7 h-7 rounded-md bg-[var(--bg-section)] border border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-colors"
       title="Copy to clipboard"
     >
       {copied ? (
-        <Check className="w-3.5 h-3.5 text-green-500 dark:text-green-400" />
+        <Check className="w-3.5 h-3.5 text-[var(--brand-emerald)]" />
       ) : (
-        <Copy className="w-3.5 h-3.5 text-neutral-400" />
+        <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />
       )}
     </button>
   );

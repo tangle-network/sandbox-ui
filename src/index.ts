@@ -268,3 +268,5 @@ export { DropZone } from "./primitives/drop-zone";
 export type { DropZoneProps } from "./primitives/drop-zone";
 export { UploadProgress } from "./primitives/upload-progress";
 export type { UploadProgressProps, UploadFile } from "./primitives/upload-progress";
+export { SidebarDropZone } from "./primitives/sidebar-drop-zone";
+export type { SidebarDropZoneProps } from "./primitives/sidebar-drop-zone";

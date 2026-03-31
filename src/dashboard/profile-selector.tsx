@@ -74,7 +74,7 @@ export function ProfileSelector({
             className="flex items-center justify-between"
           >
             <span>{placeholder}</span>
-            {!selectedId && <Check className="h-4 w-4 text-green-400" />}
+            {!selectedId && <Check className="h-4 w-4 text-[var(--surface-success-text)]" />}
           </DropdownMenuItem>
 
           {/* Built-in profiles */}
@@ -98,7 +98,7 @@ export function ProfileSelector({
                       )}
                     </div>
                     {selectedId === profile.id && (
-                      <Check className="h-4 w-4 text-green-400" />
+                      <Check className="h-4 w-4 text-[var(--surface-success-text)]" />
                     )}
                   </div>
                   {profile.description && (
@@ -132,7 +132,7 @@ export function ProfileSelector({
                       )}
                     </div>
                     {selectedId === profile.id && (
-                      <Check className="h-4 w-4 text-green-400" />
+                      <Check className="h-4 w-4 text-[var(--surface-success-text)]" />
                     )}
                   </div>
                   {profile.description && (
@@ -166,7 +166,7 @@ export function ProfileSelector({
               {onCreateClick && (
                 <DropdownMenuItem
                   onClick={onCreateClick}
-                  className="text-blue-400"
+                  className="text-[var(--surface-info-text)]"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Create New Profile
@@ -239,12 +239,12 @@ export function ProfileComparison({
               <div className="flex items-center gap-2">
                 <span className="font-medium">{profile.name}</span>
                 {isBestSuccess && (
-                  <Badge className="border-0 bg-green-500/10 text-green-400 text-xs">
+                  <Badge className="border border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)] text-xs">
                     Best Success
                   </Badge>
                 )}
                 {isFastest && !isBestSuccess && (
-                  <Badge className="border-0 bg-blue-500/10 text-blue-400 text-xs">
+                  <Badge className="border border-[var(--surface-info-border)] bg-[var(--surface-info-bg)] text-[var(--surface-info-text)] text-xs">
                     Fastest
                   </Badge>
                 )}
@@ -255,10 +255,10 @@ export function ProfileComparison({
                   <span
                     className={
                       (profile.metrics?.success_rate ?? 0) >= 80
-                        ? "text-green-400"
+                        ? "text-[var(--surface-success-text)]"
                         : (profile.metrics?.success_rate ?? 0) >= 50
-                          ? "text-yellow-400"
-                          : "text-red-400"
+                          ? "text-[var(--surface-warning-text)]"
+                          : "text-[var(--surface-danger-text)]"
                     }
                   >
                     {profile.metrics?.success_rate.toFixed(0)}%

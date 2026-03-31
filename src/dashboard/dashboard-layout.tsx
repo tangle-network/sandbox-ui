@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Plus, Bell } from "lucide-react"
 import { cn } from "../lib/utils"
 import { Logo } from "../primitives/logo"
 import {
@@ -89,16 +90,6 @@ export interface DashboardLayoutProps {
 // Icons
 // ============================================================================
 
-function MaterialIcon({ name, className }: { name: string; className?: string }) {
-  return (
-    <span
-      className={cn("material-symbols-outlined", className)}
-      style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
-    >
-      {name}
-    </span>
-  )
-}
 
 function SettingsIconSmall({ className }: { className?: string }) {
   return (
@@ -194,7 +185,7 @@ function DashboardLayoutInner({
     <>
       <SidebarRail>
         <SidebarRailHeader>
-          <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-sidebar-accent/80">
+          <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-[var(--depth-3)]">
             <Logo variant={variant} size="sm" iconOnly />
           </Link>
         </SidebarRailHeader>
@@ -264,10 +255,10 @@ function DashboardLayoutInner({
   )
 
   return (
-    <div className={cn("min-h-screen bg-surface text-on-surface", className)}>
+    <div className={cn("min-h-screen bg-[var(--depth-1)] text-[var(--text-primary)]", className)}>
       {/* Top nav bar */}
       <nav
-        className="fixed top-0 z-50 bg-slate-950/60 backdrop-blur-xl flex justify-between items-center px-8 h-14 font-sans text-sm tracking-tight transition-[left,width] duration-200 ease-in-out"
+        className="fixed top-0 z-50 bg-[var(--depth-2)] border-b border-[var(--border-subtle)] flex justify-between items-center px-8 h-14 font-sans text-sm tracking-tight transition-[left,width] duration-200 ease-in-out"
         style={{
           left: hidden ? 0 : contentMargin,
           width: hidden ? "100%" : `calc(100% - ${contentMargin}px)`,
@@ -284,8 +275,8 @@ function DashboardLayoutInner({
                   className={cn(
                     "transition-all duration-300 px-2 py-1 rounded",
                     activeTopNavHref === link.href
-                      ? "text-white border-b-2 border-violet-500 pb-1"
-                      : "text-slate-400 hover:text-slate-200 hover:bg-white/5",
+                      ? "text-[var(--text-primary)] border-b-2 border-[var(--brand-cool)] pb-1"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--depth-3)]",
                   )}
                 >
                   {link.label}
@@ -299,21 +290,21 @@ function DashboardLayoutInner({
             <button
               type="button"
               onClick={onNewSandbox}
-              className="hidden md:flex items-center gap-2 bg-md3-primary text-on-primary px-4 py-2 rounded-lg font-bold hover:shadow-[0_0_15px_rgba(209,188,255,0.4)] transition-all active:scale-95 text-xs"
+              className="hidden md:flex items-center gap-2 bg-[var(--accent-surface-soft)] border border-[var(--border-accent)] text-[var(--accent-text)] px-4 py-2 rounded-lg font-bold hover:bg-[var(--accent-surface-strong)] transition-all active:scale-95 text-xs"
             >
-              <MaterialIcon name="add" className="text-sm" />
+              <Plus className="h-3.5 w-3.5" />
               New Sandbox
             </button>
           )}
-          <button type="button" className="text-slate-400 hover:text-violet-400 transition-colors p-2 rounded-lg hover:bg-white/5">
-            <MaterialIcon name="notifications" />
+          <button type="button" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-2 rounded-lg hover:bg-[var(--depth-3)]">
+            <Bell className="h-4 w-4" />
           </button>
         </div>
         {/* Mobile menu toggle */}
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="rounded-md p-2 hover:bg-white/5 lg:hidden"
+          className="rounded-md p-2 hover:bg-[var(--depth-3)] lg:hidden"
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileMenuOpen}
         >
@@ -329,7 +320,7 @@ function DashboardLayoutInner({
       {/* Mobile sidebar drawer */}
       <aside
         className={cn(
-          "fixed top-14 bottom-0 left-0 z-30 flex bg-sidebar backdrop-blur-xl transition-transform duration-200 lg:hidden",
+          "fixed top-14 bottom-0 left-0 z-30 flex bg-[var(--depth-1)] transition-transform duration-200 lg:hidden",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
         style={{ width: SIDEBAR_TOTAL_WIDTH }}

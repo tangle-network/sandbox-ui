@@ -86,7 +86,7 @@ export function SessionActivityMonitor({
           return (
             <div
               key={String(project.projectId)}
-              className="rounded-[calc(var(--radius-lg)+2px)] border border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent),var(--bg-card)]/96 p-3 shadow-[var(--shadow-card)]"
+              className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] p-3 shadow-[var(--shadow-card)]"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>

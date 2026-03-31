@@ -33,36 +33,23 @@ const TerminalDisplay = React.forwardRef<HTMLDivElement, TerminalDisplayProps>(
     }, [autoScroll]);
 
     const variants = {
-      default: "border-border",
+      default: "border-[var(--border-subtle)]",
       sandbox: "border-[var(--border-accent)] shadow-[var(--shadow-accent)]",
-    };
-
-    const dotColors = {
-      default: ["bg-red-500", "bg-yellow-500", "bg-green-500"],
-      sandbox: ["bg-red-500", "bg-yellow-500", "bg-[var(--brand-cool)]"],
     };
 
     return (
       <div
         ref={ref}
         className={cn(
-          "overflow-hidden rounded-xl border bg-[#0a0a0a] font-mono text-sm",
+          "overflow-hidden rounded-xl border bg-[var(--depth-1)] font-mono text-sm",
           variants[variant],
           className,
         )}
         {...props}
       >
         {showHeader && (
-          <div className="flex items-center gap-2 border-border/50 border-b bg-card/30 px-4 py-3">
-            <div className="flex gap-1.5">
-              {dotColors[variant].map((color) => (
-                <div
-                  key={color}
-                  className={cn("h-3 w-3 rounded-full", color)}
-                />
-              ))}
-            </div>
-            <span className="ml-2 text-muted-foreground text-xs">{title}</span>
+          <div className="flex items-center border-b border-[var(--border-subtle)] bg-[var(--depth-2)] px-4 py-3">
+            <span className="text-[var(--text-muted)] text-xs">{title}</span>
           </div>
         )}
         <div
@@ -99,14 +86,14 @@ const TerminalLine = React.forwardRef<HTMLDivElement, TerminalLineProps>(
     ref,
   ) => {
     const typeStyles = {
-      input: "text-foreground",
-      output: "text-muted-foreground",
-      error: "text-red-400",
-      success: "text-green-400",
-      info: "text-blue-400",
-      thinking: "text-yellow-400 animate-pulse",
-      command: "text-foreground",
-      warning: "text-yellow-400",
+      input:    "text-[var(--text-primary)]",
+      output:   "text-[var(--text-secondary)]",
+      error:    "text-[var(--surface-danger-text)]",
+      success:  "text-[var(--surface-success-text)]",
+      info:     "text-[var(--surface-info-text)]",
+      thinking: "text-[var(--surface-warning-text)] animate-pulse",
+      command:  "text-[var(--text-primary)]",
+      warning:  "text-[var(--surface-warning-text)]",
     };
 
     return (
@@ -120,13 +107,13 @@ const TerminalLine = React.forwardRef<HTMLDivElement, TerminalLineProps>(
         {...props}
       >
         {(type === "input" || type === "command") && (
-          <span className="shrink-0 select-none text-green-400">{prompt}</span>
+          <span className="shrink-0 select-none text-[var(--surface-success-text)]">{prompt}</span>
         )}
         {type === "thinking" && (
           <span className="shrink-0 select-none">...</span>
         )}
         {timestamp && (
-          <span className="shrink-0 select-none text-muted-foreground/50">
+          <span className="shrink-0 select-none text-[var(--text-muted)] opacity-50">
             [{timestamp}]
           </span>
         )}
@@ -144,7 +131,7 @@ const TerminalCursor = React.forwardRef<
   <span
     ref={ref}
     className={cn(
-      "ml-0.5 inline-block h-4 w-2 animate-pulse bg-foreground",
+      "ml-0.5 inline-block h-4 w-2 animate-pulse bg-[var(--text-primary)]",
       className,
     )}
     {...props}
@@ -170,26 +157,26 @@ const TerminalInput = React.forwardRef<HTMLInputElement, TerminalInputProps>(
     };
 
     const variants = {
-      default: "border-border focus-within:border-muted-foreground",
+      default: "border-[var(--border-subtle)] focus-within:border-[var(--border-default)]",
       sandbox: "border-[var(--border-accent)] focus-within:border-[var(--border-accent-hover)]",
     };
 
     return (
       <div
         className={cn(
-          "flex items-center rounded-lg border bg-[#0a0a0a] px-4 py-2.5 font-mono text-sm transition-colors",
+          "flex items-center rounded-lg border bg-[var(--depth-1)] px-4 py-2.5 font-mono text-sm transition-colors",
           variants[variant],
           className,
         )}
       >
-        <span className="mr-2 select-none text-green-400">$</span>
+        <span className="mr-2 select-none text-[var(--surface-success-text)]">$</span>
         <input
           ref={ref}
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+          className="flex-1 bg-transparent text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
           {...props}
         />
         <TerminalCursor />

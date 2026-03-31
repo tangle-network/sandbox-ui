@@ -98,7 +98,7 @@ export function MarkdownDocumentEditor({
     >
       <EditorToolbar
         editor={editor}
-        className="border-[var(--border-subtle)] bg-[var(--bg-card)]/80 px-2 py-2"
+        className="border-[var(--border-subtle)] bg-[var(--depth-2)] px-2 py-2"
       />
       <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
         <EditorContent editor={editor} />
@@ -122,7 +122,7 @@ export function MarkdownDocumentEditor({
         }
 
         .ProseMirror code {
-          background: var(--bg-hover, rgba(255,255,255,0.05));
+          background: var(--depth-3);
           border-radius: 0.35rem;
           padding: 0.12rem 0.3rem;
         }

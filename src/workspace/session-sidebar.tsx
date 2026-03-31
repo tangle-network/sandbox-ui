@@ -139,11 +139,11 @@ function badgeClasses(tone: SessionSidebarBadge["tone"] = "neutral") {
     case "accent":
       return "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]";
     case "success":
-      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+      return "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]";
     case "warning":
-      return "border-amber-500/30 bg-amber-500/10 text-amber-100";
+      return "border-[var(--surface-warning-border)] bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]";
     case "danger":
-      return "border-red-500/30 bg-red-500/10 text-red-200";
+      return "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]";
     default:
       return "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-secondary)]";
   }
@@ -213,55 +213,54 @@ export function SessionSidebar({
   ), [currentItemId, filters, orderedItems, sessionsById]);
 
   return (
-    <aside className={cn("flex w-72 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.12),transparent_26%),var(--bg-card)]/94 backdrop-blur-xl", className)}>
-      <div className="border-b border-[var(--border-subtle)] px-4 py-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[linear-gradient(135deg,rgba(82,164,255,0.22),rgba(82,164,255,0.08))] text-[var(--accent-text)] shadow-[var(--shadow-accent)]">
-            <MessageSquareText className="h-4 w-4" />
+    <aside className={cn("flex w-64 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--depth-2)]", className)}>
+      <div className="border-b border-[var(--border-subtle)] px-3 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--border-accent)]/50 bg-[var(--accent-surface-soft)] text-[var(--accent-text)]">
+              <MessageSquareText className="h-3.5 w-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold tracking-[0.01em] text-[var(--text-primary)]">{title}</div>
+              {subtitle && (
+                <div className="truncate text-[11px] text-[var(--text-muted)]">{subtitle}</div>
+              )}
+            </div>
           </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold tracking-[0.01em] text-[var(--text-primary)]">{title}</div>
-            {subtitle && (
-              <div className="truncate text-xs text-[var(--text-muted)]">{subtitle}</div>
+          <div className="flex items-center gap-2 shrink-0">
+            {runningCount > 0 && (
+              <span className="rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent-text)]">
+                {runningCount}
+              </span>
+            )}
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                title={createLabel}
+                className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--border-default)] bg-[var(--bg-section)] text-[var(--text-muted)] transition-colors hover:border-[var(--border-accent)] hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
             )}
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-3 py-2">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Tracked</div>
-            <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{items.length}</div>
-          </div>
-          <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-3 py-2">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Running</div>
-            <div className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{runningCount}</div>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          onClick={onCreate}
-          className="mt-4 w-full justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,var(--brand-cool),var(--brand-glow))] text-white shadow-[var(--shadow-accent)] hover:translate-y-[-1px] hover:brightness-105"
-        >
-          <Plus className="h-4 w-4" />
-          {createLabel}
-        </Button>
-
         {enableSearch && items.length > 0 && (
-          <div className="relative mt-3">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-dim)]" />
+          <div className="relative mt-2.5">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-dim)]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
-              className="h-10 w-full rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] pl-9 pr-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-dim)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/45"
+              className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] pl-8 pr-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-dim)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]"
             />
           </div>
         )}
 
         {filters.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-1">
             {filters.map((filter) => {
               const isSelected = activeFilterId === filter.id;
               return (
@@ -270,14 +269,14 @@ export function SessionSidebar({
                   type="button"
                   onClick={() => setActiveFilterId(filter.id)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
                     isSelected
                       ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
-                      : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)] hover:text-[var(--text-primary)]",
+                      : "border-[var(--border-subtle)] bg-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
                   )}
                 >
                   <span>{filter.label}</span>
-                  <span className="rounded-full bg-[var(--bg-card)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
+                  <span className="text-[9px] opacity-70">
                     {filterCounts[filter.id] ?? 0}
                   </span>
                 </button>
@@ -287,13 +286,13 @@ export function SessionSidebar({
         )}
       </div>
 
-      <nav aria-label="Sessions" className="flex-1 overflow-y-auto px-3 py-3">
+      <nav aria-label="Sessions" className="flex-1 overflow-y-auto px-2 py-2">
         {visibleItems.length === 0 ? (
-          <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] px-4 py-5 text-sm text-[var(--text-muted)]">
+          <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-4 text-xs text-[var(--text-muted)]">
             {query.trim() ? `No sessions match "${query.trim()}".` : emptyMessage}
           </div>
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="space-y-1">
             {visibleItems.map((item) => {
               const session = sessionsById.get(item.id) ?? null;
               const isActive = currentItemId === item.id;
@@ -307,10 +306,10 @@ export function SessionSidebar({
                 <li key={item.id}>
                   <div
                     className={cn(
-                      "group flex items-start gap-2 rounded-[calc(var(--radius-lg)+2px)] border px-2 py-2 transition-colors backdrop-blur-sm",
+                      "group flex items-start gap-2 rounded-[var(--radius-md)] border px-2 py-2 transition-colors",
                       isActive
-                        ? "border-[var(--border-accent)] bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_40%),var(--accent-surface-soft)] shadow-[var(--shadow-card)]"
-                        : "border-transparent bg-transparent hover:border-[var(--border-subtle)] hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)]",
+                        ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] shadow-[var(--shadow-card)]"
+                        : "border-[var(--border-subtle)] bg-transparent hover:border-[var(--border-default)] hover:bg-[var(--bg-section)]",
                     )}
                   >
                     <button
@@ -324,25 +323,25 @@ export function SessionSidebar({
                         navigateToHref(item.href);
                       }}
                       aria-current={isActive ? "page" : undefined}
-                      className="min-w-0 flex flex-1 items-start gap-3 rounded-[var(--radius-lg)] px-1 py-1 text-left"
+                      className="min-w-0 flex flex-1 items-start gap-2.5 text-left"
                     >
-                      <span className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", statusClasses(status))} />
+                      <span className={cn("mt-[5px] h-2 w-2 shrink-0 rounded-full", statusClasses(status))} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-[var(--text-primary)]">
+                        <div className="truncate text-xs font-medium text-[var(--text-primary)]">
                           {item.title}
                         </div>
                         {item.subtitle && (
-                          <div className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
+                          <div className="mt-0.5 truncate text-[11px] leading-tight text-[var(--text-muted)]">
                             {item.subtitle}
                           </div>
                         )}
                         {visibleBadges.length > 0 && (
-                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
                             {visibleBadges.map((badge) => (
                               <span
                                 key={badge.id}
                                 className={cn(
-                                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em]",
+                                  "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.06em]",
                                   badgeClasses(badge.tone),
                                 )}
                               >
@@ -381,14 +380,14 @@ export function SessionSidebar({
       </nav>
 
       {activityMonitor && (
-        <div className="border-t border-[var(--border-subtle)] px-3 py-3">
+        <div className="border-t border-[var(--border-subtle)] px-2 py-2">
           {activityMonitor}
         </div>
       )}
 
       {links.length > 0 && (
-        <nav aria-label="Workspace sections" className="border-t border-[var(--border-subtle)] px-3 py-3">
-          <div className="space-y-1">
+        <nav aria-label="Workspace sections" className="border-t border-[var(--border-subtle)] px-2 py-2">
+          <div className="space-y-0.5">
             {links.map((link) => {
               const Icon = iconForLink(link.icon);
               return (
@@ -403,9 +402,9 @@ export function SessionSidebar({
 
                     navigateToHref(link.href);
                   }}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-md)] px-3 py-2 text-left text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-section)] hover:text-[var(--text-primary)]"
+                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-section)] hover:text-[var(--text-primary)]"
                 >
-                  <Icon className="h-4 w-4 shrink-0" />
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{link.label}</span>
                 </button>
               );

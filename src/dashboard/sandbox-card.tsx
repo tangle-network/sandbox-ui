@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Cpu, Database, Plus, Terminal, Power, ExternalLink, RefreshCw } from "lucide-react"
+import { Cpu, Database, Plus, Terminal, Power, ExternalLink, RefreshCw, Trash2 } from "lucide-react"
 import { cn } from "../lib/utils"
 import { ResourceMeter } from "./resource-meter"
 
@@ -28,6 +28,7 @@ export interface SandboxCardProps {
   onOpenTerminal?: (id: string) => void
   onWake?: (id: string) => void
   onRestore?: (id: string) => void
+  onDelete?: (id: string) => void
   className?: string
 }
 
@@ -40,7 +41,7 @@ const statusConfig: Record<SandboxStatus, { color: string; bg: string; border: s
   archived:     { color: "text-[var(--text-muted)]",    bg: "bg-[var(--depth-3)]",        border: "border-[var(--border-subtle)]", dotClass: "bg-[var(--border-default)]",              label: "Archived" },
 }
 
-export function SandboxCard({ sandbox, onOpenIDE, onOpenTerminal, onWake, onRestore, className }: SandboxCardProps) {
+export function SandboxCard({ sandbox, onOpenIDE, onOpenTerminal, onWake, onRestore, onDelete, className }: SandboxCardProps) {
   const status = statusConfig[sandbox.status] ?? statusConfig.stopped
   const isActive = sandbox.status === "running"
   const isHibernating = sandbox.status === "hibernating"
@@ -169,6 +170,17 @@ export function SandboxCard({ sandbox, onOpenIDE, onOpenTerminal, onWake, onRest
           className="w-full py-2 bg-[var(--depth-3)] hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg transition-all text-xs font-semibold border border-[var(--border-subtle)]"
         >
           Restore Sandbox
+        </button>
+      )}
+
+      {onDelete && !isProvisioning && (
+        <button
+          type="button"
+          onClick={() => onDelete(sandbox.id)}
+          className="absolute bottom-4 right-4 p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--surface-danger-text)] hover:bg-[var(--surface-danger-bg)] transition-all opacity-0 group-hover:opacity-100"
+          title="Delete sandbox"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
       )}
     </div>

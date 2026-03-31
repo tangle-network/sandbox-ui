@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Terminal, Code2, Key, MoreVertical, RefreshCw, ChevronLeft, ChevronRight, FileText } from "lucide-react"
+import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "../lib/utils"
 import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
 
@@ -16,6 +16,7 @@ export interface SandboxTableProps {
   onSSH?: (id: string) => void
   onWake?: (id: string) => void
   onMore?: (id: string) => void
+  onDelete?: (id: string) => void
   className?: string
 }
 
@@ -53,6 +54,7 @@ export function SandboxTable({
   onSSH,
   onWake,
   onMore,
+  onDelete,
   className,
 }: SandboxTableProps) {
   const totalCount = total ?? sandboxes.length
@@ -142,9 +144,16 @@ export function SandboxTable({
                             Wake Up
                           </button>
                         )}
-                        <button type="button" onClick={() => onMore?.(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90">
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
+                        {onMore && (
+                          <button type="button" onClick={() => onMore(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90">
+                            <Code2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button type="button" onClick={() => onDelete(sb.id)} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-[var(--text-muted)] hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

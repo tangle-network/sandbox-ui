@@ -29,14 +29,14 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
     ref,
   ) => {
     const iconColors = {
-      default: "text-muted-foreground",
+      default: "text-[var(--text-muted)]",
       sandbox: "text-[var(--accent-text)]",
     };
 
     const trendColors = {
       positive: "text-[var(--surface-success-text)]",
       negative: "text-[var(--surface-danger-text)]",
-      neutral: "text-muted-foreground",
+      neutral: "text-[var(--text-muted)]",
     };
 
     const trendStatus = trend
@@ -56,10 +56,10 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
       >
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <p className="text-muted-foreground text-sm">{title}</p>
+            <p className="text-[var(--text-muted)] text-sm">{title}</p>
             <p className="font-bold text-3xl tracking-tight">{value}</p>
             {subtitle && (
-              <p className="text-muted-foreground/70 text-xs">{subtitle}</p>
+              <p className="text-[var(--text-muted)] opacity-70 text-xs">{subtitle}</p>
             )}
             {trend && trendStatus && (
               <div
@@ -71,7 +71,7 @@ const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
                 {trend.value > 0 ? "↑" : trend.value < 0 ? "↓" : "→"}
                 <span>{Math.abs(trend.value)}%</span>
                 {trend.label && (
-                  <span className="text-muted-foreground">{trend.label}</span>
+                  <span className="text-[var(--text-muted)]">{trend.label}</span>
                 )}
               </div>
             )}

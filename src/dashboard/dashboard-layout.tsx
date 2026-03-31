@@ -185,7 +185,7 @@ function DashboardLayoutInner({
     <>
       <SidebarRail>
         <SidebarRailHeader>
-          <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-sidebar-accent/80">
+          <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-[var(--depth-3)]">
             <Logo variant={variant} size="sm" iconOnly />
           </Link>
         </SidebarRailHeader>

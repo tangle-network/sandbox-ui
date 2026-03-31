@@ -12,8 +12,15 @@ export interface EnvironmentOption {
   color: string
 }
 
+export interface EnvironmentEntry {
+  id: string
+  description?: string
+  version?: string
+}
+
 export interface ProvisioningWizardProps {
   environments?: EnvironmentOption[]
+  onLoadEnvironments?: () => Promise<EnvironmentEntry[]>
   onSubmit?: (config: ProvisioningConfig) => void
   onBack?: () => void
   className?: string
@@ -26,6 +33,30 @@ export interface ProvisioningConfig {
   storageGB: number
   modelTier: string
   systemPrompt: string
+}
+
+const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string }> = {
+  universal: { name: "Universal", abbr: "U", color: "violet", textClass: "text-[var(--surface-violet-text)]" },
+  ethereum:  { name: "Ethereum",  abbr: "Ξ", color: "blue",   textClass: "text-[var(--surface-info-text)]" },
+  solana:    { name: "Solana",    abbr: "S", color: "green",  textClass: "text-[var(--surface-success-text)]" },
+  tangle:    { name: "Tangle",    abbr: "T", color: "purple", textClass: "text-[var(--surface-violet-text)]" },
+  "ai-sdk":  { name: "AI SDK",    abbr: "AI", color: "teal", textClass: "text-[var(--surface-teal-text)]" },
+  rust:      { name: "Rust",      abbr: "Rs", color: "orange", textClass: "text-[var(--surface-orange-text)]" },
+}
+
+export function resolveEnvironment(env: EnvironmentEntry): EnvironmentOption {
+  const display = STACK_DISPLAY[env.id]
+  const name = display?.name ?? (env.id.length > 0 ? env.id.charAt(0).toUpperCase() + env.id.slice(1).replace(/-/g, " ") : "Unknown")
+  const abbr = display?.abbr ?? (env.id.length > 0 ? env.id[0].toUpperCase() : "?")
+  const color = display?.color ?? "slate"
+  const textClass = display?.textClass ?? "text-[var(--text-muted)]"
+  return {
+    id: env.id,
+    name,
+    description: env.description ?? `${name} development environment`,
+    icon: <span className={`${textClass} text-2xl font-bold`}>{abbr}</span>,
+    color,
+  }
 }
 
 const defaultEnvironments: EnvironmentOption[] = [
@@ -51,11 +82,24 @@ function calcCost(cpu: number, ram: number): string {
 const sectionIcon = "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-surface-soft)] border border-[var(--border-accent)] text-[var(--brand-cool)]"
 
 export function ProvisioningWizard({
-  environments = defaultEnvironments,
+  environments: environmentsProp,
+  onLoadEnvironments,
   onSubmit,
   onBack,
   className,
 }: ProvisioningWizardProps) {
+  const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
+
+  React.useEffect(() => {
+    if (onLoadEnvironments) {
+      onLoadEnvironments().then((entries) => setEnvList(entries.map(resolveEnvironment)))
+    } else if (environmentsProp) {
+      setEnvList(environmentsProp)
+    }
+  }, [onLoadEnvironments, environmentsProp])
+
+  const environments = envList
+
   const [step, setStep] = React.useState(0)
   const [selectedEnv, setSelectedEnv] = React.useState(environments[0]?.id ?? "")
   const [cpuCores, setCpuCores] = React.useState(4)

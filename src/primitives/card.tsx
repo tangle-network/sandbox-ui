@@ -4,25 +4,27 @@ import { cn } from "../lib/utils";
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & {
-    variant?: "default" | "glass" | "sandbox";
+    variant?: "default" | "glass" | "sandbox" | "elevated";
     hover?: boolean;
   }
 >(({ className, variant = "default", hover = false, ...props }, ref) => {
   const variants = {
-    default: "bg-card border-border",
-    glass: "bg-card/60 backdrop-blur-xl border-border/50",
+    default: "bg-card border-[var(--border-default)]",
+    elevated: "bg-[var(--bg-elevated)] border-[var(--border-subtle)] shadow-[var(--shadow-card)]",
+    glass: "bg-[var(--depth-2)] border-[var(--border-subtle)] shadow-[var(--shadow-card)]",
     sandbox:
-      "bg-card/80 backdrop-blur-xl border-[var(--border-accent)] shadow-[var(--shadow-accent)]",
+      "bg-[var(--depth-3)] border-[var(--border-accent)] shadow-[var(--shadow-accent)]",
   };
 
   return (
     <div
       ref={ref}
       className={cn(
-        "rounded-xl border text-card-foreground transition-all duration-300",
+        "rounded-[var(--radius-lg)] border text-card-foreground transition-[border-color,box-shadow]",
+        "duration-[var(--transition-default)]",
         variants[variant],
         hover &&
-          "cursor-pointer hover:border-muted-foreground/50 hover:shadow-xl",
+          "cursor-pointer hover:border-[var(--border-hover)]",
         className,
       )}
       {...props}
@@ -37,7 +39,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    className={cn("flex flex-col space-y-1 p-4", className)}
     {...props}
   />
 ));
@@ -71,7 +73,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  <div ref={ref} className={cn("p-4 pt-0", className)} {...props} />
 ));
 CardContent.displayName = "CardContent";
 

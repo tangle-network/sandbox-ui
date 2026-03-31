@@ -22,6 +22,21 @@ export interface ExpandedToolDetailProps {
   part: ToolPart;
 }
 
+const EXT_LANG: Record<string, string> = {
+  ts: "typescript", tsx: "tsx", js: "javascript", jsx: "jsx",
+  rs: "rust", py: "python", go: "go", rb: "ruby",
+  json: "json", yaml: "yaml", yml: "yaml", toml: "toml",
+  md: "markdown", css: "css", scss: "scss", html: "html",
+  sh: "bash", bash: "bash", zsh: "bash", sql: "sql",
+  sol: "solidity", proto: "protobuf",
+};
+
+function langFromPath(path?: string): string | undefined {
+  if (!path) return undefined;
+  const ext = path.split(".").pop()?.toLowerCase();
+  return ext ? EXT_LANG[ext] : undefined;
+}
+
 /** Format an unknown value as a displayable string. */
 function formatOutput(value: unknown): string {
   if (value == null) return "";
@@ -74,7 +89,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
   if (meta.displayVariant === "read-file") {
     return (
       <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
-        <div className="flex items-center gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/70 px-4 py-3">
+        <div className="flex items-center gap-3 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-4 py-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--border-accent)] bg-[var(--bg-section)] text-[var(--brand-cool)]">
             <FileText className="h-4 w-4" />
           </div>
@@ -87,14 +102,14 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
         </div>
         <div className="space-y-3 px-4 py-4">
           {typeof output === "string" ? (
-            <CodeBlock code={output} language="text" className="rounded-[var(--radius-md)]" />
+            <CodeBlock code={output} language={langFromPath(meta.targetPath) ?? "text"} className="rounded-[var(--radius-md)]" />
           ) : (
-            <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)]/60 px-3 py-4 text-sm text-[var(--text-muted)]">
+            <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-4 text-sm text-[var(--text-muted)]">
               No readable file content was returned.
             </div>
           )}
           {error ? (
-            <div className="rounded-[var(--radius-md)] border border-red-500/30 bg-red-500/8 px-3 py-3 text-sm text-red-200">
+            <div className="rounded-[var(--radius-md)] border border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] px-3 py-3 text-sm text-[var(--surface-danger-text)]">
               {error}
             </div>
           ) : null}
@@ -112,7 +127,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
       {/* Input */}
       {inputStr && (
         <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]">
-          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/70 px-3 py-2">
+          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-3 py-2">
             <ArrowRight className="h-3 w-3 text-[var(--brand-cool)]" />
             <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
               Input
@@ -125,7 +140,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
       {/* Output */}
       {status === "completed" && outputStr && (
         <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]">
-          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)]/70 px-3 py-2">
+          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-3 py-2">
             <ArrowLeft className="h-3 w-3 text-[var(--brand-cool)]" />
             <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
               Output
@@ -145,14 +160,14 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
 
       {/* Error */}
       {error && (
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-red-500/30">
-          <div className="flex items-center gap-2 border-b border-red-500/20 bg-red-500/10 px-3 py-2">
-            <AlertCircle className="h-3 w-3 text-red-300" />
-            <span className="text-xs font-medium uppercase tracking-[0.08em] text-red-200">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--surface-danger-border)]">
+          <div className="flex items-center gap-2 border-b border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] px-3 py-2">
+            <AlertCircle className="h-3 w-3 text-[var(--surface-danger-text)]" />
+            <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--surface-danger-text)]">
               Error
             </span>
           </div>
-          <pre className="bg-red-500/6 p-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-red-100">
+          <pre className="bg-[var(--surface-danger-bg)] p-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-[var(--surface-danger-text)]">
             {error}
           </pre>
         </div>
@@ -160,7 +175,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
 
       {/* Running state */}
       {(status === "pending" || status === "running") && (
-        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/60 px-3 py-3 text-xs text-[var(--text-muted)]">
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-3 text-xs text-[var(--text-muted)]">
           <Loader2 className={cn("h-3 w-3 animate-spin text-[var(--brand-cool)]")} />
           Running…
         </div>

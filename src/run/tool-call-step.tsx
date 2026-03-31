@@ -12,7 +12,6 @@ import {
   FileCode,
   Search,
   CheckCircle,
-  XCircle,
   ChevronRight,
   Loader2,
   FolderOpen,
@@ -21,6 +20,7 @@ import {
   Eye,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { CodeBlock } from "../markdown/code-block";
 
 export type ToolCallType =
   | "bash"
@@ -43,8 +43,53 @@ export interface ToolCallStepProps {
   status: ToolCallStatus;
   detail?: string;
   output?: string;
+  /** Override syntax highlighting language; inferred from detail path if omitted */
+  language?: string;
   duration?: number;
   className?: string;
+}
+
+const EXT_LANGUAGE: Record<string, string> = {
+  ts: "typescript", tsx: "typescript",
+  js: "javascript", jsx: "javascript", mjs: "javascript", cjs: "javascript",
+  css: "css", scss: "scss",
+  json: "json", jsonc: "json",
+  md: "markdown", mdx: "markdown",
+  py: "python",
+  sh: "bash", bash: "bash", zsh: "bash",
+  html: "html", htm: "html",
+  yaml: "yaml", yml: "yaml",
+  toml: "toml",
+  rs: "rust",
+  go: "go",
+  sql: "sql",
+  xml: "xml",
+}
+
+function inferLanguage(detail?: string, language?: string): string | undefined {
+  if (language) return language
+  if (!detail) return undefined
+  const ext = detail.split(".").pop()?.toLowerCase()
+  return ext ? EXT_LANGUAGE[ext] : undefined
+}
+
+function isFilePath(detail: string): boolean {
+  return /[/\\]/.test(detail) || /\.\w{1,6}$/.test(detail)
+}
+
+function FilePathChip({ path }: { path: string }) {
+  const parts = path.replace(/\\/g, "/").split("/")
+  const filename = parts.pop() ?? path
+  const dir = parts.length > 0 ? parts.join("/") + "/" : ""
+  return (
+    <div className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--depth-1)] px-2.5 py-1.5 font-[var(--font-mono)] text-xs min-w-0">
+      <FileCode className="h-3.5 w-3.5 shrink-0 text-[var(--brand-cool)]" />
+      {dir && (
+        <span className="truncate text-[var(--text-muted)]">{dir}</span>
+      )}
+      <span className="shrink-0 font-semibold text-[var(--text-primary)]">{filename}</span>
+    </div>
+  )
 }
 
 const ICONS: Record<ToolCallType, typeof Terminal> = {
@@ -73,12 +118,14 @@ export function ToolCallStep({
   status,
   detail,
   output,
+  language,
   duration,
   className,
 }: ToolCallStepProps) {
   const [expanded, setExpanded] = useState(false);
   const Icon = ICONS[type] || ICONS.unknown;
   const hasExpandable = !!(detail || output);
+  const lang = inferLanguage(detail, language);
 
   return (
     <div
@@ -86,7 +133,7 @@ export function ToolCallStep({
         "group overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--bg-card)] transition-colors",
         status === "running" && "border-[var(--border-accent)]",
         status === "success" && "border-[var(--border-subtle)] hover:border-[var(--border-accent)]",
-        status === "error" && "border-red-500/30",
+        status === "error" && "border-[var(--surface-danger-border)]",
         className,
       )}
     >
@@ -101,9 +148,9 @@ export function ToolCallStep({
         <div
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
-            status === "running" && "border-[var(--border-accent)] bg-[var(--brand-cool)]/12 text-[var(--brand-cool)]",
-            status === "success" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
-            status === "error" && "border-red-500/30 bg-red-500/10 text-red-200",
+            status === "running" && "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--brand-cool)]",
+            status === "success" && "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
+            status === "error" && "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]",
           )}
         >
           {status === "running" ? (
@@ -122,10 +169,10 @@ export function ToolCallStep({
           className={cn(
             "rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em]",
             status === "running" &&
-              "border-[var(--border-accent)] bg-[var(--brand-cool)]/10 text-[var(--brand-cool)]",
+              "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--brand-cool)]",
             status === "success" &&
-              "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
-            status === "error" && "border-red-500/30 bg-red-500/10 text-red-200",
+              "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
+            status === "error" && "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]",
           )}
         >
           {status}
@@ -151,16 +198,18 @@ export function ToolCallStep({
 
       {/* Expandable content */}
       {expanded && (detail || output) && (
-        <div className="space-y-2 border-t border-[var(--border-subtle)] bg-[var(--bg-section)]/50 px-4 py-4">
+        <div className="space-y-2 border-t border-[var(--border-subtle)] bg-[var(--bg-section)] px-4 py-4">
           {detail && (
-            <div className="text-xs font-[var(--font-mono)] text-[var(--text-muted)]">
-              {detail}
-            </div>
+            isFilePath(detail)
+              ? <FilePathChip path={detail} />
+              : <div className="text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{detail}</div>
           )}
           {output && (
-            <pre className="max-h-48 overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] p-3 text-xs font-[var(--font-mono)] text-[var(--text-secondary)]">
-              {output}
-            </pre>
+            <CodeBlock
+              code={output}
+              language={lang}
+              className="max-h-72 overflow-auto text-xs"
+            />
           )}
         </div>
       )}

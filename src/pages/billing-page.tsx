@@ -300,7 +300,6 @@ export function BillingPage({
               data={data.usageHistory}
               title="Credit Usage History"
               unit="credits"
-              variant={variant}
             />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-12 text-center">

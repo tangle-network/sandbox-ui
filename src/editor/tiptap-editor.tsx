@@ -421,7 +421,7 @@ export function EditorToolbar({
   return (
     <div
       className={cn(
-        "flex items-center gap-1 border-border border-b bg-muted/50 p-2",
+        "flex items-center gap-1 border-border border-b bg-[var(--depth-2)] p-2",
         className,
       )}
     >

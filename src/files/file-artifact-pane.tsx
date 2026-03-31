@@ -123,7 +123,7 @@ export function FileArtifactPane({
             tabs={paneTabs}
             headerActions={headerActions}
           >
-            <div className="flex min-h-[20rem] items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)]/40 text-sm text-[var(--text-muted)]">
+            <div className="flex min-h-[20rem] items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] text-sm text-[var(--text-muted)]">
               Loading editor…
             </div>
           </ArtifactPane>

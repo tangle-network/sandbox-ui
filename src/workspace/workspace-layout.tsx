@@ -245,7 +245,7 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
         type="button"
         aria-label={`Close ${title}`}
         onClick={onClose}
-        className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/70"
       />
       <aside
         className={cn(

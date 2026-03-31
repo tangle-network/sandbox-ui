@@ -37,29 +37,34 @@ export function ChatMessage({
   return (
     <div
       className={cn(
-        "flex gap-4 rounded-[calc(var(--radius-xl)+2px)] border px-4 py-4 shadow-[var(--shadow-card)] backdrop-blur-sm",
-        isUser
-          ? "border-[var(--border-accent)] bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.18),transparent_42%),linear-gradient(135deg,rgba(98,114,243,0.18),rgba(98,114,243,0.06)_55%,rgba(255,255,255,0.02))]"
-          : "border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_32%),var(--bg-card)]",
+        "flex gap-3",
+        isUser ? "flex-row-reverse" : "flex-row",
         className,
       )}
     >
       {/* Avatar */}
       <div
         className={cn(
-          "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border shadow-[var(--shadow-accent)]",
+          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border",
           isUser
-            ? "border-[var(--border-accent)] bg-[linear-gradient(135deg,rgba(82,164,255,0.24),rgba(82,164,255,0.08))] text-[var(--brand-cool)]"
-            : "border-[var(--border-subtle)] bg-[linear-gradient(135deg,rgba(77,203,255,0.24),rgba(77,203,255,0.08))] text-[var(--brand-glow)]",
+            ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
+            : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--brand-cool)]",
         )}
       >
-        {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+        {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
       </div>
 
-      {/* Content */}
-      <div className="min-w-0 flex-1 space-y-2">
+      {/* Bubble */}
+      <div
+        className={cn(
+          "min-w-0 max-w-[85%] space-y-1.5 rounded-[var(--radius-xl)] border px-4 py-3",
+          isUser
+            ? "border-[var(--border-accent)] bg-[var(--depth-3)]"
+            : "border-[var(--border-subtle)] bg-[var(--depth-2)]",
+        )}
+      >
         {/* Role label + timestamp */}
-        <div className="flex items-center gap-2">
+        <div className={cn("flex items-center gap-2", isUser && "flex-row-reverse")}>
           <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
             {isUser ? "You" : "Agent"}
           </span>
@@ -78,14 +83,13 @@ export function ChatMessage({
         ) : (
           <>
             {content && <Markdown className="tangle-prose text-[15px] leading-7">{content}</Markdown>}
-            {/* Streaming cursor */}
             {isStreaming && (
               <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-[var(--brand-cool)] align-text-bottom" />
             )}
           </>
         )}
 
-        {/* Inline tool calls (rendered between text sections) */}
+        {/* Inline tool calls (left-aligned below agent text) */}
         {toolCalls}
       </div>
     </div>

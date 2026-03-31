@@ -180,7 +180,7 @@ export function ProfilesPage({
 
       {/* Tier limit warning */}
       {!canCreateMore && (
-        <div className="flex items-center gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-400">
+        <div className="flex items-center gap-2 rounded-lg border border-[var(--surface-warning-border)] bg-[var(--surface-warning-bg)] p-3 text-sm text-[var(--surface-warning-text)]">
           <AlertCircle className="h-4 w-4" />
           <span>
             You've reached your profile limit ({profileLimit} profiles). Upgrade
@@ -202,7 +202,7 @@ export function ProfilesPage({
 
       {/* Error state */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-400 text-sm">
+        <div className="flex items-center gap-2 rounded-lg border border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] p-3 text-[var(--surface-danger-text)] text-sm">
           <AlertCircle className="h-4 w-4" />
           <span>{error}</span>
           <Button variant="ghost" size="sm" onClick={loadProfiles}>
@@ -378,7 +378,7 @@ function ProfileCard({
               </Badge>
             )}
             {profile.is_public && !isBuiltin && (
-              <Badge className="border-0 bg-blue-500/10 text-blue-400 text-xs">
+              <Badge className="border border-[var(--surface-info-border)] bg-[var(--surface-info-bg)] text-[var(--surface-info-text)] text-xs">
                 Public
               </Badge>
             )}
@@ -408,7 +408,7 @@ function ProfileCard({
                 onClick={onDelete}
                 aria-label="Delete profile"
               >
-                <Trash2 className="h-4 w-4 text-red-400" />
+                <Trash2 className="h-4 w-4 text-[var(--surface-danger-text)]" />
               </Button>
             )}
           </div>
@@ -556,7 +556,7 @@ function ProfileFormDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-400 text-sm">
+            <div className="flex items-center gap-2 rounded-lg border border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] p-3 text-[var(--surface-danger-text)] text-sm">
               <AlertCircle className="h-4 w-4" />
               <span>{error}</span>
             </div>
@@ -742,14 +742,14 @@ function DeleteProfileDialog({
         </DialogHeader>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-400 text-sm">
+          <div className="flex items-center gap-2 rounded-lg border border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] p-3 text-[var(--surface-danger-text)] text-sm">
             <AlertCircle className="h-4 w-4" />
             <span>{error}</span>
           </div>
         )}
 
         {profile?.metrics && profile.metrics.total_runs > 0 && (
-          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-400">
+          <div className="rounded-lg border border-[var(--surface-warning-border)] bg-[var(--surface-warning-bg)] p-3 text-sm text-[var(--surface-warning-text)]">
             This profile has {profile.metrics.total_runs} recorded runs.
             Deleting it will lose all performance metrics.
           </div>
@@ -804,7 +804,7 @@ function ProfileDetailDialog({
               </Badge>
             )}
             {profile.is_public && !profile.is_builtin && (
-              <Badge className="border-0 bg-blue-500/10 text-blue-400">
+              <Badge className="border border-[var(--surface-info-border)] bg-[var(--surface-info-bg)] text-[var(--surface-info-text)]">
                 Public
               </Badge>
             )}

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Check } from "lucide-react"
 import { cn } from "../lib/utils"
 
 export interface PlanFeature {
@@ -24,47 +25,39 @@ export interface PlanCardsProps {
   className?: string
 }
 
-function MaterialIcon({ name, className }: { name: string; className?: string }) {
-  return (
-    <span className={cn("material-symbols-outlined", className)} style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>
-      {name}
-    </span>
-  )
-}
-
 export function PlanCards({ plans, className }: PlanCardsProps) {
   return (
     <section className={className}>
-      <h2 className="text-2xl font-bold text-white tracking-tight mb-8 px-2">Subscription Plans</h2>
+      <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight mb-8 px-2">Subscription Plans</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((plan) => (
           <div
             key={plan.id}
             className={cn(
-              "p-8 rounded-xl transition-all",
+              "p-8 rounded-xl transition-all relative overflow-hidden border",
               plan.popular
-                ? "bg-surface-container-highest border-2 border-md3-primary/30 relative overflow-hidden"
-                : "bg-surface-container-low group hover:bg-surface-container",
+                ? "bg-[var(--depth-3)] border-[var(--border-accent)]"
+                : "bg-[var(--depth-2)] border-[var(--border-subtle)] hover:bg-[var(--depth-3)] hover:border-[var(--border-default)]",
             )}
           >
             {plan.popular && (
-              <div className="absolute top-0 right-0 bg-md3-primary px-4 py-1 text-[10px] font-bold text-on-primary uppercase tracking-widest rounded-bl-lg">
+              <div className="absolute top-0 right-0 bg-[var(--accent-surface-soft)] border-l border-b border-[var(--border-accent)] px-4 py-1 text-[10px] font-bold text-[var(--accent-text)] uppercase tracking-widest rounded-bl-lg">
                 Popular
               </div>
             )}
             <div className="mb-6">
-              <div className={cn("text-xs font-mono uppercase tracking-widest mb-2", plan.popular ? "text-md3-primary" : "text-on-surface-variant")}>
+              <div className={cn("text-xs font-mono uppercase tracking-widest mb-2", plan.popular ? "text-[var(--brand-cool)]" : "text-[var(--text-muted)]")}>
                 {plan.name}
               </div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-3xl font-bold text-[var(--text-primary)]">
                 ${plan.price}
-                <span className="text-sm font-normal text-on-surface-variant tracking-normal">/{plan.period ?? "mo"}</span>
+                <span className="text-sm font-normal text-[var(--text-muted)] tracking-normal">/{plan.period ?? "mo"}</span>
               </div>
             </div>
-            <ul className="space-y-3 mb-8 text-sm text-on-surface-variant">
+            <ul className="space-y-3 mb-8 text-sm text-[var(--text-muted)]">
               {plan.features.map((f, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <MaterialIcon name="check" className="text-sm text-md3-primary" />
+                  <Check className="h-3.5 w-3.5 text-[var(--brand-cool)] shrink-0" />
                   {f.text}
                 </li>
               ))}
@@ -73,12 +66,12 @@ export function PlanCards({ plans, className }: PlanCardsProps) {
               type="button"
               onClick={() => plan.onSelect?.(plan.id)}
               className={cn(
-                "w-full py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all",
+                "w-full py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all border",
                 plan.current
-                  ? "border border-outline-variant/40 text-on-surface-variant hover:border-md3-primary"
+                  ? "border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--border-default)] hover:text-[var(--text-secondary)]"
                   : plan.popular
-                    ? "bg-gradient-to-r from-md3-primary to-primary-container text-on-primary shadow-lg shadow-md3-primary/20 active:scale-95 transition-transform"
-                    : "border border-outline-variant/40 text-on-surface-variant hover:border-md3-primary",
+                    ? "bg-[var(--accent-surface-soft)] border-[var(--border-accent)] text-[var(--accent-text)] hover:bg-[var(--accent-surface-strong)] active:scale-95 transition-transform"
+                    : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-accent)] hover:text-[var(--brand-cool)]",
               )}
             >
               {plan.ctaLabel ?? (plan.current ? "Current Plan" : "Upgrade Now")}

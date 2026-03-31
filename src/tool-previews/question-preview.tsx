@@ -81,7 +81,7 @@ export const QuestionPreview = memo(({ part }: QuestionPreviewProps) => {
       {questions.map((question, index) => (
         <div
           key={`${question}-${index}`}
-          className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/55 px-3 py-3"
+          className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-3"
         >
           <div className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
             Question {index + 1}

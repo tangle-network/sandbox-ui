@@ -17,10 +17,10 @@ const toastVariants = cva(
     variants: {
       variant: {
         default: "border-border bg-background text-foreground",
-        success: "border-green-500/20 bg-green-500/10 text-green-400",
-        error: "border-red-500/20 bg-red-500/10 text-red-400",
-        warning: "border-yellow-500/20 bg-yellow-500/10 text-yellow-400",
-        info: "border-blue-500/20 bg-blue-500/10 text-blue-400",
+        success: "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
+        error: "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]",
+        warning: "border-[var(--surface-warning-border)] bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]",
+        info: "border-[var(--surface-info-border)] bg-[var(--surface-info-bg)] text-[var(--surface-info-text)]",
       },
     },
     defaultVariants: {

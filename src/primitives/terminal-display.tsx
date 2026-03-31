@@ -53,16 +53,8 @@ const TerminalDisplay = React.forwardRef<HTMLDivElement, TerminalDisplayProps>(
         {...props}
       >
         {showHeader && (
-          <div className="flex items-center gap-2 border-border/50 border-b bg-card/30 px-4 py-3">
-            <div className="flex gap-1.5">
-              {dotColors[variant].map((color) => (
-                <div
-                  key={color}
-                  className={cn("h-3 w-3 rounded-full", color)}
-                />
-              ))}
-            </div>
-            <span className="ml-2 text-muted-foreground text-xs">{title}</span>
+          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-4 py-3">
+            <span className="text-muted-foreground text-xs">{title}</span>
           </div>
         )}
         <div

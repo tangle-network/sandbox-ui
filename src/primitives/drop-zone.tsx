@@ -106,17 +106,22 @@ export function DropZone({
     >
       {dragOver &&
         (overlay || (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none bg-black/20 backdrop-blur-sm">
-            <div className="rounded-3xl border-2 border-dashed border-[hsl(var(--ring))] bg-[hsl(var(--card))] p-16 text-center shadow-2xl max-w-lg mx-auto">
-              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[hsl(var(--primary))]/10">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none bg-[var(--depth-1)]">
+            <div className="rounded-2xl border-2 border-dashed border-[var(--border-accent)] bg-[var(--depth-2)] p-16 text-center shadow-[var(--shadow-dropdown)] max-w-lg mx-auto">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-[var(--border-accent)] bg-[var(--accent-surface-soft)]">
                 {typeof icon === "string" ? (
-                  <span className="material-symbols-outlined text-5xl text-[hsl(var(--primary))]">{icon}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-[var(--accent-text)]">
+                    <title>Upload</title>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
                 ) : (
                   icon
                 )}
               </div>
-              <h2 className="text-2xl font-extrabold text-[hsl(var(--foreground))]">{title}</h2>
-              <p className="mt-2 text-[hsl(var(--muted-foreground))]">{description}</p>
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">{title}</h2>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">{description}</p>
             </div>
           </div>
         ))}

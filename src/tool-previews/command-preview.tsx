@@ -65,8 +65,8 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
             className={cn(
               "inline-flex items-center rounded-full border px-2 py-0.5 font-[var(--font-mono)]",
               isError
-                ? "border-red-500/30 bg-red-500/10 text-red-200"
-                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+                ? "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]"
+                : "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
             )}
           >
             exit {output.exitCode}
@@ -76,7 +76,7 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
     >
       <button
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/60 px-3 py-2 text-left transition-colors hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/45"
+        className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2 text-left transition-colors hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/45"
       >
         <code className="min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-[var(--text-secondary)]">
           {command}
@@ -97,7 +97,7 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
       {errorText ? <PreviewError error={errorText} /> : null}
 
       {expanded && output ? (
-        <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/55">
+        <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]">
           {output.stdout ? (
             <pre className="max-h-80 overflow-auto px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-[var(--text-secondary)]">
               {output.stdout}

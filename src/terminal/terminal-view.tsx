@@ -212,20 +212,20 @@ export default function TerminalView({
 
       {/* Connection status overlay */}
       {(!isConnected || error) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--depth-1)] rounded-lg">
           <div className="text-center">
             {error ? (
               <>
-                <p className="text-sm text-red-400 mb-3">{error}</p>
+                <p className="text-sm text-[var(--surface-danger-text)] mb-3">{error}</p>
                 <button
                   onClick={reconnect}
-                  className="text-sm text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
+                  className="text-sm text-[var(--surface-success-text)] hover:opacity-80 underline cursor-pointer"
                 >
                   Retry connection
                 </button>
               </>
             ) : (
-              <p className="text-sm text-neutral-400">Connecting to terminal...</p>
+              <p className="text-sm text-[var(--text-muted)]">Connecting to terminal...</p>
             )}
           </div>
         </div>

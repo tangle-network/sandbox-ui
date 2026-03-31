@@ -93,7 +93,7 @@ function CodePreview({ content, filename }: { content: string; filename: string 
         <table className="w-full">
           <tbody>
             {lines.map((line, i) => (
-              <tr key={i} className="hover:bg-[var(--bg-hover)]/50">
+              <tr key={i} className="hover:bg-[var(--bg-hover)]">
                 <td className="text-right pr-4 pl-4 py-0 select-none text-[var(--text-muted)] text-xs font-[var(--font-mono)] w-10 align-top leading-[1.55]">
                   {i + 1}
                 </td>
@@ -172,7 +172,7 @@ function CsvPreview({ content }: { content: string }) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-hover)]/50">
+            <tr key={i} className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-hover)]">
               {row.map((cell, j) => (
                 <td
                   key={j}

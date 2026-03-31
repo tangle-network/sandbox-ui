@@ -111,9 +111,9 @@ export function SidebarDropZone({
         "rounded-lg border-2 border-dashed transition-all duration-150",
         isVisible ? "p-4" : "p-0 border-transparent",
         dragOver
-          ? "border-[var(--brand-cool,hsl(var(--ring)))] bg-[var(--brand-cool,hsl(var(--primary)))]/8"
+          ? "border-[var(--brand-cool,hsl(var(--ring)))] bg-[var(--accent-surface-soft)]"
           : persistent
-            ? "border-[var(--border-subtle,hsl(var(--border)))] bg-transparent hover:border-[var(--border-default,hsl(var(--border)))] hover:bg-[var(--bg-hover,hsl(var(--accent)))]/50"
+            ? "border-[var(--border-subtle,hsl(var(--border)))] bg-transparent hover:border-[var(--border-default,hsl(var(--border)))] hover:bg-[var(--bg-hover,hsl(var(--accent)))]"
             : "",
         disabled && "opacity-50 pointer-events-none",
         className,

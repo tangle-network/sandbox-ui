@@ -1,8 +1,9 @@
 @import "./tokens.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Geist (UI) + Geist Mono (code) + Outfit (display) — via Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap");
+
+@import "tailwindcss";
 
 @layer base {
   :root {
@@ -15,31 +16,39 @@
   }
 
   body {
-    @apply antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     font-family: var(--font-sans);
     font-feature-settings:
       "rlig" 1,
-      "calt" 1;
+      "calt" 1,
+      "ss01" 1;
+  }
+
+  ::selection {
+    background: rgba(56, 178, 172, 0.22);
+    color: hsl(var(--hsl-foreground));
   }
 
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
+    background: hsl(var(--border) / 0.7);
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    background: hsl(var(--muted-foreground) / 0.4);
   }
 }
 
@@ -47,30 +56,109 @@
   /* Gradient text -- Tangle default accent */
   .text-gradient-sandbox {
     background-image: var(--tangle-gradient);
-    @apply bg-clip-text text-transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
   }
 
   /* Glow effects */
   .glow-sandbox {
-    box-shadow: 0 0 40px -10px hsl(var(--sandbox) / 0.4);
+    box-shadow: 0 0 48px -10px hsl(var(--sandbox) / 0.45);
   }
 
-  /* Glass effect */
+  /* Solid depth cards */
+  .glass-card {
+    background: var(--depth-2);
+    border: 1px solid var(--border-subtle);
+    transition: border-color var(--transition-default), box-shadow var(--transition-default);
+  }
+
+  .glass-card:hover {
+    border-color: var(--border-default);
+  }
+
+  .glass-card-strong {
+    background: var(--depth-3);
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Legacy alias */
   .glass {
-    backdrop-filter: blur(24px);
-    background-color: hsl(var(--card) / 0.8);
-    border: 1px solid hsl(var(--border) / 0.5);
+    background-color: var(--depth-2);
+    border: 1px solid var(--border-subtle);
+  }
+
+  /* Atmospheric mesh gradient background */
+  .bg-mesh {
+    position: relative;
+  }
+
+  .bg-mesh::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 40%, var(--mesh-teal), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 20%, var(--mesh-violet), transparent),
+      radial-gradient(ellipse 50% 60% at 50% 80%, var(--mesh-blue), transparent);
+    pointer-events: none;
+    z-index: 0;
   }
 
   /* Subtle noise texture */
   .noise {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    opacity: 0.02;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none;
   }
 
-  /* Terminal styling */
+  /* Status dots — operational state indicators */
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  .status-dot-running {
+    background: var(--status-running);
+    box-shadow: var(--shadow-status-running);
+  }
+
+  .status-dot-creating {
+    background: var(--status-creating);
+    animation: status-pulse 2s ease-in-out infinite;
+  }
+
+  .status-dot-stopped {
+    background: var(--status-stopped);
+  }
+
+  .status-dot-warm {
+    background: var(--status-warm);
+  }
+
+  .status-dot-cold {
+    background: var(--status-cold);
+  }
+
+  .status-dot-error {
+    background: var(--status-error);
+    box-shadow: var(--shadow-status-error);
+  }
+
+  .status-dot-deleted {
+    background: var(--status-deleted);
+    opacity: 0.6;
+  }
+
+  /* Terminal cursor */
   .terminal-cursor {
-    @apply inline-block w-2 h-5 bg-foreground animate-pulse;
+    display: inline-block;
+    width: 0.5rem;
+    height: 1.25rem;
+    background-color: hsl(var(--foreground));
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
   /* Shimmer animation */
@@ -85,95 +173,41 @@
     animation: shimmer 2s infinite;
   }
 
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
-
   /* Fade in animation */
   .animate-in {
-    animation: fade-in 0.3s ease-out;
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    animation: fade-in 0.25s ease-out;
   }
 
   /* Pulse ring animation */
   .pulse-ring {
-    @apply relative;
+    position: relative;
   }
 
   .pulse-ring::before {
     content: "";
-    @apply absolute inset-0 rounded-full;
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
     animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  @keyframes pulse-ring {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 currentColor;
-      opacity: 0.4;
-    }
-    50% {
-      box-shadow: 0 0 0 8px currentColor;
-      opacity: 0;
-    }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
-}
 
-/* Fonts -- Inter (UI) + JetBrains Mono (code). */
-@font-face {
-  font-family: "Inter";
-  src: url("https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiA.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Inter";
-  src: url("https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiA.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Inter";
-  src: url("https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI2fAZ9hiA.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Inter";
-  src: url("https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYAZ9hiA.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxTOlOV.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxTPlOV.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 0.4; }
+    50% { box-shadow: 0 0 0 8px currentColor; opacity: 0; }
+  }
+
+  @keyframes status-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
 }

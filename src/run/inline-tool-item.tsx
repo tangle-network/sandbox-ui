@@ -107,29 +107,22 @@ export const InlineToolItem = memo(
                 className,
               )}
             >
-              <div className="flex items-center gap-3 px-3 py-3">
-                <div
-                  className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
-                    isRunning &&
-                      "border-[var(--border-accent)] bg-[var(--brand-cool)]/12 text-[var(--brand-cool)]",
-                    isComplete &&
-                      "border-emerald-500/30 bg-emerald-500/12 text-emerald-200",
-                    isError && "border-red-500/30 bg-red-500/10 text-red-200",
-                    !isRunning &&
-                      !isComplete &&
-                      !isError &&
-                      "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)]",
-                  )}
-                >
+              <div className="flex items-center gap-2.5 px-3 py-2">
+                <div className={cn(
+                  "shrink-0",
+                  isRunning && "text-[var(--brand-cool)]",
+                  isComplete && "text-[var(--surface-success-text)]",
+                  isError && "text-[var(--surface-danger-text)]",
+                  !isRunning && !isComplete && !isError && "text-[var(--text-muted)]",
+                )}>
                   {isRunning ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : isComplete ? (
-                    <CheckCircle2 className="h-4 w-4" />
+                    <CheckCircle2 className="h-3.5 w-3.5" />
                   ) : isError ? (
-                    <AlertCircle className="h-4 w-4" />
+                    <AlertCircle className="h-3.5 w-3.5" />
                   ) : (
-                    <DefaultIcon className="h-4 w-4" />
+                    <DefaultIcon className="h-3.5 w-3.5" />
                   )}
                 </div>
 
@@ -139,7 +132,7 @@ export const InlineToolItem = memo(
                       {meta.title}
                     </span>
                     {isError ? (
-                      <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-red-200">
+                      <span className="rounded-full border border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--surface-danger-text)]">
                         Failed
                       </span>
                     ) : null}

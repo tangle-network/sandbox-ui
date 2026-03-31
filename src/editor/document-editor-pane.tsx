@@ -54,13 +54,13 @@ export interface DocumentEditorPaneProps
 function connectionTone(state: ConnectionState) {
   switch (state) {
     case "synced":
-      return "text-emerald-300 border-emerald-400/30 bg-emerald-400/10";
+      return "text-[var(--surface-success-text)] border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]";
     case "connected":
     case "connecting":
-      return "text-sky-300 border-sky-400/30 bg-sky-400/10";
+      return "text-[var(--surface-info-text)] border-[var(--surface-info-border)] bg-[var(--surface-info-bg)]";
     case "disconnected":
     default:
-      return "text-amber-200 border-amber-300/30 bg-amber-300/10";
+      return "text-[var(--surface-warning-text)] border-[var(--surface-warning-border)] bg-[var(--surface-warning-bg)]";
   }
 }
 
@@ -127,7 +127,7 @@ function CollaborativeDocumentSurface({
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col gap-3", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]/80 px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--depth-2)] px-3 py-2">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
             <span

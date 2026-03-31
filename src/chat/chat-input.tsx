@@ -169,9 +169,9 @@ export function ChatInput({
     >
       {/* Drop zone overlay */}
       {dragOver && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[28px] border-2 border-dashed border-[var(--brand-cool)] bg-[var(--brand-cool)]/8 backdrop-blur-sm pointer-events-none">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[var(--radius-xl)] border-2 border-dashed border-[var(--border-accent)] bg-[var(--depth-2)] pointer-events-none">
           <div className="text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-cool)]/15">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent-surface-soft)]">
               <Upload className="h-6 w-6 text-[var(--brand-cool)]" />
             </div>
             <p className="text-sm font-semibold text-[var(--text-primary)]">{dropTitle}</p>
@@ -187,8 +187,8 @@ export function ChatInput({
             <span
               key={f.id}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs shadow-[var(--shadow-card)] backdrop-blur-sm",
-                "border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))]",
+                "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs",
+                "border-[var(--border-subtle)] bg-[var(--depth-3)]",
                 f.status === "error" && "border-[var(--code-error)]/30 text-[var(--code-error)]",
                 f.status !== "error" && "text-[var(--text-secondary)]",
               )}
@@ -217,8 +217,8 @@ export function ChatInput({
             <span
               key={f.id}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs shadow-[var(--shadow-card)] backdrop-blur-sm",
-                "border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))]",
+                "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs",
+                "border-[var(--border-subtle)] bg-[var(--depth-3)]",
                 f.status === "error" && "border-[var(--code-error)]/30 text-[var(--code-error)]",
                 f.status !== "error" && "text-[var(--text-secondary)]",
               )}
@@ -244,8 +244,8 @@ export function ChatInput({
       )}
 
       {/* Input row */}
-      <div className="rounded-[28px] border border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.16),transparent_42%),linear-gradient(135deg,rgba(98,114,243,0.12),rgba(255,255,255,0.03)_42%,transparent)] p-[1px] shadow-[var(--shadow-accent)]">
-        <div className="rounded-[26px] border border-white/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_35%),var(--bg-card)] px-3 py-3.5 transition-colors focus-within:border-[var(--border-accent)]">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--border-default)] bg-[var(--depth-2)] shadow-[var(--shadow-card)]">
+        <div className="rounded-[var(--radius-xl)] px-3 py-3.5 transition-colors focus-within:border-[var(--border-accent)]">
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
               Agent Command Deck
@@ -331,7 +331,7 @@ export function ChatInput({
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
-            className="mb-0.5 shrink-0 rounded-[var(--radius-lg)] border border-[var(--border-accent)] bg-[linear-gradient(135deg,rgba(82,164,255,0.24),rgba(82,164,255,0.08))] p-2.5 text-[var(--brand-cool)] transition-colors hover:translate-y-[-1px] hover:bg-[linear-gradient(135deg,rgba(82,164,255,0.28),rgba(82,164,255,0.12))] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+            className="mb-0.5 shrink-0 rounded-[var(--radius-lg)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] p-2.5 text-[var(--accent-text)] transition-colors hover:translate-y-[-1px] hover:bg-[var(--accent-surface-strong)] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-accent)]"
           >
             <Send className="h-4 w-4" />
           </button>

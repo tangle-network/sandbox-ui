@@ -398,7 +398,7 @@ export function ProfileAvatar({
           <div className="flex items-center gap-3 px-2 py-3">
             <Avatar className="h-12 w-12 shrink-0">
               {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
-              <AvatarFallback className="text-sm bg-violet-500/20 text-violet-300">
+              <AvatarFallback className="text-sm bg-[var(--surface-violet-bg)] text-[var(--surface-violet-text)]">
                 {getInitials(user?.name, user?.email)}
               </AvatarFallback>
             </Avatar>
@@ -440,7 +440,7 @@ export function ProfileAvatar({
         {onLogout && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-400" onClick={onLogout}>
+            <DropdownMenuItem className="text-[var(--surface-danger-text)]" onClick={onLogout}>
               <LogOutIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               Sign Out
             </DropdownMenuItem>

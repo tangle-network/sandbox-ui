@@ -11,31 +11,13 @@ export interface UsageChartProps {
   data: UsageDataPoint[];
   title: string;
   unit: string;
-  variant?: "agentrun" | "automateai" | "tradingbots" | "sandbox";
   className?: string;
 }
 
-const variantColors = {
-  agentrun: {
-    bar: "bg-gradient-to-t from-blue-600 to-blue-400",
-    barHover: "hover:from-blue-500 hover:to-blue-300",
-    text: "text-blue-400",
-  },
-  automateai: {
-    bar: "bg-[image:linear-gradient(to_top,var(--brand-purple),var(--brand-cool))]",
-    barHover: "hover:brightness-110",
-    text: "text-[var(--brand-purple)]",
-  },
-  tradingbots: {
-    bar: "bg-gradient-to-t from-green-600 to-green-400",
-    barHover: "hover:from-green-500 hover:to-green-300",
-    text: "text-green-400",
-  },
-  sandbox: {
-    bar: "bg-[image:var(--accent-gradient-strong)]",
-    barHover: "hover:brightness-110",
-    text: "text-[var(--accent-text)]",
-  },
+const colors = {
+  bar: "bg-[image:var(--accent-gradient-strong)]",
+  barHover: "hover:brightness-110",
+  text: "text-[var(--accent-text)]",
 };
 
 function formatDate(dateStr: string): string {
@@ -53,14 +35,7 @@ function formatValue(value: number): string {
   return value.toLocaleString();
 }
 
-export function UsageChart({
-  data,
-  title,
-  unit,
-  variant = "agentrun",
-  className,
-}: UsageChartProps) {
-  const colors = variantColors[variant];
+export function UsageChart({ data, title, unit, className }: UsageChartProps) {
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const total = data.reduce((sum, d) => sum + d.value, 0);
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);

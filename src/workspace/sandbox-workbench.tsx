@@ -377,7 +377,7 @@ export function SandboxWorkbench({
   };
 
   const centerHeader = (
-    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[calc(var(--radius-xl)+2px)] border border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.16),transparent_34%),linear-gradient(135deg,rgba(98,114,243,0.14),rgba(255,255,255,0.03)_42%,transparent_76%)] px-4 py-3.5 shadow-[var(--shadow-accent)] backdrop-blur-sm">
+    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--depth-3)] px-4 py-3.5">
       <div className="min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-cool)]">
           Tangle Sandbox
@@ -400,7 +400,7 @@ export function SandboxWorkbench({
       meta={session.meta}
       headerActions={session.headerActions}
       className="h-full"
-      contentClassName="bg-[radial-gradient(circle_at_top,rgba(82,164,255,0.1),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_22%)]"
+      contentClassName="bg-[var(--bg-dark)]"
     >
       <ChatContainer
         {...session}
@@ -418,7 +418,7 @@ export function SandboxWorkbench({
         onSelect={handleArtifactChange}
         onClose={onArtifactClose}
       />
-      <div className="min-h-0 flex-1 overflow-auto bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent)]">
+      <div className="min-h-0 flex-1 overflow-auto bg-[var(--bg-dark)]">
         {activeArtifact ? (
           renderArtifact(activeArtifact)
         ) : (

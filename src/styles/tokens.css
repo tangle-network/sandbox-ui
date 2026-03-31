@@ -84,6 +84,16 @@
   --error: var(--hsl-destructive);
   --info: var(--hsl-info);
 
+  /* Sidebar tokens */
+  --sidebar-background: 248 52% 5%;
+  --sidebar-foreground: 244 20% 94%;
+  --sidebar-primary: 247 100% 61%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 245 28% 21%;
+  --sidebar-accent-foreground: 240 16% 92%;
+  --sidebar-border: 236 16% 18%;
+  --sidebar-ring: 247 100% 61%;
+
   /* Depth scale — Tangle deep indigo surfaces */
   --depth-1: #08071A;
   --depth-2: #131228;
@@ -322,6 +332,16 @@
   --surface-neutral-bg: var(--depth-3);
   --surface-neutral-border: var(--border-subtle);
   --surface-neutral-text: var(--text-muted);
+
+  /* Sidebar — light */
+  --sidebar-background: 210 17% 97%;
+  --sidebar-foreground: 210 20% 10%;
+  --sidebar-primary: 248 100% 35%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 210 20% 92%;
+  --sidebar-accent-foreground: 210 20% 10%;
+  --sidebar-border: 214 18% 88%;
+  --sidebar-ring: 248 100% 35%;
 
   --mesh-teal: rgba(44, 140, 134, 0.04);
   --mesh-violet: rgba(74, 58, 255, 0.03);

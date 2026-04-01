@@ -35,11 +35,15 @@ function getPreviewType(filename: string, mimeType?: string): string {
   if (mimeType?.startsWith("image/") || ["png", "jpg", "jpeg", "gif", "svg", "webp"].includes(ext)) return "image";
   if (["csv"].includes(ext)) return "csv";
   if (["xlsx", "xls"].includes(ext)) return "spreadsheet";
-  if (["py", "ts", "js", "tsx", "jsx", "sh", "bash"].includes(ext)) return "code";
+  if (["py", "ts", "js", "tsx", "jsx", "sh", "bash"].includes(ext) || ["profile", "bashrc", "bash_logout", "env", "gitignore"].includes(ext)) return "code";
   if (["json"].includes(ext)) return "json";
   if (["yaml", "yml"].includes(ext)) return "yaml";
   if (["md", "markdown"].includes(ext)) return "markdown";
   if (["txt", "log", "text"].includes(ext)) return "text";
+  
+  // If we have no known extension but we do have a text plain content payload, fallback to text rather than "unknown"
+  if (mimeType?.startsWith("text/plain")) return "text";
+  
   return "unknown";
 }
 
@@ -310,12 +314,12 @@ export function FilePreview({
       <div className="flex-1 overflow-auto p-3">
         {previewType === "pdf" && blobUrl && <PdfPreview blobUrl={blobUrl} filename={filename} />}
         {previewType === "image" && blobUrl && <ImagePreview src={blobUrl} filename={filename} />}
-        {previewType === "csv" && content && <CsvPreview content={content} />}
-        {(previewType === "code" || previewType === "json" || previewType === "yaml") && content && (
+        {previewType === "csv" && typeof content === "string" && <CsvPreview content={content} />}
+        {(previewType === "code" || previewType === "json" || previewType === "yaml") && typeof content === "string" && (
           <CodePreview content={content} filename={filename} />
         )}
-        {previewType === "text" && content && <TextPreview content={content} />}
-        {previewType === "markdown" && content && <MarkdownPreview content={content} />}
+        {previewType === "text" && typeof content === "string" && <TextPreview content={content} />}
+        {previewType === "markdown" && typeof content === "string" && <MarkdownPreview content={content} />}
         {previewType === "spreadsheet" && (
           <UnsupportedPreview
             filename={filename}
@@ -323,8 +327,9 @@ export function FilePreview({
             description="Download the workbook or convert it to CSV when you need an inline preview."
           />
         )}
-        {previewType === "unknown" && <EmptyPreview filename={filename} />}
-        {!hasRenderableSource && (
+        {previewType === "unknown" && typeof content !== "string" && <EmptyPreview filename={filename} />}
+        {previewType === "unknown" && typeof content === "string" && <TextPreview content={content} />}
+        {!hasRenderableSource && typeof content !== "string" && (
           <UnsupportedPreview
             filename={filename}
             title="Preview data is not available yet"

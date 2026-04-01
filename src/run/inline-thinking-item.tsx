@@ -88,11 +88,11 @@ export const InlineThinkingItem = memo(
           </button>
         </Collapsible.Trigger>
 
-        <Collapsible.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
+        <Collapsible.Content className="overflow-hidden rounded-b-[var(--radius-lg)] data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
           {part.text ? (
             <div
               className={cn(
-                "border-t border-border px-3 py-3 text-sm text-foreground",
+                "max-h-60 overflow-y-auto border-t border-border bg-card px-3 py-3 text-sm leading-relaxed text-foreground",
                 contentClassName,
               )}
             >

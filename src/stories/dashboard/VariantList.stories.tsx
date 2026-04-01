@@ -7,7 +7,7 @@ const meta: Meta<typeof VariantList> = {
   parameters: { layout: 'centered', backgrounds: { default: 'dark' } },
   decorators: [
     (Story) => (
-      <div className="w-[680px] p-4 bg-[var(--depth-1)] rounded-xl">
+      <div className="w-[680px] p-4 bg-background rounded-xl">
         <Story />
       </div>
     ),

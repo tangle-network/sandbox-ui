@@ -18,7 +18,7 @@ const meta: Meta<typeof ClusterStatusBar> = {
   },
   decorators: [
     (Story) => (
-      <div className="relative h-48 bg-[var(--depth-1)]">
+      <div className="relative h-48 bg-background">
         <Story />
       </div>
     ),

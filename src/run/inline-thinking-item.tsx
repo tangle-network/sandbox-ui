@@ -58,9 +58,9 @@ export const InlineThinkingItem = memo(
         <Collapsible.Trigger asChild>
           <button
             className={cn(
-              "w-full rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] text-left transition-colors",
-              "hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/35",
-              open && "border-[var(--border-accent)] bg-[var(--bg-hover)]/30",
+              "w-full rounded-[var(--radius-lg)] border border-border bg-card text-left transition-colors",
+              "hover:border-[var(--border-accent-hover)] hover:bg-accent/35",
+              open && "border-border bg-accent/30",
               className,
             )}
           >
@@ -69,8 +69,8 @@ export const InlineThinkingItem = memo(
                 className={cn(
                   "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
                   isActive
-                    ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)] shadow-[var(--shadow-glow)]"
-                    : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)]",
+                    ? "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)] shadow-[var(--shadow-glow)]"
+                    : "border-border bg-muted text-muted-foreground",
                 )}
               >
                 <Brain className={cn("h-4 w-4", isActive && "animate-pulse")} />
@@ -78,27 +78,27 @@ export const InlineThinkingItem = memo(
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[var(--text-primary)]">
+                  <span className="text-sm font-medium text-foreground">
                     {isActive ? "Thinking…" : "Reasoning"}
                   </span>
                   {!isActive && durationMs != null ? (
-                    <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2 py-0.5 text-[11px] font-[var(--font-mono)] text-[var(--text-muted)]">
+                    <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-[var(--font-mono)] text-muted-foreground">
                       {formatDuration(durationMs)}
                     </span>
                   ) : null}
                   {isActive && startTime ? <LiveDuration startTime={startTime} /> : null}
                 </div>
                 {preview && !open ? (
-                  <div className="mt-1 truncate text-xs text-[var(--text-muted)]">
+                  <div className="mt-1 truncate text-xs text-muted-foreground">
                     {preview}
                   </div>
                 ) : null}
               </div>
 
               {open ? (
-                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               ) : (
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               )}
             </div>
           </button>
@@ -108,14 +108,14 @@ export const InlineThinkingItem = memo(
           {part.text ? (
             <div
               className={cn(
-                "border-t border-[var(--border-subtle)] px-4 py-4 text-sm text-[var(--text-secondary)]",
+                "border-t border-border px-4 py-4 text-sm text-foreground",
                 contentClassName,
               )}
             >
               <Markdown>{part.text}</Markdown>
             </div>
           ) : (
-            <div className="border-t border-[var(--border-subtle)] px-4 py-3 text-sm text-[var(--text-muted)]">
+            <div className="border-t border-border px-4 py-3 text-sm text-muted-foreground">
               No reasoning text was provided.
             </div>
           )}

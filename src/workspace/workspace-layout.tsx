@@ -174,12 +174,12 @@ function ResizeHandle({ label, onDragStart, onStep, className }: ResizeHandlePro
       className={cn(
         "relative hidden w-3 shrink-0 cursor-col-resize lg:flex",
         "items-stretch justify-center bg-transparent touch-none",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
         className,
       )}
     >
-      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[var(--border-subtle)] transition-colors" />
-      <span className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-transparent hover:bg-[var(--brand-cool)]/30 focus-visible:bg-[var(--brand-cool)]/40" />
+      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[hsl(var(--border))] transition-colors" />
+      <span className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-transparent hover:bg-primary/30 focus-visible:bg-primary/40" />
     </button>
   );
 }
@@ -220,12 +220,12 @@ function HorizontalResizeHandle({ label, onDragStart, onStep, className }: Horiz
       className={cn(
         "relative hidden h-3 shrink-0 cursor-row-resize lg:flex",
         "items-center justify-center bg-transparent touch-none w-full",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
         className,
       )}
     >
-      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--border-subtle)] transition-colors" />
-      <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-transparent hover:bg-[var(--brand-cool)]/30 focus-visible:bg-[var(--brand-cool)]/40" />
+      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[hsl(var(--border))] transition-colors" />
+      <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-transparent hover:bg-primary/30 focus-visible:bg-primary/40" />
     </button>
   );
 }
@@ -249,17 +249,17 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
       />
       <aside
         className={cn(
-          "relative flex h-full w-[min(88vw,24rem)] flex-col border-[var(--border-default)] bg-[var(--bg-dark)] shadow-[var(--shadow-dropdown)]",
+          "relative flex h-full w-[min(88vw,24rem)] flex-col border-border bg-background shadow-[var(--shadow-dropdown)]",
           side === "left" ? "border-r" : "ml-auto border-l",
         )}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-3">
-          <div className="min-w-0 flex-1">{header ?? <span className="text-sm font-semibold text-[var(--text-primary)]">{title}</span>}</div>
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="min-w-0 flex-1">{header ?? <span className="text-sm font-semibold text-foreground">{title}</span>}</div>
           <button
             type="button"
             aria-label={`Close ${title}`}
             onClick={onClose}
-            className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+            className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
           >
             <X className="h-4 w-4" />
           </button>
@@ -418,7 +418,7 @@ export function WorkspaceLayout({
       data-sandbox-theme={theme}
       data-density={density}
       className={cn(
-        "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-[var(--text-primary)] font-[var(--font-sans)]",
+        "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-foreground font-[var(--font-sans)]",
         className,
       )}
     >
@@ -428,16 +428,16 @@ export function WorkspaceLayout({
             <aside
               aria-label={leftLabel}
               style={leftStyle}
-              className="hidden shrink-0 border-r border-[var(--border-subtle)] bg-[var(--bg-dark)] lg:flex lg:flex-col"
+              className="hidden shrink-0 border-r border-border bg-background lg:flex lg:flex-col"
             >
               {leftHeader && (
-                <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2">
+                <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
                   <div className="min-w-0 flex-1">{leftHeader}</div>
                   <button
                     type="button"
                     aria-label="Collapse left panel"
                     onClick={() => setLeftOpen(false)}
-                    className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                    className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                   >
                     <PanelLeftClose className="h-4 w-4" />
                   </button>
@@ -457,13 +457,13 @@ export function WorkspaceLayout({
 
         <main className="flex min-w-0 flex-1 flex-col">
           {(centerHeader || left || right || bottom) && (
-            <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-dark)] px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-border bg-background px-3 py-2">
               {left && !leftOpen && (
                 <button
                   type="button"
                   aria-label="Open left panel"
                   onClick={() => setLeftOpen(true)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                  className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
                   <PanelLeftOpen className="h-4 w-4" />
                 </button>
@@ -474,7 +474,7 @@ export function WorkspaceLayout({
                   type="button"
                   aria-label="Open bottom panel"
                   onClick={() => setBottomOpen(true)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                  className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
                   <PanelBottomOpen className="h-4 w-4" />
                 </button>
@@ -484,7 +484,7 @@ export function WorkspaceLayout({
                   type="button"
                   aria-label="Open right panel"
                   onClick={() => setRightOpen(true)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                  className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
                   <PanelRightOpen className="h-4 w-4" />
                 </button>
@@ -505,14 +505,14 @@ export function WorkspaceLayout({
               )}
               <section
                 aria-label={bottomLabel}
-                className="border-t border-[var(--border-subtle)] bg-[var(--bg-card)] shrink-0"
+                className="border-t border-border bg-card shrink-0"
                 style={{ height: `${bottomHeight}px` }}
               >
                 <div className="flex h-full flex-col">
-                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2 shrink-0">
+                  <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 shrink-0">
                     <div className="min-w-0 flex-1">
                       {bottomHeader ?? (
-                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                           Runtime
                         </span>
                       )}
@@ -521,7 +521,7 @@ export function WorkspaceLayout({
                       type="button"
                       aria-label="Collapse bottom panel"
                       onClick={() => setBottomOpen(false)}
-                      className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                      className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                     >
                       <PanelBottomClose className="h-4 w-4" />
                     </button>
@@ -533,7 +533,7 @@ export function WorkspaceLayout({
           )}
 
           {centerFooter && (
-            <div className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-dark)]">
+            <div className="shrink-0 border-t border-border bg-background">
               {centerFooter}
             </div>
           )}
@@ -551,17 +551,17 @@ export function WorkspaceLayout({
             <aside
               aria-label={rightLabel}
               style={rightStyle}
-              className="hidden shrink-0 border-l border-[var(--border-subtle)] bg-[var(--bg-dark)] lg:flex lg:flex-col"
+              className="hidden shrink-0 border-l border-border bg-background lg:flex lg:flex-col"
             >
-              <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2">
+              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
                 <div className="min-w-0 flex-1">
-                  {rightHeader ?? <span className="text-sm font-semibold text-[var(--text-primary)]">Artifacts</span>}
+                  {rightHeader ?? <span className="text-sm font-semibold text-foreground">Artifacts</span>}
                 </div>
                 <button
                   type="button"
                   aria-label="Collapse right panel"
                   onClick={() => setRightOpen(false)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                  className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
                   <PanelRightClose className="h-4 w-4" />
                 </button>

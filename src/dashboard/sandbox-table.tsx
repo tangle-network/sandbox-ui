@@ -22,23 +22,23 @@ export interface SandboxTableProps {
 
 const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: string }> = {
   running: { dot: "bg-[var(--code-success)] animate-pulse", text: "text-[var(--code-success)]", bar: "bg-[var(--code-success)]" },
-  hibernating: { dot: "bg-[var(--text-muted)]", text: "text-[var(--text-muted)]", bar: "bg-[var(--text-muted)]" },
-  provisioning: { dot: "bg-[var(--brand-cool)] animate-pulse", text: "text-[var(--brand-cool)]", bar: "bg-[var(--brand-cool)]" },
-  creating: { dot: "bg-[var(--brand-cool)] animate-pulse", text: "text-[var(--brand-cool)]", bar: "bg-[var(--brand-cool)]" },
-  stopped: { dot: "bg-[var(--text-muted)]", text: "text-[var(--text-secondary)]", bar: "bg-[var(--text-muted)]" },
+  hibernating: { dot: "bg-[hsl(var(--muted-foreground))]", text: "text-muted-foreground", bar: "bg-[hsl(var(--muted-foreground))]" },
+  provisioning: { dot: "bg-primary animate-pulse", text: "text-primary", bar: "bg-primary" },
+  creating: { dot: "bg-primary animate-pulse", text: "text-primary", bar: "bg-primary" },
+  stopped: { dot: "bg-[hsl(var(--muted-foreground))]", text: "text-foreground", bar: "bg-[hsl(var(--muted-foreground))]" },
   failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--code-error)]", bar: "bg-[var(--code-error)]" },
-  archived: { dot: "bg-[var(--border-default)]", text: "text-[var(--text-muted)]", bar: "bg-[var(--border-default)]" },
+  archived: { dot: "bg-[var(--border-default)]", text: "text-muted-foreground", bar: "bg-[var(--border-default)]" },
 }
 
 function MiniMeter({ label, percent, className }: { label: string; percent: number; className?: string }) {
   return (
     <div className={cn("space-y-1", className)}>
-      <div className="flex justify-between text-[10px] font-mono text-[var(--text-muted)]">
+      <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
         <span className="font-bold">{label}</span>
-        <span className="text-[var(--brand-cool)]">{percent}%</span>
+        <span className="text-primary">{percent}%</span>
       </div>
-      <div className="h-1.5 w-full bg-[var(--depth-1)] rounded-full overflow-hidden">
-        <div className="h-full bg-[var(--brand-cool)] rounded-full" style={{ width: `${percent}%` }} />
+      <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+        <div className="h-full bg-primary rounded-full" style={{ width: `${percent}%` }} />
       </div>
     </div>
   )
@@ -63,26 +63,26 @@ export function SandboxTable({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="w-full bg-[var(--depth-2)] rounded-2xl overflow-hidden border border-[var(--border-subtle)]">
+      <div className="w-full bg-card rounded-2xl overflow-hidden border border-border">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[var(--depth-1)] border-b border-[var(--border-subtle)]">
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Sandbox Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Environment</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Resources</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider text-right">Actions</th>
+              <tr className="bg-background border-b border-border">
+                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sandbox Name</th>
+                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Environment</th>
+                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resources</th>
+                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border-subtle)]">
+            <tbody className="divide-y divide-[hsl(var(--border))]">
               {sandboxes.map((sb) => {
                 const sc = statusColors[sb.status] ?? statusColors.stopped
                 const isActive = sb.status === "running"
                 const isHibernating = sb.status === "hibernating"
                 const isProvisioning = sb.status === "provisioning"
                 return (
-                  <tr key={sb.id} className="hover:bg-[var(--depth-3)] transition-colors group relative">
+                  <tr key={sb.id} className="hover:bg-muted/50 transition-colors group relative">
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span className={cn("flex h-2.5 w-2.5 rounded-full", sc.dot)} />
@@ -93,18 +93,18 @@ export function SandboxTable({
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--brand-cool)] transition-colors">{sb.name}</span>
-                        {sb.nodeId && <span className="text-[10px] font-mono text-[var(--text-muted)]">{sb.nodeId}</span>}
+                        <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{sb.name}</span>
+                        {sb.nodeId && <span className="text-[10px] font-mono text-muted-foreground">{sb.nodeId}</span>}
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         {sb.imageIcon && (
-                          <div className="w-8 h-8 rounded-lg bg-[var(--depth-3)] flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
                             {sb.imageIcon}
                           </div>
                         )}
-                        {sb.image && <span className="text-xs font-bold text-[var(--text-primary)]">{sb.image}</span>}
+                        {sb.image && <span className="text-xs font-bold text-foreground">{sb.image}</span>}
                       </div>
                     </td>
                     <td className="px-6 py-5">
@@ -114,7 +114,7 @@ export function SandboxTable({
                           <MiniMeter label="RAM" percent={sb.ramTotal ? Math.round(((sb.ramUsed ?? 0) / sb.ramTotal) * 100) : 0} />
                         </div>
                       ) : isProvisioning ? (
-                        <div className="flex items-center gap-2 text-[var(--brand-cool)] italic text-[10px] font-bold">
+                        <div className="flex items-center gap-2 text-primary italic text-[10px] font-bold">
                           <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                           {sb.provisioningMessage ?? "Allocating nodes..."}
                         </div>
@@ -129,29 +129,29 @@ export function SandboxTable({
                       <div className="flex items-center justify-end gap-1">
                         {isActive && (
                           <>
-                            <button type="button" onClick={() => onOpenIDE?.(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90" title="Open IDE">
+                            <button type="button" onClick={() => onOpenIDE?.(sb.id)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Open IDE">
                               <Code2 className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={() => onOpenTerminal?.(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90" title="Terminal">
+                            <button type="button" onClick={() => onOpenTerminal?.(sb.id)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Terminal">
                               <Terminal className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={() => onSSH?.(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90" title="SSH">
+                            <button type="button" onClick={() => onSSH?.(sb.id)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="SSH">
                               <Key className="h-4 w-4" />
                             </button>
                           </>
                         )}
                         {isHibernating && (
-                          <button type="button" onClick={() => onWake?.(sb.id)} className="px-3 py-1.5 rounded-lg border border-[var(--border-accent)] text-[var(--brand-cool)] text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all">
+                          <button type="button" onClick={() => onWake?.(sb.id)} className="px-3 py-1.5 rounded-lg border border-border text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all">
                             Wake Up
                           </button>
                         )}
                         {onMore && (
-                          <button type="button" onClick={() => onMore(sb.id)} className="p-2 rounded-lg hover:bg-[var(--depth-4)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all active:scale-90">
+                          <button type="button" onClick={() => onMore(sb.id)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90">
                             <Code2 className="h-4 w-4" />
                           </button>
                         )}
                         {onDelete && (
-                          <button type="button" onClick={() => onDelete(sb.id)} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-[var(--text-muted)] hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
+                          <button type="button" onClick={() => onDelete(sb.id)} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -167,10 +167,10 @@ export function SandboxTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-[var(--text-muted)] text-xs font-medium gap-4">
+        <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-muted-foreground text-xs font-medium gap-4">
           <p>Showing {sandboxes.length} of {totalCount} active sandboxes</p>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => onPageChange?.(page - 1)} disabled={page <= 1} className="p-2 rounded-lg border border-[var(--border-subtle)] hover:bg-[var(--depth-3)] transition-colors disabled:opacity-30">
+            <button type="button" onClick={() => onPageChange?.(page - 1)} disabled={page <= 1} className="p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors disabled:opacity-30">
               <ChevronLeft className="h-4 w-4" />
             </button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
@@ -180,13 +180,13 @@ export function SandboxTable({
                 onClick={() => onPageChange?.(p)}
                 className={cn(
                   "px-3 py-1 rounded-lg transition-colors",
-                  p === page ? "bg-[var(--accent-surface-soft)] text-[var(--brand-cool)] border border-[var(--border-accent)]" : "hover:bg-[var(--depth-3)]",
+                  p === page ? "bg-[var(--accent-surface-soft)] text-primary border border-border" : "hover:bg-muted/50",
                 )}
               >
                 {p}
               </button>
             ))}
-            <button type="button" onClick={() => onPageChange?.(page + 1)} disabled={page >= totalPages} className="p-2 rounded-lg border border-[var(--border-subtle)] hover:bg-[var(--depth-3)] transition-colors disabled:opacity-30">
+            <button type="button" onClick={() => onPageChange?.(page + 1)} disabled={page >= totalPages} className="p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors disabled:opacity-30">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>

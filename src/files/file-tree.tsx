@@ -121,8 +121,8 @@ function getFileColor(name: string): string {
     case "yml": return "text-[var(--accent-text)]";
     case "csv":
     case "xlsx": return "text-emerald-400";
-    case "md": return "text-[var(--text-secondary)]";
-    default: return "text-[var(--text-muted)]";
+    case "md": return "text-foreground";
+    default: return "text-muted-foreground";
   }
 }
 
@@ -150,7 +150,7 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
     ? (expanded ? FolderOpen : Folder)
     : getFileIcon(node.name);
 
-  const iconColor = isDir ? "text-[var(--brand-cool)]" : getFileColor(node.name);
+  const iconColor = isDir ? "text-primary" : getFileColor(node.name);
 
   return (
     <div>
@@ -158,16 +158,16 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
         onClick={handleClick}
         className={cn(
           "flex items-center gap-1.5 w-full text-left px-2 py-1 rounded-[var(--radius-sm)] text-sm transition-colors",
-          "hover:bg-[var(--bg-hover)]",
-          isSelected && "bg-[var(--brand-cool)]/10 text-[var(--text-primary)]",
-          !isSelected && "text-[var(--text-secondary)]",
+          "hover:bg-accent",
+          isSelected && "bg-primary/10 text-foreground",
+          !isSelected && "text-foreground",
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         {isDir && (
           <ChevronRight
             className={cn(
-              "h-3 w-3 shrink-0 text-[var(--text-muted)] transition-transform",
+              "h-3 w-3 shrink-0 text-muted-foreground transition-transform",
               expanded && "rotate-90",
             )}
           />
@@ -176,7 +176,7 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
         <Icon className={cn("h-4 w-4 shrink-0", iconColor)} />
         <span className="truncate">{node.name}</span>
         {node.size !== undefined && !isDir && (
-          <span className="text-[var(--text-muted)] text-xs ml-auto tabular-nums">
+          <span className="text-muted-foreground text-xs ml-auto tabular-nums">
             {formatSize(node.size)}
           </span>
         )}

@@ -127,9 +127,9 @@ function CollaborativeDocumentSurface({
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col gap-3", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--depth-2)] px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-border bg-card px-3 py-2">
         <div className="min-w-0 space-y-2">
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium",
@@ -143,12 +143,12 @@ function CollaborativeDocumentSurface({
               )}
               {connectionLabel(state)}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2.5 py-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-[var(--bg-input)] px-2.5 py-1">
               <Users className="h-3.5 w-3.5" />
               {collaborators.length === 0 ? "Solo editing" : `${collaboratorCount} active`}
             </span>
           </div>
-          <p className="text-xs text-[var(--text-muted)]">
+          <p className="text-xs text-muted-foreground">
             {connectionDescription(state, collaborators.length, readOnly)}
           </p>
         </div>
@@ -242,31 +242,31 @@ export function DocumentEditorPane({
     <div className="flex flex-wrap items-center justify-between gap-3">
       <TabsList
         variant="underline"
-        className="h-auto gap-4 border-0 bg-transparent p-0 text-[var(--text-muted)]"
+        className="h-auto gap-4 border-0 bg-transparent p-0 text-muted-foreground"
       >
         <TabsTrigger
           value="preview"
           variant="underline"
-          className="pb-2 data-[state=active]:border-[var(--brand-cool)] data-[state=active]:text-[var(--text-primary)]"
+          className="pb-2 data-[state=active]:border-primary data-[state=active]:text-foreground"
         >
           Preview
         </TabsTrigger>
         <TabsTrigger
           value="edit"
           variant="underline"
-          className="flex items-center gap-2 pb-2 data-[state=active]:border-[var(--brand-cool)] data-[state=active]:text-[var(--text-primary)]"
+          className="flex items-center gap-2 pb-2 data-[state=active]:border-primary data-[state=active]:text-foreground"
         >
           <PencilLine className="h-3.5 w-3.5" />
           {isCollaborative ? "Live edit" : "Edit"}
         </TabsTrigger>
       </TabsList>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {toolbar}
-        <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1 font-medium">
+        <span className="rounded-full border border-border bg-card px-2.5 py-1 font-medium">
           {isCollaborative ? "Live document" : "Local draft"}
         </span>
-        <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-input)] px-2.5 py-1">
+        <span className="rounded-full border border-border bg-[var(--bg-input)] px-2.5 py-1">
           {saveStateLabel}
         </span>
         {onSave && !readOnly && (
@@ -274,7 +274,7 @@ export function DocumentEditorPane({
             type="button"
             onClick={() => void onSave(draft)}
             disabled={saving || !isDirty}
-            className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-[var(--brand-cool)]/40 hover:text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" />
             {saving ? "Saving..." : saveLabel}
@@ -287,7 +287,7 @@ export function DocumentEditorPane({
   const preview = (
     <div
       className={cn(
-        "rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-input)] p-5",
+        "rounded-[var(--radius-lg)] border border-border bg-[var(--bg-input)] p-5",
         previewClassName,
       )}
     >

@@ -42,7 +42,7 @@ export function StatusBar({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-1.5 border-t border-[var(--border-subtle)] bg-[var(--bg-dark)] text-xs",
+        "flex items-center gap-3 px-4 py-1.5 border-t border-border bg-background text-xs",
         className,
       )}
     >
@@ -50,7 +50,7 @@ export function StatusBar({
       {modelLabel && (
         <button
           onClick={onModelClick}
-          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-full)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:border-[var(--border-accent)] hover:text-[var(--text-secondary)] transition-colors"
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-full)] border border-border text-muted-foreground hover:border-border hover:text-foreground transition-colors"
         >
           <span className={cn("w-1.5 h-1.5 rounded-full", statusInfo.color)} />
           {modelLabel}
@@ -59,24 +59,24 @@ export function StatusBar({
 
       {/* Status label */}
       {statusInfo.label && (
-        <span className="text-[var(--text-muted)]">{statusInfo.label}</span>
+        <span className="text-muted-foreground">{statusInfo.label}</span>
       )}
 
       {/* Context badges */}
       {contextBadges.map((badge) => (
         <span
           key={badge.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-full)] border border-[var(--border-accent)] text-[var(--text-secondary)] bg-[var(--border-accent)]/5"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-full)] border border-border text-foreground bg-[var(--border-accent)]/5"
         >
           <FileText className="h-3 w-3" />
           {badge.label}
           {badge.count !== undefined && (
-            <span className="text-[var(--text-muted)]">{badge.count}</span>
+            <span className="text-muted-foreground">{badge.count}</span>
           )}
           {onRemoveBadge && (
             <button
               onClick={() => onRemoveBadge(badge.id)}
-              className="hover:text-[var(--text-primary)] transition-colors"
+              className="hover:text-foreground transition-colors"
             >
               <X className="h-2.5 w-2.5" />
             </button>
@@ -88,7 +88,7 @@ export function StatusBar({
 
       {/* Credits */}
       {credits !== undefined && (
-        <span className="inline-flex items-center gap-1 text-[var(--text-muted)]">
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
           <Zap className="h-3 w-3" />
           {credits.toLocaleString()} credits
         </span>

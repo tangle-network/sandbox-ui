@@ -375,7 +375,7 @@ export const Empty: Story = {
   args: {
     items: [],
     emptyState: (
-      <div className="text-center text-sm text-[var(--text-muted)]">
+      <div className="text-center text-sm text-muted-foreground">
         No messages yet — start a conversation.
       </div>
     ),

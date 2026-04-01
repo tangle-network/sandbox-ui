@@ -28,9 +28,9 @@ export interface TerminalProps {
 
 const LINE_COLORS: Record<string, string> = {
   command: "text-[var(--code-function)]",
-  stdout: "text-[var(--text-secondary)]",
+  stdout: "text-foreground",
   stderr: "text-[var(--code-error)]",
-  system: "text-[var(--text-muted)]",
+  system: "text-muted-foreground",
 };
 
 const LINE_PREFIXES: Record<string, string> = {
@@ -58,11 +58,11 @@ export function TerminalPanel({
   }, [lines, isCollapsed]);
 
   return (
-    <div className={cn("border-t border-[var(--border-subtle)] bg-[var(--bg-card)]", className)}>
+    <div className={cn("border-t border-border bg-card", className)}>
       {/* Header */}
       <button
         onClick={onToggle}
-        className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         <TerminalIcon className="h-3.5 w-3.5" />
         <span className="font-medium">{title}</span>
@@ -73,7 +73,7 @@ export function TerminalPanel({
         )}
         <div className="flex-1" />
         {onClose && (
-          <X className="h-3 w-3 hover:text-[var(--text-primary)]" onClick={(e) => { e.stopPropagation(); onClose(); }} />
+          <X className="h-3 w-3 hover:text-foreground" onClick={(e) => { e.stopPropagation(); onClose(); }} />
         )}
         {isCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </button>
@@ -87,12 +87,12 @@ export function TerminalPanel({
         >
           {lines.map((line) => (
             <div key={line.id} className={cn("whitespace-pre-wrap", LINE_COLORS[line.type])}>
-              <span className="text-[var(--text-muted)] select-none">{LINE_PREFIXES[line.type]}</span>
+              <span className="text-muted-foreground select-none">{LINE_PREFIXES[line.type]}</span>
               {line.text}
             </div>
           ))}
           {lines.length === 0 && (
-            <div className="text-[var(--text-muted)] py-2">No output yet</div>
+            <div className="text-muted-foreground py-2">No output yet</div>
           )}
         </div>
       )}

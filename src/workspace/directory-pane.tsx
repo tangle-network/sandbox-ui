@@ -112,7 +112,7 @@ export function DirectoryPane({
               type="button"
               aria-label="Refresh directory"
               onClick={onRefresh}
-              className="rounded-[var(--radius-sm)] p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="rounded-[var(--radius-sm)] p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
               <RefreshCw className="h-4 w-4" />
             </button>
@@ -122,7 +122,7 @@ export function DirectoryPane({
               type="button"
               aria-label="Upload files"
               onClick={onUpload}
-              className="rounded-[var(--radius-sm)] p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="rounded-[var(--radius-sm)] p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
               <Upload className="h-4 w-4" />
             </button>
@@ -130,7 +130,7 @@ export function DirectoryPane({
         </div>
       }
       footer={
-        <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{counts.files} files</span>
           <span>{Math.max(counts.directories - 1, 0)} folders</span>
         </div>

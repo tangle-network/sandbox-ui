@@ -178,9 +178,9 @@ export default function TerminalView({
   return (
     <div className="relative h-full w-full group">
       {/* Glassmorphic Welcome Box Overlay */}
-      <div className="absolute top-4 right-4 z-10 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none glass-panel px-4 py-2 border-glass-border flex flex-col items-end shadow-xl bg-[var(--depth-1)]/80 backdrop-blur-md rounded-lg">
-        <div className="text-sm font-semibold text-[var(--text-primary)]">{title}</div>
-        <div className="text-xs text-[var(--text-muted)]">{subtitle}</div>
+      <div className="absolute top-4 right-4 z-10 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none glass-panel px-4 py-2 border-glass-border flex flex-col items-end shadow-xl bg-background/80 backdrop-blur-md rounded-lg">
+        <div className="text-sm font-semibold text-foreground">{title}</div>
+        <div className="text-xs text-muted-foreground">{subtitle}</div>
       </div>
 
       <div
@@ -191,7 +191,7 @@ export default function TerminalView({
 
       {/* Connection status overlay */}
       {(!isConnected || error) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[var(--depth-1)] rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-background rounded-lg">
           <div className="text-center">
             {error ? (
               <>
@@ -204,7 +204,7 @@ export default function TerminalView({
                 </button>
               </>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">Connecting to terminal...</p>
+              <p className="text-sm text-muted-foreground">Connecting to terminal...</p>
             )}
           </div>
         </div>

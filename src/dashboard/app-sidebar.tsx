@@ -89,10 +89,11 @@ function LogOutIcon({ className }: { className?: string }) {
 export interface SidebarProps {
   children: React.ReactNode
   className?: string
+  style?: React.CSSProperties
 }
 
-export function Sidebar({ children, className }: SidebarProps) {
-  const { panelOpen, hidden } = useSidebar()
+export function Sidebar({ children, className, style }: SidebarProps) {
+  const { panelOpen, hidden, hasPanels } = useSidebar()
 
   return (
     <div
@@ -102,7 +103,7 @@ export function Sidebar({ children, className }: SidebarProps) {
         hidden && "-translate-x-full",
         className,
       )}
-      style={{ width: panelOpen ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH }}
+      style={{ width: (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH, ...style }}
     >
       {children}
     </div>
@@ -212,16 +213,16 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
         "group relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200",
         "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
         "active:scale-95",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         isActive && "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] shadow-[0_0_12px_-2px_rgba(130,99,255,0.3)]",
-        !isActive && "text-[var(--text-muted)]",
+        !isActive && "text-muted-foreground",
         className,
       )}
     >
       <Icon className="h-5 w-5" />
       {/* Label intentionally removed from rail button to reduce vertical crowding. Tooltip relies on title={label} */}
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--brand-primary)] text-[9px] font-bold text-[var(--md3-on-primary)] px-1 shadow-sm">
+        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-[var(--md3-on-primary)] px-1 shadow-sm">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -296,7 +297,7 @@ export function SidebarPanelHeader({ children, title, className }: SidebarPanelH
   return (
     <div className={cn("flex h-14 items-center px-4 border-b border-[var(--md3-outline-variant)] shrink-0", className)}>
       {children ?? (
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       )}
     </div>
   )
@@ -377,7 +378,7 @@ export function ProfileAvatar({
           type="button"
           className={cn(
             "flex items-center justify-center w-12 h-12 rounded-lg transition-colors hover:bg-[var(--accent-surface-soft)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
             className,
           )}
           aria-label="User menu"

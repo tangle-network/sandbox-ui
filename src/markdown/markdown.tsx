@@ -36,7 +36,7 @@ export const Markdown = memo(({ children, className }: MarkdownProps) => {
               return (
                 <code
                   className={cn(
-                    "px-1.5 py-0.5 rounded border border-[var(--border-subtle)] bg-[var(--depth-2)] text-[var(--code-keyword)] text-[0.85em] font-mono",
+                    "px-1.5 py-0.5 rounded border border-border bg-card text-[var(--code-keyword)] text-[0.85em] font-mono",
                     codeClass,
                   )}
                   {...rest}

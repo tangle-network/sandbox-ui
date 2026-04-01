@@ -55,7 +55,7 @@ export function resolveEnvironment(env: EnvironmentEntry): EnvironmentOption {
   const name = display?.name ?? (env.id.length > 0 ? env.id.charAt(0).toUpperCase() + env.id.slice(1).replace(/-/g, " ") : "Unknown")
   const abbr = display?.abbr ?? (env.id.length > 0 ? env.id[0].toUpperCase() : "?")
   const color = display?.color ?? "slate"
-  const textClass = display?.textClass ?? "text-[var(--text-muted)]"
+  const textClass = display?.textClass ?? "text-muted-foreground"
   return {
     id: env.id,
     name,
@@ -83,7 +83,7 @@ function calcCost(cpu: number, ram: number): string {
   return cost.toFixed(2)
 }
 
-const sectionIcon = "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-surface-soft)] border border-[var(--border-accent)] text-[var(--brand-cool)]"
+const sectionIcon = "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-surface-soft)] border border-border text-primary"
 
 export function ProvisioningWizard({
   environments: environmentsProp,
@@ -141,13 +141,13 @@ export function ProvisioningWizard({
       {/* Header */}
       <div className="mb-10 flex items-center gap-4">
         {onBack && (
-          <button type="button" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border-subtle)] hover:bg-[var(--depth-3)] transition-colors text-[var(--text-secondary)]">
+          <button type="button" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border hover:bg-muted/50 transition-colors text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </button>
         )}
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-[var(--text-primary)] mb-2">Sandbox Provisioning</h1>
-          <p className="text-[var(--text-muted)] max-w-2xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground mb-2">Sandbox Provisioning</h1>
+          <p className="text-muted-foreground max-w-2xl">
             Configure your high-performance orchestration environment. Select your stack, allocate resources, and prime your agent for deployment.
           </p>
         </div>
@@ -425,6 +425,7 @@ export function ProvisioningWizard({
                 {currentStep < 3 ? (
                   <button
                     type="button"
+                    onClick={() => setCurrentStep((s) => s + 1)}
                     className="flex-[2] relative overflow-hidden h-16 bg-accent/10 text-accent font-extrabold text-xl rounded-2xl border border-accent/20 hover:bg-accent/20 transition-colors shadow-sm shadow-accent/10 disabled:opacity-50"
                   >
                     Continue to {currentStep === 1 ? "Resources" : "Agent Config"}

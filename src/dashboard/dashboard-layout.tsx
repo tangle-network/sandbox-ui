@@ -20,7 +20,7 @@ import {
   ProfileAvatar,
 } from "./app-sidebar"
 import type { SidebarUser } from "./app-sidebar"
-import { SidebarProvider, useSidebar, SIDEBAR_TOTAL_WIDTH } from "./sidebar-context"
+import { SidebarProvider, useSidebar, SIDEBAR_TOTAL_WIDTH, SIDEBAR_RAIL_WIDTH } from "./sidebar-context"
 
 // ============================================================================
 // Types
@@ -171,7 +171,7 @@ function DashboardLayoutInner({
 }: DashboardLayoutProps) {
   const Link = LinkComponent
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
-  const { contentMargin, hidden, mode } = useSidebar()
+  const { contentMargin, hidden, mode, hasPanels, panelOpen } = useSidebar()
   const modeSet = React.useMemo(() => new Set(modeItems), [modeItems])
 
   const sidebarUser: SidebarUser | undefined = user
@@ -185,7 +185,7 @@ function DashboardLayoutInner({
     <>
       <SidebarRail>
         <SidebarRailHeader>
-          <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-[var(--depth-3)]">
+          <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-muted/50">
             <Logo variant={variant} size="sm" iconOnly />
           </Link>
         </SidebarRailHeader>
@@ -255,7 +255,7 @@ function DashboardLayoutInner({
   )
 
   return (
-    <div className={cn("min-h-screen bg-[var(--depth-1)] text-[var(--text-primary)]", className)}>
+    <div className={cn("min-h-screen bg-background text-foreground", className)}>
       {/* Top nav bar */}
       <nav
         className="fixed top-0 z-50 bg-black/40 backdrop-blur-3xl border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width] duration-200 ease-in-out shadow-sm"
@@ -275,8 +275,8 @@ function DashboardLayoutInner({
                   className={cn(
                     "transition-all duration-300 px-2 py-1 rounded",
                     activeTopNavHref === link.href
-                      ? "text-[var(--text-primary)] border-b-2 border-[var(--brand-cool)] pb-1"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--depth-3)]",
+                      ? "text-foreground border-b-2 border-primary pb-1"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                   )}
                 >
                   {link.label}
@@ -290,13 +290,13 @@ function DashboardLayoutInner({
             <button
               type="button"
               onClick={onNewSandbox}
-              className="hidden md:flex items-center gap-2 bg-[var(--accent-surface-soft)] border border-[var(--border-accent)] text-[var(--accent-text)] px-4 py-2 rounded-lg font-bold hover:bg-[var(--accent-surface-strong)] transition-all active:scale-95 text-xs"
+              className="hidden md:flex items-center gap-2 bg-[var(--accent-surface-soft)] border border-border text-[var(--accent-text)] px-4 py-2 rounded-lg font-bold hover:bg-[var(--accent-surface-strong)] transition-all active:scale-95 text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
               New Sandbox
             </button>
           )}
-          <button type="button" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-2 rounded-lg hover:bg-[var(--depth-3)]">
+          <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted/50">
             <Bell className="h-4 w-4" />
           </button>
         </div>
@@ -304,7 +304,7 @@ function DashboardLayoutInner({
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="rounded-md p-2 hover:bg-[var(--depth-3)] lg:hidden"
+          className="rounded-md p-2 hover:bg-muted/50 lg:hidden"
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileMenuOpen}
         >
@@ -320,10 +320,10 @@ function DashboardLayoutInner({
       {/* Mobile sidebar drawer */}
       <aside
         className={cn(
-          "fixed top-14 bottom-0 left-0 z-30 flex bg-[var(--depth-1)] transition-transform duration-200 lg:hidden",
+          "fixed top-14 bottom-0 left-0 z-30 flex bg-background transition-transform duration-200 lg:hidden",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
-        style={{ width: SIDEBAR_TOTAL_WIDTH }}
+        style={{ width: (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH }}
       >
         {sidebarContent}
       </aside>
@@ -354,8 +354,8 @@ function DashboardLayoutInner({
 
 export function DashboardLayout({ defaultPanelOpen, defaultMode, ...props }: DashboardLayoutProps) {
   return (
-    <SidebarProvider defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode}>
-      <DashboardLayoutInner {...props} />
+    <SidebarProvider defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} hasPanels={(props.panels?.length ?? 0) > 0}>
+      <DashboardLayoutInner defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} {...props} />
     </SidebarProvider>
   )
 }

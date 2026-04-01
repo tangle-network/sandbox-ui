@@ -20,7 +20,7 @@ const badgeVariants = cva(
         info:
           "border-[var(--surface-info-border)] bg-[var(--surface-info-bg)] text-[var(--surface-info-text)]",
         sandbox:
-          "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
+          "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
         /* Operational status variants */
         running:
           "border-[var(--surface-teal-border)] bg-[var(--surface-teal-bg)] text-[var(--surface-teal-text)]",

@@ -78,7 +78,7 @@ export function SystemLogsViewer({ apiUrl, token, className }: SystemLogsViewerP
 
   return (
     <div className={cn("glass-panel flex flex-col h-full bg-[#0a0a0c] text-[var(--code-keyword)] font-mono text-sm leading-relaxed overflow-hidden", className)}>
-      <div className="flex-none flex items-center justify-between border-b border-glass-border bg-[var(--depth-1)]/80 backdrop-blur-md px-4 py-2">
+      <div className="flex-none flex items-center justify-between border-b border-glass-border bg-background/80 backdrop-blur-md px-4 py-2">
         <div className="flex items-center gap-2">
            <Terminal className="h-4 w-4 text-accent animate-pulse" />
            <span className="font-bold text-xs uppercase tracking-widest text-[#82828c]">System Traces</span>
@@ -93,7 +93,7 @@ export function SystemLogsViewer({ apiUrl, token, className }: SystemLogsViewerP
                 scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
               }
             }}
-            className={cn("px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-colors", isFollowing ? "bg-accent/20 text-accent border border-accent/20" : "bg-white/5 text-white/50 border border-glass-border hover:bg-[var(--depth-2)] hover:text-white/80")}
+            className={cn("px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-colors", isFollowing ? "bg-accent/20 text-accent border border-accent/20" : "bg-white/5 text-white/50 border border-glass-border hover:bg-card hover:text-white/80")}
           >
             {isFollowing ? "Auto-Scroll ON" : "Auto-Scroll OFF"}
           </button>

@@ -8,7 +8,7 @@ const meta: Meta<typeof ResourceMeter> = {
   parameters: { layout: 'centered', backgrounds: { default: 'dark' } },
   decorators: [
     (Story) => (
-      <div className="w-72 space-y-4 p-6 rounded-xl bg-[var(--depth-2)]">
+      <div className="w-72 space-y-4 p-6 rounded-xl bg-card">
         <Story />
       </div>
     ),
@@ -51,7 +51,7 @@ export const WithUnit: Story = {
 export const AllLevels: Story = {
   name: 'All usage levels',
   render: () => (
-    <div className="w-72 space-y-6 p-6 rounded-xl bg-[var(--depth-2)]">
+    <div className="w-72 space-y-6 p-6 rounded-xl bg-card">
       <ResourceMeter label="CPU Usage" icon={<Cpu className="h-3 w-3" />} value={15} max={100} />
       <ResourceMeter label="Memory" icon={<Database className="h-3 w-3" />} value={42} max={100} />
       <ResourceMeter label="Network" icon={<Wifi className="h-3 w-3" />} value={72} max={100} />

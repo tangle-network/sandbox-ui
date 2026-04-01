@@ -82,12 +82,12 @@ function FilePathChip({ path }: { path: string }) {
   const filename = parts.pop() ?? path
   const dir = parts.length > 0 ? parts.join("/") + "/" : ""
   return (
-    <div className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--depth-1)] px-2.5 py-1.5 font-[var(--font-mono)] text-xs min-w-0">
-      <FileCode className="h-3.5 w-3.5 shrink-0 text-[var(--brand-cool)]" />
+    <div className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border bg-background px-2.5 py-1.5 font-[var(--font-mono)] text-xs min-w-0">
+      <FileCode className="h-3.5 w-3.5 shrink-0 text-primary" />
       {dir && (
-        <span className="truncate text-[var(--text-muted)]">{dir}</span>
+        <span className="truncate text-muted-foreground">{dir}</span>
       )}
-      <span className="shrink-0 font-semibold text-[var(--text-primary)]">{filename}</span>
+      <span className="shrink-0 font-semibold text-foreground">{filename}</span>
     </div>
   )
 }
@@ -107,7 +107,7 @@ const ICONS: Record<ToolCallType, typeof Terminal> = {
 };
 
 const STATUS_COLORS: Record<ToolCallStatus, string> = {
-  running: "text-[var(--brand-cool)]",
+  running: "text-primary",
   success: "text-[var(--code-success)]",
   error: "text-[var(--code-error)]",
 };
@@ -130,9 +130,9 @@ export function ToolCallStep({
   return (
     <div
       className={cn(
-        "group overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--bg-card)] transition-colors",
-        status === "running" && "border-[var(--border-accent)]",
-        status === "success" && "border-[var(--border-subtle)] hover:border-[var(--border-accent)]",
+        "group overflow-hidden rounded-[var(--radius-lg)] border bg-card transition-colors",
+        status === "running" && "border-border",
+        status === "success" && "border-border hover:border-border",
         status === "error" && "border-[var(--surface-danger-border)]",
         className,
       )}
@@ -148,7 +148,7 @@ export function ToolCallStep({
         <div
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
-            status === "running" && "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--brand-cool)]",
+            status === "running" && "border-border bg-[var(--accent-surface-soft)] text-primary",
             status === "success" && "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
             status === "error" && "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]",
           )}
@@ -161,7 +161,7 @@ export function ToolCallStep({
         </div>
 
         {/* Label */}
-        <span className="truncate flex-1 font-[var(--font-sans)] text-[var(--text-secondary)]">
+        <span className="truncate flex-1 font-[var(--font-sans)] text-foreground">
           {label}
         </span>
 
@@ -169,7 +169,7 @@ export function ToolCallStep({
           className={cn(
             "rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em]",
             status === "running" &&
-              "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--brand-cool)]",
+              "border-border bg-[var(--accent-surface-soft)] text-primary",
             status === "success" &&
               "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
             status === "error" && "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]",
@@ -180,7 +180,7 @@ export function ToolCallStep({
 
         {/* Duration */}
         {duration !== undefined && status !== "running" && (
-          <span className="shrink-0 text-xs tabular-nums text-[var(--text-muted)]">
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`}
           </span>
         )}
@@ -189,7 +189,7 @@ export function ToolCallStep({
         {hasExpandable && (
           <ChevronRight
             className={cn(
-              "h-3 w-3 text-[var(--text-muted)] transition-transform shrink-0",
+              "h-3 w-3 text-muted-foreground transition-transform shrink-0",
               expanded && "rotate-90",
             )}
           />
@@ -198,11 +198,11 @@ export function ToolCallStep({
 
       {/* Expandable content */}
       {expanded && (detail || output) && (
-        <div className="space-y-2 border-t border-[var(--border-subtle)] bg-[var(--bg-section)] px-4 py-4">
+        <div className="space-y-2 border-t border-border bg-muted px-4 py-4">
           {detail && (
             isFilePath(detail)
               ? <FilePathChip path={detail} />
-              : <div className="text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{detail}</div>
+              : <div className="text-xs font-[var(--font-mono)] text-muted-foreground">{detail}</div>
           )}
           {output && (
             <CodeBlock
@@ -230,7 +230,7 @@ export function ToolCallGroup({ title, children, className }: ToolCallGroupProps
   return (
     <div className={cn("my-2 space-y-2", className)}>
       {title && (
-        <div className="mb-1 px-1 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+        <div className="mb-1 px-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
           {title}
         </div>
       )}

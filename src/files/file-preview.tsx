@@ -73,17 +73,17 @@ function CodePreview({ content, filename }: { content: string; filename: string 
   const language = filename.split(".").pop()?.toUpperCase() || "TXT";
 
   return (
-    <div className="relative bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-2.5">
+    <div className="relative bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-border overflow-hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
           <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
           <div className="w-3 h-3 rounded-full bg-[#8E59FF]" />
         </div>
-        <div className="ml-2 min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">
+        <div className="ml-2 min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-muted-foreground">
           {filename}
         </div>
-        <div className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <div className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-border bg-card px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           <span>{language}</span>
           <span className="h-1 w-1 rounded-full bg-[var(--border-hover)]" />
           <span>{lines.length} lines</span>
@@ -93,11 +93,11 @@ function CodePreview({ content, filename }: { content: string; filename: string 
         <table className="w-full">
           <tbody>
             {lines.map((line, i) => (
-              <tr key={i} className="hover:bg-[var(--bg-hover)]">
-                <td className="text-right pr-4 pl-4 py-0 select-none text-[var(--text-muted)] text-xs font-[var(--font-mono)] w-10 align-top leading-[1.55]">
+              <tr key={i} className="hover:bg-accent">
+                <td className="text-right pr-4 pl-4 py-0 select-none text-muted-foreground text-xs font-[var(--font-mono)] w-10 align-top leading-[1.55]">
                   {i + 1}
                 </td>
-                <td className="pr-4 py-0 font-[var(--font-mono)] text-[13px] text-[var(--text-secondary)] leading-[1.55] whitespace-pre">
+                <td className="pr-4 py-0 font-[var(--font-mono)] text-[13px] text-foreground leading-[1.55] whitespace-pre">
                   {line || " "}
                 </td>
               </tr>
@@ -156,14 +156,14 @@ function CsvPreview({ content }: { content: string }) {
   );
 
   return (
-    <div className="overflow-auto max-h-[70vh] rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
+    <div className="overflow-auto max-h-[70vh] rounded-[var(--radius-md)] border border-border">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-[var(--bg-elevated)] sticky top-0">
+          <tr className="bg-muted/50 sticky top-0">
             {headers.map((h, i) => (
               <th
                 key={i}
-                className="px-3 py-2 text-left text-xs font-semibold text-[var(--text-secondary)] border-b border-[var(--border-subtle)] whitespace-nowrap"
+                className="px-3 py-2 text-left text-xs font-semibold text-foreground border-b border-border whitespace-nowrap"
               >
                 {h}
               </th>
@@ -172,11 +172,11 @@ function CsvPreview({ content }: { content: string }) {
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className="border-b border-[var(--border-subtle)] hover:bg-[var(--bg-hover)]">
+            <tr key={i} className="border-b border-border hover:bg-accent">
               {row.map((cell, j) => (
                 <td
                   key={j}
-                  className="px-3 py-1.5 text-[var(--text-secondary)] font-[var(--font-mono)] text-xs whitespace-nowrap"
+                  className="px-3 py-1.5 text-foreground font-[var(--font-mono)] text-xs whitespace-nowrap"
                 >
                   {cell}
                 </td>
@@ -191,7 +191,7 @@ function CsvPreview({ content }: { content: string }) {
 
 function ImagePreview({ src, filename }: { src: string; filename: string }) {
   return (
-    <div className="flex items-center justify-center p-4 bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-[var(--border-subtle)]">
+    <div className="flex items-center justify-center p-4 bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-border">
       <img src={src} alt={filename} className="max-w-full max-h-[70vh] object-contain rounded" />
     </div>
   );
@@ -201,7 +201,7 @@ function PdfPreview({ blobUrl, filename }: { blobUrl: string; filename: string }
   // Simple iframe-based PDF viewer. For richer rendering, consumers can
   // swap in react-pdf at the app level.
   return (
-    <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] overflow-hidden bg-[var(--bg-input)]">
+    <div className="rounded-[var(--radius-md)] border border-border overflow-hidden bg-[var(--bg-input)]">
       <iframe
         src={blobUrl}
         title={filename}
@@ -213,7 +213,7 @@ function PdfPreview({ blobUrl, filename }: { blobUrl: string; filename: string }
 
 function TextPreview({ content }: { content: string }) {
   return (
-    <pre className="bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-[var(--border-subtle)] p-4 overflow-auto max-h-[70vh] text-sm text-[var(--text-secondary)] font-[var(--font-mono)] leading-[1.55]">
+    <pre className="bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-border p-4 overflow-auto max-h-[70vh] text-sm text-foreground font-[var(--font-mono)] leading-[1.55]">
       {content}
     </pre>
   );
@@ -229,9 +229,9 @@ function UnsupportedPreview({
   description: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-input)] px-6 py-16 text-center text-[var(--text-muted)]">
+    <div className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border border-dashed border-border bg-[var(--bg-input)] px-6 py-16 text-center text-muted-foreground">
       <FileText className="mb-3 h-12 w-12 opacity-30" />
-      <p className="text-sm text-[var(--text-secondary)]">{title}</p>
+      <p className="text-sm text-foreground">{title}</p>
       <p className="mt-1 max-w-md text-xs">{description}</p>
       <p className="mt-4 text-[11px] uppercase tracking-[0.12em]">{filename}</p>
     </div>
@@ -240,7 +240,7 @@ function UnsupportedPreview({
 
 function MarkdownPreview({ content }: { content: string }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-input)] p-5">
+    <div className="rounded-[var(--radius-md)] border border-border bg-[var(--bg-input)] p-5">
       <Markdown className="prose-sm max-w-none">{content}</Markdown>
     </div>
   );
@@ -248,7 +248,7 @@ function MarkdownPreview({ content }: { content: string }) {
 
 function EmptyPreview({ filename }: { filename: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-[var(--text-muted)]">
+    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
       <FileText className="h-12 w-12 mb-3 opacity-30" />
       <p className="text-sm">Cannot preview {filename}</p>
       <p className="text-xs mt-1">Download to view this file</p>
@@ -277,10 +277,10 @@ export function FilePreview({
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {!hideHeader && (
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border-subtle)] shrink-0">
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0">
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-[var(--text-primary)]">{filename}</div>
-            <div className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <div className="truncate text-sm font-medium text-foreground">{filename}</div>
+            <div className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
               {previewLabel}
             </div>
           </div>
@@ -289,7 +289,7 @@ export function FilePreview({
               type="button"
               onClick={onDownload}
               aria-label={`Download ${filename}`}
-              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
             >
               <Download className="h-4 w-4" />
             </button>
@@ -299,7 +299,7 @@ export function FilePreview({
               type="button"
               onClick={onClose}
               aria-label={`Close ${filename}`}
-              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+              className="p-1.5 rounded-[var(--radius-sm)] hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="h-4 w-4" />
             </button>

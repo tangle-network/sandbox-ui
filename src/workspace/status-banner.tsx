@@ -16,11 +16,11 @@ export interface StatusBannerProps {
 }
 
 const BANNER_STYLES: Record<BannerType, { bg: string; border: string; icon: typeof Loader2 }> = {
-  provisioning: { bg: "bg-[var(--brand-cool)]/5", border: "border-[var(--brand-cool)]/20", icon: Loader2 },
+  provisioning: { bg: "bg-primary/5", border: "border-primary/20", icon: Loader2 },
   connecting: { bg: "bg-[var(--code-number)]/5", border: "border-[var(--code-number)]/20", icon: Wifi },
   error: { bg: "bg-[var(--code-error)]/5", border: "border-[var(--code-error)]/20", icon: AlertCircle },
   success: { bg: "bg-[var(--code-success)]/5", border: "border-[var(--code-success)]/20", icon: CheckCircle },
-  info: { bg: "bg-[var(--bg-elevated)]", border: "border-[var(--border-default)]", icon: AlertCircle },
+  info: { bg: "bg-muted/50", border: "border-border", icon: AlertCircle },
 };
 
 export function StatusBanner({ type, message, detail, onDismiss, className }: StatusBannerProps) {
@@ -31,10 +31,10 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
   return (
     <div className={cn("flex items-center gap-3 px-4 py-2 border-b text-sm", style.bg, style.border, className)}>
       <Icon className={cn("h-4 w-4 shrink-0", isAnimated && "animate-spin")} />
-      <span className="text-[var(--text-secondary)]">{message}</span>
-      {detail && <span className="text-[var(--text-muted)] text-xs">{detail}</span>}
+      <span className="text-foreground">{message}</span>
+      {detail && <span className="text-muted-foreground text-xs">{detail}</span>}
       {onDismiss && (
-        <button onClick={onDismiss} className="ml-auto text-[var(--text-muted)] hover:text-[var(--text-secondary)] text-xs">
+        <button onClick={onDismiss} className="ml-auto text-muted-foreground hover:text-foreground text-xs">
           Dismiss
         </button>
       )}

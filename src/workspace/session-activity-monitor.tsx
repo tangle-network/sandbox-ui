@@ -23,7 +23,7 @@ function SessionStatusDot({ session }: { session: ActiveSessionRecord }) {
   }
 
   if (session.status === "running") {
-    return <LoaderCircle className="h-3.5 w-3.5 animate-spin text-[var(--brand-cool)]" />;
+    return <LoaderCircle className="h-3.5 w-3.5 animate-spin text-primary" />;
   }
 
   if (session.status === "attention-needed") {
@@ -57,7 +57,7 @@ export function SessionActivityMonitor({
     if (compact) return null;
 
     return (
-      <div className={cn("rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] p-3 text-sm text-[var(--text-muted)]", className)}>
+      <div className={cn("rounded-[var(--radius-lg)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] p-3 text-sm text-muted-foreground", className)}>
         {emptyMessage}
       </div>
     );
@@ -66,12 +66,12 @@ export function SessionActivityMonitor({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           <Activity className="h-3.5 w-3.5" />
           Active Sessions
         </div>
         {totalRunning > 0 && (
-          <span className="rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--accent-text)]">
+          <span className="rounded-full border border-border bg-[var(--accent-surface-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--accent-text)]">
             {totalRunning} running
           </span>
         )}
@@ -86,17 +86,17 @@ export function SessionActivityMonitor({
           return (
             <div
               key={String(project.projectId)}
-              className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] p-3 shadow-[var(--shadow-card)]"
+              className="rounded-[var(--radius-md)] border border-border bg-muted p-3 shadow-[var(--shadow-card)]"
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-[var(--text-primary)]">{label}</div>
-                  <div className="text-xs text-[var(--text-muted)]">
+                  <div className="text-sm font-semibold text-foreground">{label}</div>
+                  <div className="text-xs text-muted-foreground">
                     {project.activeSessionCount} tracked session{project.activeSessionCount === 1 ? "" : "s"}
                   </div>
                 </div>
                 {project.runningSessionIds.length > 0 && (
-                  <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2 py-0.5 text-[11px] text-[var(--text-secondary)]">
+                  <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-foreground">
                     {project.runningSessionIds.length} live
                   </span>
                 )}
@@ -120,20 +120,20 @@ export function SessionActivityMonitor({
 
                           navigateToSession(session);
                         }}
-                        className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2 text-left transition-colors hover:border-[var(--border-accent)] hover:bg-[var(--bg-elevated)]"
+                        className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-border bg-muted px-3 py-2 text-left transition-colors hover:border-border hover:bg-muted/50"
                       >
                         <div className="flex min-w-0 items-center gap-2">
                           <SessionStatusDot session={session} />
                           <div className="min-w-0">
-                            <div className="truncate text-sm font-medium text-[var(--text-primary)]">
+                            <div className="truncate text-sm font-medium text-foreground">
                               {session.title ?? "Untitled Session"}
                             </div>
-                            <div className="truncate text-xs text-[var(--text-muted)]">
+                            <div className="truncate text-xs text-muted-foreground">
                               {session.href ?? session.sessionId}
                             </div>
                           </div>
                         </div>
-                        <MessageSquareText className="h-4 w-4 shrink-0 text-[var(--text-dim)]" />
+                        <MessageSquareText className="h-4 w-4 shrink-0 text-muted-foreground" />
                       </button>
                     );
                   })}

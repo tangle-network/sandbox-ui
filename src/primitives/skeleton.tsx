@@ -6,7 +6,7 @@ function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-lg bg-[var(--depth-3)]", className)}
+      className={cn("animate-pulse rounded-lg bg-muted/50", className)}
       {...props}
     />
   );
@@ -16,7 +16,7 @@ function SkeletonCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "space-y-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6",
+        "space-y-4 rounded-xl border border-border bg-card p-6",
         className,
       )}
     >
@@ -34,7 +34,7 @@ function SkeletonCard({ className }: { className?: string }) {
 function SkeletonTable({ rows = 5 }: { rows?: number }) {
   return (
     <div className="space-y-3">
-      <div className="flex gap-4 border-[var(--border-subtle)] border-b pb-2">
+      <div className="flex gap-4 border-border border-b pb-2">
         <Skeleton className="h-4 w-1/4" />
         <Skeleton className="h-4 w-1/4" />
         <Skeleton className="h-4 w-1/4" />

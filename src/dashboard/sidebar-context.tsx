@@ -25,6 +25,8 @@ interface SidebarContextValue {
   setHidden: (hidden: boolean) => void
   /** Computed content margin in px */
   contentMargin: number
+  /** Whether there are panels at all */
+  hasPanels: boolean
 }
 
 const SidebarContext = React.createContext<SidebarContextValue | null>(null)
@@ -41,12 +43,14 @@ function readStorage(key: string, fallback: string): string {
 export interface SidebarProviderProps {
   defaultPanelOpen?: boolean
   defaultMode?: string
+  hasPanels?: boolean
   children: React.ReactNode
 }
 
 export function SidebarProvider({
   defaultPanelOpen = true,
   defaultMode = "projects",
+  hasPanels = true,
   children,
 }: SidebarProviderProps) {
   const [panelOpen, setPanelOpenState] = React.useState(
@@ -112,7 +116,7 @@ export function SidebarProvider({
     })
   }, [])
 
-  const contentMargin = hidden ? 0 : panelOpen ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH
+  const contentMargin = hidden ? 0 : (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH
 
   const value = React.useMemo<SidebarContextValue>(
     () => ({
@@ -125,8 +129,9 @@ export function SidebarProvider({
       hidden,
       setHidden,
       contentMargin,
+      hasPanels,
     }),
-    [panelOpen, setPanelOpen, togglePanel, mode, setMode, switchModeStable, hidden, setHidden, contentMargin],
+    [panelOpen, setPanelOpen, togglePanel, mode, setMode, switchModeStable, hidden, setHidden, contentMargin, hasPanels],
   )
 
   return (

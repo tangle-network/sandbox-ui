@@ -101,8 +101,8 @@ export const InlineToolItem = memo(
             <button
               className={cn(
                 "w-full border text-left transition-colors",
-                "border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/35",
-                open && "border-[var(--border-accent)] bg-[var(--bg-hover)]/30",
+                "border-border bg-card hover:border-[var(--border-accent-hover)] hover:bg-accent/35",
+                open && "border-border bg-accent/30",
                 shapeClass,
                 className,
               )}
@@ -110,10 +110,10 @@ export const InlineToolItem = memo(
               <div className="flex items-center gap-2.5 px-3 py-2">
                 <div className={cn(
                   "shrink-0",
-                  isRunning && "text-[var(--brand-cool)]",
+                  isRunning && "text-primary",
                   isComplete && "text-[var(--surface-success-text)]",
                   isError && "text-[var(--surface-danger-text)]",
-                  !isRunning && !isComplete && !isError && "text-[var(--text-muted)]",
+                  !isRunning && !isComplete && !isError && "text-muted-foreground",
                 )}>
                   {isRunning ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -128,7 +128,7 @@ export const InlineToolItem = memo(
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-[var(--text-primary)]">
+                    <span className="truncate text-sm font-medium text-foreground">
                       {meta.title}
                     </span>
                     {isError ? (
@@ -137,13 +137,13 @@ export const InlineToolItem = memo(
                       </span>
                     ) : null}
                     {isRunning ? (
-                      <span className="rounded-full border border-[var(--border-accent)] bg-[var(--brand-cool)]/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--brand-cool)]">
+                      <span className="rounded-full border border-border bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-primary">
                         Running
                       </span>
                     ) : null}
                   </div>
                   {meta.description ? (
-                    <div className="mt-1 truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">
+                    <div className="mt-1 truncate text-xs font-[var(--font-mono)] text-muted-foreground">
                       {meta.description}
                     </div>
                   ) : null}
@@ -152,21 +152,21 @@ export const InlineToolItem = memo(
                 <div className="flex shrink-0 items-center gap-2">
                   {isRunning && startTime ? <LiveDuration startTime={startTime} /> : null}
                   {!isRunning && durationMs != null ? (
-                    <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2 py-0.5 text-[11px] font-[var(--font-mono)] text-[var(--text-muted)]">
+                    <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-[var(--font-mono)] text-muted-foreground">
                       {formatDuration(durationMs)}
                     </span>
                   ) : null}
 
                   {open ? (
-                    <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                 </div>
               </div>
 
               {errorText && !open ? (
-                <div className="border-t border-[var(--border-subtle)] px-3 py-2 text-xs text-red-200">
+                <div className="border-t border-border px-3 py-2 text-xs text-red-200">
                   {errorText}
                 </div>
               ) : null}

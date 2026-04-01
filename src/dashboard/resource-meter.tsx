@@ -15,7 +15,7 @@ export interface ResourceMeterProps {
 function getBarColor(percent: number): string {
   if (percent >= 90) return "bg-[var(--code-error)]"
   if (percent >= 70) return "bg-[var(--surface-warning-text)]"
-  return "bg-[var(--brand-cool)]"
+  return "bg-primary"
 }
 
 export function ResourceMeter({ label, value, max = 100, unit, icon, className }: ResourceMeterProps) {
@@ -24,8 +24,8 @@ export function ResourceMeter({ label, value, max = 100, unit, icon, className }
 
   return (
     <div className={cn("space-y-1.5", className)}>
-      <div className="flex justify-between text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wide">
-        <span className="flex items-center gap-1 text-[var(--text-secondary)]">
+      <div className="flex justify-between text-[10px] font-mono text-muted-foreground uppercase tracking-wide">
+        <span className="flex items-center gap-1 text-foreground">
           {icon}
           {label}
         </span>
@@ -33,7 +33,7 @@ export function ResourceMeter({ label, value, max = 100, unit, icon, className }
           {unit ? `${value}${unit} / ${max}${unit}` : `${Math.round(percent)}%`}
         </span>
       </div>
-      <div className="h-1.5 w-full bg-[var(--depth-1)] rounded-full overflow-hidden">
+      <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
         <div
           className={cn("h-full rounded-full transition-all duration-500", barColor)}
           style={{ width: `${percent}%` }}

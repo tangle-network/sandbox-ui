@@ -94,16 +94,16 @@ export const WebSearchPreview = memo(({ part }: WebSearchPreviewProps) => {
             href={result.url}
             target="_blank"
             rel="noreferrer"
-            className="block rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/55 px-3 py-3 transition-colors hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/50"
+            className="block rounded-[var(--radius-md)] border border-border bg-muted/55 px-3 py-3 transition-colors hover:border-[var(--border-accent-hover)] hover:bg-accent/50"
           >
-            <div className="text-sm font-medium text-[var(--text-primary)]">
+            <div className="text-sm font-medium text-foreground">
               {result.title}
             </div>
-            <div className="mt-1 truncate text-xs text-[var(--brand-cool)]">
+            <div className="mt-1 truncate text-xs text-primary">
               {result.url}
             </div>
             {result.snippet ? (
-              <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 {result.snippet}
               </p>
             ) : null}

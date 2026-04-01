@@ -34,7 +34,7 @@ export const Default: Story = {}
 export const InContext: Story = {
   render: () => (
     <div className="space-y-1">
-      <div className="rounded-[calc(var(--radius-xl)+2px)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-4 text-sm text-[var(--text-secondary)]">
+      <div className="rounded-[calc(var(--radius-xl)+2px)] border border-border bg-card px-4 py-4 text-sm text-foreground">
         Let me analyze the rate limiter implementation and check the Redis pipeline for atomicity issues.
       </div>
       <ThinkingIndicator />

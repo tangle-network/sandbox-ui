@@ -11,9 +11,9 @@ const meta: Meta<typeof SidebarDropZone> = {
   },
   decorators: [
     (Story) => (
-      <div className="w-64 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--depth-1)] space-y-3">
-        <div className="text-xs text-[var(--text-muted)] font-mono uppercase tracking-widest">Workspace Files</div>
-        <div className="space-y-1 text-sm text-[var(--text-secondary)]">
+      <div className="w-64 p-4 rounded-xl border border-border bg-background space-y-3">
+        <div className="text-xs text-muted-foreground font-mono uppercase tracking-widest">Workspace Files</div>
+        <div className="space-y-1 text-sm text-foreground">
           <div className="px-2 py-1 rounded hover:bg-zinc-800">index.ts</div>
           <div className="px-2 py-1 rounded hover:bg-zinc-800">utils.ts</div>
           <div className="px-2 py-1 rounded hover:bg-zinc-800">config.json</div>

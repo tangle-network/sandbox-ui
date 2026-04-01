@@ -36,7 +36,7 @@ export interface PricingPageProps {
 const variantColors = {
   sandbox: {
     accent: "text-[var(--accent-text)]",
-    border: "border-[var(--border-accent)]",
+    border: "border-border",
     bg: "bg-[var(--accent-surface-soft)]",
     ring: "ring-[hsl(var(--primary)/0.35)]",
   },

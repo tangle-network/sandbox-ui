@@ -83,8 +83,8 @@ export interface AgentTimelineProps {
 const TONE_STYLES: Record<AgentTimelineTone, { dot: string; card: string; text: string; icon: typeof Info }> = {
   default: {
     dot: "bg-[var(--border-hover)]",
-    card: "border-[var(--border-subtle)] bg-[var(--bg-card)]",
-    text: "text-[var(--text-secondary)]",
+    card: "border-border bg-card",
+    text: "text-foreground",
     icon: CircleDot,
   },
   info: {
@@ -128,7 +128,7 @@ function AgentTimelineRow({ isLast, accentClassName, children }: AgentTimelineRo
     <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-4">
       <div className="relative flex justify-center">
         {!isLast && (
-          <span className="absolute top-4 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2 bg-[var(--border-subtle)]" />
+          <span className="absolute top-4 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2 bg-[hsl(var(--border))]" />
         )}
         <span className={cn("relative mt-2 h-2.5 w-2.5 rounded-full ring-4 ring-[var(--bg-root)]", accentClassName)} />
       </div>
@@ -141,13 +141,13 @@ function UserMessage({ item }: { item: AgentTimelineMessageItem }) {
   return (
     <div className="mb-3 flex justify-end">
       <div className="max-w-[72%]">
-        <div className="rounded-2xl border border-[var(--border-accent)] bg-[var(--depth-3)] px-4 py-3">
+        <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3">
           {item.timestamp && (
-            <div className="mb-1.5 text-right text-[11px] text-[var(--text-muted)]">
+            <div className="mb-1.5 text-right text-[11px] text-muted-foreground">
               {formatTime(item.timestamp)}
             </div>
           )}
-          <div className="whitespace-pre-wrap text-[15px] leading-7 text-[var(--text-primary)]">
+          <div className="whitespace-pre-wrap text-[15px] leading-7 text-foreground">
             {item.content}
           </div>
         </div>
@@ -160,7 +160,7 @@ function AssistantMessage({ item }: { item: AgentTimelineMessageItem }) {
   return (
     <div className="-mt-0.5">
       {item.timestamp && (
-        <div className="mb-2 text-[11px] text-[var(--text-muted)]">
+        <div className="mb-2 text-[11px] text-muted-foreground">
           {formatTime(item.timestamp)}
         </div>
       )}
@@ -168,11 +168,11 @@ function AssistantMessage({ item }: { item: AgentTimelineMessageItem }) {
         <Markdown className="tangle-prose text-[15px] leading-7">{item.content}</Markdown>
       )}
       {item.isStreaming && (
-        <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-[var(--brand-cool)] align-text-bottom" />
+        <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-primary align-text-bottom" />
       )}
       {item.toolCalls && <div className="mt-3">{item.toolCalls}</div>}
       {item.after && (
-        <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
+        <div className="mt-3 border-t border-border pt-3">
           {item.after}
         </div>
       )}
@@ -191,7 +191,7 @@ function StatusCard({ item }: { item: AgentTimelineStatusItem }) {
         <div className="min-w-0">
           <div className={cn("text-sm font-medium", tone.text)}>{item.label}</div>
           {item.detail && (
-            <div className="mt-0.5 text-sm text-[var(--text-muted)]">{item.detail}</div>
+            <div className="mt-0.5 text-sm text-muted-foreground">{item.detail}</div>
           )}
         </div>
       </div>
@@ -204,16 +204,16 @@ function ArtifactCard({ item }: { item: AgentTimelineArtifactItem }) {
   const content = (
     <div className={cn("rounded-[var(--radius-lg)] border px-4 py-3", tone.card)}>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-muted/50 text-foreground">
           {item.icon ?? <FileText className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-[var(--text-primary)]">{item.title}</div>
+          <div className="text-sm font-medium text-foreground">{item.title}</div>
           {item.description && (
-            <div className="mt-1 text-sm text-[var(--text-muted)]">{item.description}</div>
+            <div className="mt-1 text-sm text-muted-foreground">{item.description}</div>
           )}
           {item.meta && (
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {item.meta}
             </div>
           )}
@@ -236,7 +236,7 @@ function ArtifactCard({ item }: { item: AgentTimelineArtifactItem }) {
           item.onClick?.();
         }
       }}
-      className="block w-full text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+      className="block w-full text-left transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
     >
       {content}
     </div>

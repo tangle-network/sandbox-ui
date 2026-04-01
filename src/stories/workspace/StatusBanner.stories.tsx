@@ -47,11 +47,11 @@ export const ErrorDismissible: Story = {
     const [visible, setVisible] = useState(true)
     if (!visible) {
       return (
-        <div className="p-4 text-sm text-[var(--text-muted)]">
+        <div className="p-4 text-sm text-muted-foreground">
           Banner dismissed.{' '}
           <button
             onClick={() => setVisible(true)}
-            className="underline hover:text-[var(--text-secondary)]"
+            className="underline hover:text-foreground"
           >
             Show again
           </button>
@@ -88,11 +88,11 @@ export const InfoDismissible: Story = {
     const [visible, setVisible] = useState(true)
     if (!visible) {
       return (
-        <div className="p-4 text-sm text-[var(--text-muted)]">
+        <div className="p-4 text-sm text-muted-foreground">
           Banner dismissed.{' '}
           <button
             onClick={() => setVisible(true)}
-            className="underline hover:text-[var(--text-secondary)]"
+            className="underline hover:text-foreground"
           >
             Show again
           </button>

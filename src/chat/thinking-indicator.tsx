@@ -23,11 +23,11 @@ export function ThinkingIndicator({ className }: ThinkingIndicatorProps) {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-[var(--text-muted)]">
+        <span className="text-sm text-muted-foreground">
           {elapsed < 10 ? "Thinking..." : elapsed < 60 ? "Thinking deeply..." : "Still working..."}
         </span>
         {elapsed > 5 && (
-          <span className="text-xs tabular-nums text-[var(--text-muted)]">
+          <span className="text-xs tabular-nums text-muted-foreground">
             {elapsed}s
           </span>
         )}

@@ -52,8 +52,8 @@ export function MarkdownDocumentEditor({
       attributes: {
         class: cn(
           "prose prose-sm sm:prose-base max-w-none focus:outline-none",
-          "prose-headings:text-[var(--text-primary)] prose-p:text-[var(--text-secondary)] prose-li:text-[var(--text-secondary)]",
-          "prose-strong:text-[var(--text-primary)] prose-code:text-[var(--text-primary)] prose-pre:text-[var(--text-secondary)]",
+          "prose-headings:text-foreground prose-p:text-foreground prose-li:text-foreground",
+          "prose-strong:text-foreground prose-code:text-foreground prose-pre:text-foreground",
           contentClassName,
         ),
         "data-placeholder": placeholder,
@@ -92,13 +92,13 @@ export function MarkdownDocumentEditor({
   return (
     <div
       className={cn(
-        "flex min-h-[24rem] w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-input)]",
+        "flex min-h-[24rem] w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-border bg-[var(--bg-input)]",
         className,
       )}
     >
       <EditorToolbar
         editor={editor}
-        className="border-[var(--border-subtle)] bg-[var(--depth-2)] px-2 py-2"
+        className="border-border bg-card px-2 py-2"
       />
       <div className="min-h-0 flex-1 overflow-auto px-5 py-4">
         <EditorContent editor={editor} />
@@ -122,7 +122,7 @@ export function MarkdownDocumentEditor({
         }
 
         .ProseMirror code {
-          background: var(--depth-3);
+          background: hsl(var(--muted));
           border-radius: 0.35rem;
           padding: 0.12rem 0.3rem;
         }

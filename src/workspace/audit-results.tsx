@@ -38,14 +38,14 @@ export function AuditResults({ forms, crossFormChecks = [], overallScore, classN
   return (
     <div className={cn("space-y-3 p-3", className)}>
       {/* Summary */}
-      <div className="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--bg-input)] border border-[var(--border-subtle)]">
+      <div className="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--bg-input)] border border-border">
         <Shield className={cn("h-5 w-5", totalChecks === totalPassed ? "text-[var(--code-success)]" : "text-[var(--code-number)]")} />
         <div>
-          <div className="text-sm font-semibold text-[var(--text-primary)]">
+          <div className="text-sm font-semibold text-foreground">
             {totalPassed}/{totalChecks} checks passed
           </div>
           {overallScore !== undefined && (
-            <div className="text-xs text-[var(--text-muted)]">Score: {overallScore}/100</div>
+            <div className="text-xs text-muted-foreground">Score: {overallScore}/100</div>
           )}
         </div>
       </div>
@@ -58,7 +58,7 @@ export function AuditResults({ forms, crossFormChecks = [], overallScore, classN
       {/* Cross-form checks */}
       {crossFormChecks.length > 0 && (
         <div>
-          <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
             Cross-Form Checks
           </div>
           {crossFormChecks.map((check, i) => (
@@ -75,10 +75,10 @@ function FormAuditCard({ form }: { form: FormAudit }) {
   const allPassed = form.failed === 0 && form.found;
 
   return (
-    <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] overflow-hidden">
+    <div className="rounded-[var(--radius-md)] border border-border overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-[var(--bg-hover)] transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-accent transition-colors"
       >
         {allPassed ? (
           <CheckCircle className="h-4 w-4 text-[var(--code-success)] shrink-0" />
@@ -87,17 +87,17 @@ function FormAuditCard({ form }: { form: FormAudit }) {
         ) : (
           <XCircle className="h-4 w-4 text-[var(--code-number)] shrink-0" />
         )}
-        <span className="text-sm font-medium text-[var(--text-primary)] flex-1">
+        <span className="text-sm font-medium text-foreground flex-1">
           {form.formName || form.formId}
         </span>
-        <span className={cn("text-xs tabular-nums", allPassed ? "text-[var(--code-success)]" : "text-[var(--text-muted)]")}>
+        <span className={cn("text-xs tabular-nums", allPassed ? "text-[var(--code-success)]" : "text-muted-foreground")}>
           {form.passed}/{form.passed + form.failed}
         </span>
-        <ChevronRight className={cn("h-3 w-3 text-[var(--text-muted)] transition-transform", expanded && "rotate-90")} />
+        <ChevronRight className={cn("h-3 w-3 text-muted-foreground transition-transform", expanded && "rotate-90")} />
       </button>
 
       {expanded && (
-        <div className="border-t border-[var(--border-subtle)] px-3 py-1.5 space-y-0.5">
+        <div className="border-t border-border px-3 py-1.5 space-y-0.5">
           {form.checks.map((check, i) => (
             <CheckRow key={i} check={check} />
           ))}
@@ -115,8 +115,8 @@ function CheckRow({ check }: { check: AuditCheck }) {
       ) : (
         <XCircle className="h-3 w-3 text-[var(--code-error)] shrink-0" />
       )}
-      <span className="text-[var(--text-secondary)] flex-1 truncate">{check.label}</span>
-      <span className="text-[var(--text-muted)] tabular-nums shrink-0">
+      <span className="text-foreground flex-1 truncate">{check.label}</span>
+      <span className="text-muted-foreground tabular-nums shrink-0">
         {check.passed ? String(check.actual ?? check.expected) : `${check.actual ?? "missing"} ≠ ${check.expected}`}
       </span>
     </div>

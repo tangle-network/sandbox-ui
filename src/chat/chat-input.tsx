@@ -169,13 +169,13 @@ export function ChatInput({
     >
       {/* Drop zone overlay */}
       {dragOver && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[var(--radius-xl)] border-2 border-dashed border-[var(--border-accent)] bg-[var(--depth-2)] pointer-events-none">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[var(--radius-xl)] border-2 border-dashed border-border bg-card pointer-events-none">
           <div className="text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--accent-surface-soft)]">
-              <Upload className="h-6 w-6 text-[var(--brand-cool)]" />
+              <Upload className="h-6 w-6 text-primary" />
             </div>
-            <p className="text-sm font-semibold text-[var(--text-primary)]">{dropTitle}</p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">{dropDescription}</p>
+            <p className="text-sm font-semibold text-foreground">{dropTitle}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{dropDescription}</p>
           </div>
         </div>
       )}
@@ -188,25 +188,25 @@ export function ChatInput({
               key={f.id}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs",
-                "border-[var(--border-subtle)] bg-[var(--depth-3)]",
+                "border-border bg-muted/50",
                 f.status === "error" && "border-[var(--code-error)]/30 text-[var(--code-error)]",
-                f.status !== "error" && "text-[var(--text-secondary)]",
+                f.status !== "error" && "text-foreground",
               )}
             >
               <FolderUp className="h-3 w-3 shrink-0" />
               <span className="truncate max-w-[150px]">{f.name}</span>
               {f.fileCount !== undefined && (
-                <span className="text-[var(--text-muted)]">({f.fileCount})</span>
+                <span className="text-muted-foreground">({f.fileCount})</span>
               )}
               {f.status === "uploading" && (
-                <span className="w-3 h-3 border-2 border-[var(--brand-cool)] border-t-transparent rounded-full animate-spin" />
+                <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               )}
               {onRemoveFile && (
                 <button
                   type="button"
                   aria-label={`Remove ${f.name}`}
                   onClick={() => onRemoveFile(f.id)}
-                  className="rounded p-0.5 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                  className="rounded p-0.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -218,22 +218,22 @@ export function ChatInput({
               key={f.id}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border px-3 py-1.5 text-xs",
-                "border-[var(--border-subtle)] bg-[var(--depth-3)]",
+                "border-border bg-muted/50",
                 f.status === "error" && "border-[var(--code-error)]/30 text-[var(--code-error)]",
-                f.status !== "error" && "text-[var(--text-secondary)]",
+                f.status !== "error" && "text-foreground",
               )}
             >
               <Paperclip className="h-3 w-3 shrink-0" />
               <span className="truncate max-w-[150px]">{f.name}</span>
               {f.status === "uploading" && (
-                <span className="w-3 h-3 border-2 border-[var(--brand-cool)] border-t-transparent rounded-full animate-spin" />
+                <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               )}
               {onRemoveFile && (
                 <button
                   type="button"
                   aria-label={`Remove ${f.name}`}
                   onClick={() => onRemoveFile(f.id)}
-                  className="rounded p-0.5 transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+                  className="rounded p-0.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -244,13 +244,13 @@ export function ChatInput({
       )}
 
       {/* Input row */}
-      <div className="rounded-[var(--radius-xl)] border border-[var(--border-default)] bg-[var(--depth-2)] shadow-[var(--shadow-card)]">
-        <div className="rounded-[var(--radius-xl)] px-3 py-3.5 transition-colors focus-within:border-[var(--border-accent)]">
+      <div className="rounded-[var(--radius-xl)] border border-border bg-card shadow-[var(--shadow-card)]">
+        <div className="rounded-[var(--radius-xl)] px-3 py-3.5 transition-colors focus-within:border-border">
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Agent Command Deck
             </div>
-            <div className="text-[11px] text-[var(--text-muted)]">
+            <div className="text-[11px] text-muted-foreground">
               {isStreaming ? "Streaming response" : "Ready for next instruction"}
             </div>
           </div>
@@ -264,7 +264,7 @@ export function ChatInput({
               disabled={isStreaming}
               aria-label="Attach files"
               title="Attach files"
-              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -286,7 +286,7 @@ export function ChatInput({
               disabled={isStreaming}
               aria-label="Attach folder"
               title="Attach folder"
-              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:border-[var(--border-subtle)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
               <FolderUp className="h-4 w-4" />
             </button>
@@ -312,7 +312,7 @@ export function ChatInput({
           disabled={isStreaming || disabled}
           rows={1}
           aria-label="Message input"
-          className="min-h-[36px] max-h-[160px] flex-1 resize-none bg-transparent text-[15px] leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
+          className="min-h-[36px] max-h-[160px] flex-1 resize-none bg-transparent text-[15px] leading-7 text-foreground placeholder:text-muted-foreground disabled:opacity-50 focus-visible:outline-none"
         />
 
         {/* Send / Cancel */}
@@ -331,7 +331,7 @@ export function ChatInput({
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
-            className="mb-0.5 shrink-0 rounded-[var(--radius-lg)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] p-2.5 text-[var(--accent-text)] transition-colors hover:translate-y-[-1px] hover:bg-[var(--accent-surface-strong)] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-accent)]"
+            className="mb-0.5 shrink-0 rounded-[var(--radius-lg)] border border-border bg-[var(--accent-surface-soft)] p-2.5 text-[var(--accent-text)] transition-colors hover:translate-y-[-1px] hover:bg-[var(--accent-surface-strong)] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-accent)]"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -348,16 +348,16 @@ export function ChatInput({
               type="button"
               onClick={onModelClick}
               aria-label={`Select model, current model ${modelLabel}`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2.5 py-1 text-xs text-[var(--text-muted)] transition-colors hover:border-[var(--border-accent)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--code-success)]" />
               {modelLabel}
             </button>
           )}
         </div>
-        <span className="text-xs text-[var(--text-muted)]">
-          <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-[var(--border-subtle)] text-[10px]">Cmd</kbd>
-          <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-[var(--border-subtle)] text-[10px] ml-0.5">L</kbd>
+        <span className="text-xs text-muted-foreground">
+          <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-border text-[10px]">Cmd</kbd>
+          <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-border text-[10px] ml-0.5">L</kbd>
           <span className="ml-1">to focus</span>
         </span>
       </div>

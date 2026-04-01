@@ -47,7 +47,7 @@ const StatusSwatch = ({ name, cssVar, label }: { name: string; cssVar: string; l
 
 export const Colors: Story = {
   render: () => (
-    <div className="bg-[var(--depth-1)] p-8 min-h-screen">
+    <div className="bg-background p-8 min-h-screen">
       <div className="max-w-4xl mx-auto space-y-10">
 
         <div>
@@ -139,7 +139,7 @@ export const Colors: Story = {
 export const StatusDots: Story = {
   name: 'Status Dots',
   render: () => (
-    <div className="bg-[var(--depth-1)] p-8 min-h-screen">
+    <div className="bg-background p-8 min-h-screen">
       <div className="space-y-6 max-w-sm">
         <h2 className="text-foreground font-semibold text-lg">Status Dot Indicators</h2>
         {[

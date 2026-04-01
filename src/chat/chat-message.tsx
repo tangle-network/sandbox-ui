@@ -47,8 +47,8 @@ export function ChatMessage({
         className={cn(
           "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border",
           isUser
-            ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
-            : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--brand-cool)]",
+            ? "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
+            : "border-border bg-muted text-primary",
         )}
       >
         {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
@@ -59,17 +59,17 @@ export function ChatMessage({
         className={cn(
           "min-w-0 max-w-[85%] space-y-1.5 rounded-[var(--radius-xl)] border px-4 py-3",
           isUser
-            ? "border-[var(--border-accent)] bg-[var(--depth-3)]"
-            : "border-[var(--border-subtle)] bg-[var(--depth-2)]",
+            ? "border-border bg-muted/50"
+            : "border-border bg-card",
         )}
       >
         {/* Role label + timestamp */}
         <div className={cn("flex items-center gap-2", isUser && "flex-row-reverse")}>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground">
             {isUser ? "You" : "Agent"}
           </span>
           {timestamp && (
-            <span className="text-[11px] text-[var(--text-muted)]">
+            <span className="text-[11px] text-muted-foreground">
               {formatTime(timestamp)}
             </span>
           )}
@@ -77,14 +77,14 @@ export function ChatMessage({
 
         {/* Message body */}
         {isUser ? (
-          <div className="whitespace-pre-wrap text-[15px] leading-7 text-[var(--text-primary)]">
+          <div className="whitespace-pre-wrap text-[15px] leading-7 text-foreground">
             {content}
           </div>
         ) : (
           <>
             {content && <Markdown className="tangle-prose text-[15px] leading-7">{content}</Markdown>}
             {isStreaming && (
-              <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-[var(--brand-cool)] align-text-bottom" />
+              <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-primary align-text-bottom" />
             )}
           </>
         )}

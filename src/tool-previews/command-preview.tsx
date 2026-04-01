@@ -76,20 +76,20 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
     >
       <button
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2 text-left transition-colors hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/45"
+        className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-border bg-muted px-3 py-2 text-left transition-colors hover:border-[var(--border-accent-hover)] hover:bg-accent/45"
       >
-        <code className="min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-[var(--text-secondary)]">
+        <code className="min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-foreground">
           {command}
         </code>
         {lineCount > 0 ? (
-          <span className="shrink-0 text-xs text-[var(--text-muted)]">
+          <span className="shrink-0 text-xs text-muted-foreground">
             {lineCount} line{lineCount === 1 ? "" : "s"}
           </span>
         ) : null}
         {expanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
         ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
         )}
       </button>
 
@@ -97,14 +97,14 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
       {errorText ? <PreviewError error={errorText} /> : null}
 
       {expanded && output ? (
-        <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]">
+        <div className="overflow-hidden rounded-[var(--radius-md)] border border-border bg-muted">
           {output.stdout ? (
-            <pre className="max-h-80 overflow-auto px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-[var(--text-secondary)]">
+            <pre className="max-h-80 overflow-auto px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-foreground">
               {output.stdout}
             </pre>
           ) : null}
           {output.stderr ? (
-            <pre className="max-h-80 overflow-auto border-t border-[var(--border-subtle)] px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-red-200">
+            <pre className="max-h-80 overflow-auto border-t border-border px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-red-200">
               {output.stderr}
             </pre>
           ) : null}

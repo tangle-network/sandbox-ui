@@ -124,9 +124,9 @@ export const CodeBlock = memo(
     const isVault = useIsVaultTheme();
     const light = lightProp ?? isVault;
     const theme = light ? tangleLight : tangleDark;
-    const bg = "bg-[var(--depth-2)] border-[var(--border-subtle)]";
-    const headerBg = light ? "bg-[var(--depth-3)] border-[var(--border-subtle)]" : "bg-[var(--depth-1)] border-[var(--border-subtle)]";
-    const langColor = "text-[var(--text-muted)]";
+    const bg = "bg-card border-border";
+    const headerBg = light ? "bg-muted/50 border-border" : "bg-background border-border";
+    const langColor = "text-muted-foreground";
 
     return (
       <div
@@ -189,13 +189,13 @@ export const CopyButton = memo(({ text }: { text: string }) => {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center justify-center w-7 h-7 rounded-md bg-[var(--bg-section)] border border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-colors"
+      className="flex items-center justify-center w-7 h-7 rounded-md bg-muted border border-border hover:border-border transition-colors"
       title="Copy to clipboard"
     >
       {copied ? (
         <Check className="w-3.5 h-3.5 text-[var(--brand-emerald)]" />
       ) : (
-        <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+        <Copy className="w-3.5 h-3.5 text-muted-foreground" />
       )}
     </button>
   );

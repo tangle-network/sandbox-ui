@@ -64,7 +64,7 @@ export const WriteFilePreview = memo(({ part }: WriteFilePreviewProps) => {
       title="Write file"
       description={write.path}
       meta={
-        <span className="text-xs text-[var(--text-muted)]">
+        <span className="text-xs text-muted-foreground">
           +{lineCount} line{lineCount !== 1 ? "s" : ""}
         </span>
       }

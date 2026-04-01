@@ -73,7 +73,7 @@ export interface SessionSidebarProps {
 function statusClasses(status?: ActiveSessionStatus) {
   switch (status) {
     case "running":
-      return "bg-[var(--brand-cool)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--brand-cool)_18%,transparent)]";
+      return "bg-primary shadow-[0_0_0_4px_color-mix(in_srgb,hsl(var(--primary))_18%,transparent)]";
     case "error":
       return "bg-[var(--status-danger)]";
     case "attention-needed":
@@ -137,7 +137,7 @@ function sortItems(
 function badgeClasses(tone: SessionSidebarBadge["tone"] = "neutral") {
   switch (tone) {
     case "accent":
-      return "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]";
+      return "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]";
     case "success":
       return "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]";
     case "warning":
@@ -145,7 +145,7 @@ function badgeClasses(tone: SessionSidebarBadge["tone"] = "neutral") {
     case "danger":
       return "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]";
     default:
-      return "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-secondary)]";
+      return "border-border bg-muted text-foreground";
   }
 }
 
@@ -213,23 +213,23 @@ export function SessionSidebar({
   ), [currentItemId, filters, orderedItems, sessionsById]);
 
   return (
-    <aside className={cn("flex w-64 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--depth-2)]", className)}>
-      <div className="border-b border-[var(--border-subtle)] px-3 py-3">
+    <aside className={cn("flex w-64 shrink-0 flex-col border-r border-border bg-card", className)}>
+      <div className="border-b border-border px-3 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--border-accent)]/50 bg-[var(--accent-surface-soft)] text-[var(--accent-text)]">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-[var(--accent-surface-soft)] text-[var(--accent-text)]">
               <MessageSquareText className="h-3.5 w-3.5" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold tracking-[0.01em] text-[var(--text-primary)]">{title}</div>
+              <div className="truncate text-sm font-semibold tracking-[0.01em] text-foreground">{title}</div>
               {subtitle && (
-                <div className="truncate text-[11px] text-[var(--text-muted)]">{subtitle}</div>
+                <div className="truncate text-[11px] text-muted-foreground">{subtitle}</div>
               )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {runningCount > 0 && (
-              <span className="rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent-text)]">
+              <span className="rounded-full border border-border bg-[var(--accent-surface-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent-text)]">
                 {runningCount}
               </span>
             )}
@@ -238,7 +238,7 @@ export function SessionSidebar({
                 type="button"
                 onClick={onCreate}
                 title={createLabel}
-                className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--border-default)] bg-[var(--bg-section)] text-[var(--text-muted)] transition-colors hover:border-[var(--border-accent)] hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]"
+                className="flex h-6 w-6 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground transition-colors hover:border-border hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -248,13 +248,13 @@ export function SessionSidebar({
 
         {enableSearch && items.length > 0 && (
           <div className="relative mt-2.5">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-dim)]" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
-              className="h-8 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] pl-8 pr-3 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-dim)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]"
+              className="h-8 w-full rounded-[var(--radius-md)] border border-border bg-muted pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]"
             />
           </div>
         )}
@@ -271,8 +271,8 @@ export function SessionSidebar({
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
                     isSelected
-                      ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
-                      : "border-[var(--border-subtle)] bg-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]",
+                      ? "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
+                      : "border-border bg-transparent text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <span>{filter.label}</span>
@@ -288,7 +288,7 @@ export function SessionSidebar({
 
       <nav aria-label="Sessions" className="flex-1 overflow-y-auto px-2 py-2">
         {visibleItems.length === 0 ? (
-          <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-4 text-xs text-[var(--text-muted)]">
+          <div className="rounded-[var(--radius-md)] border border-dashed border-border bg-muted px-3 py-4 text-xs text-muted-foreground">
             {query.trim() ? `No sessions match "${query.trim()}".` : emptyMessage}
           </div>
         ) : (
@@ -308,8 +308,8 @@ export function SessionSidebar({
                     className={cn(
                       "group flex items-start gap-2 rounded-[var(--radius-md)] border px-2 py-2 transition-colors",
                       isActive
-                        ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] shadow-[var(--shadow-card)]"
-                        : "border-[var(--border-subtle)] bg-transparent hover:border-[var(--border-default)] hover:bg-[var(--bg-section)]",
+                        ? "border-border bg-[var(--accent-surface-soft)] shadow-[var(--shadow-card)]"
+                        : "border-border bg-transparent hover:border-border hover:bg-muted",
                     )}
                   >
                     <button
@@ -327,11 +327,11 @@ export function SessionSidebar({
                     >
                       <span className={cn("mt-[5px] h-2 w-2 shrink-0 rounded-full", statusClasses(status))} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-medium text-[var(--text-primary)]">
+                        <div className="truncate text-xs font-medium text-foreground">
                           {item.title}
                         </div>
                         {item.subtitle && (
-                          <div className="mt-0.5 truncate text-[11px] leading-tight text-[var(--text-muted)]">
+                          <div className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">
                             {item.subtitle}
                           </div>
                         )}
@@ -355,7 +355,7 @@ export function SessionSidebar({
 
                     <div className="flex shrink-0 items-center gap-2">
                       {session?.isForeground && (
-                        <Badge className="rounded-full border-[var(--border-subtle)] bg-[var(--bg-section)] text-[10px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
+                        <Badge className="rounded-full border-border bg-muted text-[10px] uppercase tracking-[0.14em] text-foreground">
                           Live
                         </Badge>
                       )}
@@ -380,13 +380,13 @@ export function SessionSidebar({
       </nav>
 
       {activityMonitor && (
-        <div className="border-t border-[var(--border-subtle)] px-2 py-2">
+        <div className="border-t border-border px-2 py-2">
           {activityMonitor}
         </div>
       )}
 
       {links.length > 0 && (
-        <nav aria-label="Workspace sections" className="border-t border-[var(--border-subtle)] px-2 py-2">
+        <nav aria-label="Workspace sections" className="border-t border-border px-2 py-2">
           <div className="space-y-0.5">
             {links.map((link) => {
               const Icon = iconForLink(link.icon);
@@ -402,7 +402,7 @@ export function SessionSidebar({
 
                     navigateToHref(link.href);
                   }}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-xs text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-section)] hover:text-[var(--text-primary)]"
+                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{link.label}</span>

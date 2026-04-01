@@ -99,16 +99,18 @@ export interface CodeBlockProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
 }
 
-function useIsVaultTheme(): boolean {
+const LIGHT_THEMES = new Set(["vault", "dawn"]);
+
+function useIsLightTheme(): boolean {
   const detect = () =>
     typeof document !== "undefined" &&
-    document.documentElement.getAttribute("data-sandbox-theme") === "vault";
+    LIGHT_THEMES.has(document.documentElement.getAttribute("data-sandbox-theme") ?? "");
 
-  const [isVault, setIsVault] = useState(detect);
+  const [isLight, setIsLight] = useState(detect);
 
   useEffect(() => {
-    setIsVault(detect());
-    const observer = new MutationObserver(() => setIsVault(detect()));
+    setIsLight(detect());
+    const observer = new MutationObserver(() => setIsLight(detect()));
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-sandbox-theme"],
@@ -116,13 +118,13 @@ function useIsVaultTheme(): boolean {
     return () => observer.disconnect();
   }, []);
 
-  return isVault;
+  return isLight;
 }
 
 export const CodeBlock = memo(
   ({ code, language, showLineNumbers = false, light: lightProp, className, children, ...props }: CodeBlockProps) => {
-    const isVault = useIsVaultTheme();
-    const light = lightProp ?? isVault;
+    const isLight = useIsLightTheme();
+    const light = lightProp ?? isLight;
     const theme = light ? tangleLight : tangleDark;
     const bg = "bg-card border-border";
     const headerBg = light ? "bg-muted/50 border-border" : "bg-background border-border";

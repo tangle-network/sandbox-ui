@@ -4,36 +4,46 @@
 /* MD3 surface hierarchy */
 :root,
 [data-sandbox-ui] {
-  --md3-surface: #131228;
-  --md3-surface-dim: #09080F;
-  --md3-surface-bright: #2E2C56;
-  --md3-surface-container-lowest: #06060E;
-  --md3-surface-container-low: #131228;
-  --md3-surface-container: #191738;
-  --md3-surface-container-high: #211F45;
-  --md3-surface-container-highest: #2A2854;
-  --md3-surface-variant: #2A2854;
-  --md3-on-surface: #E8E6F6;
-  --md3-on-surface-variant: #C4C0D8;
-  --md3-primary: #8263FF;
-  --md3-primary-container: #4a3aff;
-  --md3-on-primary: #FFFFFF;
-  --md3-on-primary-container: #FFFFFF;
-  --md3-primary-fixed: #C4AAFF;
-  --md3-primary-fixed-dim: #8263FF;
-  --md3-secondary: #6B7094;
-  --md3-secondary-container: #1E1D35;
-  --md3-on-secondary: #FFFFFF;
-  --md3-on-secondary-container: #C4C0D8;
+  --md3-surface: #0a0a0c;
+  --md3-surface-dim: #070709;
+  --md3-surface-bright: #1b1b22;
+  --md3-surface-container-lowest: #000000;
+  --md3-surface-container-low: #0c0c0f;
+  --md3-surface-container: #101014;
+  --md3-surface-container-high: #15151a;
+  --md3-surface-container-highest: #1e1e24;
+  --md3-surface-variant: #1e1e24;
+  --md3-on-surface: #fdfdfd;
+  --md3-on-surface-variant: #b0b0b8;
+  
+  --md3-primary: #9b8cff;
+  --md3-primary-dim: #705bf5;
+  --md3-primary-container: #5d48e5;
+  --md3-on-primary: #ffffff;
+  --md3-on-primary-container: #efeaff;
+  --md3-primary-fixed: #ada3ff;
+  --md3-primary-fixed-dim: #9082ff;
+  
+  --md3-secondary: #c4b9f5;
+  --md3-secondary-dim: #b6ace7;
+  --md3-secondary-container: #2b234d;
+  --md3-on-secondary: #e8e4ff;
+  --md3-on-secondary-container: #e8e4ff;
+  
   --md3-tertiary: #10b981;
-  --md3-outline: #6B7094;
-  --md3-outline-variant: #2A2B39;
-  --md3-error: #FF4D6D;
-  --md3-error-container: #7A0020;
-  --md3-on-error: #FFFFFF;
-  --md3-inverse-surface: #E8E6F6;
-  --md3-inverse-primary: #4a3aff;
-  --md3-surface-tint: #8263FF;
+  --md3-outline: #474858;
+  --md3-outline-variant: #282937;
+  
+  --md3-error: #ff5277;
+  --md3-error-dim: #eb2855;
+  --md3-error-container: #82042b;
+  --md3-on-error: #ffffff;
+  --md3-on-error-container: #ffbdf2;
+  
+  --md3-inverse-surface: #fdfdfd;
+  --md3-inverse-primary: #4530c5;
+  --md3-inverse-on-surface: #000000;
+  --md3-surface-tint: #9b8cff;
 
   /* Semantic HSL bridge */
   --hsl-background: 248 52% 5%;
@@ -183,11 +193,11 @@
   --brand-emerald: #10b981;
 
   /* Borders */
-  --border-subtle: rgba(107, 112, 148, 0.25);
-  --border-default: rgba(107, 112, 148, 0.40);
-  --border-hover: rgba(107, 112, 148, 0.60);
-  --border-accent: rgba(130, 99, 255, 0.40);
-  --border-accent-hover: rgba(130, 99, 255, 0.65);
+  --border-subtle: rgba(107, 112, 148, 0.08);
+  --border-default: rgba(107, 112, 148, 0.15);
+  --border-hover: rgba(107, 112, 148, 0.25);
+  --border-accent: rgba(130, 99, 255, 0.15);
+  --border-accent-hover: rgba(130, 99, 255, 0.35);
 
   /* Buttons */
   --btn-primary-bg: #4a3aff;
@@ -369,11 +379,11 @@
   --brand-vibrant: #4a3aff;
   --brand-emerald: #10b981;
 
-  --border-subtle: rgba(107, 112, 148, 0.15);
-  --border-default: rgba(107, 112, 148, 0.25);
-  --border-hover: rgba(107, 112, 148, 0.40);
-  --border-accent: rgba(74, 58, 255, 0.25);
-  --border-accent-hover: rgba(74, 58, 255, 0.50);
+  --border-subtle: rgba(107, 112, 148, 0.08); /* fixed white-lined issue */
+  --border-default: rgba(107, 112, 148, 0.15);
+  --border-hover: rgba(107, 112, 148, 0.25);
+  --border-accent: rgba(74, 58, 255, 0.15);
+  --border-accent-hover: rgba(74, 58, 255, 0.35);
 
   --btn-primary-bg: #1e116e;
   --btn-primary-hover: #211f54;

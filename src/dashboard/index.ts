@@ -114,3 +114,7 @@ export {
   type VariantStatus,
   type VariantOutcome,
 } from "./variant-list";
+export {
+  SystemLogsViewer,
+  type SystemLogsViewerProps,
+} from "./system-logs";

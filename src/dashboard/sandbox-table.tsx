@@ -24,6 +24,7 @@ const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: stri
   running: { dot: "bg-[var(--code-success)] animate-pulse", text: "text-[var(--code-success)]", bar: "bg-[var(--code-success)]" },
   hibernating: { dot: "bg-[var(--text-muted)]", text: "text-[var(--text-muted)]", bar: "bg-[var(--text-muted)]" },
   provisioning: { dot: "bg-[var(--brand-cool)] animate-pulse", text: "text-[var(--brand-cool)]", bar: "bg-[var(--brand-cool)]" },
+  creating: { dot: "bg-[var(--brand-cool)] animate-pulse", text: "text-[var(--brand-cool)]", bar: "bg-[var(--brand-cool)]" },
   stopped: { dot: "bg-[var(--text-muted)]", text: "text-[var(--text-secondary)]", bar: "bg-[var(--text-muted)]" },
   failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--code-error)]", bar: "bg-[var(--code-error)]" },
   archived: { dot: "bg-[var(--border-default)]", text: "text-[var(--text-muted)]", bar: "bg-[var(--border-default)]" },

@@ -20,6 +20,8 @@ export interface UsePtySessionReturn {
   error: string | null;
   /** Send a command to the PTY session. */
   sendCommand: (command: string) => Promise<void>;
+  /** Safely resize the remote PTY. */
+  resizeTerminal: (cols: number, rows: number) => Promise<void>;
   /** Tear down and reconnect. */
   reconnect: () => void;
 }
@@ -218,6 +220,27 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     }
   }, [apiUrl, token, cleanup, connectStream]);
 
+  // -- Resize terminal -------------------------------------------------------
+
+  const resizeTerminal = useCallback(async (cols: number, rows: number) => {
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+
+    try {
+      await fetch(`${apiUrl}/terminals/${sid}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ cols, rows }),
+      });
+    } catch (err) {
+      console.error('Failed to resize terminal', err);
+    }
+  }, [apiUrl, token]);
+
   // -- Send command ----------------------------------------------------------
 
   const sendCommand = useCallback(async (command: string) => {
@@ -251,5 +274,5 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     };
   }, [connect, cleanup]);
 
-  return { isConnected, error, sendCommand, reconnect: connect };
+  return { isConnected, error, sendCommand, resizeTerminal, reconnect: connect };
 }

@@ -9,18 +9,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--btn-primary-bg)] text-primary-foreground shadow-[var(--shadow-accent)] hover:bg-[var(--btn-primary-hover)] active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-[var(--md3-primary)]/20 border border-[var(--md3-primary)]/30 text-[var(--md3-primary)] hover:text-white shadow-[0_0_15px_rgba(173,163,255,0.1)] hover:bg-[var(--md3-primary)] hover:shadow-[0_0_20px_rgba(173,163,255,0.4)] active:scale-[0.97] duration-[var(--transition-fast)]",
         destructive:
-          "bg-destructive/15 border border-destructive/25 text-destructive hover:bg-destructive/22 active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-red-500/10 border border-red-500/30 text-red-400 hover:text-white hover:bg-red-500/80 shadow-[0_0_15px_rgba(255,82,119,0.1)] hover:shadow-[0_0_20px_rgba(255,82,119,0.4)] active:scale-[0.97] duration-[var(--transition-fast)]",
         outline:
-          "border border-[var(--border-default)] bg-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] active:scale-[0.97] duration-[var(--transition-fast)]",
+          "border border-white/10 bg-black/20 backdrop-blur-xl hover:bg-white/10 hover:border-white/20 active:scale-[0.97] duration-[var(--transition-fast)] text-white shadow-sm",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/70 active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-white/5 border border-white/5 text-white backdrop-blur-xl hover:bg-white/10 active:scale-[0.97] duration-[var(--transition-fast)] shadow-[0_4px_24px_rgba(0,0,0,0.2)]",
         ghost:
-          "hover:bg-[var(--bg-hover)] hover:text-foreground duration-[var(--transition-fast)]",
-        link: "text-primary underline-offset-4 hover:underline",
+          "hover:bg-white/10 hover:text-white duration-[var(--transition-fast)] text-[var(--md3-on-surface-variant)] border border-transparent",
+        link: "text-[var(--md3-primary)] underline-offset-4 hover:underline",
         sandbox:
-          "bg-[image:var(--accent-gradient-strong)] text-white shadow-[var(--shadow-accent)] hover:brightness-110 active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-black/40 backdrop-blur-2xl text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] border border-[var(--md3-outline-variant)] hover:bg-black/60 active:scale-[0.97] duration-[var(--transition-fast)]",
       },
       size: {
         default: "h-[var(--control-height)] px-4 py-2",

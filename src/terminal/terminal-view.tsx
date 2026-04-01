@@ -99,7 +99,7 @@ export default function TerminalView({
     termRef.current?.write(data);
   }, []);
 
-  const { isConnected, error, sendCommand, reconnect } = usePtySession({
+  const { isConnected, error, sendCommand, resizeTerminal, reconnect } = usePtySession({
     apiUrl,
     token,
     onData,
@@ -135,13 +135,7 @@ export default function TerminalView({
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Welcome message
-    const padTitle = title.padEnd(37);
-    const padSubtitle = subtitle.padEnd(37);
-    term.writeln(`\x1b[38;5;48m\u256d${"\u2500".repeat(41)}\u256e\x1b[0m`);
-    term.writeln(`\x1b[38;5;48m\u2502\x1b[0m  \x1b[1m${padTitle}\x1b[0m\x1b[38;5;48m\u2502\x1b[0m`);
-    term.writeln(`\x1b[38;5;48m\u2502\x1b[0m  ${padSubtitle}\x1b[38;5;48m\u2502\x1b[0m`);
-    term.writeln(`\x1b[38;5;48m\u2570${"\u2500".repeat(41)}\u256f\x1b[0m`);
+    // We now use a React-rendered glassmorphic overlay for the welcome message instead of term.writeln
 
     // Forward all keyboard input to the PTY — no local echo.
     // The PTY echoes input back via SSE, so xterm only writes what
@@ -152,6 +146,10 @@ export default function TerminalView({
           `\r\n\x1b[31m${err instanceof Error ? err.message : 'Send failed'}\x1b[0m`,
         );
       });
+    });
+
+    term.onResize(({ cols, rows }) => {
+      resizeTerminal(cols, rows).catch(console.error);
     });
 
     // Resize observer
@@ -168,13 +166,26 @@ export default function TerminalView({
       termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [sendCommand, resolvedTheme, title, subtitle]);
+  }, [sendCommand, resizeTerminal, resolvedTheme, title, subtitle]);
+
+  // Synchronize size with sidecar once connected to trigger SIGWINCH and prompt redraw
+  useEffect(() => {
+    if (isConnected && termRef.current) {
+      resizeTerminal(termRef.current.cols, termRef.current.rows).catch(console.error);
+    }
+  }, [isConnected, resizeTerminal]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full group">
+      {/* Glassmorphic Welcome Box Overlay */}
+      <div className="absolute top-4 right-4 z-10 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none glass-panel px-4 py-2 border-glass-border flex flex-col items-end shadow-xl bg-[var(--depth-1)]/80 backdrop-blur-md rounded-lg">
+        <div className="text-sm font-semibold text-[var(--text-primary)]">{title}</div>
+        <div className="text-xs text-[var(--text-muted)]">{subtitle}</div>
+      </div>
+
       <div
         ref={containerRef}
-        className="h-full w-full rounded-lg overflow-hidden"
+        className="h-full w-full rounded-lg overflow-hidden relative z-0"
         style={{ backgroundColor: resolvedTheme.background }}
       />
 

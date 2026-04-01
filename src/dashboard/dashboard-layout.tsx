@@ -258,7 +258,7 @@ function DashboardLayoutInner({
     <div className={cn("min-h-screen bg-[var(--depth-1)] text-[var(--text-primary)]", className)}>
       {/* Top nav bar */}
       <nav
-        className="fixed top-0 z-50 bg-[var(--depth-2)] border-b border-[var(--border-subtle)] flex justify-between items-center px-8 h-14 font-sans text-sm tracking-tight transition-[left,width] duration-200 ease-in-out"
+        className="fixed top-0 z-50 bg-black/40 backdrop-blur-3xl border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width] duration-200 ease-in-out shadow-sm"
         style={{
           left: hidden ? 0 : contentMargin,
           width: hidden ? "100%" : `calc(100% - ${contentMargin}px)`,

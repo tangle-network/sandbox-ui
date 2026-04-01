@@ -213,7 +213,7 @@ export function SessionSidebar({
   ), [currentItemId, filters, orderedItems, sessionsById]);
 
   return (
-    <aside className={cn("flex w-64 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--depth-2)]", className)}>
+    <aside className={cn("flex w-64 shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-card)]", className)}>
       <div className="border-b border-[var(--border-subtle)] px-3 py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">

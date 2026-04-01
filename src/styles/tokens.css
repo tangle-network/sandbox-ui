@@ -47,7 +47,7 @@
   --hsl-secondary: 243 25% 19%;
   --hsl-secondary-foreground: 240 16% 90%;
   --hsl-muted: 242 22% 16%;
-  --hsl-muted-foreground: 233 17% 55%;
+  --hsl-muted-foreground: 233 17% 62%;
   --hsl-accent: 245 28% 21%;
   --hsl-accent-foreground: 240 16% 92%;
   --hsl-destructive: 348 90% 60%;
@@ -169,9 +169,9 @@
 
   /* Text */
   --text-primary: hsl(var(--hsl-foreground));
-  --text-secondary: hsl(244 18% 86%);
-  --text-muted: #6B7094;
-  --text-dim: #4A4D6A;
+  --text-secondary: hsl(244 18% 88%);
+  --text-muted: #8B90B8;
+  --text-dim: #6B70A0;
 
   /* Brand accents — Tangle exact */
   --brand-primary: #4a3aff;

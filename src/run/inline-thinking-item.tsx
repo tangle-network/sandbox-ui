@@ -15,10 +15,6 @@ export interface InlineThinkingItemProps {
   contentClassName?: string;
 }
 
-/**
- * Minimal collapsible display for thinking/reasoning parts.
- * Shows "Thinking..." with optional preview text and duration.
- */
 export const InlineThinkingItem = memo(
   ({
     part,
@@ -34,7 +30,7 @@ export const InlineThinkingItem = memo(
     const endTime = part.time?.end;
     const durationMs = startTime && endTime ? endTime - startTime : undefined;
     const isActive = startTime != null && endTime == null;
-    const preview = part.text ? truncateText(part.text, 120) : undefined;
+    const preview = part.text ? truncateText(part.text, 80) : undefined;
 
     useEffect(() => {
       if (isActive) {
@@ -58,48 +54,32 @@ export const InlineThinkingItem = memo(
         <Collapsible.Trigger asChild>
           <button
             className={cn(
-              "w-full rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] text-left transition-colors",
-              "hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/35",
-              open && "border-[var(--border-accent)] bg-[var(--bg-hover)]/30",
+              "w-full rounded-[var(--radius-lg)] border text-left transition-colors",
+              "border-border bg-card hover:bg-accent/50",
+              open && "border-primary/30 bg-accent/30",
               className,
             )}
           >
-            <div className="flex items-center gap-3 px-3 py-3">
-              <div
-                className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
-                  isActive
-                    ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)] shadow-[var(--shadow-glow)]"
-                    : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)]",
-                )}
-              >
-                <Brain className={cn("h-4 w-4", isActive && "animate-pulse")} />
-              </div>
+            <div className="flex items-center gap-2 px-2.5 py-1.5">
+              <Brain className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-primary animate-pulse" : "text-muted-foreground")} />
 
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[var(--text-primary)]">
-                    {isActive ? "Thinking…" : "Reasoning"}
+              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                {preview ?? (isActive ? "…" : "Reasoning")}
+              </span>
+
+              <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                {isActive && startTime ? <LiveDuration startTime={startTime} /> : null}
+                {!isActive && durationMs != null ? (
+                  <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
+                    {formatDuration(durationMs)}
                   </span>
-                  {!isActive && durationMs != null ? (
-                    <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2 py-0.5 text-[11px] font-[var(--font-mono)] text-[var(--text-muted)]">
-                      {formatDuration(durationMs)}
-                    </span>
-                  ) : null}
-                  {isActive && startTime ? <LiveDuration startTime={startTime} /> : null}
-                </div>
-                {preview && !open ? (
-                  <div className="mt-1 truncate text-xs text-[var(--text-muted)]">
-                    {preview}
-                  </div>
                 ) : null}
+                {open ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
               </div>
-
-              {open ? (
-                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
-              )}
             </div>
           </button>
         </Collapsible.Trigger>
@@ -108,15 +88,15 @@ export const InlineThinkingItem = memo(
           {part.text ? (
             <div
               className={cn(
-                "border-t border-[var(--border-subtle)] px-4 py-4 text-sm text-[var(--text-secondary)]",
+                "border-t border-border px-3 py-2.5 text-sm text-foreground",
                 contentClassName,
               )}
             >
               <Markdown>{part.text}</Markdown>
             </div>
           ) : (
-            <div className="border-t border-[var(--border-subtle)] px-4 py-3 text-sm text-[var(--text-muted)]">
-              No reasoning text was provided.
+            <div className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
+              No reasoning text provided.
             </div>
           )}
         </Collapsible.Content>

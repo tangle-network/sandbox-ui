@@ -158,15 +158,15 @@ export function ProvisioningWizard({
             <div className="flex items-center gap-2 mb-4 glass-panel p-3 rounded-2xl mx-auto max-w-2xl justify-between shrink-0">
               {[1, 2, 3].map((s) => (
                 <div key={s} className="flex items-center">
-                  <div className={cn("w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs transition-colors shrink-0", currentStep === s ? "bg-accent text-black" : currentStep > s ? "bg-accent/40 text-black" : "bg-white/10 text-white/50")}>
+                  <div className={cn("w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs transition-colors shrink-0", currentStep === s ? "bg-primary text-primary-foreground" : currentStep > s ? "bg-primary/40 text-primary-foreground" : "bg-muted text-muted-foreground")}>
                     {s}
                   </div>
-                  <span className={cn("ml-2 sm:ml-3 font-bold text-sm tracking-tight hidden sm:inline", currentStep === s ? "text-white" : currentStep > s ? "text-accent/60" : "text-white/30")}>
+                  <span className={cn("ml-2 sm:ml-3 font-bold text-sm tracking-tight hidden sm:inline", currentStep === s ? "text-foreground" : currentStep > s ? "text-primary/60" : "text-muted-foreground")}>
                     {s === 1 && "Environment"}
                     {s === 2 && "Resources"}
                     {s === 3 && "AI Agent"}
                   </span>
-                  {s < 3 && <div className={cn("w-4 sm:w-8 h-px mx-2 sm:mx-4 transition-colors", currentStep > s ? "bg-accent/40" : "bg-white/10")} />}
+                  {s < 3 && <div className={cn("w-4 sm:w-8 h-px mx-2 sm:mx-4 transition-colors", currentStep > s ? "bg-primary/40" : "bg-border")} />}
                 </div>
               ))}
             </div>
@@ -180,7 +180,7 @@ export function ProvisioningWizard({
           <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
             <div className="flex items-center gap-3 mb-6">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Layers className="h-5 w-5" /></div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Environment Selection</h2>
+              <h2 className="text-lg font-bold text-foreground tracking-tight">Environment Selection</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {environments.map((env) => (
@@ -199,15 +199,15 @@ export function ProvisioningWizard({
                     <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-transparent pointer-events-none" />
                   )}
                   <div className="flex justify-between items-start mb-3 relative z-10">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-black/40 border border-glass-border shadow-inner">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted/50 border border-border shadow-inner">
                       {env.icon}
                     </div>
-                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", selectedEnv === env.id ? "border-accent bg-accent/20" : "border-glass-border")}>
+                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", selectedEnv === env.id ? "border-accent bg-accent/20" : "border-border")}>
                       {selectedEnv === env.id && <div className="w-2.5 h-2.5 bg-accent rounded-full animate-in zoom-in" />}
                     </div>
                   </div>
-                  <h3 className="font-bold text-sm mb-0.5 text-white relative z-10">{env.name}</h3>
-                  <p className="text-xs text-white/50 leading-relaxed relative z-10">{env.description}</p>
+                  <h3 className="font-bold text-sm mb-0.5 text-foreground relative z-10">{env.name}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed relative z-10">{env.description}</p>
                 </button>
               ))}
             </div>
@@ -221,23 +221,23 @@ export function ProvisioningWizard({
           <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
             <div className="flex items-center gap-3 mb-5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Cpu className="h-5 w-5" /></div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Resource Allocation</h2>
+              <h2 className="text-lg font-bold text-foreground tracking-tight">Resource Allocation</h2>
             </div>
 
             <div className="mb-6">
-              <label className="block font-label text-xs font-bold uppercase tracking-widest text-[#a1a1aa] mb-3">Compute Presets</label>
+              <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Compute Presets</label>
               <div className="grid grid-cols-3 gap-3">
                 <button type="button" onClick={() => applyPreset(2, 4, 50)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
-                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "text-accent" : "text-white")}>Lightweight</div>
-                  <div className="text-xs text-[#a1a1aa] mt-0.5 font-mono">2C / 4G / 50G</div>
+                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "text-accent" : "text-foreground")}>Lightweight</div>
+                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">2C / 4G / 50G</div>
                 </button>
                 <button type="button" onClick={() => applyPreset(4, 16, 128)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
-                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "text-accent" : "text-white")}>Standard</div>
-                  <div className="text-xs text-[#a1a1aa] mt-0.5 font-mono">4C / 16G / 128G</div>
+                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "text-accent" : "text-foreground")}>Standard</div>
+                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">4C / 16G / 128G</div>
                 </button>
                 <button type="button" onClick={() => applyPreset(8, 32, 256)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
-                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "text-accent" : "text-white")}>Performance</div>
-                  <div className="text-xs text-[#a1a1aa] mt-0.5 font-mono">8C / 32G / 256G</div>
+                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "text-accent" : "text-foreground")}>Performance</div>
+                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">8C / 32G / 256G</div>
                 </button>
               </div>
             </div>
@@ -249,9 +249,9 @@ export function ProvisioningWizard({
                 { label: "Ephemeral Storage", value: storageGB, setter: setStorageGB, min: STORAGE_MIN, max: STORAGE_MAX, step: 8, unit: "GB" },
               ].map(({ label, value, setter, min, max, step: s, unit }) => (
                 <div key={label}>
-                  <div className="flex justify-between items-end border-b border-glass-border pb-1.5 mb-2">
-                    <label className="font-label text-xs font-bold uppercase tracking-widest text-[#a1a1aa]">{label}</label>
-                    <span className="text-xl font-bold text-white tracking-tight">{value} <span className="text-xs text-accent/80 ml-1">{unit}</span></span>
+                  <div className="flex justify-between items-end border-b border-border pb-1.5 mb-2">
+                    <label className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">{label}</label>
+                    <span className="text-xl font-bold text-foreground tracking-tight">{value} <span className="text-xs text-accent/80 ml-1">{unit}</span></span>
                   </div>
                   <input
                     type="range"
@@ -260,9 +260,9 @@ export function ProvisioningWizard({
                     step={s}
                     value={value}
                     onChange={(e) => setter(+e.target.value)}
-                    className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-accent"
+                    className="w-full h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-accent"
                   />
-                  <div className="flex justify-between text-[10px] font-mono text-white/30 mt-1">
+                  <div className="flex justify-between text-[10px] font-mono text-muted-foreground/60 mt-1">
                     <span>{min}{unit}</span>
                     <span>{max}{unit}</span>
                   </div>
@@ -279,15 +279,15 @@ export function ProvisioningWizard({
           <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
             <div className="flex items-center gap-3 mb-5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Bot className="h-5 w-5" /></div>
-              <h2 className="text-lg font-bold text-white tracking-tight">AI Agent Capability</h2>
+              <h2 className="text-lg font-bold text-foreground tracking-tight">AI Agent Capability</h2>
             </div>
             <div className="space-y-5">
               <div>
-                <label className="block font-label text-xs font-bold uppercase tracking-widest text-white/50 mb-2">Model Engine</label>
+                <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Model Engine</label>
                 <select
                   value={modelTier}
                   onChange={(e) => setModelTier(e.target.value)}
-                  className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
+                  className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
                 >
                   <option value="llama-3-8b" className="bg-gray-900">Llama-3-8B-Instruct (Lightweight)</option>
                   <option value="mistral-7b" className="bg-gray-900">Mistral-7B-v0.2 (Efficient)</option>
@@ -295,21 +295,21 @@ export function ProvisioningWizard({
                 </select>
               </div>
               <div>
-                <label className="block font-label text-xs font-bold uppercase tracking-widest text-white/50 mb-2">Core Directives (System Prompt)</label>
+                <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Core Directives (System Prompt)</label>
                 <textarea
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
-                  className="w-full glass-panel rounded-xl p-4 font-mono text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent h-32 resize-none placeholder:text-white/20"
+                  className="w-full glass-panel rounded-xl p-4 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent h-32 resize-none placeholder:text-muted-foreground"
                   placeholder="Define the autonomous directives or operational boundaries..."
                 />
               </div>
 
               {/* Advanced Options Toggle Section */}
-              <div className="pt-4 border-t border-glass-border">
+              <div className="pt-4 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm font-bold focus:outline-none"
+                  className="flex items-center gap-2 text-foreground/70 hover:text-foreground transition-colors text-sm font-bold focus:outline-none"
                 >
                   <Settings className="w-4 h-4" />
                   {showAdvanced ? "Hide Advanced Options" : "Show Advanced Options"}
@@ -319,21 +319,21 @@ export function ProvisioningWizard({
                   <div className="mt-6 space-y-5 animate-in slide-in-from-top-4 fade-in duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block font-label text-xs font-bold uppercase tracking-widest text-white/50 mb-2">Workspace Name</label>
+                        <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Workspace Name</label>
                         <input
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-white/20"
+                          className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-muted-foreground"
                           placeholder="my-cool-sandbox"
                         />
                       </div>
                       <div>
-                        <label className="block font-label text-xs font-bold uppercase tracking-widest text-white/50 mb-2">Virtualization Driver</label>
+                        <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Virtualization Driver</label>
                         <select
                           value={driver}
                           onChange={(e) => setDriver(e.target.value as any)}
-                          className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
+                          className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
                         >
                           <option value="docker" className="bg-gray-900">Docker container (Default)</option>
                           <option value="firecracker" className="bg-gray-900">Firecracker microVM (Secure)</option>
@@ -343,19 +343,19 @@ export function ProvisioningWizard({
                     </div>
 
                     <div>
-                      <label className="block font-label text-xs font-bold uppercase tracking-widest text-white/50 mb-2">Git Repository URL</label>
+                      <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Git Repository URL</label>
                       <input
                         type="text"
                         value={gitUrl}
                         onChange={(e) => setGitUrl(e.target.value)}
-                        className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-white/20"
+                        className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-muted-foreground"
                         placeholder="https://github.com/my-org/my-repo.git"
                       />
                     </div>
 
                     <div>
                       <div className="flex justify-between items-center mb-2">
-                        <label className="block font-label text-xs font-bold uppercase tracking-widest text-white/50">Environment Variables</label>
+                        <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">Environment Variables</label>
                         <button type="button" onClick={() => setEnvVars([...envVars, {key: '', value: ''}])} className="flex items-center gap-1 text-xs text-accent hover:text-accent-deep transition-colors font-bold">
                           <Plus className="h-3 w-3" /> Add Var
                         </button>
@@ -367,14 +367,14 @@ export function ProvisioningWizard({
                               type="text"
                               value={env.key}
                               onChange={(e) => setEnvVars(envVars.map((v, idx) => idx === i ? { ...v, key: e.target.value } : v))}
-                              className="flex-1 glass-panel rounded-xl h-10 px-3 font-mono text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-white/20"
+                              className="flex-1 glass-panel rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
                               placeholder="API_KEY"
                             />
                             <input
                               type="password"
                               value={env.value}
                               onChange={(e) => setEnvVars(envVars.map((v, idx) => idx === i ? { ...v, value: e.target.value } : v))}
-                              className="flex-[2] glass-panel rounded-xl h-10 px-3 font-mono text-sm text-white focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-white/20"
+                              className="flex-[2] glass-panel rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
                               placeholder="sk-xxxxxxxxxxx"
                             />
                             <button type="button" onClick={() => setEnvVars(envVars.filter((_, idx) => idx !== i))} className="h-10 w-10 flex items-center justify-center shrink-0 rounded-xl glass-panel text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors">
@@ -383,20 +383,20 @@ export function ProvisioningWizard({
                           </div>
                         ))}
                         {envVars.length === 0 && (
-                          <div className="text-center p-3 glass-panel rounded-xl text-white/30 text-sm italic">No environment variables set</div>
+                          <div className="text-center p-3 glass-panel rounded-xl text-muted-foreground/60 text-sm italic">No environment variables set</div>
                         )}
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-glass-border">
+                    <div className="pt-2 border-t border-border">
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative flex items-center justify-center shrink-0">
                           <input type="checkbox" className="sr-only peer" checked={bare} onChange={(e) => setBare(e.target.checked)} />
-                          <div className="w-10 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent hover:bg-white/20 transition-colors"></div>
+                          <div className="w-10 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent hover:bg-white/20 transition-colors"></div>
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-white mb-0.5 group-hover:text-accent transition-colors">Bare Mode</div>
-                          <div className="text-xs text-white/50">Start as a raw container without an embedded AI Agent backend.</div>
+                          <div className="text-sm font-bold text-foreground mb-0.5 group-hover:text-accent transition-colors">Bare Mode</div>
+                          <div className="text-xs text-muted-foreground">Start as a raw container without an embedded AI Agent backend.</div>
                         </div>
                       </label>
                     </div>
@@ -415,24 +415,24 @@ export function ProvisioningWizard({
           {/* Terminal preview */}
           <div className="glass-panel-heavy rounded-[24px] overflow-hidden shadow-2xl relative">
              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(173,163,255,0.05)_0,transparent_100%)] pointer-events-none" />
-            <div className="bg-black/40 border-b border-glass-border px-4 py-3 flex items-center gap-3">
+            <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center gap-3">
               <div className="flex gap-2">
                 <div className="h-3 w-3 rounded-full bg-[#ff5f56]/80" />
                 <div className="h-3 w-3 rounded-full bg-[#ffbd2e]/80" />
                 <div className="h-3 w-3 rounded-full bg-[#27c93f]/80" />
               </div>
-              <div className="font-mono text-[10px] text-[#a1a1aa] uppercase tracking-widest ml-2 border-l border-glass-border pl-3">deploy_sequence.sh</div>
+              <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest ml-2 border-l border-border pl-3">deploy_sequence.sh</div>
             </div>
             <div className="p-5 font-mono text-xs space-y-3 min-h-[240px] relative z-10 text-[13px]">
-              <div className="text-green-400">root@tangle:~# <span className="text-white/80">tangle-cli provision --new</span></div>
-              <div className="text-white/40">Initializing deployment handshake...</div>
-              <div className="text-white/70"><span className="text-accent mr-2">✓</span> Bound Platform: <span className="text-white font-bold">{environments.find((e) => e.id === selectedEnv)?.name ?? "Node.js"}</span></div>
-              <div className="text-white/70"><span className="text-accent mr-2">✓</span> Allocation CPU: <span className="text-white font-bold">{cpuCores} Cores</span></div>
-              <div className="text-white/70"><span className="text-accent mr-2">✓</span> Allocation RAM: <span className="text-white font-bold">{ramGB}GB</span></div>
-              <div className="text-white/70"><span className="text-accent mr-2">✓</span> Mounted Storage: <span className="text-white font-bold">{storageGB}GB NVMe</span></div>
+              <div className="text-green-400">root@tangle:~# <span className="text-foreground/80">tangle-cli provision --new</span></div>
+              <div className="text-muted-foreground/70">Initializing deployment handshake...</div>
+              <div className="text-foreground/70"><span className="text-accent mr-2">✓</span> Bound Platform: <span className="text-foreground font-bold">{environments.find((e) => e.id === selectedEnv)?.name ?? "Node.js"}</span></div>
+              <div className="text-foreground/70"><span className="text-accent mr-2">✓</span> Allocation CPU: <span className="text-foreground font-bold">{cpuCores} Cores</span></div>
+              <div className="text-foreground/70"><span className="text-accent mr-2">✓</span> Allocation RAM: <span className="text-foreground font-bold">{ramGB}GB</span></div>
+              <div className="text-foreground/70"><span className="text-accent mr-2">✓</span> Mounted Storage: <span className="text-foreground font-bold">{storageGB}GB NVMe</span></div>
               <div className="pt-3 flex items-center gap-3">
                 <div className="w-2 h-4 bg-accent animate-pulse" />
-                <span className="text-white/50">Awaiting user confirmation...</span>
+                <span className="text-muted-foreground">Awaiting user confirmation...</span>
               </div>
             </div>
           </div>
@@ -442,23 +442,23 @@ export function ProvisioningWizard({
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-accent/20 blur-[50px] rounded-full" />
 
             <div className="flex justify-between items-center mb-4 relative z-10">
-              <span className="font-label text-xs font-bold uppercase tracking-widest text-[#a1a1aa]">Run Cost</span>
-              <div className="h-7 w-7 rounded-full bg-black/20 flex items-center justify-center border border-glass-border">
+              <span className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">Run Cost</span>
+              <div className="h-7 w-7 rounded-full bg-muted/30 flex items-center justify-center border border-border">
                 <Info className="h-3.5 w-3.5 text-accent" />
               </div>
             </div>
             <div className="flex items-baseline gap-2 mb-5 relative z-10">
-              <span className="text-4xl font-black text-white tracking-tighter">${hourCost}</span>
-              <span className="text-[#a1a1aa] text-sm font-bold">/ hour</span>
+              <span className="text-4xl font-black text-foreground tracking-tighter">${hourCost}</span>
+              <span className="text-muted-foreground text-sm font-bold">/ hour</span>
             </div>
-            <div className="space-y-2 relative z-10 glass-panel rounded-xl p-3 border border-glass-border">
-              <div className="flex justify-between text-xs font-mono tracking-widest text-[#a1a1aa]">
+            <div className="space-y-2 relative z-10 glass-panel rounded-xl p-3 border border-border">
+              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>COMPUTE</span>
-                <span className="text-white">${(cpuCores * 0.045).toFixed(2)}/h</span>
+                <span className="text-foreground">${(cpuCores * 0.045).toFixed(2)}/h</span>
               </div>
-              <div className="flex justify-between text-xs font-mono tracking-widest text-white/50">
+              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>MEMORY</span>
-                <span className="text-white/80">${(ramGB * 0.005).toFixed(2)}</span>
+                <span className="text-foreground/80">${(ramGB * 0.005).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -497,7 +497,7 @@ export function ProvisioningWizard({
                   <button
                     type="button"
                     onClick={() => setCurrentStep((s) => s - 1)}
-                    className="w-full h-10 glass-panel text-white/70 font-bold text-sm rounded-2xl hover:text-white hover:border-[var(--glass-border-color)] transition-colors"
+                    className="w-full h-10 glass-panel text-foreground/70 font-bold text-sm rounded-2xl hover:text-foreground hover:border-[var(--glass-border-color)] transition-colors"
                   >
                     Back
                   </button>

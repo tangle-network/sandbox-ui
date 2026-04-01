@@ -99,7 +99,7 @@ export function Sidebar({ children, className, style }: SidebarProps) {
     <div
       data-sidebar="true"
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex bg-black/40 backdrop-blur-3xl border-r border-[var(--md3-outline-variant)] transition-[transform,width] duration-200 ease-in-out shadow-[0_0_30px_rgba(0,0,0,0.5)]",
+        "fixed inset-y-0 left-0 z-40 flex bg-card/80 backdrop-blur-3xl border-r border-border transition-[transform,width] duration-200 ease-in-out shadow-sm",
         hidden && "-translate-x-full",
         className,
       )}
@@ -138,7 +138,7 @@ export interface SidebarRailHeaderProps {
 
 export function SidebarRailHeader({ children, className }: SidebarRailHeaderProps) {
   return (
-    <div className={cn("flex h-14 items-center justify-center border-b border-[var(--md3-outline-variant)]", className)}>
+    <div className={cn("flex h-14 items-center justify-center border-b border-border", className)}>
       {children}
     </div>
   )
@@ -271,7 +271,7 @@ export function SidebarPanel({ children, className }: SidebarPanelProps) {
   return (
     <div
       className={cn(
-        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-[var(--md3-outline-variant)] bg-black/20 backdrop-blur-xl",
+        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-border bg-card/50 backdrop-blur-xl",
         panelOpen ? "w-[260px] opacity-100" : "w-0 opacity-0 pointer-events-none",
         className,
       )}
@@ -295,7 +295,7 @@ export interface SidebarPanelHeaderProps {
 
 export function SidebarPanelHeader({ children, title, className }: SidebarPanelHeaderProps) {
   return (
-    <div className={cn("flex h-14 items-center px-4 border-b border-[var(--md3-outline-variant)] shrink-0", className)}>
+    <div className={cn("flex h-14 items-center px-4 border-b border-border shrink-0", className)}>
       {children ?? (
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       )}

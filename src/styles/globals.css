@@ -284,3 +284,37 @@
     50% { opacity: 0.35; }
   }
 }
+
+/* Light theme overrides — outside @layer so they always win */
+[data-sandbox-theme="vault"] .glass-panel,
+[data-sandbox-theme="dawn"] .glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+[data-sandbox-theme="vault"] .glass-panel:hover,
+[data-sandbox-theme="dawn"] .glass-panel:hover {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+[data-sandbox-theme="vault"] .glass-panel-heavy,
+[data-sandbox-theme="dawn"] .glass-panel-heavy {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+[data-sandbox-theme="vault"] .glow-primary,
+[data-sandbox-theme="dawn"] .glow-primary {
+  box-shadow: 0 0 24px rgba(74, 58, 255, 0.1);
+}
+
+[data-sandbox-theme="vault"] .glow-primary:hover,
+[data-sandbox-theme="dawn"] .glow-primary:hover {
+  box-shadow: 0 0 40px rgba(74, 58, 255, 0.18);
+}

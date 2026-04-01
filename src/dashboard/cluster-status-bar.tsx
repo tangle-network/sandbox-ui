@@ -21,7 +21,7 @@ export function ClusterStatusBar({ items, latency, className }: ClusterStatusBar
 
   return (
     <div className={cn("fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[90vw] animate-in slide-in-from-bottom flex justify-center", className)}>
-      <div className="glass-panel-heavy overflow-hidden rounded-full px-6 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-8 border-[var(--md3-primary)]/20 shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+      <div className="glass-panel-heavy overflow-hidden rounded-full px-6 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-8 border-primary/20 shadow-sm backdrop-blur-2xl">
         
         <div className="flex items-center gap-6">
           {items.map((item, i) => (
@@ -33,7 +33,7 @@ export function ClusterStatusBar({ items, latency, className }: ClusterStatusBar
                 <span className="text-[10px] text-[var(--md3-on-surface-variant)] uppercase tracking-wider font-bold">
                   {item.label}
                 </span>
-                <span className={cn("text-xs font-bold text-white", item.valueClass)}>
+                <span className={cn("text-xs font-bold text-foreground", item.valueClass)}>
                   {item.value}
                 </span>
               </div>
@@ -43,7 +43,7 @@ export function ClusterStatusBar({ items, latency, className }: ClusterStatusBar
 
         {latency && (
           <>
-            <div className="h-6 w-px bg-[var(--md3-outline-variant)]" />
+            <div className="h-6 w-px bg-border" />
             <div className="flex items-center gap-3">
               <div className="relative flex h-2.5 w-2.5 items-center justify-center">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>

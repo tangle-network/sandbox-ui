@@ -487,7 +487,7 @@ export function SandboxWorkbench({
       rightHeader={right ? regionHeader(regionSections.right, genericPanelsHeader) : undefined}
       bottom={bottom}
       bottomHeader={bottom ? regionHeader(regionSections.bottom, genericPanelsHeader) : undefined}
-      theme={layout?.theme ?? "operator"}
+      theme={layout?.theme}
       density={layout?.density ?? "comfortable"}
       persistenceKey={layout?.persistenceKey}
       defaultLeftOpen={layout?.defaultLeftOpen ?? Boolean(left)}

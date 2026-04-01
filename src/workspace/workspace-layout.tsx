@@ -245,7 +245,7 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
         type="button"
         aria-label={`Close ${title}`}
         onClick={onClose}
-        className="absolute inset-0 bg-black/70"
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
       />
       <aside
         className={cn(
@@ -294,7 +294,7 @@ export function WorkspaceLayout({
   maxBottomHeight = 500,
   persistenceKey,
   resizable = true,
-  theme = "operator",
+  theme,
   density = "comfortable",
   leftLabel = "Left workspace panel",
   rightLabel = "Right workspace panel",
@@ -414,8 +414,7 @@ export function WorkspaceLayout({
 
   return (
     <div
-      data-sandbox-ui="true"
-      data-sandbox-theme={theme}
+      {...(theme ? { "data-sandbox-ui": "true", "data-sandbox-theme": theme } : {})}
       data-density={density}
       className={cn(
         "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-foreground font-[var(--font-sans)]",

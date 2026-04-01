@@ -44,11 +44,11 @@ export function LoginLayout({
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0,transparent_100%)] pointer-events-none rounded-2xl" />
             {brandIcon || <Terminal className="h-8 w-8 text-[var(--md3-primary)]" />}
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white text-glow">{title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
           <p className="mt-2 text-[var(--md3-on-surface-variant)]">{subtitle}</p>
         </div>
 
-        <div className="w-full glass-panel-heavy p-8 border border-[var(--md3-outline-variant)] shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden backdrop-blur-3xl rounded-[32px]">
+        <div className="w-full glass-panel-heavy p-8 border border-border shadow-sm relative overflow-hidden backdrop-blur-3xl rounded-[32px]">
           {/* Internal gradient flare */}
           <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--md3-primary)] to-transparent opacity-50" />
           

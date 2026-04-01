@@ -21,14 +21,14 @@ export function CreditBalance({
   const [topUpValue, setTopUpValue] = React.useState("50.00")
 
   return (
-    <div className={cn("bg-[var(--depth-2)] p-8 rounded-xl flex flex-col justify-between border border-[var(--border-subtle)]", className)}>
+    <div className={cn("bg-[var(--depth-2)] p-5 rounded-xl flex flex-col justify-between border border-[var(--border-subtle)]", className)}>
       <div>
         <h3 className="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-widest mb-2">Available Credits</h3>
-        <div className="text-5xl font-extrabold text-[var(--brand-cool)] tracking-tighter mb-3">${amount.toFixed(2)}</div>
+        <div className="text-4xl font-extrabold text-[var(--brand-cool)] tracking-tighter mb-2">${amount.toFixed(2)}</div>
         <p className="text-sm text-[var(--text-muted)] leading-relaxed">{description}</p>
       </div>
       {onTopUp && (
-        <div className="space-y-3 mt-8">
+        <div className="space-y-2.5 mt-5">
           <div className="bg-[var(--depth-1)] border border-[var(--border-subtle)] p-1 rounded-lg flex items-center">
             <input
               type="text"

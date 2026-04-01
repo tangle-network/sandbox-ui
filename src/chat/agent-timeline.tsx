@@ -256,7 +256,7 @@ export function AgentTimeline({
 }: AgentTimelineProps) {
   if (items.length === 0 && !isThinking) {
     return emptyState ? (
-      <div className={cn("flex h-full items-center justify-center p-8", className)}>
+      <div className={cn("flex h-full items-center justify-center p-4", className)}>
         {emptyState}
       </div>
     ) : null;

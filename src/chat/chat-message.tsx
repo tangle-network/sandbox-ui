@@ -57,7 +57,8 @@ export function ChatMessage({
       {/* Bubble */}
       <div
         className={cn(
-          "min-w-0 max-w-[85%] space-y-1.5 rounded-[var(--radius-xl)] border px-4 py-3",
+          "min-w-0 max-w-[85%] space-y-1 rounded-[var(--radius-lg)] border",
+          "px-[var(--chat-message-px)] py-[var(--chat-message-py)]",
           isUser
             ? "border-[var(--border-accent)] bg-[var(--depth-3)]"
             : "border-[var(--border-subtle)] bg-[var(--depth-2)]",

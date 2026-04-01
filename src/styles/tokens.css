@@ -227,6 +227,19 @@
   --panel-padding: 1rem;
   --content-max-width: 80rem;
 
+  /* Component sizing — override per-app for tighter/looser layouts */
+  --code-padding-x: 0.75rem;
+  --code-padding-y: 0.625rem;
+  --code-font-size: 0.8125rem;
+  --code-line-height: 1.5;
+  --chat-message-px: 0.875rem;
+  --chat-message-py: 0.5rem;
+  --chat-input-py: 0.625rem;
+  --card-padding: 1.25rem;
+  --tool-card-px: 0.75rem;
+  --tool-card-py: 0.5rem;
+  --tool-icon-size: 1.75rem;
+
   /* Transitions */
   --transition-fast: 0.1s ease;
   --transition-default: 0.16s ease;
@@ -412,4 +425,16 @@
   --radius-xl: 12px;
   --control-height: 2rem;
   --panel-padding: 0.625rem;
+
+  --code-padding-x: 0.625rem;
+  --code-padding-y: 0.5rem;
+  --code-font-size: 0.75rem;
+  --code-line-height: 1.4;
+  --chat-message-px: 0.75rem;
+  --chat-message-py: 0.375rem;
+  --chat-input-py: 0.5rem;
+  --card-padding: 1rem;
+  --tool-card-px: 0.625rem;
+  --tool-card-py: 0.375rem;
+  --tool-icon-size: 1.5rem;
 }

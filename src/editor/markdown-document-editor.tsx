@@ -92,7 +92,7 @@ export function MarkdownDocumentEditor({
   return (
     <div
       className={cn(
-        "flex min-h-[24rem] w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-input)]",
+        "flex min-h-[14rem] w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-input)]",
         className,
       )}
     >

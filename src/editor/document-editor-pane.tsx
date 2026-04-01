@@ -160,7 +160,7 @@ function CollaborativeDocumentSurface({
         placeholder={placeholder}
         autoFocus={autoFocus}
         readOnly={readOnly}
-        className={cn("h-full min-h-[28rem]", className)}
+        className={cn("h-full min-h-[16rem]", className)}
         onUpdate={(editor) => {
           onChange?.(normalizeMarkdown(htmlToMarkdown(editor.getHTML())));
         }}

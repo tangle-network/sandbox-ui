@@ -198,7 +198,7 @@ export function NewSandboxCard({ onClick, className }: NewSandboxCardProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        "border-2 border-dashed border-[var(--border-subtle)] rounded-xl p-6 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-[var(--border-accent)] hover:bg-[var(--accent-surface-soft)] transition-all duration-300 w-full min-h-[200px]",
+        "border-2 border-dashed border-[var(--border-subtle)] rounded-xl p-5 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-[var(--border-accent)] hover:bg-[var(--accent-surface-soft)] transition-all duration-300 w-full min-h-[160px]",
         className,
       )}
     >

@@ -141,22 +141,22 @@ export function ToolCallStep({
         onClick={() => hasExpandable && setExpanded(!expanded)}
         disabled={!hasExpandable}
         className={cn(
-          "flex w-full items-center gap-3 px-3 py-3 text-left text-sm",
+          "flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm",
           hasExpandable && "cursor-pointer",
         )}
       >
         <div
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
             status === "running" && "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--brand-cool)]",
             status === "success" && "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
             status === "error" && "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]",
           )}
         >
           {status === "running" ? (
-            <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+            <Loader2 className="h-3 w-3 animate-spin shrink-0" />
           ) : (
-            <Icon className={cn("h-4 w-4 shrink-0", STATUS_COLORS[status])} />
+            <Icon className={cn("h-3 w-3 shrink-0", STATUS_COLORS[status])} />
           )}
         </div>
 
@@ -198,7 +198,7 @@ export function ToolCallStep({
 
       {/* Expandable content */}
       {expanded && (detail || output) && (
-        <div className="space-y-2 border-t border-[var(--border-subtle)] bg-[var(--bg-section)] px-4 py-4">
+        <div className="space-y-2 border-t border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2.5">
           {detail && (
             isFilePath(detail)
               ? <FilePathChip path={detail} />

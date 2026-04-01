@@ -245,8 +245,8 @@ export function ChatInput({
 
       {/* Input row */}
       <div className="rounded-[var(--radius-xl)] border border-[var(--border-default)] bg-[var(--depth-2)] shadow-[var(--shadow-card)]">
-        <div className="rounded-[var(--radius-xl)] px-3 py-3.5 transition-colors focus-within:border-[var(--border-accent)]">
-          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+        <div className="rounded-[var(--radius-xl)] px-3 py-[var(--chat-input-py)] transition-colors focus-within:border-[var(--border-accent)]">
+          <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
               Agent Command Deck
             </div>
@@ -312,7 +312,7 @@ export function ChatInput({
           disabled={isStreaming || disabled}
           rows={1}
           aria-label="Message input"
-          className="min-h-[36px] max-h-[160px] flex-1 resize-none bg-transparent text-[15px] leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
+          className="min-h-[32px] max-h-[120px] flex-1 resize-none bg-transparent text-[14px] leading-6 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
         />
 
         {/* Send / Cancel */}

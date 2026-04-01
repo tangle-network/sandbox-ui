@@ -30,7 +30,7 @@ export const InlineThinkingItem = memo(
     const endTime = part.time?.end;
     const durationMs = startTime && endTime ? endTime - startTime : undefined;
     const isActive = startTime != null && endTime == null;
-    const preview = part.text ? truncateText(part.text, 80) : undefined;
+    const preview = part.text ? truncateText(part.text, 120) : undefined;
 
     useEffect(() => {
       if (isActive) {
@@ -55,19 +55,23 @@ export const InlineThinkingItem = memo(
           <button
             className={cn(
               "w-full rounded-[var(--radius-lg)] border text-left transition-colors",
-              "border-border bg-card hover:bg-accent/50",
-              open && "border-primary/30 bg-accent/30",
+              isActive
+                ? "border-primary/30 bg-primary/10"
+                : "border-border bg-muted hover:bg-accent",
+              open && !isActive && "bg-accent",
               className,
             )}
           >
-            <div className="flex items-center gap-2 px-2.5 py-1.5">
-              <Brain className={cn("h-3.5 w-3.5 shrink-0", isActive ? "text-primary animate-pulse" : "text-muted-foreground")} />
+            <div className="flex items-center gap-2.5 px-3 py-2">
+              <Brain className={cn("h-4 w-4 shrink-0", isActive ? "text-primary animate-pulse" : "text-muted-foreground")} />
 
-              <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-                {preview ?? (isActive ? "…" : "Reasoning")}
-              </span>
+              <div className="min-w-0 flex-1">
+                <span className="truncate text-xs text-foreground">
+                  {preview ?? (isActive ? "Thinking…" : "Reasoning")}
+                </span>
+              </div>
 
-              <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              <div className="flex shrink-0 items-center gap-2">
                 {isActive && startTime ? <LiveDuration startTime={startTime} /> : null}
                 {!isActive && durationMs != null ? (
                   <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
@@ -88,14 +92,14 @@ export const InlineThinkingItem = memo(
           {part.text ? (
             <div
               className={cn(
-                "border-t border-border px-3 py-2.5 text-sm text-foreground",
+                "border-t border-border px-3 py-3 text-sm text-foreground",
                 contentClassName,
               )}
             >
               <Markdown>{part.text}</Markdown>
             </div>
           ) : (
-            <div className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
+            <div className="border-t border-border px-3 py-2.5 text-xs text-muted-foreground">
               No reasoning text provided.
             </div>
           )}

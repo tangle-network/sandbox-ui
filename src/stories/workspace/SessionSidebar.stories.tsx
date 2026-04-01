@@ -7,11 +7,10 @@ const meta: Meta<typeof SessionSidebar> = {
   component: SessionSidebar,
   parameters: {
     layout: 'fullscreen',
-    backgrounds: { default: 'dark' },
   },
   decorators: [
     (Story) => (
-      <div className="flex h-screen" data-sandbox-ui="true" >
+      <div className="flex h-screen bg-background">
         <Story />
       </div>
     ),

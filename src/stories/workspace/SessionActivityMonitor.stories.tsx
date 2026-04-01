@@ -10,12 +10,11 @@ const meta: Meta<typeof SessionActivityMonitor> = {
   title: 'Workspace/SessionActivityMonitor',
   component: SessionActivityMonitor,
   parameters: {
-    layout: 'fullscreen',
-    backgrounds: { default: 'dark' },
+    layout: 'centered',
   },
   decorators: [
     (Story) => (
-      <div className="w-80 p-4 bg-[var(--bg-card)] min-h-screen" data-sandbox-ui="true" >
+      <div className="w-72 p-4">
         <Story />
       </div>
     ),
@@ -58,115 +57,50 @@ const RUNNING_SESSIONS: Record<string, ActiveSessionRecord> = {
   }),
   's-002': makeRecord({
     sessionId: 's-002',
-    title: 'Schema validation run',
+    title: 'Schema validation sweep',
     status: 'running',
     isRunning: true,
-  }),
-}
-
-const MIXED_SESSIONS: Record<string, ActiveSessionRecord> = {
-  's-001': makeRecord({
-    sessionId: 's-001',
-    title: 'File ingestion pipeline',
-    projectId: 'proj-1',
-    projectLabel: 'Blueprint Agent',
-    status: 'running',
-    isRunning: true,
-    isForeground: true,
+    isForeground: false,
   }),
   's-003': makeRecord({
     sessionId: 's-003',
-    title: 'Report generation',
+    title: 'Background indexer',
     projectId: 'proj-2',
-    projectLabel: 'Data Extractor',
+    projectLabel: 'GTM Agent',
     status: 'running',
     isRunning: true,
-  }),
-  's-004': makeRecord({
-    sessionId: 's-004',
-    title: 'Auth token refresh',
-    projectId: 'proj-2',
-    projectLabel: 'Data Extractor',
-    status: 'error',
-    isRunning: false,
-    lastError: 'Token exchange failed',
-    reconnectState: 'failed',
-    connectionState: 'error',
+    isForeground: false,
   }),
 }
 
-// Decorator that seeds the nanostores atom before rendering
-function withSessions(sessions: Record<string, ActiveSessionRecord>) {
-  return function Seeder({ children }: { children: React.ReactNode }) {
-    useEffect(() => {
-      activeSessionsAtom.set({ sessions, lastUpdatedAt: Date.now() })
-      return () => activeSessionsAtom.set({ sessions: {}, lastUpdatedAt: Date.now() })
-    }, [])
-    return <>{children}</>
-  }
+function WithSessions({ sessions, children }: { sessions: ActiveSessionRecord[]; children: React.ReactNode }) {
+  useEffect(() => {
+    activeSessionsAtom.set(sessions)
+    return () => activeSessionsAtom.set([])
+  }, [sessions])
+  return <>{children}</>
+}
+
+export const Default: Story = {
+  render: () => (
+    <WithSessions sessions={Object.values(RUNNING_SESSIONS)}>
+      <SessionActivityMonitor sessionsById={RUNNING_SESSIONS} />
+    </WithSessions>
+  ),
 }
 
 export const Empty: Story = {
-  args: {
-    emptyMessage: 'No active sessions',
-  },
-  decorators: [
-    (Story) => {
-      useEffect(() => {
-        activeSessionsAtom.set({ sessions: {}, lastUpdatedAt: Date.now() })
-      }, [])
-      return <Story />
-    },
-  ],
-}
-
-export const SingleProjectRunning: Story = {
-  name: 'Single Project — Running',
-  args: {
-    sessionsById: RUNNING_SESSIONS,
-  },
-  decorators: [
-    (Story) => {
-      const Seeder = withSessions(RUNNING_SESSIONS)
-      return (
-        <Seeder>
-          <Story />
-        </Seeder>
-      )
-    },
-  ],
-}
-
-export const MultiProject: Story = {
-  name: 'Multi-Project',
-  args: {
-    sessionsById: MIXED_SESSIONS,
-  },
-  decorators: [
-    (Story) => {
-      const Seeder = withSessions(MIXED_SESSIONS)
-      return (
-        <Seeder>
-          <Story />
-        </Seeder>
-      )
-    },
-  ],
+  render: () => (
+    <WithSessions sessions={[]}>
+      <SessionActivityMonitor />
+    </WithSessions>
+  ),
 }
 
 export const Compact: Story = {
-  args: {
-    compact: true,
-    sessionsById: RUNNING_SESSIONS,
-  },
-  decorators: [
-    (Story) => {
-      const Seeder = withSessions(RUNNING_SESSIONS)
-      return (
-        <Seeder>
-          <Story />
-        </Seeder>
-      )
-    },
-  ],
+  render: () => (
+    <WithSessions sessions={Object.values(RUNNING_SESSIONS)}>
+      <SessionActivityMonitor compact sessionsById={RUNNING_SESSIONS} />
+    </WithSessions>
+  ),
 }

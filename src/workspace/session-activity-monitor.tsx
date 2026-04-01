@@ -53,7 +53,7 @@ export function SessionActivityMonitor({
   if (projectActivity.length === 0) {
     if (compact) return null;
     return (
-      <div className={cn("rounded-md border border-dashed border-border px-3 py-2 text-xs text-muted-foreground", className)}>
+      <div className={cn("rounded-md border border-dashed border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground", className)}>
         {emptyMessage}
       </div>
     );
@@ -82,7 +82,7 @@ export function SessionActivityMonitor({
           return (
             <div
               key={String(project.projectId)}
-              className="rounded-md border border-border bg-card"
+              className="rounded-md border border-border bg-muted"
             >
               <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
                 <div className="min-w-0">

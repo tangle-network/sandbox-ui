@@ -180,20 +180,15 @@ export default function TerminalView({
     };
   }, [sendCommand, resizeTerminal, resolvedTheme, title, subtitle]);
 
-  // Synchronize size with sidecar once connected to trigger SIGWINCH and prompt redraw
+  // Synchronize size with sidecar once connected to trigger SIGWINCH
   useEffect(() => {
     if (isConnected && termRef.current) {
       resizeTerminal(termRef.current.cols, termRef.current.rows).catch(console.error);
-      // Wait a tick for the connection to fully stabilize, then ping a carriage return
-      // to force the bash prompt to render if it was waiting
-      setTimeout(() => {
-        sendCommand("\r").catch(console.error);
-        if (isActive) {
-          termRef.current?.focus();
-        }
-      }, 150);
+      if (isActive) {
+        termRef.current.focus();
+      }
     }
-  }, [isConnected, resizeTerminal, sendCommand, isActive]);
+  }, [isConnected, resizeTerminal, isActive]);
 
   // Handle visibility changes from tab switches
   useEffect(() => {

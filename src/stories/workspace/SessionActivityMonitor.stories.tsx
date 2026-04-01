@@ -15,7 +15,7 @@ const meta: Meta<typeof SessionActivityMonitor> = {
   },
   decorators: [
     (Story) => (
-      <div className="w-80 p-4 bg-[var(--bg-card)] min-h-screen" data-sandbox-ui="true" data-sandbox-theme="operator">
+      <div className="w-80 p-4 bg-[var(--bg-card)] min-h-screen" data-sandbox-ui="true" >
         <Story />
       </div>
     ),

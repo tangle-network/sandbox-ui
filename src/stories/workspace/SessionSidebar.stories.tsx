@@ -11,7 +11,7 @@ const meta: Meta<typeof SessionSidebar> = {
   },
   decorators: [
     (Story) => (
-      <div className="flex h-screen" data-sandbox-ui="true" data-sandbox-theme="operator">
+      <div className="flex h-screen" data-sandbox-ui="true" >
         <Story />
       </div>
     ),

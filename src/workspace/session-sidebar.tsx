@@ -306,10 +306,10 @@ export function SessionSidebar({
                 <li key={item.id}>
                   <div
                     className={cn(
-                      "group flex items-start gap-2 rounded-[var(--radius-md)] border px-2 py-2 transition-colors",
+                      "group relative flex items-center gap-2 rounded-[var(--radius-md)] px-2 py-1.5 transition-all",
                       isActive
-                        ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] shadow-[var(--shadow-card)]"
-                        : "border-[var(--border-subtle)] bg-transparent hover:border-[var(--border-default)] hover:bg-[var(--bg-section)]",
+                        ? "bg-[var(--accent-surface-soft)] shadow-[inset_2px_0_0_var(--brand-cool)]"
+                        : "hover:bg-[var(--bg-hover)]",
                     )}
                   >
                     <button
@@ -323,45 +323,42 @@ export function SessionSidebar({
                         navigateToHref(item.href);
                       }}
                       aria-current={isActive ? "page" : undefined}
-                      className="min-w-0 flex flex-1 items-start gap-2.5 text-left"
+                      className="min-w-0 flex flex-1 items-center gap-2 text-left"
                     >
-                      <span className={cn("mt-[5px] h-2 w-2 shrink-0 rounded-full", statusClasses(status))} />
+                      <span className={cn("h-2 w-2 shrink-0 rounded-full", statusClasses(status))} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-medium text-[var(--text-primary)]">
+                        <div className={cn(
+                          "truncate text-xs",
+                          isActive ? "font-semibold text-[var(--text-primary)]" : "font-medium text-[var(--text-secondary)]",
+                        )}>
                           {item.title}
                         </div>
                         {item.subtitle && (
-                          <div className="mt-0.5 truncate text-[11px] leading-tight text-[var(--text-muted)]">
+                          <div className="truncate text-[10px] leading-tight text-[var(--text-muted)]">
                             {item.subtitle}
-                          </div>
-                        )}
-                        {visibleBadges.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                            {visibleBadges.map((badge) => (
-                              <span
-                                key={badge.id}
-                                className={cn(
-                                  "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.06em]",
-                                  badgeClasses(badge.tone),
-                                )}
-                              >
-                                {badge.label}
-                              </span>
-                            ))}
                           </div>
                         )}
                       </div>
                     </button>
 
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1">
+                      {visibleBadges.length > 0 && visibleBadges.slice(0, 1).map((badge) => (
+                        <span
+                          key={badge.id}
+                          className={cn(
+                            "rounded-full border px-1.5 py-px text-[8px] font-semibold uppercase",
+                            badgeClasses(badge.tone),
+                          )}
+                        >
+                          {badge.label}
+                        </span>
+                      ))}
                       {session?.isForeground && (
-                        <Badge className="rounded-full border-[var(--border-subtle)] bg-[var(--bg-section)] text-[10px] uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-                          Live
-                        </Badge>
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-cool)] shadow-[0_0_4px_var(--brand-cool)]" title="Live" />
                       )}
                       {renderItemActions ? (
                         <div
-                          className="opacity-70 transition-opacity hover:opacity-100 group-hover:opacity-100"
+                          className="opacity-0 transition-opacity group-hover:opacity-100"
                           onClick={(event) => event.stopPropagation()}
                         >
                           {renderItemActions(item, {

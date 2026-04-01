@@ -154,7 +154,7 @@ function ArtifactTabs({
   if (artifacts.length === 0) return null;
 
   return (
-    <div className="flex items-center overflow-x-auto border-b border-border bg-background">
+    <div className="flex items-center overflow-x-auto border-b border-border bg-muted/20">
       {artifacts.map((artifact) => {
         const Icon = getArtifactTabIcon(artifact.kind);
         const isActive = artifact.id === activeArtifactId;
@@ -163,16 +163,16 @@ function ArtifactTabs({
           <div
             key={artifact.id}
             className={cn(
-              "group flex shrink-0 items-center border-r border-border",
+              "group flex shrink-0 items-center border-r border-border bg-background relative",
               isActive
-                ? "border-b-2 border-b-primary bg-card text-foreground"
-                : "text-muted-foreground hover:bg-muted/50",
+                ? "text-foreground after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary"
+                : "text-muted-foreground hover:bg-muted/50 cursor-pointer",
             )}
           >
             <button
               type="button"
               onClick={() => onSelect(artifact.id)}
-              className="flex min-w-0 items-center gap-2 px-3 py-2 text-xs transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
+              className="flex min-w-0 items-center gap-2 px-3 py-2 text-[12px] uppercase tracking-wider font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/60"
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
               <span className="max-w-[14rem] truncate">{artifactTabLabel(artifact)}</span>
@@ -182,7 +182,7 @@ function ArtifactTabs({
                 type="button"
                 aria-label={`Close ${artifactTabLabel(artifact)}`}
                 onClick={() => onClose(artifact.id)}
-                className="mr-1 rounded p-1 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 group-hover:opacity-100"
+                className="mr-1 rounded-[2px] p-1 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60 group-hover:opacity-100"
               >
                 <X className="h-3 w-3" />
               </button>

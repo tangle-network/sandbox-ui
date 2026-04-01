@@ -47,6 +47,8 @@ export interface TerminalViewProps {
   subtitle?: string;
   /** @deprecated No longer used — the PTY provides its own prompt. */
   prompt?: string;
+  /** Whether the terminal tab is currently active and visible. */
+  isActive?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +90,7 @@ export default function TerminalView({
   theme,
   title = "Terminal",
   subtitle = "Connected to PTY session",
+  isActive = true,
 }: TerminalViewProps) {
   const resolvedTheme = { ...DEFAULT_TERMINAL_THEME, ...theme };
 
@@ -141,6 +144,15 @@ export default function TerminalView({
     // The PTY echoes input back via SSE, so xterm only writes what
     // arrives from onData. This avoids double-displayed characters.
     term.onData((data) => {
+      // Manually handle CTRL+L (form feed) to clear the screen
+      // since the fallback shell might not correctly implement clear line via readline.
+      if (data === '\x0c') {
+        termRef.current?.clear();
+        // Send a carriage return to force the prompt to redraw at the top
+        sendCommand('\r').catch(console.error);
+        return;
+      }
+
       sendCommand(data).catch((err) => {
         termRef.current?.writeln(
           `\r\n\x1b[31m${err instanceof Error ? err.message : 'Send failed'}\x1b[0m`,
@@ -172,26 +184,43 @@ export default function TerminalView({
   useEffect(() => {
     if (isConnected && termRef.current) {
       resizeTerminal(termRef.current.cols, termRef.current.rows).catch(console.error);
+      // Wait a tick for the connection to fully stabilize, then ping a carriage return
+      // to force the bash prompt to render if it was waiting
+      setTimeout(() => {
+        sendCommand("\r").catch(console.error);
+        if (isActive) {
+          termRef.current?.focus();
+        }
+      }, 150);
     }
-  }, [isConnected, resizeTerminal]);
+  }, [isConnected, resizeTerminal, sendCommand, isActive]);
+
+  // Handle visibility changes from tab switches
+  useEffect(() => {
+    if (isActive && termRef.current && fitAddonRef.current) {
+      // Small delay allows CSS visibility transition to complete so 
+      // dimensions are accurate before fitting
+      setTimeout(() => {
+        fitAddonRef.current?.fit();
+        termRef.current?.focus();
+      }, 50);
+    }
+  }, [isActive]);
 
   return (
-    <div className="relative h-full w-full group">
-      {/* Glassmorphic Welcome Box Overlay */}
-      <div className="absolute top-4 right-4 z-10 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none glass-panel px-4 py-2 border-glass-border flex flex-col items-end shadow-xl bg-background/80 backdrop-blur-md rounded-lg">
-        <div className="text-sm font-semibold text-foreground">{title}</div>
-        <div className="text-xs text-muted-foreground">{subtitle}</div>
-      </div>
-
+    <div 
+      className="relative h-full w-full group cursor-text"
+      onClick={() => termRef.current?.focus()}
+    >
       <div
         ref={containerRef}
-        className="h-full w-full rounded-lg overflow-hidden relative z-0"
+        className="h-full w-full overflow-hidden relative z-0"
         style={{ backgroundColor: resolvedTheme.background }}
       />
 
       {/* Connection status overlay */}
       {(!isConnected || error) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-background">
           <div className="text-center">
             {error ? (
               <>
@@ -204,7 +233,7 @@ export default function TerminalView({
                 </button>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">Connecting to terminal...</p>
+              <p className="text-[13px] text-muted-foreground">Connecting to terminal...</p>
             )}
           </div>
         </div>

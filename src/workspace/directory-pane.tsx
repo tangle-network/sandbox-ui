@@ -104,7 +104,7 @@ export function DirectoryPane({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
-              className="h-9"
+              className="h-7 text-xs rounded-[2px]"
             />
           </div>
           {onRefresh && (
@@ -112,7 +112,7 @@ export function DirectoryPane({
               type="button"
               aria-label="Refresh directory"
               onClick={onRefresh}
-              className="rounded-[var(--radius-sm)] p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              className="rounded-[2px] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
             >
               <RefreshCw className="h-4 w-4" />
             </button>
@@ -122,7 +122,7 @@ export function DirectoryPane({
               type="button"
               aria-label="Upload files"
               onClick={onUpload}
-              className="rounded-[var(--radius-sm)] p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              className="rounded-[2px] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
             >
               <Upload className="h-4 w-4" />
             </button>
@@ -144,7 +144,7 @@ export function DirectoryPane({
       }
     >
       {filteredRoot ? (
-        <div className="p-3">
+        <div className="py-2">
           <FileTree
             root={filteredRoot}
             selectedPath={selectedPath}

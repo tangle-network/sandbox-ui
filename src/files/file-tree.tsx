@@ -154,15 +154,22 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
 
   return (
     <div>
-      <button
-        onClick={handleClick}
+      <div
         className={cn(
-          "flex items-center gap-1.5 w-full text-left px-2 py-1 rounded-[var(--radius-sm)] text-sm transition-colors",
+          "flex items-center gap-1.5 w-full text-left px-2 py-[2px] cursor-pointer text-[13px] transition-colors",
           "hover:bg-accent",
-          isSelected && "bg-primary/10 text-foreground",
-          !isSelected && "text-foreground",
+          isSelected ? "bg-primary/15 text-foreground" : "text-foreground",
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        onClick={handleClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
       >
         {isDir && (
           <ChevronRight
@@ -180,7 +187,7 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
             {formatSize(node.size)}
           </span>
         )}
-      </button>
+      </div>
       {isDir && expanded && node.children && (
         <div>
           {node.children

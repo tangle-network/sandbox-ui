@@ -42,7 +42,7 @@ export function StatusBar({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-1.5 border-t border-border bg-background text-xs",
+        "flex items-center gap-3 px-3 py-1 border-t border-border bg-muted/20 text-[12px]",
         className,
       )}
     >
@@ -50,7 +50,7 @@ export function StatusBar({
       {modelLabel && (
         <button
           onClick={onModelClick}
-          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[var(--radius-full)] border border-border text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] border border-border text-muted-foreground hover:border-border hover:text-foreground transition-colors"
         >
           <span className={cn("w-1.5 h-1.5 rounded-full", statusInfo.color)} />
           {modelLabel}
@@ -66,7 +66,7 @@ export function StatusBar({
       {contextBadges.map((badge) => (
         <span
           key={badge.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-full)] border border-border text-foreground bg-[var(--border-accent)]/5"
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] border border-border text-foreground bg-[var(--border-accent)]/5"
         >
           <FileText className="h-3 w-3" />
           {badge.label}

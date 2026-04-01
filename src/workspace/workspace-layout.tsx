@@ -253,13 +253,13 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
           side === "left" ? "border-r" : "ml-auto border-l",
         )}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-          <div className="min-w-0 flex-1">{header ?? <span className="text-sm font-semibold text-foreground">{title}</span>}</div>
+        <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
+          <div className="min-w-0 flex-1">{header ?? <span className="text-[13px] font-medium text-foreground">{title}</span>}</div>
           <button
             type="button"
             aria-label={`Close ${title}`}
             onClick={onClose}
-            className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
           >
             <X className="h-4 w-4" />
           </button>
@@ -431,13 +431,13 @@ export function WorkspaceLayout({
               className="hidden shrink-0 border-r border-border bg-background lg:flex lg:flex-col"
             >
               {leftHeader && (
-                <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+                <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5 bg-muted/20">
                   <div className="min-w-0 flex-1">{leftHeader}</div>
                   <button
                     type="button"
                     aria-label="Collapse left panel"
                     onClick={() => setLeftOpen(false)}
-                    className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                    className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                   >
                     <PanelLeftClose className="h-4 w-4" />
                   </button>
@@ -457,13 +457,13 @@ export function WorkspaceLayout({
 
         <main className="flex min-w-0 flex-1 flex-col">
           {(centerHeader || left || right || bottom) && (
-            <div className="flex items-center gap-2 border-b border-border bg-background px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-border bg-muted/20 px-3 py-1.5">
               {left && !leftOpen && (
                 <button
                   type="button"
                   aria-label="Open left panel"
                   onClick={() => setLeftOpen(true)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                 >
                   <PanelLeftOpen className="h-4 w-4" />
                 </button>
@@ -474,7 +474,7 @@ export function WorkspaceLayout({
                   type="button"
                   aria-label="Open bottom panel"
                   onClick={() => setBottomOpen(true)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                 >
                   <PanelBottomOpen className="h-4 w-4" />
                 </button>
@@ -484,7 +484,7 @@ export function WorkspaceLayout({
                   type="button"
                   aria-label="Open right panel"
                   onClick={() => setRightOpen(true)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                 >
                   <PanelRightOpen className="h-4 w-4" />
                 </button>
@@ -509,10 +509,10 @@ export function WorkspaceLayout({
                 style={{ height: `${bottomHeight}px` }}
               >
                 <div className="flex h-full flex-col">
-                  <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2 shrink-0">
+                  <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5 bg-muted/20 shrink-0">
                     <div className="min-w-0 flex-1">
                       {bottomHeader ?? (
-                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                           Runtime
                         </span>
                       )}
@@ -521,7 +521,7 @@ export function WorkspaceLayout({
                       type="button"
                       aria-label="Collapse bottom panel"
                       onClick={() => setBottomOpen(false)}
-                      className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                      className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                     >
                       <PanelBottomClose className="h-4 w-4" />
                     </button>
@@ -553,15 +553,15 @@ export function WorkspaceLayout({
               style={rightStyle}
               className="hidden shrink-0 border-l border-border bg-background lg:flex lg:flex-col"
             >
-              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5 bg-muted/20">
                 <div className="min-w-0 flex-1">
-                  {rightHeader ?? <span className="text-sm font-semibold text-foreground">Artifacts</span>}
+                  {rightHeader ?? <span className="text-[13px] font-medium text-foreground">Artifacts</span>}
                 </div>
                 <button
                   type="button"
                   aria-label="Collapse right panel"
                   onClick={() => setRightOpen(false)}
-                  className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
                 >
                   <PanelRightClose className="h-4 w-4" />
                 </button>

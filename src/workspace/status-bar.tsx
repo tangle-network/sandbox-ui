@@ -50,7 +50,7 @@ export function StatusBar({
       {modelLabel && (
         <button
           onClick={onModelClick}
-          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] border border-border text-muted-foreground hover:border-border hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[2px] border border-border text-muted-foreground hover:border-primary/20 hover:text-foreground transition-colors"
         >
           <span className={cn("w-1.5 h-1.5 rounded-full", statusInfo.color)} />
           {modelLabel}

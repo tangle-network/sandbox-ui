@@ -64,7 +64,7 @@ export function RuntimePane({
       {content ? (
         <div className="min-h-0 flex-1 overflow-hidden">{content}</div>
       ) : (
-        <div className="grid min-h-0 flex-1 gap-px bg-[hsl(var(--border))] lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.9fr)]">
+        <div className="grid min-h-0 flex-1 gap-px bg-border lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.9fr)]">
           <div className="min-h-0 overflow-auto bg-card">
             {terminal ? (
               <TerminalPanel
@@ -81,7 +81,7 @@ export function RuntimePane({
             )}
           </div>
 
-          <div className="grid min-h-0 gap-px bg-[hsl(var(--border))]">
+          <div className="grid min-h-0 gap-px bg-border">
             <div className="min-h-0 overflow-auto bg-card">
               {audit ? (
                 audit

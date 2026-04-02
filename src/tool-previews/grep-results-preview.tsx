@@ -142,7 +142,7 @@ export const GrepResultsPreview = memo(({ part }: GrepResultsPreviewProps) => {
                 <div className="pt-0.5 text-xs font-mono text-muted-foreground">
                   {match.line ?? "·"}
                 </div>
-                <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs font-[var(--font-mono)] text-foreground">
+                <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs font-mono text-foreground">
                   {match.text}
                 </pre>
               </div>

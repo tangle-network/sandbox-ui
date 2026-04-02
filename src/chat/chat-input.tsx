@@ -348,7 +348,7 @@ export function ChatInput({
               type="button"
               onClick={onModelClick}
               aria-label={`Select model, current model ${modelLabel}`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--code-success)]" />
               {modelLabel}

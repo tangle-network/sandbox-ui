@@ -120,7 +120,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
 
       {/* Create dialog */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={() => { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null); setShowValue(false) }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null); setShowValue(false) }}>
           <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-foreground mb-1">Create Secret</h2>
             <p className="text-sm text-muted-foreground mb-6">
@@ -187,7 +187,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
 
       {/* Delete confirmation */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-foreground mb-2">Delete Secret?</h2>
             <p className="text-sm text-muted-foreground mb-6">

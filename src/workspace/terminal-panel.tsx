@@ -82,7 +82,7 @@ export function TerminalPanel({
       {!isCollapsed && (
         <div
           ref={scrollRef}
-          className="overflow-auto px-3 pb-2 font-[var(--font-mono)] text-xs leading-[1.6]"
+          className="overflow-auto px-3 pb-2 font-mono text-xs leading-[1.6]"
           style={{ maxHeight }}
         >
           {lines.map((line) => (

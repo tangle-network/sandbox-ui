@@ -131,7 +131,7 @@ const TerminalCursor = React.forwardRef<
   <span
     ref={ref}
     className={cn(
-      "ml-0.5 inline-block h-4 w-2 animate-pulse bg-[hsl(var(--foreground))]",
+      "ml-0.5 inline-block h-4 w-2 animate-pulse bg-foreground",
       className,
     )}
     {...props}

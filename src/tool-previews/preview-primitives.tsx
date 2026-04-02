@@ -34,7 +34,7 @@ export function PreviewCard({
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--text-primary)]">{title}</span>
             {description ? (
-              <span className="truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{description}</span>
+              <span className="truncate text-xs font-mono text-[var(--text-muted)]">{description}</span>
             ) : null}
           </div>
         </div>

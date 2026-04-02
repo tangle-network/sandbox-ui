@@ -154,23 +154,17 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
 
   return (
     <div>
-      <div
+      <button
+        type="button"
         className={cn(
           "flex items-center gap-1.5 w-full text-left px-2 py-[2px] cursor-pointer text-[13px] transition-colors",
+          "appearance-none bg-transparent border-none",
           "hover:bg-accent",
           isSelected ? "bg-primary/15 text-foreground" : "text-foreground",
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
         onClick={handleClick}
-        role="button"
-        tabIndex={0}
         aria-expanded={isDir ? expanded : undefined}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleClick();
-          }
-        }}
       >
         {isDir && (
           <ChevronRight
@@ -188,7 +182,7 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
             {formatSize(node.size)}
           </span>
         )}
-      </div>
+      </button>
       {isDir && expanded && node.children && (
         <div>
           {node.children
@@ -233,7 +227,7 @@ export function FileTree({
   }
 
   return (
-    <div className={cn("text-sm font-[var(--font-sans)]", className)}>
+    <div className={cn("text-sm font-sans", className)}>
       {visibleRoot.children ? (
         visibleRoot.children
           .sort((a, b) => {

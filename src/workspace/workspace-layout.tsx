@@ -178,7 +178,7 @@ function ResizeHandle({ label, onDragStart, onStep, className }: ResizeHandlePro
         className,
       )}
     >
-      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[hsl(var(--border))] transition-colors" />
+      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors" />
       <span className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-transparent hover:bg-primary/30 focus-visible:bg-primary/40" />
     </button>
   );
@@ -224,7 +224,7 @@ function HorizontalResizeHandle({ label, onDragStart, onStep, className }: Horiz
         className,
       )}
     >
-      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[hsl(var(--border))] transition-colors" />
+      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border transition-colors" />
       <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-transparent hover:bg-primary/30 focus-visible:bg-primary/40" />
     </button>
   );
@@ -245,7 +245,7 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
         type="button"
         aria-label={`Close ${title}`}
         onClick={onClose}
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
       />
       <aside
         className={cn(
@@ -417,7 +417,7 @@ export function WorkspaceLayout({
       {...(theme ? { "data-sandbox-ui": "true", "data-sandbox-theme": theme } : {})}
       data-density={density}
       className={cn(
-        "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-foreground font-[var(--font-sans)]",
+        "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-foreground font-sans",
         className,
       )}
     >

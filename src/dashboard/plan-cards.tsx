@@ -37,7 +37,7 @@ export function PlanCards({ plans, className }: PlanCardsProps) {
               "p-5 rounded-xl transition-all relative overflow-hidden border",
               plan.popular
                 ? "bg-muted/50 border-border"
-                : "bg-card border-border hover:bg-muted/50 hover:border-border",
+                : "bg-card border-border hover:bg-muted/50 hover:border-primary/20",
             )}
           >
             {plan.popular && (
@@ -68,10 +68,10 @@ export function PlanCards({ plans, className }: PlanCardsProps) {
               className={cn(
                 "w-full py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all border",
                 plan.current
-                  ? "border-border text-muted-foreground hover:border-border hover:text-foreground"
+                  ? "border-border text-muted-foreground hover:border-primary/20 hover:text-foreground"
                   : plan.popular
                     ? "bg-[var(--accent-surface-soft)] border-border text-[var(--accent-text)] hover:bg-[var(--accent-surface-strong)] active:scale-95 transition-transform"
-                    : "border-border text-foreground hover:border-border hover:text-primary",
+                    : "border-border text-foreground hover:border-primary/20 hover:text-primary",
               )}
             >
               {plan.ctaLabel ?? (plan.current ? "Current Plan" : "Upgrade Now")}

@@ -63,7 +63,7 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
         output ? (
           <span
             className={cn(
-              "inline-flex items-center rounded-full border px-2 py-0.5 font-[var(--font-mono)]",
+              "inline-flex items-center rounded-full border px-2 py-0.5 font-mono",
               isError
                 ? "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]"
                 : "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
@@ -78,7 +78,7 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
         onClick={() => setExpanded((value) => !value)}
         className="flex w-full items-center gap-2 rounded-[var(--radius-md)] border border-border bg-muted px-3 py-2 text-left transition-colors hover:border-[var(--border-accent-hover)] hover:bg-accent/45"
       >
-        <code className="min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-foreground">
+        <code className="min-w-0 flex-1 truncate text-xs font-mono text-foreground">
           {command}
         </code>
         {lineCount > 0 ? (
@@ -99,12 +99,12 @@ export const CommandPreview = memo(({ part }: CommandPreviewProps) => {
       {expanded && output ? (
         <div className="overflow-hidden rounded-[var(--radius-md)] border border-border bg-muted">
           {output.stdout ? (
-            <pre className="max-h-80 overflow-auto px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-foreground">
+            <pre className="max-h-80 overflow-auto px-3 py-3 text-xs font-mono whitespace-pre-wrap break-all text-foreground">
               {output.stdout}
             </pre>
           ) : null}
           {output.stderr ? (
-            <pre className="max-h-80 overflow-auto border-t border-border px-3 py-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-red-200">
+            <pre className="max-h-80 overflow-auto border-t border-border px-3 py-3 text-xs font-mono whitespace-pre-wrap break-all text-red-200">
               {output.stderr}
             </pre>
           ) : null}

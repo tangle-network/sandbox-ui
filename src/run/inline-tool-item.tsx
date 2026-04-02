@@ -130,7 +130,7 @@ export const InlineToolItem = memo(
                   {meta.title}
                 </span>
                 {meta.description ? (
-                  <span className="hidden truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)] sm:inline">
+                  <span className="hidden truncate text-xs font-mono text-[var(--text-muted)] sm:inline">
                     {meta.description}
                   </span>
                 ) : null}
@@ -138,7 +138,7 @@ export const InlineToolItem = memo(
                 <div className="ml-auto flex shrink-0 items-center gap-1.5">
                   {isRunning && startTime ? <LiveDuration startTime={startTime} /> : null}
                   {!isRunning && durationMs != null ? (
-                    <span className="text-[10px] font-[var(--font-mono)] tabular-nums text-[var(--text-muted)]">
+                    <span className="text-[10px] font-mono tabular-nums text-[var(--text-muted)]">
                       {formatDuration(durationMs)}
                     </span>
                   ) : null}

@@ -82,7 +82,7 @@ function FilePathChip({ path }: { path: string }) {
   const filename = parts.pop() ?? path
   const dir = parts.length > 0 ? parts.join("/") + "/" : ""
   return (
-    <div className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border bg-background px-2.5 py-1.5 font-[var(--font-mono)] text-xs min-w-0">
+    <div className="flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border bg-background px-2.5 py-1.5 font-mono text-xs min-w-0">
       <FileCode className="h-3.5 w-3.5 shrink-0 text-primary" />
       {dir && (
         <span className="truncate text-muted-foreground">{dir}</span>
@@ -132,7 +132,7 @@ export function ToolCallStep({
       className={cn(
         "group overflow-hidden rounded-[var(--radius-lg)] border bg-card transition-colors",
         status === "running" && "border-border",
-        status === "success" && "border-border hover:border-border",
+        status === "success" && "border-border hover:border-primary/20",
         status === "error" && "border-[var(--surface-danger-border)]",
         className,
       )}
@@ -161,7 +161,7 @@ export function ToolCallStep({
         </div>
 
         {/* Label */}
-        <span className="truncate flex-1 font-[var(--font-sans)] text-foreground">
+        <span className="truncate flex-1 font-sans text-foreground">
           {label}
         </span>
 
@@ -202,7 +202,7 @@ export function ToolCallStep({
           {detail && (
             isFilePath(detail)
               ? <FilePathChip path={detail} />
-              : <div className="text-xs font-[var(--font-mono)] text-muted-foreground">{detail}</div>
+              : <div className="text-xs font-mono text-muted-foreground">{detail}</div>
           )}
           {output && (
             <CodeBlock

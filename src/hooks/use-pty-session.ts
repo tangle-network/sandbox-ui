@@ -224,7 +224,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
 
   const resizeTerminal = useCallback(async (cols: number, rows: number) => {
     const sid = sessionIdRef.current;
-    if (!sid) return;
+    if (!sid || cols <= 0 || rows <= 0) return;
 
     try {
       const res = await fetch(`${apiUrl}/terminals/${sid}`, {

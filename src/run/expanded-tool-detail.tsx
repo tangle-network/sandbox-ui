@@ -96,7 +96,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
           <div className="min-w-0 flex items-center gap-2">
             <span className="text-xs font-semibold text-[var(--text-primary)]">Read file</span>
             {meta.targetPath ? (
-              <span className="truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{meta.targetPath}</span>
+              <span className="truncate text-xs font-mono text-[var(--text-muted)]">{meta.targetPath}</span>
             ) : null}
           </div>
         </div>
@@ -167,7 +167,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
               Error
             </span>
           </div>
-          <pre className="bg-[var(--surface-danger-bg)] p-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-[var(--surface-danger-text)]">
+          <pre className="bg-[var(--surface-danger-bg)] p-3 text-xs font-mono whitespace-pre-wrap break-all text-[var(--surface-danger-text)]">
             {error}
           </pre>
         </div>

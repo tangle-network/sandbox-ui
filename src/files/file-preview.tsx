@@ -84,7 +84,7 @@ function CodePreview({ content, filename }: { content: string; filename: string 
           <div className="w-3 h-3 rounded-full bg-[#FEBC2E]" />
           <div className="w-3 h-3 rounded-full bg-[#8E59FF]" />
         </div>
-        <div className="ml-2 min-w-0 flex-1 truncate text-xs font-[var(--font-mono)] text-muted-foreground">
+        <div className="ml-2 min-w-0 flex-1 truncate text-xs font-mono text-muted-foreground">
           {filename}
         </div>
         <div className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-border bg-card px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -98,10 +98,10 @@ function CodePreview({ content, filename }: { content: string; filename: string 
           <tbody>
             {lines.map((line, i) => (
               <tr key={i} className="hover:bg-accent">
-                <td className="text-right pr-4 pl-4 py-0 select-none text-muted-foreground text-xs font-[var(--font-mono)] w-10 align-top leading-[1.55]">
+                <td className="text-right pr-4 pl-4 py-0 select-none text-muted-foreground text-xs font-mono w-10 align-top leading-[1.55]">
                   {i + 1}
                 </td>
-                <td className="pr-4 py-0 font-[var(--font-mono)] text-[13px] text-foreground leading-[1.55] whitespace-pre">
+                <td className="pr-4 py-0 font-mono text-[13px] text-foreground leading-[1.55] whitespace-pre">
                   {line || " "}
                 </td>
               </tr>
@@ -180,7 +180,7 @@ function CsvPreview({ content }: { content: string }) {
               {row.map((cell, j) => (
                 <td
                   key={j}
-                  className="px-3 py-1.5 text-foreground font-[var(--font-mono)] text-xs whitespace-nowrap"
+                  className="px-3 py-1.5 text-foreground font-mono text-xs whitespace-nowrap"
                 >
                   {cell}
                 </td>
@@ -217,7 +217,7 @@ function PdfPreview({ blobUrl, filename }: { blobUrl: string; filename: string }
 
 function TextPreview({ content }: { content: string }) {
   return (
-    <pre className="bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-border p-4 overflow-auto max-h-[70vh] text-sm text-foreground font-[var(--font-mono)] leading-[1.55]">
+    <pre className="bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-border p-4 overflow-auto max-h-[70vh] text-sm text-foreground font-mono leading-[1.55]">
       {content}
     </pre>
   );

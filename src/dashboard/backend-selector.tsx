@@ -43,9 +43,9 @@ export function BackendSelector({
             "border border-border bg-card",
             "px-3 py-2.5 text-sm text-left",
             "transition-colors duration-[var(--transition-fast)]",
-            "hover:border-border hover:bg-accent/30",
-            "focus:outline-none focus:border-border",
-            "data-[state=open]:border-border data-[state=open]:bg-accent/30",
+            "hover:border-primary/20 hover:bg-accent/30",
+            "focus:outline-none focus:border-primary/30",
+            "data-[state=open]:border-primary/30 data-[state=open]:bg-accent/30",
           )}
         >
           <div className="min-w-0 flex-1">

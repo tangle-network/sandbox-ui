@@ -128,7 +128,7 @@ function AgentTimelineRow({ isLast, accentClassName, children }: AgentTimelineRo
     <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-4">
       <div className="relative flex justify-center">
         {!isLast && (
-          <span className="absolute top-4 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2 bg-[hsl(var(--border))]" />
+          <span className="absolute top-4 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2 bg-border" />
         )}
         <span className={cn("relative mt-2 h-2.5 w-2.5 rounded-full ring-4 ring-[var(--bg-root)]", accentClassName)} />
       </div>

@@ -13,7 +13,7 @@ const Card = React.forwardRef<
     elevated: "bg-muted/50 border-border shadow-[var(--shadow-card)]",
     glass: "bg-card border-border shadow-[var(--shadow-card)]",
     sandbox:
-      "bg-muted/50 border-border shadow-[var(--shadow-accent)]",
+      "bg-muted/50 border-primary/20 shadow-[var(--shadow-accent)]",
   };
 
   return (

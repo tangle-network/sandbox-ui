@@ -242,7 +242,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
             node.tone === "success" && "text-[var(--surface-success-text)]",
             node.tone === "warning" && "text-[var(--surface-warning-text)]",
             node.tone === "error" && "text-[var(--surface-danger-text)]",
-            node.mono && "font-[var(--font-mono)] text-[13px]",
+            node.mono && "font-mono text-[13px]",
           )}
         >
           {node.text}
@@ -379,13 +379,13 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
     case "separator":
       return (
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-[hsl(var(--border))]" />
+          <div className="h-px flex-1 bg-border" />
           {node.label && (
             <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               {node.label}
             </span>
           )}
-          <div className="h-px flex-1 bg-[hsl(var(--border))]" />
+          <div className="h-px flex-1 bg-border" />
         </div>
       );
 

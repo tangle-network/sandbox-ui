@@ -20,7 +20,7 @@ const buttonVariants = cva(
           "hover:bg-muted hover:text-foreground duration-[var(--transition-fast)] text-muted-foreground border border-transparent",
         link: "text-primary underline-offset-4 hover:underline",
         sandbox:
-          "bg-primary/10 backdrop-blur-2xl text-primary border border-primary/20 shadow-sm hover:bg-primary/20 active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-[image:var(--accent-gradient-strong)] text-white shadow-[var(--shadow-accent)] backdrop-blur-2xl border border-[var(--border-accent)] hover:brightness-110 active:scale-[0.97] duration-[var(--transition-fast)]",
       },
       size: {
         default: "h-[var(--control-height)] px-4 py-2",

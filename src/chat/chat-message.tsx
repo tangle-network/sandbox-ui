@@ -67,7 +67,7 @@ export function ChatMessage({
               "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border",
               isUser
                 ? "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
-                : "border-border bg-muted text-primary",
+                : "border-border bg-muted text-[var(--brand-cool)]",
             )}
           >
             {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
@@ -88,11 +88,11 @@ export function ChatMessage({
         {/* Role label + timestamp */}
         {!hideRoleLabel && (
           <div className={cn("flex items-center gap-2", isUser && "flex-row-reverse")}>
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground">
+            <span className="text-[var(--chat-label-size,11px)] font-[var(--chat-label-weight,600)] uppercase tracking-[var(--chat-label-tracking,0.14em)] text-foreground">
               {isUser ? userLabel : assistantLabel}
             </span>
             {timestamp && (
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-[var(--chat-label-size,11px)] text-muted-foreground">
                 {formatTime(timestamp)}
               </span>
             )}
@@ -108,7 +108,7 @@ export function ChatMessage({
           <>
             {content && <Markdown className="tangle-prose text-[15px] leading-7">{content}</Markdown>}
             {isStreaming && (
-              <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-primary align-text-bottom" />
+              <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-[var(--brand-cool)] align-text-bottom" />
             )}
           </>
         )}

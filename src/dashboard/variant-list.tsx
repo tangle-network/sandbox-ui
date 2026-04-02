@@ -172,14 +172,14 @@ export function VariantList({
                 />
                 {status.label}
               </Badge>
-              <span className="truncate text-sm font-medium text-[var(--text-primary)]">{variant.label}</span>
+              <span className="truncate text-sm font-medium text-foreground">{variant.label}</span>
               {variant.sublabel && (
-                <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                <span className="shrink-0 text-xs text-muted-foreground">
                   ({variant.sublabel})
                 </span>
               )}
               {variant.durationMs && (
-                <span className="flex shrink-0 items-center gap-1 text-xs text-[var(--text-muted)]">
+                <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
                   <Timer className="h-3 w-3" />
                   {(variant.durationMs / 1000).toFixed(1)}s
                 </span>
@@ -229,7 +229,7 @@ export function VariantList({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.open(variant.detailsUrl, "_blank");
@@ -244,7 +244,7 @@ export function VariantList({
               <p className="mt-1.5 text-xs text-[var(--surface-danger-text)]">{variant.error}</p>
             )}
             {variant.summary && (
-              <p className="mt-1.5 line-clamp-2 text-xs text-[var(--text-muted)]">
+              <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
                 {variant.summary}
               </p>
             )}

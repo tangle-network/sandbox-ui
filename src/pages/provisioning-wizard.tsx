@@ -27,6 +27,10 @@ export interface ProvisioningWizardProps {
   variant?: "flat" | "multistep"
   /** Pre-select an environment by ID (e.g. from a template link) */
   defaultEnvironment?: string
+  /** Pre-fill all form fields from a template preset */
+  defaultConfig?: Partial<ProvisioningConfig>
+  /** When true and defaultConfig is provided, start on the final step */
+  skipToReview?: boolean
 }
 
 export interface ProvisioningConfig {

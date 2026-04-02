@@ -3,6 +3,14 @@
 import * as React from "react"
 import { Lock, Plus, Trash2, Eye, EyeOff, Check, Copy, AlertCircle } from "lucide-react"
 import { cn } from "../lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../primitives/dialog"
 
 export interface Secret {
   name: string
@@ -119,99 +127,99 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
       )}
 
       {/* Create dialog */}
-      {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null); setShowValue(false) }}>
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-foreground mb-1">Create Secret</h2>
-            <p className="text-sm text-muted-foreground mb-6">
+      <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null); setShowValue(false) } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Secret</DialogTitle>
+            <DialogDescription>
               Secrets securely stored here will be automatically exposed as environment variables across all your new sandboxes.
-            </p>
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Name</label>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"))}
-                  placeholder="MY_SECRET_KEY"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Value</label>
-                <div className="relative">
-                  <input
-                    type={showValue ? "text" : "password"}
-                    value={newValue}
-                    onChange={(e) => setNewValue(e.target.value)}
-                    placeholder="Enter secret value..."
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowValue(!showValue)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                  >
-                    {showValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <p className="mt-1.5 text-xs text-muted-foreground">This value cannot be retrieved after creation.</p>
-              </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Name</label>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"))}
+                placeholder="MY_SECRET_KEY"
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
             </div>
-
-            {createError && (
-              <p className="mt-3 text-sm text-destructive">{createError}</p>
-            )}
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null) }}
-                className="rounded-lg border border-border bg-muted px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/80 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={!newName.trim() || !newValue || isCreating}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 active:scale-[0.97]"
-              >
-                {isCreating ? "Creating..." : "Create Secret"}
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Value</label>
+              <div className="relative">
+                <input
+                  type={showValue ? "text" : "password"}
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                  placeholder="Enter secret value..."
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowValue(!showValue)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                >
+                  {showValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <p className="mt-1.5 text-xs text-muted-foreground">This value cannot be retrieved after creation.</p>
             </div>
           </div>
-        </div>
-      )}
+
+          {createError && (
+            <p className="mt-3 text-sm text-destructive">{createError}</p>
+          )}
+
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null) }}
+              className="rounded-lg border border-border bg-muted px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/80 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={!newName.trim() || !newValue || isCreating}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 active:scale-[0.97]"
+            >
+              {isCreating ? "Creating..." : "Create Secret"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-foreground mb-2">Delete Secret?</h2>
-            <p className="text-sm text-muted-foreground mb-6">
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Secret?</DialogTitle>
+            <DialogDescription>
               This will permanently delete <span className="font-mono font-bold text-foreground">{deleteTarget}</span>. Sandboxes using this secret will lose access to it.
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteTarget(null)}
-                className="rounded-lg border border-border bg-muted px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/80 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => deleteTarget && handleDelete(deleteTarget)}
-                className="rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:bg-destructive/90 transition-colors active:scale-[0.97]"
-              >
-                Delete Secret
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setDeleteTarget(null)}
+              className="rounded-lg border border-border bg-muted px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/80 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => deleteTarget && handleDelete(deleteTarget)}
+              className="rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:bg-destructive/90 transition-colors active:scale-[0.97]"
+            >
+              Delete Secret
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Secrets table */}
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">

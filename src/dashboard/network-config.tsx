@@ -19,9 +19,11 @@ export interface NetworkConfigProps {
 export function NetworkConfig({ config, onUpdate, loading = false, className }: NetworkConfigProps) {
   const [newCidr, setNewCidr] = React.useState("")
 
+  const CIDR_RE = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/
+
   const handleAddCidr = () => {
     const cidr = newCidr.trim()
-    if (cidr && config) {
+    if (cidr && config && CIDR_RE.test(cidr)) {
       onUpdate({ allowList: [...config.allowList, cidr] })
       setNewCidr("")
     }

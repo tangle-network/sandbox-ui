@@ -19,3 +19,8 @@ export {
   TemplatesPage,
   type TemplatesPageProps,
 } from "./templates-page";
+export {
+  getPresetForTemplate,
+  type TemplatePreset,
+  type TemplateCategory,
+} from "../lib/template-presets";

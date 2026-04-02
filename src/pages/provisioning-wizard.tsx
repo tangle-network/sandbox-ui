@@ -97,7 +97,10 @@ export function ProvisioningWizard({
   className,
   variant = "flat",
   defaultEnvironment,
+  defaultConfig,
+  skipToReview,
 }: ProvisioningWizardProps) {
+  const dc = defaultConfig
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
 
   React.useEffect(() => {
@@ -110,28 +113,29 @@ export function ProvisioningWizard({
 
   const environments = envList
 
-  const [selectedEnv, setSelectedEnv] = React.useState(defaultEnvironment ?? environments[0]?.id ?? "")
+  const effectiveDefault = dc?.environment ?? defaultEnvironment
+  const [selectedEnv, setSelectedEnv] = React.useState(effectiveDefault ?? environments[0]?.id ?? "")
 
   // Sync selection when environments load asynchronously and a default was requested
   React.useEffect(() => {
-    if (defaultEnvironment && envList.some((e) => e.id === defaultEnvironment)) {
-      setSelectedEnv(defaultEnvironment)
+    if (effectiveDefault && envList.some((e) => e.id === effectiveDefault)) {
+      setSelectedEnv(effectiveDefault)
     }
-  }, [envList, defaultEnvironment])
-  const [cpuCores, setCpuCores] = React.useState(4)
-  const [ramGB, setRamGB] = React.useState(16)
-  const [storageGB, setStorageGB] = React.useState(128)
-  const [modelTier, setModelTier] = React.useState("claude-sonnet")
-  const [systemPrompt, setSystemPrompt] = React.useState("")
-  const [name, setName] = React.useState("")
-  const [gitUrl, setGitUrl] = React.useState("")
-  const [envVars, setEnvVars] = React.useState<{key: string, value: string}[]>([{ key: "", value: "" }])
-  const [driver, setDriver] = React.useState<"docker" | "firecracker" | "tangle">("docker")
-  const [bare, setBare] = React.useState(false)
+  }, [envList, effectiveDefault])
+  const [cpuCores, setCpuCores] = React.useState(dc?.cpuCores ?? 4)
+  const [ramGB, setRamGB] = React.useState(dc?.ramGB ?? 16)
+  const [storageGB, setStorageGB] = React.useState(dc?.storageGB ?? 128)
+  const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? "claude-sonnet")
+  const [systemPrompt, setSystemPrompt] = React.useState(dc?.systemPrompt ?? "")
+  const [name, setName] = React.useState(dc?.name ?? "")
+  const [gitUrl, setGitUrl] = React.useState(dc?.gitUrl ?? "")
+  const [envVars, setEnvVars] = React.useState<{key: string, value: string}[]>(dc?.envVars ?? [{ key: "", value: "" }])
+  const [driver, setDriver] = React.useState<"docker" | "firecracker" | "tangle">(dc?.driver ?? "docker")
+  const [bare, setBare] = React.useState(dc?.bare ?? false)
   const [showAdvanced, setShowAdvanced] = React.useState(false)
 
-  const [currentStep, setCurrentStep] = React.useState(1)
   const isMultistep = variant === "multistep"
+  const [currentStep, setCurrentStep] = React.useState(skipToReview && dc && isMultistep ? 3 : 1)
 
   const [isDeploying, setIsDeploying] = React.useState(false)
 
@@ -183,6 +187,31 @@ export function ProvisioningWizard({
                   {s < 3 && <div className={cn("w-4 sm:w-8 h-px mx-2 sm:mx-4 transition-colors", currentStep > s ? "bg-primary/40" : "bg-border")} />}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Template pre-fill banner */}
+          {dc && isMultistep && (
+            <div className="flex items-center justify-between glass-panel rounded-2xl px-4 py-3 shrink-0">
+              <div className="flex items-center gap-2 text-sm">
+                <Info className="h-4 w-4 text-accent shrink-0" />
+                <span className="text-muted-foreground">Pre-configured from template.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentStep(1)
+                  setCpuCores(4)
+                  setRamGB(16)
+                  setStorageGB(128)
+                  setModelTier("claude-sonnet")
+                  setSystemPrompt("")
+                  setBare(false)
+                }}
+                className="text-xs font-bold text-accent hover:text-accent-deep transition-colors"
+              >
+                Start from scratch
+              </button>
             </div>
           )}
 

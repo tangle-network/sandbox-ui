@@ -330,7 +330,7 @@ export function ChatInput({
           disabled={isStreaming || disabled}
           rows={1}
           aria-label="Message input"
-          className="min-h-[32px] max-h-[120px] flex-1 resize-none bg-transparent text-[14px] leading-6 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
+          className="min-h-[32px] max-h-[120px] flex-1 resize-none bg-transparent text-[14px] leading-6 text-foreground placeholder:text-muted-foreground disabled:opacity-50 focus-visible:outline-none"
         />
 
         {/* Send / Cancel */}
@@ -376,8 +376,8 @@ export function ChatInput({
           </div>
           {!hideShortcutHint && (
             <span className="text-xs text-muted-foreground">
-              <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-border text-[10px]">Cmd</kbd>
-              <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-border text-[10px] ml-0.5">L</kbd>
+              <kbd className="px-1 py-0.5 bg-background rounded border border-border text-[10px]">Cmd</kbd>
+              <kbd className="px-1 py-0.5 bg-background rounded border border-border text-[10px] ml-0.5">L</kbd>
               <span className="ml-1">to focus</span>
             </span>
           )}

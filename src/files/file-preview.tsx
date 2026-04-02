@@ -77,7 +77,7 @@ function CodePreview({ content, filename }: { content: string; filename: string 
   const language = filename.split(".").pop()?.toUpperCase() || "TXT";
 
   return (
-    <div className="relative bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-border overflow-hidden">
+    <div className="relative bg-background rounded-[var(--radius-md)] border border-border overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-[#FF5F57]" />
@@ -195,7 +195,7 @@ function CsvPreview({ content }: { content: string }) {
 
 function ImagePreview({ src, filename }: { src: string; filename: string }) {
   return (
-    <div className="flex items-center justify-center p-4 bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-border">
+    <div className="flex items-center justify-center p-4 bg-background rounded-[var(--radius-md)] border border-border">
       <img src={src} alt={filename} className="max-w-full max-h-[70vh] object-contain rounded" />
     </div>
   );
@@ -205,7 +205,7 @@ function PdfPreview({ blobUrl, filename }: { blobUrl: string; filename: string }
   // Simple iframe-based PDF viewer. For richer rendering, consumers can
   // swap in react-pdf at the app level.
   return (
-    <div className="rounded-[var(--radius-md)] border border-border overflow-hidden bg-[var(--bg-input)]">
+    <div className="rounded-[var(--radius-md)] border border-border overflow-hidden bg-background">
       <iframe
         src={blobUrl}
         title={filename}
@@ -217,7 +217,7 @@ function PdfPreview({ blobUrl, filename }: { blobUrl: string; filename: string }
 
 function TextPreview({ content }: { content: string }) {
   return (
-    <pre className="bg-[var(--bg-input)] rounded-[var(--radius-md)] border border-border p-4 overflow-auto max-h-[70vh] text-sm text-foreground font-mono leading-[1.55]">
+    <pre className="bg-background rounded-[var(--radius-md)] border border-border p-4 overflow-auto max-h-[70vh] text-sm text-foreground font-mono leading-[1.55]">
       {content}
     </pre>
   );
@@ -233,7 +233,7 @@ function UnsupportedPreview({
   description: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border border-dashed border-border bg-[var(--bg-input)] px-6 py-16 text-center text-muted-foreground">
+    <div className="flex flex-col items-center justify-center rounded-[var(--radius-md)] border border-dashed border-border bg-background px-6 py-16 text-center text-muted-foreground">
       <FileText className="mb-3 h-12 w-12 opacity-30" />
       <p className="text-sm text-foreground">{title}</p>
       <p className="mt-1 max-w-md text-xs">{description}</p>
@@ -244,7 +244,7 @@ function UnsupportedPreview({
 
 function MarkdownPreview({ content }: { content: string }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-border bg-[var(--bg-input)] p-5">
+    <div className="rounded-[var(--radius-md)] border border-border bg-background p-5">
       <Markdown className="prose-sm max-w-none">{content}</Markdown>
     </div>
   );

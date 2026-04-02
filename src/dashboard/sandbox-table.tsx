@@ -27,7 +27,7 @@ const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: stri
   creating: { dot: "bg-primary animate-pulse", text: "text-primary", bar: "bg-primary" },
   stopped: { dot: "bg-muted-foreground", text: "text-foreground", bar: "bg-muted-foreground" },
   failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--code-error)]", bar: "bg-[var(--code-error)]" },
-  archived: { dot: "bg-[var(--border-default)]", text: "text-muted-foreground", bar: "bg-[var(--border-default)]" },
+  archived: { dot: "bg-border", text: "text-muted-foreground", bar: "bg-border" },
 }
 
 function MiniMeter({ label, percent, className }: { label: string; percent: number; className?: string }) {

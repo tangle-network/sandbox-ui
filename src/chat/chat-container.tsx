@@ -420,9 +420,9 @@ export const ChatContainer = memo(
         >
           {messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <div className="max-w-md rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-5 py-5 text-center shadow-[var(--shadow-card)]">
-                <div className="text-sm font-semibold text-[var(--text-primary)]">Start the filing workflow</div>
-                <div className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+              <div className="max-w-md rounded-[var(--radius-xl)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-5 py-5 text-center shadow-[var(--shadow-card)]">
+                <div className="text-sm font-semibold text-foreground">Start the filing workflow</div>
+                <div className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   Ask the agent to analyze documents, generate forms, explain a calculation, or review the current filing package.
                 </div>
               </div>

@@ -143,7 +143,7 @@ function CollaborativeDocumentSurface({
               )}
               {connectionLabel(state)}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-[var(--bg-input)] px-2.5 py-1">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1">
               <Users className="h-3.5 w-3.5" />
               {collaborators.length === 0 ? "Solo editing" : `${collaboratorCount} active`}
             </span>
@@ -266,7 +266,7 @@ export function DocumentEditorPane({
         <span className="rounded-full border border-border bg-card px-2.5 py-1 font-medium">
           {isCollaborative ? "Live document" : "Local draft"}
         </span>
-        <span className="rounded-full border border-border bg-[var(--bg-input)] px-2.5 py-1">
+        <span className="rounded-full border border-border bg-background px-2.5 py-1">
           {saveStateLabel}
         </span>
         {onSave && !readOnly && (
@@ -287,7 +287,7 @@ export function DocumentEditorPane({
   const preview = (
     <div
       className={cn(
-        "rounded-[var(--radius-lg)] border border-border bg-[var(--bg-input)] p-5",
+        "rounded-[var(--radius-lg)] border border-border bg-background p-5",
         previewClassName,
       )}
     >

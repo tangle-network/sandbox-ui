@@ -148,7 +148,7 @@ export const InlineToolItem = memo(
                     </span>
                   ) : null}
                   {isRunning ? (
-                    <span className="rounded-full border border-[var(--border-accent)] bg-[var(--brand-cool)]/10 px-1.5 py-px text-[10px] font-semibold uppercase text-[var(--brand-cool)]">
+                    <span className="rounded-full border border-[var(--border-accent)] bg-primary/10 px-1.5 py-px text-[10px] font-semibold uppercase text-primary">
                       Running
                     </span>
                   ) : null}

@@ -316,7 +316,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
             code={node.code}
             language={node.language}
             showLineNumbers={node.showLineNumbers}
-            className="border-border bg-[var(--bg-input)]"
+            className="border-border bg-background"
           />
         </div>
       );

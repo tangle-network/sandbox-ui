@@ -53,10 +53,10 @@ export const InlineThinkingItem = memo(
       <Collapsible.Root open={open} onOpenChange={setOpen}>
         <div
           className={cn(
-            "overflow-hidden rounded-[var(--radius-lg)] border bg-[var(--bg-card)] transition-colors",
+            "overflow-hidden rounded-[var(--radius-lg)] border bg-card transition-colors",
             isActive
               ? "border-[var(--border-accent)]"
-              : "border-[var(--border-subtle)] hover:border-[var(--border-accent)]",
+              : "border-border hover:border-[var(--border-accent)]",
             className,
           )}
         >
@@ -68,27 +68,27 @@ export const InlineThinkingItem = memo(
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
                   isActive
-                    ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--brand-cool)]"
-                    : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)]",
+                    ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary"
+                    : "border-border bg-muted text-muted-foreground",
                 )}
               >
                 <Brain className={cn("h-3 w-3 shrink-0", isActive && "animate-pulse")} />
               </div>
 
-              <p className="min-w-0 flex-1 truncate font-[var(--font-sans)] text-[var(--text-secondary)]">
+              <p className="min-w-0 flex-1 truncate font-[var(--font-sans)] text-muted-foreground">
                 {preview ?? (isActive ? "Thinking…" : "Reasoning")}
               </p>
 
               <div className="flex shrink-0 items-center gap-2">
                 {isActive && startTime ? <LiveDuration startTime={startTime} /> : null}
                 {!isActive && durationMs != null ? (
-                  <span className="shrink-0 text-xs tabular-nums text-[var(--text-muted)]">
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                     {formatDuration(durationMs)}
                   </span>
                 ) : null}
                 <ChevronRight
                   className={cn(
-                    "h-3 w-3 text-[var(--text-muted)] transition-transform shrink-0",
+                    "h-3 w-3 text-muted-foreground transition-transform shrink-0",
                     open && "rotate-90",
                   )}
                 />
@@ -100,14 +100,14 @@ export const InlineThinkingItem = memo(
             {part.text ? (
               <div
                 className={cn(
-                  "max-h-60 overflow-y-auto border-t border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-3 text-sm leading-relaxed text-[var(--text-muted)]",
+                  "max-h-60 overflow-y-auto border-t border-border bg-muted px-3 py-3 text-sm leading-relaxed text-muted-foreground",
                   contentClassName,
                 )}
               >
                 <Markdown>{part.text}</Markdown>
               </div>
             ) : (
-              <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2.5 text-xs text-[var(--text-muted)]">
+              <div className="border-t border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground">
                 No reasoning text provided.
               </div>
             )}

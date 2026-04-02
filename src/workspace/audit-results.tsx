@@ -38,7 +38,7 @@ export function AuditResults({ forms, crossFormChecks = [], overallScore, classN
   return (
     <div className={cn("space-y-3 p-3", className)}>
       {/* Summary */}
-      <div className="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--bg-input)] border border-border">
+      <div className="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] bg-background border border-border">
         <Shield className={cn("h-5 w-5", totalChecks === totalPassed ? "text-[var(--code-success)]" : "text-[var(--code-number)]")} />
         <div>
           <div className="text-sm font-semibold text-foreground">

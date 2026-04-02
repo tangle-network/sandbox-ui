@@ -148,7 +148,7 @@ export function ToolCallStep({
         <div
           className={cn(
             "flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border",
-            status === "running" && "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--brand-cool)]",
+            status === "running" && "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary",
             status === "success" && "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]",
             status === "error" && "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]",
           )}
@@ -198,7 +198,7 @@ export function ToolCallStep({
 
       {/* Expandable content */}
       {expanded && (detail || output) && (
-        <div className="space-y-2 border-t border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2.5">
+        <div className="space-y-2 border-t border-border bg-muted px-3 py-2.5">
           {detail && (
             isFilePath(detail)
               ? <FilePathChip path={detail} />

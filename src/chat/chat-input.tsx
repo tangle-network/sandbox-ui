@@ -256,7 +256,7 @@ export function ChatInput({
       )}
 
       {/* Input row */}
-      <div className="rounded-[var(--radius-xl)] border border-[var(--chat-input-border,var(--border-default))] bg-[var(--chat-input-bg,var(--depth-2))] shadow-[var(--chat-input-shadow,var(--shadow-card))] transition-all focus-within:border-[var(--chat-input-focus-border,var(--border-accent))] focus-within:shadow-[var(--chat-input-focus-shadow,var(--shadow-card))]">
+      <div className="rounded-[var(--radius-xl)] border border-[var(--chat-input-border,var(--border-default))] [background:var(--chat-input-bg,var(--depth-2))] shadow-[var(--chat-input-shadow,var(--shadow-card))] transition-all focus-within:border-[var(--chat-input-focus-border,var(--border-accent))] focus-within:shadow-[var(--chat-input-focus-shadow,var(--shadow-card))]">
         <div className="rounded-[var(--radius-xl)] px-3 py-[var(--chat-input-py)]">
           {(inputLabel !== null || idleStatus !== null || streamingStatus !== null) && (
             <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
@@ -349,7 +349,7 @@ export function ChatInput({
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
-            className="mb-0.5 shrink-0 rounded-[var(--chat-send-radius,var(--radius-lg))] border border-[var(--chat-send-border,var(--border-accent))] bg-[var(--chat-send-bg,var(--accent-surface-soft))] p-2.5 text-[var(--chat-send-color,var(--accent-text))] shadow-[var(--chat-send-shadow,none)] transition-all hover:translate-y-[-1px] hover:bg-[var(--chat-send-hover-bg,var(--accent-surface-strong))] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-send-ring,var(--border-accent))]"
+            className="mb-0.5 shrink-0 rounded-[var(--chat-send-radius,var(--radius-lg))] border border-[var(--chat-send-border,var(--border-accent))] [background:var(--chat-send-bg,var(--accent-surface-soft))] p-2.5 text-[var(--chat-send-color,var(--accent-text))] shadow-[var(--chat-send-shadow,none)] transition-all hover:translate-y-[-1px] hover:[background:var(--chat-send-hover-bg,var(--accent-surface-strong))] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-send-ring,var(--border-accent))]"
           >
             <Send className="h-4 w-4" />
           </button>

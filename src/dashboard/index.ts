@@ -124,6 +124,12 @@ export {
   type UsageSummaryData,
 } from "./usage-summary";
 export {
+  GitPanel,
+  type GitPanelProps,
+  type GitStatusData,
+  type GitCommitData,
+} from "./git-panel";
+export {
   PortsList,
   type PortsListProps,
   type ExposedPort,
@@ -133,3 +139,24 @@ export {
   type TemplateCardProps,
   type TemplateCardData,
 } from "./template-card";
+export {
+  ProcessList,
+  type ProcessListProps,
+  type ProcessInfo,
+} from "./process-list";
+export {
+  NetworkConfig,
+  type NetworkConfigProps,
+  type NetworkConfigData,
+} from "./network-config";
+export {
+  BackendConfig,
+  type BackendConfigProps,
+  type BackendStatusData,
+  type McpServer,
+} from "./backend-config";
+export {
+  SnapshotList,
+  type SnapshotListProps,
+  type SnapshotInfo as DashboardSnapshotInfo,
+} from "./snapshot-list";

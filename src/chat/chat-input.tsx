@@ -47,6 +47,14 @@ export interface ChatInputProps {
   /** Drop zone overlay description */
   dropDescription?: string;
   className?: string;
+  /** Label above the input. Set to null to hide. Default: "Agent Command Deck" */
+  inputLabel?: string | null;
+  /** Status text shown when idle. Set to null to hide. Default: "Ready for next instruction" */
+  idleStatus?: string | null;
+  /** Status text shown when streaming. Set to null to hide. Default: "Streaming response" */
+  streamingStatus?: string | null;
+  /** Hide the Cmd+L focus shortcut hint */
+  hideShortcutHint?: boolean;
 }
 
 export function ChatInput({
@@ -65,6 +73,10 @@ export function ChatInput({
   dropTitle = "Drop files to add context",
   dropDescription = "Files will be attached to your next message.",
   className,
+  inputLabel = "Agent Command Deck",
+  idleStatus = "Ready for next instruction",
+  streamingStatus = "Streaming response",
+  hideShortcutHint,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -246,14 +258,20 @@ export function ChatInput({
       {/* Input row */}
       <div className="rounded-[var(--radius-xl)] border border-[var(--border-default)] bg-[var(--depth-2)] shadow-[var(--shadow-card)]">
         <div className="rounded-[var(--radius-xl)] px-3 py-[var(--chat-input-py)] transition-colors focus-within:border-[var(--border-accent)]">
-          <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-              Agent Command Deck
+          {(inputLabel !== null || idleStatus !== null || streamingStatus !== null) && (
+            <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
+              {inputLabel !== null && (
+                <div className="text-[var(--chat-label-size,11px)] font-[var(--chat-label-weight,600)] uppercase tracking-[var(--chat-label-tracking,0.16em)] text-[var(--text-muted)]">
+                  {inputLabel}
+                </div>
+              )}
+              {(idleStatus !== null || streamingStatus !== null) && (
+                <div className="text-[var(--chat-label-size,11px)] text-[var(--text-muted)]">
+                  {isStreaming ? (streamingStatus ?? "") : (idleStatus ?? "")}
+                </div>
+              )}
             </div>
-            <div className="text-[11px] text-muted-foreground">
-              {isStreaming ? "Streaming response" : "Ready for next instruction"}
-            </div>
-          </div>
+          )}
           <div className="flex items-end gap-2">
         {/* Attach buttons */}
         {onAttach && (
@@ -341,26 +359,30 @@ export function ChatInput({
       </div>
 
       {/* Footer: model selector + shortcuts */}
-      <div className="mt-2 flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          {modelLabel && (
-            <button
-              type="button"
-              onClick={onModelClick}
-              aria-label={`Select model, current model ${modelLabel}`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--code-success)]" />
-              {modelLabel}
-            </button>
+      {(modelLabel || !hideShortcutHint) && (
+        <div className="mt-2 flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            {modelLabel && (
+              <button
+                type="button"
+                onClick={onModelClick}
+                aria-label={`Select model, current model ${modelLabel}`}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-full)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--code-success)]" />
+                {modelLabel}
+              </button>
+            )}
+          </div>
+          {!hideShortcutHint && (
+            <span className="text-xs text-muted-foreground">
+              <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-border text-[10px]">Cmd</kbd>
+              <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-border text-[10px] ml-0.5">L</kbd>
+              <span className="ml-1">to focus</span>
+            </span>
           )}
         </div>
-        <span className="text-xs text-muted-foreground">
-          <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-border text-[10px]">Cmd</kbd>
-          <kbd className="px-1 py-0.5 bg-[var(--bg-input)] rounded border border-border text-[10px] ml-0.5">L</kbd>
-          <span className="ml-1">to focus</span>
-        </span>
-      </div>
+      )}
     </div>
   );
 }

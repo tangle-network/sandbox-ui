@@ -5,6 +5,10 @@
 
 @import "tailwindcss";
 
+/* Scan all component source files so every Tailwind class used in JSX is generated */
+@source "../../src/**/*.tsx";
+@source "../../src/**/*.ts";
+
 @layer base {
   :root {
     --sandbox: var(--primary);

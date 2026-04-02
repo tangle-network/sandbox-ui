@@ -138,6 +138,9 @@ importers:
       '@xterm/xterm':
         specifier: ^6.0.0
         version: 6.0.0
+      postcss:
+        specifier: ^8.5.8
+        version: 8.5.8
       react:
         specifier: ^19.1.0
         version: 19.2.4

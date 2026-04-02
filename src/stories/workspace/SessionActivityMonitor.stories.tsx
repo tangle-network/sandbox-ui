@@ -73,17 +73,17 @@ const RUNNING_SESSIONS: Record<string, ActiveSessionRecord> = {
   }),
 }
 
-function WithSessions({ sessions, children }: { sessions: ActiveSessionRecord[]; children: React.ReactNode }) {
+function WithSessions({ sessions, children }: { sessions: Record<string, ActiveSessionRecord>; children: React.ReactNode }) {
   useEffect(() => {
-    activeSessionsAtom.set(sessions)
-    return () => activeSessionsAtom.set([])
+    activeSessionsAtom.set({ sessions, lastUpdatedAt: Date.now() })
+    return () => activeSessionsAtom.set({ sessions: {}, lastUpdatedAt: Date.now() })
   }, [sessions])
   return <>{children}</>
 }
 
 export const Default: Story = {
   render: () => (
-    <WithSessions sessions={Object.values(RUNNING_SESSIONS)}>
+    <WithSessions sessions={RUNNING_SESSIONS}>
       <SessionActivityMonitor sessionsById={RUNNING_SESSIONS} />
     </WithSessions>
   ),
@@ -91,7 +91,7 @@ export const Default: Story = {
 
 export const Empty: Story = {
   render: () => (
-    <WithSessions sessions={[]}>
+    <WithSessions sessions={{}}>
       <SessionActivityMonitor />
     </WithSessions>
   ),
@@ -99,7 +99,7 @@ export const Empty: Story = {
 
 export const Compact: Story = {
   render: () => (
-    <WithSessions sessions={Object.values(RUNNING_SESSIONS)}>
+    <WithSessions sessions={RUNNING_SESSIONS}>
       <SessionActivityMonitor compact sessionsById={RUNNING_SESSIONS} />
     </WithSessions>
   ),

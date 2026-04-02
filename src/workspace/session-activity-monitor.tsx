@@ -19,15 +19,15 @@ export interface SessionActivityMonitorProps {
 
 function SessionStatusDot({ session }: { session: ActiveSessionRecord }) {
   if (session.status === "error") {
-    return <AlertCircle className="h-3 w-3 text-destructive" />;
+    return <AlertCircle className="h-3 w-3 text-[var(--surface-danger-text)]" />;
   }
   if (session.status === "running") {
-    return <LoaderCircle className="h-3 w-3 animate-spin text-primary" />;
+    return <LoaderCircle className="h-3 w-3 animate-spin text-[var(--brand-cool)]" />;
   }
   if (session.status === "attention-needed") {
-    return <Activity className="h-3 w-3 text-warning" />;
+    return <Activity className="h-3 w-3 text-[var(--surface-warning-text)]" />;
   }
-  return <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />;
+  return <span className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)]" />;
 }
 
 function navigateToSession(session: ActiveSessionRecord) {
@@ -53,7 +53,7 @@ export function SessionActivityMonitor({
   if (projectActivity.length === 0) {
     if (compact) return null;
     return (
-      <div className={cn("rounded-md border border-dashed border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground", className)}>
+      <div className={cn("rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2.5 text-xs text-[var(--text-muted)]", className)}>
         {emptyMessage}
       </div>
     );
@@ -62,12 +62,12 @@ export function SessionActivityMonitor({
   return (
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
           <Activity className="h-3 w-3" />
           Active
         </span>
         {totalRunning > 0 && (
-          <span className="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary">
+          <span className="rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-1.5 py-px text-[10px] font-medium text-[var(--brand-cool)]">
             {totalRunning}
           </span>
         )}
@@ -82,24 +82,24 @@ export function SessionActivityMonitor({
           return (
             <div
               key={String(project.projectId)}
-              className="rounded-md border border-border bg-muted"
+              className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]"
             >
               <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
                 <div className="min-w-0">
-                  <div className="truncate text-xs font-medium text-foreground">{label}</div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="truncate text-xs font-medium text-[var(--text-primary)]">{label}</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">
                     {project.activeSessionCount} session{project.activeSessionCount === 1 ? "" : "s"}
                   </div>
                 </div>
                 {project.runningSessionIds.length > 0 && (
-                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                  <span className="shrink-0 text-[10px] text-[var(--text-muted)]">
                     {project.runningSessionIds.length} live
                   </span>
                 )}
               </div>
 
               {!compact && project.runningSessionIds.length > 0 && (
-                <div className="border-t border-border px-1 py-0.5">
+                <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-section)] px-1 py-0.5">
                   {project.runningSessionIds.map((sessionId) => {
                     const session = sessionLookup[sessionId];
                     if (!session) return null;
@@ -114,13 +114,13 @@ export function SessionActivityMonitor({
                           }
                           navigateToSession(session);
                         }}
-                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors hover:bg-accent"
+                        className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1 text-left transition-colors hover:bg-[var(--accent-surface-soft)]"
                       >
                         <SessionStatusDot session={session} />
-                        <span className="min-w-0 truncate text-xs text-foreground">
+                        <span className="min-w-0 truncate text-xs text-[var(--text-secondary)]">
                           {session.title ?? "Untitled"}
                         </span>
-                        <MessageSquareText className="ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
+                        <MessageSquareText className="ml-auto h-3 w-3 shrink-0 text-[var(--text-muted)]" />
                       </button>
                     );
                   })}

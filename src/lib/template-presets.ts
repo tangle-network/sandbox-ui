@@ -26,6 +26,11 @@ const AI_ML_PATTERNS = [
   "milvus", "weaviate", "mlops", "jupyter", "scientific-python",
 ]
 
+const FRONTEND_PATTERNS = [
+  "react", "next", "vue", "angular", "svelte", "vite", "astro",
+  "remix", "gatsby", "nuxt",
+]
+
 const INFRASTRUCTURE_PATTERNS = [
   "redis", "postgresql", "mongodb", "kafka", "elasticsearch",
   "clickhouse", "minio", "kubernetes", "terraform", "pulumi",
@@ -36,6 +41,7 @@ function categorizeTemplate(id: string): TemplateCategory {
   const lower = id.toLowerCase()
   if (BLOCKCHAIN_PATTERNS.some((p) => lower.includes(p))) return "blockchain"
   if (AI_ML_PATTERNS.some((p) => lower.includes(p))) return "ai-ml"
+  if (FRONTEND_PATTERNS.some((p) => lower.includes(p))) return "frontend"
   if (INFRASTRUCTURE_PATTERNS.some((p) => lower.includes(p))) return "infrastructure"
   return "general"
 }

@@ -23,7 +23,6 @@ export interface BackendConfigProps {
   mcpServers: McpServer[]
   onAddMcp: (server: { name: string; command: string; args?: string[] }) => void
   onRemoveMcp: (name: string) => void
-  onUpdateModel: (model: string) => void
   onRestart: () => void
   loading?: boolean
   className?: string
@@ -34,7 +33,6 @@ export function BackendConfig({
   mcpServers,
   onAddMcp,
   onRemoveMcp,
-  onUpdateModel,
   onRestart,
   loading = false,
   className,

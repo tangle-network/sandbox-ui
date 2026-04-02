@@ -23,9 +23,13 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
   const [copiedPort, setCopiedPort] = React.useState<number | null>(null)
 
   const handleCopy = async (url: string, port: number) => {
-    await navigator.clipboard.writeText(url)
-    setCopiedPort(port)
-    setTimeout(() => setCopiedPort(null), 2000)
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedPort(port)
+      setTimeout(() => setCopiedPort(null), 2000)
+    } catch (err) {
+      console.warn("Clipboard write failed:", err)
+    }
   }
 
   const handleExpose = () => {

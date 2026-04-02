@@ -19,11 +19,17 @@ export interface NetworkConfigProps {
 export function NetworkConfig({ config, onUpdate, loading = false, className }: NetworkConfigProps) {
   const [newCidr, setNewCidr] = React.useState("")
 
-  const CIDR_RE = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/
+  const isValidCidr = (value: string): boolean => {
+    const match = value.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/)
+    if (!match) return false
+    const octets = [match[1], match[2], match[3], match[4]].map(Number)
+    const prefix = Number(match[5])
+    return octets.every((o) => o <= 255) && prefix <= 32
+  }
 
   const handleAddCidr = () => {
     const cidr = newCidr.trim()
-    if (cidr && config && CIDR_RE.test(cidr)) {
+    if (cidr && config && isValidCidr(cidr)) {
       onUpdate({ allowList: [...config.allowList, cidr] })
       setNewCidr("")
     }

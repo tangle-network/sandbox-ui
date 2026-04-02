@@ -101,16 +101,19 @@ export interface CodeBlockProps extends HTMLAttributes<HTMLDivElement> {
 
 const LIGHT_THEMES = new Set(["vault", "dawn"]);
 
-function useIsLightTheme(): boolean {
-  const detect = () =>
+function detectLightTheme() {
+  return (
     typeof document !== "undefined" &&
-    LIGHT_THEMES.has(document.documentElement.getAttribute("data-sandbox-theme") ?? "");
+    LIGHT_THEMES.has(document.documentElement.getAttribute("data-sandbox-theme") ?? "")
+  );
+}
 
-  const [isLight, setIsLight] = useState(detect);
+function useIsLightTheme(): boolean {
+  const [isLight, setIsLight] = useState(detectLightTheme);
 
   useEffect(() => {
-    setIsLight(detect());
-    const observer = new MutationObserver(() => setIsLight(detect()));
+    setIsLight(detectLightTheme());
+    const observer = new MutationObserver(() => setIsLight(detectLightTheme()));
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-sandbox-theme"],

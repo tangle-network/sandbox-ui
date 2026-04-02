@@ -191,11 +191,11 @@ export const CopyButton = memo(({ text }: { text: string }) => {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--bg-section)] border border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-colors"
+      className="flex items-center justify-center w-6 h-6 rounded-md bg-muted border border-border hover:border-primary/20 transition-colors"
       title="Copy to clipboard"
     >
       {copied ? (
-        <Check className="w-3.5 h-3.5 text-[var(--brand-emerald)]" />
+        <Check className="w-3.5 h-3.5 text-emerald-500" />
       ) : (
         <Copy className="w-3.5 h-3.5 text-muted-foreground" />
       )}

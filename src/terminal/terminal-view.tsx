@@ -1,5 +1,5 @@
 import "@xterm/xterm/css/xterm.css";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -92,7 +92,10 @@ export default function TerminalView({
   subtitle = "Connected to PTY session",
   isActive = true,
 }: TerminalViewProps) {
-  const resolvedTheme = { ...DEFAULT_TERMINAL_THEME, ...theme };
+  const resolvedTheme = useMemo(
+    () => ({ ...DEFAULT_TERMINAL_THEME, ...theme }),
+    [theme],
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -178,7 +181,14 @@ export default function TerminalView({
       termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [sendCommand, resizeTerminal, resolvedTheme, title, subtitle]);
+  }, [sendCommand, resizeTerminal, title, subtitle]);
+
+  // Update theme without re-creating the terminal
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.theme = resolvedTheme;
+    }
+  }, [resolvedTheme]);
 
   // Synchronize size with sidecar once connected to trigger SIGWINCH
   useEffect(() => {

@@ -40,6 +40,7 @@ export function useAuth({
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
+  const retryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchSession = React.useCallback(async () => {
     setIsLoading(true);
@@ -65,8 +66,7 @@ export function useAuth({
       setUser(null);
 
       if (shouldRetryOnError) {
-        // Retry after 5 seconds on error
-        setTimeout(fetchSession, 5000);
+        retryTimerRef.current = setTimeout(fetchSession, 5000);
       }
     } finally {
       setIsLoading(false);
@@ -75,6 +75,7 @@ export function useAuth({
 
   React.useEffect(() => {
     fetchSession();
+    return () => { if (retryTimerRef.current) clearTimeout(retryTimerRef.current); };
   }, [fetchSession]);
 
   React.useEffect(() => {

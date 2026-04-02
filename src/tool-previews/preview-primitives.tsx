@@ -32,9 +32,9 @@ export function PreviewCard({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--text-primary)]">{title}</span>
+            <span className="text-xs font-semibold text-foreground">{title}</span>
             {description ? (
-              <span className="truncate text-xs font-mono text-[var(--text-muted)]">{description}</span>
+              <span className="truncate text-xs font-mono text-muted-foreground">{description}</span>
             ) : null}
           </div>
         </div>

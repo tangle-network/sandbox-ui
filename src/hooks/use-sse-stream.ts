@@ -117,10 +117,10 @@ export function useSSEStream<T = unknown>(
   const [events, setEvents] = React.useState<SSEEvent<T>[]>([]);
   const [lastEvent, setLastEvent] = React.useState<SSEEvent<T> | null>(null);
   const [error, setError] = React.useState<Error | null>(null);
-  const [retryCount, setRetryCount] = React.useState(0);
   const [lastEventTime, setLastEventTime] = React.useState<number>(Date.now());
   const [timeSinceLastEvent, setTimeSinceLastEvent] = React.useState(0);
 
+  const retryCountRef = React.useRef(0);
   const eventSourceRef = React.useRef<EventSource | null>(null);
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const reconnectTimeoutRef = React.useRef<ReturnType<
@@ -156,7 +156,10 @@ export function useSSEStream<T = unknown>(
 
       setLastEventTime(Date.now());
       setLastEvent(event);
-      setEvents((prev) => [...prev, event]);
+      setEvents((prev) => {
+        const next = [...prev, event];
+        return next.length > 1000 ? next.slice(-1000) : next;
+      });
       onEvent?.(event);
     },
     [onEvent],
@@ -229,7 +232,7 @@ export function useSSEStream<T = unknown>(
           }
 
           setState("connected");
-          setRetryCount(0);
+          retryCountRef.current = 0;
 
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
@@ -292,10 +295,10 @@ export function useSSEStream<T = unknown>(
           // Stream ended - reconnect if enabled
           if (autoReconnect && enabled) {
             setState("reconnecting");
-            const delay = reconnectDelay * 2 ** retryCount;
+            const delay = reconnectDelay * 2 ** retryCountRef.current;
             reconnectTimeoutRef.current = setTimeout(
               () => {
-                setRetryCount((c) => c + 1);
+                retryCountRef.current += 1;
                 connect();
               },
               Math.min(delay, 30000),
@@ -314,12 +317,12 @@ export function useSSEStream<T = unknown>(
           setState("error");
 
           // Reconnect on error
-          if (autoReconnect && enabled && retryCount < maxRetries) {
+          if (autoReconnect && enabled && retryCountRef.current < maxRetries) {
             setState("reconnecting");
-            const delay = reconnectDelay * 2 ** retryCount;
+            const delay = reconnectDelay * 2 ** retryCountRef.current;
             reconnectTimeoutRef.current = setTimeout(
               () => {
-                setRetryCount((c) => c + 1);
+                retryCountRef.current += 1;
                 connect();
               },
               Math.min(delay, 30000),
@@ -333,7 +336,7 @@ export function useSSEStream<T = unknown>(
 
       es.onopen = () => {
         setState("connected");
-        setRetryCount(0);
+        retryCountRef.current = 0;
       };
 
       es.onerror = () => {
@@ -341,13 +344,13 @@ export function useSSEStream<T = unknown>(
         setError(err);
         onError?.(err);
 
-        if (autoReconnect && enabled && retryCount < maxRetries) {
+        if (autoReconnect && enabled && retryCountRef.current < maxRetries) {
           setState("reconnecting");
           es.close();
-          const delay = reconnectDelay * 2 ** retryCount;
+          const delay = reconnectDelay * 2 ** retryCountRef.current;
           reconnectTimeoutRef.current = setTimeout(
             () => {
-              setRetryCount((c) => c + 1);
+              retryCountRef.current += 1;
               connect();
             },
             Math.min(delay, 30000),
@@ -390,7 +393,6 @@ export function useSSEStream<T = unknown>(
     autoReconnect,
     maxRetries,
     reconnectDelay,
-    retryCount,
     eventTypes,
     handleEvent,
     onError,
@@ -418,7 +420,7 @@ export function useSSEStream<T = unknown>(
     connect,
     disconnect,
     clearEvents,
-    retryCount,
+    retryCount: retryCountRef.current,
     timeSinceLastEvent,
   };
 }

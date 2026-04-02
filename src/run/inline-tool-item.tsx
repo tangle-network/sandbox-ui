@@ -126,11 +126,11 @@ export const InlineToolItem = memo(
                   )}
                 </div>
 
-                <span className="truncate text-xs font-medium text-[var(--text-primary)]">
+                <span className="truncate text-xs font-medium text-foreground">
                   {meta.title}
                 </span>
                 {meta.description ? (
-                  <span className="hidden truncate text-xs font-mono text-[var(--text-muted)] sm:inline">
+                  <span className="hidden truncate text-xs font-mono text-muted-foreground sm:inline">
                     {meta.description}
                   </span>
                 ) : null}
@@ -138,7 +138,7 @@ export const InlineToolItem = memo(
                 <div className="ml-auto flex shrink-0 items-center gap-1.5">
                   {isRunning && startTime ? <LiveDuration startTime={startTime} /> : null}
                   {!isRunning && durationMs != null ? (
-                    <span className="text-[10px] font-mono tabular-nums text-[var(--text-muted)]">
+                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
                       {formatDuration(durationMs)}
                     </span>
                   ) : null}
@@ -153,9 +153,9 @@ export const InlineToolItem = memo(
                     </span>
                   ) : null}
                   {open ? (
-                    <ChevronDown className="h-3 w-3 text-[var(--text-muted)]" />
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-3 w-3 text-[var(--text-muted)]" />
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
                   )}
                 </div>
               </div>

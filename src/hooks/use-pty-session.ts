@@ -179,7 +179,9 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     }
   }, [apiUrl, token, abortStream]);
 
-  connectStreamRef.current = connectStream;
+  useEffect(() => {
+    connectStreamRef.current = connectStream;
+  });
 
   // -- Full connect: create terminal + open SSE stream -----------------------
 

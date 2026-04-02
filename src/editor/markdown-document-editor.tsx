@@ -92,7 +92,7 @@ export function MarkdownDocumentEditor({
   return (
     <div
       className={cn(
-        "flex min-h-[14rem] w-full flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-input)]",
+        "flex min-h-[14rem] w-full flex-col overflow-hidden rounded-lg border border-border bg-background",
         className,
       )}
     >
@@ -108,14 +108,14 @@ export function MarkdownDocumentEditor({
         .ProseMirror p.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
-          color: var(--text-muted, #999);
+          color: hsl(var(--muted-foreground));
           pointer-events: none;
           height: 0;
         }
 
         .ProseMirror pre {
-          background: var(--bg-elevated, #16161a);
-          border: 1px solid var(--border-subtle, rgba(255,255,255,0.08));
+          background: hsl(var(--muted));
+          border: 1px solid hsl(var(--border));
           border-radius: 0.75rem;
           padding: 0.875rem 1rem;
           overflow-x: auto;

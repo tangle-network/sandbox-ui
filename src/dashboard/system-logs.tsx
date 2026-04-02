@@ -75,7 +75,7 @@ export function SystemLogsViewer({ apiUrl, token, className }: SystemLogsViewerP
 
     // If we're within 20px of the bottom, turn following ON, otherwise OFF
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 20;
-    setIsFollowing(isAtBottom);
+    setIsFollowing((prev) => prev === isAtBottom ? prev : isAtBottom);
   };
 
   return (

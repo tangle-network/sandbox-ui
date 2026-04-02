@@ -61,7 +61,7 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
             </thead>
             <tbody className="divide-y divide-border">
               {processes.map((p) => (
-                <tr key={p.pid}>
+                <tr key={`${p.pid}-${p.startedAt ?? p.command}`}>
                   <td className="px-4 py-3 font-mono text-xs text-foreground">{p.pid}</td>
                   <td className="px-4 py-3 font-mono text-xs text-foreground truncate max-w-[250px]">{p.command}</td>
                   <td className="px-4 py-3">

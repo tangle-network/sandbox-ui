@@ -352,7 +352,9 @@ export function useSessionStream({
     }
   }, [refetch]);
 
-  handleSSEEventRef.current = handleSSEEvent;
+  useEffect(() => {
+    handleSSEEventRef.current = handleSSEEvent;
+  });
 
   // ── Send message ───────────────────────────────────────────────────
 

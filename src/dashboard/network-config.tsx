@@ -29,7 +29,7 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
 
   const handleAddCidr = () => {
     const cidr = newCidr.trim()
-    if (cidr && config && isValidCidr(cidr)) {
+    if (cidr && config && isValidCidr(cidr) && !config.allowList.includes(cidr)) {
       onUpdate({ allowList: [...config.allowList, cidr] })
       setNewCidr("")
     }
@@ -63,6 +63,9 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
         </div>
         <button
           type="button"
+          role="switch"
+          aria-checked={config.blockOutbound}
+          aria-label="Block outbound traffic"
           onClick={() => onUpdate({ blockOutbound: !config.blockOutbound })}
           className={cn(
             "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",

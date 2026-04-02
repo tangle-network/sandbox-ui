@@ -66,6 +66,7 @@ export function useAuth({
       setUser(null);
 
       if (shouldRetryOnError) {
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
         retryTimerRef.current = setTimeout(fetchSession, 5000);
       }
     } finally {

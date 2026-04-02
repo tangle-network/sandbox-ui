@@ -185,7 +185,9 @@ export const CopyButton = memo(({ text }: { text: string }) => {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch (err) {
+      console.warn("Clipboard write failed:", err);
+    }
   }, [text]);
 
   return (

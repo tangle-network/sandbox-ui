@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Lock, Plus, Trash2, Eye, EyeOff, Check, Copy, AlertCircle } from "lucide-react"
+import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { cn } from "../lib/utils"
 import {
   Dialog,
@@ -42,9 +42,11 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
   const [createError, setCreateError] = React.useState<string | null>(null)
 
   const [deleteTarget, setDeleteTarget] = React.useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = React.useState(false)
 
   const loadSecrets = React.useCallback(async () => {
     try {
+      setLoading(true)
       setError(null)
       const data = await apiClient.listSecrets()
       setSecrets(data)
@@ -78,12 +80,15 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
   }
 
   const handleDelete = async (name: string) => {
+    setIsDeleting(true)
     try {
       await apiClient.deleteSecret(name)
       setDeleteTarget(null)
       loadSecrets()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete secret")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -213,9 +218,10 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
             <button
               type="button"
               onClick={() => deleteTarget && handleDelete(deleteTarget)}
-              className="rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:bg-destructive/90 transition-colors active:scale-[0.97]"
+              disabled={isDeleting}
+              className="rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50 active:scale-[0.97]"
             >
-              Delete Secret
+              {isDeleting ? "Deleting..." : "Delete Secret"}
             </button>
           </DialogFooter>
         </DialogContent>

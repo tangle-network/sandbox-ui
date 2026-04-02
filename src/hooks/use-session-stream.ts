@@ -353,10 +353,7 @@ export function useSessionStream({
     }
   }, [refetch]);
 
-  // Intentionally no deps — always keep ref pointing to latest handler
-  useEffect(() => {
-    handleSSEEventRef.current = handleSSEEvent;
-  });
+  handleSSEEventRef.current = handleSSEEvent;
 
   // ── Send message ───────────────────────────────────────────────────
 

@@ -10,7 +10,6 @@ export interface TemplateCardData {
   description: string
   icon?: React.ReactNode
   tags?: string[]
-  color?: string
 }
 
 export interface TemplateCardProps {

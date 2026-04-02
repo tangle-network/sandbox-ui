@@ -81,16 +81,22 @@ export function SidebarProvider({
 
   const switchModeStable = React.useCallback((m: string) => {
     setModeState((prevMode) => {
-      setPanelOpenState((prevOpen) => {
-        const shouldClose = prevOpen && prevMode === m
-        localStorage.setItem(PANEL_OPEN_KEY, String(!shouldClose))
-        return !shouldClose
-      })
-      if (prevMode !== m) {
-        localStorage.setItem(SIDEBAR_MODE_KEY, m)
-        return m
+      if (prevMode === m) {
+        // Same mode — toggle panel
+        setPanelOpenState((prevOpen) => {
+          const next = !prevOpen
+          localStorage.setItem(PANEL_OPEN_KEY, String(next))
+          return next
+        })
+        return prevMode
       }
-      return prevMode
+      // Different mode — always open panel
+      setPanelOpenState(() => {
+        localStorage.setItem(PANEL_OPEN_KEY, "true")
+        return true
+      })
+      localStorage.setItem(SIDEBAR_MODE_KEY, m)
+      return m
     })
   }, [])
 

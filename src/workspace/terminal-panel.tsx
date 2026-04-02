@@ -67,7 +67,7 @@ export function TerminalPanel({
         <TerminalIcon className="h-3.5 w-3.5" />
         <span className="font-medium">{title}</span>
         {lines.length > 0 && (
-          <span className="px-1.5 py-0.5 rounded-[var(--radius-full)] bg-[var(--bg-input)] text-[10px] tabular-nums">
+          <span className="px-1.5 py-0.5 rounded-full bg-muted text-[10px] tabular-nums">
             {lines.length}
           </span>
         )}

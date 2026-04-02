@@ -178,11 +178,8 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     }
   }, [apiUrl, token, abortStream]);
 
-  // Intentionally no deps — always keep refs pointing to latest callbacks
-  useEffect(() => {
-    onDataRef.current = onData;
-    connectStreamRef.current = connectStream;
-  });
+  onDataRef.current = onData;
+  connectStreamRef.current = connectStream;
 
   // -- Full connect: create terminal + open SSE stream -----------------------
 

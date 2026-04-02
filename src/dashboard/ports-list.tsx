@@ -21,12 +21,18 @@ export interface PortsListProps {
 export function PortsList({ ports, onExposePort, onRemovePort, isExposing = false, className }: PortsListProps) {
   const [newPort, setNewPort] = React.useState("")
   const [copiedPort, setCopiedPort] = React.useState<number | null>(null)
+  const copyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  React.useEffect(() => {
+    return () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current) }
+  }, [])
 
   const handleCopy = async (url: string, port: number) => {
     try {
       await navigator.clipboard.writeText(url)
       setCopiedPort(port)
-      setTimeout(() => setCopiedPort(null), 2000)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopiedPort(null), 2000)
     } catch (err) {
       console.warn("Clipboard write failed:", err)
     }

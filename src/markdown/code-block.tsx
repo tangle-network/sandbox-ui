@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useRef,
   useState,
   type HTMLAttributes,
   type ReactNode,
@@ -112,6 +113,7 @@ function useIsLightTheme(): boolean {
   const [isLight, setIsLight] = useState(detectLightTheme);
 
   useEffect(() => {
+    if (typeof document === "undefined") return;
     setIsLight(detectLightTheme());
     const observer = new MutationObserver(() => setIsLight(detectLightTheme()));
     observer.observe(document.documentElement, {
@@ -182,12 +184,18 @@ CodeBlock.displayName = "CodeBlock";
 /** Copy-to-clipboard button for use inside CodeBlock. */
 export const CopyButton = memo(({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.warn("Clipboard write failed:", err);
     }

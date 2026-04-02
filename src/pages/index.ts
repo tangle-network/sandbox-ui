@@ -8,3 +8,13 @@ export {
   type ProfileFormData,
   type ProfileMetrics,
 } from "./profiles-page";
+export {
+  SecretsPage,
+  type SecretsPageProps,
+  type SecretsApiClient,
+  type Secret,
+} from "./secrets-page";
+export {
+  TemplatesPage,
+  type TemplatesPageProps,
+} from "./templates-page";

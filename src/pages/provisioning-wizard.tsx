@@ -25,6 +25,8 @@ export interface ProvisioningWizardProps {
   onBack?: () => void
   className?: string
   variant?: "flat" | "multistep"
+  /** Pre-select an environment by ID (e.g. from a template link) */
+  defaultEnvironment?: string
 }
 
 export interface ProvisioningConfig {
@@ -90,6 +92,7 @@ export function ProvisioningWizard({
   onBack,
   className,
   variant = "flat",
+  defaultEnvironment,
 }: ProvisioningWizardProps) {
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
 
@@ -103,7 +106,14 @@ export function ProvisioningWizard({
 
   const environments = envList
 
-  const [selectedEnv, setSelectedEnv] = React.useState(environments[0]?.id ?? "")
+  const [selectedEnv, setSelectedEnv] = React.useState(defaultEnvironment ?? environments[0]?.id ?? "")
+
+  // Sync selection when environments load asynchronously and a default was requested
+  React.useEffect(() => {
+    if (defaultEnvironment && envList.some((e) => e.id === defaultEnvironment)) {
+      setSelectedEnv(defaultEnvironment)
+    }
+  }, [envList, defaultEnvironment])
   const [cpuCores, setCpuCores] = React.useState(4)
   const [ramGB, setRamGB] = React.useState(16)
   const [storageGB, setStorageGB] = React.useState(128)

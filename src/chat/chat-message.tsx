@@ -22,6 +22,16 @@ export interface ChatMessageProps {
   /** Timestamp */
   timestamp?: Date;
   className?: string;
+  /** Custom user label. Default: "You" */
+  userLabel?: string;
+  /** Custom assistant label. Default: "Agent" */
+  assistantLabel?: string;
+  /** Hide the role label row entirely */
+  hideRoleLabel?: boolean;
+  /** Hide the avatar icon */
+  hideAvatar?: boolean;
+  /** Custom avatar element (replaces default User/Bot icon) */
+  avatar?: ReactNode;
 }
 
 export function ChatMessage({
@@ -31,6 +41,11 @@ export function ChatMessage({
   isStreaming,
   timestamp,
   className,
+  userLabel = "You",
+  assistantLabel = "Agent",
+  hideRoleLabel,
+  hideAvatar,
+  avatar,
 }: ChatMessageProps) {
   const isUser = role === "user";
 
@@ -43,16 +58,22 @@ export function ChatMessage({
       )}
     >
       {/* Avatar */}
-      <div
-        className={cn(
-          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border",
-          isUser
-            ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
-            : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--brand-cool)]",
-        )}
-      >
-        {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
-      </div>
+      {!hideAvatar && (
+        avatar ? (
+          <div className="mt-0.5 shrink-0">{avatar}</div>
+        ) : (
+          <div
+            className={cn(
+              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border",
+              isUser
+                ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
+                : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--brand-cool)]",
+            )}
+          >
+            {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+          </div>
+        )
+      )}
 
       {/* Bubble */}
       <div
@@ -65,16 +86,18 @@ export function ChatMessage({
         )}
       >
         {/* Role label + timestamp */}
-        <div className={cn("flex items-center gap-2", isUser && "flex-row-reverse")}>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">
-            {isUser ? "You" : "Agent"}
-          </span>
-          {timestamp && (
-            <span className="text-[11px] text-[var(--text-muted)]">
-              {formatTime(timestamp)}
+        {!hideRoleLabel && (
+          <div className={cn("flex items-center gap-2", isUser && "flex-row-reverse")}>
+            <span className="text-[var(--chat-label-size,11px)] font-[var(--chat-label-weight,600)] uppercase tracking-[var(--chat-label-tracking,0.14em)] text-[var(--text-secondary)]">
+              {isUser ? userLabel : assistantLabel}
             </span>
-          )}
-        </div>
+            {timestamp && (
+              <span className="text-[var(--chat-label-size,11px)] text-[var(--text-muted)]">
+                {formatTime(timestamp)}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Message body */}
         {isUser ? (

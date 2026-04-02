@@ -15,10 +15,6 @@ export interface InlineThinkingItemProps {
   contentClassName?: string;
 }
 
-/**
- * Minimal collapsible display for thinking/reasoning parts.
- * Shows "Thinking..." with optional preview text and duration.
- */
 export const InlineThinkingItem = memo(
   ({
     part,
@@ -58,65 +54,53 @@ export const InlineThinkingItem = memo(
         <Collapsible.Trigger asChild>
           <button
             className={cn(
-              "w-full rounded-[var(--radius-lg)] border border-border bg-card text-left transition-colors",
-              "hover:border-[var(--border-accent-hover)] hover:bg-accent/35",
-              open && "border-border bg-accent/30",
+              "w-full rounded-[var(--radius-lg)] border text-left transition-colors",
+              isActive
+                ? "border-primary/30 bg-primary/10"
+                : "border-border bg-muted hover:bg-accent",
+              open && !isActive && "bg-accent",
               className,
             )}
           >
-            <div className="flex items-center gap-3 px-3 py-3">
-              <div
-                className={cn(
-                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border",
-                  isActive
-                    ? "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)] shadow-[var(--shadow-glow)]"
-                    : "border-border bg-muted text-muted-foreground",
-                )}
-              >
-                <Brain className={cn("h-4 w-4", isActive && "animate-pulse")} />
-              </div>
+            <div className="flex items-center gap-2.5 px-3 py-2">
+              <Brain className={cn("h-4 w-4 shrink-0", isActive ? "text-primary animate-pulse" : "text-muted-foreground")} />
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-foreground">
-                    {isActive ? "Thinking…" : "Reasoning"}
-                  </span>
-                  {!isActive && durationMs != null ? (
-                    <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-[var(--font-mono)] text-muted-foreground">
-                      {formatDuration(durationMs)}
-                    </span>
-                  ) : null}
-                  {isActive && startTime ? <LiveDuration startTime={startTime} /> : null}
-                </div>
-                {preview && !open ? (
-                  <div className="mt-1 truncate text-xs text-muted-foreground">
-                    {preview}
-                  </div>
-                ) : null}
+                <span className="truncate text-xs text-foreground">
+                  {preview ?? (isActive ? "Thinking…" : "Reasoning")}
+                </span>
               </div>
 
-              {open ? (
-                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              )}
+              <div className="flex shrink-0 items-center gap-2">
+                {isActive && startTime ? <LiveDuration startTime={startTime} /> : null}
+                {!isActive && durationMs != null ? (
+                  <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
+                    {formatDuration(durationMs)}
+                  </span>
+                ) : null}
+                {open ? (
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                )}
+              </div>
             </div>
           </button>
         </Collapsible.Trigger>
 
-        <Collapsible.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
+        <Collapsible.Content className="overflow-hidden rounded-b-[var(--radius-lg)] data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
           {part.text ? (
             <div
               className={cn(
-                "border-t border-border px-4 py-4 text-sm text-foreground",
+                "max-h-60 overflow-y-auto border-t border-border bg-card px-3 py-3 text-sm leading-relaxed text-foreground",
                 contentClassName,
               )}
             >
               <Markdown>{part.text}</Markdown>
             </div>
           ) : (
-            <div className="border-t border-border px-4 py-3 text-sm text-muted-foreground">
-              No reasoning text was provided.
+            <div className="border-t border-border px-3 py-2.5 text-xs text-muted-foreground">
+              No reasoning text provided.
             </div>
           )}
         </Collapsible.Content>

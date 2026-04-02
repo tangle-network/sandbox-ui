@@ -19,18 +19,15 @@ export interface SessionActivityMonitorProps {
 
 function SessionStatusDot({ session }: { session: ActiveSessionRecord }) {
   if (session.status === "error") {
-    return <AlertCircle className="h-3.5 w-3.5 text-[var(--status-danger)]" />;
+    return <AlertCircle className="h-3 w-3 text-destructive" />;
   }
-
   if (session.status === "running") {
-    return <LoaderCircle className="h-3.5 w-3.5 animate-spin text-primary" />;
+    return <LoaderCircle className="h-3 w-3 animate-spin text-primary" />;
   }
-
   if (session.status === "attention-needed") {
-    return <Activity className="h-3.5 w-3.5 text-[var(--status-warning)]" />;
+    return <Activity className="h-3 w-3 text-warning" />;
   }
-
-  return <span className="h-2 w-2 rounded-full bg-[var(--text-dim)]" />;
+  return <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />;
 }
 
 function navigateToSession(session: ActiveSessionRecord) {
@@ -55,29 +52,28 @@ export function SessionActivityMonitor({
 
   if (projectActivity.length === 0) {
     if (compact) return null;
-
     return (
-      <div className={cn("rounded-[var(--radius-lg)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent)] p-3 text-sm text-muted-foreground", className)}>
+      <div className={cn("rounded-md border border-dashed border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground", className)}>
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-          <Activity className="h-3.5 w-3.5" />
-          Active Sessions
-        </div>
+    <div className={cn("space-y-1.5", className)}>
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <Activity className="h-3 w-3" />
+          Active
+        </span>
         {totalRunning > 0 && (
-          <span className="rounded-full border border-border bg-[var(--accent-surface-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--accent-text)]">
-            {totalRunning} running
+          <span className="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary">
+            {totalRunning}
           </span>
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         {projectActivity.map((project) => {
           const label = resolveProjectLabel?.(project.projectId, project.projectLabel)
             ?? project.projectLabel
@@ -86,28 +82,27 @@ export function SessionActivityMonitor({
           return (
             <div
               key={String(project.projectId)}
-              className="rounded-[var(--radius-md)] border border-border bg-muted p-3 shadow-[var(--shadow-card)]"
+              className="rounded-md border border-border bg-muted"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-foreground">{label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {project.activeSessionCount} tracked session{project.activeSessionCount === 1 ? "" : "s"}
+              <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-medium text-foreground">{label}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {project.activeSessionCount} session{project.activeSessionCount === 1 ? "" : "s"}
                   </div>
                 </div>
                 {project.runningSessionIds.length > 0 && (
-                  <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] text-foreground">
+                  <span className="shrink-0 text-[10px] text-muted-foreground">
                     {project.runningSessionIds.length} live
                   </span>
                 )}
               </div>
 
               {!compact && project.runningSessionIds.length > 0 && (
-                <div className="mt-3 space-y-2">
+                <div className="border-t border-border px-1 py-0.5">
                   {project.runningSessionIds.map((sessionId) => {
                     const session = sessionLookup[sessionId];
                     if (!session) return null;
-
                     return (
                       <button
                         key={sessionId}
@@ -117,23 +112,15 @@ export function SessionActivityMonitor({
                             onSelectSession(session);
                             return;
                           }
-
                           navigateToSession(session);
                         }}
-                        className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-border bg-muted px-3 py-2 text-left transition-colors hover:border-border hover:bg-muted/50"
+                        className="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left transition-colors hover:bg-accent"
                       >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <SessionStatusDot session={session} />
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium text-foreground">
-                              {session.title ?? "Untitled Session"}
-                            </div>
-                            <div className="truncate text-xs text-muted-foreground">
-                              {session.href ?? session.sessionId}
-                            </div>
-                          </div>
-                        </div>
-                        <MessageSquareText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <SessionStatusDot session={session} />
+                        <span className="min-w-0 truncate text-xs text-foreground">
+                          {session.title ?? "Untitled"}
+                        </span>
+                        <MessageSquareText className="ml-auto h-3 w-3 shrink-0 text-muted-foreground" />
                       </button>
                     );
                   })}

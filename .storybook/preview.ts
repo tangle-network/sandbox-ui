@@ -4,9 +4,9 @@ import '../src/styles/globals.css'
 const withSandboxTheme: Decorator = (Story, context) => {
   const theme = context.globals.sandboxTheme ?? 'dark'
   const isLight = theme === 'light'
+  document.documentElement.setAttribute('data-sandbox-ui', 'true')
   document.documentElement.setAttribute('data-sandbox-theme', isLight ? 'vault' : '')
 
-  // Override Storybook backgrounds addon with !important
   let styleEl = document.getElementById('sandbox-theme-bg')
   if (!styleEl) {
     styleEl = document.createElement('style')
@@ -15,25 +15,24 @@ const withSandboxTheme: Decorator = (Story, context) => {
   }
   styleEl.textContent = `body { background: ${isLight ? '#f4f3fb' : 'hsl(248 52% 5%)'} !important; }`
 
-  // Return story wrapped in a themed container so CSS vars cascade correctly
-  // Using inline style so it always reads from the current var() value post-theme-switch
   return Story()
 }
 
 const preview: Preview = {
   decorators: [withSandboxTheme],
+  initialGlobals: {
+    sandboxTheme: 'dark',
+  },
   globalTypes: {
     sandboxTheme: {
-      name: 'Theme',
       description: 'Sandbox UI theme',
-      defaultValue: 'dark',
       toolbar: {
+        title: 'Theme',
         icon: 'paintbrush',
         items: [
-          { value: 'dark', title: 'Dark' },
-          { value: 'light', title: 'Light' },
+          { value: 'dark', title: 'Dark (Operator)' },
+          { value: 'light', title: 'Light (Vault)' },
         ],
-        showName: true,
         dynamicTitle: true,
       },
     },

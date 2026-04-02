@@ -198,7 +198,10 @@ export function NewSandboxCard({ onClick, className }: NewSandboxCardProps) {
     <button
       type="button"
       onClick={onClick}
-      className={cn("group relative flex h-full min-h-[200px] flex-col items-center justify-center overflow-hidden rounded-3xl border border-dashed border-[var(--md3-primary)]/40 bg-[var(--md3-primary)]/5 transition-all duration-300 hover:border-[var(--md3-primary)]/80 hover:bg-[var(--md3-primary)]/10 active:scale-95", className)}
+      className={cn(
+        "border-2 border-dashed border-[var(--border-subtle)] rounded-xl p-5 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-[var(--border-accent)] hover:bg-[var(--accent-surface-soft)] transition-all duration-300 w-full min-h-[160px]",
+        className,
+      )}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(155,140,255,0.1)_0,transparent_100%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--md3-primary)]/20 text-[var(--md3-primary)] shadow-[0_0_20px_rgba(155,140,255,0.2)] transition-transform duration-300 group-hover:scale-110 group-hover:shadow-[0_0_30px_rgba(155,140,255,0.4)]">

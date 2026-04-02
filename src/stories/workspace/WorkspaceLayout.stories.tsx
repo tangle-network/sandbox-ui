@@ -14,7 +14,7 @@ const meta: Meta<typeof WorkspaceLayout> = {
   },
   decorators: [
     (Story) => (
-      <div className="h-screen" data-sandbox-ui="true" data-sandbox-theme="operator">
+      <div className="h-screen" data-sandbox-ui="true" >
         <Story />
       </div>
     ),
@@ -308,7 +308,7 @@ export const BuilderTheme: Story = {
   name: 'Builder Theme',
   decorators: [
     (Story) => (
-      <div className="h-screen" data-sandbox-ui="true" data-sandbox-theme="builder">
+      <div className="h-screen" data-sandbox-ui="true">
         <Story />
       </div>
     ),

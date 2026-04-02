@@ -1,8 +1,7 @@
-import { type ReactNode, useMemo, useState } from "react";
-import { ArrowLeft, FolderTree, MessageSquareText, Plus, Search, Settings, Sparkles } from "lucide-react";
+import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { ArrowLeft, FolderTree, GripVertical, MessageSquareText, Plus, Search, Settings, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Badge } from "../primitives/badge";
-import { Button } from "../primitives/button";
 import { useNavbarSessions, type ActiveSessionRecord, type ActiveSessionStatus, type SessionProjectKey } from "../stores/active-sessions-store";
 
 export interface SessionSidebarItem {
@@ -61,6 +60,11 @@ export interface SessionSidebarProps {
   activityMonitor?: ReactNode;
   filters?: SessionSidebarFilter[];
   defaultFilterId?: string;
+  resizable?: boolean;
+  defaultWidth?: number;
+  minWidth?: number;
+  maxWidth?: number;
+  onWidthChange?: (width: number) => void;
   renderItemActions?: (
     item: SessionSidebarItem,
     options: {
@@ -70,16 +74,16 @@ export interface SessionSidebarProps {
   ) => ReactNode;
 }
 
-function statusClasses(status?: ActiveSessionStatus) {
+function statusDot(status?: ActiveSessionStatus) {
   switch (status) {
     case "running":
-      return "bg-primary shadow-[0_0_0_4px_color-mix(in_srgb,hsl(var(--primary))_18%,transparent)]";
+      return "bg-[var(--status-running)]";
     case "error":
-      return "bg-[var(--status-danger)]";
+      return "bg-[var(--surface-danger-text)]";
     case "attention-needed":
-      return "bg-[var(--status-warning)]";
+      return "bg-[var(--surface-warning-text)]";
     default:
-      return "bg-[var(--text-dim)]";
+      return "bg-muted-foreground/40";
   }
 }
 
@@ -134,24 +138,52 @@ function sortItems(
   });
 }
 
-function badgeClasses(tone: SessionSidebarBadge["tone"] = "neutral") {
+function badgeTone(tone: SessionSidebarBadge["tone"] = "neutral") {
   switch (tone) {
     case "accent":
-      return "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]";
+      return "border-primary/30 bg-primary/10 text-primary";
     case "success":
-      return "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]";
+      return "border-success/30 bg-success/10 text-success";
     case "warning":
-      return "border-[var(--surface-warning-border)] bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]";
+      return "border-warning/30 bg-warning/10 text-warning";
     case "danger":
-      return "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]";
+      return "border-destructive/30 bg-destructive/10 text-destructive";
     default:
-      return "border-border bg-muted text-foreground";
+      return "border-border bg-muted text-muted-foreground";
   }
 }
 
 function navigateToHref(href?: string) {
   if (!href || typeof window === "undefined") return;
   window.location.assign(href);
+}
+
+function useResizable(defaultWidth: number, min: number, max: number, onChange?: (w: number) => void) {
+  const [width, setWidth] = useState(defaultWidth);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(0);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    dragging.current = true;
+    startX.current = e.clientX;
+    startW.current = width;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, [width]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const delta = e.clientX - startX.current;
+    const next = Math.min(max, Math.max(min, startW.current + delta));
+    setWidth(next);
+    onChange?.(next);
+  }, [min, max, onChange]);
+
+  const onPointerUp = useCallback(() => {
+    dragging.current = false;
+  }, []);
+
+  return { width, onPointerDown, onPointerMove, onPointerUp };
 }
 
 export function SessionSidebar({
@@ -172,6 +204,11 @@ export function SessionSidebar({
   activityMonitor,
   filters = [],
   defaultFilterId,
+  resizable = false,
+  defaultWidth = 256,
+  minWidth = 200,
+  maxWidth = 400,
+  onWidthChange,
   renderItemActions,
 }: SessionSidebarProps) {
   const [query, setQuery] = useState("");
@@ -212,24 +249,30 @@ export function SessionSidebar({
     ]))
   ), [currentItemId, filters, orderedItems, sessionsById]);
 
+  const resize = useResizable(defaultWidth, minWidth, maxWidth, onWidthChange);
+
   return (
-    <aside className={cn("flex w-64 shrink-0 flex-col border-r border-border bg-card", className)}>
-      <div className="border-b border-border px-3 py-3">
+    <aside
+      className={cn("relative flex shrink-0 flex-col border-r border-border bg-card", className)}
+      style={{ width: resizable ? resize.width : defaultWidth }}
+    >
+      {/* Header */}
+      <div className="border-b border-border px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-[var(--accent-surface-soft)] text-[var(--accent-text)]">
-              <MessageSquareText className="h-3.5 w-3.5" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <MessageSquareText className="h-3 w-3" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold tracking-[0.01em] text-foreground">{title}</div>
+              <div className="truncate text-xs font-semibold text-foreground">{title}</div>
               {subtitle && (
-                <div className="truncate text-[11px] text-muted-foreground">{subtitle}</div>
+                <div className="truncate text-[10px] text-muted-foreground">{subtitle}</div>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {runningCount > 0 && (
-              <span className="rounded-full border border-border bg-[var(--accent-surface-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent-text)]">
+              <span className="rounded-full bg-primary/10 px-1.5 py-px text-[10px] font-medium text-primary">
                 {runningCount}
               </span>
             )}
@@ -238,29 +281,29 @@ export function SessionSidebar({
                 type="button"
                 onClick={onCreate}
                 title={createLabel}
-                className="flex h-6 w-6 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground transition-colors hover:border-border hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]"
+                className="flex h-6 w-6 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-3 w-3" />
               </button>
             )}
           </div>
         </div>
 
         {enableSearch && items.length > 0 && (
-          <div className="relative mt-2.5">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative mt-2">
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
-              className="h-8 w-full rounded-[var(--radius-md)] border border-border bg-muted pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]"
+              className="h-7 w-full rounded-md border border-border bg-background pl-7 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
           </div>
         )}
 
         {filters.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="mt-1.5 flex flex-wrap gap-1">
             {filters.map((filter) => {
               const isSelected = activeFilterId === filter.id;
               return (
@@ -269,16 +312,14 @@ export function SessionSidebar({
                   type="button"
                   onClick={() => setActiveFilterId(filter.id)}
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
+                    "inline-flex items-center gap-1 rounded-full border px-2 py-px text-[10px] font-medium transition-colors",
                     isSelected
-                      ? "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
-                      : "border-border bg-transparent text-muted-foreground hover:text-foreground",
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <span>{filter.label}</span>
-                  <span className="text-[9px] opacity-70">
-                    {filterCounts[filter.id] ?? 0}
-                  </span>
+                  <span className="text-[9px] opacity-60">{filterCounts[filter.id] ?? 0}</span>
                 </button>
               );
             })}
@@ -286,13 +327,14 @@ export function SessionSidebar({
         )}
       </div>
 
-      <nav aria-label="Sessions" className="flex-1 overflow-y-auto px-2 py-2">
+      {/* Session list */}
+      <nav aria-label="Sessions" className="flex-1 overflow-y-auto px-1.5 py-1.5">
         {visibleItems.length === 0 ? (
-          <div className="rounded-[var(--radius-md)] border border-dashed border-border bg-muted px-3 py-4 text-xs text-muted-foreground">
+          <div className="rounded-md border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
             {query.trim() ? `No sessions match "${query.trim()}".` : emptyMessage}
           </div>
         ) : (
-          <ul className="space-y-1">
+          <ul className="space-y-px">
             {visibleItems.map((item) => {
               const session = sessionsById.get(item.id) ?? null;
               const isActive = currentItemId === item.id;
@@ -306,10 +348,10 @@ export function SessionSidebar({
                 <li key={item.id}>
                   <div
                     className={cn(
-                      "group flex items-start gap-2 rounded-[var(--radius-md)] border px-2 py-2 transition-colors",
+                      "group relative flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
                       isActive
-                        ? "border-border bg-[var(--accent-surface-soft)] shadow-[var(--shadow-card)]"
-                        : "border-border bg-transparent hover:border-border hover:bg-muted",
+                        ? "bg-accent text-accent-foreground shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                        : "text-foreground hover:bg-accent/50",
                     )}
                   >
                     <button
@@ -319,55 +361,48 @@ export function SessionSidebar({
                           onSelectItem(item);
                           return;
                         }
-
                         navigateToHref(item.href);
                       }}
                       aria-current={isActive ? "page" : undefined}
-                      className="min-w-0 flex flex-1 items-start gap-2.5 text-left"
+                      className="min-w-0 flex flex-1 items-center gap-2 text-left"
                     >
-                      <span className={cn("mt-[5px] h-2 w-2 shrink-0 rounded-full", statusClasses(status))} />
+                      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusDot(status))} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-medium text-foreground">
+                        <div className={cn(
+                          "truncate text-xs",
+                          isActive ? "font-semibold" : "font-medium",
+                        )}>
                           {item.title}
                         </div>
                         {item.subtitle && (
-                          <div className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">
+                          <div className="truncate text-[10px] leading-tight text-muted-foreground">
                             {item.subtitle}
-                          </div>
-                        )}
-                        {visibleBadges.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                            {visibleBadges.map((badge) => (
-                              <span
-                                key={badge.id}
-                                className={cn(
-                                  "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.06em]",
-                                  badgeClasses(badge.tone),
-                                )}
-                              >
-                                {badge.label}
-                              </span>
-                            ))}
                           </div>
                         )}
                       </div>
                     </button>
 
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1">
+                      {visibleBadges.length > 0 && visibleBadges.slice(0, 1).map((badge) => (
+                        <span
+                          key={badge.id}
+                          className={cn(
+                            "rounded-full border px-1.5 py-px text-[8px] font-semibold uppercase",
+                            badgeTone(badge.tone),
+                          )}
+                        >
+                          {badge.label}
+                        </span>
+                      ))}
                       {session?.isForeground && (
-                        <Badge className="rounded-full border-border bg-muted text-[10px] uppercase tracking-[0.14em] text-foreground">
-                          Live
-                        </Badge>
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" title="Live" />
                       )}
                       {renderItemActions ? (
                         <div
-                          className="opacity-70 transition-opacity hover:opacity-100 group-hover:opacity-100"
+                          className="opacity-0 transition-opacity group-hover:opacity-100"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          {renderItemActions(item, {
-                            session,
-                            isActive,
-                          })}
+                          {renderItemActions(item, { session, isActive })}
                         </div>
                       ) : null}
                     </div>
@@ -379,15 +414,17 @@ export function SessionSidebar({
         )}
       </nav>
 
+      {/* Activity monitor slot */}
       {activityMonitor && (
-        <div className="border-t border-border px-2 py-2">
+        <div className="border-t border-border px-2 py-1.5">
           {activityMonitor}
         </div>
       )}
 
+      {/* Bottom links */}
       {links.length > 0 && (
-        <nav aria-label="Workspace sections" className="border-t border-border px-2 py-2">
-          <div className="space-y-0.5">
+        <nav aria-label="Workspace sections" className="border-t border-border px-1.5 py-1.5">
+          <div className="space-y-px">
             {links.map((link) => {
               const Icon = iconForLink(link.icon);
               return (
@@ -399,10 +436,9 @@ export function SessionSidebar({
                       onSelectLink(link);
                       return;
                     }
-
                     navigateToHref(link.href);
                   }}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{link.label}</span>
@@ -411,6 +447,17 @@ export function SessionSidebar({
             })}
           </div>
         </nav>
+      )}
+
+      {/* Resize handle */}
+      {resizable && (
+        <div
+          className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 transition-colors"
+          onPointerDown={resize.onPointerDown}
+          onPointerMove={resize.onPointerMove}
+          onPointerUp={resize.onPointerUp}
+          title="Drag to resize"
+        />
       )}
     </aside>
   );

@@ -14,24 +14,17 @@ export function ThinkingIndicator({ className }: ThinkingIndicatorProps) {
   }, []);
 
   return (
-    <div className={cn("flex gap-3 px-4 py-3", className)}>
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-glow)]/15 text-[var(--brand-glow)]">
-        <div className="flex gap-0.5">
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "0ms" }} />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "150ms" }} />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" style={{ animationDelay: "300ms" }} />
-        </div>
+    <div className={cn("flex items-center gap-2 px-3 py-1.5", className)}>
+      <div className="flex gap-[3px]">
+        <span className="h-1 w-1 animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "0ms" }} />
+        <span className="h-1 w-1 animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "150ms" }} />
+        <span className="h-1 w-1 animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "300ms" }} />
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">
-          {elapsed < 10 ? "Thinking..." : elapsed < 60 ? "Thinking deeply..." : "Still working..."}
+      {elapsed > 3 && (
+        <span className="text-[11px] tabular-nums text-[var(--text-dim)]">
+          {elapsed}s
         </span>
-        {elapsed > 5 && (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {elapsed}s
-          </span>
-        )}
-      </div>
+      )}
     </div>
   );
 }

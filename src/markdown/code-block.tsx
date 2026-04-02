@@ -136,8 +136,8 @@ export const CodeBlock = memo(
         {...props}
       >
         {language && (
-          <div className={cn("flex items-center justify-between border-b px-4 py-1.5", headerBg)}>
-            <span className={cn("text-[11px] font-mono font-medium uppercase tracking-widest", langColor)}>
+          <div className={cn("flex items-center justify-between border-b px-3 py-1", headerBg)}>
+            <span className={cn("text-[10px] font-mono font-medium uppercase tracking-widest", langColor)}>
               {language}
             </span>
             {children}
@@ -159,10 +159,10 @@ export const CodeBlock = memo(
           }}
           customStyle={{
             margin: 0,
-            padding: "1rem",
+            padding: "var(--code-padding-y, 0.625rem) var(--code-padding-x, 0.75rem)",
             background: "transparent",
-            fontSize: "0.8125rem",
-            lineHeight: "1.65",
+            fontSize: "var(--code-font-size, 0.8125rem)",
+            lineHeight: "var(--code-line-height, 1.5)",
             overflowX: "auto",
           }}
           codeTagProps={{ style: { fontFamily: "var(--font-mono, 'JetBrains Mono', ui-monospace, monospace)" } }}
@@ -191,7 +191,7 @@ export const CopyButton = memo(({ text }: { text: string }) => {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center justify-center w-7 h-7 rounded-md bg-muted border border-border hover:border-border transition-colors"
+      className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--bg-section)] border border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-colors"
       title="Copy to clipboard"
     >
       {copied ? (

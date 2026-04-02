@@ -88,19 +88,19 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
 
   if (meta.displayVariant === "read-file") {
     return (
-      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border bg-muted text-primary">
-            <FileText className="h-4 w-4" />
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
+        <div className="flex items-center gap-2.5 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-3 py-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--bg-section)] text-[var(--brand-cool)]">
+            <FileText className="h-3.5 w-3.5" />
           </div>
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-foreground">Read file</div>
+          <div className="min-w-0 flex items-center gap-2">
+            <span className="text-xs font-semibold text-[var(--text-primary)]">Read file</span>
             {meta.targetPath ? (
-              <div className="mt-1 text-xs text-muted-foreground">{meta.targetPath}</div>
+              <span className="truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{meta.targetPath}</span>
             ) : null}
           </div>
         </div>
-        <div className="space-y-3 px-4 py-4">
+        <div className="space-y-2 px-3 py-2.5">
           {typeof output === "string" ? (
             <CodeBlock code={output} language={langFromPath(meta.targetPath) ?? "text"} className="rounded-[var(--radius-md)]" />
           ) : (

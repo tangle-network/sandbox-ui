@@ -23,22 +23,20 @@ export function ResourceMeter({ label, value, max = 100, unit, icon, className }
   const barColor = getBarColor(percent)
 
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <div className="flex justify-between text-[10px] font-mono text-muted-foreground uppercase tracking-wide">
-        <span className="flex items-center gap-1 text-foreground">
-          {icon}
-          {label}
-        </span>
-        <span className="tabular-nums">
-          {unit ? `${value}${unit} / ${max}${unit}` : `${Math.round(percent)}%`}
-        </span>
-      </div>
-      <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+    <div className={cn("flex items-center gap-3", className)}>
+      <span className="flex shrink-0 items-center gap-1 text-[10px] font-mono text-[var(--text-secondary)] uppercase tracking-wide">
+        {icon}
+        {label}
+      </span>
+      <div className="h-1.5 min-w-0 flex-1 bg-[var(--depth-1)] rounded-full overflow-hidden">
         <div
           className={cn("h-full rounded-full transition-all duration-500", barColor)}
           style={{ width: `${percent}%` }}
         />
       </div>
+      <span className="shrink-0 text-[10px] font-mono tabular-nums text-[var(--text-muted)]">
+        {unit ? `${value}${unit}/${max}${unit}` : `${Math.round(percent)}%`}
+      </span>
     </div>
   )
 }

@@ -107,7 +107,7 @@ export const InlineToolItem = memo(
                 className,
               )}
             >
-              <div className="flex items-center gap-2.5 px-3 py-2">
+              <div className="flex items-center gap-2 px-2.5 py-1.5">
                 <div className={cn(
                   "shrink-0",
                   isRunning && "text-primary",
@@ -126,41 +126,36 @@ export const InlineToolItem = memo(
                   )}
                 </div>
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-foreground">
-                      {meta.title}
-                    </span>
-                    {isError ? (
-                      <span className="rounded-full border border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--surface-danger-text)]">
-                        Failed
-                      </span>
-                    ) : null}
-                    {isRunning ? (
-                      <span className="rounded-full border border-border bg-primary/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-primary">
-                        Running
-                      </span>
-                    ) : null}
-                  </div>
-                  {meta.description ? (
-                    <div className="mt-1 truncate text-xs font-[var(--font-mono)] text-muted-foreground">
-                      {meta.description}
-                    </div>
-                  ) : null}
-                </div>
+                <span className="truncate text-xs font-medium text-[var(--text-primary)]">
+                  {meta.title}
+                </span>
+                {meta.description ? (
+                  <span className="hidden truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)] sm:inline">
+                    {meta.description}
+                  </span>
+                ) : null}
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="ml-auto flex shrink-0 items-center gap-1.5">
                   {isRunning && startTime ? <LiveDuration startTime={startTime} /> : null}
                   {!isRunning && durationMs != null ? (
-                    <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-[var(--font-mono)] text-muted-foreground">
+                    <span className="text-[10px] font-[var(--font-mono)] tabular-nums text-[var(--text-muted)]">
                       {formatDuration(durationMs)}
                     </span>
                   ) : null}
-
+                  {isError ? (
+                    <span className="rounded-full border border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] px-1.5 py-px text-[10px] font-semibold uppercase text-[var(--surface-danger-text)]">
+                      Failed
+                    </span>
+                  ) : null}
+                  {isRunning ? (
+                    <span className="rounded-full border border-[var(--border-accent)] bg-[var(--brand-cool)]/10 px-1.5 py-px text-[10px] font-semibold uppercase text-[var(--brand-cool)]">
+                      Running
+                    </span>
+                  ) : null}
                   {open ? (
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    <ChevronDown className="h-3 w-3 text-[var(--text-muted)]" />
                   ) : (
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    <ChevronRight className="h-3 w-3 text-[var(--text-muted)]" />
                   )}
                 </div>
               </div>

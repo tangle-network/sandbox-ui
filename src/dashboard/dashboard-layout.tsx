@@ -334,12 +334,12 @@ function DashboardLayoutInner({
       </Sidebar>
 
       {/* Main content */}
-      <SidebarContent className={cn("pt-20 px-8 pb-12 hidden lg:block", contentClassName)}>
+      <SidebarContent className={cn("pt-16 px-6 pb-8 hidden lg:block", contentClassName)}>
         {children}
       </SidebarContent>
 
       {/* Mobile main content (no sidebar offset) */}
-      <main className={cn("pt-20 px-8 pb-12 min-h-screen lg:hidden", contentClassName)}>
+      <main className={cn("pt-16 px-6 pb-8 min-h-screen lg:hidden", contentClassName)}>
         {children}
       </main>
 

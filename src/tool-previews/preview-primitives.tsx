@@ -26,25 +26,23 @@ export function PreviewCard({
         className,
       )}
     >
-      <div className="flex items-start gap-3 border-b border-border bg-background px-4 py-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-border bg-muted text-primary">
+      <div className="flex items-center gap-2.5 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-[var(--tool-card-px)] py-[var(--tool-card-py)]">
+        <div className="flex h-[var(--tool-icon-size)] w-[var(--tool-icon-size)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--bg-section)] text-[var(--brand-cool)]">
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-foreground">
-            {title}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-[var(--text-primary)]">{title}</span>
+            {description ? (
+              <span className="truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{description}</span>
+            ) : null}
           </div>
-          {description ? (
-            <div className="mt-1 text-xs text-muted-foreground">
-              {description}
-            </div>
-          ) : null}
         </div>
         {meta ? (
           <div className="shrink-0 text-xs text-muted-foreground">{meta}</div>
         ) : null}
       </div>
-      {children ? <div className="space-y-3 px-4 py-4">{children}</div> : null}
+      {children ? <div className="space-y-2 px-[var(--tool-card-px)] py-[var(--tool-card-py)]">{children}</div> : null}
     </div>
   );
 }
@@ -59,7 +57,7 @@ export function PreviewEmpty({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-md)] border border-dashed border-border bg-muted px-3 py-4 text-sm text-muted-foreground",
+        "rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2.5 text-xs text-[var(--text-muted)]",
         className,
       )}
     >
@@ -78,8 +76,8 @@ export function PreviewError({ error }: { error: string }) {
 
 export function PreviewLoading({ label = "Running…" }: { label?: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-border bg-muted px-3 py-3 text-sm text-muted-foreground">
-      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+    <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-2 text-xs text-[var(--text-muted)]">
+      <Loader2 className="h-4 w-4 animate-spin text-[var(--brand-cool)]" />
       <span>{label}</span>
     </div>
   );

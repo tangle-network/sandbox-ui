@@ -28,13 +28,13 @@ export interface PlanCardsProps {
 export function PlanCards({ plans, className }: PlanCardsProps) {
   return (
     <section className={className}>
-      <h2 className="text-2xl font-bold text-foreground tracking-tight mb-8 px-2">Subscription Plans</h2>
+      <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight mb-5 px-2">Subscription Plans</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((plan) => (
           <div
             key={plan.id}
             className={cn(
-              "p-8 rounded-xl transition-all relative overflow-hidden border",
+              "p-5 rounded-xl transition-all relative overflow-hidden border",
               plan.popular
                 ? "bg-muted/50 border-border"
                 : "bg-card border-border hover:bg-muted/50 hover:border-border",
@@ -45,8 +45,8 @@ export function PlanCards({ plans, className }: PlanCardsProps) {
                 Popular
               </div>
             )}
-            <div className="mb-6">
-              <div className={cn("text-xs font-mono uppercase tracking-widest mb-2", plan.popular ? "text-primary" : "text-muted-foreground")}>
+            <div className="mb-4">
+              <div className={cn("text-xs font-mono uppercase tracking-widest mb-2", plan.popular ? "text-[var(--brand-cool)]" : "text-[var(--text-muted)]")}>
                 {plan.name}
               </div>
               <div className="text-3xl font-bold text-foreground">
@@ -54,7 +54,7 @@ export function PlanCards({ plans, className }: PlanCardsProps) {
                 <span className="text-sm font-normal text-muted-foreground tracking-normal">/{plan.period ?? "mo"}</span>
               </div>
             </div>
-            <ul className="space-y-3 mb-8 text-sm text-muted-foreground">
+            <ul className="space-y-2 mb-5 text-sm text-[var(--text-muted)]">
               {plan.features.map((f, i) => (
                 <li key={i} className="flex items-center gap-2">
                   <Check className="h-3.5 w-3.5 text-primary shrink-0" />

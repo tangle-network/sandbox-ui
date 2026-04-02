@@ -149,7 +149,7 @@ export function VariantList({
   className,
 }: VariantListProps) {
   return (
-    <div className={`space-y-3 ${className || ""}`}>
+    <div className={`space-y-2 ${className || ""}`}>
       {variants.map((variant) => {
         const status = statusConfig[variant.status];
         const StatusIcon = status.icon;
@@ -158,35 +158,33 @@ export function VariantList({
         return (
           <div
             key={variant.id}
-            className={`cursor-pointer rounded-lg border p-4 transition-colors ${
+            className={`cursor-pointer rounded-lg border px-3 py-2.5 transition-colors ${
               isSelected
                 ? "border-border bg-[var(--accent-surface-soft)]"
                 : "border-border bg-card hover:border-border hover:bg-muted/50"
             }`}
             onClick={() => onSelect?.(variant.id)}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Badge className={`${status.bg} ${status.border} ${status.color}`}>
-                  <StatusIcon
-                    className={`mr-1 h-3 w-3 ${status.animate ? "animate-spin" : ""}`}
-                  />
-                  {status.label}
-                </Badge>
-                <span className="font-medium text-foreground">{variant.label}</span>
-                {variant.sublabel && (
-                  <span className="text-sm text-muted-foreground">
-                    ({variant.sublabel})
-                  </span>
-                )}
-                {variant.durationMs && (
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Timer className="h-3 w-3" />
-                    {(variant.durationMs / 1000).toFixed(2)}s
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Badge className={`shrink-0 ${status.bg} ${status.border} ${status.color}`}>
+                <StatusIcon
+                  className={`mr-1 h-3 w-3 ${status.animate ? "animate-spin" : ""}`}
+                />
+                {status.label}
+              </Badge>
+              <span className="truncate text-sm font-medium text-[var(--text-primary)]">{variant.label}</span>
+              {variant.sublabel && (
+                <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                  ({variant.sublabel})
+                </span>
+              )}
+              {variant.durationMs && (
+                <span className="flex shrink-0 items-center gap-1 text-xs text-[var(--text-muted)]">
+                  <Timer className="h-3 w-3" />
+                  {(variant.durationMs / 1000).toFixed(1)}s
+                </span>
+              )}
+              <div className="ml-auto flex shrink-0 items-center gap-1.5">
                 {variant.outcome && (
                   <Badge
                     className={`${outcomeConfig[variant.outcome].bg} ${outcomeConfig[variant.outcome].border} ${outcomeConfig[variant.outcome].color}`}
@@ -198,55 +196,55 @@ export function VariantList({
                   variant.outcome === "pending_review" &&
                   onAccept &&
                   onReject && (
-                    <div className="flex items-center gap-2">
+                    <>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)] hover:bg-[var(--surface-success-border)]"
+                        className="h-7 border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] px-2 text-xs text-[var(--surface-success-text)] hover:bg-[var(--surface-success-border)]"
                         onClick={(e) => {
                           e.stopPropagation();
                           onAccept(variant.id);
                         }}
                         disabled={isActioning === variant.id}
                       >
-                        <Check className="mr-1 h-4 w-4" />
+                        <Check className="mr-1 h-3 w-3" />
                         Accept
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)] hover:bg-[var(--surface-danger-border)]"
+                        className="h-7 border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] px-2 text-xs text-[var(--surface-danger-text)] hover:bg-[var(--surface-danger-border)]"
                         onClick={(e) => {
                           e.stopPropagation();
                           onReject(variant.id);
                         }}
                         disabled={isActioning === variant.id}
                       >
-                        <X className="mr-1 h-4 w-4" />
+                        <X className="mr-1 h-3 w-3" />
                         Reject
                       </Button>
-                    </div>
+                    </>
                   )}
                 {variant.detailsUrl && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-muted-foreground hover:text-foreground"
+                    className="h-7 w-7 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.open(variant.detailsUrl, "_blank");
                     }}
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
                 )}
               </div>
             </div>
             {variant.error && (
-              <p className="mt-2 text-sm text-[var(--surface-danger-text)]">{variant.error}</p>
+              <p className="mt-1.5 text-xs text-[var(--surface-danger-text)]">{variant.error}</p>
             )}
             {variant.summary && (
-              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+              <p className="mt-1.5 line-clamp-2 text-xs text-[var(--text-muted)]">
                 {variant.summary}
               </p>
             )}

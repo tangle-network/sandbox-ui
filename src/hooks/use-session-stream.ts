@@ -142,6 +142,7 @@ export function useSessionStream({
   const [connected, setConnected] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamingMsgIdRef = useRef<string | null>(null);
   const insertionCounterRef = useRef(0);
   const handleSSEEventRef = useRef<((type: string, raw: Record<string, unknown>) => void) | null>(null);
@@ -242,7 +243,7 @@ export function useSessionStream({
 
       // Auto-reconnect
       if (!controller.signal.aborted) {
-        setTimeout(() => connectSSE(), 3000);
+        reconnectTimerRef.current = setTimeout(() => connectSSE(), 3000);
       }
     }
   }, [apiUrl, token, sessionId, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -352,6 +353,7 @@ export function useSessionStream({
     }
   }, [refetch]);
 
+  // Intentionally no deps — always keep ref pointing to latest handler
   useEffect(() => {
     handleSSEEventRef.current = handleSSEEvent;
   });
@@ -394,6 +396,7 @@ export function useSessionStream({
     connectSSE();
     return () => {
       abortRef.current?.abort();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       setConnected(false);
     };
   }, [enabled, token, sessionId, refetch, connectSSE]);

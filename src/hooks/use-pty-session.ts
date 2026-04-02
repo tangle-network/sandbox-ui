@@ -49,7 +49,6 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   const retryCountRef = useRef(0);
   const mountedRef = useRef(true);
   const onDataRef = useRef(onData);
-  onDataRef.current = onData;
   const connectStreamRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
 
   // -- Abort SSE stream only (does NOT delete the terminal session) ----------
@@ -179,7 +178,9 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     }
   }, [apiUrl, token, abortStream]);
 
+  // Intentionally no deps — always keep refs pointing to latest callbacks
   useEffect(() => {
+    onDataRef.current = onData;
     connectStreamRef.current = connectStream;
   });
 

@@ -6,8 +6,8 @@ import { cn } from "../lib/utils"
 
 export interface Secret {
   name: string
-  created_at: string
-  updated_at?: string
+  createdAt: string
+  updatedAt?: string
 }
 
 export interface SecretsApiClient {
@@ -81,7 +81,10 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
 
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString()
+      const ts = /^\d+$/.test(dateStr) ? Number(dateStr) : dateStr
+      const date = new Date(ts)
+      if (Number.isNaN(date.getTime())) return dateStr
+      return date.toLocaleDateString()
     } catch {
       return dateStr
     }
@@ -94,7 +97,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
         <div>
           <h1 className="font-bold text-3xl text-foreground">Secrets</h1>
           <p className="mt-1 text-muted-foreground">
-            Manage encrypted secrets for your sandboxes
+            Secrets securely stored here will be automatically exposed as environment variables across all your new sandboxes.
           </p>
         </div>
         <button
@@ -121,7 +124,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
           <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-foreground mb-1">Create Secret</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Secrets are encrypted and can be injected into sandboxes as environment variables.
+              Secrets securely stored here will be automatically exposed as environment variables across all your new sandboxes.
             </p>
 
             <div className="space-y-4">
@@ -253,7 +256,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
                       <span className="font-mono text-xs font-bold text-foreground">{secret.name}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-3 text-xs text-muted-foreground">{formatDate(secret.created_at)}</td>
+                  <td className="px-6 py-3 text-xs text-muted-foreground">{formatDate(secret.createdAt)}</td>
                   <td className="px-6 py-3 text-right">
                     <button
                       type="button"

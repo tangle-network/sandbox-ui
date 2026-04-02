@@ -40,6 +40,11 @@ function readStorage(key: string, fallback: string): string {
   }
 }
 
+function writeStorage(key: string, value: string) {
+  if (typeof window === "undefined") return
+  try { localStorage.setItem(key, value) } catch { /* quota/private browsing */ }
+}
+
 export interface SidebarProviderProps {
   defaultPanelOpen?: boolean
   defaultMode?: string
@@ -63,20 +68,20 @@ export function SidebarProvider({
 
   const setPanelOpen = React.useCallback((open: boolean) => {
     setPanelOpenState(open)
-    localStorage.setItem(PANEL_OPEN_KEY, String(open))
+    writeStorage(PANEL_OPEN_KEY, String(open))
   }, [])
 
   const togglePanel = React.useCallback(() => {
     setPanelOpenState((prev) => {
       const next = !prev
-      localStorage.setItem(PANEL_OPEN_KEY, String(next))
+      writeStorage(PANEL_OPEN_KEY, String(next))
       return next
     })
   }, [])
 
   const setMode = React.useCallback((m: string) => {
     setModeState(m)
-    localStorage.setItem(SIDEBAR_MODE_KEY, m)
+    writeStorage(SIDEBAR_MODE_KEY, m)
   }, [])
 
   const switchModeStable = React.useCallback((m: string) => {
@@ -85,17 +90,17 @@ export function SidebarProvider({
         // Same mode — toggle panel
         setPanelOpenState((prevOpen) => {
           const next = !prevOpen
-          localStorage.setItem(PANEL_OPEN_KEY, String(next))
+          writeStorage(PANEL_OPEN_KEY, String(next))
           return next
         })
         return prevMode
       }
       // Different mode — always open panel
       setPanelOpenState(() => {
-        localStorage.setItem(PANEL_OPEN_KEY, "true")
+        writeStorage(PANEL_OPEN_KEY, "true")
         return true
       })
-      localStorage.setItem(SIDEBAR_MODE_KEY, m)
+      writeStorage(SIDEBAR_MODE_KEY, m)
       return m
     })
   }, [])

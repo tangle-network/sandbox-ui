@@ -24,6 +24,7 @@ export interface ProcessListProps {
 function formatUptime(startedAt?: string): string {
   if (!startedAt) return "-"
   const ms = Date.now() - new Date(startedAt).getTime()
+  if (Number.isNaN(ms) || ms < 0) return "-"
   if (ms < 60_000) return `${Math.floor(ms / 1000)}s`
   if (ms < 3600_000) return `${Math.floor(ms / 60_000)}m`
   return `${Math.floor(ms / 3600_000)}h ${Math.floor((ms % 3600_000) / 60_000)}m`

@@ -1,0 +1,55 @@
+name: Auto Release & Publish
+
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Check for version change
+        id: version
+        run: |
+          NEW_VERSION=$(jq -r '.version' package.json)
+          OLD_VERSION=$(git show HEAD~1:package.json | jq -r '.version')
+          if [ "$NEW_VERSION" != "$OLD_VERSION" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "v${{ steps.version.outputs.version }}" --generate-notes
+
+      - uses: pnpm/action-setup@v4
+        if: steps.version.outputs.changed == 'true'
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v5
+        if: steps.version.outputs.changed == 'true'
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install and publish
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+          npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

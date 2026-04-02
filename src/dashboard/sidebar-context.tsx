@@ -80,19 +80,16 @@ export function SidebarProvider({
   }, [])
 
   const switchModeStable = React.useCallback((m: string) => {
-    setModeState((prevMode) => {
-      setPanelOpenState((prevOpen) => {
-        if (prevOpen && prevMode === m) {
-          localStorage.setItem(PANEL_OPEN_KEY, "false")
-          return false
-        }
-        localStorage.setItem(PANEL_OPEN_KEY, "true")
-        return true
-      })
-      localStorage.setItem(SIDEBAR_MODE_KEY, m)
-      return m
+    setPanelOpenState((prevOpen) => {
+      const shouldClose = prevOpen && mode === m
+      localStorage.setItem(PANEL_OPEN_KEY, String(!shouldClose))
+      return !shouldClose
     })
-  }, [])
+    if (mode !== m) {
+      setModeState(m)
+      localStorage.setItem(SIDEBAR_MODE_KEY, m)
+    }
+  }, [mode])
 
   const contentMargin = hidden ? 0 : (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH
 

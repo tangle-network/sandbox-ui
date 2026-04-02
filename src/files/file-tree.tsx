@@ -164,6 +164,7 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
         onClick={handleClick}
         role="button"
         tabIndex={0}
+        aria-expanded={isDir ? expanded : undefined}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();

@@ -227,7 +227,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     if (!sid) return;
 
     try {
-      await fetch(`${apiUrl}/terminals/${sid}`, {
+      const res = await fetch(`${apiUrl}/terminals/${sid}`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -236,6 +236,9 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         credentials: 'include',
         body: JSON.stringify({ cols, rows }),
       });
+      if (!res.ok) {
+        console.error('Failed to resize terminal:', res.status);
+      }
     } catch (err) {
       console.error('Failed to resize terminal', err);
     }
@@ -247,19 +250,24 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     const sid = sessionIdRef.current;
     if (!sid) return;
 
-    const res = await fetch(`${apiUrl}/terminals/${sid}/input`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ data: command }),
-    });
+    try {
+      const res = await fetch(`${apiUrl}/terminals/${sid}/input`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ data: command }),
+      });
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || `Input failed: ${res.status}`);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Input failed: ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Failed to send command', err);
+      throw err;
     }
   }, [apiUrl, token]);
 

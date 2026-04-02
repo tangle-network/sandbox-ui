@@ -136,7 +136,7 @@ export const GrepResultsPreview = memo(({ part }: GrepResultsPreviewProps) => {
           <div className="border-b border-border px-3 py-2 text-xs font-medium text-foreground">
             {path}
           </div>
-          <div className="divide-y divide-[hsl(var(--border))]">
+          <div className="divide-y divide-border">
             {pathMatches.map((match, index) => (
               <div key={`${path}-${match.line ?? index}-${index}`} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 px-3 py-2">
                 <div className="pt-0.5 text-xs font-mono text-muted-foreground">

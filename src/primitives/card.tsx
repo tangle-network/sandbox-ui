@@ -24,7 +24,7 @@ const Card = React.forwardRef<
         "duration-[var(--transition-default)]",
         variants[variant],
         hover &&
-          "cursor-pointer hover:border-border",
+          "cursor-pointer hover:border-primary/30",
         className,
       )}
       {...props}

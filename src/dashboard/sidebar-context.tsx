@@ -79,28 +79,6 @@ export function SidebarProvider({
     localStorage.setItem(SIDEBAR_MODE_KEY, m)
   }, [])
 
-  const switchMode = React.useCallback((m: string) => {
-    setPanelOpenState((prevOpen) => {
-      setModeState((prevMode) => {
-        if (prevOpen && prevMode === m) {
-          // Same mode clicked while open — close panel
-          localStorage.setItem(PANEL_OPEN_KEY, "false")
-          return prevMode
-        }
-        // Different mode or panel closed — open and switch
-        localStorage.setItem(PANEL_OPEN_KEY, "true")
-        localStorage.setItem(SIDEBAR_MODE_KEY, m)
-        return m
-      })
-      // Return value is computed inside setModeState callback above
-      // We need to determine whether panel should be open
-      return undefined as unknown as boolean
-    })
-    // Re-derive from storage since nested setState is tricky
-    // Use a simpler approach:
-  }, [])
-
-  // Simpler switchMode that avoids nested setState
   const switchModeStable = React.useCallback((m: string) => {
     setModeState((prevMode) => {
       setPanelOpenState((prevOpen) => {

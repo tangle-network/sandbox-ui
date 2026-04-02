@@ -49,7 +49,7 @@ export function InvoiceTable({ invoices, onExportAll, onLoadMore, onViewInvoice,
               <th className="px-6 py-4 font-mono text-[10px] text-muted-foreground uppercase tracking-widest text-right">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[hsl(var(--border))]">
+          <tbody className="divide-y divide-border">
             {invoices.map((inv) => (
               <tr key={inv.id} className="hover:bg-muted/50 transition-colors">
                 <td className="px-6 py-5 font-mono text-xs text-foreground">{inv.id}</td>

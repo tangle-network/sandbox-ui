@@ -75,7 +75,7 @@ export function SandboxTable({
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[hsl(var(--border))]">
+            <tbody className="divide-y divide-border">
               {sandboxes.map((sb) => {
                 const sc = statusColors[sb.status] ?? statusColors.stopped
                 const isActive = sb.status === "running"

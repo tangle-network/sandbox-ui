@@ -160,8 +160,8 @@ export function VariantList({
             key={variant.id}
             className={`cursor-pointer rounded-lg border px-3 py-2.5 transition-colors ${
               isSelected
-                ? "border-border bg-[var(--accent-surface-soft)]"
-                : "border-border bg-card hover:border-border hover:bg-muted/50"
+                ? "border-primary/30 bg-[var(--accent-surface-soft)]"
+                : "border-border bg-card hover:border-primary/20 hover:bg-muted/50"
             }`}
             onClick={() => onSelect?.(variant.id)}
           >

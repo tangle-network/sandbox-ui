@@ -122,7 +122,7 @@ export function MarkdownDocumentEditor({
         }
 
         .ProseMirror code {
-          background: hsl(var(--muted));
+          background: var(--color-muted, hsl(var(--muted)));
           border-radius: 0.35rem;
           padding: 0.12rem 0.3rem;
         }

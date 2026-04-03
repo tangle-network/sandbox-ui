@@ -179,6 +179,10 @@ export function useSessionStream({
   const connectSSE = useCallback(async () => {
     if (!token || !sessionId || !apiUrl || !enabled) return;
 
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;

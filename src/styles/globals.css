@@ -68,18 +68,18 @@
 
   /* Solid depth cards */
   .glass-card {
-    background: var(--depth-2);
-    border: 1px solid var(--border-subtle);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     transition: border-color var(--transition-default), box-shadow var(--transition-default);
   }
 
   .glass-card:hover {
-    border-color: var(--border-default);
+    border-color: hsl(var(--border));
   }
 
   .glass-card-strong {
-    background: var(--depth-3);
-    border: 1px solid var(--border-subtle);
+    background: hsl(var(--muted));
+    border: 1px solid hsl(var(--border));
   }
 
   /* Elevated glassmorphism utilities */

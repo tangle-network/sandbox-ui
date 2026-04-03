@@ -38,9 +38,9 @@ export function TemplateCard({ template, onUseTemplate, className }: TemplateCar
         <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{template.description}</p>
         {template.tags && template.tags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {template.tags.map((tag) => (
+            {template.tags.map((tag, i) => (
               <span
-                key={tag}
+                key={`${tag}-${i}`}
                 className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
               >
                 {tag}

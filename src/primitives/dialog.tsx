@@ -36,7 +36,7 @@ const DialogContent = React.forwardRef<
 >(({ className, children, variant = "default", ...props }, ref) => {
   const variants = {
     default: "border-border",
-    sandbox: "border-border shadow-[var(--shadow-accent)]",
+    sandbox: "border-[var(--border-accent)] shadow-[var(--shadow-accent)]",
   };
 
   return (

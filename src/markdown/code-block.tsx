@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useRef,
   useState,
   type HTMLAttributes,
   type ReactNode,
@@ -99,16 +100,22 @@ export interface CodeBlockProps extends HTMLAttributes<HTMLDivElement> {
   children?: ReactNode;
 }
 
-function useIsVaultTheme(): boolean {
-  const detect = () =>
-    typeof document !== "undefined" &&
-    document.documentElement.getAttribute("data-sandbox-theme") === "vault";
+const LIGHT_THEMES = new Set(["vault", "dawn"]);
 
-  const [isVault, setIsVault] = useState(detect);
+function detectLightTheme() {
+  return (
+    typeof document !== "undefined" &&
+    LIGHT_THEMES.has(document.documentElement.getAttribute("data-sandbox-theme") ?? "")
+  );
+}
+
+function useIsLightTheme(): boolean {
+  const [isLight, setIsLight] = useState(detectLightTheme);
 
   useEffect(() => {
-    setIsVault(detect());
-    const observer = new MutationObserver(() => setIsVault(detect()));
+    if (typeof document === "undefined") return;
+    setIsLight(detectLightTheme());
+    const observer = new MutationObserver(() => setIsLight(detectLightTheme()));
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["data-sandbox-theme"],
@@ -116,17 +123,17 @@ function useIsVaultTheme(): boolean {
     return () => observer.disconnect();
   }, []);
 
-  return isVault;
+  return isLight;
 }
 
 export const CodeBlock = memo(
   ({ code, language, showLineNumbers = false, light: lightProp, className, children, ...props }: CodeBlockProps) => {
-    const isVault = useIsVaultTheme();
-    const light = lightProp ?? isVault;
+    const isLight = useIsLightTheme();
+    const light = lightProp ?? isLight;
     const theme = light ? tangleLight : tangleDark;
-    const bg = "bg-[var(--depth-2)] border-[var(--border-subtle)]";
-    const headerBg = light ? "bg-[var(--depth-3)] border-[var(--border-subtle)]" : "bg-[var(--depth-1)] border-[var(--border-subtle)]";
-    const langColor = "text-[var(--text-muted)]";
+    const bg = "bg-card border-border";
+    const headerBg = light ? "bg-muted/50 border-border" : "bg-background border-border";
+    const langColor = "text-muted-foreground";
 
     return (
       <div
@@ -177,25 +184,33 @@ CodeBlock.displayName = "CodeBlock";
 /** Copy-to-clipboard button for use inside CodeBlock. */
 export const CopyButton = memo(({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   const handleCopy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.warn("Clipboard write failed:", err);
+    }
   }, [text]);
 
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center justify-center w-6 h-6 rounded-md bg-[var(--bg-section)] border border-[var(--border-subtle)] hover:border-[var(--border-default)] transition-colors"
+      className="flex items-center justify-center w-6 h-6 rounded-md bg-muted border border-border hover:border-primary/20 transition-colors"
       title="Copy to clipboard"
     >
       {copied ? (
-        <Check className="w-3.5 h-3.5 text-[var(--brand-emerald)]" />
+        <Check className="w-3.5 h-3.5 text-emerald-500" />
       ) : (
-        <Copy className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+        <Copy className="w-3.5 h-3.5 text-muted-foreground" />
       )}
     </button>
   );

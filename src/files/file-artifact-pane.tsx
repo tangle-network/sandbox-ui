@@ -90,7 +90,7 @@ export function FileArtifactPane({
           type="button"
           aria-label={`Download ${filename}`}
           onClick={onDownload}
-          className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+          className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         >
           <Download className="h-4 w-4" />
         </button>
@@ -100,7 +100,7 @@ export function FileArtifactPane({
           type="button"
           aria-label={`Close ${filename}`}
           onClick={onClose}
-          className="rounded-[var(--radius-sm)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+          className="rounded-[var(--radius-sm)] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         >
           <X className="h-4 w-4" />
         </button>
@@ -123,7 +123,7 @@ export function FileArtifactPane({
             tabs={paneTabs}
             headerActions={headerActions}
           >
-            <div className="flex min-h-[12rem] items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] text-sm text-[var(--text-muted)]">
+            <div className="flex min-h-[12rem] items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-border bg-muted text-sm text-muted-foreground">
               Loading editor…
             </div>
           </ArtifactPane>

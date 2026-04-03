@@ -170,7 +170,7 @@ const ALIGN_STYLES = {
 
 function formatValue(value: ReactNode | OpenUIPrimitive) {
   if (value === null || value === undefined) {
-    return <span className="text-[var(--text-muted)]">—</span>;
+    return <span className="text-muted-foreground">—</span>;
   }
 
   if (typeof value === "boolean") {
@@ -213,13 +213,13 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
       return (
         <div className="space-y-1">
           {node.kicker && (
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               {node.kicker}
             </div>
           )}
           <HeadingTag
             className={cn(
-              "font-semibold tracking-tight text-[var(--text-primary)]",
+              "font-semibold tracking-tight text-foreground",
               level === 1 && "text-2xl",
               level === 2 && "text-xl",
               level === 3 && "text-lg",
@@ -228,7 +228,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
           >
             {node.text}
           </HeadingTag>
-          {node.meta && <p className="text-sm text-[var(--text-muted)]">{node.meta}</p>}
+          {node.meta && <p className="text-sm text-muted-foreground">{node.meta}</p>}
         </div>
       );
     }
@@ -237,12 +237,12 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
       return (
         <p
           className={cn(
-            "text-sm leading-6 text-[var(--text-secondary)]",
-            node.tone === "muted" && "text-[var(--text-muted)]",
+            "text-sm leading-6 text-foreground",
+            node.tone === "muted" && "text-muted-foreground",
             node.tone === "success" && "text-[var(--surface-success-text)]",
             node.tone === "warning" && "text-[var(--surface-warning-text)]",
             node.tone === "error" && "text-[var(--surface-danger-text)]",
-            node.mono && "font-[var(--font-mono)] text-[13px]",
+            node.mono && "font-mono text-[13px]",
           )}
         >
           {node.text}
@@ -254,12 +254,12 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
 
     case "stat":
       return (
-        <Card variant="glass" className="border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
+        <Card variant="glass" className="border-border shadow-[var(--shadow-card)]">
           <CardContent className="space-y-2 p-4">
-            <div className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
               {node.label}
             </div>
-            <div className="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+            <div className="text-2xl font-semibold tracking-tight text-foreground">
               {node.value}
             </div>
             {node.change && (
@@ -270,7 +270,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
                   node.tone === "warning" && "text-[var(--surface-warning-text)]",
                   node.tone === "error" && "text-[var(--surface-danger-text)]",
                   node.tone === "info" && "text-[var(--surface-info-text)]",
-                  !node.tone || node.tone === "default" ? "text-[var(--text-muted)]" : undefined,
+                  !node.tone || node.tone === "default" ? "text-muted-foreground" : undefined,
                 )}
               >
                 {node.change}
@@ -286,15 +286,15 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
           {node.items.map((item, index) => (
             <div
               key={item.id ?? `${item.label}-${index}`}
-              className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3"
+              className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-3"
             >
-              <dt className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              <dt className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
                 {item.label}
               </dt>
               <dd
                 className={cn(
-                  "mt-1 text-sm font-medium text-[var(--text-primary)]",
-                  item.tone === "muted" && "text-[var(--text-secondary)]",
+                  "mt-1 text-sm font-medium text-foreground",
+                  item.tone === "muted" && "text-foreground",
                 )}
               >
                 {formatValue(item.value)}
@@ -308,7 +308,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
       return (
         <div className="space-y-2">
           {node.title && (
-            <div className="text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
               {node.title}
             </div>
           )}
@@ -316,29 +316,29 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
             code={node.code}
             language={node.language}
             showLineNumbers={node.showLineNumbers}
-            className="border-[var(--border-subtle)] bg-[var(--bg-input)]"
+            className="border-border bg-background"
           />
         </div>
       );
 
     case "markdown":
       return (
-        <div className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-5">
+        <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5">
           <Markdown className="prose-sm max-w-none">{node.content}</Markdown>
         </div>
       );
 
     case "table":
       return (
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
           <Table>
             <TableHeader>
-              <TableRow className="border-[var(--border-subtle)]">
+              <TableRow className="border-border">
                 {node.columns.map((column) => (
                   <TableHead
                     key={column.key}
                     className={cn(
-                      "h-10 text-[11px] uppercase tracking-[0.1em] text-[var(--text-muted)]",
+                      "h-10 text-[11px] uppercase tracking-[0.1em] text-muted-foreground",
                       column.align === "right" && "text-right",
                     )}
                   >
@@ -349,12 +349,12 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
             </TableHeader>
             <TableBody>
               {node.rows.map((row, rowIndex) => (
-                <TableRow key={rowIndex} className="border-[var(--border-subtle)]">
+                <TableRow key={rowIndex} className="border-border">
                   {node.columns.map((column) => (
                     <TableCell
                       key={column.key}
                       className={cn(
-                        "py-3 text-sm text-[var(--text-secondary)]",
+                        "py-3 text-sm text-foreground",
                         column.align === "right" && "text-right tabular-nums",
                       )}
                     >
@@ -366,7 +366,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
             </TableBody>
           </Table>
           {node.caption && (
-            <div className="border-t border-[var(--border-subtle)] px-4 py-2 text-xs text-[var(--text-muted)]">
+            <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
               {node.caption}
             </div>
           )}
@@ -379,13 +379,13 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
     case "separator":
       return (
         <div className="flex items-center gap-3">
-          <div className="h-px flex-1 bg-[var(--border-subtle)]" />
+          <div className="h-px flex-1 bg-border" />
           {node.label && (
-            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
               {node.label}
             </span>
           )}
-          <div className="h-px flex-1 bg-[var(--border-subtle)]" />
+          <div className="h-px flex-1 bg-border" />
         </div>
       );
 
@@ -421,19 +421,19 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
 
     case "card":
       return (
-        <Card variant="glass" className="border-[var(--border-subtle)] shadow-[var(--shadow-card)]">
+        <Card variant="glass" className="border-border shadow-[var(--shadow-card)]">
           {(node.eyebrow || node.title || node.description || node.badge || node.actions) && (
             <CardHeader className="gap-2 p-4 pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-1">
                   {node.eyebrow && (
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                       {node.eyebrow}
                     </div>
                   )}
-                  {node.title && <CardTitle className="text-base text-[var(--text-primary)]">{node.title}</CardTitle>}
+                  {node.title && <CardTitle className="text-base text-foreground">{node.title}</CardTitle>}
                   {node.description && (
-                    <CardDescription className="text-[var(--text-muted)]">
+                    <CardDescription className="text-muted-foreground">
                       {node.description}
                     </CardDescription>
                   )}
@@ -474,16 +474,16 @@ export function OpenUIArtifactRenderer({
     return (
       <div
         className={cn(
-          "flex h-full min-h-[16rem] items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 text-center",
+          "flex h-full min-h-[16rem] items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-border bg-card p-6 text-center",
           className,
         )}
       >
         <div className="space-y-2">
-          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[var(--text-muted)]">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
             <Minus className="h-4 w-4" />
           </div>
-          <div className="text-sm font-medium text-[var(--text-primary)]">No structured artifact payload</div>
-          <div className="text-sm text-[var(--text-muted)]">
+          <div className="text-sm font-medium text-foreground">No structured artifact payload</div>
+          <div className="text-sm text-muted-foreground">
             Pass an OpenUI-like schema to render dynamic result panels with sandbox-ui primitives.
           </div>
         </div>
@@ -498,7 +498,7 @@ export function OpenUIArtifactRenderer({
           {renderNode(node, onAction)}
         </Fragment>
       ))}
-      <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-xs text-[var(--text-muted)]">
+      <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
         <ArrowRight className="h-3.5 w-3.5" />
         Structured artifact rendered through sandbox-ui primitives
       </div>

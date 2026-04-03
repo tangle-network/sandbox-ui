@@ -66,8 +66,8 @@ export function ChatMessage({
             className={cn(
               "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border",
               isUser
-                ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
-                : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--brand-cool)]",
+                ? "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
+                : "border-border bg-muted text-[var(--brand-cool)]",
             )}
           >
             {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
@@ -81,18 +81,18 @@ export function ChatMessage({
           "min-w-0 max-w-[85%] space-y-1 rounded-[var(--radius-lg)] border",
           "px-[var(--chat-message-px)] py-[var(--chat-message-py)]",
           isUser
-            ? "border-[var(--border-accent)] bg-[var(--depth-3)]"
-            : "border-[var(--border-subtle)] bg-[var(--depth-2)]",
+            ? "border-border bg-muted/50"
+            : "border-border bg-card",
         )}
       >
         {/* Role label + timestamp */}
         {!hideRoleLabel && (
           <div className={cn("flex items-center gap-2", isUser && "flex-row-reverse")}>
-            <span className="text-[var(--chat-label-size,11px)] font-[var(--chat-label-weight,600)] uppercase tracking-[var(--chat-label-tracking,0.14em)] text-[var(--text-secondary)]">
+            <span className="text-[var(--chat-label-size,11px)] font-[var(--chat-label-weight,600)] uppercase tracking-[var(--chat-label-tracking,0.14em)] text-foreground">
               {isUser ? userLabel : assistantLabel}
             </span>
             {timestamp && (
-              <span className="text-[var(--chat-label-size,11px)] text-[var(--text-muted)]">
+              <span className="text-[var(--chat-label-size,11px)] text-muted-foreground">
                 {formatTime(timestamp)}
               </span>
             )}
@@ -101,7 +101,7 @@ export function ChatMessage({
 
         {/* Message body */}
         {isUser ? (
-          <div className="whitespace-pre-wrap text-[15px] leading-7 text-[var(--text-primary)]">
+          <div className="whitespace-pre-wrap text-[15px] leading-7 text-foreground">
             {content}
           </div>
         ) : (

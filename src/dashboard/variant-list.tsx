@@ -71,9 +71,9 @@ const statusConfig: Record<
   },
   running: {
     icon: Loader2,
-    color: "text-[var(--brand-cool)]",
+    color: "text-primary",
     bg: "bg-[var(--accent-surface-soft)]",
-    border: "border-[var(--border-accent)]",
+    border: "border-border",
     label: "Running",
     animate: true,
   },
@@ -160,8 +160,8 @@ export function VariantList({
             key={variant.id}
             className={`cursor-pointer rounded-lg border px-3 py-2.5 transition-colors ${
               isSelected
-                ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)]"
-                : "border-[var(--border-subtle)] bg-[var(--depth-2)] hover:border-[var(--border-default)] hover:bg-[var(--depth-3)]"
+                ? "border-primary/30 bg-[var(--accent-surface-soft)]"
+                : "border-border bg-card hover:border-primary/20 hover:bg-muted/50"
             }`}
             onClick={() => onSelect?.(variant.id)}
           >
@@ -172,14 +172,14 @@ export function VariantList({
                 />
                 {status.label}
               </Badge>
-              <span className="truncate text-sm font-medium text-[var(--text-primary)]">{variant.label}</span>
+              <span className="truncate text-sm font-medium text-foreground">{variant.label}</span>
               {variant.sublabel && (
-                <span className="shrink-0 text-xs text-[var(--text-muted)]">
+                <span className="shrink-0 text-xs text-muted-foreground">
                   ({variant.sublabel})
                 </span>
               )}
               {variant.durationMs && (
-                <span className="flex shrink-0 items-center gap-1 text-xs text-[var(--text-muted)]">
+                <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
                   <Timer className="h-3 w-3" />
                   {(variant.durationMs / 1000).toFixed(1)}s
                 </span>
@@ -229,7 +229,7 @@ export function VariantList({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.open(variant.detailsUrl, "_blank");
@@ -244,7 +244,7 @@ export function VariantList({
               <p className="mt-1.5 text-xs text-[var(--surface-danger-text)]">{variant.error}</p>
             )}
             {variant.summary && (
-              <p className="mt-1.5 line-clamp-2 text-xs text-[var(--text-muted)]">
+              <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground">
                 {variant.summary}
               </p>
             )}

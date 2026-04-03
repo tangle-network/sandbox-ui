@@ -89,20 +89,21 @@ function LogOutIcon({ className }: { className?: string }) {
 export interface SidebarProps {
   children: React.ReactNode
   className?: string
+  style?: React.CSSProperties
 }
 
-export function Sidebar({ children, className }: SidebarProps) {
-  const { panelOpen, hidden } = useSidebar()
+export function Sidebar({ children, className, style }: SidebarProps) {
+  const { panelOpen, hidden, hasPanels } = useSidebar()
 
   return (
     <div
       data-sidebar="true"
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex bg-[var(--depth-1)] border-r border-[var(--border-subtle)] transition-[transform,width] duration-200 ease-in-out",
+        "fixed inset-y-0 left-0 z-40 flex bg-card/80 backdrop-blur-3xl border-r border-border transition-[transform,width] duration-200 ease-in-out shadow-sm",
         hidden && "-translate-x-full",
         className,
       )}
-      style={{ width: panelOpen ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH }}
+      style={{ width: (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH, ...style }}
     >
       {children}
     </div>
@@ -120,7 +121,7 @@ export interface SidebarRailProps {
 
 export function SidebarRail({ children, className }: SidebarRailProps) {
   return (
-    <div className={cn("flex flex-col h-full w-16 shrink-0 bg-[var(--depth-2)]", className)}>
+    <div className={cn("flex flex-col h-full w-16 shrink-0 bg-transparent", className)}>
       {children}
     </div>
   )
@@ -137,7 +138,7 @@ export interface SidebarRailHeaderProps {
 
 export function SidebarRailHeader({ children, className }: SidebarRailHeaderProps) {
   return (
-    <div className={cn("flex h-14 items-center justify-center border-b border-[var(--border-subtle)]", className)}>
+    <div className={cn("flex h-14 items-center justify-center border-b border-border", className)}>
       {children}
     </div>
   )
@@ -186,7 +187,7 @@ export interface RailSeparatorProps {
 }
 
 export function RailSeparator({ className }: RailSeparatorProps) {
-  return <div className={cn("my-2 h-px w-10 bg-[var(--border-subtle)]", className)} />
+  return <div className={cn("my-2 h-px w-10 bg-[var(--md3-outline-variant)]", className)} />
 }
 
 // ============================================================================
@@ -209,24 +210,19 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
       onClick={onClick}
       title={label}
       className={cn(
-        "group relative flex flex-col items-center justify-center gap-0.5 w-12 h-12 rounded-lg transition-all duration-150",
+        "group relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200",
         "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
         "active:scale-95",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         isActive && "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] shadow-[0_0_12px_-2px_rgba(130,99,255,0.3)]",
-        !isActive && "text-[var(--text-muted)]",
+        !isActive && "text-muted-foreground",
         className,
       )}
     >
-      <Icon className="h-[18px] w-[18px]" />
-      <span className={cn(
-        "text-[9px] leading-none font-medium tracking-tight truncate max-w-[44px]",
-        isActive ? "text-[var(--accent-text)]" : "text-[var(--text-dim)] group-hover:text-[var(--accent-text)]"
-      )}>
-        {label}
-      </span>
+      <Icon className="h-5 w-5" />
+      {/* Label intentionally removed from rail button to reduce vertical crowding. Tooltip relies on title={label} */}
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[var(--brand-primary)] text-[8px] font-medium text-white px-0.5">
+        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-[var(--md3-on-primary)] px-1 shadow-sm">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -275,7 +271,7 @@ export function SidebarPanel({ children, className }: SidebarPanelProps) {
   return (
     <div
       className={cn(
-        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-[var(--border-subtle)] bg-[var(--depth-1)]",
+        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-border bg-card/50 backdrop-blur-xl",
         panelOpen ? "w-[260px] opacity-100" : "w-0 opacity-0 pointer-events-none",
         className,
       )}
@@ -299,9 +295,9 @@ export interface SidebarPanelHeaderProps {
 
 export function SidebarPanelHeader({ children, title, className }: SidebarPanelHeaderProps) {
   return (
-    <div className={cn("flex h-14 items-center px-4 border-b border-[var(--border-subtle)] shrink-0", className)}>
+    <div className={cn("flex h-14 items-center px-4 border-b border-border shrink-0", className)}>
       {children ?? (
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       )}
     </div>
   )
@@ -382,7 +378,7 @@ export function ProfileAvatar({
           type="button"
           className={cn(
             "flex items-center justify-center w-12 h-12 rounded-lg transition-colors hover:bg-[var(--accent-surface-soft)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
             className,
           )}
           aria-label="User menu"

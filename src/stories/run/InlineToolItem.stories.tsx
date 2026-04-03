@@ -211,11 +211,11 @@ export const GroupedSequence: Story = {
 export const AllStates: Story = {
   render: () => (
     <div className="p-6 max-w-2xl space-y-3">
-      <p className="text-xs font-mono uppercase tracking-widest text-[var(--text-muted)] px-1">Completed</p>
+      <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground px-1">Completed</p>
       <InlineToolItem part={bashComplete} groupPosition="single" />
-      <p className="text-xs font-mono uppercase tracking-widest text-[var(--text-muted)] px-1 pt-2">Running</p>
+      <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground px-1 pt-2">Running</p>
       <InlineToolItem part={bashRunning} groupPosition="single" />
-      <p className="text-xs font-mono uppercase tracking-widest text-[var(--text-muted)] px-1 pt-2">Error</p>
+      <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground px-1 pt-2">Error</p>
       <InlineToolItem part={bashError} groupPosition="single" />
     </div>
   ),

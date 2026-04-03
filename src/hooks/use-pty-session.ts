@@ -20,6 +20,8 @@ export interface UsePtySessionReturn {
   error: string | null;
   /** Send a command to the PTY session. */
   sendCommand: (command: string) => Promise<void>;
+  /** Safely resize the remote PTY. */
+  resizeTerminal: (cols: number, rows: number) => Promise<void>;
   /** Tear down and reconnect. */
   reconnect: () => void;
 }
@@ -47,7 +49,6 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   const retryCountRef = useRef(0);
   const mountedRef = useRef(true);
   const onDataRef = useRef(onData);
-  onDataRef.current = onData;
   const connectStreamRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
 
   // -- Abort SSE stream only (does NOT delete the terminal session) ----------
@@ -177,6 +178,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     }
   }, [apiUrl, token, abortStream]);
 
+  onDataRef.current = onData;
   connectStreamRef.current = connectStream;
 
   // -- Full connect: create terminal + open SSE stream -----------------------
@@ -218,25 +220,54 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     }
   }, [apiUrl, token, cleanup, connectStream]);
 
+  // -- Resize terminal -------------------------------------------------------
+
+  const resizeTerminal = useCallback(async (cols: number, rows: number) => {
+    const sid = sessionIdRef.current;
+    if (!sid || cols <= 0 || rows <= 0) return;
+
+    try {
+      const res = await fetch(`${apiUrl}/terminals/${sid}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ cols, rows }),
+      });
+      if (!res.ok) {
+        console.error('Failed to resize terminal:', res.status);
+      }
+    } catch (err) {
+      console.error('Failed to resize terminal', err);
+    }
+  }, [apiUrl, token]);
+
   // -- Send command ----------------------------------------------------------
 
   const sendCommand = useCallback(async (command: string) => {
     const sid = sessionIdRef.current;
     if (!sid) return;
 
-    const res = await fetch(`${apiUrl}/terminals/${sid}/input`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ data: command }),
-    });
+    try {
+      const res = await fetch(`${apiUrl}/terminals/${sid}/input`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ data: command }),
+      });
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || `Input failed: ${res.status}`);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Input failed: ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Failed to send command', err);
+      throw err;
     }
   }, [apiUrl, token]);
 
@@ -251,5 +282,5 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     };
   }, [connect, cleanup]);
 
-  return { isConnected, error, sendCommand, reconnect: connect };
+  return { isConnected, error, sendCommand, resizeTerminal, reconnect: connect };
 }

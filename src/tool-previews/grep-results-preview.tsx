@@ -131,18 +131,18 @@ export const GrepResultsPreview = memo(({ part }: GrepResultsPreviewProps) => {
       {groupedMatches.map(([path, pathMatches]) => (
         <div
           key={path}
-          className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/55"
+          className="rounded-[var(--radius-md)] border border-border bg-muted/55"
         >
-          <div className="border-b border-[var(--border-subtle)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)]">
+          <div className="border-b border-border px-3 py-2 text-xs font-medium text-foreground">
             {path}
           </div>
-          <div className="divide-y divide-[var(--border-subtle)]">
+          <div className="divide-y divide-border">
             {pathMatches.map((match, index) => (
               <div key={`${path}-${match.line ?? index}-${index}`} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 px-3 py-2">
-                <div className="pt-0.5 text-xs font-mono text-[var(--text-muted)]">
+                <div className="pt-0.5 text-xs font-mono text-muted-foreground">
                   {match.line ?? "·"}
                 </div>
-                <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs font-[var(--font-mono)] text-[var(--text-secondary)]">
+                <pre className="overflow-x-auto whitespace-pre-wrap break-words text-xs font-mono text-foreground">
                   {match.text}
                 </pre>
               </div>

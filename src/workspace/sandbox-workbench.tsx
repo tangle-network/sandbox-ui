@@ -154,7 +154,7 @@ function ArtifactTabs({
   if (artifacts.length === 0) return null;
 
   return (
-    <div className="flex items-center overflow-x-auto border-b border-[var(--border-subtle)] bg-[var(--bg-dark)]">
+    <div className="flex items-center overflow-x-auto border-b border-border bg-muted/20">
       {artifacts.map((artifact) => {
         const Icon = getArtifactTabIcon(artifact.kind);
         const isActive = artifact.id === activeArtifactId;
@@ -163,16 +163,16 @@ function ArtifactTabs({
           <div
             key={artifact.id}
             className={cn(
-              "group flex shrink-0 items-center border-r border-[var(--border-subtle)]",
+              "group flex shrink-0 items-center border-r border-border bg-background relative",
               isActive
-                ? "border-b-2 border-b-[var(--brand-cool)] bg-[var(--bg-card)] text-[var(--text-primary)]"
-                : "text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]",
+                ? "text-foreground after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary"
+                : "text-muted-foreground hover:bg-muted/50 cursor-pointer",
             )}
           >
             <button
               type="button"
               onClick={() => onSelect(artifact.id)}
-              className="flex min-w-0 items-center gap-2 px-3 py-2 text-xs transition-colors hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand-cool)]/60"
+              className="flex min-w-0 items-center gap-2 px-3 py-2 text-[12px] uppercase tracking-wider font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/60"
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
               <span className="max-w-[14rem] truncate">{artifactTabLabel(artifact)}</span>
@@ -182,7 +182,7 @@ function ArtifactTabs({
                 type="button"
                 aria-label={`Close ${artifactTabLabel(artifact)}`}
                 onClick={() => onClose(artifact.id)}
-                className="mr-1 rounded p-1 opacity-0 transition-opacity hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60 group-hover:opacity-100"
+                className="mr-1 rounded-[2px] p-1 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60 group-hover:opacity-100"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -281,21 +281,21 @@ function regionHeader(
   switch (sections[0]?.key) {
     case "directory":
       return (
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           <FolderTree className="h-3.5 w-3.5" />
           Directory
         </div>
       );
     case "artifacts":
       return (
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           <LayoutPanelTop className="h-3.5 w-3.5" />
           Artifacts
         </div>
       );
     case "runtime":
       return (
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           <Bot className="h-3.5 w-3.5" />
           Runtime
         </div>
@@ -377,13 +377,13 @@ export function SandboxWorkbench({
   };
 
   const centerHeader = (
-    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--depth-3)] px-4 py-3.5">
+    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-border bg-muted/50 px-4 py-3.5">
       <div className="min-w-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-cool)]">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
           Tangle Sandbox
         </div>
-        <div className="truncate text-[17px] font-semibold tracking-[0.01em] text-[var(--text-primary)]">{title}</div>
-        {subtitle && <div className="truncate text-sm text-[var(--text-muted)]">{subtitle}</div>}
+        <div className="truncate text-[17px] font-semibold tracking-[0.01em] text-foreground">{title}</div>
+        {subtitle && <div className="truncate text-sm text-muted-foreground">{subtitle}</div>}
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
         {status}
@@ -400,7 +400,7 @@ export function SandboxWorkbench({
       meta={session.meta}
       headerActions={session.headerActions}
       className="h-full"
-      contentClassName="bg-[var(--bg-dark)]"
+      contentClassName="bg-background"
     >
       <ChatContainer
         {...session}
@@ -411,14 +411,14 @@ export function SandboxWorkbench({
   );
 
   const artifactPanel = artifacts.length > 0 ? (
-    <section className="flex h-full min-h-0 flex-col bg-[var(--bg-dark)]">
+    <section className="flex h-full min-h-0 flex-col bg-background">
       <ArtifactTabs
         artifacts={artifacts}
         activeArtifactId={resolvedArtifactId}
         onSelect={handleArtifactChange}
         onClose={onArtifactClose}
       />
-      <div className="min-h-0 flex-1 overflow-auto bg-[var(--bg-dark)]">
+      <div className="min-h-0 flex-1 overflow-auto bg-background">
         {activeArtifact ? (
           renderArtifact(activeArtifact)
         ) : (
@@ -472,7 +472,7 @@ export function SandboxWorkbench({
   const bottom = renderRegion(regionSections.bottom, "bottom");
 
   const genericPanelsHeader = (
-    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
       Workspace Panels
     </span>
   );
@@ -487,7 +487,7 @@ export function SandboxWorkbench({
       rightHeader={right ? regionHeader(regionSections.right, genericPanelsHeader) : undefined}
       bottom={bottom}
       bottomHeader={bottom ? regionHeader(regionSections.bottom, genericPanelsHeader) : undefined}
-      theme={layout?.theme ?? "operator"}
+      theme={layout?.theme}
       density={layout?.density ?? "comfortable"}
       persistenceKey={layout?.persistenceKey}
       defaultLeftOpen={layout?.defaultLeftOpen ?? Boolean(left)}
@@ -514,7 +514,7 @@ export function AgentWorkbench(props: SandboxWorkbenchProps) {
         eyebrow: props.session.eyebrow ?? "Agent Session",
         title: props.session.title ?? (
           <span className="inline-flex items-center gap-2">
-            <Bot className="h-4 w-4 text-[var(--brand-cool)]" />
+            <Bot className="h-4 w-4 text-primary" />
             Execution timeline
           </span>
         ),

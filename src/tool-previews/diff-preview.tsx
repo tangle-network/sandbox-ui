@@ -64,7 +64,7 @@ export const DiffPreview = memo(({ part }: DiffPreviewProps) => {
       ) : null}
       {!payload.diff && payload.before ? (
         <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Before
           </div>
           <CodeBlock code={payload.before} language="text" className="rounded-[var(--radius-md)]" />
@@ -72,7 +72,7 @@ export const DiffPreview = memo(({ part }: DiffPreviewProps) => {
       ) : null}
       {!payload.diff && payload.after ? (
         <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             After
           </div>
           <CodeBlock code={payload.after} language="text" className="rounded-[var(--radius-md)]" />

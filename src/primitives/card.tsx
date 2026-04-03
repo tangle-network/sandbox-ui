@@ -9,11 +9,11 @@ const Card = React.forwardRef<
   }
 >(({ className, variant = "default", hover = false, ...props }, ref) => {
   const variants = {
-    default: "bg-card border-[var(--border-default)]",
-    elevated: "bg-[var(--bg-elevated)] border-[var(--border-subtle)] shadow-[var(--shadow-card)]",
-    glass: "bg-[var(--depth-2)] border-[var(--border-subtle)] shadow-[var(--shadow-card)]",
+    default: "bg-card border-border",
+    elevated: "bg-muted/50 border-border shadow-[var(--shadow-card)]",
+    glass: "bg-card/80 backdrop-blur-xl border-border shadow-[var(--shadow-card)]",
     sandbox:
-      "bg-[var(--depth-3)] border-[var(--border-accent)] shadow-[var(--shadow-accent)]",
+      "bg-muted/50 border-primary/20 shadow-[var(--shadow-accent)]",
   };
 
   return (
@@ -24,7 +24,7 @@ const Card = React.forwardRef<
         "duration-[var(--transition-default)]",
         variants[variant],
         hover &&
-          "cursor-pointer hover:border-[var(--border-hover)]",
+          "cursor-pointer hover:border-primary/30",
         className,
       )}
       {...props}

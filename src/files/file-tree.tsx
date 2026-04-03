@@ -121,8 +121,8 @@ function getFileColor(name: string): string {
     case "yml": return "text-[var(--accent-text)]";
     case "csv":
     case "xlsx": return "text-emerald-400";
-    case "md": return "text-[var(--text-secondary)]";
-    default: return "text-[var(--text-muted)]";
+    case "md": return "text-foreground";
+    default: return "text-muted-foreground";
   }
 }
 
@@ -150,24 +150,26 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
     ? (expanded ? FolderOpen : Folder)
     : getFileIcon(node.name);
 
-  const iconColor = isDir ? "text-[var(--brand-cool)]" : getFileColor(node.name);
+  const iconColor = isDir ? "text-primary" : getFileColor(node.name);
 
   return (
     <div>
       <button
-        onClick={handleClick}
+        type="button"
         className={cn(
-          "flex items-center gap-1.5 w-full text-left px-2 py-1 rounded-[var(--radius-sm)] text-sm transition-colors",
-          "hover:bg-[var(--bg-hover)]",
-          isSelected && "bg-[var(--brand-cool)]/10 text-[var(--text-primary)]",
-          !isSelected && "text-[var(--text-secondary)]",
+          "flex items-center gap-1.5 w-full text-left px-2 py-[2px] cursor-pointer text-[13px] transition-colors",
+          "appearance-none bg-transparent border-none",
+          "hover:bg-accent",
+          isSelected ? "bg-primary/15 text-foreground" : "text-foreground",
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        onClick={handleClick}
+        aria-expanded={isDir ? expanded : undefined}
       >
         {isDir && (
           <ChevronRight
             className={cn(
-              "h-3 w-3 shrink-0 text-[var(--text-muted)] transition-transform",
+              "h-3 w-3 shrink-0 text-muted-foreground transition-transform",
               expanded && "rotate-90",
             )}
           />
@@ -176,7 +178,7 @@ function TreeNode({ node, depth, selectedPath, onSelect, defaultExpanded }: Tree
         <Icon className={cn("h-4 w-4 shrink-0", iconColor)} />
         <span className="truncate">{node.name}</span>
         {node.size !== undefined && !isDir && (
-          <span className="text-[var(--text-muted)] text-xs ml-auto tabular-nums">
+          <span className="text-muted-foreground text-xs ml-auto tabular-nums">
             {formatSize(node.size)}
           </span>
         )}
@@ -225,7 +227,7 @@ export function FileTree({
   }
 
   return (
-    <div className={cn("text-sm font-[var(--font-sans)]", className)}>
+    <div className={cn("text-sm font-sans", className)}>
       {visibleRoot.children ? (
         visibleRoot.children
           .sort((a, b) => {

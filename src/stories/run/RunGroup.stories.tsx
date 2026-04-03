@@ -214,7 +214,7 @@ const customBranding: AgentBranding = {
   label: 'Sandbox Agent',
   accentClass: 'text-violet-400',
   bgClass: 'bg-violet-500/8',
-  containerBgClass: 'bg-[var(--bg-section)]/60',
+  containerBgClass: 'bg-muted/60',
   borderClass: 'border-violet-500/30',
   iconClass: '',
   textClass: 'text-violet-300',

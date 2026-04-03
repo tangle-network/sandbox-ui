@@ -81,15 +81,15 @@ export const QuestionPreview = memo(({ part }: QuestionPreviewProps) => {
       {questions.map((question, index) => (
         <div
           key={`${question}-${index}`}
-          className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-3"
+          className="rounded-[var(--radius-md)] border border-border bg-muted px-3 py-3"
         >
-          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <div className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             Question {index + 1}
           </div>
-          <div className="mt-2 text-sm leading-relaxed text-[var(--text-primary)]">
+          <div className="mt-2 text-sm leading-relaxed text-foreground">
             {question}
           </div>
-          <div className="mt-3 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+          <div className="mt-3 rounded-[var(--radius-sm)] border border-border bg-card px-3 py-2 text-sm text-foreground">
             {answers[index] ?? (part.state.status === "completed" ? "No answer recorded." : "Awaiting answer")}
           </div>
         </div>

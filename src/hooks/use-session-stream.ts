@@ -72,15 +72,13 @@ interface ApiMessage {
 // Helpers
 // ---------------------------------------------------------------------------
 
-let _insertionCounter = 0;
-
-function mapApiMessage(msg: ApiMessage): { message: SessionMessage; parts: SessionPart[] } {
+function mapApiMessage(msg: ApiMessage, counterRef: { current: number }): { message: SessionMessage; parts: SessionPart[] } {
   const created = msg.info.timestamp ? new Date(msg.info.timestamp).getTime() : Date.now();
   const message: SessionMessage = {
     id: msg.info.id,
     role: msg.info.role as 'user' | 'assistant' | 'system',
     time: { created },
-    _insertionIndex: _insertionCounter++,
+    _insertionIndex: counterRef.current++,
   };
 
   const parts: SessionPart[] = (msg.parts ?? []).map((p, i) => {
@@ -144,7 +142,9 @@ export function useSessionStream({
   const [connected, setConnected] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamingMsgIdRef = useRef<string | null>(null);
+  const insertionCounterRef = useRef(0);
   const handleSSEEventRef = useRef<((type: string, raw: Record<string, unknown>) => void) | null>(null);
 
   // ── Fetch full message history ──────────────────────────────────────
@@ -160,7 +160,7 @@ export function useSessionStream({
       const newPartMap: Record<string, SessionPart[]> = {};
 
       for (const apiMsg of apiMessages) {
-        const { message, parts } = mapApiMessage(apiMsg);
+        const { message, parts } = mapApiMessage(apiMsg, insertionCounterRef);
         newMessages.push(message);
         newPartMap[message.id] = parts;
       }
@@ -179,6 +179,10 @@ export function useSessionStream({
   const connectSSE = useCallback(async () => {
     if (!token || !sessionId || !apiUrl || !enabled) return;
 
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -243,7 +247,7 @@ export function useSessionStream({
 
       // Auto-reconnect
       if (!controller.signal.aborted) {
-        setTimeout(() => connectSSE(), 3000);
+        reconnectTimerRef.current = setTimeout(() => connectSSE(), 3000);
       }
     }
   }, [apiUrl, token, sessionId, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -273,7 +277,7 @@ export function useSessionStream({
             id,
             role: role as 'user' | 'assistant' | 'system',
             time: { created: Date.now() },
-            _insertionIndex: _insertionCounter++,
+            _insertionIndex: insertionCounterRef.current++,
           },
         ];
       });
@@ -393,6 +397,7 @@ export function useSessionStream({
     connectSSE();
     return () => {
       abortRef.current?.abort();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       setConnected(false);
     };
   }, [enabled, token, sessionId, refetch, connectSSE]);

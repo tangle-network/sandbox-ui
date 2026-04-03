@@ -84,7 +84,7 @@ export const WithActions: Story = {
     message: makeMessage('msg-6'),
     parts: [textPart('Write a SQL query to find the top 5 customers by revenue this quarter.')],
     actions: (
-      <button className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
+      <button className="text-xs text-muted-foreground hover:text-foreground">
         Edit
       </button>
     ),

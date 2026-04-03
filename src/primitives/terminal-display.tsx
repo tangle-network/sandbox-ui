@@ -33,23 +33,23 @@ const TerminalDisplay = React.forwardRef<HTMLDivElement, TerminalDisplayProps>(
     }, [autoScroll]);
 
     const variants = {
-      default: "border-[var(--border-subtle)]",
-      sandbox: "border-[var(--border-accent)] shadow-[var(--shadow-accent)]",
+      default: "border-border",
+      sandbox: "border-border shadow-[var(--shadow-accent)]",
     };
 
     return (
       <div
         ref={ref}
         className={cn(
-          "overflow-hidden rounded-xl border bg-[var(--depth-1)] font-mono text-sm",
+          "overflow-hidden rounded-xl border bg-background font-mono text-sm",
           variants[variant],
           className,
         )}
         {...props}
       >
         {showHeader && (
-          <div className="flex items-center border-b border-[var(--border-subtle)] bg-[var(--depth-2)] px-4 py-3">
-            <span className="text-[var(--text-muted)] text-xs">{title}</span>
+          <div className="flex items-center border-b border-border bg-card px-4 py-3">
+            <span className="text-muted-foreground text-xs">{title}</span>
           </div>
         )}
         <div
@@ -86,13 +86,13 @@ const TerminalLine = React.forwardRef<HTMLDivElement, TerminalLineProps>(
     ref,
   ) => {
     const typeStyles = {
-      input:    "text-[var(--text-primary)]",
-      output:   "text-[var(--text-secondary)]",
+      input:    "text-foreground",
+      output:   "text-foreground",
       error:    "text-[var(--surface-danger-text)]",
       success:  "text-[var(--surface-success-text)]",
       info:     "text-[var(--surface-info-text)]",
       thinking: "text-[var(--surface-warning-text)] animate-pulse",
-      command:  "text-[var(--text-primary)]",
+      command:  "text-foreground",
       warning:  "text-[var(--surface-warning-text)]",
     };
 
@@ -113,7 +113,7 @@ const TerminalLine = React.forwardRef<HTMLDivElement, TerminalLineProps>(
           <span className="shrink-0 select-none">...</span>
         )}
         {timestamp && (
-          <span className="shrink-0 select-none text-[var(--text-muted)] opacity-50">
+          <span className="shrink-0 select-none text-muted-foreground opacity-50">
             [{timestamp}]
           </span>
         )}
@@ -131,7 +131,7 @@ const TerminalCursor = React.forwardRef<
   <span
     ref={ref}
     className={cn(
-      "ml-0.5 inline-block h-4 w-2 animate-pulse bg-[var(--text-primary)]",
+      "ml-0.5 inline-block h-4 w-2 animate-pulse bg-foreground",
       className,
     )}
     {...props}
@@ -157,14 +157,14 @@ const TerminalInput = React.forwardRef<HTMLInputElement, TerminalInputProps>(
     };
 
     const variants = {
-      default: "border-[var(--border-subtle)] focus-within:border-[var(--border-default)]",
-      sandbox: "border-[var(--border-accent)] focus-within:border-[var(--border-accent-hover)]",
+      default: "border-border focus-within:border-border",
+      sandbox: "border-border focus-within:border-[var(--border-accent-hover)]",
     };
 
     return (
       <div
         className={cn(
-          "flex items-center rounded-lg border bg-[var(--depth-1)] px-4 py-2.5 font-mono text-sm transition-colors",
+          "flex items-center rounded-lg border bg-background px-4 py-2.5 font-mono text-sm transition-colors",
           variants[variant],
           className,
         )}
@@ -176,7 +176,7 @@ const TerminalInput = React.forwardRef<HTMLInputElement, TerminalInputProps>(
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
+          className="flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
           {...props}
         />
         <TerminalCursor />

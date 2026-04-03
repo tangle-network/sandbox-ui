@@ -101,8 +101,8 @@ export const InlineToolItem = memo(
             <button
               className={cn(
                 "w-full border text-left transition-colors",
-                "border-[var(--border-subtle)] bg-[var(--bg-card)] hover:border-[var(--border-accent-hover)] hover:bg-[var(--bg-hover)]/35",
-                open && "border-[var(--border-accent)] bg-[var(--bg-hover)]/30",
+                "border-border bg-card hover:border-[var(--border-accent-hover)] hover:bg-accent/35",
+                open && "border-border bg-accent/30",
                 shapeClass,
                 className,
               )}
@@ -110,10 +110,10 @@ export const InlineToolItem = memo(
               <div className="flex items-center gap-2 px-2.5 py-1.5">
                 <div className={cn(
                   "shrink-0",
-                  isRunning && "text-[var(--brand-cool)]",
+                  isRunning && "text-primary",
                   isComplete && "text-[var(--surface-success-text)]",
                   isError && "text-[var(--surface-danger-text)]",
-                  !isRunning && !isComplete && !isError && "text-[var(--text-muted)]",
+                  !isRunning && !isComplete && !isError && "text-muted-foreground",
                 )}>
                   {isRunning ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -126,11 +126,11 @@ export const InlineToolItem = memo(
                   )}
                 </div>
 
-                <span className="truncate text-xs font-medium text-[var(--text-primary)]">
+                <span className="truncate text-xs font-medium text-foreground">
                   {meta.title}
                 </span>
                 {meta.description ? (
-                  <span className="hidden truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)] sm:inline">
+                  <span className="hidden truncate text-xs font-mono text-muted-foreground sm:inline">
                     {meta.description}
                   </span>
                 ) : null}
@@ -138,7 +138,7 @@ export const InlineToolItem = memo(
                 <div className="ml-auto flex shrink-0 items-center gap-1.5">
                   {isRunning && startTime ? <LiveDuration startTime={startTime} /> : null}
                   {!isRunning && durationMs != null ? (
-                    <span className="text-[10px] font-[var(--font-mono)] tabular-nums text-[var(--text-muted)]">
+                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
                       {formatDuration(durationMs)}
                     </span>
                   ) : null}
@@ -148,20 +148,20 @@ export const InlineToolItem = memo(
                     </span>
                   ) : null}
                   {isRunning ? (
-                    <span className="rounded-full border border-[var(--border-accent)] bg-[var(--brand-cool)]/10 px-1.5 py-px text-[10px] font-semibold uppercase text-[var(--brand-cool)]">
+                    <span className="rounded-full border border-[var(--border-accent)] bg-primary/10 px-1.5 py-px text-[10px] font-semibold uppercase text-primary">
                       Running
                     </span>
                   ) : null}
                   {open ? (
-                    <ChevronDown className="h-3 w-3 text-[var(--text-muted)]" />
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
                   ) : (
-                    <ChevronRight className="h-3 w-3 text-[var(--text-muted)]" />
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
                   )}
                 </div>
               </div>
 
               {errorText && !open ? (
-                <div className="border-t border-[var(--border-subtle)] px-3 py-2 text-xs text-red-200">
+                <div className="border-t border-border px-3 py-2 text-xs text-red-200">
                   {errorText}
                 </div>
               ) : null}

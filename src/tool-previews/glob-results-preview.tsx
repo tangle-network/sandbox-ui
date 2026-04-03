@@ -80,10 +80,10 @@ export const GlobResultsPreview = memo(({ part }: GlobResultsPreviewProps) => {
             return (
               <div
                 key={file}
-                className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)]/55 px-3 py-2"
+                className="flex items-center gap-2 rounded-[var(--radius-md)] border border-border bg-muted/55 px-3 py-2"
               >
-                <Icon className="h-4 w-4 shrink-0 text-[var(--brand-cool)]" />
-                <span className="min-w-0 truncate text-xs font-[var(--font-mono)] text-[var(--text-secondary)]">
+                <Icon className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0 truncate text-xs font-mono text-foreground">
                   {file}
                 </span>
               </div>

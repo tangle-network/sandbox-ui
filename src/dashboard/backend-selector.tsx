@@ -32,7 +32,7 @@ export function BackendSelector({
   return (
     <div className={cn("space-y-1.5", className)}>
       {label && (
-        <label className="block text-xs font-medium text-[var(--text-muted)] uppercase tracking-[0.06em]">
+        <label className="block text-xs font-medium text-muted-foreground uppercase tracking-[0.06em]">
           {label}
         </label>
       )}
@@ -40,32 +40,32 @@ export function BackendSelector({
         <Select.Trigger
           className={cn(
             "flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)]",
-            "border border-[var(--border-default)] bg-[var(--bg-card)]",
+            "border border-border bg-card",
             "px-3 py-2.5 text-sm text-left",
             "transition-colors duration-[var(--transition-fast)]",
-            "hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)]/30",
-            "focus:outline-none focus:border-[var(--border-accent)]",
-            "data-[state=open]:border-[var(--border-accent)] data-[state=open]:bg-[var(--bg-hover)]/30",
+            "hover:border-primary/20 hover:bg-accent/30",
+            "focus:outline-none focus:border-primary/30",
+            "data-[state=open]:border-primary/30 data-[state=open]:bg-accent/30",
           )}
         >
           <div className="min-w-0 flex-1">
             {current ? (
               <div>
-                <span className="font-medium text-[var(--text-primary)]">
+                <span className="font-medium text-foreground">
                   {current.label}
                 </span>
                 {current.description && (
-                  <span className="ml-2 text-xs text-[var(--text-muted)]">
+                  <span className="ml-2 text-xs text-muted-foreground">
                     {current.description}
                   </span>
                 )}
               </div>
             ) : (
-              <span className="text-[var(--text-muted)]">{placeholder}</span>
+              <span className="text-muted-foreground">{placeholder}</span>
             )}
           </div>
           <Select.Icon asChild>
-            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform duration-[var(--transition-fast)] data-[state=open]:rotate-180" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-[var(--transition-fast)] data-[state=open]:rotate-180" />
           </Select.Icon>
         </Select.Trigger>
 
@@ -75,8 +75,8 @@ export function BackendSelector({
             sideOffset={4}
             className={cn(
               "z-50 w-[var(--radix-select-trigger-width)] overflow-hidden",
-              "rounded-[var(--radius-md)] border border-[var(--border-default)]",
-              "bg-[var(--bg-card)] shadow-[var(--shadow-dropdown)]",
+              "rounded-[var(--radius-md)] border border-border",
+              "bg-card shadow-[var(--shadow-dropdown)]",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
               "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
               "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -92,7 +92,7 @@ export function BackendSelector({
                     "relative flex cursor-pointer select-none flex-col rounded-[var(--radius-sm)]",
                     "px-3 py-2.5 text-sm outline-none",
                     "transition-colors duration-[var(--transition-fast)]",
-                    "hover:bg-[var(--bg-hover)]/50 focus:bg-[var(--bg-hover)]/50",
+                    "hover:bg-accent/50 focus:bg-accent/50",
                     "data-[state=checked]:bg-[var(--accent-surface-soft)] data-[state=checked]:text-[var(--brand-primary)]",
                   )}
                 >
@@ -100,7 +100,7 @@ export function BackendSelector({
                     <span className="font-medium">{backend.label}</span>
                   </Select.ItemText>
                   {backend.description && (
-                    <span className="mt-0.5 text-xs text-[var(--text-muted)] data-[state=checked]:text-[var(--accent-text)]">
+                    <span className="mt-0.5 text-xs text-muted-foreground data-[state=checked]:text-[var(--accent-text)]">
                       {backend.description}
                     </span>
                   )}

@@ -25,6 +25,8 @@ interface SidebarContextValue {
   setHidden: (hidden: boolean) => void
   /** Computed content margin in px */
   contentMargin: number
+  /** Whether there are panels at all */
+  hasPanels: boolean
 }
 
 const SidebarContext = React.createContext<SidebarContextValue | null>(null)
@@ -38,15 +40,22 @@ function readStorage(key: string, fallback: string): string {
   }
 }
 
+function writeStorage(key: string, value: string) {
+  if (typeof window === "undefined") return
+  try { localStorage.setItem(key, value) } catch { /* quota/private browsing */ }
+}
+
 export interface SidebarProviderProps {
   defaultPanelOpen?: boolean
   defaultMode?: string
+  hasPanels?: boolean
   children: React.ReactNode
 }
 
 export function SidebarProvider({
   defaultPanelOpen = true,
   defaultMode = "projects",
+  hasPanels = true,
   children,
 }: SidebarProviderProps) {
   const [panelOpen, setPanelOpenState] = React.useState(
@@ -59,60 +68,44 @@ export function SidebarProvider({
 
   const setPanelOpen = React.useCallback((open: boolean) => {
     setPanelOpenState(open)
-    localStorage.setItem(PANEL_OPEN_KEY, String(open))
+    writeStorage(PANEL_OPEN_KEY, String(open))
   }, [])
 
   const togglePanel = React.useCallback(() => {
     setPanelOpenState((prev) => {
       const next = !prev
-      localStorage.setItem(PANEL_OPEN_KEY, String(next))
+      writeStorage(PANEL_OPEN_KEY, String(next))
       return next
     })
   }, [])
 
   const setMode = React.useCallback((m: string) => {
     setModeState(m)
-    localStorage.setItem(SIDEBAR_MODE_KEY, m)
+    writeStorage(SIDEBAR_MODE_KEY, m)
   }, [])
 
-  const switchMode = React.useCallback((m: string) => {
-    setPanelOpenState((prevOpen) => {
-      setModeState((prevMode) => {
-        if (prevOpen && prevMode === m) {
-          // Same mode clicked while open — close panel
-          localStorage.setItem(PANEL_OPEN_KEY, "false")
-          return prevMode
-        }
-        // Different mode or panel closed — open and switch
-        localStorage.setItem(PANEL_OPEN_KEY, "true")
-        localStorage.setItem(SIDEBAR_MODE_KEY, m)
-        return m
-      })
-      // Return value is computed inside setModeState callback above
-      // We need to determine whether panel should be open
-      return undefined as unknown as boolean
-    })
-    // Re-derive from storage since nested setState is tricky
-    // Use a simpler approach:
-  }, [])
-
-  // Simpler switchMode that avoids nested setState
   const switchModeStable = React.useCallback((m: string) => {
     setModeState((prevMode) => {
-      setPanelOpenState((prevOpen) => {
-        if (prevOpen && prevMode === m) {
-          localStorage.setItem(PANEL_OPEN_KEY, "false")
-          return false
-        }
-        localStorage.setItem(PANEL_OPEN_KEY, "true")
+      if (prevMode === m) {
+        // Same mode — toggle panel
+        setPanelOpenState((prevOpen) => {
+          const next = !prevOpen
+          writeStorage(PANEL_OPEN_KEY, String(next))
+          return next
+        })
+        return prevMode
+      }
+      // Different mode — always open panel
+      setPanelOpenState(() => {
+        writeStorage(PANEL_OPEN_KEY, "true")
         return true
       })
-      localStorage.setItem(SIDEBAR_MODE_KEY, m)
+      writeStorage(SIDEBAR_MODE_KEY, m)
       return m
     })
   }, [])
 
-  const contentMargin = hidden ? 0 : panelOpen ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH
+  const contentMargin = hidden ? 0 : (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH
 
   const value = React.useMemo<SidebarContextValue>(
     () => ({
@@ -125,8 +118,9 @@ export function SidebarProvider({
       hidden,
       setHidden,
       contentMargin,
+      hasPanels,
     }),
-    [panelOpen, setPanelOpen, togglePanel, mode, setMode, switchModeStable, hidden, setHidden, contentMargin],
+    [panelOpen, setPanelOpen, togglePanel, mode, setMode, switchModeStable, hidden, setHidden, contentMargin, hasPanels],
   )
 
   return (

@@ -8,7 +8,7 @@ const meta: Meta<typeof BackendSelector> = {
   parameters: { layout: 'centered', backgrounds: { default: 'dark' } },
   decorators: [
     (Story) => (
-      <div className="w-[360px] p-6 rounded-xl bg-[var(--bg-section)]">
+      <div className="w-[360px] p-6 rounded-xl bg-muted">
         <Story />
       </div>
     ),

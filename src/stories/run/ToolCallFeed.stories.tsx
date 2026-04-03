@@ -288,7 +288,7 @@ export const Empty: Story = {
   render: (args) => (
     <div className="p-6 max-w-2xl">
       <ToolCallFeed {...args} />
-      <p className="text-sm text-[var(--text-muted)] italic">(empty feed — renders nothing)</p>
+      <p className="text-sm text-muted-foreground italic">(empty feed — renders nothing)</p>
     </div>
   ),
 }

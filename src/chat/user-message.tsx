@@ -24,16 +24,16 @@ export const UserMessage = memo(({ message, parts, actions }: UserMessageProps) 
   return (
     <div className="flex justify-end">
       <div className="flex max-w-[82%] flex-col items-end gap-2">
-        <div className="w-full rounded-[var(--radius-xl)] rounded-br-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--depth-3)] px-4 py-3.5">
-          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--brand-cool)]">
+        <div className="w-full rounded-[var(--radius-xl)] rounded-br-[var(--radius-sm)] border border-border bg-muted/50 px-4 py-3.5">
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
             You
           </div>
-          <div className="text-[15px] leading-7 text-[var(--text-primary)]">
+          <div className="text-[15px] leading-7 text-foreground">
             <Markdown className="tangle-prose">{textContent}</Markdown>
           </div>
         </div>
         {actions ? (
-          <div className="flex flex-wrap items-center justify-end gap-1.5 text-xs text-[var(--text-muted)]">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 text-xs text-muted-foreground">
             {actions}
           </div>
         ) : null}

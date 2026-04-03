@@ -29,7 +29,7 @@ type Story = StoryObj<typeof WorkspaceLayout>
 function Pane({ label, muted }: { label: string; muted?: boolean }) {
   return (
     <div className="flex h-full w-full items-center justify-center p-6 text-center">
-      <span className={muted ? 'text-xs text-[var(--text-dim)]' : 'text-sm text-[var(--text-muted)]'}>
+      <span className={muted ? 'text-xs text-muted-foreground' : 'text-sm text-muted-foreground'}>
         {label}
       </span>
     </div>
@@ -53,8 +53,8 @@ function ChatArea() {
             <div
               className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-[var(--brand-cool)]/20 text-[var(--text-primary)] border border-[var(--brand-cool)]/30'
-                  : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)]'
+                  ? 'bg-primary/20 text-foreground border border-primary/30'
+                  : 'bg-muted/50 text-foreground border border-border'
               }`}
             >
               {msg.text}
@@ -62,8 +62,8 @@ function ChatArea() {
           </div>
         ))}
       </div>
-      <div className="border-t border-[var(--border-subtle)] p-3">
-        <div className="flex h-10 items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 text-sm text-[var(--text-dim)]">
+      <div className="border-t border-border p-3">
+        <div className="flex h-10 items-center gap-2 rounded-xl border border-border bg-muted/50 px-4 text-sm text-muted-foreground">
           Send a message…
         </div>
       </div>
@@ -74,13 +74,13 @@ function ChatArea() {
 function ArtifactContent() {
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-[var(--border-subtle)] px-4 py-3">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Artifact</div>
-        <div className="mt-0.5 text-sm font-semibold text-[var(--text-primary)]">batch-writer.ts</div>
-        <div className="mt-0.5 text-xs text-[var(--text-muted)]">Suggested fix — retry logic</div>
+      <div className="border-b border-border px-4 py-3">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Artifact</div>
+        <div className="mt-0.5 text-sm font-semibold text-foreground">batch-writer.ts</div>
+        <div className="mt-0.5 text-xs text-muted-foreground">Suggested fix — retry logic</div>
       </div>
       <div className="flex-1 overflow-auto p-4">
-        <pre className="text-xs text-[var(--text-secondary)] leading-relaxed font-mono whitespace-pre-wrap">
+        <pre className="text-xs text-foreground leading-relaxed font-mono whitespace-pre-wrap">
 {`async function writeWithRetry(
   batch: Record[],
   opts: RetryOptions = {},
@@ -114,15 +114,15 @@ function ArtifactContent() {
 
 function TerminalContent() {
   return (
-    <div className="h-full overflow-auto bg-[var(--bg-dark)] p-4 font-mono text-xs leading-relaxed">
-      <div className="text-[var(--text-muted)]">$ node ingest.js --path /data/uploads</div>
+    <div className="h-full overflow-auto bg-background p-4 font-mono text-xs leading-relaxed">
+      <div className="text-muted-foreground">$ node ingest.js --path /data/uploads</div>
       <div className="text-[var(--code-success)] mt-1">✓ Connected to pipeline runtime</div>
-      <div className="text-[var(--text-secondary)]">→ Scanning 142 files…</div>
-      <div className="text-[var(--text-secondary)]">→ Schema coercion: 12 warnings</div>
+      <div className="text-foreground">→ Scanning 142 files…</div>
+      <div className="text-foreground">→ Schema coercion: 12 warnings</div>
       <div className="text-[var(--code-error)]">✗ Batch flush failed (attempt 1/5): ETIMEDOUT</div>
       <div className="text-[var(--code-number)]">  Retrying in 412ms…</div>
       <div className="text-[var(--code-success)]">✓ Batch flush succeeded on attempt 2</div>
-      <div className="text-[var(--text-secondary)]">→ Processed 142/142 files</div>
+      <div className="text-foreground">→ Processed 142/142 files</div>
       <div className="text-[var(--code-success)] mt-1">✓ Pipeline complete in 8.4s</div>
     </div>
   )
@@ -162,13 +162,13 @@ export const Default: Story = {
     defaultBottomOpen: false,
     center: <ChatArea />,
     centerHeader: (
-      <span className="text-sm font-semibold text-[var(--text-primary)]">
+      <span className="text-sm font-semibold text-foreground">
         File ingestion pipeline
       </span>
     ),
     left: <Pane label="Left panel — session list or file tree" />,
     leftHeader: (
-      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         Sessions
       </span>
     ),
@@ -200,25 +200,25 @@ export const FullDemo: Story = {
           />
         }
         leftHeader={
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Sessions
           </span>
         }
         center={<ChatArea />}
         centerHeader={
-          <span className="text-sm font-semibold text-[var(--text-primary)]">
+          <span className="text-sm font-semibold text-foreground">
             File ingestion pipeline
           </span>
         }
         right={<ArtifactContent />}
         rightHeader={
-          <span className="text-sm font-semibold text-[var(--text-primary)]">
+          <span className="text-sm font-semibold text-foreground">
             Artifact
           </span>
         }
         bottom={<TerminalContent />}
         bottomHeader={
-          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Terminal
           </span>
         }
@@ -246,7 +246,7 @@ export const WithStatusBanner: Story = {
       defaultBottomOpen={false}
       left={<Pane label="Session list" />}
       leftHeader={
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Sessions
         </span>
       }
@@ -268,7 +268,7 @@ export const WithStatusBanner: Story = {
         </div>
       }
       centerHeader={
-        <span className="text-sm font-semibold text-[var(--text-primary)]">
+        <span className="text-sm font-semibold text-foreground">
           New Session
         </span>
       }
@@ -285,19 +285,19 @@ export const WithBottomPanel: Story = {
     defaultBottomHeight: 240,
     center: <ChatArea />,
     centerHeader: (
-      <span className="text-sm font-semibold text-[var(--text-primary)]">
+      <span className="text-sm font-semibold text-foreground">
         File ingestion pipeline
       </span>
     ),
     left: <Pane label="Session list" />,
     leftHeader: (
-      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         Sessions
       </span>
     ),
     bottom: <TerminalContent />,
     bottomHeader: (
-      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
         Terminal
       </span>
     ),
@@ -320,7 +320,7 @@ export const BuilderTheme: Story = {
     defaultBottomOpen: false,
     center: <ChatArea />,
     centerHeader: (
-      <span className="text-sm font-semibold text-[var(--text-primary)]">
+      <span className="text-sm font-semibold text-foreground">
         File ingestion pipeline
       </span>
     ),
@@ -338,7 +338,7 @@ export const CompactDensity: Story = {
     defaultBottomOpen: false,
     center: <ChatArea />,
     centerHeader: (
-      <span className="text-sm font-semibold text-[var(--text-primary)]">
+      <span className="text-sm font-semibold text-foreground">
         File ingestion pipeline
       </span>
     ),

@@ -9,18 +9,18 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--btn-primary-bg)] text-primary-foreground shadow-[var(--shadow-accent)] hover:bg-[var(--btn-primary-hover)] active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-primary/20 border border-primary/30 text-primary hover:text-primary-foreground shadow-[var(--shadow-accent)] hover:bg-primary hover:shadow-[var(--shadow-glow)] active:scale-[0.97] duration-[var(--transition-fast)]",
         destructive:
-          "bg-destructive/15 border border-destructive/25 text-destructive hover:bg-destructive/22 active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-destructive/10 border border-destructive/30 text-destructive hover:text-destructive-foreground hover:bg-destructive/80 active:scale-[0.97] duration-[var(--transition-fast)]",
         outline:
-          "border border-[var(--border-default)] bg-transparent hover:bg-[var(--bg-hover)] hover:border-[var(--border-hover)] active:scale-[0.97] duration-[var(--transition-fast)]",
+          "border border-border bg-card/50 backdrop-blur-xl hover:bg-muted hover:border-primary/20 active:scale-[0.97] duration-[var(--transition-fast)] text-foreground shadow-sm",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/70 active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-muted/50 border border-border text-foreground backdrop-blur-xl hover:bg-muted active:scale-[0.97] duration-[var(--transition-fast)] shadow-sm",
         ghost:
-          "hover:bg-[var(--bg-hover)] hover:text-foreground duration-[var(--transition-fast)]",
+          "hover:bg-muted hover:text-foreground duration-[var(--transition-fast)] text-muted-foreground border border-transparent",
         link: "text-primary underline-offset-4 hover:underline",
         sandbox:
-          "bg-[image:var(--accent-gradient-strong)] text-white shadow-[var(--shadow-accent)] hover:brightness-110 active:scale-[0.97] duration-[var(--transition-fast)]",
+          "bg-[image:var(--accent-gradient-strong)] text-white shadow-[var(--shadow-accent)] backdrop-blur-2xl border border-[var(--border-accent)] hover:brightness-110 active:scale-[0.97] duration-[var(--transition-fast)]",
       },
       size: {
         default: "h-[var(--control-height)] px-4 py-2",

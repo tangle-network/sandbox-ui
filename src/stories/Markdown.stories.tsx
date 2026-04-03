@@ -10,7 +10,7 @@ const markdownMeta: Meta<typeof Markdown> = {
   parameters: { layout: 'centered', backgrounds: { default: 'dark' } },
   decorators: [
     (Story) => (
-      <div className="w-[680px] p-6 rounded-xl bg-[var(--bg-card)] text-[var(--text-primary)]">
+      <div className="w-[680px] p-6 rounded-xl bg-card text-foreground">
         <Story />
       </div>
     ),
@@ -156,7 +156,7 @@ Regular paragraph after a horizontal rule.
 export const CodeBlockOnly: Story = {
   name: 'CodeBlock standalone',
   render: () => (
-    <div className="w-[680px] p-6 rounded-xl bg-[var(--bg-card)] space-y-4">
+    <div className="w-[680px] p-6 rounded-xl bg-card space-y-4">
       <CodeBlock code={`import { DropZone } from '@tangle/sandbox-ui'\n\nfunction App() {\n  return (\n    <DropZone onDrop={files => upload(files)}>\n      <Dashboard />\n    </DropZone>\n  )\n}`} language="tsx">
         <CopyButton text="import { DropZone } from '@tangle/sandbox-ui'" />
       </CodeBlock>
@@ -170,7 +170,7 @@ export const CodeBlockOnly: Story = {
 export const CodeBlockNoLanguage: Story = {
   name: 'CodeBlock — no language',
   render: () => (
-    <div className="w-[680px] p-6 rounded-xl bg-[var(--bg-card)]">
+    <div className="w-[680px] p-6 rounded-xl bg-card">
       <CodeBlock code="DROP TABLE users;  -- don't run this" />
     </div>
   ),

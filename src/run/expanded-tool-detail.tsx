@@ -88,15 +88,15 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
 
   if (meta.displayVariant === "read-file") {
     return (
-      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
-        <div className="flex items-center gap-2.5 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-3 py-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--bg-section)] text-[var(--brand-cool)]">
+      <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card shadow-[var(--shadow-card)]">
+        <div className="flex items-center gap-2.5 border-b border-border bg-card px-3 py-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-muted text-primary">
             <FileText className="h-3.5 w-3.5" />
           </div>
           <div className="min-w-0 flex items-center gap-2">
-            <span className="text-xs font-semibold text-[var(--text-primary)]">Read file</span>
+            <span className="text-xs font-semibold text-foreground">Read file</span>
             {meta.targetPath ? (
-              <span className="truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{meta.targetPath}</span>
+              <span className="truncate text-xs font-mono text-muted-foreground">{meta.targetPath}</span>
             ) : null}
           </div>
         </div>
@@ -104,7 +104,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
           {typeof output === "string" ? (
             <CodeBlock code={output} language={langFromPath(meta.targetPath) ?? "text"} className="rounded-[var(--radius-md)]" />
           ) : (
-            <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-4 text-sm text-[var(--text-muted)]">
+            <div className="rounded-[var(--radius-md)] border border-dashed border-border bg-muted px-3 py-4 text-sm text-muted-foreground">
               No readable file content was returned.
             </div>
           )}
@@ -126,10 +126,10 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
     <div className="space-y-3">
       {/* Input */}
       {inputStr && (
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]">
-          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-3 py-2">
-            <ArrowRight className="h-3 w-3 text-[var(--brand-cool)]" />
-            <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
+          <div className="flex items-center gap-2 border-b border-border bg-background px-3 py-2">
+            <ArrowRight className="h-3 w-3 text-primary" />
+            <span className="text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
               Input
             </span>
           </div>
@@ -139,10 +139,10 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
 
       {/* Output */}
       {status === "completed" && outputStr && (
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)]">
-          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--depth-1)] px-3 py-2">
-            <ArrowLeft className="h-3 w-3 text-[var(--brand-cool)]" />
-            <span className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
+          <div className="flex items-center gap-2 border-b border-border bg-background px-3 py-2">
+            <ArrowLeft className="h-3 w-3 text-primary" />
+            <span className="text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
               Output
             </span>
           </div>
@@ -167,7 +167,7 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
               Error
             </span>
           </div>
-          <pre className="bg-[var(--surface-danger-bg)] p-3 text-xs font-[var(--font-mono)] whitespace-pre-wrap break-all text-[var(--surface-danger-text)]">
+          <pre className="bg-[var(--surface-danger-bg)] p-3 text-xs font-mono whitespace-pre-wrap break-all text-[var(--surface-danger-text)]">
             {error}
           </pre>
         </div>
@@ -175,8 +175,8 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
 
       {/* Running state */}
       {(status === "pending" || status === "running") && (
-        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-section)] px-3 py-3 text-xs text-[var(--text-muted)]">
-          <Loader2 className={cn("h-3 w-3 animate-spin text-[var(--brand-cool)]")} />
+        <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-border bg-muted px-3 py-3 text-xs text-muted-foreground">
+          <Loader2 className={cn("h-3 w-3 animate-spin text-primary")} />
           Running…
         </div>
       )}

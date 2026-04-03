@@ -44,7 +44,7 @@ export function UploadProgress({ files, onRemove, onRetry, className }: UploadPr
               ? "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)]"
               : file.status === "complete"
                 ? "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]"
-                : "border-[var(--border-subtle)] bg-[var(--depth-2)]",
+                : "border-border bg-card",
           )}
         >
           {/* Icon */}
@@ -55,23 +55,23 @@ export function UploadProgress({ files, onRemove, onRetry, className }: UploadPr
             <AlertCircle className="h-4 w-4 shrink-0 text-[var(--surface-danger-text)]" />
           )}
           {file.status === "uploading" && (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--brand-cool)]" />
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
           )}
           {file.status === "pending" && (
-            <FileText className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />
+            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
 
           {/* Name + size */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="truncate font-medium text-[var(--text-primary)]">{file.name}</span>
-              <span className="shrink-0 text-xs text-[var(--text-muted)]">{formatSize(file.size)}</span>
+              <span className="truncate font-medium text-foreground">{file.name}</span>
+              <span className="shrink-0 text-xs text-muted-foreground">{formatSize(file.size)}</span>
             </div>
             {/* Progress bar */}
             {file.status === "uploading" && file.progress !== undefined && (
-              <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-[var(--depth-3)]">
+              <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted/50">
                 <div
-                  className="h-full rounded-full bg-[var(--brand-cool)] transition-all"
+                  className="h-full rounded-full bg-primary transition-all"
                   style={{ width: `${file.progress}%` }}
                 />
               </div>
@@ -88,7 +88,7 @@ export function UploadProgress({ files, onRemove, onRetry, className }: UploadPr
               <button
                 type="button"
                 onClick={() => onRetry(file.id)}
-                className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
               </button>
@@ -97,7 +97,7 @@ export function UploadProgress({ files, onRemove, onRetry, className }: UploadPr
               <button
                 type="button"
                 onClick={() => onRemove(file.id)}
-                className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
               </button>

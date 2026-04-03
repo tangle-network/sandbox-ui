@@ -40,14 +40,21 @@ export function useAuth({
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
+  const retryTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = React.useRef<AbortController | null>(null);
 
   const fetchSession = React.useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsLoading(true);
     setError(null);
 
     try {
       const res = await fetch(`${apiBaseUrl}/auth/session`, {
         credentials: "include",
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -61,20 +68,27 @@ export function useAuth({
         setUser(null);
       }
     } catch (err) {
+      if ((err as Error).name === "AbortError") return;
       setError(err instanceof Error ? err : new Error("Unknown error"));
       setUser(null);
 
       if (shouldRetryOnError) {
-        // Retry after 5 seconds on error
-        setTimeout(fetchSession, 5000);
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = setTimeout(fetchSession, 5000);
       }
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }, [apiBaseUrl, shouldRetryOnError]);
 
   React.useEffect(() => {
     fetchSession();
+    return () => {
+      abortRef.current?.abort();
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
   }, [fetchSession]);
 
   React.useEffect(() => {

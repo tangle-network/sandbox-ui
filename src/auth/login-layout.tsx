@@ -1,111 +1,60 @@
 "use client"
 
 import * as React from "react"
-import { BookOpen, HelpCircle, Terminal } from "lucide-react"
 import { cn } from "../lib/utils"
+import { Terminal } from "lucide-react"
 
 export interface LoginLayoutProps {
-  brandName?: string
-  tagline?: React.ReactNode
-  subtitle?: string
-  terminalLines?: string[]
-  footerLinks?: { label: string; href: string }[]
+  title?: React.ReactNode
+  subtitle?: React.ReactNode
+  brandIcon?: React.ReactNode
   children: React.ReactNode
   className?: string
+  /** (Deprecated) terminal lines from legacy layout, kept for backwards compatibility */
+  terminalLines?: string[]
+  /** (Deprecated) tagline, kept for backwards compatibility */
+  tagline?: React.ReactNode
+  /** (Deprecated) footerLinks, kept for backwards compatibility */
+  footerLinks?: { label: string; href: string }[]
 }
 
 export function LoginLayout({
-  brandName = "Tangle Sandbox",
-  tagline,
-  subtitle = "Step into the next generation of sandboxed cloud infrastructure. Precise, ethereal, and designed for high-performance development.",
-  terminalLines = [
-    "Initializing secure environment...",
-    "DONE  Encrypted bridge established.",
-    "Awaiting user authentication...",
-  ],
-  footerLinks = [
-    { label: "Documentation", href: "/docs" },
-    { label: "Support", href: "/support" },
-  ],
+  title = "Welcome Back",
+  subtitle = "Sign in to your workspace.",
+  brandIcon,
   children,
   className,
 }: LoginLayoutProps) {
   return (
-    <div className={cn("bg-[var(--depth-1)] text-[var(--text-primary)] font-sans overflow-hidden", className)}>
-      {/* Subtle background dot grid */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "radial-gradient(var(--brand-cool) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+    <div className={cn("relative flex min-h-screen items-center justify-center bg-[var(--md3-background)] overflow-hidden antialiased font-sans flex-col", className)}>
+      {/* Background Magic Elements */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute top-1/4 -right-1/4 h-[800px] w-[800px] rounded-full bg-[var(--md3-primary)] opacity-10 blur-[150px] mix-blend-screen" />
+        <div className="absolute -bottom-1/4 -left-1/4 h-[800px] w-[800px] rounded-full bg-[var(--md3-primary-dim)] opacity-20 blur-[150px] mix-blend-screen" />
+        <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_100%)] blur-[50px]" />
+        
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0ibTIwIDB2MjBIMFYweiIgZmlsbD0ibm9uZSIvPPHBhdGggZD0iTTE5LjUgMEwxOS41IDIwTTIwIC41TDAgLjVIMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsIDI1NSLCAyNTUsIDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')] opacity-30" style={{ maskImage: "radial-gradient(circle at center, black, transparent)", WebkitMaskImage: "radial-gradient(circle at center, black 40%, transparent 100%)" }} />
       </div>
 
-      <main className="relative z-10 flex flex-col md:flex-row h-screen">
-        {/* Left: Branding */}
-        <section className="hidden md:flex flex-col justify-between p-12 lg:p-20 w-1/2 h-full">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[var(--accent-surface-soft)] border border-[var(--border-accent)] rounded-lg flex items-center justify-center">
-                <Terminal className="h-5 w-5 text-[var(--brand-cool)]" />
-              </div>
-              <span className="text-2xl font-extrabold tracking-tighter text-[var(--text-primary)]">
-                {brandName}
-              </span>
-            </div>
+      <div className="z-10 w-full max-w-md px-6 animate-in flex flex-col items-center">
+        {/* Header / Brand */}
+        <div className="mb-10 text-center flex flex-col items-center">
+          <div className="inline-flex h-16 w-16 mb-4 items-center justify-center rounded-2xl glass-panel shadow-[0_0_30px_rgba(173,163,255,0.15)] glow-primary relative">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1)_0,transparent_100%)] pointer-events-none rounded-2xl" />
+            {brandIcon || <Terminal className="h-8 w-8 text-[var(--md3-primary)]" />}
           </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
+          <p className="mt-2 text-[var(--md3-on-surface-variant)]">{subtitle}</p>
+        </div>
 
-          <div className="max-w-lg space-y-6">
-            {tagline ? (
-              <div className="text-5xl lg:text-7xl font-bold tracking-tight leading-none text-[var(--text-primary)]">
-                {tagline}
-              </div>
-            ) : (
-              <h1 className="text-5xl lg:text-7xl font-bold tracking-tight leading-none">
-                Orchestrate <br /><span className="text-[var(--brand-cool)]">Agents</span> in Flow.
-              </h1>
-            )}
-            <p className="text-[var(--text-muted)] text-lg leading-relaxed font-light">
-              {subtitle}
-            </p>
-
-            {/* Terminal display */}
-            <div className="mt-12 bg-[var(--depth-2)] rounded-xl border border-[var(--border-subtle)] overflow-hidden">
-              <div className="bg-[var(--depth-1)] border-b border-[var(--border-subtle)] px-4 py-2 flex items-center gap-2">
-                <span className="font-mono text-xs text-[var(--text-muted)]">tangle --init-node</span>
-              </div>
-              <div className="p-6 font-mono text-xs space-y-2">
-                {terminalLines.map((line, i) => (
-                  <div key={i} className="flex gap-4">
-                    <span className="text-[var(--brand-cool)] opacity-60">{String(i + 1).padStart(2, "0")}</span>
-                    {line.startsWith("DONE") ? (
-                      <>
-                        <span className="text-[var(--code-success)]">DONE</span>
-                        <span className="text-[var(--text-primary)]">{line.replace("DONE  ", "")}</span>
-                      </>
-                    ) : (
-                      <span className="text-[var(--text-secondary)]">{line}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Footer links */}
-          <nav className="flex gap-8 text-sm font-medium text-[var(--text-muted)]">
-            {footerLinks.map((link) => (
-              <a key={link.href} href={link.href} className="hover:text-[var(--brand-cool)] transition-colors flex items-center gap-2">
-                {link.label === "Documentation" ? <BookOpen className="h-4 w-4" /> : <HelpCircle className="h-4 w-4" />}
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        </section>
-
-        {/* Right: Auth form */}
-        <section className="w-full md:w-1/2 flex items-center justify-center p-6 lg:p-24 relative">
-          <div className="w-full max-w-md bg-[var(--depth-2)] rounded-[2rem] p-8 lg:p-12 shadow-2xl border border-[var(--border-subtle)]">
-            {children}
-          </div>
-        </section>
-      </main>
+        <div className="w-full glass-panel-heavy p-8 border border-border shadow-sm relative overflow-hidden backdrop-blur-3xl rounded-[32px]">
+          {/* Internal gradient flare */}
+          <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--md3-primary)] to-transparent opacity-50" />
+          
+          {children}
+        </div>
+      </div>
     </div>
   )
 }

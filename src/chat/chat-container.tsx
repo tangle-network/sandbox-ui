@@ -253,7 +253,7 @@ function buildTimelineItems(
             id: `${message.id}-openui-${part.id}`,
             kind: "custom",
             content: (
-              <div className="my-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
+              <div className="my-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 shadow-[var(--shadow-card)]">
                 <OpenUIArtifactRenderer schema={schema} onAction={onOpenUIAction} />
               </div>
             ),
@@ -296,7 +296,7 @@ function buildTimelineItems(
                 id: `${itemId}-openui`,
                 kind: "custom",
                 content: (
-                  <div className="my-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4 shadow-[var(--shadow-card)]">
+                  <div className="my-2 rounded-[var(--radius-lg)] border border-border bg-card p-4 shadow-[var(--shadow-card)]">
                     <OpenUIArtifactRenderer schema={schema} onAction={onOpenUIAction} />
                   </div>
                 ),
@@ -420,9 +420,9 @@ export const ChatContainer = memo(
         >
           {messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <div className="max-w-md rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-5 py-5 text-center shadow-[var(--shadow-card)]">
-                <div className="text-sm font-semibold text-[var(--text-primary)]">Start the filing workflow</div>
-                <div className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
+              <div className="max-w-md rounded-[var(--radius-xl)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-5 py-5 text-center shadow-[var(--shadow-card)]">
+                <div className="text-sm font-semibold text-foreground">Start the filing workflow</div>
+                <div className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   Ask the agent to analyze documents, generate forms, explain a calculation, or review the current filing package.
                 </div>
               </div>
@@ -453,9 +453,9 @@ export const ChatContainer = memo(
               onClick={scrollToBottom}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                "border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]",
-                "text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-hover)]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60",
+                "border border-border bg-card shadow-[var(--shadow-card)]",
+                "text-xs text-foreground transition-colors hover:bg-accent",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
               )}
             >
               <ArrowDown className="w-3 h-3" />
@@ -477,7 +477,7 @@ export const ChatContainer = memo(
             onRemoveFile={onRemoveFile}
             onAttach={onAttach}
             disabled={disabled}
-            className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-dark)]"
+            className="shrink-0 border-t border-border bg-background"
           />
         )}
       </div>

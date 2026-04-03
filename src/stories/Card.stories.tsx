@@ -32,7 +32,7 @@ export const Default: Story = { render: () => <SampleCard variant="default" /> }
 export const Elevated: Story = { render: () => <SampleCard variant="elevated" /> }
 export const Glass: Story = {
   render: () => (
-    <div className="bg-mesh bg-[var(--depth-1)] p-10 rounded-xl">
+    <div className="bg-mesh bg-background p-10 rounded-xl">
       <SampleCard variant="glass" />
     </div>
   ),
@@ -43,7 +43,7 @@ export const Hoverable: Story = { render: () => <SampleCard variant="default" ho
 export const AllVariants: Story = {
   name: 'All Variants',
   render: () => (
-    <div className="bg-mesh bg-[var(--depth-1)] p-10 rounded-xl flex flex-wrap gap-4">
+    <div className="bg-mesh bg-background p-10 rounded-xl flex flex-wrap gap-4">
       <SampleCard variant="default" />
       <SampleCard variant="elevated" />
       <SampleCard variant="glass" />

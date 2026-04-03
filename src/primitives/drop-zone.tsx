@@ -106,9 +106,9 @@ export function DropZone({
     >
       {dragOver &&
         (overlay || (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none bg-[var(--depth-1)]">
-            <div className="rounded-2xl border-2 border-dashed border-[var(--border-accent)] bg-[var(--depth-2)] p-16 text-center shadow-[var(--shadow-dropdown)] max-w-lg mx-auto">
-              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-[var(--border-accent)] bg-[var(--accent-surface-soft)]">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none bg-background">
+            <div className="rounded-2xl border-2 border-dashed border-border bg-card p-16 text-center shadow-[var(--shadow-dropdown)] max-w-lg mx-auto">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-border bg-[var(--accent-surface-soft)]">
                 {typeof icon === "string" ? (
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-10 w-10 text-[var(--accent-text)]">
                     <title>Upload</title>
@@ -120,8 +120,8 @@ export function DropZone({
                   icon
                 )}
               </div>
-              <h2 className="text-2xl font-bold text-[var(--text-primary)]">{title}</h2>
-              <p className="mt-2 text-sm text-[var(--text-muted)]">{description}</p>
+              <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{description}</p>
             </div>
           </div>
         ))}

@@ -1,14 +1,5 @@
 import { cn } from "../lib/utils";
-import { Button } from "../primitives/button";
-import { Badge } from "../primitives/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "../primitives/card";
+import { Check, Zap } from "lucide-react";
 
 export interface PricingTier {
   id: string;
@@ -19,6 +10,8 @@ export interface PricingTier {
   features: string[];
   recommended?: boolean;
   creditsPerMonth?: number;
+  monthlyPriceId?: string;
+  yearlyPriceId?: string;
 }
 
 export interface PricingPageProps {
@@ -33,40 +26,8 @@ export interface PricingPageProps {
   cardClassName?: string;
 }
 
-const variantColors = {
-  sandbox: {
-    accent: "text-[var(--accent-text)]",
-    border: "border-[var(--border-accent)]",
-    bg: "bg-[var(--accent-surface-soft)]",
-    ring: "ring-[hsl(var(--primary)/0.35)]",
-  },
-};
-
 function formatPrice(cents: number): string {
-  return (cents / 100).toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className={cn("h-5 w-5", className)}
-    >
-      <title>Check icon</title>
-      <path
-        fillRule="evenodd"
-        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
+  return `$${Math.round(cents / 100)}`;
 }
 
 export function PricingPage({
@@ -75,48 +36,56 @@ export function PricingPage({
   billingPeriod,
   onBillingPeriodChange,
   onSelectTier,
-  variant = "sandbox",
   loading = false,
   className,
-  cardClassName,
 }: PricingPageProps) {
-  const colors = variantColors[variant];
+  // Auto-mark the middle tier as recommended if none explicitly set
+  const tiersWithRecommended = tiers.map((tier, i) => ({
+    ...tier,
+    recommended: tier.recommended ?? (tiers.length === 3 && i === 1),
+  }));
 
   return (
-    <div className={cn("w-full space-y-8", className)}>
+    <div className={cn("w-full space-y-10", className)}>
       {/* Billing Period Toggle */}
-      <div className="flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => onBillingPeriodChange("monthly")}
-          className={cn(
-            "rounded-lg px-4 py-2 font-medium text-sm transition-all",
-            billingPeriod === "monthly"
-              ? cn("bg-muted text-foreground", colors.ring, "ring-2")
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Monthly
-        </button>
-        <button
-          type="button"
-          onClick={() => onBillingPeriodChange("yearly")}
-          className={cn(
-            "rounded-lg px-4 py-2 font-medium text-sm transition-all",
-            billingPeriod === "yearly"
-              ? cn("bg-muted text-foreground", colors.ring, "ring-2")
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          Yearly
-          <span className={cn("ml-2 text-xs", colors.accent)}>Save 20%</span>
-        </button>
+      <div className="flex justify-center">
+        <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-1">
+          <button
+            type="button"
+            onClick={() => onBillingPeriodChange("monthly")}
+            className={cn(
+              "rounded-full px-5 py-2 text-sm font-medium transition-all",
+              billingPeriod === "monthly"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => onBillingPeriodChange("yearly")}
+            className={cn(
+              "rounded-full px-5 py-2 text-sm font-medium transition-all",
+              billingPeriod === "yearly"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Yearly
+            <span className="ml-2 rounded-full bg-[var(--surface-success-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--surface-success-text)]">
+              Save 20%
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* Pricing Cards Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {tiers.map((tier) => {
+      {/* Pricing Cards */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
+        {tiersWithRecommended.map((tier) => {
           const isCurrentTier = tier.id === currentTierId;
+          const isRecommended = tier.recommended;
+          const isFree = tier.monthlyPriceCents === 0;
           const price =
             billingPeriod === "yearly" && tier.yearlyPriceCents !== undefined
               ? tier.yearlyPriceCents
@@ -125,98 +94,94 @@ export function PricingPage({
             billingPeriod === "yearly" ? Math.round(price / 12) : price;
 
           return (
-            <Card
+            <div
               key={tier.id}
-              variant={variant}
               className={cn(
-                "relative flex flex-col",
-                cardClassName,
-                tier.recommended &&
-                  cn(colors.border, "border-2 ring-2", colors.ring),
-                isCurrentTier && "ring-2 ring-offset-2 ring-offset-background",
-                isCurrentTier && colors.ring,
+                "relative flex flex-col rounded-2xl border transition-all",
+                isRecommended
+                  ? "border-primary shadow-[var(--shadow-glow)] scale-[1.02] z-10"
+                  : "border-border hover:border-primary/30",
               )}
             >
-              {/* Recommended Badge */}
-              {tier.recommended && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge variant={variant}>Recommended</Badge>
+              {/* Recommended banner */}
+              {isRecommended && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-sm">
+                    <Zap className="h-3 w-3" />
+                    Most Popular
+                  </span>
                 </div>
               )}
 
-              {/* Current Plan Badge */}
-              {isCurrentTier && (
-                <div className="absolute -top-3 right-4">
-                  <Badge variant="secondary">Current Plan</Badge>
+              {/* Current plan indicator */}
+              {isCurrentTier && !isRecommended && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="inline-flex items-center rounded-full bg-muted border border-border px-4 py-1.5 text-xs font-bold text-foreground">
+                    Current Plan
+                  </span>
                 </div>
               )}
 
-              <CardHeader className="text-center">
-                <CardTitle className="text-xl">{tier.name}</CardTitle>
-                <CardDescription>{tier.description}</CardDescription>
-              </CardHeader>
+              <div className={cn("flex flex-col p-8", isRecommended && "pt-10")}>
+                {/* Header */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-foreground">{tier.name}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{tier.description}</p>
+                </div>
 
-              <CardContent className="flex-1 space-y-6">
-                {/* Price Display */}
-                <div className="text-center">
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className={cn("font-bold text-4xl", colors.accent)}>
-                      {formatPrice(displayPrice)}
+                {/* Price */}
+                <div className="mb-8">
+                  <div className="flex items-baseline gap-1">
+                    <span className={cn("text-5xl font-extrabold tracking-tight", isRecommended ? "text-primary" : "text-foreground")}>
+                      {isFree ? "Free" : formatPrice(displayPrice)}
                     </span>
-                    <span className="text-muted-foreground">/mo</span>
-                  </div>
-                  {billingPeriod === "yearly" &&
-                    tier.yearlyPriceCents !== undefined && (
-                      <p className="mt-1 text-muted-foreground text-sm">
-                        {formatPrice(tier.yearlyPriceCents)} billed annually
-                      </p>
+                    {!isFree && (
+                      <span className="text-muted-foreground text-sm font-medium">/mo</span>
                     )}
+                  </div>
+                  {billingPeriod === "yearly" && tier.yearlyPriceCents !== undefined && !isFree && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatPrice(tier.yearlyPriceCents)} billed annually
+                    </p>
+                  )}
                 </div>
 
-                {/* Credits Per Month */}
-                {tier.creditsPerMonth !== undefined && (
-                  <div className={cn("rounded-lg p-3 text-center", colors.bg)}>
-                    <span className={cn("font-semibold", colors.accent)}>
-                      {tier.creditsPerMonth.toLocaleString()}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      {" "}
-                      credits/month
-                    </span>
-                  </div>
-                )}
+                {/* CTA Button */}
+                <button
+                  type="button"
+                  onClick={() => onSelectTier(tier.id)}
+                  disabled={isCurrentTier || loading}
+                  className={cn(
+                    "w-full rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50",
+                    isRecommended
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+                      : isCurrentTier
+                        ? "bg-muted text-muted-foreground border border-border cursor-default"
+                        : "bg-card text-foreground border border-border hover:border-primary/50 hover:bg-muted",
+                  )}
+                >
+                  {isCurrentTier ? "Current Plan" : isFree ? "Get Started" : "Subscribe"}
+                </button>
 
-                {/* Features List */}
-                <ul className="space-y-3">
+                {/* Divider */}
+                <div className="my-8 border-t border-border" />
+
+                {/* Features */}
+                <ul className="space-y-3.5 flex-1">
                   {tier.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
-                      <CheckIcon
-                        className={cn("mt-0.5 shrink-0", colors.accent)}
-                      />
-                      <span className="text-muted-foreground text-sm">
-                        {feature}
-                      </span>
+                      <div className={cn(
+                        "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                        isRecommended ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                      )}>
+                        <Check className="h-3 w-3" />
+                      </div>
+                      <span className="text-sm text-foreground/80">{feature}</span>
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-
-              <CardFooter>
-                <Button
-                  variant={isCurrentTier ? "outline" : variant}
-                  className="w-full"
-                  disabled={isCurrentTier || loading}
-                  loading={loading}
-                  onClick={() => onSelectTier(tier.id)}
-                >
-                  {isCurrentTier
-                    ? "Current Plan"
-                    : currentTierId
-                      ? "Upgrade"
-                      : "Subscribe"}
-                </Button>
-              </CardFooter>
-            </Card>
+              </div>
+            </div>
           );
         })}
       </div>

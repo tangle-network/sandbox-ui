@@ -6,7 +6,7 @@ import { cn } from "../lib/utils"
 export interface ClusterStatusItem {
   icon?: React.ReactNode
   label: string
-  value: string
+  value: React.ReactNode
   valueClass?: string
 }
 
@@ -17,41 +17,43 @@ export interface ClusterStatusBarProps {
 }
 
 export function ClusterStatusBar({ items, latency, className }: ClusterStatusBarProps) {
+  if (!items?.length) return null;
+
   return (
-    <footer
-      className={cn(
-        "fixed bottom-0 left-0 lg:left-64 right-0 h-9 bg-[var(--depth-1)] border-t border-[var(--border-subtle)] flex items-center justify-between px-6 z-30",
-        className,
-      )}
-    >
-      <div className="flex items-center gap-6 overflow-x-auto whitespace-nowrap">
-        {items.map((item, i) => (
-          <div key={i} className="flex items-center gap-1.5">
-            {item.icon && (
-              <span className="text-[var(--text-muted)] [&_svg]:h-3 [&_svg]:w-3">{item.icon}</span>
-            )}
-            <span className="text-[10px] font-mono text-[var(--text-muted)]">
-              {item.label}:{" "}
-              <span className={cn("text-[var(--text-secondary)]", item.valueClass)}>{item.value}</span>
-            </span>
-          </div>
-        ))}
-      </div>
-      {latency && (
-        <div className="hidden sm:flex items-center gap-2">
-          <span className="text-[10px] font-mono text-[var(--text-muted)]">
-            Latency:{" "}
-            <span className="text-[var(--text-secondary)]">{latency}</span>
-          </span>
-          <div className="flex gap-0.5 h-3 items-end">
-            <div className="w-0.5 h-1 bg-[var(--brand-cool)]" />
-            <div className="w-0.5 h-2 bg-[var(--brand-cool)]" />
-            <div className="w-0.5 h-1.5 bg-[var(--brand-cool)]" />
-            <div className="w-0.5 h-3 bg-[var(--brand-cool)]" />
-            <div className="w-0.5 h-2.5 bg-[var(--brand-cool)]" />
-          </div>
+    <div className={cn("fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[90vw] animate-in slide-in-from-bottom flex justify-center", className)}>
+      <div className="glass-panel-heavy overflow-hidden rounded-full px-6 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-8 border-primary/20 shadow-sm backdrop-blur-2xl">
+        
+        <div className="flex items-center gap-6">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-[var(--md3-primary)] [&_svg]:h-[18px] [&_svg]:w-[18px]">
+                {item.icon}
+              </span>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-[var(--md3-on-surface-variant)] uppercase tracking-wider font-bold">
+                  {item.label}
+                </span>
+                <span className={cn("text-xs font-bold text-foreground", item.valueClass)}>
+                  {item.value}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-    </footer>
+
+        {latency && (
+          <>
+            <div className="h-6 w-px bg-border" />
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-2.5 w-2.5 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+              </div>
+              <span className="text-xs font-mono text-green-400 font-bold">{latency}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   )
 }

@@ -72,18 +72,91 @@
 
   /* Solid depth cards */
   .glass-card {
-    background: var(--depth-2);
-    border: 1px solid var(--border-subtle);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
     transition: border-color var(--transition-default), box-shadow var(--transition-default);
   }
 
   .glass-card:hover {
-    border-color: var(--border-default);
+    border-color: hsl(var(--border));
   }
 
   .glass-card-strong {
-    background: var(--depth-3);
-    border: 1px solid var(--border-subtle);
+    background: hsl(var(--muted));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Elevated glassmorphism utilities */
+  .glass-panel {
+    background: hsl(var(--card) / 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--primary) / 0.1);
+    box-shadow: 0 4px 30px hsl(var(--background) / 0.3);
+  }
+
+  .glass-panel-heavy {
+    background: hsl(var(--card) / 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid hsl(var(--primary) / 0.12);
+    box-shadow: 0 8px 32px hsl(var(--background) / 0.5);
+  }
+
+  .glass-panel:hover {
+    border-color: hsl(var(--primary) / 0.25);
+  }
+
+  /* Pulsing magical glow */
+  .glow-primary {
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.25);
+    transition: box-shadow 0.4s ease-in-out;
+  }
+
+  .glow-primary:hover {
+    box-shadow: 0 0 60px hsl(var(--primary) / 0.4);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 16px hsl(var(--primary) / 0.6);
+  }
+
+  /* Radiant gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.7) 0%, hsl(var(--primary)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(var(--primary) / 0.05) 100%);
+  }
+
+  .neural-mesh {
+    background-image: radial-gradient(
+      circle at 2px 2px,
+      hsl(var(--primary) / 0.07) 1px,
+      transparent 0
+    );
+    background-size: 32px 32px;
+  }
+
+  .nav-active-indicator {
+    position: relative;
+  }
+
+  .nav-active-indicator::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 60%;
+    width: 3px;
+    background-color: hsl(var(--primary));
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 0 10px hsl(var(--primary));
   }
 
   /* Legacy alias */
@@ -214,4 +287,38 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.35; }
   }
+}
+
+/* Light theme overrides — glass panels need different opacity/blur in light mode */
+[data-sandbox-theme="vault"] .glass-panel,
+[data-sandbox-theme="dawn"] .glass-panel {
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: hsl(var(--border));
+  box-shadow: 0 1px 4px hsl(var(--foreground) / 0.06);
+}
+
+[data-sandbox-theme="vault"] .glass-panel:hover,
+[data-sandbox-theme="dawn"] .glass-panel:hover {
+  border-color: hsl(var(--foreground) / 0.15);
+}
+
+[data-sandbox-theme="vault"] .glass-panel-heavy,
+[data-sandbox-theme="dawn"] .glass-panel-heavy {
+  background: hsl(var(--card) / 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-color: hsl(var(--border));
+  box-shadow: 0 4px 16px hsl(var(--foreground) / 0.08);
+}
+
+[data-sandbox-theme="vault"] .glow-primary,
+[data-sandbox-theme="dawn"] .glow-primary {
+  box-shadow: 0 0 24px hsl(var(--primary) / 0.1);
+}
+
+[data-sandbox-theme="vault"] .glow-primary:hover,
+[data-sandbox-theme="dawn"] .glow-primary:hover {
+  box-shadow: 0 0 40px hsl(var(--primary) / 0.18);
 }

@@ -39,23 +39,23 @@ export function ArtifactPane({
   return (
     <section
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--radius-xl)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_18%),var(--bg-dark)] text-[var(--text-primary)]",
+        "flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground",
         className,
       )}
     >
-      <header className="border-b border-[var(--border-subtle)] bg-[radial-gradient(circle_at_top_left,rgba(98,114,243,0.12),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)]">
-        <div className="flex items-start justify-between gap-3 px-4 py-3">
+      <header className="border-b border-border bg-muted/10">
+        <div className="flex items-start justify-between gap-3 px-3 py-2">
           <div className="min-w-0 flex-1">
             {eyebrow && (
-              <div className="mb-1 inline-flex max-w-full items-center rounded-full border border-[var(--border-accent)] bg-[var(--brand-cool)]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--brand-cool)]">
+              <div className="mb-1 inline-flex max-w-full items-center px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 {eyebrow}
               </div>
             )}
-            <div className="min-w-0 text-[15px] font-semibold text-[var(--text-primary)]">
+            <div className="min-w-0 text-[13px] font-medium text-foreground">
               {title}
             </div>
             {(subtitle || meta) && (
-              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-relaxed text-[var(--text-muted)]">
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-relaxed text-muted-foreground">
                 {subtitle && <span className="truncate">{subtitle}</span>}
                 {meta && <span className="flex items-center gap-2">{meta}</span>}
               </div>
@@ -67,7 +67,7 @@ export function ArtifactPane({
         </div>
         {tabs}
         {toolbar && (
-          <div className="border-t border-[var(--border-subtle)] px-3 py-2">
+          <div className="border-t border-border px-3 py-2">
             {toolbar}
           </div>
         )}
@@ -82,7 +82,7 @@ export function ArtifactPane({
       </div>
 
       {footer && (
-        <footer className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2">
+        <footer className="shrink-0 border-t border-border bg-card px-3 py-2">
           {footer}
         </footer>
       )}

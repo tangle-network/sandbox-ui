@@ -1,5 +1,5 @@
 import "@xterm/xterm/css/xterm.css";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -47,6 +47,8 @@ export interface TerminalViewProps {
   subtitle?: string;
   /** @deprecated No longer used — the PTY provides its own prompt. */
   prompt?: string;
+  /** Whether the terminal tab is currently active and visible. */
+  isActive?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,8 +90,12 @@ export default function TerminalView({
   theme,
   title = "Terminal",
   subtitle = "Connected to PTY session",
+  isActive = true,
 }: TerminalViewProps) {
-  const resolvedTheme = { ...DEFAULT_TERMINAL_THEME, ...theme };
+  const resolvedTheme = useMemo(
+    () => ({ ...DEFAULT_TERMINAL_THEME, ...theme }),
+    [theme],
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -99,7 +105,7 @@ export default function TerminalView({
     termRef.current?.write(data);
   }, []);
 
-  const { isConnected, error, sendCommand, reconnect } = usePtySession({
+  const { isConnected, error, sendCommand, resizeTerminal, reconnect } = usePtySession({
     apiUrl,
     token,
     onData,
@@ -135,23 +141,30 @@ export default function TerminalView({
     termRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Welcome message
-    const padTitle = title.padEnd(37);
-    const padSubtitle = subtitle.padEnd(37);
-    term.writeln(`\x1b[38;5;48m\u256d${"\u2500".repeat(41)}\u256e\x1b[0m`);
-    term.writeln(`\x1b[38;5;48m\u2502\x1b[0m  \x1b[1m${padTitle}\x1b[0m\x1b[38;5;48m\u2502\x1b[0m`);
-    term.writeln(`\x1b[38;5;48m\u2502\x1b[0m  ${padSubtitle}\x1b[38;5;48m\u2502\x1b[0m`);
-    term.writeln(`\x1b[38;5;48m\u2570${"\u2500".repeat(41)}\u256f\x1b[0m`);
+    // We now use a React-rendered glassmorphic overlay for the welcome message instead of term.writeln
 
     // Forward all keyboard input to the PTY — no local echo.
     // The PTY echoes input back via SSE, so xterm only writes what
     // arrives from onData. This avoids double-displayed characters.
     term.onData((data) => {
+      // Manually handle CTRL+L (form feed) to clear the screen
+      // since the fallback shell might not correctly implement clear line via readline.
+      if (data === '\x0c') {
+        termRef.current?.clear();
+        // Send a carriage return to force the prompt to redraw at the top
+        sendCommand('\r').catch(console.error);
+        return;
+      }
+
       sendCommand(data).catch((err) => {
         termRef.current?.writeln(
           `\r\n\x1b[31m${err instanceof Error ? err.message : 'Send failed'}\x1b[0m`,
         );
       });
+    });
+
+    term.onResize(({ cols, rows }) => {
+      resizeTerminal(cols, rows).catch(console.error);
     });
 
     // Resize observer
@@ -168,19 +181,51 @@ export default function TerminalView({
       termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [sendCommand, resolvedTheme, title, subtitle]);
+  }, [sendCommand, resizeTerminal, title, subtitle]);
+
+  // Update theme without re-creating the terminal
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.theme = resolvedTheme;
+    }
+  }, [resolvedTheme]);
+
+  // Synchronize size with sidecar once connected to trigger SIGWINCH
+  useEffect(() => {
+    if (isConnected && termRef.current) {
+      resizeTerminal(termRef.current.cols, termRef.current.rows).catch(console.error);
+      if (isActive) {
+        termRef.current.focus();
+      }
+    }
+  }, [isConnected, resizeTerminal, isActive]);
+
+  // Handle visibility changes from tab switches
+  useEffect(() => {
+    if (isActive && termRef.current && fitAddonRef.current) {
+      // Small delay allows CSS visibility transition to complete so 
+      // dimensions are accurate before fitting
+      setTimeout(() => {
+        fitAddonRef.current?.fit();
+        termRef.current?.focus();
+      }, 50);
+    }
+  }, [isActive]);
 
   return (
-    <div className="relative h-full w-full">
+    <div 
+      className="relative h-full w-full group cursor-text"
+      onClick={() => termRef.current?.focus()}
+    >
       <div
         ref={containerRef}
-        className="h-full w-full rounded-lg overflow-hidden"
+        className="h-full w-full overflow-hidden relative z-0"
         style={{ backgroundColor: resolvedTheme.background }}
       />
 
       {/* Connection status overlay */}
       {(!isConnected || error) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[var(--depth-1)] rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-background">
           <div className="text-center">
             {error ? (
               <>
@@ -193,7 +238,7 @@ export default function TerminalView({
                 </button>
               </>
             ) : (
-              <p className="text-sm text-[var(--text-muted)]">Connecting to terminal...</p>
+              <p className="text-[13px] text-muted-foreground">Connecting to terminal...</p>
             )}
           </div>
         </div>

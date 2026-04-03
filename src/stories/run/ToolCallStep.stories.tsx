@@ -182,7 +182,7 @@ export const MixedStatuses: Story = {
 export const AllTypes: Story = {
   render: () => (
     <div className="p-6 max-w-2xl space-y-2">
-      <p className="text-xs font-mono uppercase tracking-widest text-[var(--text-muted)] px-1 pb-1">All tool types</p>
+      <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground px-1 pb-1">All tool types</p>
       <ToolCallStep type="bash" label="npm run build" status="success" duration={4200} />
       <ToolCallStep type="read" label="Read package.json" status="success" duration={18} />
       <ToolCallStep type="write" label="Write dist/index.js" status="success" duration={55} />

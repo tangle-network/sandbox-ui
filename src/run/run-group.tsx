@@ -32,12 +32,12 @@ import { Markdown } from "../markdown/markdown";
 
 const DEFAULT_BRANDING: AgentBranding = {
   label: "Agent",
-  accentClass: "text-primary",
+  accentClass: "text-[var(--brand-cool)]",
   bgClass: "bg-[var(--accent-surface-soft)]",
-  containerBgClass: "bg-muted",
-  borderClass: "border-border",
+  containerBgClass: "bg-[var(--bg-section)]",
+  borderClass: "border-[var(--border-accent)]",
   iconClass: "",
-  textClass: "text-primary",
+  textClass: "text-[var(--brand-cool)]",
 };
 
 // ---------------------------------------------------------------------------
@@ -109,7 +109,7 @@ function CategoryBadges({ categories }: { categories: Set<ToolCategory> }) {
           <span
             key={cat}
             title={cat}
-            className="flex h-5 w-5 items-center justify-center rounded border border-border text-muted-foreground"
+            className="flex h-5 w-5 items-center justify-center rounded border border-[var(--border-subtle)] text-[var(--text-muted)]"
           >
             <Icon className="h-3 w-3" />
           </span>
@@ -202,36 +202,34 @@ export const RunGroup = memo(
 
     return (
       <Collapsible.Root open={!collapsed} onOpenChange={() => onToggle()}>
+        <div className="rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
         {/* Header */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 px-4 py-4">
           <Collapsible.Trigger asChild>
             <button
               className={cn(
-                "w-full rounded-[var(--radius-lg)] border px-3 py-2 text-left transition-colors",
-                "bg-card hover:bg-muted",
-                collapsed ? branding.borderClass : "border-border",
-                branding.bgClass,
+                "w-full rounded-[20px] px-0 py-0 text-left transition-colors",
+                "bg-transparent hover:bg-transparent",
               )}
             >
               <div className="flex items-center gap-2.5">
                 <div
                   className={cn(
-                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-md)] border bg-[var(--accent-surface-soft)]",
-                    branding.borderClass,
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white",
                   )}
                 >
-                  <Bot className={cn("h-3.5 w-3.5", branding.accentClass)} />
+                  <Bot className="h-4 w-4" />
                 </div>
 
-                <span className={cn("text-xs font-semibold", branding.textClass)}>
+                <span className={cn("text-sm font-semibold", branding.textClass)}>
                   {branding.label}
                 </span>
 
                 {renderSummary(run) ? (
-                  <span className="text-[11px] text-muted-foreground">{renderSummary(run)}</span>
+                  <span className="text-[11px] text-[var(--text-muted)]">{renderSummary(run)}</span>
                 ) : null}
                 {collapsed && run.summaryText ? (
-                  <span className="min-w-0 truncate text-[11px] text-foreground/70">
+                  <span className="min-w-0 truncate text-[11px] text-[var(--text-secondary)]">
                     {run.summaryText}
                   </span>
                 ) : null}
@@ -240,21 +238,21 @@ export const RunGroup = memo(
                   <CategoryBadges categories={stats.toolCategories} />
 
                   {isStreaming ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-2 py-px text-[10px] font-semibold uppercase text-[var(--accent-text)]">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2 py-px text-[10px] font-semibold uppercase text-[var(--text-secondary)]">
                       <Loader2 className="h-2.5 w-2.5 animate-spin" />
                       Running
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-px text-[10px] font-semibold uppercase text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2 py-px text-[10px] font-semibold uppercase text-[var(--text-muted)]">
                       <Sparkles className="h-2.5 w-2.5" />
                       Done
                     </span>
                   )}
 
                   {!collapsed ? (
-                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    <ChevronDown className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                   ) : (
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    <ChevronRight className="h-3.5 w-3.5 text-[var(--text-muted)]" />
                   )}
                 </div>
               </div>
@@ -270,7 +268,7 @@ export const RunGroup = memo(
 
         {/* Summary text when collapsed */}
         {collapsed && run.summaryText && (
-          <div className="px-4 py-2 text-sm leading-6 text-muted-foreground line-clamp-2">
+          <div className="px-4 pb-4 text-sm leading-6 text-[var(--text-muted)] line-clamp-2">
             {run.summaryText}
           </div>
         )}
@@ -279,8 +277,7 @@ export const RunGroup = memo(
         <Collapsible.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
           <div
             className={cn(
-              "mt-1.5 space-y-1.5 rounded-[var(--radius-lg)] border border-border p-2 shadow-[var(--shadow-card)]",
-              branding.containerBgClass,
+              "space-y-3 border-t border-[var(--border-subtle)] px-4 pb-4 pt-3",
             )}
           >
             {allParts.map(({ part, msgId, index }, partIndex) => {
@@ -320,9 +317,9 @@ export const RunGroup = memo(
                 return (
                   <div
                     key={key}
-                    className="rounded-[var(--radius-lg)] border border-border bg-card px-3 py-2.5"
+                    className="px-1 py-1"
                   >
-                    <Markdown>{part.text}</Markdown>
+                    <Markdown className="tangle-prose text-[15px] leading-7">{part.text}</Markdown>
                   </div>
                 );
               }
@@ -331,6 +328,7 @@ export const RunGroup = memo(
             })}
           </div>
         </Collapsible.Content>
+        </div>
       </Collapsible.Root>
     );
   },

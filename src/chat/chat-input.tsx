@@ -256,8 +256,8 @@ export function ChatInput({
       )}
 
       {/* Input row */}
-      <div className="rounded-[var(--radius-xl)] border border-[var(--chat-input-border,var(--border-default))] [background:var(--chat-input-bg,var(--depth-2))] shadow-[var(--chat-input-shadow,var(--shadow-card))] transition-all focus-within:border-[var(--chat-input-focus-border,var(--border-accent))] focus-within:shadow-[var(--chat-input-focus-shadow,var(--shadow-card))]">
-        <div className="rounded-[var(--radius-xl)] px-3 py-[var(--chat-input-py)]">
+      <div className="rounded-[28px] border border-[var(--chat-input-border,var(--border-subtle))] bg-[var(--chat-input-bg,var(--bg-card))] shadow-[var(--chat-input-shadow,0_8px_24px_rgba(15,17,51,0.06))] transition-all focus-within:border-[var(--chat-input-focus-border,var(--border-accent))] focus-within:shadow-[var(--chat-input-focus-shadow,0_10px_30px_rgba(74,58,255,0.08))]">
+        <div className="rounded-[28px] px-4 py-[var(--chat-input-py)]">
           {(inputLabel !== null || idleStatus !== null || streamingStatus !== null) && (
             <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
               {inputLabel !== null && (
@@ -282,7 +282,11 @@ export function ChatInput({
               disabled={isStreaming}
               aria-label="Attach files"
               title="Attach files"
+<<<<<<< HEAD
               className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+=======
+              className="mb-0.5 shrink-0 rounded-full border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-section)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+>>>>>>> 80e3a9a (fix: show tool command detail inline, not hidden on mobile (0.8.3))
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -304,7 +308,11 @@ export function ChatInput({
               disabled={isStreaming}
               aria-label="Attach folder"
               title="Attach folder"
+<<<<<<< HEAD
               className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+=======
+              className="mb-0.5 shrink-0 rounded-full border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-section)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
+>>>>>>> 80e3a9a (fix: show tool command detail inline, not hidden on mobile (0.8.3))
             >
               <FolderUp className="h-4 w-4" />
             </button>
@@ -330,7 +338,11 @@ export function ChatInput({
           disabled={isStreaming || disabled}
           rows={1}
           aria-label="Message input"
+<<<<<<< HEAD
           className="min-h-[32px] max-h-[120px] flex-1 resize-none bg-transparent text-[14px] leading-6 text-foreground placeholder:text-muted-foreground disabled:opacity-50 focus-visible:outline-none"
+=======
+          className="min-h-[36px] max-h-[140px] flex-1 resize-none bg-transparent text-[15px] leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
+>>>>>>> 80e3a9a (fix: show tool command detail inline, not hidden on mobile (0.8.3))
         />
 
         {/* Send / Cancel */}
@@ -339,7 +351,7 @@ export function ChatInput({
             type="button"
             onClick={onCancel}
             aria-label="Stop response"
-            className="mb-0.5 shrink-0 rounded-[var(--radius-lg)] border border-[var(--code-error)]/20 bg-[var(--code-error)]/14 p-2.5 text-[var(--code-error)] transition-colors hover:bg-[var(--code-error)]/24 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--code-error)]/50"
+            className="mb-0.5 shrink-0 rounded-full border border-[var(--code-error)]/20 bg-[var(--code-error)]/14 p-2.5 text-[var(--code-error)] transition-colors hover:bg-[var(--code-error)]/24 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--code-error)]/50"
           >
             <Square className="h-4 w-4" />
           </button>
@@ -349,7 +361,7 @@ export function ChatInput({
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
-            className="mb-0.5 shrink-0 rounded-[var(--chat-send-radius,var(--radius-lg))] border border-[var(--chat-send-border,var(--border-accent))] [background:var(--chat-send-bg,var(--accent-surface-soft))] p-2.5 text-[var(--chat-send-color,var(--accent-text))] shadow-[var(--chat-send-shadow,none)] transition-all hover:translate-y-[-1px] hover:[background:var(--chat-send-hover-bg,var(--accent-surface-strong))] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-send-ring,var(--border-accent))]"
+            className="mb-0.5 shrink-0 rounded-full border border-transparent bg-[var(--brand-primary)] p-2.5 text-white shadow-[0_6px_18px_rgba(30,17,110,0.14)] transition-all hover:translate-y-[-1px] hover:bg-[var(--brand-strong)] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-send-ring,var(--border-accent))]"
           >
             <Send className="h-4 w-4" />
           </button>

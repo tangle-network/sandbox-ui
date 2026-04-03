@@ -71,8 +71,12 @@ interface ConversationState {
 type GatewayPart = Record<string, unknown>;
 
 function uid(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
+  if (typeof globalThis.crypto !== "undefined" && typeof globalThis.crypto.randomUUID === "function") {
+    try {
+      return globalThis.crypto.randomUUID();
+    } catch {
+      // Fall through to the local fallback below.
+    }
   }
 
   return `sdk-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;

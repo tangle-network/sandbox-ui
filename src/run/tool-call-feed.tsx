@@ -105,7 +105,7 @@ export function parseToolEvent(event: {
     const input = data.input as Record<string, unknown> | undefined;
 
     return {
-      id: (data.id || data.toolUseId || crypto.randomUUID()) as string,
+      id: (data.id || data.toolUseId || createId()) as string,
       type: mapToolName(toolName),
       label: formatToolLabel(toolName, input),
       status: "running",
@@ -128,6 +128,18 @@ export function parseToolEvent(event: {
 }
 
 // --- Helpers ---
+
+function createId(): string {
+  if (typeof globalThis.crypto !== "undefined" && typeof globalThis.crypto.randomUUID === "function") {
+    try {
+      return globalThis.crypto.randomUUID();
+    } catch {
+      // Fall through to the local fallback below.
+    }
+  }
+
+  return `tool_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
 
 function mapToolName(name: string): ToolCallType {
   const lower = name.toLowerCase();

@@ -28,6 +28,7 @@ export function SystemLogsViewer({ apiUrl, token, className }: SystemLogsViewerP
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout>;
+    let backoff = 2000;
     const controller = new AbortController();
 
     async function fetchLogs() {
@@ -44,14 +45,18 @@ export function SystemLogsViewer({ apiUrl, token, className }: SystemLogsViewerP
         if (!controller.signal.aborted) {
           setLogs(data.logs || []);
           setError(null);
+          backoff = 2000;
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
-        if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Failed to fetch logs");
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : "Failed to fetch logs");
+          backoff = Math.min(backoff * 2, 30000);
+        }
       }
 
       if (!controller.signal.aborted) {
-        timeoutId = setTimeout(fetchLogs, 2000);
+        timeoutId = setTimeout(fetchLogs, backoff);
       }
     }
 

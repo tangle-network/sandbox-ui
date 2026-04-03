@@ -42,7 +42,7 @@ const variantColors = {
   sandbox: {
     accent: "text-[var(--accent-text)]",
     accentBg: "bg-[var(--accent-surface-soft)]",
-    border: "border-border",
+    border: "border-[var(--border-accent)]",
     progress: "bg-[image:var(--accent-gradient-strong)]",
   },
 };

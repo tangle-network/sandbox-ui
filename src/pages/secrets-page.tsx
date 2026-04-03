@@ -43,19 +43,21 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
 
   const [deleteTarget, setDeleteTarget] = React.useState<string | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
+  const apiRef = React.useRef(apiClient)
+  apiRef.current = apiClient
 
   const loadSecrets = React.useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await apiClient.listSecrets()
+      const data = await apiRef.current.listSecrets()
       setSecrets(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load secrets")
     } finally {
       setLoading(false)
     }
-  }, [apiClient])
+  }, [])
 
   React.useEffect(() => {
     loadSecrets()
@@ -66,7 +68,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
     setIsCreating(true)
     setCreateError(null)
     try {
-      await apiClient.createSecret(newName.trim(), newValue)
+      await apiRef.current.createSecret(newName.trim(), newValue)
       setIsCreateOpen(false)
       setNewName("")
       setNewValue("")
@@ -82,7 +84,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
   const handleDelete = async (name: string) => {
     setIsDeleting(true)
     try {
-      await apiClient.deleteSecret(name)
+      await apiRef.current.deleteSecret(name)
       setDeleteTarget(null)
       loadSecrets()
     } catch (err) {

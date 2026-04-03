@@ -271,7 +271,7 @@ export function AgentTimeline({
   const timelineItems = renderedItems.filter((item) => !(item.kind === "message" && item.role === "user"));
 
   return (
-    <div className={cn("mx-auto w-full max-w-3xl px-2 py-4 md:px-4", className)}>
+    <div className={cn("mx-auto w-full max-w-5xl px-4 py-4", className)}>
       {renderedItems.map((item, index) => {
         // User messages: right-aligned bubble, no connector
         if (item.kind === "message" && item.role === "user") {

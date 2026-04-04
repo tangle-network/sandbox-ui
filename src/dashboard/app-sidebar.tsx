@@ -99,7 +99,7 @@ export function Sidebar({ children, className, style }: SidebarProps) {
     <div
       data-sidebar="true"
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex bg-card/80 backdrop-blur-3xl border-r border-border transition-[transform,width] duration-200 ease-in-out shadow-sm",
+        "fixed inset-y-0 left-0 z-40 flex bg-card border-r border-border transition-[transform,width] duration-200 ease-in-out",
         hidden && "-translate-x-full",
         className,
       )}
@@ -214,7 +214,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
         "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
         "active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        isActive && "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] shadow-[0_0_12px_-2px_rgba(130,99,255,0.3)]",
+        isActive && "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]",
         !isActive && "text-muted-foreground",
         className,
       )}
@@ -271,7 +271,7 @@ export function SidebarPanel({ children, className }: SidebarPanelProps) {
   return (
     <div
       className={cn(
-        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-border bg-card/50 backdrop-blur-xl",
+        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-border bg-card",
         panelOpen ? "w-[260px] opacity-100" : "w-0 opacity-0 pointer-events-none",
         className,
       )}
@@ -334,8 +334,8 @@ export function SidebarContent({ children, className }: SidebarContentProps) {
 
   return (
     <main
-      className={cn("min-h-screen transition-[margin-left] duration-200 ease-in-out", className)}
-      style={{ marginLeft: contentMargin }}
+      className={cn("min-h-screen transition-[margin-left,width] duration-200 ease-in-out", className)}
+      style={{ marginLeft: contentMargin, width: `calc(100% - ${contentMargin}px)` }}
     >
       {children}
     </main>

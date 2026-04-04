@@ -258,7 +258,7 @@ function DashboardLayoutInner({
     <div className={cn("min-h-screen bg-background text-foreground", className)}>
       {/* Top nav bar */}
       <nav
-        className="fixed top-0 z-50 bg-card/80 backdrop-blur-3xl border-b border-border flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width] duration-200 ease-in-out shadow-sm"
+        className="fixed top-0 z-50 bg-card border-b border-border flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width] duration-200 ease-in-out"
         style={{
           left: hidden ? 0 : contentMargin,
           width: hidden ? "100%" : `calc(100% - ${contentMargin}px)`,
@@ -334,12 +334,12 @@ function DashboardLayoutInner({
       </Sidebar>
 
       {/* Main content */}
-      <SidebarContent className={cn("pt-16 px-6 pb-8 hidden lg:block", contentClassName)}>
+      <SidebarContent className={cn("pt-16 px-8 pb-8 hidden lg:block bg-background", contentClassName)}>
         {children}
       </SidebarContent>
 
       {/* Mobile main content (no sidebar offset) */}
-      <main className={cn("pt-16 px-6 pb-8 min-h-screen lg:hidden", contentClassName)}>
+      <main className={cn("pt-16 px-6 pb-8 min-h-screen lg:hidden bg-background", contentClassName)}>
         {children}
       </main>
 

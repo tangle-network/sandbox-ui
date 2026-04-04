@@ -48,7 +48,7 @@ export interface ProvisioningConfig {
 }
 
 const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string }> = {
-  universal: { name: "Universal", abbr: "U", color: "violet", textClass: "text-[var(--surface-violet-text)]" },
+  universal: { name: "Default", abbr: "D", color: "violet", textClass: "text-[var(--surface-violet-text)]" },
   ethereum:  { name: "Ethereum",  abbr: "Ξ", color: "blue",   textClass: "text-[var(--surface-info-text)]" },
   solana:    { name: "Solana",    abbr: "S", color: "green",  textClass: "text-[var(--surface-success-text)]" },
   tangle:    { name: "Tangle",    abbr: "T", color: "purple", textClass: "text-[var(--surface-violet-text)]" },
@@ -173,7 +173,7 @@ export function ProvisioningWizard({
         {/* Left: Configuration Form */}
         <div className="col-span-12 xl:col-span-8 flex flex-col min-h-0">
           {isMultistep && (
-            <div className="flex items-center gap-2 mb-4 glass-panel p-3 rounded-2xl mx-auto max-w-2xl justify-between shrink-0">
+            <div className="flex items-center gap-2 mb-4 bg-card border border-border p-3 rounded-2xl mx-auto max-w-2xl justify-between shrink-0">
               {[1, 2, 3].map((s) => (
                 <div key={s} className="flex items-center">
                   <div className={cn("w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs transition-colors shrink-0", currentStep === s ? "bg-primary text-primary-foreground" : currentStep > s ? "bg-primary/40 text-primary-foreground" : "bg-muted text-muted-foreground")}>
@@ -192,7 +192,7 @@ export function ProvisioningWizard({
 
           {/* Template pre-fill banner */}
           {dc && isMultistep && (
-            <div className="flex items-center justify-between glass-panel rounded-2xl px-4 py-3 shrink-0">
+            <div className="flex items-center justify-between bg-card border border-border rounded-2xl px-4 py-3 shrink-0">
               <div className="flex items-center gap-2 text-sm">
                 <Info className="h-4 w-4 text-accent shrink-0" />
                 <span className="text-muted-foreground">Pre-configured from template.</span>
@@ -220,9 +220,9 @@ export function ProvisioningWizard({
           {(!isMultistep || currentStep === 1) && (
           <React.Fragment>
           {/* Section 1: Environment */}
-          <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
+          <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
             <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Layers className="h-5 w-5" /></div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent "><Layers className="h-5 w-5" /></div>
               <h2 className="text-lg font-bold text-foreground tracking-tight">Environment Selection</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -234,8 +234,8 @@ export function ProvisioningWizard({
                   className={cn(
                     "group relative p-4 rounded-[16px] transition-all text-left overflow-hidden border border-transparent",
                     selectedEnv === env.id
-                      ? "glass-panel-heavy border-accent glow-primary"
-                      : "glass-panel hover:border-[var(--glass-border-color)]",
+                      ? "bg-card border border-border border-accent "
+                      : "bg-card border border-border hover:border-[var(--glass-border-color)]",
                   )}
                 >
                   {selectedEnv === env.id && (
@@ -261,24 +261,24 @@ export function ProvisioningWizard({
           {(!isMultistep || currentStep === 2) && (
           <React.Fragment>
           {/* Section 2: Resources */}
-          <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
+          <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
             <div className="flex items-center gap-3 mb-5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Cpu className="h-5 w-5" /></div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent "><Cpu className="h-5 w-5" /></div>
               <h2 className="text-lg font-bold text-foreground tracking-tight">Resource Allocation</h2>
             </div>
 
             <div className="mb-6">
               <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Compute Presets</label>
               <div className="grid grid-cols-3 gap-3">
-                <button type="button" onClick={() => applyPreset(2, 4, 50)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
+                <button type="button" onClick={() => applyPreset(2, 4, 50)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "bg-card border border-border border-accent " : "bg-card border border-border hover:border-[var(--glass-border-color)]")}>
                   <div className={cn("font-bold text-sm transition-colors", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "text-accent" : "text-foreground")}>Lightweight</div>
                   <div className="text-xs text-muted-foreground mt-0.5 font-mono">2C / 4G / 50G</div>
                 </button>
-                <button type="button" onClick={() => applyPreset(4, 16, 128)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
+                <button type="button" onClick={() => applyPreset(4, 16, 128)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "bg-card border border-border border-accent " : "bg-card border border-border hover:border-[var(--glass-border-color)]")}>
                   <div className={cn("font-bold text-sm transition-colors", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "text-accent" : "text-foreground")}>Standard</div>
                   <div className="text-xs text-muted-foreground mt-0.5 font-mono">4C / 16G / 128G</div>
                 </button>
-                <button type="button" onClick={() => applyPreset(8, 32, 256)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
+                <button type="button" onClick={() => applyPreset(8, 32, 256)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "bg-card border border-border border-accent " : "bg-card border border-border hover:border-[var(--glass-border-color)]")}>
                   <div className={cn("font-bold text-sm transition-colors", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "text-accent" : "text-foreground")}>Performance</div>
                   <div className="text-xs text-muted-foreground mt-0.5 font-mono">8C / 32G / 256G</div>
                 </button>
@@ -319,9 +319,9 @@ export function ProvisioningWizard({
           {(!isMultistep || currentStep === 3) && (
           <React.Fragment>
           {/* Section 3: AI Agent */}
-          <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
+          <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
             <div className="flex items-center gap-3 mb-5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Bot className="h-5 w-5" /></div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent "><Bot className="h-5 w-5" /></div>
               <h2 className="text-lg font-bold text-foreground tracking-tight">AI Agent Capability</h2>
             </div>
             <div className="space-y-5">
@@ -330,7 +330,7 @@ export function ProvisioningWizard({
                 <select
                   value={modelTier}
                   onChange={(e) => setModelTier(e.target.value)}
-                  className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
+                  className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
                 >
                   <option value="llama-3-8b" className="bg-gray-900">Llama-3-8B-Instruct (Lightweight)</option>
                   <option value="mistral-7b" className="bg-gray-900">Mistral-7B-v0.2 (Efficient)</option>
@@ -342,7 +342,7 @@ export function ProvisioningWizard({
                 <textarea
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
-                  className="w-full glass-panel rounded-xl p-4 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent h-32 resize-none placeholder:text-muted-foreground"
+                  className="w-full bg-card border border-border rounded-xl p-4 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent h-32 resize-none placeholder:text-muted-foreground"
                   placeholder="Define the autonomous directives or operational boundaries..."
                 />
               </div>
@@ -367,7 +367,7 @@ export function ProvisioningWizard({
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-muted-foreground"
+                          className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-muted-foreground"
                           placeholder="my-cool-sandbox"
                         />
                       </div>
@@ -376,7 +376,7 @@ export function ProvisioningWizard({
                         <select
                           value={driver}
                           onChange={(e) => setDriver(e.target.value as any)}
-                          className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
+                          className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
                         >
                           <option value="docker" className="bg-gray-900">Docker container (Default)</option>
                           <option value="firecracker" className="bg-gray-900">Firecracker microVM (Secure)</option>
@@ -391,7 +391,7 @@ export function ProvisioningWizard({
                         type="text"
                         value={gitUrl}
                         onChange={(e) => setGitUrl(e.target.value)}
-                        className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-muted-foreground"
+                        className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-muted-foreground"
                         placeholder="https://github.com/my-org/my-repo.git"
                       />
                     </div>
@@ -410,23 +410,23 @@ export function ProvisioningWizard({
                               type="text"
                               value={env.key}
                               onChange={(e) => setEnvVars(envVars.map((v, idx) => idx === i ? { ...v, key: e.target.value } : v))}
-                              className="flex-1 glass-panel rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
+                              className="flex-1 bg-card border border-border rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
                               placeholder="API_KEY"
                             />
                             <input
                               type="password"
                               value={env.value}
                               onChange={(e) => setEnvVars(envVars.map((v, idx) => idx === i ? { ...v, value: e.target.value } : v))}
-                              className="flex-[2] glass-panel rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
+                              className="flex-[2] bg-card border border-border rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
                               placeholder="sk-xxxxxxxxxxx"
                             />
-                            <button type="button" onClick={() => setEnvVars(envVars.filter((_, idx) => idx !== i))} className="h-10 w-10 flex items-center justify-center shrink-0 rounded-xl glass-panel text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors">
+                            <button type="button" onClick={() => setEnvVars(envVars.filter((_, idx) => idx !== i))} className="h-10 w-10 flex items-center justify-center shrink-0 rounded-xl bg-card border border-border text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
                         ))}
                         {envVars.length === 0 && (
-                          <div className="text-center p-3 glass-panel rounded-xl text-muted-foreground/60 text-sm italic">No environment variables set</div>
+                          <div className="text-center p-3 bg-card border border-border rounded-xl text-muted-foreground/60 text-sm italic">No environment variables set</div>
                         )}
                       </div>
                     </div>
@@ -456,7 +456,7 @@ export function ProvisioningWizard({
         {/* Right: Cost estimator + terminal preview */}
         <div className="col-span-12 xl:col-span-4 sticky top-4 space-y-4">
           {/* Terminal preview */}
-          <div className="glass-panel-heavy rounded-[24px] overflow-hidden shadow-2xl relative">
+          <div className="bg-card border border-border rounded-[24px] overflow-hidden shadow-2xl relative">
              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(173,163,255,0.05)_0,transparent_100%)] pointer-events-none" />
             <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center gap-3">
               <div className="flex gap-2">
@@ -481,8 +481,8 @@ export function ProvisioningWizard({
           </div>
 
           {/* Cost card */}
-          <div className="p-6 rounded-2xl bg-accent/5 backdrop-blur-md border border-accent/20 shadow-[0_0_30px_rgba(173,163,255,0.1)] relative overflow-hidden">
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-accent/20 blur-[50px] rounded-full" />
+          <div className="p-6 rounded-lg bg-card border border-border relative overflow-hidden">
+            <div className="hidden" />
 
             <div className="flex justify-between items-center mb-4 relative z-10">
               <span className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">Run Cost</span>
@@ -494,7 +494,7 @@ export function ProvisioningWizard({
               <span className="text-4xl font-black text-foreground tracking-tighter">${hourCost}</span>
               <span className="text-muted-foreground text-sm font-bold">/ hour</span>
             </div>
-            <div className="space-y-2 relative z-10 glass-panel rounded-xl p-3 border border-border">
+            <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3 border border-border">
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>COMPUTE</span>
                 <span className="text-foreground">${(cpuCores * 0.045).toFixed(2)}/h</span>
@@ -540,7 +540,7 @@ export function ProvisioningWizard({
                   <button
                     type="button"
                     onClick={() => setCurrentStep((s) => s - 1)}
-                    className="w-full h-10 glass-panel text-foreground/70 font-bold text-sm rounded-2xl hover:text-foreground hover:border-[var(--glass-border-color)] transition-colors"
+                    className="w-full h-10 bg-card border border-border text-foreground/70 font-bold text-sm rounded-2xl hover:text-foreground hover:border-[var(--glass-border-color)] transition-colors"
                   >
                     Back
                   </button>

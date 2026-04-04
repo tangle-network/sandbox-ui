@@ -130,7 +130,6 @@ export const InlineToolItem = memo(
                   {meta.title}
                 </span>
                 {meta.description ? (
-                  <span className="hidden truncate text-xs font-mono text-muted-foreground sm:inline">
                   <span className="truncate text-xs font-[var(--font-mono)] text-[var(--text-muted)]">
                     {meta.description}
                   </span>

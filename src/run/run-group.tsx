@@ -188,6 +188,10 @@ export const RunGroup = memo(
     }, [run.messages, partMap]);
 
     const { stats, isStreaming } = run;
+    const hasToolOrReasoning = allParts.some(
+      ({ part }) => part.type === "tool" || part.type === "reasoning",
+    );
+    let hasRenderedAnswerLabel = false;
     const hasRenderableParts = allParts.some(({ part }) => {
       if (part.type === "tool" || part.type === "reasoning") {
         return true;
@@ -202,9 +206,9 @@ export const RunGroup = memo(
 
     return (
       <Collapsible.Root open={!collapsed} onOpenChange={() => onToggle()}>
-        <div className="rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[var(--shadow-card)]">
+        <div className="rounded-[30px] border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
         {/* Header */}
-        <div className="flex items-start gap-3 px-4 py-4">
+        <div className="flex items-start gap-3 px-5 py-4.5">
           <Collapsible.Trigger asChild>
             <button
               className={cn(
@@ -221,7 +225,7 @@ export const RunGroup = memo(
                   <Bot className="h-4 w-4" />
                 </div>
 
-                <span className={cn("text-sm font-semibold", branding.textClass)}>
+                <span className={cn("text-[13px] font-semibold tracking-[-0.01em]", branding.textClass)}>
                   {branding.label}
                 </span>
 
@@ -229,7 +233,7 @@ export const RunGroup = memo(
                   <span className="text-[11px] text-[var(--text-muted)]">{renderSummary(run)}</span>
                 ) : null}
                 {collapsed && run.summaryText ? (
-                  <span className="min-w-0 truncate text-[11px] text-[var(--text-secondary)]">
+                  <span className="min-w-0 truncate text-[12px] text-[var(--text-secondary)]">
                     {run.summaryText}
                   </span>
                 ) : null}
@@ -268,7 +272,7 @@ export const RunGroup = memo(
 
         {/* Summary text when collapsed */}
         {collapsed && run.summaryText && (
-          <div className="px-4 pb-4 text-sm leading-6 text-[var(--text-muted)] line-clamp-2">
+          <div className="px-5 pb-4 text-[14px] leading-6 text-[var(--text-muted)] line-clamp-2">
             {run.summaryText}
           </div>
         )}
@@ -277,7 +281,7 @@ export const RunGroup = memo(
         <Collapsible.Content className="overflow-hidden data-[state=open]:animate-slideDown data-[state=closed]:animate-slideUp">
           <div
             className={cn(
-              "space-y-3 border-t border-[var(--border-subtle)] px-4 pb-4 pt-3",
+              "space-y-3 border-t border-[var(--border-subtle)] px-5 pb-5 pt-4",
             )}
           >
             {allParts.map(({ part, msgId, index }, partIndex) => {
@@ -314,12 +318,23 @@ export const RunGroup = memo(
                 !part.synthetic &&
                 part.text.trim()
               ) {
+                const showAnswerLabel = hasToolOrReasoning && !hasRenderedAnswerLabel;
+                if (showAnswerLabel) {
+                  hasRenderedAnswerLabel = true;
+                }
                 return (
                   <div
                     key={key}
-                    className="px-1 py-1"
+                    className="px-1 py-1.5"
                   >
-                    <Markdown className="tangle-prose text-[15px] leading-7">{part.text}</Markdown>
+                    {showAnswerLabel ? (
+                      <div className="mb-2 inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                        Answer
+                      </div>
+                    ) : null}
+                    <Markdown className="tangle-prose text-[15px] leading-7.5 text-[var(--text-primary)] [&_a]:font-medium [&_a]:text-[var(--brand-cool)] [&_a]:underline-offset-4 hover:[&_a]:underline">
+                      {part.text}
+                    </Markdown>
                   </div>
                 );
               }

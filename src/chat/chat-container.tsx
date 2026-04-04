@@ -103,6 +103,12 @@ function extractOpenUISchema(output: unknown): OpenUIComponentNode[] | null {
         if (Array.isArray(inner) && inner.length > 0 && inner.every(isOpenUINode)) {
           return inner as OpenUIComponentNode[];
         }
+        if (typeof inner === "string") {
+          const parsed = extractOpenUISchema(inner);
+          if (parsed) {
+            return parsed;
+          }
+        }
       }
     }
   }

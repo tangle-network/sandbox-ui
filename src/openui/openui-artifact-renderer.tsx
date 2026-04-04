@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { ArrowRight, Minus } from "lucide-react";
+import { Minus } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Badge } from "../primitives/badge";
 import { Button } from "../primitives/button";
@@ -148,6 +148,8 @@ export interface OpenUIArtifactRendererProps {
   className?: string;
 }
 
+type LooseRecord = Record<string, unknown>;
+
 const GAP_STYLES = {
   sm: "gap-2",
   md: "gap-4",
@@ -180,6 +182,220 @@ function formatValue(value: ReactNode | OpenUIPrimitive) {
   return value;
 }
 
+function asRecord(value: unknown): LooseRecord | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as LooseRecord)
+    : null;
+}
+
+function asString(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function normalizeActionTone(value: unknown): OpenUIAction["tone"] {
+  switch (value) {
+    case "default":
+    case "secondary":
+    case "outline":
+    case "ghost":
+    case "destructive":
+      return value;
+    case "warning":
+      return "secondary";
+    default:
+      return "outline";
+  }
+}
+
+function normalizeBadgeTone(value: unknown): OpenUIBadgeNode["tone"] {
+  switch (value) {
+    case "default":
+    case "secondary":
+    case "success":
+    case "warning":
+    case "error":
+    case "info":
+    case "sandbox":
+      return value;
+    case "neutral":
+    case "outline":
+      return "secondary";
+    default:
+      return "default";
+  }
+}
+
+function normalizeAction(value: unknown): OpenUIAction | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const id = asString(record.id) ?? asString(record.label);
+  const label = asString(record.label) ?? asString(record.id);
+
+  if (!id || !label) {
+    return null;
+  }
+
+  return {
+    id,
+    label,
+    tone: normalizeActionTone(record.tone ?? record.variant),
+    disabled: Boolean(record.disabled),
+  };
+}
+
+function normalizeKeyValueItems(value: unknown): OpenUIKeyValueNode["items"] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const items = value
+    .map((item, index) => {
+      if (Array.isArray(item) && item.length >= 2) {
+        return {
+          id: `pair_${index}`,
+          label: String(item[0]),
+          value: item[1] as ReactNode | OpenUIPrimitive,
+          tone: "default" as const,
+        };
+      }
+
+      const record = asRecord(item);
+      if (!record) return null;
+
+      return {
+        id: asString(record.id) ?? `pair_${index}`,
+        label: asString(record.label) ?? asString(record.key) ?? `Item ${index + 1}`,
+        value: (record.value ?? record.text) as ReactNode | OpenUIPrimitive,
+        tone: record.tone === "muted" ? ("muted" as const) : ("default" as const),
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  return items.length > 0 ? items : null;
+}
+
+function normalizeTableColumns(value: unknown): OpenUITableNode["columns"] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const columns = value
+    .map((column, index) => {
+      if (typeof column === "string") {
+        return {
+          key: `col_${index}`,
+          header: column,
+          align: "left" as const,
+        };
+      }
+
+      const record = asRecord(column);
+      if (!record) return null;
+
+      return {
+        key: asString(record.key) ?? `col_${index}`,
+        header:
+          asString(record.header) ??
+          asString(record.label) ??
+          asString(record.key) ??
+          `Column ${index + 1}`,
+        align: record.align === "right" ? ("right" as const) : ("left" as const),
+      };
+    })
+    .filter((column): column is NonNullable<typeof column> => column !== null);
+
+  return columns.length > 0 ? columns : null;
+}
+
+function normalizeTableRows(
+  value: unknown,
+  columns: OpenUITableNode["columns"],
+): OpenUITableNode["rows"] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const rows = value
+    .map((row) => {
+      if (Array.isArray(row)) {
+        return Object.fromEntries(
+          columns.map((column, index) => [column.key, row[index] as ReactNode | OpenUIPrimitive]),
+        );
+      }
+
+      const record = asRecord(row);
+      if (!record) return null;
+
+      return Object.fromEntries(columns.map((column) => [column.key, record[column.key]]));
+    })
+    .filter((row): row is Record<string, ReactNode | OpenUIPrimitive> => row !== null);
+
+  return rows.length > 0 ? rows : null;
+}
+
+function normalizeNode(node: OpenUIComponentNode): OpenUIComponentNode {
+  const record = node as unknown as LooseRecord;
+
+  switch (node.type) {
+    case "badge":
+      return {
+        ...node,
+        label: node.label ?? asString(record.text) ?? "Badge",
+        tone: normalizeBadgeTone(node.tone ?? record.variant),
+      };
+    case "actions":
+      return {
+        ...node,
+        actions:
+          node.actions ??
+          (Array.isArray(record.items)
+            ? record.items
+                .map((item) => normalizeAction(item))
+                .filter((item): item is OpenUIAction => item !== null)
+            : []),
+      };
+    case "key_value":
+      return {
+        ...node,
+        items: node.items ?? normalizeKeyValueItems(record.pairs) ?? [],
+      };
+    case "table": {
+      const columns = node.columns ?? normalizeTableColumns(record.columns) ?? [];
+      return {
+        ...node,
+        columns,
+        rows: node.rows ?? normalizeTableRows(record.rows, columns) ?? [],
+      };
+    }
+    case "text":
+      return {
+        ...node,
+        text: node.text ?? asString(record.content) ?? "",
+      };
+    case "heading":
+      return {
+        ...node,
+        text: node.text ?? asString(record.title) ?? "",
+      };
+    case "card":
+      return {
+        ...node,
+        title: node.title ?? asString(record.heading),
+        description: node.description ?? asString(record.text),
+        actions:
+          node.actions ??
+          (Array.isArray(record.items)
+            ? record.items
+                .map((item) => normalizeAction(item))
+                .filter((item): item is OpenUIAction => item !== null)
+            : undefined),
+      };
+    default:
+      return node;
+  }
+}
+
 function renderActions(actions: OpenUIAction[], onAction?: (action: OpenUIAction) => void) {
   if (actions.length === 0) return null;
 
@@ -205,16 +421,18 @@ function renderActions(actions: OpenUIAction[], onAction?: (action: OpenUIAction
 }
 
 function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction) => void): ReactNode {
-  switch (node.type) {
+  const normalized = normalizeNode(node);
+
+  switch (normalized.type) {
     case "heading": {
-      const level = node.level ?? 2;
+      const level = normalized.level ?? 2;
       const HeadingTag = `h${level}` as const;
 
       return (
         <div className="space-y-1">
-          {node.kicker && (
+          {normalized.kicker && (
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              {node.kicker}
+              {normalized.kicker}
             </div>
           )}
           <HeadingTag
@@ -226,9 +444,9 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
               level === 4 && "text-base",
             )}
           >
-            {node.text}
+            {normalized.text}
           </HeadingTag>
-          {node.meta && <p className="text-sm text-muted-foreground">{node.meta}</p>}
+          {normalized.meta && <p className="text-sm text-muted-foreground">{normalized.meta}</p>}
         </div>
       );
     }
@@ -238,42 +456,42 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
         <p
           className={cn(
             "text-sm leading-6 text-foreground",
-            node.tone === "muted" && "text-muted-foreground",
-            node.tone === "success" && "text-[var(--surface-success-text)]",
-            node.tone === "warning" && "text-[var(--surface-warning-text)]",
-            node.tone === "error" && "text-[var(--surface-danger-text)]",
-            node.mono && "font-mono text-[13px]",
+            normalized.tone === "muted" && "text-muted-foreground",
+            normalized.tone === "success" && "text-[var(--surface-success-text)]",
+            normalized.tone === "warning" && "text-[var(--surface-warning-text)]",
+            normalized.tone === "error" && "text-[var(--surface-danger-text)]",
+            normalized.mono && "font-mono text-[13px]",
           )}
         >
-          {node.text}
+          {normalized.text}
         </p>
       );
 
     case "badge":
-      return <Badge variant={node.tone ?? "outline"}>{node.label}</Badge>;
+      return <Badge variant={normalized.tone ?? "outline"}>{normalized.label}</Badge>;
 
     case "stat":
       return (
         <Card variant="glass" className="border-border shadow-[var(--shadow-card)]">
           <CardContent className="space-y-2 p-4">
             <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-              {node.label}
+              {normalized.label}
             </div>
             <div className="text-2xl font-semibold tracking-tight text-foreground">
-              {node.value}
+              {normalized.value}
             </div>
-            {node.change && (
+            {normalized.change && (
               <div
                 className={cn(
                   "text-xs",
-                  node.tone === "success" && "text-[var(--surface-success-text)]",
-                  node.tone === "warning" && "text-[var(--surface-warning-text)]",
-                  node.tone === "error" && "text-[var(--surface-danger-text)]",
-                  node.tone === "info" && "text-[var(--surface-info-text)]",
-                  !node.tone || node.tone === "default" ? "text-muted-foreground" : undefined,
+                  normalized.tone === "success" && "text-[var(--surface-success-text)]",
+                  normalized.tone === "warning" && "text-[var(--surface-warning-text)]",
+                  normalized.tone === "error" && "text-[var(--surface-danger-text)]",
+                  normalized.tone === "info" && "text-[var(--surface-info-text)]",
+                  !normalized.tone || normalized.tone === "default" ? "text-muted-foreground" : undefined,
                 )}
               >
-                {node.change}
+                {normalized.change}
               </div>
             )}
           </CardContent>
@@ -283,7 +501,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
     case "key_value":
       return (
         <dl className="grid gap-3 sm:grid-cols-2">
-          {node.items.map((item, index) => (
+          {normalized.items.map((item, index) => (
             <div
               key={item.id ?? `${item.label}-${index}`}
               className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-3"
@@ -307,15 +525,15 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
     case "code":
       return (
         <div className="space-y-2">
-          {node.title && (
+          {normalized.title && (
             <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-              {node.title}
+              {normalized.title}
             </div>
           )}
           <CodeBlock
-            code={node.code}
-            language={node.language}
-            showLineNumbers={node.showLineNumbers}
+            code={normalized.code}
+            language={normalized.language}
+            showLineNumbers={normalized.showLineNumbers}
             className="border-border bg-background"
           />
         </div>
@@ -324,7 +542,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
     case "markdown":
       return (
         <div className="rounded-[var(--radius-lg)] border border-border bg-card p-5">
-          <Markdown className="prose-sm max-w-none">{node.content}</Markdown>
+          <Markdown className="prose-sm max-w-none">{normalized.content}</Markdown>
         </div>
       );
 
@@ -334,7 +552,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                {node.columns.map((column) => (
+                {normalized.columns.map((column) => (
                   <TableHead
                     key={column.key}
                     className={cn(
@@ -348,9 +566,9 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
               </TableRow>
             </TableHeader>
             <TableBody>
-              {node.rows.map((row, rowIndex) => (
+              {normalized.rows.map((row, rowIndex) => (
                 <TableRow key={rowIndex} className="border-border">
-                  {node.columns.map((column) => (
+                  {normalized.columns.map((column) => (
                     <TableCell
                       key={column.key}
                       className={cn(
@@ -365,24 +583,24 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
               ))}
             </TableBody>
           </Table>
-          {node.caption && (
+          {normalized.caption && (
             <div className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
-              {node.caption}
+              {normalized.caption}
             </div>
           )}
         </div>
       );
 
     case "actions":
-      return renderActions(node.actions, onAction);
+      return renderActions(normalized.actions, onAction);
 
     case "separator":
       return (
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-border" />
-          {node.label && (
+          {normalized.label && (
             <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-              {node.label}
+              {normalized.label}
             </span>
           )}
           <div className="h-px flex-1 bg-border" />
@@ -394,13 +612,13 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
         <div
           className={cn(
             "flex",
-            node.direction === "row" ? "flex-row" : "flex-col",
-            GAP_STYLES[node.gap ?? "md"],
-            ALIGN_STYLES[node.align ?? "stretch"],
-            node.wrap && "flex-wrap",
+            normalized.direction === "row" ? "flex-row" : "flex-col",
+            GAP_STYLES[normalized.gap ?? "md"],
+            ALIGN_STYLES[normalized.align ?? "stretch"],
+            normalized.wrap && "flex-wrap",
           )}
         >
-          {node.children.map((child, index) => (
+          {normalized.children.map((child, index) => (
             <Fragment key={child.id ?? `${child.type}-${index}`}>
               {renderNode(child, onAction)}
             </Fragment>
@@ -410,8 +628,8 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
 
     case "grid":
       return (
-        <div className={cn("grid", GRID_STYLES[node.columns ?? 2], GAP_STYLES[node.gap ?? "md"])}>
-          {node.children.map((child, index) => (
+        <div className={cn("grid", GRID_STYLES[normalized.columns ?? 2], GAP_STYLES[normalized.gap ?? "md"])}>
+          {normalized.children.map((child, index) => (
             <Fragment key={child.id ?? `${child.type}-${index}`}>
               {renderNode(child, onAction)}
             </Fragment>
@@ -422,30 +640,30 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
     case "card":
       return (
         <Card variant="glass" className="border-border shadow-[var(--shadow-card)]">
-          {(node.eyebrow || node.title || node.description || node.badge || node.actions) && (
+          {(normalized.eyebrow || normalized.title || normalized.description || normalized.badge || normalized.actions) && (
             <CardHeader className="gap-2 p-4 pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-1">
-                  {node.eyebrow && (
+                  {normalized.eyebrow && (
                     <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                      {node.eyebrow}
+                      {normalized.eyebrow}
                     </div>
                   )}
-                  {node.title && <CardTitle className="text-base text-foreground">{node.title}</CardTitle>}
-                  {node.description && (
+                  {normalized.title && <CardTitle className="text-base text-foreground">{normalized.title}</CardTitle>}
+                  {normalized.description && (
                     <CardDescription className="text-muted-foreground">
-                      {node.description}
+                      {normalized.description}
                     </CardDescription>
                   )}
                 </div>
-                {node.badge && <Badge variant={node.badge.tone ?? "outline"}>{node.badge.label}</Badge>}
+                {normalized.badge && <Badge variant={normalized.badge.tone ?? "outline"}>{normalized.badge.label}</Badge>}
               </div>
-              {node.actions && renderActions(node.actions, onAction)}
+              {normalized.actions && renderActions(normalized.actions, onAction)}
             </CardHeader>
           )}
-          {node.children && node.children.length > 0 && (
+          {normalized.children && normalized.children.length > 0 && (
             <CardContent className="space-y-4 p-4">
-              {node.children.map((child, index) => (
+              {normalized.children.map((child, index) => (
                 <Fragment key={child.id ?? `${child.type}-${index}`}>
                   {renderNode(child, onAction)}
                 </Fragment>
@@ -498,10 +716,6 @@ export function OpenUIArtifactRenderer({
           {renderNode(node, onAction)}
         </Fragment>
       ))}
-      <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-        <ArrowRight className="h-3.5 w-3.5" />
-        Structured artifact rendered through sandbox-ui primitives
-      </div>
     </div>
   );
 }

@@ -48,6 +48,33 @@ function formatOutput(value: unknown): string {
   }
 }
 
+function collectUrls(value: unknown, seen = new Set<string>()): string[] {
+  if (value == null) return [];
+
+  if (typeof value === "string") {
+    const matches = value.match(/https?:\/\/[^\s)"'<>]+/g) ?? [];
+    for (const match of matches) {
+      seen.add(match);
+    }
+    return [...seen];
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectUrls(item, seen);
+    }
+    return [...seen];
+  }
+
+  if (typeof value === "object") {
+    for (const nested of Object.values(value as Record<string, unknown>)) {
+      collectUrls(nested, seen);
+    }
+  }
+
+  return [...seen];
+}
+
 /**
  * Renders full tool details when a tool item is expanded.
  * Dispatches to specialised previews (CommandPreview, WriteFilePreview)
@@ -56,6 +83,7 @@ function formatOutput(value: unknown): string {
 export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
   const meta = getToolDisplayMetadata(part);
   const { status, input, output, error } = part.state;
+  const evidenceUrls = collectUrls([input, output, error]).slice(0, 8);
 
   // Specialised previews
   if (meta.displayVariant === "command") {
@@ -124,6 +152,22 @@ export const ExpandedToolDetail = memo(({ part }: ExpandedToolDetailProps) => {
 
   return (
     <div className="space-y-3">
+      {evidenceUrls.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {evidenceUrls.map((url, index) => (
+            <a
+              key={`${url}-${index}`}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center rounded-full border border-[var(--border-subtle)] bg-[var(--bg-section)] px-2.5 py-1 text-xs font-medium text-[var(--text-primary)] transition-colors hover:bg-white"
+            >
+              Evidence
+            </a>
+          ))}
+        </div>
+      ) : null}
+
       {/* Input */}
       {inputStr && (
         <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">

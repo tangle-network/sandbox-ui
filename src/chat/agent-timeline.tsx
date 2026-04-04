@@ -139,15 +139,9 @@ function AgentTimelineRow({ isLast, accentClassName, children }: AgentTimelineRo
 
 function UserMessage({ item }: { item: AgentTimelineMessageItem }) {
   return (
-<<<<<<< HEAD
-    <div className="mb-3 flex justify-end">
-      <div className="max-w-[72%]">
-        <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3">
-=======
     <div className="mb-4 flex justify-end">
       <div className="max-w-[70%]">
         <div className="rounded-[26px] rounded-tr-[12px] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-3.5 shadow-[var(--shadow-card)]">
->>>>>>> 80e3a9a (fix: show tool command detail inline, not hidden on mobile (0.8.3))
           {item.timestamp && (
             <div className="mb-1.5 text-right text-[11px] text-muted-foreground">
               {formatTime(item.timestamp)}
@@ -164,26 +158,6 @@ function UserMessage({ item }: { item: AgentTimelineMessageItem }) {
 
 function AssistantMessage({ item }: { item: AgentTimelineMessageItem }) {
   return (
-<<<<<<< HEAD
-    <div className="-mt-0.5">
-      {item.timestamp && (
-        <div className="mb-2 text-[11px] text-muted-foreground">
-          {formatTime(item.timestamp)}
-        </div>
-      )}
-      {item.content && (
-        <Markdown className="tangle-prose text-[15px] leading-7">{item.content}</Markdown>
-      )}
-      {item.isStreaming && (
-        <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-primary align-text-bottom" />
-      )}
-      {item.toolCalls && <div className="mt-3">{item.toolCalls}</div>}
-      {item.after && (
-        <div className="mt-3 border-t border-border pt-3">
-          {item.after}
-        </div>
-      )}
-=======
     <div className="-mt-0.5 max-w-[min(100%,52rem)]">
       <div className="rounded-[28px] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-4 shadow-[var(--shadow-card)]">
         {item.timestamp && (
@@ -206,7 +180,6 @@ function AssistantMessage({ item }: { item: AgentTimelineMessageItem }) {
           </div>
         )}
       </div>
->>>>>>> 80e3a9a (fix: show tool command detail inline, not hidden on mobile (0.8.3))
     </div>
   );
 }

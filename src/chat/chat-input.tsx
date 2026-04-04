@@ -282,11 +282,7 @@ export function ChatInput({
               disabled={isStreaming}
               aria-label="Attach files"
               title="Attach files"
-<<<<<<< HEAD
-              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-=======
               className="mb-0.5 shrink-0 rounded-full border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-section)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
->>>>>>> 80e3a9a (fix: show tool command detail inline, not hidden on mobile (0.8.3))
             >
               <Paperclip className="h-4 w-4" />
             </button>
@@ -308,11 +304,7 @@ export function ChatInput({
               disabled={isStreaming}
               aria-label="Attach folder"
               title="Attach folder"
-<<<<<<< HEAD
-              className="mb-0.5 shrink-0 rounded-[var(--radius-md)] border border-transparent p-2 text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-=======
               className="mb-0.5 shrink-0 rounded-full border border-transparent p-2 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-section)] hover:text-[var(--text-secondary)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-cool)]/60"
->>>>>>> 80e3a9a (fix: show tool command detail inline, not hidden on mobile (0.8.3))
             >
               <FolderUp className="h-4 w-4" />
             </button>
@@ -338,11 +330,7 @@ export function ChatInput({
           disabled={isStreaming || disabled}
           rows={1}
           aria-label="Message input"
-<<<<<<< HEAD
-          className="min-h-[32px] max-h-[120px] flex-1 resize-none bg-transparent text-[14px] leading-6 text-foreground placeholder:text-muted-foreground disabled:opacity-50 focus-visible:outline-none"
-=======
           className="min-h-[36px] max-h-[140px] flex-1 resize-none bg-transparent text-[15px] leading-7 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] disabled:opacity-50 focus-visible:outline-none"
->>>>>>> 80e3a9a (fix: show tool command detail inline, not hidden on mobile (0.8.3))
         />
 
         {/* Send / Cancel */}
@@ -361,9 +349,15 @@ export function ChatInput({
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
-            className="mb-0.5 shrink-0 rounded-full border border-transparent bg-[var(--brand-primary)] p-2.5 text-white shadow-[0_6px_18px_rgba(30,17,110,0.14)] transition-all hover:translate-y-[-1px] hover:bg-[var(--brand-strong)] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-send-ring,var(--border-accent))]"
+            className={cn(
+              "mb-0.5 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-send-ring,var(--border-accent))]",
+              value.trim() && !disabled
+                ? "border-transparent bg-[var(--brand-primary)] text-white shadow-[0_6px_18px_rgba(30,17,110,0.14)] hover:translate-y-[-1px] hover:bg-[var(--brand-strong)]"
+                : "border-[var(--border-subtle)] bg-[var(--bg-section)] text-[var(--text-muted)] opacity-100",
+            )}
           >
             <Send className="h-4 w-4" />
+            <span className="hidden sm:inline">Send</span>
           </button>
         )}
           </div>

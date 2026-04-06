@@ -16,12 +16,12 @@ export function ThinkingIndicator({ className }: ThinkingIndicatorProps) {
   return (
     <div className={cn("flex items-center gap-2 px-3 py-1.5", className)}>
       <div className="flex gap-[3px]">
-        <span className="h-1 w-1 animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "0ms" }} />
-        <span className="h-1 w-1 animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "150ms" }} />
-        <span className="h-1 w-1 animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "300ms" }} />
+        <span className="h-[var(--indicator-dot-size)] w-[var(--indicator-dot-size)] animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "0ms" }} />
+        <span className="h-[var(--indicator-dot-size)] w-[var(--indicator-dot-size)] animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "150ms" }} />
+        <span className="h-[var(--indicator-dot-size)] w-[var(--indicator-dot-size)] animate-bounce rounded-full bg-[var(--brand-glow)]" style={{ animationDelay: "300ms" }} />
       </div>
       {elapsed > 3 && (
-        <span className="text-[11px] tabular-nums text-[var(--text-dim)]">
+        <span className="text-[var(--font-size-xs)] tabular-nums text-[var(--text-dim)]">
           {elapsed}s
         </span>
       )}

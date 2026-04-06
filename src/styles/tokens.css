@@ -237,7 +237,21 @@
   --panel-padding: 1rem;
   --content-max-width: 80rem;
 
-  /* Component sizing — override per-app for tighter/looser layouts */
+  /* Typography scale — override per-app for custom type hierarchy.
+     Components reference these instead of hardcoded pixel values. */
+  --font-size-xs: 0.6875rem;      /* 11px — labels, timestamps */
+  --font-size-sm: 0.75rem;        /* 12px — captions, meta */
+  --font-size-base: 0.9375rem;    /* 15px — message body */
+  --font-size-lg: 1rem;           /* 16px — emphasized text */
+  --font-size-xl: 1.25rem;        /* 20px — section headers */
+  --line-height-tight: 1.3;
+  --line-height-base: 1.75;       /* matches leading-7 */
+  --line-height-relaxed: 1.8;
+
+  /* Component spacing — override per-app for tighter/looser layouts */
+  --avatar-size: 2rem;            /* 32px — chat avatars */
+  --timeline-dot-size: 0.625rem;  /* 10px — timeline connector dots */
+  --indicator-dot-size: 0.25rem;  /* 4px — thinking indicator dots */
   --code-padding-x: 0.75rem;
   --code-padding-y: 0.625rem;
   --code-font-size: 0.8125rem;
@@ -249,6 +263,17 @@
   --tool-card-px: 0.75rem;
   --tool-card-py: 0.5rem;
   --tool-icon-size: 1.75rem;
+
+  /* Syntax highlighting — override per-theme in vault/dawn sections */
+  --syntax-comment: #6B7094;
+  --syntax-keyword: #A78FFF;
+  --syntax-string: #10b981;
+  --syntax-function: #6D9FFF;
+  --syntax-number: #FFB347;
+  --syntax-meta: #8263FF;
+  --syntax-error: #FF4D6D;
+  --syntax-variable: #C4C0D8;
+  --syntax-foreground: #E8E6F6;
 
   /* Transitions */
   --transition-fast: 0.1s ease;
@@ -426,6 +451,17 @@
   --font-sans: "Geist", "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", "Geist", sans-serif;
   --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* Light syntax highlighting */
+  --syntax-comment: #8B92B8;
+  --syntax-keyword: #5B3FCC;
+  --syntax-string: #059669;
+  --syntax-function: #2563EB;
+  --syntax-number: #D97706;
+  --syntax-meta: #7C3AED;
+  --syntax-error: #DC2626;
+  --syntax-variable: #334155;
+  --syntax-foreground: #1E293B;
 }
 
 /* ── Ocean — cool blue-teal dark theme ── */
@@ -1041,6 +1077,14 @@
   --radius-xl: 12px;
   --control-height: 2rem;
   --panel-padding: 0.625rem;
+
+  --font-size-xs: 0.625rem;
+  --font-size-sm: 0.6875rem;
+  --font-size-base: 0.8125rem;
+  --font-size-lg: 0.875rem;
+  --line-height-base: 1.6;
+  --avatar-size: 1.5rem;
+  --timeline-dot-size: 0.5rem;
 
   --code-padding-x: 0.625rem;
   --code-padding-y: 0.5rem;

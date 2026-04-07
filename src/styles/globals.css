@@ -290,8 +290,7 @@
 }
 
 /* Light theme overrides — solid surfaces, no glassmorphism */
-[data-sandbox-theme="vault"] .glass-panel,
-[data-sandbox-theme="dawn"] .glass-panel {
+[data-sandbox-theme="vault"] .glass-panel {
   background: hsl(var(--card));
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -299,13 +298,11 @@
   box-shadow: var(--shadow-card);
 }
 
-[data-sandbox-theme="vault"] .glass-panel:hover,
-[data-sandbox-theme="dawn"] .glass-panel:hover {
+[data-sandbox-theme="vault"] .glass-panel:hover {
   border-color: hsl(var(--foreground) / 0.15);
 }
 
-[data-sandbox-theme="vault"] .glass-panel-heavy,
-[data-sandbox-theme="dawn"] .glass-panel-heavy {
+[data-sandbox-theme="vault"] .glass-panel-heavy {
   background: hsl(var(--card));
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -313,12 +310,10 @@
   box-shadow: var(--shadow-card);
 }
 
-[data-sandbox-theme="vault"] .glow-primary,
-[data-sandbox-theme="dawn"] .glow-primary {
+[data-sandbox-theme="vault"] .glow-primary {
   box-shadow: none;
 }
 
-[data-sandbox-theme="vault"] .glow-primary:hover,
-[data-sandbox-theme="dawn"] .glow-primary:hover {
+[data-sandbox-theme="vault"] .glow-primary:hover {
   box-shadow: none;
 }

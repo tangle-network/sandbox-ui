@@ -31,6 +31,16 @@ export interface ProvisioningWizardProps {
   defaultConfig?: Partial<ProvisioningConfig>
   /** When true and defaultConfig is provided, start on the final step */
   skipToReview?: boolean
+  /** Load user's startup scripts for the advanced options selector */
+  onLoadStartupScripts?: () => Promise<StartupScriptEntry[]>
+}
+
+export interface StartupScriptEntry {
+  id: string
+  name: string
+  description: string
+  enabled: boolean
+  injectSecrets: string[]
 }
 
 export interface ProvisioningConfig {
@@ -45,6 +55,7 @@ export interface ProvisioningConfig {
   envVars: { key: string; value: string }[]
   driver: "docker" | "firecracker" | "tangle"
   bare: boolean
+  startupScriptIds: string[]
 }
 
 const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string }> = {
@@ -99,6 +110,7 @@ export function ProvisioningWizard({
   defaultEnvironment,
   defaultConfig,
   skipToReview,
+  onLoadStartupScripts,
 }: ProvisioningWizardProps) {
   const dc = defaultConfig
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
@@ -132,7 +144,15 @@ export function ProvisioningWizard({
   const [envVars, setEnvVars] = React.useState<{key: string, value: string}[]>(dc?.envVars ?? [{ key: "", value: "" }])
   const [driver, setDriver] = React.useState<"docker" | "firecracker" | "tangle">(dc?.driver ?? "docker")
   const [bare, setBare] = React.useState(dc?.bare ?? false)
+  const [startupScriptIds, setStartupScriptIds] = React.useState<string[]>(dc?.startupScriptIds ?? [])
+  const [availableScripts, setAvailableScripts] = React.useState<StartupScriptEntry[]>([])
   const [showAdvanced, setShowAdvanced] = React.useState(false)
+
+  React.useEffect(() => {
+    if (onLoadStartupScripts) {
+      onLoadStartupScripts().then(setAvailableScripts).catch(() => {})
+    }
+  }, [onLoadStartupScripts])
 
   const isMultistep = variant === "multistep"
   const [currentStep, setCurrentStep] = React.useState(skipToReview && dc && isMultistep ? 3 : 1)
@@ -142,7 +162,7 @@ export function ProvisioningWizard({
   const handleDeploy = async () => {
     setIsDeploying(true)
     try {
-      await onSubmit?.({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare })
+      await onSubmit?.({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare, startupScriptIds })
     } catch {
       setIsDeploying(false)
     }
@@ -446,6 +466,44 @@ export function ProvisioningWizard({
                         )}
                       </div>
                     </div>
+
+                    {/* Startup Scripts */}
+                    {availableScripts.length > 0 && (
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Startup Scripts</div>
+                        <div className="space-y-2">
+                          {availableScripts.filter(s => s.enabled).map((script) => {
+                            const selected = startupScriptIds.includes(script.id)
+                            return (
+                              <label key={script.id} className="flex items-start gap-3 cursor-pointer group rounded-lg border border-border p-3 transition-colors hover:border-primary/30">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={() => setStartupScriptIds(prev =>
+                                    selected ? prev.filter(id => id !== script.id) : [...prev, script.id]
+                                  )}
+                                  className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{script.name}</div>
+                                  {script.description && <div className="text-xs text-muted-foreground mt-0.5">{script.description}</div>}
+                                  {script.injectSecrets.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1.5">
+                                      {script.injectSecrets.map(s => (
+                                        <span key={s} className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                                          <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                          {s}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="pt-2 border-t border-border">
                       <label className="flex items-center gap-3 cursor-pointer group">

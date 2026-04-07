@@ -340,27 +340,27 @@
   --hsl-card-foreground: 200 7% 10%;
   --hsl-popover: 0 0% 100%;
   --hsl-popover-foreground: 200 7% 10%;
-  --hsl-primary: 250 100% 14%;
+  --hsl-primary: 250 56% 42%;
   --hsl-primary-foreground: 0 0% 100%;
-  --hsl-secondary: 237 18% 43%;
+  --hsl-secondary: 250 20% 48%;
   --hsl-secondary-foreground: 0 0% 100%;
-  --hsl-muted: 210 14% 95%;
-  --hsl-muted-foreground: 240 5% 38%;
-  --hsl-accent: 210 20% 94%;
-  --hsl-accent-foreground: 200 7% 10%;
+  --hsl-muted: 250 12% 89%;
+  --hsl-muted-foreground: 250 8% 30%;
+  --hsl-accent: 250 22% 85%;
+  --hsl-accent-foreground: 250 40% 28%;
   --hsl-destructive: 0 72% 41%;
   --hsl-destructive-foreground: 0 0% 100%;
-  --hsl-border: 250 10% 80%;
-  --hsl-input: 250 10% 82%;
-  --hsl-ring: 250 100% 14%;
+  --hsl-border: 250 14% 72%;
+  --hsl-input: 250 12% 76%;
+  --hsl-ring: 250 56% 42%;
   --hsl-success: 160 100% 31%;
   --hsl-warning: 41 96% 50%;
   --hsl-info: 212 80% 50%;
 
-  --depth-1: #f8f9fa;
-  --depth-2: #f3f4f5;
-  --depth-3: #edeeef;
-  --depth-4: #e7e8e9;
+  --depth-1: #f5f4f8;
+  --depth-2: #efeef4;
+  --depth-3: #e8e7ef;
+  --depth-4: #e0dfe9;
 
   --status-running: #009f6e;
   --status-creating: #1e116e;
@@ -404,48 +404,48 @@
   /* Sidebar — light */
   --sidebar-background: 210 14% 96%;
   --sidebar-foreground: 200 7% 10%;
-  --sidebar-primary: 250 100% 14%;
+  --sidebar-primary: 250 56% 42%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 14% 95%;
-  --sidebar-accent-foreground: 200 7% 10%;
-  --sidebar-border: 250 10% 80%;
-  --sidebar-ring: 250 100% 14%;
+  --sidebar-accent: 250 16% 89%;
+  --sidebar-accent-foreground: 250 35% 28%;
+  --sidebar-border: 250 14% 72%;
+  --sidebar-ring: 250 56% 42%;
 
   --mesh-teal: rgba(0, 159, 110, 0.04);
   --mesh-violet: rgba(10, 0, 69, 0.03);
   --mesh-blue: rgba(29, 111, 164, 0.03);
 
-  --bg-root: #f8f9fa;
-  --bg-dark: #f3f4f5;
+  --bg-root: #f5f4f8;
+  --bg-dark: #efeef4;
   --bg-card: #ffffff;
-  --bg-elevated: #edeeef;
-  --bg-section: #f3f4f5;
-  --bg-input: #f3f4f5;
-  --bg-hover: rgba(10, 0, 69, 0.04);
-  --bg-selection: rgba(10, 0, 69, 0.08);
+  --bg-elevated: #e8e7ef;
+  --bg-section: #efeef4;
+  --bg-input: #efeef4;
+  --bg-hover: rgba(59, 44, 158, 0.06);
+  --bg-selection: rgba(59, 44, 158, 0.12);
 
   --text-primary: #191c1d;
-  --text-secondary: #474551;
-  --text-muted: #787583;
-  --text-dim: #c8c4d3;
+  --text-secondary: #3d3a4d;
+  --text-muted: #65627a;
+  --text-dim: #b0acc0;
 
-  --brand-primary: #0a0045;
-  --brand-strong: #1e116e;
+  --brand-primary: #3b2c9e;
+  --brand-strong: #2d2080;
   --brand-cool: #5a53ab;
   --brand-glow: #8781dc;
-  --brand-purple: #1e116e;
-  --brand-vibrant: #1e116e;
+  --brand-purple: #4a3aad;
+  --brand-vibrant: #4a3aad;
   --brand-emerald: #009f6e;
 
-  --border-subtle: rgba(200, 196, 211, 0.3);
-  --border-default: rgba(200, 196, 211, 0.5);
-  --border-hover: rgba(200, 196, 211, 0.7);
-  --border-accent: rgba(10, 0, 69, 0.12);
-  --border-accent-hover: rgba(10, 0, 69, 0.25);
+  --border-subtle: rgba(160, 152, 185, 0.3);
+  --border-default: rgba(160, 152, 185, 0.5);
+  --border-hover: rgba(160, 152, 185, 0.7);
+  --border-accent: rgba(59, 44, 158, 0.18);
+  --border-accent-hover: rgba(59, 44, 158, 0.32);
 
-  --btn-primary-bg: #1e116e;
-  --btn-primary-hover: #0a0045;
-  --btn-cta-bg: #1e116e;
+  --btn-primary-bg: #3b2c9e;
+  --btn-primary-hover: #2d2080;
+  --btn-cta-bg: #3b2c9e;
   --btn-cta-text: #ffffff;
 
   --code-keyword: #0a0045;
@@ -461,12 +461,12 @@
   --shadow-glow: none;
   --shadow-accent: 0 1px 3px rgba(25, 28, 29, 0.04), 0 0 0 1px rgba(30, 17, 110, 0.15);
 
-  --tangle-gradient: linear-gradient(135deg, #0a0045, #1e116e);
-  --tangle-gradient-text: linear-gradient(135deg, #0a0045, #1e116e);
-  --accent-gradient-strong: linear-gradient(135deg, #0a0045, #1e116e);
-  --accent-surface-soft: rgba(10, 0, 69, 0.04);
-  --accent-surface-strong: rgba(10, 0, 69, 0.08);
-  --accent-text: #0a0045;
+  --tangle-gradient: linear-gradient(135deg, #3b2c9e, #5a53ab);
+  --tangle-gradient-text: linear-gradient(135deg, #3b2c9e, #5a53ab);
+  --accent-gradient-strong: linear-gradient(135deg, #3b2c9e, #5a53ab);
+  --accent-surface-soft: rgba(59, 44, 158, 0.06);
+  --accent-surface-strong: rgba(59, 44, 158, 0.12);
+  --accent-text: #3b2c9e;
 
   /* Typography — Manrope (headlines) + Inter (body/labels) */
   --font-sans: "Inter", "Geist", ui-sans-serif, system-ui, sans-serif;

@@ -290,7 +290,7 @@ function DashboardLayoutInner({
             <button
               type="button"
               onClick={onNewSandbox}
-              className="hidden md:flex items-center gap-2 bg-[var(--accent-surface-soft)] border border-border text-[var(--accent-text)] px-4 py-2 rounded-lg font-bold hover:bg-[var(--accent-surface-strong)] transition-all active:scale-95 text-xs"
+              className="hidden md:flex items-center gap-2 bg-[var(--btn-primary-bg)] border border-[var(--border-accent)] text-white px-4 py-2 rounded-lg font-bold hover:bg-[var(--btn-primary-hover)] transition-all active:scale-95 text-xs"
             >
               <Plus className="h-3.5 w-3.5" />
               New Sandbox

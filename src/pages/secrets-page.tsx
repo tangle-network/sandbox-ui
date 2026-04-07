@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../primitives/dialog"
+import { InfoPanel } from "../dashboard/info-panel"
 
 export interface Secret {
   name: string
@@ -142,14 +143,12 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
             <span className="text-sm font-semibold text-[var(--surface-success-text,#047857)]">Encrypted</span>
           </div>
         </div>
-        <div className="md:col-span-2 rounded-lg bg-[var(--brand-strong,hsl(var(--primary)))] p-5 text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">Security Audit</p>
-            <h3 className="mt-1 text-lg font-bold">All engines operational.</h3>
-            <p className="mt-1 text-sm text-white/70">Secrets are encrypted at rest using AES-256.</p>
-          </div>
-          <div className="absolute right-0 top-0 h-full w-1/3 bg-white/5 -skew-x-12 translate-x-12 pointer-events-none" />
-        </div>
+        <InfoPanel
+          className="md:col-span-2"
+          label="Security Audit"
+          title="All engines operational."
+          description="Secrets are encrypted at rest using AES-256."
+        />
       </div>
 
       {/* Error banner */}

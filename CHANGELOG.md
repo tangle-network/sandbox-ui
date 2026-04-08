@@ -2,6 +2,8 @@
 
 ## 0.9.0
 
+> Versions 0.5.0–0.8.4 were published without changelog entries.
+
 ### Breaking Changes
 
 - **Themes removed**: `ocean`, `ember`, `forest`, `dawn`, `operator`, `builder`, and `consumer` themes have been removed. Only the default dark theme and `vault` (light) remain. The `theme` prop on `WorkspaceLayout` now accepts `"vault"` only.
@@ -14,10 +16,12 @@
 | `StartupScriptsPage` | `/pages` | Full CRUD page for managing sandbox startup scripts |
 | `PromoBanner` | `/dashboard` | Themed promotional banner with CTA button |
 | `InfoPanel` | `/dashboard` | Themed info card for stats rows |
-| `StandalonePricingPage` | `/pages` | Pricing tiers page with billing period toggle and FAQ |
+
+
 
 ### Improvements
 
+- **Pricing page**: Added eyebrow prop, FAQ section, billing period toggle.
 - **Provisioning wizard**: Startup scripts integration, deploy error feedback, load error surfacing, `maxLength` on name/prompt inputs, runtime driver validation.
 - **Secrets page**: Redesigned with stats row, `InfoPanel` integration, race-safe data loading via generation counter, `showSpinner` parameter to avoid flash on mutation refresh.
 - **Design tokens**: Added `--btn-primary-text`, `--brand-strong-text`, `--brand-strong-text-muted`, `--brand-strong-text-dim` tokens for WCAG-compliant text on themed backgrounds.

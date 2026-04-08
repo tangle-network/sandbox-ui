@@ -441,7 +441,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="font-[var(--font-display)] text-3xl font-extrabold tracking-tight text-foreground">
+          <h1 className="font-display text-3xl font-extrabold tracking-tight text-foreground">
             Startup Scripts
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -463,13 +463,13 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Scripts</p>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="font-[var(--font-display)] text-2xl font-extrabold text-foreground">{scripts.length}</span>
+            <span className="font-display text-2xl font-extrabold text-foreground">{scripts.length}</span>
           </div>
         </div>
         <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="font-[var(--font-display)] text-2xl font-extrabold text-foreground">{activeCount}</span>
+            <span className="font-display text-2xl font-extrabold text-foreground">{activeCount}</span>
             <span className="text-xs text-muted-foreground">of {scripts.length}</span>
           </div>
         </div>

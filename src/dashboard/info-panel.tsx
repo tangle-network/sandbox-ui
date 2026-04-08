@@ -12,7 +12,7 @@ export interface InfoPanelProps {
 
 export function InfoPanel({ label, title, description, className }: InfoPanelProps) {
   return (
-    <div className={cn("rounded-lg bg-[#2E2A5E] p-5 text-white relative overflow-hidden", className)}>
+    <div className={cn("rounded-lg bg-[var(--brand-strong)] p-5 text-white relative overflow-hidden", className)}>
       <div className="relative z-10">
         <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">{label}</p>
         <h3 className="mt-1 text-lg font-bold">{title}</h3>

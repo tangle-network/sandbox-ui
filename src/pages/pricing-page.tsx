@@ -127,7 +127,7 @@ export function StandalonePricingPage({
         {eyebrow && (
           <span className="text-xs font-bold uppercase tracking-widest text-[var(--brand-emerald,#009f6e)]">{eyebrow}</span>
         )}
-        <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl font-[var(--font-display)]">
+        <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl font-display">
           {title}
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-muted-foreground">

@@ -115,13 +115,16 @@ export function ProvisioningWizard({
   const dc = defaultConfig
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
 
+  const onLoadEnvironmentsRef = React.useRef(onLoadEnvironments)
+  onLoadEnvironmentsRef.current = onLoadEnvironments
+
   React.useEffect(() => {
-    if (onLoadEnvironments) {
-      onLoadEnvironments().then((entries) => setEnvList(entries.map(resolveEnvironment)))
+    if (onLoadEnvironmentsRef.current) {
+      onLoadEnvironmentsRef.current().then((entries) => setEnvList(entries.map(resolveEnvironment)))
     } else if (environmentsProp) {
       setEnvList(environmentsProp)
     }
-  }, [onLoadEnvironments, environmentsProp])
+  }, [environmentsProp])
 
   const environments = envList
 
@@ -148,11 +151,12 @@ export function ProvisioningWizard({
   const [availableScripts, setAvailableScripts] = React.useState<StartupScriptEntry[]>([])
   const [showAdvanced, setShowAdvanced] = React.useState(false)
 
+  const onLoadStartupScriptsRef = React.useRef(onLoadStartupScripts)
+  onLoadStartupScriptsRef.current = onLoadStartupScripts
+
   React.useEffect(() => {
-    if (onLoadStartupScripts) {
-      onLoadStartupScripts().then(setAvailableScripts).catch(() => {})
-    }
-  }, [onLoadStartupScripts])
+    onLoadStartupScriptsRef.current?.().then(setAvailableScripts).catch(() => {})
+  }, [])
 
   const isMultistep = variant === "multistep"
   const [currentStep, setCurrentStep] = React.useState(skipToReview && dc && isMultistep ? 3 : 1)
@@ -160,10 +164,11 @@ export function ProvisioningWizard({
   const [isDeploying, setIsDeploying] = React.useState(false)
 
   const handleDeploy = async () => {
+    if (!onSubmit) return
     setIsDeploying(true)
     try {
-      await onSubmit?.({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare, startupScriptIds })
-    } catch {
+      await onSubmit({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare, startupScriptIds })
+    } finally {
       setIsDeploying(false)
     }
   }
@@ -232,12 +237,18 @@ export function ProvisioningWizard({
                 type="button"
                 onClick={() => {
                   setCurrentStep(1)
+                  setSelectedEnv(environments[0]?.id ?? "")
                   setCpuCores(4)
                   setRamGB(16)
                   setStorageGB(128)
                   setModelTier("claude-sonnet")
                   setSystemPrompt("")
+                  setName("")
+                  setGitUrl("")
+                  setEnvVars([{ key: "", value: "" }])
+                  setDriver("docker")
                   setBare(false)
+                  setStartupScriptIds([])
                 }}
                 className="text-xs font-bold text-primary hover:text-primary/70 transition-colors"
               >
@@ -568,7 +579,7 @@ export function ProvisioningWizard({
               <span key={hourCost} className="text-4xl font-black text-foreground tracking-tighter animate-in fade-in duration-200">${hourCost}</span>
               <span className="text-muted-foreground text-sm font-bold">/ hour</span>
             </div>
-            <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3 border border-border">
+            <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>COMPUTE</span>
                 <span className="text-foreground">${(cpuCores * 0.045).toFixed(2)}/h</span>

@@ -205,6 +205,7 @@
   /* Buttons */
   --btn-primary-bg: #6366F1;
   --btn-primary-hover: #818CF8;
+  --btn-primary-text: #ffffff;
   --btn-cta-bg: #818CF8;
   --btn-cta-text: #FFFFFF;
 
@@ -450,6 +451,7 @@
 
   --btn-primary-bg: #6366F1;
   --btn-primary-hover: #4F46E5;
+  --btn-primary-text: #ffffff;
   --btn-cta-bg: #6366F1;
   --btn-cta-text: #ffffff;
 
@@ -604,6 +606,7 @@
 
   --btn-primary-bg: #0ea5e9;
   --btn-primary-hover: #38bdf8;
+  --btn-primary-text: #ffffff;
   --btn-cta-bg: #0ea5e9;
   --btn-cta-text: #FFFFFF;
 
@@ -758,6 +761,7 @@
 
   --btn-primary-bg: #f59e0b;
   --btn-primary-hover: #fbbf24;
+  --btn-primary-text: #000000;
   --btn-cta-bg: #f59e0b;
   --btn-cta-text: #000000;
 
@@ -912,6 +916,7 @@
 
   --btn-primary-bg: #10b981;
   --btn-primary-hover: #34d399;
+  --btn-primary-text: #000000;
   --btn-cta-bg: #10b981;
   --btn-cta-text: #000000;
 
@@ -1064,6 +1069,7 @@
 
   --btn-primary-bg: #d97706;
   --btn-primary-hover: #b45309;
+  --btn-primary-text: #422006;
   --btn-cta-bg: #ea580c;
   --btn-cta-text: #ffffff;
 

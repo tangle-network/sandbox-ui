@@ -334,8 +334,8 @@ export function SidebarContent({ children, className }: SidebarContentProps) {
 
   return (
     <main
-      className={cn("min-h-screen transition-[margin-left,width] duration-200 ease-in-out", className)}
-      style={{ marginLeft: contentMargin, width: `calc(100% - ${contentMargin}px)` }}
+      className={cn("min-h-screen transition-[margin-left] duration-200 ease-in-out", className)}
+      style={{ marginLeft: contentMargin }}
     >
       {children}
     </main>

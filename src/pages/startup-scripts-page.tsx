@@ -1058,7 +1058,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text,#fff)]">
               <Play className="h-5 w-5" />
             </div>
             <h3 className="text-sm font-bold text-foreground">How Scripts Run</h3>
@@ -1069,7 +1069,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         </div>
         <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text,#fff)]">
               <Shield className="h-5 w-5" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Security & Secrets</h3>

@@ -46,17 +46,21 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
   const [isDeleting, setIsDeleting] = React.useState(false)
   const apiRef = React.useRef(apiClient)
   apiRef.current = apiClient
+  const loadGenRef = React.useRef(0)
 
   const loadSecrets = React.useCallback(async (showSpinner = true) => {
+    const gen = ++loadGenRef.current
     try {
       if (showSpinner) setLoading(true)
       setError(null)
       const data = await apiRef.current.listSecrets()
+      if (gen !== loadGenRef.current) return
       setSecrets(data)
     } catch (err) {
+      if (gen !== loadGenRef.current) return
       setError(err instanceof Error ? err.message : "Failed to load secrets")
     } finally {
-      setLoading(false)
+      if (gen === loadGenRef.current) setLoading(false)
     }
   }, [])
 
@@ -325,7 +329,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text,#fff)]">
               <Shield className="h-5 w-5" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Encryption Standard</h3>
@@ -336,7 +340,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
         </div>
         <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text,#fff)]">
               <Lock className="h-5 w-5" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Access Policy</h3>

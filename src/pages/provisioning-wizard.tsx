@@ -119,13 +119,15 @@ export function ProvisioningWizard({
   onLoadEnvironmentsRef.current = onLoadEnvironments
 
   React.useEffect(() => {
+    let cancelled = false
     if (onLoadEnvironmentsRef.current) {
-      onLoadEnvironmentsRef.current().then((entries) => setEnvList(entries.map(resolveEnvironment))).catch((err) => {
-        setLoadError(err instanceof Error ? err.message : "Failed to load environments")
-      })
+      onLoadEnvironmentsRef.current()
+        .then((entries) => { if (!cancelled) setEnvList(entries.map(resolveEnvironment)) })
+        .catch((err) => { if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load environments") })
     } else if (environmentsProp) {
       setEnvList(environmentsProp)
     }
+    return () => { cancelled = true }
   }, [environmentsProp])
 
   const environments = envList
@@ -158,13 +160,13 @@ export function ProvisioningWizard({
   onLoadStartupScriptsRef.current = onLoadStartupScripts
 
   React.useEffect(() => {
+    let cancelled = false
     if (onLoadStartupScriptsRef.current) {
       onLoadStartupScriptsRef.current()
-        .then(setAvailableScripts)
-        .catch((err) => {
-          setLoadError(err instanceof Error ? err.message : "Failed to load startup scripts")
-        })
+        .then((scripts) => { if (!cancelled) setAvailableScripts(scripts) })
+        .catch((err) => { if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load startup scripts") })
     }
+    return () => { cancelled = true }
   }, [])
 
   const isMultistep = variant === "multistep"

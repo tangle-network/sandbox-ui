@@ -427,7 +427,7 @@ export function WorkspaceLayout({
 
   return (
     <div
-      {...(theme ? { "data-sandbox-ui": "true", ...(resolvedTheme ? { "data-sandbox-theme": resolvedTheme } : {}) } : {})}
+      {...(resolvedTheme ? { "data-sandbox-ui": "true", "data-sandbox-theme": resolvedTheme } : {})}
       data-density={density}
       className={cn(
         "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-foreground font-sans",

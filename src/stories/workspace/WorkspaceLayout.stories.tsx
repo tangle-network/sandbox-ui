@@ -304,8 +304,8 @@ export const WithBottomPanel: Story = {
   },
 }
 
-export const BuilderTheme: Story = {
-  name: 'Builder Theme',
+export const VaultTheme: Story = {
+  name: 'Vault Theme',
   decorators: [
     (Story) => (
       <div className="h-screen" data-sandbox-ui="true">

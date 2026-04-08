@@ -288,9 +288,9 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
   const apiRef = React.useRef(apiClient)
   apiRef.current = apiClient
 
-  const loadData = React.useCallback(async () => {
+  const loadData = React.useCallback(async (showSpinner = true) => {
     try {
-      setLoading(true)
+      if (showSpinner) setLoading(true)
       setError(null)
       const [scriptData, secretData, envData] = await Promise.all([
         apiRef.current.listScripts(),
@@ -385,7 +385,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         await apiRef.current.createScript(formData)
       }
       setIsDialogOpen(false)
-      await loadData()
+      await loadData(false)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Failed to save script")
     } finally {
@@ -396,7 +396,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
   const handleToggle = async (script: StartupScript) => {
     try {
       await apiRef.current.toggleScript(script.id)
-      await loadData()
+      await loadData(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to toggle script")
     }
@@ -408,7 +408,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
     try {
       await apiRef.current.deleteScript(deleteTarget.id)
       setDeleteTarget(null)
-      await loadData()
+      await loadData(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete script")
     } finally {

@@ -46,7 +46,7 @@ export function PromoBanner({
             {buttonContent}
           </a>
         ) : (
-          <button type="button" onClick={disabled ? undefined : onClick} disabled={disabled} className={buttonClasses}>
+          <button type="button" onClick={onClick} disabled={disabled} className={buttonClasses}>
             {buttonContent}
           </button>
         )}

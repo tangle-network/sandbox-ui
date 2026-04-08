@@ -71,6 +71,27 @@ describe("PromoBanner", () => {
     expect(wrapper.className).not.toContain("#2E2A5E")
   })
 
+  it("renders a disabled button (not an anchor) when both href and disabled are provided", () => {
+    render(<PromoBanner {...baseProps} href="https://example.com" disabled />)
+    // When disabled, should render a button, not a link
+    const button = screen.getByRole("button", { name: /learn more/i })
+    expect(button).toBeDisabled()
+    expect(screen.queryByRole("link")).toBeNull()
+  })
+
+  it("uses design token for button background (not hardcoded hex)", () => {
+    render(<PromoBanner {...baseProps} />)
+    const button = screen.getByRole("button", { name: /learn more/i })
+    expect(button.className).toContain("bg-[var(--btn-primary-bg")
+    expect(button.className).not.toContain("#6366F1")
+  })
+
+  it("uses brand-strong-text token for title (not hardcoded text-white)", () => {
+    render(<PromoBanner {...baseProps} />)
+    const title = screen.getByText("Upgrade your plan")
+    expect(title.className).toContain("text-[var(--brand-strong-text)]")
+  })
+
   it("applies custom className", () => {
     const { container } = render(<PromoBanner {...baseProps} className="my-custom-class" />)
     const wrapper = container.firstElementChild as HTMLElement

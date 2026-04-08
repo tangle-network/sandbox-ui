@@ -317,3 +317,32 @@
 [data-sandbox-theme="vault"] .glow-primary:hover {
   box-shadow: none;
 }
+
+/* Dawn light theme — same solid surface treatment */
+[data-sandbox-theme="dawn"] .glass-panel {
+  background: hsl(var(--card));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: hsl(var(--border));
+  box-shadow: var(--shadow-card);
+}
+
+[data-sandbox-theme="dawn"] .glass-panel:hover {
+  border-color: hsl(var(--foreground) / 0.15);
+}
+
+[data-sandbox-theme="dawn"] .glass-panel-heavy {
+  background: hsl(var(--card));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: hsl(var(--border));
+  box-shadow: var(--shadow-card);
+}
+
+[data-sandbox-theme="dawn"] .glow-primary {
+  box-shadow: none;
+}
+
+[data-sandbox-theme="dawn"] .glow-primary:hover {
+  box-shadow: none;
+}

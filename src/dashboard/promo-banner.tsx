@@ -25,8 +25,8 @@ export function PromoBanner({
   className,
 }: PromoBannerProps) {
   const buttonClasses = cn(
-    "mt-6 inline-flex items-center gap-2 rounded-md border border-white/20 bg-[#6366F1] px-4 py-2 text-sm font-medium text-white transition-colors",
-    disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[#818CF8]",
+    "mt-6 inline-flex items-center gap-2 rounded-md border border-white/20 bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-medium text-white transition-colors",
+    disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))]",
   )
 
   const buttonContent = (
@@ -39,14 +39,14 @@ export function PromoBanner({
   return (
     <div className={cn("relative overflow-hidden rounded-xl bg-[var(--brand-strong)] p-8 md:flex md:items-center md:justify-between", className)}>
       <div className="relative z-10">
-        <h3 className="text-xl font-bold text-white">{title}</h3>
-        <p className="mt-2 max-w-md text-sm text-white/70">{description}</p>
-        {href ? (
+        <h3 className="text-xl font-bold text-[var(--brand-strong-text)]">{title}</h3>
+        <p className="mt-2 max-w-md text-sm text-[var(--brand-strong-text-muted)]">{description}</p>
+        {href && !disabled ? (
           <a href={href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={buttonClasses}>
             {buttonContent}
           </a>
         ) : (
-          <button type="button" onClick={onClick} disabled={disabled} className={buttonClasses}>
+          <button type="button" onClick={disabled ? undefined : onClick} disabled={disabled} className={buttonClasses}>
             {buttonContent}
           </button>
         )}

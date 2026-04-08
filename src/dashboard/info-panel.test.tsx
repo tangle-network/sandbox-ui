@@ -36,4 +36,12 @@ describe("InfoPanel", () => {
     expect(label.className).toContain("uppercase")
     expect(label.className).toContain("tracking-widest")
   })
+
+  it("uses brand-strong-text tokens for text colors (not hardcoded text-white)", () => {
+    render(<InfoPanel {...baseProps} />)
+    const title = screen.getByText("All engines operational.")
+    const wrapper = title.closest("[class*='bg-[var(--brand-strong)]']") as HTMLElement
+    expect(wrapper.className).toContain("text-[var(--brand-strong-text)]")
+    expect(wrapper.className).not.toContain("text-white")
+  })
 })

@@ -186,6 +186,9 @@
   /* Brand accents — Tangle */
   --brand-primary: #6366F1;
   --brand-strong: #2E2A5E;
+  --brand-strong-text: #ffffff;
+  --brand-strong-text-muted: rgba(255, 255, 255, 0.7);
+  --brand-strong-text-dim: rgba(255, 255, 255, 0.5);
   --brand-cool: #818CF8;
   --brand-glow: #A5AAFC;
   --brand-purple: #C7D2FE;
@@ -430,6 +433,9 @@
 
   --brand-primary: #6366F1;
   --brand-strong: #2E2A5E;
+  --brand-strong-text: #ffffff;
+  --brand-strong-text-muted: rgba(255, 255, 255, 0.7);
+  --brand-strong-text-dim: rgba(255, 255, 255, 0.5);
   --brand-cool: #818CF8;
   --brand-glow: #A5AAFC;
   --brand-purple: #6366F1;
@@ -581,6 +587,9 @@
 
   --brand-primary: #0ea5e9;
   --brand-strong: #0284c7;
+  --brand-strong-text: #ffffff;
+  --brand-strong-text-muted: rgba(255, 255, 255, 0.7);
+  --brand-strong-text-dim: rgba(255, 255, 255, 0.5);
   --brand-cool: #38bdf8;
   --brand-glow: #7dd3fc;
   --brand-purple: #38bdf8;
@@ -732,6 +741,9 @@
 
   --brand-primary: #f59e0b;
   --brand-strong: #d97706;
+  --brand-strong-text: #422006;
+  --brand-strong-text-muted: rgba(66, 32, 6, 0.75);
+  --brand-strong-text-dim: rgba(66, 32, 6, 0.55);
   --brand-cool: #fbbf24;
   --brand-glow: #fcd34d;
   --brand-purple: #fbbf24;
@@ -883,6 +895,9 @@
 
   --brand-primary: #10b981;
   --brand-strong: #059669;
+  --brand-strong-text: #022c22;
+  --brand-strong-text-muted: rgba(2, 44, 34, 0.75);
+  --brand-strong-text-dim: rgba(2, 44, 34, 0.55);
   --brand-cool: #34d399;
   --brand-glow: #6ee7b7;
   --brand-purple: #34d399;
@@ -1032,6 +1047,9 @@
 
   --brand-primary: #d97706;
   --brand-strong: #b45309;
+  --brand-strong-text: #ffffff;
+  --brand-strong-text-muted: rgba(255, 255, 255, 0.7);
+  --brand-strong-text-dim: rgba(255, 255, 255, 0.5);
   --brand-cool: #f59e0b;
   --brand-glow: #fbbf24;
   --brand-purple: #d97706;

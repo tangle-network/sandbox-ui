@@ -25,8 +25,8 @@ export function PromoBanner({
   className,
 }: PromoBannerProps) {
   const buttonClasses = cn(
-    "mt-6 inline-flex items-center gap-2 rounded-md border border-white/20 bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-medium text-[var(--btn-primary-text,#fff)] transition-colors",
-    disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))]",
+    "mt-6 inline-flex items-center gap-2 rounded-md border border-white/20 bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-medium text-[var(--btn-primary-text)] transition-colors",
+    disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--btn-primary-hover)]",
   )
 
   const buttonContent = (

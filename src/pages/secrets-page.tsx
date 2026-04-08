@@ -47,9 +47,9 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
   const apiRef = React.useRef(apiClient)
   apiRef.current = apiClient
 
-  const loadSecrets = React.useCallback(async () => {
+  const loadSecrets = React.useCallback(async (showSpinner = true) => {
     try {
-      setLoading(true)
+      if (showSpinner) setLoading(true)
       setError(null)
       const data = await apiRef.current.listSecrets()
       setSecrets(data)
@@ -74,7 +74,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
       setNewName("")
       setNewValue("")
       setShowValue(false)
-      await loadSecrets()
+      await loadSecrets(false)
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Failed to create secret")
     } finally {
@@ -87,7 +87,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
     try {
       await apiRef.current.deleteSecret(name)
       setDeleteTarget(null)
-      await loadSecrets()
+      await loadSecrets(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete secret")
     } finally {

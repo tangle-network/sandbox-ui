@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.9.0
+
+### Breaking Changes
+
+- **Themes removed**: `ocean`, `ember`, `forest`, `dawn`, `operator`, `builder`, and `consumer` themes have been removed. Only the default dark theme and `vault` (light) remain. The `theme` prop on `WorkspaceLayout` now accepts `"vault"` only.
+- **`ProvisioningConfig.startupScriptIds`**: New optional field added to the exported interface. Existing code is unaffected since the field is optional.
+
+### New Components
+
+| Component | Subpath | Purpose |
+|---|---|---|
+| `StartupScriptsPage` | `/pages` | Full CRUD page for managing sandbox startup scripts |
+| `PromoBanner` | `/dashboard` | Themed promotional banner with CTA button |
+| `InfoPanel` | `/dashboard` | Themed info card for stats rows |
+| `StandalonePricingPage` | `/pages` | Pricing tiers page with billing period toggle and FAQ |
+
+### Improvements
+
+- **Provisioning wizard**: Startup scripts integration, deploy error feedback, load error surfacing, `maxLength` on name/prompt inputs, runtime driver validation.
+- **Secrets page**: Redesigned with stats row, `InfoPanel` integration, race-safe data loading via generation counter, `showSpinner` parameter to avoid flash on mutation refresh.
+- **Design tokens**: Added `--btn-primary-text`, `--brand-strong-text`, `--brand-strong-text-muted`, `--brand-strong-text-dim` tokens for WCAG-compliant text on themed backgrounds.
+- **Card variants**: Restored visual distinctions for `elevated`, `glass`, and `sandbox` card variants.
+- **Accessibility**: `aria-label` on script action buttons, `aria-hidden` on decorative SVGs, touch-visible action buttons on mobile.
+- **Consistent styling**: All primary buttons use `--btn-primary-bg`/`--btn-primary-hover`/`--btn-primary-text` tokens. `font-display` Tailwind utility used consistently instead of `font-[var(--font-display)]`.
+- **Test coverage**: Added test suites for `StartupScriptsPage`, `SecretsPage`, `PromoBanner`, `InfoPanel`, `ProvisioningWizard`, and `WorkspaceLayout` (59 tests total).
+
 ## 0.4.0
 
 ### Breaking Changes

@@ -55,7 +55,7 @@ export interface ProvisioningConfig {
   envVars: { key: string; value: string }[]
   driver: "docker" | "firecracker" | "tangle"
   bare: boolean
-  startupScriptIds: string[]
+  startupScriptIds?: string[]
 }
 
 const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string }> = {

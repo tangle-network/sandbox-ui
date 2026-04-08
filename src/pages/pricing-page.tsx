@@ -125,7 +125,7 @@ export function StandalonePricingPage({
       {/* Header */}
       <div className="space-y-4 text-center">
         {eyebrow && (
-          <span className="text-xs font-bold uppercase tracking-widest text-[var(--brand-emerald,#009f6e)]">{eyebrow}</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-[var(--brand-emerald,#10B981)]">{eyebrow}</span>
         )}
         <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl font-display">
           {title}

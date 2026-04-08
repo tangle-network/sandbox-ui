@@ -104,7 +104,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
       const ts = /^\d+$/.test(dateStr) ? Number(dateStr) : dateStr
       const date = new Date(ts)
       if (Number.isNaN(date.getTime())) return dateStr
-      return date.toLocaleDateString()
+      return date.toLocaleDateString("en-US")
     } catch {
       return dateStr
     }
@@ -125,10 +125,10 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
         <button
           type="button"
           onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--btn-primary-text,#fff)] hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors active:scale-[0.97]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
         >
           <Plus className="h-4 w-4" />
-          Add Secret
+          New Secret
         </button>
       </div>
 
@@ -216,8 +216,8 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
             <button
               type="button"
               onClick={handleCreate}
-              disabled={!newName.trim() || !newValue || isCreating}
-              className="rounded-md bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text,#fff)] hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors disabled:opacity-50 active:scale-[0.97]"
+              disabled={!newName.trim() || !newValue.trim() || isCreating}
+              className="rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 active:scale-[0.97]"
             >
               {isCreating ? "Creating..." : "Create Secret"}
             </button>
@@ -275,7 +275,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
-              className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text,#fff)] hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors active:scale-[0.97]"
+              className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
             >
               <Plus className="h-4 w-4" />
               Create Secret
@@ -329,7 +329,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text,#fff)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
               <Shield className="h-5 w-5" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Encryption Standard</h3>
@@ -340,7 +340,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
         </div>
         <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text,#fff)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
               <Lock className="h-5 w-5" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Access Policy</h3>

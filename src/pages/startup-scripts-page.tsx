@@ -287,8 +287,10 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
 
   const apiRef = React.useRef(apiClient)
   apiRef.current = apiClient
+  const loadGenRef = React.useRef(0)
 
   const loadData = React.useCallback(async (showSpinner = true) => {
+    const gen = ++loadGenRef.current
     try {
       if (showSpinner) setLoading(true)
       setError(null)
@@ -297,13 +299,15 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         apiRef.current.listSecrets?.() ?? Promise.resolve([]),
         apiRef.current.listEnvironments?.() ?? Promise.resolve([]),
       ])
+      if (gen !== loadGenRef.current) return
       setScripts(scriptData)
       setSecrets(secretData)
       setEnvironments(envData)
     } catch (err) {
+      if (gen !== loadGenRef.current) return
       setError(err instanceof Error ? err.message : "Failed to load startup scripts")
     } finally {
-      setLoading(false)
+      if (gen === loadGenRef.current) setLoading(false)
     }
   }, [])
 
@@ -451,7 +455,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text,#fff)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
         >
           <Plus className="h-4 w-4" />
           New Script
@@ -886,7 +890,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving || !formData.name.trim() || !formData.content.trim()}
-                className="rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text,#fff)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] disabled:opacity-50"
+                className="rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)] disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : editingScript ? "Save Changes" : "Create Script"}
               </button>
@@ -951,7 +955,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
             <button
               type="button"
               onClick={openCreate}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text,#fff)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))]"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
             >
               <Plus className="h-4 w-4" />
               Create Script
@@ -1058,7 +1062,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text,#fff)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
               <Play className="h-5 w-5" />
             </div>
             <h3 className="text-sm font-bold text-foreground">How Scripts Run</h3>
@@ -1069,7 +1073,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         </div>
         <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text,#fff)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
               <Shield className="h-5 w-5" />
             </div>
             <h3 className="text-sm font-bold text-foreground">Security & Secrets</h3>

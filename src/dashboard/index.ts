@@ -160,3 +160,11 @@ export {
   type SnapshotListProps,
   type SnapshotInfo as DashboardSnapshotInfo,
 } from "./snapshot-list";
+export {
+  PromoBanner,
+  type PromoBannerProps,
+} from "./promo-banner";
+export {
+  InfoPanel,
+  type InfoPanelProps,
+} from "./info-panel";

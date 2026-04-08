@@ -17,6 +17,7 @@ export interface StandalonePricingPageProps {
   fetchTiers?: () => Promise<PricingTier[]>;
   title?: string;
   subtitle?: string;
+  eyebrow?: string;
   className?: string;
 }
 
@@ -58,6 +59,7 @@ export function StandalonePricingPage({
   fetchTiers,
   title = "Simple, transparent pricing",
   subtitle = "Choose the plan that fits your needs. Upgrade or downgrade at any time.",
+  eyebrow,
   className,
 }: StandalonePricingPageProps) {
   const [state, setState] = React.useState<PricingPageState>({
@@ -122,7 +124,10 @@ export function StandalonePricingPage({
     <div className={cn("mx-auto max-w-6xl px-6 py-16 space-y-16", className)}>
       {/* Header */}
       <div className="space-y-4 text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
+        {eyebrow && (
+          <span className="text-xs font-bold uppercase tracking-widest text-[var(--brand-emerald,#10B981)]">{eyebrow}</span>
+        )}
+        <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl font-display">
           {title}
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-muted-foreground">

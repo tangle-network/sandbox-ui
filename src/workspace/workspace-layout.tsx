@@ -94,7 +94,7 @@ export interface WorkspaceLayoutProps {
   /** Disable resize handles */
   resizable?: boolean;
   /** Visual theme for sandbox surfaces */
-  theme?: "operator" | "builder" | "consumer" | "vault";
+  theme?: "vault";
   /** Density mode for control sizing */
   density?: "comfortable" | "compact";
   /** Accessible label for the left panel */

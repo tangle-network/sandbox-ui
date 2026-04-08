@@ -133,16 +133,15 @@ There is a built-in Tangle default theme, but consumers can restyle the library 
 
 `WorkspaceLayout` and `SandboxWorkbench` support:
 
-- `theme="operator"`
-- `theme="builder"`
-- `theme="consumer"`
+- `theme="vault"` — light theme with solid surfaces
+- No theme prop — default dark theme
 
 They also support `density="comfortable"` and `density="compact"`.
 
 ```tsx
 <SandboxWorkbench
   layout={{
-    theme: "consumer",
+    theme: "vault",
     density: "comfortable",
   }}
   session={{ ... }}
@@ -152,7 +151,7 @@ They also support `density="comfortable"` and `density="compact"`.
 If you are not using `SandboxWorkbench`, you can set the same attributes yourself:
 
 ```tsx
-<div data-sandbox-ui data-sandbox-theme="consumer" data-density="compact">
+<div data-sandbox-ui data-sandbox-theme="vault" data-density="compact">
   <YourSandboxApp />
 </div>
 ```
@@ -257,7 +256,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 - [Tailwind CSS](https://tailwindcss.com/) v4
 - [Lucide](https://lucide.dev/) icons
 - [CVA](https://cva.style/) for variant management
-- Shared semantic tokens for `operator`, `builder`, and `consumer` sandbox themes
+- Shared semantic tokens for default dark and `vault` light sandbox themes
 - ESM-only, tree-shakeable, fully typed
 
 ## License

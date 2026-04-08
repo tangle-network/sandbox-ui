@@ -135,9 +135,8 @@ Recommended theme layers:
 2. Semantic tokens
    - surface, panel, accent, success, warning, danger, code, selection
 3. Product themes
-   - `operator`
-   - `builder`
-   - `consumer`
+   - default dark
+   - `vault` (light)
 4. Density modes
    - `comfortable`
    - `compact`
@@ -210,8 +209,8 @@ The less technical apps should feel calmer, more guided, and less terminal-like.
 
 ### Phase 4: Product Variants
 
-- operator theme for sandbox/devtools
-- guided theme for consumer/prosumer apps
+- default dark theme for sandbox/devtools
+- vault light theme for professional/enterprise contexts
 - white-label hooks for partner products
 
 ## High-Priority Fixes Before Bigger Refactors

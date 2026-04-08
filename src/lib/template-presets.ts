@@ -7,7 +7,7 @@ export type TemplateCategory =
   | "infrastructure"
   | "general"
 
-export type TemplatePreset = Omit<ProvisioningConfig, "name" | "gitUrl" | "envVars" | "driver">
+export type TemplatePreset = Omit<ProvisioningConfig, "name" | "gitUrl" | "envVars" | "driver" | "startupScriptIds">
 
 const BLOCKCHAIN_PATTERNS = [
   "ethereum", "solana", "arbitrum", "base-aa", "base-l2", "polygon",

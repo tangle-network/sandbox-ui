@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ArrowLeft, Layers, Cpu, Bot, Info, Loader2, Settings, Plus, Trash2 } from "lucide-react"
+import { ArrowLeft, Layers, Cpu, Bot, Info, Loader2, Settings, Plus, Trash2, Check } from "lucide-react"
 import { cn } from "../lib/utils"
 
 export interface EnvironmentOption {
@@ -21,7 +21,7 @@ export interface EnvironmentEntry {
 export interface ProvisioningWizardProps {
   environments?: EnvironmentOption[]
   onLoadEnvironments?: () => Promise<EnvironmentEntry[]>
-  onSubmit?: (config: ProvisioningConfig) => void
+  onSubmit?: (config: ProvisioningConfig) => void | Promise<void>
   onBack?: () => void
   className?: string
   variant?: "flat" | "multistep"
@@ -31,6 +31,16 @@ export interface ProvisioningWizardProps {
   defaultConfig?: Partial<ProvisioningConfig>
   /** When true and defaultConfig is provided, start on the final step */
   skipToReview?: boolean
+  /** Load user's startup scripts for the advanced options selector */
+  onLoadStartupScripts?: () => Promise<StartupScriptEntry[]>
+}
+
+export interface StartupScriptEntry {
+  id: string
+  name: string
+  description: string
+  enabled: boolean
+  injectSecrets: string[]
 }
 
 export interface ProvisioningConfig {
@@ -45,10 +55,13 @@ export interface ProvisioningConfig {
   envVars: { key: string; value: string }[]
   driver: "docker" | "firecracker" | "tangle"
   bare: boolean
+  startupScriptIds?: string[]
 }
 
+const VALID_DRIVERS: ReadonlySet<string> = new Set(["docker", "firecracker", "tangle"])
+
 const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string }> = {
-  universal: { name: "Universal", abbr: "U", color: "violet", textClass: "text-[var(--surface-violet-text)]" },
+  universal: { name: "Default", abbr: "D", color: "violet", textClass: "text-[var(--surface-violet-text)]" },
   ethereum:  { name: "Ethereum",  abbr: "Ξ", color: "blue",   textClass: "text-[var(--surface-info-text)]" },
   solana:    { name: "Solana",    abbr: "S", color: "green",  textClass: "text-[var(--surface-success-text)]" },
   tangle:    { name: "Tangle",    abbr: "T", color: "purple", textClass: "text-[var(--surface-violet-text)]" },
@@ -99,17 +112,25 @@ export function ProvisioningWizard({
   defaultEnvironment,
   defaultConfig,
   skipToReview,
+  onLoadStartupScripts,
 }: ProvisioningWizardProps) {
   const dc = defaultConfig
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
 
+  const onLoadEnvironmentsRef = React.useRef(onLoadEnvironments)
+  onLoadEnvironmentsRef.current = onLoadEnvironments
+
   React.useEffect(() => {
-    if (onLoadEnvironments) {
-      onLoadEnvironments().then((entries) => setEnvList(entries.map(resolveEnvironment)))
+    let cancelled = false
+    if (onLoadEnvironmentsRef.current) {
+      onLoadEnvironmentsRef.current()
+        .then((entries) => { if (!cancelled) setEnvList(entries.map(resolveEnvironment)) })
+        .catch((err) => { if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load environments") })
     } else if (environmentsProp) {
       setEnvList(environmentsProp)
     }
-  }, [onLoadEnvironments, environmentsProp])
+    return () => { cancelled = true }
+  }, [environmentsProp])
 
   const environments = envList
 
@@ -132,16 +153,42 @@ export function ProvisioningWizard({
   const [envVars, setEnvVars] = React.useState<{key: string, value: string}[]>(dc?.envVars ?? [{ key: "", value: "" }])
   const [driver, setDriver] = React.useState<"docker" | "firecracker" | "tangle">(dc?.driver ?? "docker")
   const [bare, setBare] = React.useState(dc?.bare ?? false)
+  const [startupScriptIds, setStartupScriptIds] = React.useState<string[]>(dc?.startupScriptIds ?? [])
+  const [availableScripts, setAvailableScripts] = React.useState<StartupScriptEntry[]>([])
   const [showAdvanced, setShowAdvanced] = React.useState(false)
+  const [loadError, setLoadError] = React.useState<string | null>(null)
+
+  const onLoadStartupScriptsRef = React.useRef(onLoadStartupScripts)
+  onLoadStartupScriptsRef.current = onLoadStartupScripts
+
+  React.useEffect(() => {
+    let cancelled = false
+    if (onLoadStartupScriptsRef.current) {
+      onLoadStartupScriptsRef.current()
+        .then((scripts) => { if (!cancelled) setAvailableScripts(scripts) })
+        .catch((err) => { if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load startup scripts") })
+    }
+    return () => { cancelled = true }
+  }, [])
 
   const isMultistep = variant === "multistep"
   const [currentStep, setCurrentStep] = React.useState(skipToReview && dc && isMultistep ? 3 : 1)
 
   const [isDeploying, setIsDeploying] = React.useState(false)
+  const [deployError, setDeployError] = React.useState<string | null>(null)
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
+    if (!onSubmit) return
     setIsDeploying(true)
-    onSubmit?.({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare })
+    setDeployError(null)
+    try {
+      const validScriptIds = new Set(availableScripts.filter(s => s.enabled).map(s => s.id))
+      await onSubmit({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare, startupScriptIds: startupScriptIds.filter(id => validScriptIds.has(id)) })
+    } catch (err) {
+      setDeployError(err instanceof Error ? err.message : "Deployment failed")
+    } finally {
+      setIsDeploying(false)
+    }
   }
 
   const applyPreset = (cpu: number, ram: number, storage: number) => {
@@ -173,18 +220,25 @@ export function ProvisioningWizard({
         {/* Left: Configuration Form */}
         <div className="col-span-12 xl:col-span-8 flex flex-col min-h-0">
           {isMultistep && (
-            <div className="flex items-center gap-2 mb-4 glass-panel p-3 rounded-2xl mx-auto max-w-2xl justify-between shrink-0">
+            <div className="flex items-center gap-2 mb-4 bg-card border border-border p-3 rounded-2xl mx-auto max-w-2xl justify-between shrink-0">
               {[1, 2, 3].map((s) => (
                 <div key={s} className="flex items-center">
-                  <div className={cn("w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs transition-colors shrink-0", currentStep === s ? "bg-primary text-primary-foreground" : currentStep > s ? "bg-primary/40 text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                    {s}
+                  <div className={cn(
+                    "w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200",
+                    currentStep === s
+                      ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-card shadow-sm"
+                      : currentStep > s
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted border border-border text-muted-foreground"
+                  )}>
+                    {currentStep > s ? <Check className="h-3.5 w-3.5" /> : s}
                   </div>
-                  <span className={cn("ml-2 sm:ml-3 font-bold text-sm tracking-tight hidden sm:inline", currentStep === s ? "text-foreground" : currentStep > s ? "text-primary/60" : "text-muted-foreground")}>
+                  <span className={cn("ml-2 sm:ml-3 font-bold text-sm tracking-tight hidden sm:inline transition-colors duration-200", currentStep === s ? "text-foreground" : currentStep > s ? "text-primary" : "text-muted-foreground")}>
                     {s === 1 && "Environment"}
                     {s === 2 && "Resources"}
                     {s === 3 && "AI Agent"}
                   </span>
-                  {s < 3 && <div className={cn("w-4 sm:w-8 h-px mx-2 sm:mx-4 transition-colors", currentStep > s ? "bg-primary/40" : "bg-border")} />}
+                  {s < 3 && <div className={cn("w-4 sm:w-8 h-0.5 mx-2 sm:mx-4 rounded-full transition-colors duration-300", currentStep > s ? "bg-primary" : "bg-border")} />}
                 </div>
               ))}
             </div>
@@ -192,26 +246,40 @@ export function ProvisioningWizard({
 
           {/* Template pre-fill banner */}
           {dc && isMultistep && (
-            <div className="flex items-center justify-between glass-panel rounded-2xl px-4 py-3 shrink-0">
+            <div className="flex items-center justify-between bg-card border border-border rounded-2xl px-4 py-3 shrink-0">
               <div className="flex items-center gap-2 text-sm">
-                <Info className="h-4 w-4 text-accent shrink-0" />
+                <Info className="h-4 w-4 text-primary shrink-0" />
                 <span className="text-muted-foreground">Pre-configured from template.</span>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   setCurrentStep(1)
+                  setSelectedEnv(environments[0]?.id ?? "")
                   setCpuCores(4)
                   setRamGB(16)
                   setStorageGB(128)
                   setModelTier("claude-sonnet")
                   setSystemPrompt("")
+                  setName("")
+                  setGitUrl("")
+                  setEnvVars([{ key: "", value: "" }])
+                  setDriver("docker")
                   setBare(false)
+                  setStartupScriptIds([])
                 }}
-                className="text-xs font-bold text-accent hover:text-accent-deep transition-colors"
+                className="text-xs font-bold text-primary hover:text-primary/70 transition-colors"
               >
                 Start from scratch
               </button>
+            </div>
+          )}
+
+          {/* Load error */}
+          {loadError && (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2 shrink-0">
+              <Info className="h-4 w-4 text-destructive shrink-0" />
+              <p className="text-sm font-medium text-destructive">{loadError}</p>
             </div>
           )}
 
@@ -220,9 +288,9 @@ export function ProvisioningWizard({
           {(!isMultistep || currentStep === 1) && (
           <React.Fragment>
           {/* Section 1: Environment */}
-          <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
+          <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Layers className="h-5 w-5" /></div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary"><Layers className="h-5 w-5" /></div>
               <h2 className="text-lg font-bold text-foreground tracking-tight">Environment Selection</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -232,21 +300,26 @@ export function ProvisioningWizard({
                   type="button"
                   onClick={() => setSelectedEnv(env.id)}
                   className={cn(
-                    "group relative p-4 rounded-[16px] transition-all text-left overflow-hidden border border-transparent",
+                    "group relative p-4 rounded-[16px] text-left overflow-hidden border transition-all duration-200",
                     selectedEnv === env.id
-                      ? "glass-panel-heavy border-accent glow-primary"
-                      : "glass-panel hover:border-[var(--glass-border-color)]",
+                      ? "bg-primary/5 border-primary ring-2 ring-primary/20 shadow-md"
+                      : "bg-card border-border hover:border-primary/30 hover:shadow-sm hover:-translate-y-0.5 active:scale-[0.98]",
                   )}
                 >
                   {selectedEnv === env.id && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/8 to-transparent pointer-events-none" />
                   )}
                   <div className="flex justify-between items-start mb-3 relative z-10">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted/50 border border-border shadow-inner">
                       {env.icon}
                     </div>
-                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors", selectedEnv === env.id ? "border-accent bg-accent/20" : "border-border")}>
-                      {selectedEnv === env.id && <div className="w-2.5 h-2.5 bg-accent rounded-full animate-in zoom-in" />}
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200",
+                      selectedEnv === env.id
+                        ? "border-primary bg-primary"
+                        : "border-border group-hover:border-primary/40"
+                    )}>
+                      {selectedEnv === env.id && <Check className="h-3 w-3 text-primary-foreground animate-in zoom-in duration-200" />}
                     </div>
                   </div>
                   <h3 className="font-bold text-sm mb-0.5 text-foreground relative z-10">{env.name}</h3>
@@ -261,25 +334,25 @@ export function ProvisioningWizard({
           {(!isMultistep || currentStep === 2) && (
           <React.Fragment>
           {/* Section 2: Resources */}
-          <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
+          <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex items-center gap-3 mb-5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Cpu className="h-5 w-5" /></div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary"><Cpu className="h-5 w-5" /></div>
               <h2 className="text-lg font-bold text-foreground tracking-tight">Resource Allocation</h2>
             </div>
 
             <div className="mb-6">
               <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Compute Presets</label>
               <div className="grid grid-cols-3 gap-3">
-                <button type="button" onClick={() => applyPreset(2, 4, 50)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
-                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "text-accent" : "text-foreground")}>Lightweight</div>
+                <button type="button" onClick={() => applyPreset(2, 4, 50)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
+                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "text-primary" : "text-foreground")}>Lightweight</div>
                   <div className="text-xs text-muted-foreground mt-0.5 font-mono">2C / 4G / 50G</div>
                 </button>
-                <button type="button" onClick={() => applyPreset(4, 16, 128)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
-                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "text-accent" : "text-foreground")}>Standard</div>
+                <button type="button" onClick={() => applyPreset(4, 16, 128)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
+                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "text-primary" : "text-foreground")}>Standard</div>
                   <div className="text-xs text-muted-foreground mt-0.5 font-mono">4C / 16G / 128G</div>
                 </button>
-                <button type="button" onClick={() => applyPreset(8, 32, 256)} className={cn("p-3 rounded-[14px] transition-all text-center group", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "glass-panel-heavy border-accent glow-primary" : "glass-panel hover:border-[var(--glass-border-color)]")}>
-                  <div className={cn("font-bold text-sm transition-colors", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "text-accent" : "text-foreground")}>Performance</div>
+                <button type="button" onClick={() => applyPreset(8, 32, 256)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
+                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "text-primary" : "text-foreground")}>Performance</div>
                   <div className="text-xs text-muted-foreground mt-0.5 font-mono">8C / 32G / 256G</div>
                 </button>
               </div>
@@ -294,7 +367,7 @@ export function ProvisioningWizard({
                 <div key={label}>
                   <div className="flex justify-between items-end border-b border-border pb-1.5 mb-2">
                     <label className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">{label}</label>
-                    <span className="text-xl font-bold text-foreground tracking-tight">{value} <span className="text-xs text-accent/80 ml-1">{unit}</span></span>
+                    <span className="text-xl font-bold text-foreground tracking-tight">{value} <span className="text-xs text-primary ml-1">{unit}</span></span>
                   </div>
                   <input
                     type="range"
@@ -303,7 +376,7 @@ export function ProvisioningWizard({
                     step={s}
                     value={value}
                     onChange={(e) => setter(+e.target.value)}
-                    className="w-full h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-accent"
+                    className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-runnable-track]:bg-border [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:h-2 [&::-moz-range-track]:bg-border [&::-moz-range-track]:rounded-full [&::-moz-range-track]:h-2 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary-foreground [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
                   />
                   <div className="flex justify-between text-[10px] font-mono text-muted-foreground/60 mt-1">
                     <span>{min}{unit}</span>
@@ -319,9 +392,9 @@ export function ProvisioningWizard({
           {(!isMultistep || currentStep === 3) && (
           <React.Fragment>
           {/* Section 3: AI Agent */}
-          <section className="glass-panel rounded-[24px] p-6 shadow-2xl relative overflow-hidden">
+          <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="flex items-center gap-3 mb-5">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent/10 border border-accent/20 text-accent glow-primary"><Bot className="h-5 w-5" /></div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary"><Bot className="h-5 w-5" /></div>
               <h2 className="text-lg font-bold text-foreground tracking-tight">AI Agent Capability</h2>
             </div>
             <div className="space-y-5">
@@ -330,7 +403,7 @@ export function ProvisioningWizard({
                 <select
                   value={modelTier}
                   onChange={(e) => setModelTier(e.target.value)}
-                  className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
+                  className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                 >
                   <option value="llama-3-8b" className="bg-gray-900">Llama-3-8B-Instruct (Lightweight)</option>
                   <option value="mistral-7b" className="bg-gray-900">Mistral-7B-v0.2 (Efficient)</option>
@@ -342,7 +415,8 @@ export function ProvisioningWizard({
                 <textarea
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
-                  className="w-full glass-panel rounded-xl p-4 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent h-32 resize-none placeholder:text-muted-foreground"
+                  maxLength={10000}
+                  className="w-full bg-card border border-border rounded-xl p-4 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32 resize-none placeholder:text-muted-foreground"
                   placeholder="Define the autonomous directives or operational boundaries..."
                 />
               </div>
@@ -367,7 +441,8 @@ export function ProvisioningWizard({
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-muted-foreground"
+                          maxLength={128}
+                          className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground"
                           placeholder="my-cool-sandbox"
                         />
                       </div>
@@ -375,8 +450,8 @@ export function ProvisioningWizard({
                         <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Virtualization Driver</label>
                         <select
                           value={driver}
-                          onChange={(e) => setDriver(e.target.value as any)}
-                          className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent appearance-none"
+                          onChange={(e) => { if (VALID_DRIVERS.has(e.target.value)) setDriver(e.target.value as ProvisioningConfig["driver"]) }}
+                          className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                         >
                           <option value="docker" className="bg-gray-900">Docker container (Default)</option>
                           <option value="firecracker" className="bg-gray-900">Firecracker microVM (Secure)</option>
@@ -391,7 +466,7 @@ export function ProvisioningWizard({
                         type="text"
                         value={gitUrl}
                         onChange={(e) => setGitUrl(e.target.value)}
-                        className="w-full glass-panel rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent placeholder:text-muted-foreground"
+                        className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground"
                         placeholder="https://github.com/my-org/my-repo.git"
                       />
                     </div>
@@ -399,7 +474,7 @@ export function ProvisioningWizard({
                     <div>
                       <div className="flex justify-between items-center mb-2">
                         <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">Environment Variables</label>
-                        <button type="button" onClick={() => setEnvVars([...envVars, {key: '', value: ''}])} className="flex items-center gap-1 text-xs text-accent hover:text-accent-deep transition-colors font-bold">
+                        <button type="button" onClick={() => setEnvVars([...envVars, {key: '', value: ''}])} className="flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors font-bold">
                           <Plus className="h-3 w-3" /> Add Var
                         </button>
                       </div>
@@ -410,35 +485,73 @@ export function ProvisioningWizard({
                               type="text"
                               value={env.key}
                               onChange={(e) => setEnvVars(envVars.map((v, idx) => idx === i ? { ...v, key: e.target.value } : v))}
-                              className="flex-1 glass-panel rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
+                              className="flex-1 bg-card border border-border rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                               placeholder="API_KEY"
                             />
                             <input
                               type="password"
                               value={env.value}
                               onChange={(e) => setEnvVars(envVars.map((v, idx) => idx === i ? { ...v, value: e.target.value } : v))}
-                              className="flex-[2] glass-panel rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-muted-foreground"
+                              className="flex-[2] bg-card border border-border rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
                               placeholder="sk-xxxxxxxxxxx"
                             />
-                            <button type="button" onClick={() => setEnvVars(envVars.filter((_, idx) => idx !== i))} className="h-10 w-10 flex items-center justify-center shrink-0 rounded-xl glass-panel text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors">
+                            <button type="button" onClick={() => setEnvVars(envVars.filter((_, idx) => idx !== i))} className="h-10 w-10 flex items-center justify-center shrink-0 rounded-xl bg-card border border-border text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
                         ))}
                         {envVars.length === 0 && (
-                          <div className="text-center p-3 glass-panel rounded-xl text-muted-foreground/60 text-sm italic">No environment variables set</div>
+                          <div className="text-center p-3 bg-card border border-border rounded-xl text-muted-foreground/60 text-sm italic">No environment variables set</div>
                         )}
                       </div>
                     </div>
+
+                    {/* Startup Scripts */}
+                    {availableScripts.length > 0 && (
+                      <div>
+                        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Startup Scripts</div>
+                        <div className="space-y-2">
+                          {availableScripts.filter(s => s.enabled).map((script) => {
+                            const selected = startupScriptIds.includes(script.id)
+                            return (
+                              <label key={script.id} className="flex items-start gap-3 cursor-pointer group rounded-lg border border-border p-3 transition-colors hover:border-primary/30">
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={() => setStartupScriptIds(prev =>
+                                    selected ? prev.filter(id => id !== script.id) : [...prev, script.id]
+                                  )}
+                                  className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{script.name}</div>
+                                  {script.description && <div className="text-xs text-muted-foreground mt-0.5">{script.description}</div>}
+                                  {script.injectSecrets.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1.5">
+                                      {script.injectSecrets.map(s => (
+                                        <span key={s} className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                                          <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                          {s}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="pt-2 border-t border-border">
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative flex items-center justify-center shrink-0">
                           <input type="checkbox" className="sr-only peer" checked={bare} onChange={(e) => setBare(e.target.checked)} />
-                          <div className="w-10 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent hover:bg-white/20 transition-colors"></div>
+                          <div className="w-10 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary hover:bg-muted/80 transition-colors"></div>
                         </div>
                         <div>
-                          <div className="text-sm font-bold text-foreground mb-0.5 group-hover:text-accent transition-colors">Bare Mode</div>
+                          <div className="text-sm font-bold text-foreground mb-0.5 group-hover:text-primary transition-colors">Bare Mode</div>
                           <div className="text-xs text-muted-foreground">Start as a raw container without an embedded AI Agent backend.</div>
                         </div>
                       </label>
@@ -456,7 +569,7 @@ export function ProvisioningWizard({
         {/* Right: Cost estimator + terminal preview */}
         <div className="col-span-12 xl:col-span-4 sticky top-4 space-y-4">
           {/* Terminal preview */}
-          <div className="glass-panel-heavy rounded-[24px] overflow-hidden shadow-2xl relative">
+          <div className="bg-card border border-primary/15 rounded-[24px] overflow-hidden shadow-2xl relative">
              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(173,163,255,0.05)_0,transparent_100%)] pointer-events-none" />
             <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center gap-3">
               <div className="flex gap-2">
@@ -469,32 +582,32 @@ export function ProvisioningWizard({
             <div className="p-5 font-mono text-xs space-y-3 min-h-[240px] relative z-10 text-[13px]">
               <div className="text-green-400">root@tangle:~# <span className="text-foreground/80">tangle-cli provision --new</span></div>
               <div className="text-muted-foreground/70">Initializing deployment handshake...</div>
-              <div className="text-foreground/70"><span className="text-accent mr-2">✓</span> Bound Platform: <span className="text-foreground font-bold">{environments.find((e) => e.id === selectedEnv)?.name ?? "Node.js"}</span></div>
-              <div className="text-foreground/70"><span className="text-accent mr-2">✓</span> Allocation CPU: <span className="text-foreground font-bold">{cpuCores} Cores</span></div>
-              <div className="text-foreground/70"><span className="text-accent mr-2">✓</span> Allocation RAM: <span className="text-foreground font-bold">{ramGB}GB</span></div>
-              <div className="text-foreground/70"><span className="text-accent mr-2">✓</span> Mounted Storage: <span className="text-foreground font-bold">{storageGB}GB NVMe</span></div>
+              <div className="text-foreground/70"><span className="text-primary mr-2">&#10003;</span> Bound Platform: <span key={`env-${selectedEnv}`} className="text-foreground font-bold animate-in fade-in duration-300">{environments.find((e) => e.id === selectedEnv)?.name ?? "Node.js"}</span></div>
+              <div className="text-foreground/70"><span className="text-primary mr-2">&#10003;</span> Allocation CPU: <span key={`cpu-${cpuCores}`} className="text-foreground font-bold animate-in fade-in duration-300">{cpuCores} Cores</span></div>
+              <div className="text-foreground/70"><span className="text-primary mr-2">&#10003;</span> Allocation RAM: <span key={`ram-${ramGB}`} className="text-foreground font-bold animate-in fade-in duration-300">{ramGB}GB</span></div>
+              <div className="text-foreground/70"><span className="text-primary mr-2">&#10003;</span> Mounted Storage: <span key={`disk-${storageGB}`} className="text-foreground font-bold animate-in fade-in duration-300">{storageGB}GB NVMe</span></div>
               <div className="pt-3 flex items-center gap-3">
-                <div className="w-2 h-4 bg-accent animate-pulse" />
+                <div className="w-2 h-4 bg-primary animate-pulse" />
                 <span className="text-muted-foreground">Awaiting user confirmation...</span>
               </div>
             </div>
           </div>
 
           {/* Cost card */}
-          <div className="p-6 rounded-2xl bg-accent/5 backdrop-blur-md border border-accent/20 shadow-[0_0_30px_rgba(173,163,255,0.1)] relative overflow-hidden">
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-accent/20 blur-[50px] rounded-full" />
+          <div className="p-6 rounded-[24px] bg-card border border-primary/15 relative overflow-hidden">
+            <div className="hidden" />
 
             <div className="flex justify-between items-center mb-4 relative z-10">
               <span className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">Run Cost</span>
               <div className="h-7 w-7 rounded-full bg-muted/30 flex items-center justify-center border border-border">
-                <Info className="h-3.5 w-3.5 text-accent" />
+                <Info className="h-3.5 w-3.5 text-primary" />
               </div>
             </div>
             <div className="flex items-baseline gap-2 mb-5 relative z-10">
-              <span className="text-4xl font-black text-foreground tracking-tighter">${hourCost}</span>
+              <span key={hourCost} className="text-4xl font-black text-foreground tracking-tighter animate-in fade-in duration-200">${hourCost}</span>
               <span className="text-muted-foreground text-sm font-bold">/ hour</span>
             </div>
-            <div className="space-y-2 relative z-10 glass-panel rounded-xl p-3 border border-border">
+            <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>COMPUTE</span>
                 <span className="text-foreground">${(cpuCores * 0.045).toFixed(2)}/h</span>
@@ -506,6 +619,14 @@ export function ProvisioningWizard({
             </div>
           </div>
 
+          {/* Deploy error */}
+          {deployError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2">
+              <Info className="h-4 w-4 text-destructive shrink-0" />
+              <p className="text-sm font-medium text-destructive">{deployError}</p>
+            </div>
+          )}
+
           {/* Navigation buttons */}
           <div className="space-y-3">
             {isMultistep ? (
@@ -514,7 +635,7 @@ export function ProvisioningWizard({
                   <button
                     type="button"
                     onClick={() => setCurrentStep((s) => s + 1)}
-                    className="w-full relative overflow-hidden h-12 bg-accent/10 text-accent font-extrabold text-sm rounded-2xl border border-accent/20 hover:bg-accent/20 transition-colors shadow-sm shadow-accent/10"
+                    className="w-full relative overflow-hidden h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl hover:brightness-110 transition-all active:scale-[0.98] shadow-md"
                   >
                     Continue to {currentStep === 1 ? "Resources" : "Agent Config"}
                   </button>
@@ -523,24 +644,23 @@ export function ProvisioningWizard({
                     type="button"
                     onClick={handleDeploy}
                     disabled={isDeploying || !selectedEnv}
-                    className="w-full relative overflow-hidden h-12 bg-gradient-to-r from-accent to-accent-deep text-white font-extrabold text-sm rounded-2xl tracking-wide shadow-[0_0_20px_rgba(130,99,255,0.2)] disabled:opacity-50 transition-transform active:scale-[0.98]"
+                    className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
                   >
                     {isDeploying ? (
-                      <span className="relative z-10 flex items-center justify-center gap-2">
+                      <span className="flex items-center justify-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Deploying...
                       </span>
                     ) : (
-                      <span className="relative z-10">Deploy Workspace</span>
+                      "Deploy Workspace"
                     )}
-                    <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity" />
                   </button>
                 )}
                 {currentStep > 1 && (
                   <button
                     type="button"
                     onClick={() => setCurrentStep((s) => s - 1)}
-                    className="w-full h-10 glass-panel text-foreground/70 font-bold text-sm rounded-2xl hover:text-foreground hover:border-[var(--glass-border-color)] transition-colors"
+                    className="w-full h-10 bg-secondary text-secondary-foreground border border-border font-bold text-sm rounded-2xl hover:brightness-95 active:scale-[0.98] transition-all"
                   >
                     Back
                   </button>
@@ -551,17 +671,16 @@ export function ProvisioningWizard({
                 type="button"
                 onClick={handleDeploy}
                 disabled={isDeploying || !selectedEnv}
-                className="w-full relative overflow-hidden h-12 bg-gradient-to-r from-accent to-accent-deep text-white font-extrabold text-sm rounded-2xl tracking-wide shadow-[0_0_20px_rgba(130,99,255,0.2)] disabled:opacity-50 transition-transform active:scale-[0.98]"
+                className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
               >
                 {isDeploying ? (
-                  <span className="relative z-10 flex items-center justify-center gap-2">
+                  <span className="flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Spinning up environment...
                   </span>
                 ) : (
-                  <span className="relative z-10">Deploy Workspace</span>
+                  "Deploy Workspace"
                 )}
-                <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity" />
               </button>
             )}
           </div>

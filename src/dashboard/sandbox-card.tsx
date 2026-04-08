@@ -94,19 +94,23 @@ export function SandboxCard({
               <>
                 {onStop && <DropdownMenuItem onClick={() => onStop(sandbox.id)}><PowerOff className="mr-2 h-4 w-4" /> Stop Sandbox</DropdownMenuItem>}
                 {onKeepAlive && <DropdownMenuItem onClick={() => onKeepAlive(sandbox.id)}><Clock className="mr-2 h-4 w-4" /> Keep Alive</DropdownMenuItem>}
-                <DropdownMenuSeparator />
+                {(onStop || onKeepAlive) && <DropdownMenuSeparator />}
                 {onUsage && <DropdownMenuItem onClick={() => onUsage(sandbox.id)}><BarChart2 className="mr-2 h-4 w-4" /> View Usage</DropdownMenuItem>}
                 {onHealth && <DropdownMenuItem onClick={() => onHealth(sandbox.id)}><Activity className="mr-2 h-4 w-4" /> Health Check</DropdownMenuItem>}
-                <DropdownMenuSeparator />
-                {onFork && <DropdownMenuItem onClick={() => onFork(sandbox.id)}><Copy className="mr-2 h-4 w-4" /> Fork Sandbox</DropdownMenuItem>}
-                <DropdownMenuSeparator />
+                {(onUsage || onHealth) && <DropdownMenuSeparator />}
+                {onFork && (
+                  <>
+                    <DropdownMenuItem onClick={() => onFork(sandbox.id)}><Copy className="mr-2 h-4 w-4" /> Fork Sandbox</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
               </>
             )}
             {isStopped && (
               <>
                 {onResume && <DropdownMenuItem onClick={() => onResume(sandbox.id)}><Power className="mr-2 h-4 w-4" /> Resume Sandbox</DropdownMenuItem>}
                 {onFork && <DropdownMenuItem onClick={() => onFork(sandbox.id)}><Copy className="mr-2 h-4 w-4" /> Fork Sandbox</DropdownMenuItem>}
-                <DropdownMenuSeparator />
+                {(onResume || onFork) && <DropdownMenuSeparator />}
               </>
             )}
             {onDelete && (

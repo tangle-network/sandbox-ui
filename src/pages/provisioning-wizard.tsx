@@ -158,9 +158,13 @@ export function ProvisioningWizard({
   onLoadStartupScriptsRef.current = onLoadStartupScripts
 
   React.useEffect(() => {
-    onLoadStartupScriptsRef.current?.().then(setAvailableScripts).catch((err) => {
-      setLoadError(err instanceof Error ? err.message : "Failed to load startup scripts")
-    })
+    if (onLoadStartupScriptsRef.current) {
+      onLoadStartupScriptsRef.current()
+        .then(setAvailableScripts)
+        .catch((err) => {
+          setLoadError(err instanceof Error ? err.message : "Failed to load startup scripts")
+        })
+    }
   }, [])
 
   const isMultistep = variant === "multistep"

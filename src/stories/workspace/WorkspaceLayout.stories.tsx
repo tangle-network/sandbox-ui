@@ -314,7 +314,7 @@ export const BuilderTheme: Story = {
     ),
   ],
   args: {
-    theme: 'builder',
+    theme: 'vault',
     defaultLeftOpen: true,
     defaultRightOpen: true,
     defaultBottomOpen: false,

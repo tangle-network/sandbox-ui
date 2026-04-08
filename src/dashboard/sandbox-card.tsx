@@ -155,7 +155,7 @@ export function SandboxCard({
           <button
             type="button"
             onClick={() => onOpenIDE?.(sandbox.id)}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97]"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97]"
           >
             <Network className="h-4 w-4" />
             Connect Session

@@ -121,7 +121,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
         <button
           type="button"
           onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors active:scale-[0.97]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--btn-primary-text,#fff)] hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors active:scale-[0.97]"
         >
           <Plus className="h-4 w-4" />
           Add Secret
@@ -213,7 +213,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
               type="button"
               onClick={handleCreate}
               disabled={!newName.trim() || !newValue || isCreating}
-              className="rounded-md bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-bold text-white hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors disabled:opacity-50 active:scale-[0.97]"
+              className="rounded-md bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text,#fff)] hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors disabled:opacity-50 active:scale-[0.97]"
             >
               {isCreating ? "Creating..." : "Create Secret"}
             </button>
@@ -271,7 +271,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
-              className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors active:scale-[0.97]"
+              className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text,#fff)] hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] transition-colors active:scale-[0.97]"
             >
               <Plus className="h-4 w-4" />
               Create Secret

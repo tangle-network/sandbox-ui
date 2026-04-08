@@ -93,8 +93,15 @@ export interface WorkspaceLayoutProps {
   persistenceKey?: string;
   /** Disable resize handles */
   resizable?: boolean;
-  /** Visual theme for sandbox surfaces */
-  theme?: "vault" | "ocean" | "ember" | "forest" | "dawn";
+  /**
+   * Visual theme for sandbox surfaces.
+   *
+   * Available themes: "vault", "ocean", "ember", "forest", "dawn".
+   *
+   * @deprecated "operator", "builder", and "consumer" are deprecated and
+   * resolve to the default dark theme. Migrate to a named theme above.
+   */
+  theme?: "vault" | "ocean" | "ember" | "forest" | "dawn" | "operator" | "builder" | "consumer";
   /** Density mode for control sizing */
   density?: "comfortable" | "compact";
   /** Accessible label for the left panel */

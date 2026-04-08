@@ -451,7 +451,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text,#fff)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))]"
         >
           <Plus className="h-4 w-4" />
           New Script
@@ -781,7 +781,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                       <input
                         type="number"
                         value={formData.runOrder}
-                        onChange={(e) => setFormData((p) => ({ ...p, runOrder: Number(e.target.value) }))}
+                        onChange={(e) => setFormData((p) => ({ ...p, runOrder: e.target.value ? Math.max(0, Number(e.target.value)) : 0 }))}
                         min={0}
                         max={9999}
                         className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -796,7 +796,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                       <input
                         type="number"
                         value={formData.timeoutSeconds}
-                        onChange={(e) => setFormData((p) => ({ ...p, timeoutSeconds: Number(e.target.value) }))}
+                        onChange={(e) => setFormData((p) => ({ ...p, timeoutSeconds: e.target.value ? Math.max(5, Number(e.target.value)) : 300 }))}
                         min={5}
                         max={3600}
                         className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -886,7 +886,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving || !formData.name.trim() || !formData.content.trim()}
-                className="rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] disabled:opacity-50"
+                className="rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text,#fff)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))] disabled:opacity-50"
               >
                 {isSaving ? "Saving..." : editingScript ? "Save Changes" : "Create Script"}
               </button>
@@ -951,7 +951,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
             <button
               type="button"
               onClick={openCreate}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))]"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg,hsl(var(--primary)))] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text,#fff)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover,hsl(var(--primary)/0.9))]"
             >
               <Plus className="h-4 w-4" />
               Create Script

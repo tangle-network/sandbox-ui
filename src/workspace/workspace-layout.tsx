@@ -314,6 +314,17 @@ export function WorkspaceLayout({
   // so strip them to inherit the default dark theme from :root.
   const resolvedTheme = theme && DEPRECATED_THEMES.has(theme) ? undefined : theme;
 
+  if (theme && DEPRECATED_THEMES.has(theme)) {
+    const g = globalThis as Record<string, unknown>
+    const env = (g.process as { env?: Record<string, string> } | undefined)?.env
+    if (!env || env.NODE_ENV !== "production") {
+      console.warn(
+        `[sandbox-ui] theme="${theme}" is deprecated and has no effect. ` +
+        `Migrate to one of: "vault", "ocean", "ember", "forest", "dawn".`,
+      )
+    }
+  }
+
   const desktop = useDesktopMediaQuery(DESKTOP_BREAKPOINT);
   const dragStateRef = useRef<{
     side: "left" | "right" | "bottom";

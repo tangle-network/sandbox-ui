@@ -93,15 +93,8 @@ export interface WorkspaceLayoutProps {
   persistenceKey?: string;
   /** Disable resize handles */
   resizable?: boolean;
-  /**
-   * Visual theme for sandbox surfaces.
-   *
-   * Available themes: "vault", "ocean", "ember", "forest", "dawn".
-   *
-   * @deprecated "operator", "builder", and "consumer" are deprecated and
-   * resolve to the default dark theme. Migrate to a named theme above.
-   */
-  theme?: "vault" | "ocean" | "ember" | "forest" | "dawn" | "operator" | "builder" | "consumer";
+  /** Visual theme for sandbox surfaces */
+  theme?: "vault";
   /** Density mode for control sizing */
   density?: "comfortable" | "compact";
   /** Accessible label for the left panel */
@@ -117,7 +110,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-const DEPRECATED_THEMES: ReadonlySet<string> = new Set(["operator", "builder", "consumer"]);
 
 function readStoredLayout(key: string): WorkspaceLayoutStorage | null {
   if (typeof window === "undefined") return null;
@@ -310,21 +302,6 @@ export function WorkspaceLayout({
   bottomLabel = "Bottom runtime panel",
   className,
 }: WorkspaceLayoutProps) {
-  // Normalize deprecated theme values — they have no CSS definitions,
-  // so strip them to inherit the default dark theme from :root.
-  const resolvedTheme = theme && DEPRECATED_THEMES.has(theme) ? undefined : theme;
-
-  if (theme && DEPRECATED_THEMES.has(theme)) {
-    const g = globalThis as Record<string, unknown>
-    const env = (g.process as { env?: Record<string, string> } | undefined)?.env
-    if (!env || env.NODE_ENV !== "production") {
-      console.warn(
-        `[sandbox-ui] theme="${theme}" is deprecated and has no effect. ` +
-        `Migrate to one of: "vault", "ocean", "ember", "forest", "dawn".`,
-      )
-    }
-  }
-
   const desktop = useDesktopMediaQuery(DESKTOP_BREAKPOINT);
   const dragStateRef = useRef<{
     side: "left" | "right" | "bottom";
@@ -438,7 +415,7 @@ export function WorkspaceLayout({
 
   return (
     <div
-      {...(resolvedTheme ? { "data-sandbox-ui": "true", "data-sandbox-theme": resolvedTheme } : {})}
+      {...(theme ? { "data-sandbox-ui": "true", "data-sandbox-theme": theme } : {})}
       data-density={density}
       className={cn(
         "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-foreground font-sans",

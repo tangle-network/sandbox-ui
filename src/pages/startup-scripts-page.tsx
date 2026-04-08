@@ -1039,7 +1039,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                     type="button"
                     onClick={() => openEdit(script)}
                     className="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                    title="Edit"
+                    aria-label={`Edit ${script.name}`}
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
@@ -1047,7 +1047,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                     type="button"
                     onClick={() => setDeleteTarget(script)}
                     className="rounded-md p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    title="Delete"
+                    aria-label={`Delete ${script.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

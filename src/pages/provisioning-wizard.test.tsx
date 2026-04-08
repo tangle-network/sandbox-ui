@@ -93,9 +93,7 @@ describe("ProvisioningWizard — startup scripts integration", () => {
       expect(screen.getByText("My Script")).toBeInTheDocument()
     })
 
-    // First checkbox is the startup script, second is the Bare Mode sr-only toggle
-    const checkboxes = screen.getAllByRole("checkbox")
-    const scriptCheckbox = checkboxes[0]
+    const scriptCheckbox = screen.getByRole("checkbox", { name: /my script/i })
     expect(scriptCheckbox).not.toBeChecked()
 
     await user.click(scriptCheckbox)

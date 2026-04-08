@@ -248,7 +248,7 @@ describe("StartupScriptsPage", () => {
     })
 
     // Click the delete button (trash icon)
-    const deleteBtn = screen.getByTitle("Delete")
+    const deleteBtn = screen.getByRole("button", { name: /delete delete me/i })
     await user.click(deleteBtn)
 
     // Confirm the deletion dialog appears
@@ -328,7 +328,7 @@ describe("StartupScriptsPage", () => {
       expect(screen.getByText("Edit Me")).toBeInTheDocument()
     })
 
-    await user.click(screen.getByTitle("Edit"))
+    await user.click(screen.getByRole("button", { name: /edit edit me/i }))
 
     await waitFor(() => {
       expect(screen.getByText("Edit Script")).toBeInTheDocument()

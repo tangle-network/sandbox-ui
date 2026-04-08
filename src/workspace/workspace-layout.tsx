@@ -110,7 +110,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-
 function readStoredLayout(key: string): WorkspaceLayoutStorage | null {
   if (typeof window === "undefined") return null;
 

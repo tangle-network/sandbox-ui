@@ -268,7 +268,7 @@
   --tool-card-py: 0.5rem;
   --tool-icon-size: 1.75rem;
 
-  /* Syntax highlighting — override per-theme in vault/dawn sections */
+  /* Syntax highlighting — override per-theme in vault section */
   --syntax-comment: #6B7094;
   --syntax-keyword: #A78FFF;
   --syntax-string: #10b981;

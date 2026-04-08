@@ -120,7 +120,7 @@ export function ProvisioningWizard({
 
   React.useEffect(() => {
     if (onLoadEnvironmentsRef.current) {
-      onLoadEnvironmentsRef.current().then((entries) => setEnvList(entries.map(resolveEnvironment)))
+      onLoadEnvironmentsRef.current().then((entries) => setEnvList(entries.map(resolveEnvironment))).catch(() => {})
     } else if (environmentsProp) {
       setEnvList(environmentsProp)
     }
@@ -422,7 +422,7 @@ export function ProvisioningWizard({
                         <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Virtualization Driver</label>
                         <select
                           value={driver}
-                          onChange={(e) => setDriver(e.target.value as any)}
+                          onChange={(e) => setDriver(e.target.value as ProvisioningConfig["driver"])}
                           className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                         >
                           <option value="docker" className="bg-gray-900">Docker container (Default)</option>

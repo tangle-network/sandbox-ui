@@ -74,7 +74,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
       setNewName("")
       setNewValue("")
       setShowValue(false)
-      loadSecrets()
+      await loadSecrets()
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Failed to create secret")
     } finally {
@@ -87,7 +87,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
     try {
       await apiRef.current.deleteSecret(name)
       setDeleteTarget(null)
-      loadSecrets()
+      await loadSecrets()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete secret")
     } finally {

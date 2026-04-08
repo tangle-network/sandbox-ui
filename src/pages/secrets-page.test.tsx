@@ -91,7 +91,7 @@ describe("SecretsPage", () => {
     })
 
     // Click the header "Add Secret" button
-    await user.click(screen.getByRole("button", { name: /add secret/i }))
+    await user.click(screen.getByRole("button", { name: /new secret/i }))
 
     // Scope to dialog
     const dialog = await screen.findByRole("dialog")
@@ -119,7 +119,7 @@ describe("SecretsPage", () => {
       expect(screen.getByText("No secrets yet")).toBeInTheDocument()
     })
 
-    await user.click(screen.getByRole("button", { name: /add secret/i }))
+    await user.click(screen.getByRole("button", { name: /new secret/i }))
 
     const dialog = await screen.findByRole("dialog")
     const submitBtn = within(dialog).getByRole("button", { name: /create secret/i })
@@ -136,7 +136,7 @@ describe("SecretsPage", () => {
       expect(screen.getByText("No secrets yet")).toBeInTheDocument()
     })
 
-    await user.click(screen.getByRole("button", { name: /add secret/i }))
+    await user.click(screen.getByRole("button", { name: /new secret/i }))
 
     const dialog = await screen.findByRole("dialog")
 

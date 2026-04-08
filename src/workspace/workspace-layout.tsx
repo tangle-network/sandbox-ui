@@ -117,6 +117,8 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+const DEPRECATED_THEMES: ReadonlySet<string> = new Set(["operator", "builder", "consumer"]);
+
 function readStoredLayout(key: string): WorkspaceLayoutStorage | null {
   if (typeof window === "undefined") return null;
 
@@ -308,6 +310,10 @@ export function WorkspaceLayout({
   bottomLabel = "Bottom runtime panel",
   className,
 }: WorkspaceLayoutProps) {
+  // Normalize deprecated theme values — they have no CSS definitions,
+  // so strip them to inherit the default dark theme from :root.
+  const resolvedTheme = theme && DEPRECATED_THEMES.has(theme) ? undefined : theme;
+
   const desktop = useDesktopMediaQuery(DESKTOP_BREAKPOINT);
   const dragStateRef = useRef<{
     side: "left" | "right" | "bottom";
@@ -421,7 +427,7 @@ export function WorkspaceLayout({
 
   return (
     <div
-      {...(theme ? { "data-sandbox-ui": "true", "data-sandbox-theme": theme } : {})}
+      {...(theme ? { "data-sandbox-ui": "true", ...(resolvedTheme ? { "data-sandbox-theme": resolvedTheme } : {}) } : {})}
       data-density={density}
       className={cn(
         "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-foreground font-sans",

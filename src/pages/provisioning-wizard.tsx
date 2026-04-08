@@ -58,6 +58,8 @@ export interface ProvisioningConfig {
   startupScriptIds?: string[]
 }
 
+const VALID_DRIVERS: ReadonlySet<string> = new Set(["docker", "firecracker", "tangle"])
+
 const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string }> = {
   universal: { name: "Default", abbr: "D", color: "violet", textClass: "text-[var(--surface-violet-text)]" },
   ethereum:  { name: "Ethereum",  abbr: "Ξ", color: "blue",   textClass: "text-[var(--surface-info-text)]" },
@@ -180,7 +182,8 @@ export function ProvisioningWizard({
     setIsDeploying(true)
     setDeployError(null)
     try {
-      await onSubmit({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare, startupScriptIds })
+      const validScriptIds = new Set(availableScripts.filter(s => s.enabled).map(s => s.id))
+      await onSubmit({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare, startupScriptIds: startupScriptIds.filter(id => validScriptIds.has(id)) })
     } catch (err) {
       setDeployError(err instanceof Error ? err.message : "Deployment failed")
     } finally {
@@ -412,6 +415,7 @@ export function ProvisioningWizard({
                 <textarea
                   value={systemPrompt}
                   onChange={(e) => setSystemPrompt(e.target.value)}
+                  maxLength={10000}
                   className="w-full bg-card border border-border rounded-xl p-4 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32 resize-none placeholder:text-muted-foreground"
                   placeholder="Define the autonomous directives or operational boundaries..."
                 />
@@ -437,6 +441,7 @@ export function ProvisioningWizard({
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
+                          maxLength={128}
                           className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground"
                           placeholder="my-cool-sandbox"
                         />
@@ -445,7 +450,7 @@ export function ProvisioningWizard({
                         <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Virtualization Driver</label>
                         <select
                           value={driver}
-                          onChange={(e) => setDriver(e.target.value as ProvisioningConfig["driver"])}
+                          onChange={(e) => { if (VALID_DRIVERS.has(e.target.value)) setDriver(e.target.value as ProvisioningConfig["driver"]) }}
                           className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
                         >
                           <option value="docker" className="bg-gray-900">Docker container (Default)</option>

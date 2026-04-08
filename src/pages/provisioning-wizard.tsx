@@ -120,7 +120,9 @@ export function ProvisioningWizard({
 
   React.useEffect(() => {
     if (onLoadEnvironmentsRef.current) {
-      onLoadEnvironmentsRef.current().then((entries) => setEnvList(entries.map(resolveEnvironment))).catch(() => {})
+      onLoadEnvironmentsRef.current().then((entries) => setEnvList(entries.map(resolveEnvironment))).catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Failed to load environments")
+      })
     } else if (environmentsProp) {
       setEnvList(environmentsProp)
     }
@@ -150,24 +152,31 @@ export function ProvisioningWizard({
   const [startupScriptIds, setStartupScriptIds] = React.useState<string[]>(dc?.startupScriptIds ?? [])
   const [availableScripts, setAvailableScripts] = React.useState<StartupScriptEntry[]>([])
   const [showAdvanced, setShowAdvanced] = React.useState(false)
+  const [loadError, setLoadError] = React.useState<string | null>(null)
 
   const onLoadStartupScriptsRef = React.useRef(onLoadStartupScripts)
   onLoadStartupScriptsRef.current = onLoadStartupScripts
 
   React.useEffect(() => {
-    onLoadStartupScriptsRef.current?.().then(setAvailableScripts).catch(() => {})
+    onLoadStartupScriptsRef.current?.().then(setAvailableScripts).catch((err) => {
+      setLoadError(err instanceof Error ? err.message : "Failed to load startup scripts")
+    })
   }, [])
 
   const isMultistep = variant === "multistep"
   const [currentStep, setCurrentStep] = React.useState(skipToReview && dc && isMultistep ? 3 : 1)
 
   const [isDeploying, setIsDeploying] = React.useState(false)
+  const [deployError, setDeployError] = React.useState<string | null>(null)
 
   const handleDeploy = async () => {
     if (!onSubmit) return
     setIsDeploying(true)
+    setDeployError(null)
     try {
       await onSubmit({ environment: selectedEnv, cpuCores, ramGB, storageGB, modelTier, systemPrompt, name, gitUrl, envVars: envVars.filter(e => e.key.trim() !== ''), driver, bare, startupScriptIds })
+    } catch (err) {
+      setDeployError(err instanceof Error ? err.message : "Deployment failed")
     } finally {
       setIsDeploying(false)
     }
@@ -254,6 +263,14 @@ export function ProvisioningWizard({
               >
                 Start from scratch
               </button>
+            </div>
+          )}
+
+          {/* Load error */}
+          {loadError && (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2 shrink-0">
+              <Info className="h-4 w-4 text-destructive shrink-0" />
+              <p className="text-sm font-medium text-destructive">{loadError}</p>
             </div>
           )}
 
@@ -590,6 +607,14 @@ export function ProvisioningWizard({
               </div>
             </div>
           </div>
+
+          {/* Deploy error */}
+          {deployError && (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2">
+              <Info className="h-4 w-4 text-destructive shrink-0" />
+              <p className="text-sm font-medium text-destructive">{deployError}</p>
+            </div>
+          )}
 
           {/* Navigation buttons */}
           <div className="space-y-3">

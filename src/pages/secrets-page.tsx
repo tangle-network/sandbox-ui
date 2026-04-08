@@ -69,7 +69,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
   }, [loadSecrets])
 
   const handleCreate = async () => {
-    if (!newName.trim()) return
+    if (!newName.trim() || !newValue.trim()) return
     setIsCreating(true)
     setCreateError(null)
     try {

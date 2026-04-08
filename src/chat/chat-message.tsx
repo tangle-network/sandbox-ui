@@ -64,7 +64,8 @@ export function ChatMessage({
         ) : (
           <div
             className={cn(
-              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border",
+              "mt-0.5 flex shrink-0 items-center justify-center rounded-[calc(var(--radius-md)+2px)] border",
+              "h-[var(--avatar-size)] w-[var(--avatar-size)]",
               isUser
                 ? "border-border bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
                 : "border-border bg-muted text-[var(--brand-cool)]",
@@ -88,11 +89,11 @@ export function ChatMessage({
         {/* Role label + timestamp */}
         {!hideRoleLabel && (
           <div className={cn("flex items-center gap-2", isUser && "flex-row-reverse")}>
-            <span className="text-[var(--chat-label-size,11px)] font-[var(--chat-label-weight,600)] uppercase tracking-[var(--chat-label-tracking,0.14em)] text-foreground">
+            <span className="text-[var(--font-size-xs)] font-[var(--chat-label-weight,600)] uppercase tracking-[var(--chat-label-tracking,0.14em)] text-foreground">
               {isUser ? userLabel : assistantLabel}
             </span>
             {timestamp && (
-              <span className="text-[var(--chat-label-size,11px)] text-muted-foreground">
+              <span className="text-[var(--font-size-xs)] text-muted-foreground">
                 {formatTime(timestamp)}
               </span>
             )}
@@ -101,12 +102,12 @@ export function ChatMessage({
 
         {/* Message body */}
         {isUser ? (
-          <div className="whitespace-pre-wrap text-[15px] leading-7 text-foreground">
+          <div className="whitespace-pre-wrap text-[var(--font-size-base)] leading-[var(--line-height-base)] text-foreground">
             {content}
           </div>
         ) : (
           <>
-            {content && <Markdown className="tangle-prose text-[15px] leading-7">{content}</Markdown>}
+            {content && <Markdown className="tangle-prose text-[var(--font-size-base)] leading-[var(--line-height-base)]">{content}</Markdown>}
             {isStreaming && (
               <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-[var(--brand-cool)] align-text-bottom" />
             )}

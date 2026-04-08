@@ -11,85 +11,65 @@ import SyntaxHighlighter from "react-syntax-highlighter";
 import { Check, Copy } from "lucide-react";
 import { cn } from "../lib/utils";
 
-// Tangle brand dark theme — maps to our design tokens
-const tangleDark: { [key: string]: React.CSSProperties } = {
-  "hljs-comment":           { color: "#6B7094", fontStyle: "italic" },
-  "hljs-quote":             { color: "#6B7094", fontStyle: "italic" },
-  "hljs-doctag":            { color: "#6B7094" },
-  "hljs-keyword":           { color: "#A78FFF" },
-  "hljs-selector-tag":      { color: "#A78FFF" },
-  "hljs-literal":           { color: "#A78FFF" },
-  "hljs-type":              { color: "#A78FFF" },
-  "hljs-class":             { color: "#A78FFF" },
-  "hljs-string":            { color: "#10b981" },
-  "hljs-template-tag":      { color: "#10b981" },
-  "hljs-template-variable": { color: "#10b981" },
-  "hljs-addition":          { color: "#10b981" },
-  "hljs-regexp":            { color: "#10b981" },
-  "hljs-title":             { color: "#6D9FFF" },
-  "hljs-section":           { color: "#6D9FFF" },
-  "hljs-built_in":          { color: "#6D9FFF" },
-  "hljs-name":              { color: "#6D9FFF" },
-  "hljs-function":          { color: "#6D9FFF" },
-  "hljs-selector-id":       { color: "#6D9FFF" },
-  "hljs-selector-class":    { color: "#6D9FFF" },
-  "hljs-attribute":         { color: "#6D9FFF" },
-  "hljs-number":            { color: "#FFB347" },
-  "hljs-symbol":            { color: "#FFB347" },
-  "hljs-bullet":            { color: "#FFB347" },
-  "hljs-link":              { color: "#FFB347", textDecoration: "underline" },
-  "hljs-meta":              { color: "#8263FF" },
-  "hljs-selector-pseudo":   { color: "#8263FF" },
-  "hljs-deletion":          { color: "#FF4D6D" },
-  "hljs-params":            { color: "#C4C0D8" },
-  "hljs-variable":          { color: "#C4C0D8" },
-  "hljs-tag":               { color: "#C4C0D8" },
-  "hljs-attr":              { color: "#C4C0D8" },
-  "hljs-subst":             { color: "#C4C0D8" },
-  "hljs-strong":            { fontWeight: "bold" },
-  "hljs-emphasis":          { fontStyle: "italic" },
-  "hljs":                   { color: "#E8E6F6", background: "transparent" },
-};
+// Theme-aware syntax highlighting — reads CSS custom properties at render time.
+// Override --syntax-* tokens in tokens.css per theme.
+function getSyntaxTheme(): { [key: string]: React.CSSProperties } {
+  const el = typeof document !== "undefined" ? document.documentElement : null;
+  const v = (name: string, fallback: string) =>
+    el ? getComputedStyle(el).getPropertyValue(name).trim() || fallback : fallback;
 
-// Light theme for vault/light contexts
-const tangleLight: { [key: string]: React.CSSProperties } = {
-  "hljs-comment":           { color: "#8B92B8", fontStyle: "italic" },
-  "hljs-quote":             { color: "#8B92B8", fontStyle: "italic" },
-  "hljs-doctag":            { color: "#8B92B8" },
-  "hljs-keyword":           { color: "#5B3FCC" },
-  "hljs-selector-tag":      { color: "#5B3FCC" },
-  "hljs-literal":           { color: "#5B3FCC" },
-  "hljs-type":              { color: "#5B3FCC" },
-  "hljs-class":             { color: "#5B3FCC" },
-  "hljs-string":            { color: "#0D7A57" },
-  "hljs-template-tag":      { color: "#0D7A57" },
-  "hljs-template-variable": { color: "#0D7A57" },
-  "hljs-addition":          { color: "#0D7A57" },
-  "hljs-regexp":            { color: "#0D7A57" },
-  "hljs-title":             { color: "#1B5EBF" },
-  "hljs-section":           { color: "#1B5EBF" },
-  "hljs-built_in":          { color: "#1B5EBF" },
-  "hljs-name":              { color: "#1B5EBF" },
-  "hljs-function":          { color: "#1B5EBF" },
-  "hljs-selector-id":       { color: "#1B5EBF" },
-  "hljs-selector-class":    { color: "#1B5EBF" },
-  "hljs-attribute":         { color: "#1B5EBF" },
-  "hljs-number":            { color: "#B85C00" },
-  "hljs-symbol":            { color: "#B85C00" },
-  "hljs-bullet":            { color: "#B85C00" },
-  "hljs-link":              { color: "#B85C00", textDecoration: "underline" },
-  "hljs-meta":              { color: "#6940C4" },
-  "hljs-selector-pseudo":   { color: "#6940C4" },
-  "hljs-deletion":          { color: "#CC1A3A" },
-  "hljs-params":            { color: "#2D2D4A" },
-  "hljs-variable":          { color: "#2D2D4A" },
-  "hljs-tag":               { color: "#2D2D4A" },
-  "hljs-attr":              { color: "#2D2D4A" },
-  "hljs-subst":             { color: "#2D2D4A" },
-  "hljs-strong":            { fontWeight: "bold" },
-  "hljs-emphasis":          { fontStyle: "italic" },
-  "hljs":                   { color: "#1A1A2E", background: "transparent" },
-};
+  const comment  = v("--syntax-comment", "#6B7094");
+  const keyword  = v("--syntax-keyword", "#A78FFF");
+  const string   = v("--syntax-string", "#10b981");
+  const fn       = v("--syntax-function", "#6D9FFF");
+  const number   = v("--syntax-number", "#FFB347");
+  const meta     = v("--syntax-meta", "#8263FF");
+  const error    = v("--syntax-error", "#FF4D6D");
+  const variable = v("--syntax-variable", "#C4C0D8");
+  const fg       = v("--syntax-foreground", "#E8E6F6");
+
+  return {
+    "hljs-comment":           { color: comment, fontStyle: "italic" },
+    "hljs-quote":             { color: comment, fontStyle: "italic" },
+    "hljs-doctag":            { color: comment },
+    "hljs-keyword":           { color: keyword },
+    "hljs-selector-tag":      { color: keyword },
+    "hljs-literal":           { color: keyword },
+    "hljs-type":              { color: keyword },
+    "hljs-class":             { color: keyword },
+    "hljs-string":            { color: string },
+    "hljs-template-tag":      { color: string },
+    "hljs-template-variable": { color: string },
+    "hljs-addition":          { color: string },
+    "hljs-regexp":            { color: string },
+    "hljs-title":             { color: fn },
+    "hljs-section":           { color: fn },
+    "hljs-built_in":          { color: fn },
+    "hljs-name":              { color: fn },
+    "hljs-function":          { color: fn },
+    "hljs-selector-id":       { color: fn },
+    "hljs-selector-class":    { color: fn },
+    "hljs-attribute":         { color: fn },
+    "hljs-number":            { color: number },
+    "hljs-symbol":            { color: number },
+    "hljs-bullet":            { color: number },
+    "hljs-link":              { color: number, textDecoration: "underline" },
+    "hljs-meta":              { color: meta },
+    "hljs-selector-pseudo":   { color: meta },
+    "hljs-deletion":          { color: error },
+    "hljs-params":            { color: variable },
+    "hljs-variable":          { color: variable },
+    "hljs-tag":               { color: variable },
+    "hljs-attr":              { color: variable },
+    "hljs-subst":             { color: variable },
+    "hljs-strong":            { fontWeight: "bold" },
+    "hljs-emphasis":          { fontStyle: "italic" },
+    "hljs":                   { color: fg, background: "transparent" },
+  };
+}
+
+// tangleLight removed — getSyntaxTheme() reads --syntax-* CSS vars which are overridden
+// per theme in tokens.css (vault, dawn themes set light values).
 
 export interface CodeBlockProps extends HTMLAttributes<HTMLDivElement> {
   code: string;
@@ -130,7 +110,7 @@ export const CodeBlock = memo(
   ({ code, language, showLineNumbers = false, light: lightProp, className, children, ...props }: CodeBlockProps) => {
     const isLight = useIsLightTheme();
     const light = lightProp ?? isLight;
-    const theme = light ? tangleLight : tangleDark;
+    const theme = getSyntaxTheme();
     const bg = "bg-card border-border";
     const headerBg = light ? "bg-muted/50 border-border" : "bg-background border-border";
     const langColor = "text-muted-foreground";
@@ -142,7 +122,7 @@ export const CodeBlock = memo(
       >
         {language && (
           <div className={cn("flex items-center justify-between border-b px-3 py-1", headerBg)}>
-            <span className={cn("text-[10px] font-mono font-medium uppercase tracking-widest", langColor)}>
+            <span className={cn("text-[calc(var(--font-size-xs)-1px)] font-mono font-medium uppercase tracking-widest", langColor)}>
               {language}
             </span>
             {children}

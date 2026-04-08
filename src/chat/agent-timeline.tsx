@@ -130,7 +130,7 @@ function AgentTimelineRow({ isLast, accentClassName, children }: AgentTimelineRo
         {!isLast && (
           <span className="absolute top-4 bottom-[-0.75rem] left-1/2 w-px -translate-x-1/2 bg-border" />
         )}
-        <span className={cn("relative mt-2 h-2.5 w-2.5 rounded-full ring-4 ring-[var(--bg-root)]", accentClassName)} />
+        <span className={cn("relative mt-2 h-[var(--timeline-dot-size)] w-[var(--timeline-dot-size)] rounded-full ring-4 ring-[var(--bg-root)]", accentClassName)} />
       </div>
       <div className="min-w-0 pb-3">{children}</div>
     </div>
@@ -143,11 +143,11 @@ function UserMessage({ item }: { item: AgentTimelineMessageItem }) {
       <div className="max-w-[72%]">
         <div className="rounded-2xl border border-border bg-muted/50 px-4 py-3">
           {item.timestamp && (
-            <div className="mb-1.5 text-right text-[11px] text-muted-foreground">
+            <div className="mb-1.5 text-right text-[var(--font-size-xs)] text-muted-foreground">
               {formatTime(item.timestamp)}
             </div>
           )}
-          <div className="whitespace-pre-wrap text-[15px] leading-7 text-foreground">
+          <div className="whitespace-pre-wrap text-[var(--font-size-base)] leading-[var(--line-height-base)] text-foreground">
             {item.content}
           </div>
         </div>
@@ -160,12 +160,12 @@ function AssistantMessage({ item }: { item: AgentTimelineMessageItem }) {
   return (
     <div className="-mt-0.5">
       {item.timestamp && (
-        <div className="mb-2 text-[11px] text-muted-foreground">
+        <div className="mb-2 text-[var(--font-size-xs)] text-muted-foreground">
           {formatTime(item.timestamp)}
         </div>
       )}
       {item.content && (
-        <Markdown className="tangle-prose text-[15px] leading-7">{item.content}</Markdown>
+        <Markdown className="tangle-prose text-[var(--font-size-base)] leading-[var(--line-height-base)]">{item.content}</Markdown>
       )}
       {item.isStreaming && (
         <span className="ml-0.5 inline-block h-4 w-2 animate-pulse rounded-sm bg-primary align-text-bottom" />
@@ -204,7 +204,7 @@ function ArtifactCard({ item }: { item: AgentTimelineArtifactItem }) {
   const content = (
     <div className={cn("rounded-[var(--radius-lg)] border px-4 py-3", tone.card)}>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-muted/50 text-foreground">
+        <div className="mt-0.5 flex h-[var(--avatar-size)] w-[var(--avatar-size)] shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-muted/50 text-foreground">
           {item.icon ?? <FileText className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">

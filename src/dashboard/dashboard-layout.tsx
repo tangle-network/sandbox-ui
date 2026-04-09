@@ -189,8 +189,15 @@ function DashboardLayoutInner({
         setNotificationsOpen(false)
       }
     }
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNotificationsOpen(false)
+    }
     document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
+    document.addEventListener("keydown", keyHandler)
+    return () => {
+      document.removeEventListener("mousedown", handler)
+      document.removeEventListener("keydown", keyHandler)
+    }
   }, [notificationsOpen])
   const { contentMargin, hidden, mode, hasPanels, panelOpen } = useSidebar()
   const modeSet = React.useMemo(() => new Set(modeItems), [modeItems])
@@ -365,6 +372,9 @@ function DashboardLayoutInner({
                           {n.title}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                        <p className="text-[10px] text-muted-foreground/50 mt-1">
+                          {new Date(n.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       </button>
                     ))}
                   </div>

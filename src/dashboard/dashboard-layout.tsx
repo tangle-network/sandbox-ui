@@ -131,7 +131,7 @@ function XIcon({ className }: { className?: string }) {
 
 function formatNotifDate(raw: string): string {
   const d = new Date(raw)
-  return Number.isNaN(d.getTime()) ? raw : d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+  return Number.isNaN(d.getTime()) ? raw : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
 }
 
 function DefaultLink({
@@ -369,8 +369,8 @@ function DashboardLayoutInner({
                         key={n.id}
                         type="button"
                         className={cn(
-                          "w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/50 transition-colors",
-                          !n.read && "bg-primary/5"
+                          "w-full text-left px-4 py-3 border-b border-border last:border-0 transition-colors",
+                          n.read ? "cursor-default" : "bg-primary/5 hover:bg-muted/50"
                         )}
                         onClick={() => { if (!n.read) notifData.onMarkRead?.(n.id); }}
                       >

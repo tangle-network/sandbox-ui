@@ -330,6 +330,7 @@ function DashboardLayoutInner({
               className="relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted/50"
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               aria-label="Notifications"
+              aria-expanded={notificationsOpen}
             >
               <Bell className="h-4 w-4" />
               {(notifData?.unreadCount ?? 0) > 0 && (
@@ -373,7 +374,7 @@ function DashboardLayoutInner({
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                         <p className="text-[10px] text-muted-foreground/50 mt-1">
-                          {new Date(n.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {(() => { const d = new Date(n.createdAt); return Number.isNaN(d.getTime()) ? n.createdAt : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); })()}
                         </p>
                       </button>
                     ))}

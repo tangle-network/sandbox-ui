@@ -167,9 +167,9 @@ export function ProvisioningWizard({
       setSelectedEnv(effectiveDefault)
     }
   }, [envList, effectiveDefault])
-  const [cpuCores, setCpuCores] = React.useState(dc?.cpuCores ?? 4)
-  const [ramGB, setRamGB] = React.useState(dc?.ramGB ?? 16)
-  const [storageGB, setStorageGB] = React.useState(dc?.storageGB ?? 128)
+  const [cpuCores, setCpuCores] = React.useState(Math.min(dc?.cpuCores ?? 4, cpuMax))
+  const [ramGB, setRamGB] = React.useState(Math.min(dc?.ramGB ?? 16, ramMax))
+  const [storageGB, setStorageGB] = React.useState(Math.min(dc?.storageGB ?? 128, storageMax))
   const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? "claude-sonnet")
   const [systemPrompt, setSystemPrompt] = React.useState(dc?.systemPrompt ?? "")
   const [name, setName] = React.useState(dc?.name ?? "")
@@ -216,9 +216,9 @@ export function ProvisioningWizard({
   }
 
   const applyPreset = (cpu: number, ram: number, storage: number) => {
-    setCpuCores(cpu)
-    setRamGB(ram)
-    setStorageGB(storage)
+    setCpuCores(Math.min(cpu, cpuMax))
+    setRamGB(Math.min(ram, ramMax))
+    setStorageGB(Math.min(storage, storageMax))
   }
 
   const hourCost = calcCost(cpuCores, ramGB, storageGB)
@@ -280,9 +280,9 @@ export function ProvisioningWizard({
                 onClick={() => {
                   setCurrentStep(1)
                   setSelectedEnv(environments[0]?.id ?? "")
-                  setCpuCores(4)
-                  setRamGB(16)
-                  setStorageGB(128)
+                  setCpuCores(Math.min(4, cpuMax))
+                  setRamGB(Math.min(16, ramMax))
+                  setStorageGB(Math.min(128, storageMax))
                   setModelTier("claude-sonnet")
                   setSystemPrompt("")
                   setName("")
@@ -638,11 +638,11 @@ export function ProvisioningWizard({
               </div>
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>MEMORY</span>
-                <span className="text-foreground/80">${(ramGB * 0.005).toFixed(2)}</span>
+                <span className="text-foreground/80">${(ramGB * 0.005).toFixed(2)}/h</span>
               </div>
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>STORAGE</span>
-                <span className="text-foreground/80">${(storageGB * 0.0011).toFixed(2)}</span>
+                <span className="text-foreground/80">${(storageGB * 0.0011).toFixed(2)}/h</span>
               </div>
             </div>
           </div>

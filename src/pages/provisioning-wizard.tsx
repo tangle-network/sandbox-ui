@@ -18,6 +18,12 @@ export interface EnvironmentEntry {
   version?: string
 }
 
+export interface ResourceLimits {
+  cpuMax?: number
+  ramMaxGB?: number
+  storageMaxGB?: number
+}
+
 export interface ProvisioningWizardProps {
   environments?: EnvironmentOption[]
   onLoadEnvironments?: () => Promise<EnvironmentEntry[]>
@@ -33,6 +39,8 @@ export interface ProvisioningWizardProps {
   skipToReview?: boolean
   /** Load user's startup scripts for the advanced options selector */
   onLoadStartupScripts?: () => Promise<StartupScriptEntry[]>
+  /** Plan-based resource limits — caps the slider maximums */
+  resourceLimits?: ResourceLimits
 }
 
 export interface StartupScriptEntry {
@@ -70,6 +78,18 @@ const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string;
 }
 
 export function resolveEnvironment(env: EnvironmentEntry): EnvironmentOption {
+  // User-created templates have IDs like "template:{uuid}"
+  if (env.id.startsWith("template:")) {
+    const templateName = env.description?.replace(/^Template:\s*/, "") ?? "Custom Template"
+    return {
+      id: env.id,
+      name: templateName,
+      description: env.description ?? "User template from snapshot",
+      icon: <span className="text-[var(--surface-success-text)] text-2xl font-bold">T</span>,
+      color: "green",
+    }
+  }
+
   const display = STACK_DISPLAY[env.id]
   const name = display?.name ?? (env.id.length > 0 ? env.id.charAt(0).toUpperCase() + env.id.slice(1).replace(/-/g, " ") : "Unknown")
   const abbr = display?.abbr ?? (env.id.length > 0 ? env.id[0].toUpperCase() : "?")
@@ -97,8 +117,8 @@ const RAM_MAX = 32
 const STORAGE_MIN = 20
 const STORAGE_MAX = 512
 
-function calcCost(cpu: number, ram: number): string {
-  const cost = cpu * 0.045 + ram * 0.005
+function calcCost(cpu: number, ram: number, storage: number): string {
+  const cost = cpu * 0.045 + ram * 0.005 + storage * 0.0011
   return cost.toFixed(2)
 }
 
@@ -113,7 +133,11 @@ export function ProvisioningWizard({
   defaultConfig,
   skipToReview,
   onLoadStartupScripts,
+  resourceLimits,
 }: ProvisioningWizardProps) {
+  const cpuMax = Math.min(resourceLimits?.cpuMax ?? CPU_MAX, CPU_MAX)
+  const ramMax = Math.min(resourceLimits?.ramMaxGB ?? RAM_MAX, RAM_MAX)
+  const storageMax = Math.min(resourceLimits?.storageMaxGB ?? STORAGE_MAX, STORAGE_MAX)
   const dc = defaultConfig
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
 
@@ -197,7 +221,7 @@ export function ProvisioningWizard({
     setStorageGB(storage)
   }
 
-  const hourCost = calcCost(cpuCores, ramGB)
+  const hourCost = calcCost(cpuCores, ramGB, storageGB)
 
   return (
     <div className={cn("max-w-6xl mx-auto flex flex-col", className)}>
@@ -360,9 +384,9 @@ export function ProvisioningWizard({
 
             <div className="space-y-6">
               {[
-                { label: "Compute Cores (CPU)", value: cpuCores, setter: setCpuCores, min: CPU_MIN, max: CPU_MAX, step: 0.5, unit: "vCPUs" },
-                { label: "Memory (RAM)", value: ramGB, setter: setRamGB, min: RAM_MIN, max: RAM_MAX, step: 1, unit: "GB" },
-                { label: "Ephemeral Storage", value: storageGB, setter: setStorageGB, min: STORAGE_MIN, max: STORAGE_MAX, step: 8, unit: "GB" },
+                { label: "Compute Cores (CPU)", value: cpuCores, setter: setCpuCores, min: CPU_MIN, max: cpuMax, step: 0.5, unit: "vCPUs" },
+                { label: "Memory (RAM)", value: ramGB, setter: setRamGB, min: RAM_MIN, max: ramMax, step: 1, unit: "GB" },
+                { label: "Ephemeral Storage", value: storageGB, setter: setStorageGB, min: STORAGE_MIN, max: storageMax, step: 8, unit: "GB" },
               ].map(({ label, value, setter, min, max, step: s, unit }) => (
                 <div key={label}>
                   <div className="flex justify-between items-end border-b border-border pb-1.5 mb-2">
@@ -615,6 +639,10 @@ export function ProvisioningWizard({
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>MEMORY</span>
                 <span className="text-foreground/80">${(ramGB * 0.005).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                <span>STORAGE</span>
+                <span className="text-foreground/80">${(storageGB * 0.0011).toFixed(2)}</span>
               </div>
             </div>
           </div>

@@ -18,6 +18,12 @@ export interface EnvironmentEntry {
   version?: string
 }
 
+export interface ResourceLimits {
+  cpuMax?: number
+  ramMaxGB?: number
+  storageMaxGB?: number
+}
+
 export interface ProvisioningWizardProps {
   environments?: EnvironmentOption[]
   onLoadEnvironments?: () => Promise<EnvironmentEntry[]>
@@ -33,6 +39,8 @@ export interface ProvisioningWizardProps {
   skipToReview?: boolean
   /** Load user's startup scripts for the advanced options selector */
   onLoadStartupScripts?: () => Promise<StartupScriptEntry[]>
+  /** Plan-based resource limits — caps the slider maximums */
+  resourceLimits?: ResourceLimits
 }
 
 export interface StartupScriptEntry {
@@ -70,6 +78,18 @@ const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string;
 }
 
 export function resolveEnvironment(env: EnvironmentEntry): EnvironmentOption {
+  // User-created templates have IDs like "template:{uuid}"
+  if (env.id.startsWith("template:")) {
+    const templateName = env.description?.replace(/^Template:\s*/, "") ?? "Custom Template"
+    return {
+      id: env.id,
+      name: templateName,
+      description: env.description ?? "User template from snapshot",
+      icon: <span className="text-[var(--surface-success-text)] text-2xl font-bold">T</span>,
+      color: "green",
+    }
+  }
+
   const display = STACK_DISPLAY[env.id]
   const name = display?.name ?? (env.id.length > 0 ? env.id.charAt(0).toUpperCase() + env.id.slice(1).replace(/-/g, " ") : "Unknown")
   const abbr = display?.abbr ?? (env.id.length > 0 ? env.id[0].toUpperCase() : "?")
@@ -97,8 +117,8 @@ const RAM_MAX = 32
 const STORAGE_MIN = 20
 const STORAGE_MAX = 512
 
-function calcCost(cpu: number, ram: number): string {
-  const cost = cpu * 0.045 + ram * 0.005
+function calcCost(cpu: number, ram: number, storage: number): string {
+  const cost = cpu * 0.045 + ram * 0.005 + storage * 0.0011
   return cost.toFixed(2)
 }
 
@@ -113,7 +133,11 @@ export function ProvisioningWizard({
   defaultConfig,
   skipToReview,
   onLoadStartupScripts,
+  resourceLimits,
 }: ProvisioningWizardProps) {
+  const cpuMax = Math.max(CPU_MIN, Math.min(resourceLimits?.cpuMax ?? CPU_MAX, CPU_MAX))
+  const ramMax = Math.max(RAM_MIN, Math.min(resourceLimits?.ramMaxGB ?? RAM_MAX, RAM_MAX))
+  const storageMax = Math.max(STORAGE_MIN, Math.min(resourceLimits?.storageMaxGB ?? STORAGE_MAX, STORAGE_MAX))
   const dc = defaultConfig
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
 
@@ -143,9 +167,16 @@ export function ProvisioningWizard({
       setSelectedEnv(effectiveDefault)
     }
   }, [envList, effectiveDefault])
-  const [cpuCores, setCpuCores] = React.useState(dc?.cpuCores ?? 4)
-  const [ramGB, setRamGB] = React.useState(dc?.ramGB ?? 16)
-  const [storageGB, setStorageGB] = React.useState(dc?.storageGB ?? 128)
+  const [cpuCores, setCpuCores] = React.useState(Math.min(dc?.cpuCores ?? 4, cpuMax))
+  const [ramGB, setRamGB] = React.useState(Math.min(dc?.ramGB ?? 16, ramMax))
+  const [storageGB, setStorageGB] = React.useState(Math.min(dc?.storageGB ?? 128, storageMax))
+
+  React.useEffect(() => {
+    setCpuCores((prev) => Math.min(prev, cpuMax))
+    setRamGB((prev) => Math.min(prev, ramMax))
+    setStorageGB((prev) => Math.min(prev, storageMax))
+  }, [cpuMax, ramMax, storageMax])
+
   const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? "claude-sonnet")
   const [systemPrompt, setSystemPrompt] = React.useState(dc?.systemPrompt ?? "")
   const [name, setName] = React.useState(dc?.name ?? "")
@@ -155,6 +186,7 @@ export function ProvisioningWizard({
   const [bare, setBare] = React.useState(dc?.bare ?? false)
   const [startupScriptIds, setStartupScriptIds] = React.useState<string[]>(dc?.startupScriptIds ?? [])
   const [availableScripts, setAvailableScripts] = React.useState<StartupScriptEntry[]>([])
+  const [activePreset, setActivePreset] = React.useState<string | null>(null)
   const [showAdvanced, setShowAdvanced] = React.useState(false)
   const [loadError, setLoadError] = React.useState<string | null>(null)
 
@@ -191,13 +223,20 @@ export function ProvisioningWizard({
     }
   }
 
-  const applyPreset = (cpu: number, ram: number, storage: number) => {
-    setCpuCores(cpu)
-    setRamGB(ram)
-    setStorageGB(storage)
+  const applyPreset = (name: string, cpu: number, ram: number, storage: number) => {
+    setCpuCores(Math.min(cpu, cpuMax))
+    setRamGB(Math.min(ram, ramMax))
+    setStorageGB(Math.min(storage, storageMax))
+    setActivePreset(name)
   }
 
-  const hourCost = calcCost(cpuCores, ramGB)
+  const presets = [
+    { name: "Lightweight", cpu: Math.min(2, cpuMax), ram: Math.min(4, ramMax), storage: Math.min(50, storageMax) },
+    { name: "Standard", cpu: Math.min(4, cpuMax), ram: Math.min(16, ramMax), storage: Math.min(128, storageMax) },
+    { name: "Performance", cpu: Math.min(8, cpuMax), ram: Math.min(32, ramMax), storage: Math.min(256, storageMax) },
+  ]
+
+  const hourCost = calcCost(cpuCores, ramGB, storageGB)
 
   return (
     <div className={cn("max-w-6xl mx-auto flex flex-col", className)}>
@@ -256,9 +295,9 @@ export function ProvisioningWizard({
                 onClick={() => {
                   setCurrentStep(1)
                   setSelectedEnv(environments[0]?.id ?? "")
-                  setCpuCores(4)
-                  setRamGB(16)
-                  setStorageGB(128)
+                  setCpuCores(Math.min(4, cpuMax))
+                  setRamGB(Math.min(16, ramMax))
+                  setStorageGB(Math.min(128, storageMax))
                   setModelTier("claude-sonnet")
                   setSystemPrompt("")
                   setName("")
@@ -267,6 +306,7 @@ export function ProvisioningWizard({
                   setDriver("docker")
                   setBare(false)
                   setStartupScriptIds([])
+                  setActivePreset(null)
                 }}
                 className="text-xs font-bold text-primary hover:text-primary/70 transition-colors"
               >
@@ -343,26 +383,23 @@ export function ProvisioningWizard({
             <div className="mb-6">
               <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Compute Presets</label>
               <div className="grid grid-cols-3 gap-3">
-                <button type="button" onClick={() => applyPreset(2, 4, 50)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
-                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "text-primary" : "text-foreground")}>Lightweight</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">2C / 4G / 50G</div>
-                </button>
-                <button type="button" onClick={() => applyPreset(4, 16, 128)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
-                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "text-primary" : "text-foreground")}>Standard</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">4C / 16G / 128G</div>
-                </button>
-                <button type="button" onClick={() => applyPreset(8, 32, 256)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
-                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "text-primary" : "text-foreground")}>Performance</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">8C / 32G / 256G</div>
-                </button>
+                {presets.map((p) => {
+                  const active = activePreset === p.name
+                  return (
+                    <button key={p.name} type="button" onClick={() => applyPreset(p.name, p.cpu, p.ram, p.storage)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", active ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
+                      <div className={cn("font-bold text-sm transition-colors duration-200", active ? "text-primary" : "text-foreground")}>{p.name}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 font-mono">{p.cpu}C / {p.ram}G / {p.storage}G</div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             <div className="space-y-6">
               {[
-                { label: "Compute Cores (CPU)", value: cpuCores, setter: setCpuCores, min: CPU_MIN, max: CPU_MAX, step: 0.5, unit: "vCPUs" },
-                { label: "Memory (RAM)", value: ramGB, setter: setRamGB, min: RAM_MIN, max: RAM_MAX, step: 1, unit: "GB" },
-                { label: "Ephemeral Storage", value: storageGB, setter: setStorageGB, min: STORAGE_MIN, max: STORAGE_MAX, step: 8, unit: "GB" },
+                { label: "Compute Cores (CPU)", value: cpuCores, setter: setCpuCores, min: CPU_MIN, max: cpuMax, step: 0.5, unit: "vCPUs" },
+                { label: "Memory (RAM)", value: ramGB, setter: setRamGB, min: RAM_MIN, max: ramMax, step: 1, unit: "GB" },
+                { label: "Ephemeral Storage", value: storageGB, setter: setStorageGB, min: STORAGE_MIN, max: storageMax, step: 8, unit: "GB" },
               ].map(({ label, value, setter, min, max, step: s, unit }) => (
                 <div key={label}>
                   <div className="flex justify-between items-end border-b border-border pb-1.5 mb-2">
@@ -375,7 +412,7 @@ export function ProvisioningWizard({
                     max={max}
                     step={s}
                     value={value}
-                    onChange={(e) => setter(+e.target.value)}
+                    onChange={(e) => { setter(+e.target.value); setActivePreset(null) }}
                     className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-runnable-track]:bg-border [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:h-2 [&::-moz-range-track]:bg-border [&::-moz-range-track]:rounded-full [&::-moz-range-track]:h-2 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary-foreground [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
                   />
                   <div className="flex justify-between text-[10px] font-mono text-muted-foreground/60 mt-1">
@@ -614,7 +651,11 @@ export function ProvisioningWizard({
               </div>
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>MEMORY</span>
-                <span className="text-foreground/80">${(ramGB * 0.005).toFixed(2)}</span>
+                <span className="text-foreground/80">${(ramGB * 0.005).toFixed(2)}/h</span>
+              </div>
+              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                <span>STORAGE</span>
+                <span className="text-foreground/80">${(storageGB * 0.0011).toFixed(2)}/h</span>
               </div>
             </div>
           </div>

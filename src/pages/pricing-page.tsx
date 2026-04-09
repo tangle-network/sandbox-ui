@@ -38,16 +38,16 @@ async function fetchTiersFromApi(apiBasePath: string): Promise<PricingTier[]> {
 
 const FAQ = [
   {
-    q: "What are credits?",
-    a: "Credits are used to pay for AI model usage. Different models consume different amounts of credits based on their complexity and the length of your requests.",
+    q: "What is included usage?",
+    a: "Each plan includes a monthly USD usage balance. Compute and AI model usage are billed per second from this balance. If you exceed your included amount, overage is billed at the same rates with no penalty.",
   },
   {
     q: "Can I change plans later?",
     a: "Yes. You can upgrade or downgrade your plan at any time. When you upgrade, you are charged the prorated difference. When you downgrade, the change takes effect at the end of your billing cycle.",
   },
   {
-    q: "Do unused credits roll over?",
-    a: "Monthly credits do not roll over to the next month. However, purchased credit packs never expire and can be used at any time.",
+    q: "Does unused balance roll over?",
+    a: "Monthly included usage does not roll over to the next month. Your balance resets at the start of each billing cycle.",
   },
 ];
 

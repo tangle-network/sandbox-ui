@@ -129,6 +129,11 @@ function XIcon({ className }: { className?: string }) {
   )
 }
 
+function formatNotifDate(raw: string): string {
+  const d = new Date(raw)
+  return Number.isNaN(d.getTime()) ? raw : d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+}
+
 function DefaultLink({
   href,
   to,
@@ -374,7 +379,7 @@ function DashboardLayoutInner({
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
                         <p className="text-[10px] text-muted-foreground/50 mt-1">
-                          {(() => { const d = new Date(n.createdAt); return Number.isNaN(d.getTime()) ? n.createdAt : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); })()}
+                          {formatNotifDate(n.createdAt)}
                         </p>
                       </button>
                     ))}

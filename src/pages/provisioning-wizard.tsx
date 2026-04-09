@@ -186,6 +186,7 @@ export function ProvisioningWizard({
   const [bare, setBare] = React.useState(dc?.bare ?? false)
   const [startupScriptIds, setStartupScriptIds] = React.useState<string[]>(dc?.startupScriptIds ?? [])
   const [availableScripts, setAvailableScripts] = React.useState<StartupScriptEntry[]>([])
+  const [activePreset, setActivePreset] = React.useState<string | null>(null)
   const [showAdvanced, setShowAdvanced] = React.useState(false)
   const [loadError, setLoadError] = React.useState<string | null>(null)
 
@@ -222,10 +223,11 @@ export function ProvisioningWizard({
     }
   }
 
-  const applyPreset = (cpu: number, ram: number, storage: number) => {
+  const applyPreset = (name: string, cpu: number, ram: number, storage: number) => {
     setCpuCores(Math.min(cpu, cpuMax))
     setRamGB(Math.min(ram, ramMax))
     setStorageGB(Math.min(storage, storageMax))
+    setActivePreset(name)
   }
 
   const presets = [
@@ -304,6 +306,7 @@ export function ProvisioningWizard({
                   setDriver("docker")
                   setBare(false)
                   setStartupScriptIds([])
+                  setActivePreset(null)
                 }}
                 className="text-xs font-bold text-primary hover:text-primary/70 transition-colors"
               >
@@ -381,9 +384,9 @@ export function ProvisioningWizard({
               <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Compute Presets</label>
               <div className="grid grid-cols-3 gap-3">
                 {presets.map((p) => {
-                  const active = cpuCores === p.cpu && ramGB === p.ram && storageGB === p.storage
+                  const active = activePreset === p.name
                   return (
-                    <button key={p.name} type="button" onClick={() => applyPreset(p.cpu, p.ram, p.storage)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", active ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
+                    <button key={p.name} type="button" onClick={() => applyPreset(p.name, p.cpu, p.ram, p.storage)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", active ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
                       <div className={cn("font-bold text-sm transition-colors duration-200", active ? "text-primary" : "text-foreground")}>{p.name}</div>
                       <div className="text-xs text-muted-foreground mt-0.5 font-mono">{p.cpu}C / {p.ram}G / {p.storage}G</div>
                     </button>
@@ -409,7 +412,7 @@ export function ProvisioningWizard({
                     max={max}
                     step={s}
                     value={value}
-                    onChange={(e) => setter(+e.target.value)}
+                    onChange={(e) => { setter(+e.target.value); setActivePreset(null) }}
                     className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-runnable-track]:bg-border [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:h-2 [&::-moz-range-track]:bg-border [&::-moz-range-track]:rounded-full [&::-moz-range-track]:h-2 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary-foreground [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
                   />
                   <div className="flex justify-between text-[10px] font-mono text-muted-foreground/60 mt-1">

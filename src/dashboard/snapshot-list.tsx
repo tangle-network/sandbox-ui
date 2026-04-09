@@ -15,6 +15,7 @@ export interface SnapshotListProps {
   snapshots: SnapshotInfo[]
   onCreate: (tags?: string[]) => void
   onRestore: (snapshotId: string) => void
+  onSaveAsTemplate?: (snapshotId: string) => void
   loading?: boolean
   className?: string
 }
@@ -34,7 +35,7 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
 }
 
-export function SnapshotList({ snapshots, onCreate, onRestore, loading = false, className }: SnapshotListProps) {
+export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate, loading = false, className }: SnapshotListProps) {
   const [showCreate, setShowCreate] = React.useState(false)
   const [tags, setTags] = React.useState("")
 
@@ -137,15 +138,27 @@ export function SnapshotList({ snapshots, onCreate, onRestore, loading = false, 
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onRestore(s.id)}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors border border-border"
-                      title="Restore to new sandbox"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      Restore
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onRestore(s.id)}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors border border-border"
+                        title="Restore to new sandbox"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Restore
+                      </button>
+                      {onSaveAsTemplate && (
+                        <button
+                          type="button"
+                          onClick={() => onSaveAsTemplate(s.id)}
+                          className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
+                          title="Save as reusable template"
+                        >
+                          Save as Template
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

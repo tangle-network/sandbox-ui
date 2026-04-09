@@ -135,9 +135,9 @@ export function ProvisioningWizard({
   onLoadStartupScripts,
   resourceLimits,
 }: ProvisioningWizardProps) {
-  const cpuMax = Math.min(resourceLimits?.cpuMax ?? CPU_MAX, CPU_MAX)
-  const ramMax = Math.min(resourceLimits?.ramMaxGB ?? RAM_MAX, RAM_MAX)
-  const storageMax = Math.min(resourceLimits?.storageMaxGB ?? STORAGE_MAX, STORAGE_MAX)
+  const cpuMax = Math.max(CPU_MIN, Math.min(resourceLimits?.cpuMax ?? CPU_MAX, CPU_MAX))
+  const ramMax = Math.max(RAM_MIN, Math.min(resourceLimits?.ramMaxGB ?? RAM_MAX, RAM_MAX))
+  const storageMax = Math.max(STORAGE_MIN, Math.min(resourceLimits?.storageMaxGB ?? STORAGE_MAX, STORAGE_MAX))
   const dc = defaultConfig
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(environmentsProp ?? defaultEnvironments)
 
@@ -220,6 +220,12 @@ export function ProvisioningWizard({
     setRamGB(Math.min(ram, ramMax))
     setStorageGB(Math.min(storage, storageMax))
   }
+
+  const presets = [
+    { name: "Lightweight", cpu: Math.min(2, cpuMax), ram: Math.min(4, ramMax), storage: Math.min(50, storageMax) },
+    { name: "Standard", cpu: Math.min(4, cpuMax), ram: Math.min(16, ramMax), storage: Math.min(128, storageMax) },
+    { name: "Performance", cpu: Math.min(8, cpuMax), ram: Math.min(32, ramMax), storage: Math.min(256, storageMax) },
+  ]
 
   const hourCost = calcCost(cpuCores, ramGB, storageGB)
 
@@ -367,18 +373,15 @@ export function ProvisioningWizard({
             <div className="mb-6">
               <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Compute Presets</label>
               <div className="grid grid-cols-3 gap-3">
-                <button type="button" onClick={() => applyPreset(2, 4, 50)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
-                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 2 && ramGB === 4 && storageGB === 50 ? "text-primary" : "text-foreground")}>Lightweight</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">2C / 4G / 50G</div>
-                </button>
-                <button type="button" onClick={() => applyPreset(4, 16, 128)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
-                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 4 && ramGB === 16 && storageGB === 128 ? "text-primary" : "text-foreground")}>Standard</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">4C / 16G / 128G</div>
-                </button>
-                <button type="button" onClick={() => applyPreset(8, 32, 256)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
-                  <div className={cn("font-bold text-sm transition-colors duration-200", cpuCores === 8 && ramGB === 32 && storageGB === 256 ? "text-primary" : "text-foreground")}>Performance</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">8C / 32G / 256G</div>
-                </button>
+                {presets.map((p) => {
+                  const active = cpuCores === p.cpu && ramGB === p.ram && storageGB === p.storage
+                  return (
+                    <button key={p.name} type="button" onClick={() => applyPreset(p.cpu, p.ram, p.storage)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", active ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
+                      <div className={cn("font-bold text-sm transition-colors duration-200", active ? "text-primary" : "text-foreground")}>{p.name}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 font-mono">{p.cpu}C / {p.ram}G / {p.storage}G</div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

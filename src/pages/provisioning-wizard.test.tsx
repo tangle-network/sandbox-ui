@@ -333,4 +333,36 @@ describe("ProvisioningWizard — resourceLimits", () => {
     // cost = 2*0.045 + 4*0.005 + 20*0.0011 = 0.09 + 0.02 + 0.022 = 0.132 → "0.13"
     expect(screen.getByText("$0.13")).toBeInTheDocument()
   })
+
+  it("enforces lower-bound on resourceLimits so slider min never exceeds max", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 0.1, ramMaxGB: 1, storageMaxGB: 5 }}
+      />,
+    )
+
+    const sliders = screen.getAllByRole("slider")
+    // cpuMax should be clamped up to CPU_MIN (0.5), not 0.1
+    expect(Number(sliders[0].getAttribute("max"))).toBeGreaterThanOrEqual(Number(sliders[0].getAttribute("min")))
+    // ramMax should be clamped up to RAM_MIN (2), not 1
+    expect(Number(sliders[1].getAttribute("max"))).toBeGreaterThanOrEqual(Number(sliders[1].getAttribute("min")))
+    // storageMax should be clamped up to STORAGE_MIN (20), not 5
+    expect(Number(sliders[2].getAttribute("max"))).toBeGreaterThanOrEqual(Number(sliders[2].getAttribute("min")))
+  })
+
+  it("preset labels reflect clamped values when limits are active", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
+      />,
+    )
+
+    // Both "Standard" (4/16/128) and "Performance" (8/32/256) clamp to the same values
+    const clampedLabels = screen.getAllByText("2C / 8G / 64G")
+    expect(clampedLabels).toHaveLength(2)
+    // "Lightweight" preset (2C/4G/50G) — cpu and ram within limits, storage within limits
+    expect(screen.getByText("2C / 4G / 50G")).toBeInTheDocument()
+  })
 })

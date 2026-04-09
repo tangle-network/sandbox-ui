@@ -170,6 +170,13 @@ export function ProvisioningWizard({
   const [cpuCores, setCpuCores] = React.useState(Math.min(dc?.cpuCores ?? 4, cpuMax))
   const [ramGB, setRamGB] = React.useState(Math.min(dc?.ramGB ?? 16, ramMax))
   const [storageGB, setStorageGB] = React.useState(Math.min(dc?.storageGB ?? 128, storageMax))
+
+  React.useEffect(() => {
+    setCpuCores((prev) => Math.min(prev, cpuMax))
+    setRamGB((prev) => Math.min(prev, ramMax))
+    setStorageGB((prev) => Math.min(prev, storageMax))
+  }, [cpuMax, ramMax, storageMax])
+
   const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? "claude-sonnet")
   const [systemPrompt, setSystemPrompt] = React.useState(dc?.systemPrompt ?? "")
   const [name, setName] = React.useState(dc?.name ?? "")

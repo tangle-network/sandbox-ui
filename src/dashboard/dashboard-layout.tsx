@@ -84,6 +84,13 @@ export interface DashboardLayoutProps {
   railFooter?: React.ReactNode
   /** Extra dropdown items in the profile menu */
   profileMenuItems?: React.ReactNode
+  /** Notification data for the bell dropdown */
+  notifications?: {
+    items: { id: string; title: string; message: string; read: boolean; createdAt: string }[]
+    unreadCount: number
+    onMarkRead?: (id: string) => void
+    onMarkAllRead?: () => void
+  }
 }
 
 // ============================================================================
@@ -168,9 +175,23 @@ function DashboardLayoutInner({
   footer,
   railFooter,
   profileMenuItems,
+  notifications: notifData,
 }: DashboardLayoutProps) {
   const Link = LinkComponent
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const [notificationsOpen, setNotificationsOpen] = React.useState(false)
+  const notifRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (!notificationsOpen) return
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotificationsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [notificationsOpen])
   const { contentMargin, hidden, mode, hasPanels, panelOpen } = useSidebar()
   const modeSet = React.useMemo(() => new Set(modeItems), [modeItems])
 
@@ -296,9 +317,61 @@ function DashboardLayoutInner({
               New Sandbox
             </button>
           )}
-          <button type="button" className="text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted/50">
-            <Bell className="h-4 w-4" />
-          </button>
+          <div className="relative" ref={notifRef}>
+            <button
+              type="button"
+              className="relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted/50"
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              aria-label="Notifications"
+            >
+              <Bell className="h-4 w-4" />
+              {(notifData?.unreadCount ?? 0) > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
+              )}
+            </button>
+            {notificationsOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-border bg-card shadow-lg z-50">
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <p className="font-bold text-foreground text-sm">Notifications</p>
+                  {(notifData?.unreadCount ?? 0) > 0 && notifData?.onMarkAllRead && (
+                    <button
+                      type="button"
+                      onClick={() => { notifData.onMarkAllRead?.(); }}
+                      className="text-primary text-xs font-medium hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                {(!notifData?.items || notifData.items.length === 0) ? (
+                  <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
+                    <Bell className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                    <p className="text-muted-foreground text-sm">No notifications yet</p>
+                    <p className="text-muted-foreground/60 text-xs mt-1">We'll notify you about important updates</p>
+                  </div>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifData.items.map((n) => (
+                      <button
+                        key={n.id}
+                        type="button"
+                        className={cn(
+                          "w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/50 transition-colors",
+                          !n.read && "bg-primary/5"
+                        )}
+                        onClick={() => { if (!n.read) notifData.onMarkRead?.(n.id); }}
+                      >
+                        <p className={cn("text-sm", !n.read ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                          {n.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         {/* Mobile menu toggle */}
         <button

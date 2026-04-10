@@ -27,3 +27,20 @@ export { StatusBar, type StatusBarProps, type ContextBadge } from "./status-bar"
 export { StatusBanner, type StatusBannerProps, type BannerType } from "./status-banner";
 export { AuditResults, type AuditResultsProps, type FormAudit, type AuditCheck } from "./audit-results";
 export { TerminalPanel, type TerminalProps, type TerminalLine } from "./terminal-panel";
+export {
+  TaskBoard,
+  type TaskBoardProps,
+  type TaskBoardItem,
+  type TaskBoardColumn,
+} from "./task-board";
+export {
+  CalendarView,
+  type CalendarViewProps,
+  type CalendarEvent,
+} from "./calendar-view";
+export {
+  ApprovalQueue,
+  type ApprovalQueueProps,
+  type ApprovalItem,
+  type ApprovalConfidenceStat,
+} from "./approval-queue";

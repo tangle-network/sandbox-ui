@@ -66,6 +66,9 @@ export { StatusBar, type StatusBarProps, type ContextBadge } from "./workspace/s
 export { StatusBanner, type StatusBannerProps, type BannerType } from "./workspace/status-banner";
 export { AuditResults, type AuditResultsProps, type FormAudit, type AuditCheck } from "./workspace/audit-results";
 export { TerminalPanel, type TerminalProps, type TerminalLine } from "./workspace/terminal-panel";
+export { TaskBoard, type TaskBoardProps, type TaskBoardItem, type TaskBoardColumn } from "./workspace/task-board";
+export { CalendarView, type CalendarViewProps, type CalendarEvent } from "./workspace/calendar-view";
+export { ApprovalQueue, type ApprovalQueueProps, type ApprovalItem, type ApprovalConfidenceStat } from "./workspace/approval-queue";
 
 // --- OpenUI ---
 export {

@@ -12,14 +12,12 @@ export interface TaskBoardItem {
   tags?: string[];
   dueDate?: Date | null;
   assigneeId?: string | null;
-  /** Arbitrary metadata rendered by renderItemMeta */
   meta?: Record<string, unknown>;
 }
 
 export interface TaskBoardColumn {
   id: string;
   label: string;
-  /** Tailwind border-top color class, e.g. "border-t-blue-500" */
   accent?: string;
 }
 
@@ -28,34 +26,48 @@ export interface TaskBoardProps {
   columns: TaskBoardColumn[];
   className?: string;
 
-  // ── Callbacks ──
   onMoveItem?: (itemId: string, toColumnId: string) => void;
   onClickItem?: (item: TaskBoardItem) => void;
 
-  // ── Customization slots ──
-  /** Render custom content inside each card below the title/description */
   renderItemMeta?: (item: TaskBoardItem) => ReactNode;
-  /** Render actions in the column header (e.g. "+" button) */
   renderColumnAction?: (column: TaskBoardColumn) => ReactNode;
-  /** Badge renderer for priority/tags — receives the raw value */
   renderBadge?: (value: string, type: "priority" | "tag") => ReactNode;
-  /** Empty state shown when a column has no items */
   columnEmptyState?: ReactNode;
-  /** Header slot above the board */
   header?: ReactNode;
+
+  /**
+   * Wrap each column's item list container. Use this to inject a DnD
+   * droppable zone (e.g. Droppable from @hello-pangea/dnd).
+   *
+   * Receives the column ID, the default item list element, and the column's items.
+   * Return a ReactNode that wraps/replaces the default element.
+   *
+   * If not provided, the default unstyled div is rendered.
+   */
+  renderColumnBody?: (
+    columnId: string,
+    defaultChildren: ReactNode,
+    items: TaskBoardItem[],
+  ) => ReactNode;
+
+  /**
+   * Wrap each item card. Use this to inject a DnD draggable
+   * (e.g. Draggable from @hello-pangea/dnd).
+   *
+   * Receives the item, its index, and the default card element.
+   * Return a ReactNode that wraps/replaces the default element.
+   *
+   * If not provided, the default button card is rendered.
+   */
+  renderItemWrapper?: (
+    item: TaskBoardItem,
+    index: number,
+    defaultCard: ReactNode,
+  ) => ReactNode;
 }
 
 // ── Component ──
 
-/**
- * TaskBoard — flexible kanban board for task/work-item management.
- *
- * Renders items grouped by status into columns. Does NOT manage drag-drop
- * internally — consumers wire @hello-pangea/dnd or similar and call
- * onMoveItem. This keeps the component lightweight and DnD-library-agnostic.
- *
- * All visual customization happens through render props and slots.
- */
 export function TaskBoard({
   items,
   columns,
@@ -67,6 +79,8 @@ export function TaskBoard({
   renderBadge,
   columnEmptyState,
   header,
+  renderColumnBody,
+  renderItemWrapper,
 }: TaskBoardProps) {
   const grouped = useMemo(() => {
     const map = new Map<string, TaskBoardItem[]>();
@@ -85,31 +99,12 @@ export function TaskBoard({
       <div className="flex flex-1 gap-3 overflow-x-auto p-4">
         {columns.map((col) => {
           const colItems = grouped.get(col.id) ?? [];
-          return (
-            <div
-              key={col.id}
-              className={cn(
-                "flex w-72 shrink-0 flex-col rounded-xl border border-border bg-card/50 border-t-2",
-                col.accent ?? "border-t-muted-foreground/30",
-              )}
-            >
-              {/* Column header */}
-              <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {col.label}
-                  </h3>
-                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-border px-1.5 text-[10px] font-medium text-muted-foreground">
-                    {colItems.length}
-                  </span>
-                </div>
-                {renderColumnAction?.(col)}
-              </div>
 
-              {/* Items */}
-              <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2 min-h-[80px]">
-                {colItems.length === 0 && columnEmptyState}
-                {colItems.map((item) => (
+          const itemCards = (
+            <>
+              {colItems.length === 0 && columnEmptyState}
+              {colItems.map((item, index) => {
+                const card = (
                   <button
                     key={item.id}
                     type="button"
@@ -124,7 +119,6 @@ export function TaskBoard({
                         {item.description}
                       </p>
                     )}
-                    {/* Badges */}
                     {(item.priority || item.tags?.length) && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {item.priority &&
@@ -151,8 +145,43 @@ export function TaskBoard({
                     )}
                     {renderItemMeta?.(item)}
                   </button>
-                ))}
+                );
+
+                return renderItemWrapper
+                  ? <span key={item.id}>{renderItemWrapper(item, index, card)}</span>
+                  : card;
+              })}
+            </>
+          );
+
+          const columnBody = (
+            <div className="flex flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2 min-h-[80px]">
+              {renderColumnBody
+                ? renderColumnBody(col.id, itemCards, colItems)
+                : itemCards}
+            </div>
+          );
+
+          return (
+            <div
+              key={col.id}
+              className={cn(
+                "flex w-72 shrink-0 flex-col rounded-xl border border-border bg-card/50 border-t-2",
+                col.accent ?? "border-t-muted-foreground/30",
+              )}
+            >
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {col.label}
+                  </h3>
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-border px-1.5 text-[10px] font-medium text-muted-foreground">
+                    {colItems.length}
+                  </span>
+                </div>
+                {renderColumnAction?.(col)}
               </div>
+              {columnBody}
             </div>
           );
         })}

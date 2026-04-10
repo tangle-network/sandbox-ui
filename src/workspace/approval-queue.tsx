@@ -295,7 +295,7 @@ export function ApprovalQueue({
                         {item.status}
                       </span>
                     </div>
-                    {item.meta?.rejectionReason && (
+                    {item.meta?.rejectionReason != null && (
                       <p className="mt-1 text-xs text-destructive">
                         Reason: {String(item.meta.rejectionReason)}
                       </p>

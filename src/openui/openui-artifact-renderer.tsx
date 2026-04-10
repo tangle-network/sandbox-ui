@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { ArrowRight, Minus } from "lucide-react";
+import { Minus } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Badge } from "../primitives/badge";
 import { Button } from "../primitives/button";
@@ -148,6 +148,22 @@ export interface OpenUIArtifactRendererProps {
   className?: string;
 }
 
+const NODE_TYPES = new Set([
+  "heading",
+  "text",
+  "badge",
+  "stat",
+  "key_value",
+  "code",
+  "markdown",
+  "table",
+  "actions",
+  "separator",
+  "stack",
+  "grid",
+  "card",
+]);
+
 const GAP_STYLES = {
   sm: "gap-2",
   md: "gap-4",
@@ -178,6 +194,20 @@ function formatValue(value: ReactNode | OpenUIPrimitive) {
   }
 
   return value;
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function isOpenUIComponentNode(value: unknown): value is OpenUIComponentNode {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    typeof (value as { type?: unknown }).type === "string" &&
+    NODE_TYPES.has((value as { type: string }).type)
+  );
 }
 
 function renderActions(actions: OpenUIAction[], onAction?: (action: OpenUIAction) => void) {
@@ -281,9 +311,12 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
       );
 
     case "key_value":
+      if (asArray(node.items).length === 0) {
+        return null;
+      }
       return (
         <dl className="grid gap-3 sm:grid-cols-2">
-          {node.items.map((item, index) => (
+          {asArray<OpenUIKeyValueNode["items"][number]>(node.items).map((item, index) => (
             <div
               key={item.id ?? `${item.label}-${index}`}
               className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-3"
@@ -329,12 +362,15 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
       );
 
     case "table":
+      if (asArray(node.columns).length === 0) {
+        return null;
+      }
       return (
         <div className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card">
           <Table>
             <TableHeader>
               <TableRow className="border-border">
-                {node.columns.map((column) => (
+                {asArray<OpenUITableNode["columns"][number]>(node.columns).map((column) => (
                   <TableHead
                     key={column.key}
                     className={cn(
@@ -348,9 +384,9 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
               </TableRow>
             </TableHeader>
             <TableBody>
-              {node.rows.map((row, rowIndex) => (
+              {asArray<OpenUITableNode["rows"][number]>(node.rows).map((row, rowIndex) => (
                 <TableRow key={rowIndex} className="border-border">
-                  {node.columns.map((column) => (
+                  {asArray<OpenUITableNode["columns"][number]>(node.columns).map((column) => (
                     <TableCell
                       key={column.key}
                       className={cn(
@@ -374,7 +410,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
       );
 
     case "actions":
-      return renderActions(node.actions, onAction);
+      return renderActions(asArray<OpenUIAction>(node.actions), onAction);
 
     case "separator":
       return (
@@ -390,6 +426,9 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
       );
 
     case "stack":
+      if (asArray(node.children).length === 0) {
+        return null;
+      }
       return (
         <div
           className={cn(
@@ -400,7 +439,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
             node.wrap && "flex-wrap",
           )}
         >
-          {node.children.map((child, index) => (
+          {asArray<OpenUIComponentNode>(node.children).map((child, index) => (
             <Fragment key={child.id ?? `${child.type}-${index}`}>
               {renderNode(child, onAction)}
             </Fragment>
@@ -409,9 +448,12 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
       );
 
     case "grid":
+      if (asArray(node.children).length === 0) {
+        return null;
+      }
       return (
         <div className={cn("grid", GRID_STYLES[node.columns ?? 2], GAP_STYLES[node.gap ?? "md"])}>
-          {node.children.map((child, index) => (
+          {asArray<OpenUIComponentNode>(node.children).map((child, index) => (
             <Fragment key={child.id ?? `${child.type}-${index}`}>
               {renderNode(child, onAction)}
             </Fragment>
@@ -422,7 +464,7 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
     case "card":
       return (
         <Card variant="glass" className="border-border shadow-[var(--shadow-card)]">
-          {(node.eyebrow || node.title || node.description || node.badge || node.actions) && (
+          {(node.eyebrow || node.title || node.description || node.badge || asArray(node.actions).length > 0) && (
             <CardHeader className="gap-2 p-4 pb-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-1">
@@ -440,12 +482,12 @@ function renderNode(node: OpenUIComponentNode, onAction?: (action: OpenUIAction)
                 </div>
                 {node.badge && <Badge variant={node.badge.tone ?? "outline"}>{node.badge.label}</Badge>}
               </div>
-              {node.actions && renderActions(node.actions, onAction)}
+              {asArray(node.actions).length > 0 && renderActions(asArray<OpenUIAction>(node.actions), onAction)}
             </CardHeader>
           )}
-          {node.children && node.children.length > 0 && (
+          {asArray(node.children).length > 0 && (
             <CardContent className="space-y-4 p-4">
-              {node.children.map((child, index) => (
+              {asArray<OpenUIComponentNode>(node.children).map((child, index) => (
                 <Fragment key={child.id ?? `${child.type}-${index}`}>
                   {renderNode(child, onAction)}
                 </Fragment>
@@ -468,13 +510,13 @@ export function OpenUIArtifactRenderer({
   onAction,
   className,
 }: OpenUIArtifactRendererProps) {
-  const nodes = Array.isArray(schema) ? schema : [schema];
+  const nodes = (Array.isArray(schema) ? schema : [schema]).filter(isOpenUIComponentNode);
 
   if (nodes.length === 0) {
     return (
       <div
         className={cn(
-          "flex h-full min-h-[16rem] items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-border bg-card p-6 text-center",
+          "flex min-h-[6rem] items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-border bg-card p-5 text-center",
           className,
         )}
       >
@@ -482,26 +524,19 @@ export function OpenUIArtifactRenderer({
           <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-muted/50 text-muted-foreground">
             <Minus className="h-4 w-4" />
           </div>
-          <div className="text-sm font-medium text-foreground">No structured artifact payload</div>
-          <div className="text-sm text-muted-foreground">
-            Pass an OpenUI-like schema to render dynamic result panels with sandbox-ui primitives.
-          </div>
+          <div className="text-sm font-medium text-foreground">No view was generated.</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn("space-y-4 p-4", className)}>
+    <div className={cn("space-y-4", className)}>
       {nodes.map((node, index) => (
         <Fragment key={node.id ?? `${node.type}-${index}`}>
           {renderNode(node, onAction)}
         </Fragment>
       ))}
-      <div className="flex items-center gap-2 rounded-[var(--radius-lg)] border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-        <ArrowRight className="h-3.5 w-3.5" />
-        Structured artifact rendered through sandbox-ui primitives
-      </div>
     </div>
   );
 }

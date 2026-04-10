@@ -44,7 +44,7 @@ export const MessageList = memo(
     renderToolActions,
   }: MessageListProps) => {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {groups.map((group) => {
           if (group.type === "user") {
             const messageParts = partMap[group.message.id] ?? [];

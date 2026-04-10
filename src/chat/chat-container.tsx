@@ -412,25 +412,24 @@ export const ChatContainer = memo(
     );
 
     return (
-      <div className={cn("flex flex-col h-full", className)}>
+      <div className={cn("flex h-full flex-col", className)}>
         {/* Message area */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-2 [scrollbar-gutter:stable]"
+          className="flex-1 overflow-y-auto [scrollbar-gutter:stable]"
         >
           {messages.length === 0 ? (
             <div className="flex h-full items-center justify-center">
-              <div className="max-w-md rounded-[var(--radius-xl)] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-5 py-5 text-center shadow-[var(--shadow-card)]">
-                <div className="text-sm font-semibold text-foreground">Start the filing workflow</div>
-                <div className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Ask the agent to analyze documents, generate forms, explain a calculation, or review the current filing package.
-                </div>
+              <div className="max-w-md text-center">
+                <div className="text-sm font-medium text-muted-foreground">Start a conversation.</div>
               </div>
             </div>
           ) : presentation === "timeline" ? (
-            <AgentTimeline items={timeline.items} isThinking={timeline.showThinking} />
+            <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-end">
+              <AgentTimeline items={timeline.items} isThinking={timeline.showThinking} />
+            </div>
           ) : (
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-3">
+            <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-end">
               <MessageList
                 groups={groups}
                 partMap={partMap}
@@ -448,12 +447,12 @@ export const ChatContainer = memo(
 
         {/* Scroll-to-bottom button */}
         {!isAtBottom && (
-          <div className="flex justify-center -mt-10 relative z-10">
+          <div className="relative z-10 -mt-10 flex justify-center">
             <button
               onClick={scrollToBottom}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full",
-                "border border-border bg-card shadow-[var(--shadow-card)]",
+                "border border-border bg-card shadow-[0_6px_16px_rgba(15,23,42,0.08)]",
                 "text-xs text-foreground transition-colors hover:bg-accent",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
               )}

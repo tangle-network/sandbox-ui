@@ -1,7 +1,6 @@
 import { memo, type ReactNode } from "react";
 import type { SessionMessage } from "../types/message";
 import type { SessionPart } from "../types/parts";
-import { Markdown } from "../markdown/markdown";
 
 export interface UserMessageProps {
   message: SessionMessage;
@@ -23,13 +22,13 @@ export const UserMessage = memo(({ message, parts, actions }: UserMessageProps) 
 
   return (
     <div className="flex justify-end">
-      <div className="flex max-w-[82%] flex-col items-end gap-2">
-        <div className="w-full rounded-[var(--radius-xl)] rounded-br-[var(--radius-sm)] border border-border bg-muted/50 px-4 py-3.5">
-          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+      <div className="flex max-w-[78%] flex-col items-end gap-2">
+        <div className="w-full rounded-[26px] rounded-br-[12px] bg-[var(--brand-primary)] px-4 py-3 text-white shadow-[0_8px_20px_rgba(15,23,42,0.12)]">
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">
             You
           </div>
-          <div className="text-[15px] leading-7 text-foreground">
-            <Markdown className="tangle-prose">{textContent}</Markdown>
+          <div className="whitespace-pre-wrap text-[15px] leading-6.5 text-white">
+            {textContent}
           </div>
         </div>
         {actions ? (

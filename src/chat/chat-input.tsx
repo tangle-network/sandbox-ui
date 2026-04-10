@@ -173,7 +173,7 @@ export function ChatInput({
 
   return (
     <div
-      className={cn("px-4 py-3 relative", className)}
+      className={cn("relative", className)}
       onDragEnter={onAttach ? handleDragEnter : undefined}
       onDragLeave={onAttach ? handleDragLeave : undefined}
       onDragOver={onAttach ? handleDragOver : undefined}
@@ -256,8 +256,8 @@ export function ChatInput({
       )}
 
       {/* Input row */}
-      <div className="rounded-[var(--radius-xl)] border border-[var(--chat-input-border,var(--border-default))] [background:var(--chat-input-bg,var(--depth-2))] shadow-[var(--chat-input-shadow,var(--shadow-card))] transition-all focus-within:border-[var(--chat-input-focus-border,var(--border-accent))] focus-within:shadow-[var(--chat-input-focus-shadow,var(--shadow-card))]">
-        <div className="rounded-[var(--radius-xl)] px-3 py-[var(--chat-input-py)]">
+      <div className="rounded-[24px] border border-[var(--chat-input-border,var(--border-default))] [background:var(--chat-input-bg,var(--bg-card))] shadow-[var(--chat-input-shadow,0_1px_2px_rgba(15,23,42,0.05))] transition-all focus-within:border-[var(--chat-input-focus-border,var(--border-accent))] focus-within:shadow-[var(--chat-input-focus-shadow,0_10px_30px_rgba(15,23,42,0.08))]">
+        <div className="rounded-[24px] px-4 py-[var(--chat-input-py)]">
           {(inputLabel !== null || idleStatus !== null || streamingStatus !== null) && (
             <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
               {inputLabel !== null && (
@@ -272,7 +272,7 @@ export function ChatInput({
               )}
             </div>
           )}
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-2.5">
         {/* Attach buttons */}
         {onAttach && (
           <>
@@ -330,7 +330,7 @@ export function ChatInput({
           disabled={isStreaming || disabled}
           rows={1}
           aria-label="Message input"
-          className="min-h-[32px] max-h-[120px] flex-1 resize-none bg-transparent text-[14px] leading-6 text-foreground placeholder:text-muted-foreground disabled:opacity-50 focus-visible:outline-none"
+          className="min-h-[42px] max-h-[160px] flex-1 resize-none bg-transparent py-2 text-[15px] leading-6 text-foreground placeholder:text-muted-foreground disabled:opacity-50 focus-visible:outline-none"
         />
 
         {/* Send / Cancel */}
@@ -349,9 +349,10 @@ export function ChatInput({
             onClick={handleSend}
             disabled={!value.trim() || disabled}
             aria-label="Send message"
-            className="mb-0.5 shrink-0 rounded-[var(--chat-send-radius,var(--radius-lg))] border border-[var(--chat-send-border,var(--border-accent))] [background:var(--chat-send-bg,var(--accent-surface-soft))] p-2.5 text-[var(--chat-send-color,var(--accent-text))] shadow-[var(--chat-send-shadow,none)] transition-all hover:translate-y-[-1px] hover:[background:var(--chat-send-hover-bg,var(--accent-surface-strong))] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-send-ring,var(--border-accent))]"
+            className="mb-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--chat-send-border,var(--border-accent))] [background:var(--chat-send-bg,var(--brand-primary))] px-3.5 py-2.5 text-sm font-medium text-[var(--chat-send-color,white)] shadow-[var(--chat-send-shadow,0_6px_16px_rgba(15,23,42,0.12))] transition-all hover:translate-y-[-1px] hover:[background:var(--chat-send-hover-bg,var(--brand-strong))] disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chat-send-ring,var(--border-accent))]"
           >
             <Send className="h-4 w-4" />
+            <span>Send</span>
           </button>
         )}
           </div>

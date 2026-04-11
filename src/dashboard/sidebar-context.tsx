@@ -9,6 +9,12 @@ const SIDEBAR_MODE_KEY = "sandbox-sidebar-mode"
 export const SIDEBAR_RAIL_WIDTH = 64
 export const SIDEBAR_PANEL_WIDTH = 260
 export const SIDEBAR_TOTAL_WIDTH = SIDEBAR_RAIL_WIDTH + SIDEBAR_PANEL_WIDTH
+/**
+ * Width of the mobile drawer when the rail is rendered with labels
+ * (`showLabel` on {@link RailButton}). The standard 64px rail is only
+ * wide enough for icons; labels need a wider container to avoid truncation.
+ */
+export const SIDEBAR_MOBILE_WIDTH = 256
 
 interface SidebarContextValue {
   /** Whether the content panel beside the rail is open */

@@ -117,11 +117,23 @@ export function Sidebar({ children, className, style }: SidebarProps) {
 export interface SidebarRailProps {
   children: React.ReactNode
   className?: string
+  /**
+   * Render the rail at the wider mobile-drawer width so labels fit
+   * beside the icons. Defaults to the 64px icon-only rail used on
+   * desktop.
+   */
+  wide?: boolean
 }
 
-export function SidebarRail({ children, className }: SidebarRailProps) {
+export function SidebarRail({ children, className, wide = false }: SidebarRailProps) {
   return (
-    <div className={cn("flex flex-col h-full w-16 shrink-0 bg-transparent", className)}>
+    <div
+      className={cn(
+        "flex flex-col h-full shrink-0 bg-transparent",
+        wide ? "w-full" : "w-16",
+        className,
+      )}
+    >
       {children}
     </div>
   )

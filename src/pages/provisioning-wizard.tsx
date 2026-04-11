@@ -24,6 +24,35 @@ export interface ResourceLimits {
   storageMaxGB?: number
 }
 
+export interface ModelOption {
+  value: string
+  label: string
+  disabled?: boolean
+}
+
+export interface PricingRates {
+  cpuPerHr: number
+  ramPerGbHr: number
+  diskPerGbHr: number
+  minChargePerHr?: number
+}
+
+/**
+ * Describes one selectable plan tier for the purpose of badging locked
+ * presets with the *correct* upgrade target. Without this, every locked
+ * preset shows "Pro" — wrong for a user who is already on Pro and whose
+ * next step up is Enterprise.
+ */
+export interface PlanTierInfo {
+  /** Stable id (e.g. "free" | "pro" | "enterprise") */
+  id: string
+  /** Short badge label shown on locked presets (e.g. "Pro", "Enterprise") */
+  label: string
+  cpuMax: number
+  ramMaxGB: number
+  storageMaxGB: number
+}
+
 export interface ProvisioningWizardProps {
   environments?: EnvironmentOption[]
   onLoadEnvironments?: () => Promise<EnvironmentEntry[]>
@@ -41,6 +70,16 @@ export interface ProvisioningWizardProps {
   onLoadStartupScripts?: () => Promise<StartupScriptEntry[]>
   /** Plan-based resource limits — caps the slider maximums */
   resourceLimits?: ResourceLimits
+  /** Override the list of model engines shown in step 3 */
+  modelOptions?: ModelOption[]
+  /** Real pricing rates from the API for accurate cost calculation */
+  pricingRates?: PricingRates
+  /**
+   * Ordered list of plan tiers (smallest to largest). When provided,
+   * locked presets are badged with the label of the smallest tier that
+   * would unlock them. Falls back to a generic "Pro" badge when omitted.
+   */
+  planTiers?: PlanTierInfo[]
 }
 
 export interface StartupScriptEntry {
@@ -67,6 +106,18 @@ export interface ProvisioningConfig {
 }
 
 const VALID_DRIVERS: ReadonlySet<string> = new Set(["docker", "firecracker", "tangle"])
+
+const DEFAULT_MODEL_OPTIONS: ModelOption[] = [
+  { value: "claude-sonnet", label: "Claude Sonnet 4.6 (Highly Capable)" },
+]
+
+/**
+ * Fallback modelTier used by the initial state and the "Start from
+ * scratch" reset when the caller hasn't supplied `modelOptions`. Kept
+ * as a single source of truth so a future rename of the default model
+ * doesn't leave any code path out of sync.
+ */
+const DEFAULT_MODEL_TIER: string = DEFAULT_MODEL_OPTIONS[0]?.value ?? "claude-sonnet"
 
 const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string }> = {
   universal: { name: "Default", abbr: "D", color: "violet", textClass: "text-[var(--surface-violet-text)]" },
@@ -117,8 +168,33 @@ const RAM_MAX = 32
 const STORAGE_MIN = 20
 const STORAGE_MAX = 512
 
-function calcCost(cpu: number, ram: number, storage: number): string {
-  const cost = cpu * 0.045 + ram * 0.005 + storage * 0.0011
+const DEFAULT_PRICING_RATES: PricingRates = {
+  cpuPerHr: 0.045,
+  ramPerGbHr: 0.005,
+  diskPerGbHr: 0.0011,
+  minChargePerHr: undefined,
+}
+
+/**
+ * Real (unclamped) resource preset values. The wizard locks any preset
+ * that exceeds the current plan's limits rather than rewriting its
+ * values, so every user sees the same three rows but the locked ones
+ * carry an upsell badge. Hoisted out of the component body so the
+ * array identity is stable across renders.
+ */
+const RAW_PRESETS: ReadonlyArray<{ name: string; cpu: number; ram: number; storage: number }> = [
+  { name: "Lightweight", cpu: 2, ram: 4, storage: 50 },
+  { name: "Standard", cpu: 4, ram: 16, storage: 128 },
+  { name: "Performance", cpu: 8, ram: 32, storage: 256 },
+]
+
+function calcCost(cpu: number, ram: number, storage: number, rates: PricingRates): string {
+  const cost = Math.max(
+    rates.minChargePerHr ?? 0,
+    cpu * rates.cpuPerHr +
+    ram * rates.ramPerGbHr +
+    storage * rates.diskPerGbHr
+  )
   return cost.toFixed(2)
 }
 
@@ -134,6 +210,9 @@ export function ProvisioningWizard({
   skipToReview,
   onLoadStartupScripts,
   resourceLimits,
+  modelOptions,
+  pricingRates,
+  planTiers,
 }: ProvisioningWizardProps) {
   const cpuMax = Math.max(CPU_MIN, Math.min(resourceLimits?.cpuMax ?? CPU_MAX, CPU_MAX))
   const ramMax = Math.max(RAM_MIN, Math.min(resourceLimits?.ramMaxGB ?? RAM_MAX, RAM_MAX))
@@ -177,8 +256,22 @@ export function ProvisioningWizard({
     setStorageGB((prev) => Math.min(prev, storageMax))
   }, [cpuMax, ramMax, storageMax])
 
-  const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? "claude-sonnet")
+  const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? DEFAULT_MODEL_TIER)
   const [systemPrompt, setSystemPrompt] = React.useState(dc?.systemPrompt ?? "")
+
+  // If the current modelTier is not in the options list, or is present but disabled,
+  // auto-select the first available option so the <select> always reflects a real value.
+  React.useEffect(() => {
+    const options = modelOptions ?? DEFAULT_MODEL_OPTIONS
+    if (options.length === 0) return
+    const currentOption = options.find((o) => o.value === modelTier)
+    if (!currentOption || currentOption.disabled) {
+      const firstAvailable = options.find((o) => !o.disabled)
+      if (firstAvailable && firstAvailable.value !== modelTier) {
+        setModelTier(firstAvailable.value)
+      }
+    }
+  }, [modelOptions, modelTier])
   const [name, setName] = React.useState(dc?.name ?? "")
   const [gitUrl, setGitUrl] = React.useState(dc?.gitUrl ?? "")
   const [envVars, setEnvVars] = React.useState<{key: string, value: string}[]>(dc?.envVars ?? [{ key: "", value: "" }])
@@ -230,13 +323,73 @@ export function ProvisioningWizard({
     setActivePreset(name)
   }
 
-  const presets = [
-    { name: "Lightweight", cpu: Math.min(2, cpuMax), ram: Math.min(4, ramMax), storage: Math.min(50, storageMax) },
-    { name: "Standard", cpu: Math.min(4, cpuMax), ram: Math.min(16, ramMax), storage: Math.min(128, storageMax) },
-    { name: "Performance", cpu: Math.min(8, cpuMax), ram: Math.min(32, ramMax), storage: Math.min(256, storageMax) },
-  ]
+  // Determine which presets fit within user's limits and mark locked ones.
+  // For each locked preset, compute the smallest `planTiers` entry that
+  // would unlock it — so a Pro user sees "Enterprise" on presets that
+  // exceed their Pro limits, instead of a misleading "Pro" badge.
+  const presets = RAW_PRESETS.map((p) => {
+    const locked = p.cpu > cpuMax || p.ram > ramMax || p.storage > storageMax
+    let unlockLabel: string | undefined
+    if (locked && planTiers && planTiers.length > 0) {
+      const unlocking = planTiers.find(
+        (t) => p.cpu <= t.cpuMax && p.ram <= t.ramMaxGB && p.storage <= t.storageMaxGB,
+      )
+      unlockLabel = unlocking?.label
+    }
+    return {
+      ...p,
+      fits: !locked,
+      locked,
+      unlockLabel: unlockLabel ?? "Pro",
+    }
+  })
 
-  const hourCost = calcCost(cpuCores, ramGB, storageGB)
+  // Initialise preset selection. Re-runs when the effective limits
+  // actually change (tracked via a ref to avoid firing on every render)
+  // because wrappers usually load `resourceLimits` async via SWR — the
+  // first render sees the unclamped CPU_MAX/RAM_MAX/STORAGE_MAX
+  // defaults, and without this we'd freeze `activePreset = "Performance"`
+  // for a free-tier user once the real limits arrived.
+  //
+  //  - dc flow (edit): the edit-flow init only runs once, matching the
+  //    saved cpu/ram/storage against the real (unclamped) preset values
+  //    so the saved state isn't overwritten.
+  //  - new-sandbox flow: pick the largest preset that fits the current
+  //    limits; if none fit (free tier), clear `activePreset` so no
+  //    button shows as selected.
+  const didInitPresetFromDcRef = React.useRef(false)
+  const lastLimitsRef = React.useRef<{ cpu: number; ram: number; storage: number } | null>(null)
+  React.useEffect(() => {
+    const limitsUnchanged =
+      lastLimitsRef.current !== null &&
+      lastLimitsRef.current.cpu === cpuMax &&
+      lastLimitsRef.current.ram === ramMax &&
+      lastLimitsRef.current.storage === storageMax
+    if (limitsUnchanged) return
+    lastLimitsRef.current = { cpu: cpuMax, ram: ramMax, storage: storageMax }
+
+    if (dc && !didInitPresetFromDcRef.current) {
+      didInitPresetFromDcRef.current = true
+      const matching = RAW_PRESETS.find(
+        (p) => p.cpu === dc.cpuCores && p.ram === dc.ramGB && p.storage === dc.storageGB,
+      )
+      if (matching) setActivePreset(matching.name)
+      return
+    }
+
+    const largestFitting = [...RAW_PRESETS]
+      .reverse()
+      .find((p) => p.cpu <= cpuMax && p.ram <= ramMax && p.storage <= storageMax)
+    if (largestFitting) {
+      applyPreset(largestFitting.name, largestFitting.cpu, largestFitting.ram, largestFitting.storage)
+    } else {
+      setActivePreset(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cpuMax, ramMax, storageMax, dc])
+
+  const effectivePricingRates = pricingRates ?? DEFAULT_PRICING_RATES
+  const hourCost = calcCost(cpuCores, ramGB, storageGB, effectivePricingRates)
 
   return (
     <div className={cn("max-w-6xl mx-auto flex flex-col", className)}>
@@ -298,7 +451,16 @@ export function ProvisioningWizard({
                   setCpuCores(Math.min(4, cpuMax))
                   setRamGB(Math.min(16, ramMax))
                   setStorageGB(Math.min(128, storageMax))
-                  setModelTier("claude-sonnet")
+                  // Use the first *available* option from the caller's
+                  // `modelOptions` so the <select> never renders an unknown
+                  // value between this reset and the auto-correct effect.
+                  // Falls back to the hardcoded default when the caller
+                  // didn't supply options at all.
+                  {
+                    const resetOptions = modelOptions ?? DEFAULT_MODEL_OPTIONS
+                    const firstAvailable = resetOptions.find((o) => !o.disabled)
+                    setModelTier(firstAvailable?.value ?? DEFAULT_MODEL_TIER)
+                  }
                   setSystemPrompt("")
                   setName("")
                   setGitUrl("")
@@ -384,11 +546,36 @@ export function ProvisioningWizard({
               <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Compute Presets</label>
               <div className="grid grid-cols-3 gap-3">
                 {presets.map((p) => {
-                  const active = activePreset === p.name
+                  // A locked preset must never paint as active, even if an
+                  // earlier render or stale state set activePreset to its name
+                  // (e.g. before async resourceLimits arrived).
+                  const active = activePreset === p.name && !p.locked
                   return (
-                    <button key={p.name} type="button" onClick={() => applyPreset(p.name, p.cpu, p.ram, p.storage)} className={cn("p-3 rounded-[14px] transition-all duration-200 text-center group border", active ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm" : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]")}>
-                      <div className={cn("font-bold text-sm transition-colors duration-200", active ? "text-primary" : "text-foreground")}>{p.name}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5 font-mono">{p.cpu}C / {p.ram}G / {p.storage}G</div>
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => !p.locked && applyPreset(p.name, p.cpu, p.ram, p.storage)}
+                      disabled={p.locked}
+                      className={cn(
+                        "p-3 rounded-[14px] transition-all duration-200 text-center group border relative",
+                        active
+                          ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm"
+                          : p.locked
+                            ? "bg-muted/30 border-border opacity-60 cursor-not-allowed"
+                            : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]"
+                      )}
+                    >
+                      {p.locked && (
+                        <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                          {p.unlockLabel}
+                        </div>
+                      )}
+                      <div className={cn("font-bold text-sm transition-colors duration-200", active ? "text-primary" : p.locked ? "text-muted-foreground" : "text-foreground")}>
+                        {p.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5 font-mono">
+                        {p.cpu} vCPU{p.cpu === 1 ? "" : "s"} / {p.ram}GB / {p.storage}GB
+                      </div>
                     </button>
                   )
                 })}
@@ -397,14 +584,16 @@ export function ProvisioningWizard({
 
             <div className="space-y-6">
               {[
-                { label: "Compute Cores (CPU)", value: cpuCores, setter: setCpuCores, min: CPU_MIN, max: cpuMax, step: 0.5, unit: "vCPUs" },
+                { label: "Compute Cores (CPU)", value: cpuCores, setter: setCpuCores, min: CPU_MIN, max: cpuMax, step: 0.5, unit: "vCPU" },
                 { label: "Memory (RAM)", value: ramGB, setter: setRamGB, min: RAM_MIN, max: ramMax, step: 1, unit: "GB" },
                 { label: "Ephemeral Storage", value: storageGB, setter: setStorageGB, min: STORAGE_MIN, max: storageMax, step: 8, unit: "GB" },
-              ].map(({ label, value, setter, min, max, step: s, unit }) => (
+              ].map(({ label, value, setter, min, max, step: s, unit }) => {
+                const displayUnit = unit === "vCPU" ? `${value} vCPU${value === 1 ? "" : "s"}` : `${value}${unit}`
+                return (
                 <div key={label}>
                   <div className="flex justify-between items-end border-b border-border pb-1.5 mb-2">
                     <label className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">{label}</label>
-                    <span className="text-xl font-bold text-foreground tracking-tight">{value} <span className="text-xs text-primary ml-1">{unit}</span></span>
+                    <span className="text-xl font-bold text-foreground tracking-tight">{displayUnit}</span>
                   </div>
                   <input
                     type="range"
@@ -416,11 +605,11 @@ export function ProvisioningWizard({
                     className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-runnable-track]:bg-border [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:h-2 [&::-moz-range-track]:bg-border [&::-moz-range-track]:rounded-full [&::-moz-range-track]:h-2 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary-foreground [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
                   />
                   <div className="flex justify-between text-[10px] font-mono text-muted-foreground/60 mt-1">
-                    <span>{min}{unit}</span>
-                    <span>{max}{unit}</span>
+                    <span>{min}{unit === "vCPU" ? (min === 1 ? " vCPU" : " vCPUs") : unit}</span>
+                    <span>{max}{unit === "vCPU" ? (max === 1 ? " vCPU" : " vCPUs") : unit}</span>
                   </div>
                 </div>
-              ))}
+                )})}
             </div>
           </section>
           </React.Fragment>
@@ -440,12 +629,25 @@ export function ProvisioningWizard({
                 <select
                   value={modelTier}
                   onChange={(e) => setModelTier(e.target.value)}
-                  className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
+                  disabled={modelOptions && modelOptions.filter(o => !o.disabled).length === 0}
+                  className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="llama-3-8b" className="bg-gray-900">Llama-3-8B-Instruct (Lightweight)</option>
-                  <option value="mistral-7b" className="bg-gray-900">Mistral-7B-v0.2 (Efficient)</option>
-                  <option value="claude-sonnet" className="bg-gray-900">Claude Sonnet 4.6 (Highly Capable)</option>
+                  {(modelOptions ?? DEFAULT_MODEL_OPTIONS).map((option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      disabled={option.disabled}
+                      className="bg-gray-900"
+                    >
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
+                {modelOptions && modelOptions.length > 0 && modelOptions.every(o => o.disabled) && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    All model options are currently disabled. Please upgrade your plan or contact support.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Core Directives (System Prompt)</label>
@@ -603,33 +805,8 @@ export function ProvisioningWizard({
           </div>
         </div>
 
-        {/* Right: Cost estimator + terminal preview */}
+        {/* Right: Cost estimator */}
         <div className="col-span-12 xl:col-span-4 sticky top-4 space-y-4">
-          {/* Terminal preview */}
-          <div className="bg-card border border-primary/15 rounded-[24px] overflow-hidden shadow-2xl relative">
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(173,163,255,0.05)_0,transparent_100%)] pointer-events-none" />
-            <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center gap-3">
-              <div className="flex gap-2">
-                <div className="h-3 w-3 rounded-full bg-[#ff5f56]/80" />
-                <div className="h-3 w-3 rounded-full bg-[#ffbd2e]/80" />
-                <div className="h-3 w-3 rounded-full bg-[#27c93f]/80" />
-              </div>
-              <div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest ml-2 border-l border-border pl-3">deploy_sequence.sh</div>
-            </div>
-            <div className="p-5 font-mono text-xs space-y-3 min-h-[240px] relative z-10 text-[13px]">
-              <div className="text-green-400">root@tangle:~# <span className="text-foreground/80">tangle-cli provision --new</span></div>
-              <div className="text-muted-foreground/70">Initializing deployment handshake...</div>
-              <div className="text-foreground/70"><span className="text-primary mr-2">&#10003;</span> Bound Platform: <span key={`env-${selectedEnv}`} className="text-foreground font-bold animate-in fade-in duration-300">{environments.find((e) => e.id === selectedEnv)?.name ?? "Node.js"}</span></div>
-              <div className="text-foreground/70"><span className="text-primary mr-2">&#10003;</span> Allocation CPU: <span key={`cpu-${cpuCores}`} className="text-foreground font-bold animate-in fade-in duration-300">{cpuCores} Cores</span></div>
-              <div className="text-foreground/70"><span className="text-primary mr-2">&#10003;</span> Allocation RAM: <span key={`ram-${ramGB}`} className="text-foreground font-bold animate-in fade-in duration-300">{ramGB}GB</span></div>
-              <div className="text-foreground/70"><span className="text-primary mr-2">&#10003;</span> Mounted Storage: <span key={`disk-${storageGB}`} className="text-foreground font-bold animate-in fade-in duration-300">{storageGB}GB NVMe</span></div>
-              <div className="pt-3 flex items-center gap-3">
-                <div className="w-2 h-4 bg-primary animate-pulse" />
-                <span className="text-muted-foreground">Awaiting user confirmation...</span>
-              </div>
-            </div>
-          </div>
-
           {/* Cost card */}
           <div className="p-6 rounded-[24px] bg-card border border-primary/15 relative overflow-hidden">
             <div className="hidden" />
@@ -644,20 +821,40 @@ export function ProvisioningWizard({
               <span key={hourCost} className="text-4xl font-black text-foreground tracking-tighter animate-in fade-in duration-200">${hourCost}</span>
               <span className="text-muted-foreground text-sm font-bold">/ hour</span>
             </div>
-            <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                <span>COMPUTE</span>
-                <span className="text-foreground">${(cpuCores * 0.045).toFixed(2)}/h</span>
-              </div>
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                <span>MEMORY</span>
-                <span className="text-foreground/80">${(ramGB * 0.005).toFixed(2)}/h</span>
-              </div>
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                <span>STORAGE</span>
-                <span className="text-foreground/80">${(storageGB * 0.0011).toFixed(2)}/h</span>
-              </div>
-            </div>
+            {(() => {
+              // Show the raw per-resource breakdown, and — when the plan's
+              // hourly floor is above the summed line items — surface the
+              // floor as its own row so the header total never silently
+              // disagrees with the sum (reviewed in upstream PR feedback).
+              const computeCost = cpuCores * effectivePricingRates.cpuPerHr
+              const memoryCost = ramGB * effectivePricingRates.ramPerGbHr
+              const storageCost = storageGB * effectivePricingRates.diskPerGbHr
+              const lineSum = computeCost + memoryCost + storageCost
+              const floor = effectivePricingRates.minChargePerHr ?? 0
+              const floorApplies = floor > lineSum
+              return (
+                <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
+                  <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                    <span>COMPUTE</span>
+                    <span className="text-foreground">${computeCost.toFixed(2)}/h</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                    <span>MEMORY</span>
+                    <span className="text-foreground/80">${memoryCost.toFixed(2)}/h</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                    <span>STORAGE</span>
+                    <span className="text-foreground/80">${storageCost.toFixed(2)}/h</span>
+                  </div>
+                  {floorApplies && (
+                    <div className="flex justify-between text-xs font-mono tracking-widest text-primary border-t border-border pt-2">
+                      <span>MIN CHARGE</span>
+                      <span>${(floor - lineSum).toFixed(2)}/h</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Deploy error */}

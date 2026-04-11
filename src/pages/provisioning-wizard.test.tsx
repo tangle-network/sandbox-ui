@@ -244,7 +244,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
     expect(config.storageGB).toBeLessThanOrEqual(64)
   })
 
-  it("preset buttons clamp values to resourceLimits", async () => {
+  it("locked presets are disabled and clicking them does not apply their values", async () => {
     const user = userEvent.setup()
     const onSubmit = vi.fn().mockResolvedValue(undefined)
 
@@ -252,11 +252,24 @@ describe("ProvisioningWizard — resourceLimits", () => {
       <ProvisioningWizard
         variant="flat"
         onSubmit={onSubmit}
+        // 2 vCPU / 8 GB / 64 GB leaves Lightweight (2/4/50) as the only
+        // fitting preset; Standard (4/16/128) and Performance (8/32/256)
+        // both exceed it, so they must be rendered disabled.
         resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
       />,
     )
 
-    // Click "Performance" preset (8C/32G/256G) which exceeds all limits
+    const standardBtn = screen.getByText("Standard").closest("button")
+    const performanceBtn = screen.getByText("Performance").closest("button")
+    expect(standardBtn).toBeDisabled()
+    expect(performanceBtn).toBeDisabled()
+    // Lightweight fits, so it should remain interactive and auto-selected.
+    const lightweightBtn = screen.getByText("Lightweight").closest("button")
+    expect(lightweightBtn).not.toBeDisabled()
+
+    // Clicking a locked preset must not apply its raw values (the onClick
+    // handler short-circuits on `p.locked` AND the button is disabled so
+    // the click is swallowed by the browser).
     await user.click(screen.getByText("Performance"))
 
     await user.click(screen.getByRole("button", { name: /deploy workspace/i }))
@@ -266,9 +279,15 @@ describe("ProvisioningWizard — resourceLimits", () => {
     })
 
     const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
-    expect(config.cpuCores).toBe(2)
-    expect(config.ramGB).toBe(8)
-    expect(config.storageGB).toBe(64)
+    // Sliders still obey the user's limits — the disabled click was a no-op.
+    expect(config.cpuCores).toBeLessThanOrEqual(2)
+    expect(config.ramGB).toBeLessThanOrEqual(8)
+    expect(config.storageGB).toBeLessThanOrEqual(64)
+    // And the click to Performance did NOT succeed in bumping the sliders
+    // up to the preset's raw values.
+    expect(config.cpuCores).toBeLessThan(8)
+    expect(config.ramGB).toBeLessThan(32)
+    expect(config.storageGB).toBeLessThan(256)
   })
 
   it("'Start from scratch' clamps values to resourceLimits", async () => {
@@ -351,7 +370,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
     expect(Number(sliders[2].getAttribute("max"))).toBeGreaterThanOrEqual(Number(sliders[2].getAttribute("min")))
   })
 
-  it("preset labels reflect clamped values when limits are active", () => {
+  it("preset labels always show their real unclamped values", () => {
     render(
       <ProvisioningWizard
         variant="flat"
@@ -359,10 +378,190 @@ describe("ProvisioningWizard — resourceLimits", () => {
       />,
     )
 
-    // Both "Standard" (4/16/128) and "Performance" (8/32/256) clamp to the same values
-    const clampedLabels = screen.getAllByText("2C / 8G / 64G")
-    expect(clampedLabels).toHaveLength(2)
-    // "Lightweight" preset (2C/4G/50G) — cpu and ram within limits, storage within limits
-    expect(screen.getByText("2C / 4G / 50G")).toBeInTheDocument()
+    // The wizard renders every preset with its real specs regardless of
+    // the caller's limits — out-of-range rows are disabled and badged
+    // with an upsell tier rather than silently rewritten to the user's
+    // max. This makes the "Pro plan unlocks more" story visible.
+    expect(screen.getByText("2 vCPUs / 4GB / 50GB")).toBeInTheDocument()
+    expect(screen.getByText("4 vCPUs / 16GB / 128GB")).toBeInTheDocument()
+    expect(screen.getByText("8 vCPUs / 32GB / 256GB")).toBeInTheDocument()
+  })
+})
+
+describe("ProvisioningWizard — modelOptions", () => {
+  it("renders the provided model options in the dropdown", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        modelOptions={[
+          { value: "claude-sonnet", label: "Claude Sonnet 4.5" },
+          { value: "gpt-5.2", label: "GPT-5.2" },
+        ]}
+      />,
+    )
+    expect(screen.getByRole("option", { name: "Claude Sonnet 4.5" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "GPT-5.2" })).toBeInTheDocument()
+    // The default "Mistral"/"Llama" strings must not bleed through
+    expect(screen.queryByText(/Llama/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Mistral/i)).not.toBeInTheDocument()
+  })
+
+  it("auto-selects the first available option when the current value is not in the list", async () => {
+    // The wizard's internal `modelTier` state starts at "claude-sonnet".
+    // If the caller's option list only contains other ids, the wizard
+    // must switch to the first available option so the <select>
+    // reflects a real value instead of silently dropping to an unknown.
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        onSubmit={onSubmit}
+        modelOptions={[
+          { value: "gpt-5.2", label: "GPT-5.2" },
+          { value: "glm-4.7", label: "GLM 4.7" },
+        ]}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
+    expect(config.modelTier).toBe("gpt-5.2")
+  })
+
+  it("skips past disabled options when auto-selecting", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        onSubmit={onSubmit}
+        modelOptions={[
+          { value: "gpt-5.2", label: "GPT-5.2", disabled: true },
+          { value: "glm-4.7", label: "GLM 4.7" },
+        ]}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
+    expect(config.modelTier).toBe("glm-4.7")
+  })
+})
+
+describe("ProvisioningWizard — pricingRates", () => {
+  it("computes the hourly total from caller-supplied rates", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        // Limits kept tiny so sliders start at predictable values: 1 vCPU / 2 GB / 20 GB.
+        resourceLimits={{ cpuMax: 1, ramMaxGB: 2, storageMaxGB: 20 }}
+        pricingRates={{
+          cpuPerHr: 0.1,
+          ramPerGbHr: 0.02,
+          diskPerGbHr: 0.001,
+          minChargePerHr: 0,
+        }}
+      />,
+    )
+    // 1 * 0.1 + 2 * 0.02 + 20 * 0.001 = 0.10 + 0.04 + 0.02 = 0.16
+    expect(screen.getByText("$0.16")).toBeInTheDocument()
+  })
+
+  it("honours minChargePerHr as a floor and surfaces the difference as a MIN CHARGE row", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 1, ramMaxGB: 2, storageMaxGB: 20 }}
+        pricingRates={{
+          cpuPerHr: 0.01,
+          ramPerGbHr: 0.001,
+          diskPerGbHr: 0.0001,
+          // Lines sum to 0.01 + 0.002 + 0.002 = 0.014 → well below 1.00
+          minChargePerHr: 1.0,
+        }}
+      />,
+    )
+    // Header total reflects the floor…
+    expect(screen.getByText("$1.00")).toBeInTheDocument()
+    // …and the breakdown surfaces the floor contribution explicitly so
+    // line items + MIN CHARGE = total.
+    expect(screen.getByText("MIN CHARGE")).toBeInTheDocument()
+  })
+
+  it("does not render MIN CHARGE when the line sum already clears the floor", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 1, ramMaxGB: 2, storageMaxGB: 20 }}
+        pricingRates={{
+          cpuPerHr: 0.1,
+          ramPerGbHr: 0.02,
+          diskPerGbHr: 0.001,
+          minChargePerHr: 0.01, // line sum (0.16) >> floor
+        }}
+      />,
+    )
+    expect(screen.queryByText("MIN CHARGE")).not.toBeInTheDocument()
+  })
+})
+
+describe("ProvisioningWizard — planTiers", () => {
+  it("badges locked presets with the smallest tier that unlocks them", () => {
+    // Caller is on a Pro-equivalent plan. Performance (32 GB RAM) exceeds
+    // Pro's 16 GB cap, so it must be locked AND badged with "Enterprise" —
+    // not the legacy hardcoded "Pro" label.
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 8, ramMaxGB: 16, storageMaxGB: 256 }}
+        planTiers={[
+          { id: "free", label: "Free", cpuMax: 1, ramMaxGB: 2, storageMaxGB: 50 },
+          { id: "pro", label: "Pro", cpuMax: 8, ramMaxGB: 16, storageMaxGB: 256 },
+          { id: "enterprise", label: "Enterprise", cpuMax: 12, ramMaxGB: 32, storageMaxGB: 512 },
+        ]}
+      />,
+    )
+
+    // Performance row is the only locked preset under Pro limits.
+    const performanceButton = screen.getByText("Performance").closest("button")
+    expect(performanceButton).toBeDisabled()
+    // The badge lives inside that button.
+    expect(performanceButton?.textContent).toContain("Enterprise")
+    // Other two are unlocked — no badge.
+    expect(screen.getByText("Lightweight").closest("button")).not.toBeDisabled()
+    expect(screen.getByText("Standard").closest("button")).not.toBeDisabled()
+  })
+
+  it("falls back to a 'Pro' badge when planTiers is not provided", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 1, ramMaxGB: 2, storageMaxGB: 50 }}
+      />,
+    )
+    // Lightweight is locked on free-tier limits; without planTiers, the
+    // wizard still has to render *some* label so it defaults to "Pro".
+    const lightweightButton = screen.getByText("Lightweight").closest("button")
+    expect(lightweightButton).toBeDisabled()
+    expect(lightweightButton?.textContent).toContain("Pro")
+  })
+
+  it("renders no preset as selected when every row is locked", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 1, ramMaxGB: 2, storageMaxGB: 50 }}
+      />,
+    )
+    for (const name of ["Lightweight", "Standard", "Performance"]) {
+      const btn = screen.getByText(name).closest("button") as HTMLButtonElement
+      expect(btn).toBeDisabled()
+      // The "active" styling hinges on the `border-primary` class; none of
+      // the locked rows should carry it (they use `border-border` instead).
+      expect(btn.className).not.toContain("border-primary")
+    }
   })
 })

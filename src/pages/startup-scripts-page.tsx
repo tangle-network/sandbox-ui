@@ -955,10 +955,14 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
             <button
               type="button"
               onClick={openCreate}
+              // See secrets-page: distinct aria-label from the header CTA
+              // so assistive tech (and existing tests) can address them
+              // independently while the visible verb stays consistent.
+              aria-label="Create your first startup script"
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
             >
               <Plus className="h-4 w-4" />
-              Create Script
+              New Script
             </button>
           </div>
         ) : (

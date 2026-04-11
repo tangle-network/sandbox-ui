@@ -20,7 +20,7 @@ import {
   ProfileAvatar,
 } from "./app-sidebar"
 import type { SidebarUser } from "./app-sidebar"
-import { SidebarProvider, useSidebar, SIDEBAR_TOTAL_WIDTH, SIDEBAR_RAIL_WIDTH } from "./sidebar-context"
+import { SidebarProvider, useSidebar, SIDEBAR_MOBILE_WIDTH, SIDEBAR_PANEL_WIDTH } from "./sidebar-context"
 
 // ============================================================================
 // Types
@@ -207,85 +207,119 @@ function DashboardLayoutInner({
   const { contentMargin, hidden, mode, hasPanels, panelOpen } = useSidebar()
   const modeSet = React.useMemo(() => new Set(modeItems), [modeItems])
 
-  const sidebarUser: SidebarUser | undefined = user
-    ? { email: user.email, name: user.name, tier: user.tier, avatarUrl: user.avatarUrl }
-    : undefined
+  // Memoised so the `buildSidebarContent` callback below (which depends on
+  // this value) doesn't recreate on every render — that was silently
+  // defeating both `sidebarContent` / `mobileSidebarContent` useMemos.
+  const sidebarUser = React.useMemo<SidebarUser | undefined>(
+    () =>
+      user
+        ? { email: user.email, name: user.name, tier: user.tier, avatarUrl: user.avatarUrl }
+        : undefined,
+    [user?.email, user?.name, user?.tier, user?.avatarUrl],
+  )
 
   const activePanel = panels.find((p) => p.mode === mode)
 
-  // The composable sidebar — consumers can replace this entirely
-  const sidebarContent = (
-    <>
-      <SidebarRail>
-        <SidebarRailHeader>
-          <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-muted/50">
-            <Logo variant={variant} size="sm" iconOnly />
-          </Link>
-        </SidebarRailHeader>
+  // Build the sidebar tree once per relevant dependency change. We keep
+  // desktop (icon-only rail) and mobile (labeled drawer) as two memoised
+  // trees so a state change that only affects one (e.g. toggling
+  // `mobileMenuOpen`) doesn't force the other to reconcile.
+  const buildSidebarContent = React.useCallback(
+    (showLabels: boolean) => (
+      <>
+        <SidebarRail wide={showLabels}>
+          <SidebarRailHeader>
+            <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-muted/50">
+              <Logo variant={variant} size="sm" iconOnly />
+            </Link>
+          </SidebarRailHeader>
 
-        <SidebarRailNav>
-          {navItems.map((item, i) => {
-            const isMode = modeSet.has(item.id)
-            const prevIsMode = i > 0 && modeSet.has(navItems[i - 1].id)
-            const showSep = i > 0 && isMode && !prevIsMode
+          <SidebarRailNav>
+            {navItems.map((item, i) => {
+              const isMode = modeSet.has(item.id)
+              const prevIsMode = i > 0 && modeSet.has(navItems[i - 1].id)
+              const showSep = i > 0 && isMode && !prevIsMode
 
-            return (
-              <React.Fragment key={item.id}>
-                {showSep && <RailSeparator />}
-                {isMode ? (
-                  <RailModeButton
-                    mode={item.id}
-                    icon={item.icon}
-                    label={item.label}
-                    badge={item.badge}
-                  />
-                ) : (
-                  <Link href={item.href} to={item.href}>
-                    <RailButton
+              return (
+                <React.Fragment key={item.id}>
+                  {showSep && <RailSeparator />}
+                  {isMode ? (
+                    <RailModeButton
+                      mode={item.id}
                       icon={item.icon}
                       label={item.label}
-                      isActive={activeNavId === item.id}
+                      badge={item.badge}
+                      showLabel={showLabels}
                     />
-                  </Link>
-                )}
-              </React.Fragment>
-            )
-          })}
-        </SidebarRailNav>
+                  ) : (
+                    <Link href={item.href} to={item.href}>
+                      <RailButton
+                        icon={item.icon}
+                        label={item.label}
+                        isActive={activeNavId === item.id}
+                        showLabel={showLabels}
+                      />
+                    </Link>
+                  )}
+                </React.Fragment>
+              )
+            })}
+          </SidebarRailNav>
 
-        <SidebarRailFooter>
-          {onSettingsClick ? (
-            <RailButton icon={SettingsIconSmall} label="Settings" onClick={onSettingsClick} />
-          ) : (
-            <Link href={settingsHref} to={settingsHref}>
-              <RailButton icon={SettingsIconSmall} label="Settings" />
-            </Link>
-          )}
-          {railFooter}
-          <RailSeparator />
-          <ProfileAvatar
-            user={sidebarUser}
-            isLoading={isLoading}
-            onLogout={onLogout}
-            onSettingsClick={onSettingsClick}
-            settingsHref={settingsHref}
-            LinkComponent={LinkComponent}
-          >
-            {profileMenuItems}
-          </ProfileAvatar>
-        </SidebarRailFooter>
-      </SidebarRail>
+          <SidebarRailFooter>
+            {onSettingsClick ? (
+              <RailButton icon={SettingsIconSmall} label="Settings" onClick={onSettingsClick} showLabel={showLabels} />
+            ) : (
+              <Link href={settingsHref} to={settingsHref}>
+                <RailButton icon={SettingsIconSmall} label="Settings" showLabel={showLabels} />
+              </Link>
+            )}
+            {railFooter}
+            <RailSeparator />
+            <ProfileAvatar
+              user={sidebarUser}
+              isLoading={isLoading}
+              onLogout={onLogout}
+              onSettingsClick={onSettingsClick}
+              settingsHref={settingsHref}
+              LinkComponent={LinkComponent}
+            >
+              {profileMenuItems}
+            </ProfileAvatar>
+          </SidebarRailFooter>
+        </SidebarRail>
 
-      {panels.length > 0 && (
-        <SidebarPanel>
-          <SidebarPanelHeader title={activePanel?.title ?? mode} />
-          <SidebarPanelContent>
-            {activePanel?.content}
-          </SidebarPanelContent>
-        </SidebarPanel>
-      )}
-    </>
+        {panels.length > 0 && (
+          <SidebarPanel>
+            <SidebarPanelHeader title={activePanel?.title ?? mode} />
+            <SidebarPanelContent>{activePanel?.content}</SidebarPanelContent>
+          </SidebarPanel>
+        )}
+      </>
+    ),
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — only the inputs that actually affect the sidebar tree
+    [
+      Link,
+      variant,
+      navItems,
+      modeSet,
+      activeNavId,
+      onSettingsClick,
+      settingsHref,
+      railFooter,
+      sidebarUser,
+      isLoading,
+      onLogout,
+      LinkComponent,
+      profileMenuItems,
+      panels,
+      activePanel,
+      mode,
+    ],
   )
+
+  const sidebarContent = React.useMemo(() => buildSidebarContent(false), [buildSidebarContent])
+  const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true), [buildSidebarContent])
 
   return (
     <div className={cn("min-h-screen bg-background text-foreground", className)}>
@@ -298,6 +332,12 @@ function DashboardLayoutInner({
         }}
       >
         <div className="flex items-center gap-8">
+          {/* Mobile-only brand — the desktop sidebar rail carries the logo
+              on lg+, but on mobile the rail is hidden behind the drawer and
+              the top bar otherwise contained only a bell + hamburger. */}
+          <Link href="/" to="/" className="lg:hidden flex items-center p-1 rounded-md hover:bg-muted/50 transition-colors">
+            <Logo variant={variant} size="sm" iconOnly />
+          </Link>
           {topNavLinks && topNavLinks.length > 0 && (
             <div className="hidden md:flex gap-6">
               {topNavLinks.map((link) => (
@@ -406,15 +446,23 @@ function DashboardLayoutInner({
         <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMobileMenuOpen(false)} aria-hidden="true" />
       )}
 
-      {/* Mobile sidebar drawer */}
+      {/* Mobile sidebar drawer. The mobile rail renders labels beside
+          icons (see `SidebarRail` `wide` prop) so the drawer must be wider
+          than the 64px icon rail to avoid truncating them. When a panel
+          is open we extend by the panel width so both sit side-by-side. */}
       <aside
         className={cn(
           "fixed top-14 bottom-0 left-0 z-30 flex bg-background transition-transform duration-200 lg:hidden",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
-        style={{ width: (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH }}
+        style={{
+          width:
+            panelOpen && hasPanels
+              ? SIDEBAR_MOBILE_WIDTH + SIDEBAR_PANEL_WIDTH
+              : SIDEBAR_MOBILE_WIDTH,
+        }}
       >
-        {sidebarContent}
+        {mobileSidebarContent}
       </aside>
 
       {/* Desktop sidebar */}
@@ -422,15 +470,12 @@ function DashboardLayoutInner({
         {sidebarContent}
       </Sidebar>
 
-      {/* Main content */}
-      <SidebarContent className={cn("pt-16 px-8 pb-8 hidden lg:block bg-background", contentClassName)}>
+      {/* Single responsive main landmark — SidebarContent only applies the
+          desktop sidebar margin at lg+, so this one <main> works for both
+          viewports and keeps screen-reader landmarks unambiguous. */}
+      <SidebarContent className={cn("pt-16 px-6 pb-8 lg:px-8 bg-background", contentClassName)}>
         {children}
       </SidebarContent>
-
-      {/* Mobile main content (no sidebar offset) */}
-      <main className={cn("pt-16 px-6 pb-8 min-h-screen lg:hidden bg-background", contentClassName)}>
-        {children}
-      </main>
 
       {footer}
     </div>

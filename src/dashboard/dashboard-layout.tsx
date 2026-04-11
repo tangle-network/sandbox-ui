@@ -207,9 +207,16 @@ function DashboardLayoutInner({
   const { contentMargin, hidden, mode, hasPanels, panelOpen } = useSidebar()
   const modeSet = React.useMemo(() => new Set(modeItems), [modeItems])
 
-  const sidebarUser: SidebarUser | undefined = user
-    ? { email: user.email, name: user.name, tier: user.tier, avatarUrl: user.avatarUrl }
-    : undefined
+  // Memoised so the `buildSidebarContent` callback below (which depends on
+  // this value) doesn't recreate on every render — that was silently
+  // defeating both `sidebarContent` / `mobileSidebarContent` useMemos.
+  const sidebarUser = React.useMemo<SidebarUser | undefined>(
+    () =>
+      user
+        ? { email: user.email, name: user.name, tier: user.tier, avatarUrl: user.avatarUrl }
+        : undefined,
+    [user?.email, user?.name, user?.tier, user?.avatarUrl],
+  )
 
   const activePanel = panels.find((p) => p.mode === mode)
 

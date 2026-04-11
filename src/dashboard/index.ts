@@ -33,6 +33,7 @@ export {
   SIDEBAR_RAIL_WIDTH,
   SIDEBAR_PANEL_WIDTH,
   SIDEBAR_TOTAL_WIDTH,
+  SIDEBAR_MOBILE_WIDTH,
   type SidebarProviderProps,
 } from "./sidebar-context";
 export {

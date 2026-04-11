@@ -184,7 +184,7 @@ export {
   type SidebarContentProps, type RailButtonProps, type RailModeButtonProps,
   type RailSeparatorProps, type ProfileAvatarProps, type SidebarUser,
 } from "./dashboard/app-sidebar";
-export { SidebarProvider, useSidebar, SIDEBAR_RAIL_WIDTH, SIDEBAR_PANEL_WIDTH, SIDEBAR_TOTAL_WIDTH, type SidebarProviderProps } from "./dashboard/sidebar-context";
+export { SidebarProvider, useSidebar, SIDEBAR_RAIL_WIDTH, SIDEBAR_PANEL_WIDTH, SIDEBAR_TOTAL_WIDTH, SIDEBAR_MOBILE_WIDTH, type SidebarProviderProps } from "./dashboard/sidebar-context";
 export { ClusterStatusBar, type ClusterStatusBarProps, type ClusterStatusItem } from "./dashboard/cluster-status-bar";
 export { CreditBalance, type CreditBalanceProps } from "./dashboard/credit-balance";
 export { InvoiceTable, type InvoiceTableProps, type Invoice } from "./dashboard/invoice-table";

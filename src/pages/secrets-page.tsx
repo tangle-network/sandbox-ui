@@ -291,6 +291,10 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
+              // aria-label distinguishes this empty-state CTA from the
+              // header "New Secret" button for assistive tech (and tests)
+              // while keeping the visible verb consistent across the page.
+              aria-label="Create your first secret"
               className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
             >
               <Plus className="h-4 w-4" />

@@ -28,7 +28,6 @@ export interface ModelOption {
   value: string
   label: string
   disabled?: boolean
-  badge?: string
 }
 
 export interface PricingRates {
@@ -111,6 +110,14 @@ const VALID_DRIVERS: ReadonlySet<string> = new Set(["docker", "firecracker", "ta
 const DEFAULT_MODEL_OPTIONS: ModelOption[] = [
   { value: "claude-sonnet", label: "Claude Sonnet 4.6 (Highly Capable)" },
 ]
+
+/**
+ * Fallback modelTier used by the initial state and the "Start from
+ * scratch" reset when the caller hasn't supplied `modelOptions`. Kept
+ * as a single source of truth so a future rename of the default model
+ * doesn't leave any code path out of sync.
+ */
+const DEFAULT_MODEL_TIER: string = DEFAULT_MODEL_OPTIONS[0]?.value ?? "claude-sonnet"
 
 const STACK_DISPLAY: Record<string, { name: string; abbr: string; color: string; textClass: string }> = {
   universal: { name: "Default", abbr: "D", color: "violet", textClass: "text-[var(--surface-violet-text)]" },
@@ -249,7 +256,7 @@ export function ProvisioningWizard({
     setStorageGB((prev) => Math.min(prev, storageMax))
   }, [cpuMax, ramMax, storageMax])
 
-  const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? "claude-sonnet")
+  const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? DEFAULT_MODEL_TIER)
   const [systemPrompt, setSystemPrompt] = React.useState(dc?.systemPrompt ?? "")
 
   // If the current modelTier is not in the options list, or is present but disabled,
@@ -444,7 +451,16 @@ export function ProvisioningWizard({
                   setCpuCores(Math.min(4, cpuMax))
                   setRamGB(Math.min(16, ramMax))
                   setStorageGB(Math.min(128, storageMax))
-                  setModelTier("claude-sonnet")
+                  // Use the first *available* option from the caller's
+                  // `modelOptions` so the <select> never renders an unknown
+                  // value between this reset and the auto-correct effect.
+                  // Falls back to the hardcoded default when the caller
+                  // didn't supply options at all.
+                  {
+                    const resetOptions = modelOptions ?? DEFAULT_MODEL_OPTIONS
+                    const firstAvailable = resetOptions.find((o) => !o.disabled)
+                    setModelTier(firstAvailable?.value ?? DEFAULT_MODEL_TIER)
+                  }
                   setSystemPrompt("")
                   setName("")
                   setGitUrl("")

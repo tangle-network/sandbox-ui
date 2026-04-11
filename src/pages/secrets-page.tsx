@@ -172,38 +172,54 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
               Secrets are automatically exposed as environment variables across all your new sandboxes.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (newName.trim() && newValue.trim() && !isCreating) handleCreate()
+            }}
+            className="space-y-4"
+          >
             <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Name</label>
+              <label htmlFor="secret-name" className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Name</label>
               <input
+                id="secret-name"
+                name="secret-name"
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"))}
                 placeholder="MY_SECRET_KEY"
+                autoComplete="off"
                 className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Value</label>
+              <label htmlFor="secret-value" className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Value</label>
               <div className="relative">
                 <input
+                  id="secret-value"
+                  name="secret-value"
                   type={showValue ? "text" : "password"}
                   value={newValue}
                   onChange={(e) => setNewValue(e.target.value)}
                   placeholder="Enter secret value..."
+                  autoComplete="new-password"
                   className="w-full rounded-md border border-border bg-card px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <button
                   type="button"
                   onClick={() => setShowValue(!showValue)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  aria-label={showValue ? "Hide value" : "Show value"}
                 >
                   {showValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               <p className="mt-1.5 text-xs text-muted-foreground">This value cannot be retrieved after creation.</p>
             </div>
-          </div>
+            {/* Hidden submit so the form is valid and Enter key submits even though the visible
+                submit button lives in DialogFooter and uses type="button" for layout reasons. */}
+            <button type="submit" className="hidden" tabIndex={-1} aria-hidden="true">Submit</button>
+          </form>
           {createError && <p className="mt-3 text-sm text-destructive">{createError}</p>}
           <DialogFooter>
             <button
@@ -278,7 +294,7 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
               className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
             >
               <Plus className="h-4 w-4" />
-              Create Secret
+              New Secret
             </button>
           </div>
         ) : (

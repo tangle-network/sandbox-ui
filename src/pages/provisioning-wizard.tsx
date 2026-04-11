@@ -168,6 +168,19 @@ const DEFAULT_PRICING_RATES: PricingRates = {
   minChargePerHr: undefined,
 }
 
+/**
+ * Real (unclamped) resource preset values. The wizard locks any preset
+ * that exceeds the current plan's limits rather than rewriting its
+ * values, so every user sees the same three rows but the locked ones
+ * carry an upsell badge. Hoisted out of the component body so the
+ * array identity is stable across renders.
+ */
+const RAW_PRESETS: ReadonlyArray<{ name: string; cpu: number; ram: number; storage: number }> = [
+  { name: "Lightweight", cpu: 2, ram: 4, storage: 50 },
+  { name: "Standard", cpu: 4, ram: 16, storage: 128 },
+  { name: "Performance", cpu: 8, ram: 32, storage: 256 },
+]
+
 function calcCost(cpu: number, ram: number, storage: number, rates: PricingRates): string {
   const cost = Math.max(
     rates.minChargePerHr ?? 0,
@@ -303,18 +316,11 @@ export function ProvisioningWizard({
     setActivePreset(name)
   }
 
-  // Define presets with their REAL (unclamped) values
-  const rawPresets = [
-    { name: "Lightweight", cpu: 2, ram: 4, storage: 50 },
-    { name: "Standard", cpu: 4, ram: 16, storage: 128 },
-    { name: "Performance", cpu: 8, ram: 32, storage: 256 },
-  ]
-
   // Determine which presets fit within user's limits and mark locked ones.
   // For each locked preset, compute the smallest `planTiers` entry that
   // would unlock it — so a Pro user sees "Enterprise" on presets that
   // exceed their Pro limits, instead of a misleading "Pro" badge.
-  const presets = rawPresets.map((p) => {
+  const presets = RAW_PRESETS.map((p) => {
     const locked = p.cpu > cpuMax || p.ram > ramMax || p.storage > storageMax
     let unlockLabel: string | undefined
     if (locked && planTiers && planTiers.length > 0) {
@@ -357,14 +363,14 @@ export function ProvisioningWizard({
 
     if (dc && !didInitPresetFromDcRef.current) {
       didInitPresetFromDcRef.current = true
-      const matching = rawPresets.find(
+      const matching = RAW_PRESETS.find(
         (p) => p.cpu === dc.cpuCores && p.ram === dc.ramGB && p.storage === dc.storageGB,
       )
       if (matching) setActivePreset(matching.name)
       return
     }
 
-    const largestFitting = [...rawPresets]
+    const largestFitting = [...RAW_PRESETS]
       .reverse()
       .find((p) => p.cpu <= cpuMax && p.ram <= ramMax && p.storage <= storageMax)
     if (largestFitting) {
@@ -799,20 +805,40 @@ export function ProvisioningWizard({
               <span key={hourCost} className="text-4xl font-black text-foreground tracking-tighter animate-in fade-in duration-200">${hourCost}</span>
               <span className="text-muted-foreground text-sm font-bold">/ hour</span>
             </div>
-            <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                <span>COMPUTE</span>
-                <span className="text-foreground">${(cpuCores * effectivePricingRates.cpuPerHr).toFixed(2)}/h</span>
-              </div>
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                <span>MEMORY</span>
-                <span className="text-foreground/80">${(ramGB * effectivePricingRates.ramPerGbHr).toFixed(2)}/h</span>
-              </div>
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                <span>STORAGE</span>
-                <span className="text-foreground/80">${(storageGB * effectivePricingRates.diskPerGbHr).toFixed(2)}/h</span>
-              </div>
-            </div>
+            {(() => {
+              // Show the raw per-resource breakdown, and — when the plan's
+              // hourly floor is above the summed line items — surface the
+              // floor as its own row so the header total never silently
+              // disagrees with the sum (reviewed in upstream PR feedback).
+              const computeCost = cpuCores * effectivePricingRates.cpuPerHr
+              const memoryCost = ramGB * effectivePricingRates.ramPerGbHr
+              const storageCost = storageGB * effectivePricingRates.diskPerGbHr
+              const lineSum = computeCost + memoryCost + storageCost
+              const floor = effectivePricingRates.minChargePerHr ?? 0
+              const floorApplies = floor > lineSum
+              return (
+                <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
+                  <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                    <span>COMPUTE</span>
+                    <span className="text-foreground">${computeCost.toFixed(2)}/h</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                    <span>MEMORY</span>
+                    <span className="text-foreground/80">${memoryCost.toFixed(2)}/h</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                    <span>STORAGE</span>
+                    <span className="text-foreground/80">${storageCost.toFixed(2)}/h</span>
+                  </div>
+                  {floorApplies && (
+                    <div className="flex justify-between text-xs font-mono tracking-widest text-primary border-t border-border pt-2">
+                      <span>MIN CHARGE</span>
+                      <span>${(floor - lineSum).toFixed(2)}/h</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Deploy error */}

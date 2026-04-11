@@ -201,16 +201,19 @@ export interface RailButtonProps {
   badge?: number
   onClick?: () => void
   className?: string
+  /** Show label text next to icon (for mobile drawer) */
+  showLabel?: boolean
 }
 
-export function RailButton({ icon: Icon, label, isActive, badge, onClick, className }: RailButtonProps) {
+export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel }: RailButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       title={label}
       className={cn(
-        "group relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200",
+        "group relative flex items-center justify-center rounded-xl transition-all duration-200",
+        showLabel ? "w-full justify-start px-3 h-11 gap-3" : "w-11 h-11 justify-center",
         "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
         "active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
@@ -219,8 +222,10 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
         className,
       )}
     >
-      <Icon className="h-5 w-5" />
-      {/* Label intentionally removed from rail button to reduce vertical crowding. Tooltip relies on title={label} */}
+      <Icon className="h-5 w-5 shrink-0" />
+      {showLabel && (
+        <span className="text-sm font-medium">{label}</span>
+      )}
       {badge !== undefined && badge > 0 && (
         <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-[var(--md3-on-primary)] px-1 shadow-sm">
           {badge > 99 ? "99+" : badge}
@@ -240,18 +245,21 @@ export interface RailModeButtonProps {
   label: string
   badge?: number
   className?: string
+  /** Show label text next to icon (for mobile drawer) */
+  showLabel?: boolean
 }
 
-export function RailModeButton({ mode, icon, label, badge, className }: RailModeButtonProps) {
+export function RailModeButton({ mode, icon, label, badge, className, showLabel }: RailModeButtonProps) {
   const { panelOpen, mode: currentMode, switchMode } = useSidebar()
   return (
     <RailButton
       icon={icon}
       label={label}
+      isActive={mode === currentMode && panelOpen}
       badge={badge}
-      isActive={panelOpen && currentMode === mode}
       onClick={() => switchMode(mode)}
       className={className}
+      showLabel={showLabel}
     />
   )
 }
@@ -332,10 +340,16 @@ export interface SidebarContentProps {
 export function SidebarContent({ children, className }: SidebarContentProps) {
   const { contentMargin } = useSidebar()
 
+  // Single responsive <main> landmark. Margin-left only applies at lg+ where
+  // the desktop sidebar is visible as a rail; on mobile the drawer is an
+  // overlay so content starts at the viewport edge.
   return (
     <main
-      className={cn("min-h-screen transition-[margin-left] duration-200 ease-in-out", className)}
-      style={{ marginLeft: contentMargin }}
+      className={cn(
+        "min-h-screen transition-[margin-left] duration-200 ease-in-out lg:ml-[var(--sb-content-margin,0px)]",
+        className,
+      )}
+      style={{ "--sb-content-margin": `${contentMargin}px` } as React.CSSProperties}
     >
       {children}
     </main>

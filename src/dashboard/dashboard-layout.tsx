@@ -213,8 +213,8 @@ function DashboardLayoutInner({
 
   const activePanel = panels.find((p) => p.mode === mode)
 
-  // The composable sidebar — consumers can replace this entirely
-  const sidebarContent = (
+  // Helper to create sidebar content with optional labels
+  const createSidebarContent = (showLabels = false) => (
     <>
       <SidebarRail>
         <SidebarRailHeader>
@@ -238,6 +238,7 @@ function DashboardLayoutInner({
                     icon={item.icon}
                     label={item.label}
                     badge={item.badge}
+                    showLabel={showLabels}
                   />
                 ) : (
                   <Link href={item.href} to={item.href}>
@@ -245,6 +246,7 @@ function DashboardLayoutInner({
                       icon={item.icon}
                       label={item.label}
                       isActive={activeNavId === item.id}
+                      showLabel={showLabels}
                     />
                   </Link>
                 )}
@@ -255,10 +257,10 @@ function DashboardLayoutInner({
 
         <SidebarRailFooter>
           {onSettingsClick ? (
-            <RailButton icon={SettingsIconSmall} label="Settings" onClick={onSettingsClick} />
+            <RailButton icon={SettingsIconSmall} label="Settings" onClick={onSettingsClick} showLabel={showLabels} />
           ) : (
             <Link href={settingsHref} to={settingsHref}>
-              <RailButton icon={SettingsIconSmall} label="Settings" />
+              <RailButton icon={SettingsIconSmall} label="Settings" showLabel={showLabels} />
             </Link>
           )}
           {railFooter}
@@ -287,6 +289,10 @@ function DashboardLayoutInner({
     </>
   )
 
+  // The composable sidebar — consumers can replace this entirely
+  const sidebarContent = createSidebarContent(false) // Desktop: no labels
+  const mobileSidebarContent = createSidebarContent(true) // Mobile: with labels
+
   return (
     <div className={cn("min-h-screen bg-background text-foreground", className)}>
       {/* Top nav bar */}
@@ -298,6 +304,12 @@ function DashboardLayoutInner({
         }}
       >
         <div className="flex items-center gap-8">
+          {/* Mobile-only brand — the desktop sidebar rail carries the logo
+              on lg+, but on mobile the rail is hidden behind the drawer and
+              the top bar otherwise contained only a bell + hamburger. */}
+          <Link href="/" to="/" className="lg:hidden flex items-center p-1 rounded-md hover:bg-muted/50 transition-colors">
+            <Logo variant={variant} size="sm" iconOnly />
+          </Link>
           {topNavLinks && topNavLinks.length > 0 && (
             <div className="hidden md:flex gap-6">
               {topNavLinks.map((link) => (
@@ -414,7 +426,7 @@ function DashboardLayoutInner({
         )}
         style={{ width: (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH }}
       >
-        {sidebarContent}
+        {mobileSidebarContent}
       </aside>
 
       {/* Desktop sidebar */}
@@ -422,15 +434,12 @@ function DashboardLayoutInner({
         {sidebarContent}
       </Sidebar>
 
-      {/* Main content */}
-      <SidebarContent className={cn("pt-16 px-8 pb-8 hidden lg:block bg-background", contentClassName)}>
+      {/* Single responsive main landmark — SidebarContent only applies the
+          desktop sidebar margin at lg+, so this one <main> works for both
+          viewports and keeps screen-reader landmarks unambiguous. */}
+      <SidebarContent className={cn("pt-16 px-6 pb-8 lg:px-8 bg-background", contentClassName)}>
         {children}
       </SidebarContent>
-
-      {/* Mobile main content (no sidebar offset) */}
-      <main className={cn("pt-16 px-6 pb-8 min-h-screen lg:hidden bg-background", contentClassName)}>
-        {children}
-      </main>
 
       {footer}
     </div>

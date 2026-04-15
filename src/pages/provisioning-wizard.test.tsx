@@ -557,7 +557,7 @@ describe("ProvisioningWizard — pricing view toggle", () => {
     expect(screen.getByText("/ hour")).toBeInTheDocument()
 
     const perSecButton = screen.getByRole("button", {
-      name: "/sec",
+      name: "Per second",
       pressed: false,
     })
     await userEvent.click(perSecButton)
@@ -575,7 +575,7 @@ describe("ProvisioningWizard — pricing view toggle", () => {
     // aria-pressed flips so screen readers can announce the active view.
     expect(perSecButton).toHaveAttribute("aria-pressed", "true")
     expect(
-      screen.getByRole("button", { name: "/hr", pressed: false }),
+      screen.getByRole("button", { name: "Per hour", pressed: false }),
     ).toBeInTheDocument()
   })
 
@@ -597,7 +597,7 @@ describe("ProvisioningWizard — pricing view toggle", () => {
       />,
     )
 
-    await userEvent.click(screen.getByRole("button", { name: "/sec" }))
+    await userEvent.click(screen.getByRole("button", { name: "Per second" }))
 
     // Header is the floor / 3600, not the line sum / 3600.
     expect(screen.getByText("$0.00027778")).toBeInTheDocument()
@@ -629,10 +629,10 @@ describe("ProvisioningWizard — pricing view toggle", () => {
       />,
     )
 
-    await userEvent.click(screen.getByRole("button", { name: "/sec" }))
+    await userEvent.click(screen.getByRole("button", { name: "Per second" }))
     expect(screen.getByText("$0.00011133")).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole("button", { name: "/hr" }))
+    await userEvent.click(screen.getByRole("button", { name: "Per hour" }))
     expect(screen.getByText("$0.40")).toBeInTheDocument()
     expect(screen.getByText("/ hour")).toBeInTheDocument()
   })

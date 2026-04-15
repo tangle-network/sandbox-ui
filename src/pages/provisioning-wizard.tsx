@@ -285,17 +285,39 @@ const RAW_PRESETS: ReadonlyArray<{
   { name: "Performance", cpu: 8, ram: 32, storage: 256 },
 ];
 
-function calcCost(
+interface HourlyCostBreakdown {
+  compute: number;
+  memory: number;
+  storage: number;
+  lineSum: number;
+  floor: number;
+  floorApplies: boolean;
+  total: number;
+}
+
+// Single source of truth for the hourly cost model. Both the run-cost header
+// and the per-resource breakdown read from the same struct so that adding a
+// new fee component cannot silently desync the two displays.
+function computeHourlyCost(
   cpu: number,
   ram: number,
   storage: number,
   rates: PricingRates,
-): string {
-  const cost = Math.max(
-    rates.minChargePerHr ?? 0,
-    cpu * rates.cpuPerHr + ram * rates.ramPerGbHr + storage * rates.diskPerGbHr,
-  );
-  return cost.toFixed(2);
+): HourlyCostBreakdown {
+  const compute = cpu * rates.cpuPerHr;
+  const memory = ram * rates.ramPerGbHr;
+  const storageCost = storage * rates.diskPerGbHr;
+  const lineSum = compute + memory + storageCost;
+  const floor = rates.minChargePerHr ?? 0;
+  return {
+    compute,
+    memory,
+    storage: storageCost,
+    lineSum,
+    floor,
+    floorApplies: floor > lineSum,
+    total: Math.max(floor, lineSum),
+  };
 }
 
 export function ProvisioningWizard({
@@ -584,7 +606,13 @@ export function ProvisioningWizard({
   }, [cpuMax, ramMax, storageMax, dc]);
 
   const effectivePricingRates = pricingRates ?? DEFAULT_PRICING_RATES;
-  const hourCost = calcCost(cpuCores, ramGB, storageGB, effectivePricingRates);
+  const hourlyCostBreakdown = computeHourlyCost(
+    cpuCores,
+    ramGB,
+    storageGB,
+    effectivePricingRates,
+  );
+  const hourCost = hourlyCostBreakdown.total.toFixed(2);
 
   return (
     <div className={cn("max-w-6xl mx-auto flex flex-col", className)}>
@@ -1256,6 +1284,7 @@ export function ProvisioningWizard({
               >
                 <button
                   type="button"
+                  aria-label="Per hour"
                   aria-pressed={pricingView === "hourly"}
                   onClick={() => setPricingView("hourly")}
                   className={cn(
@@ -1269,6 +1298,7 @@ export function ProvisioningWizard({
                 </button>
                 <button
                   type="button"
+                  aria-label="Per second"
                   aria-pressed={pricingView === "perSecond"}
                   onClick={() => setPricingView("perSecond")}
                   className={cn(
@@ -1283,20 +1313,13 @@ export function ProvisioningWizard({
               </div>
             </div>
             {(() => {
-              const computeCost = cpuCores * effectivePricingRates.cpuPerHr;
-              const memoryCost = ramGB * effectivePricingRates.ramPerGbHr;
-              const storageCost = storageGB * effectivePricingRates.diskPerGbHr;
-              const lineSum = computeCost + memoryCost + storageCost;
-              const floor = effectivePricingRates.minChargePerHr ?? 0;
-              const floorApplies = floor > lineSum;
               // Per-second header derives from the raw float total, not the
               // already-rounded `hourCost`, so the header and the breakdown
               // sum stay in lockstep at 8-decimal precision.
-              const rawTotal = Math.max(floor, lineSum);
               const displayValue =
                 pricingView === "hourly"
                   ? hourCost
-                  : formatPerSecondValue(rawTotal);
+                  : formatPerSecondValue(hourlyCostBreakdown.total);
               const suffix = pricingView === "hourly" ? "/ hour" : "/ sec";
               const rateSuffix = pricingView === "hourly" ? "/h" : "/s";
               const fmt = (v: number) =>
@@ -1323,29 +1346,33 @@ export function ProvisioningWizard({
                     <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                       <span>COMPUTE</span>
                       <span className="text-foreground">
-                        ${fmt(computeCost)}
+                        ${fmt(hourlyCostBreakdown.compute)}
                         {rateSuffix}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                       <span>MEMORY</span>
                       <span className="text-foreground/80">
-                        ${fmt(memoryCost)}
+                        ${fmt(hourlyCostBreakdown.memory)}
                         {rateSuffix}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                       <span>STORAGE</span>
                       <span className="text-foreground/80">
-                        ${fmt(storageCost)}
+                        ${fmt(hourlyCostBreakdown.storage)}
                         {rateSuffix}
                       </span>
                     </div>
-                    {floorApplies && (
+                    {hourlyCostBreakdown.floorApplies && (
                       <div className="flex justify-between text-xs font-mono tracking-widest text-primary border-t border-border pt-2">
                         <span>MIN CHARGE</span>
                         <span>
-                          ${fmt(floor - lineSum)}
+                          $
+                          {fmt(
+                            hourlyCostBreakdown.floor -
+                              hourlyCostBreakdown.lineSum,
+                          )}
                           {rateSuffix}
                         </span>
                       </div>

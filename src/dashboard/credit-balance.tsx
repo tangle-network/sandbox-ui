@@ -13,7 +13,7 @@ export interface CreditBalanceProps {
 
 export function CreditBalance({
   amount,
-  description = "Credits are automatically deducted based on per-second Sandbox usage and Agent operations.",
+  description = "Credits are automatically deducted based on hourly Sandbox usage and Agent operations.",
   onTopUp,
   quickAmounts = [10, 25, 100],
   className,

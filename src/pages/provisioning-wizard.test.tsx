@@ -579,6 +579,42 @@ describe("ProvisioningWizard — pricing view toggle", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders the MIN CHARGE row in per-second mode using the floor-minus-lineSum value", async () => {
+    // Limits pin the sliders to 2 vCPU / 4 GB / 40 GB so the three line
+    // products are each distinct (0.022 / 0.012 / 0.016 per hour) and the
+    // line sum (0.05/hr) is well below the 1.0/hr floor — exercising the
+    // floorApplies branch that none of the other tests touch.
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 2, ramMaxGB: 4, storageMaxGB: 40 }}
+        pricingRates={{
+          cpuPerHr: 0.011,
+          ramPerGbHr: 0.003,
+          diskPerGbHr: 0.0004,
+          minChargePerHr: 1.0,
+        }}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole("button", { name: "/sec" }))
+
+    // Header is the floor / 3600, not the line sum / 3600.
+    expect(screen.getByText("$0.00027778")).toBeInTheDocument()
+
+    // Each breakdown row renders at per-second precision from the raw float.
+    expect(screen.getByText("$0.00000611/s")).toBeInTheDocument()
+    expect(screen.getByText("$0.00000333/s")).toBeInTheDocument()
+    expect(screen.getByText("$0.00000444/s")).toBeInTheDocument()
+
+    // MIN CHARGE row renders `floor - lineSum` per-second so that, modulo
+    // sub-rounding drift, line items + MIN CHARGE reconcile to the header.
+    // If a future refactor renders `floor` instead of `floor - lineSum`
+    // here, this assertion catches the silent invariant break.
+    expect(screen.getByText("MIN CHARGE")).toBeInTheDocument()
+    expect(screen.getByText("$0.00026389/s")).toBeInTheDocument()
+  })
+
   it("returns to the hourly view when the user toggles back", async () => {
     render(
       <ProvisioningWizard

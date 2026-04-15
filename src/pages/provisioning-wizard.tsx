@@ -259,9 +259,12 @@ const DEFAULT_PRICING_RATES: PricingRates = {
 
 type PricingView = "hourly" | "perSecond";
 
-function formatPerSecondValue(hourlyValue: number): string {
-  const perSec = hourlyValue / 3600;
-  return perSec.toFixed(8).replace(/0+$/, "").replace(/\.$/, "");
+// Per-second display uses a fixed 8-decimal width so that the header and
+// every breakdown row line up visually and arithmetically — stripping
+// trailing zeros made each row land on a different precision and broke
+// header/sum equality.
+export function formatPerSecondValue(hourlyValue: number): string {
+  return (hourlyValue / 3600).toFixed(8);
 }
 
 /**
@@ -689,6 +692,7 @@ export function ProvisioningWizard({
                   setBare(false);
                   setStartupScriptIds([]);
                   setActivePreset(null);
+                  setPricingView("hourly");
                 }}
                 className="text-xs font-bold text-primary hover:text-primary/70 transition-colors"
               >
@@ -1245,9 +1249,14 @@ export function ProvisioningWizard({
               <span className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 Run Cost
               </span>
-              <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-0.5">
+              <div
+                role="group"
+                aria-label="Pricing view"
+                className="inline-flex items-center rounded-full border border-border bg-muted/50 p-0.5"
+              >
                 <button
                   type="button"
+                  aria-pressed={pricingView === "hourly"}
                   onClick={() => setPricingView("hourly")}
                   className={cn(
                     "rounded-full px-2 py-0.5 text-[10px] font-bold transition-all",
@@ -1260,6 +1269,7 @@ export function ProvisioningWizard({
                 </button>
                 <button
                   type="button"
+                  aria-pressed={pricingView === "perSecond"}
                   onClick={() => setPricingView("perSecond")}
                   className={cn(
                     "rounded-full px-2 py-0.5 text-[10px] font-bold transition-all",
@@ -1273,19 +1283,22 @@ export function ProvisioningWizard({
               </div>
             </div>
             {(() => {
-              const hourlyNum = parseFloat(hourCost);
-              const displayValue =
-                pricingView === "hourly"
-                  ? hourCost
-                  : formatPerSecondValue(hourlyNum);
-              const suffix = pricingView === "hourly" ? "/ hour" : "/ sec";
-              const rateSuffix = pricingView === "hourly" ? "/h" : "/s";
               const computeCost = cpuCores * effectivePricingRates.cpuPerHr;
               const memoryCost = ramGB * effectivePricingRates.ramPerGbHr;
               const storageCost = storageGB * effectivePricingRates.diskPerGbHr;
               const lineSum = computeCost + memoryCost + storageCost;
               const floor = effectivePricingRates.minChargePerHr ?? 0;
               const floorApplies = floor > lineSum;
+              // Per-second header derives from the raw float total, not the
+              // already-rounded `hourCost`, so the header and the breakdown
+              // sum stay in lockstep at 8-decimal precision.
+              const rawTotal = Math.max(floor, lineSum);
+              const displayValue =
+                pricingView === "hourly"
+                  ? hourCost
+                  : formatPerSecondValue(rawTotal);
+              const suffix = pricingView === "hourly" ? "/ hour" : "/ sec";
+              const rateSuffix = pricingView === "hourly" ? "/h" : "/s";
               const fmt = (v: number) =>
                 pricingView === "hourly"
                   ? v.toFixed(2)

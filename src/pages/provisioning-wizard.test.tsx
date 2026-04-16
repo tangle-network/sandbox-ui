@@ -324,6 +324,29 @@ describe("ProvisioningWizard — resourceLimits", () => {
     expect(config.storageGB).toBeLessThanOrEqual(64)
   })
 
+  it("'Start from scratch' resets the pricing view to hourly", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        defaultConfig={{ cpuCores: 1, ramGB: 4, storageGB: 30, environment: "node", modelTier: "claude-sonnet", systemPrompt: "", name: "", gitUrl: "", envVars: [], driver: "docker", bare: false }}
+        skipToReview
+        resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
+      />,
+    )
+
+    // Switch to per-second view, then start over.
+    await user.click(screen.getByRole("button", { name: "Per Second" }))
+    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "true")
+
+    await user.click(screen.getByText("Start from scratch"))
+
+    // The hourly toggle should be active again.
+    expect(screen.getByRole("button", { name: "Per Hour" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "false")
+  })
+
   it("slider max reflects resourceLimits", () => {
     render(
       <ProvisioningWizard

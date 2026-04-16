@@ -614,6 +614,18 @@ export function ProvisioningWizard({
   );
   const hourCost = hourlyCostBreakdown.total.toFixed(2);
 
+  // Per-second header derives from the raw float total, not the
+  // already-rounded `hourCost`, so the header and the breakdown sum
+  // stay in lockstep at 8-decimal precision.
+  const displayValue =
+    pricingView === "hourly"
+      ? hourCost
+      : formatPerSecondValue(hourlyCostBreakdown.total);
+  const pricingSuffix = pricingView === "hourly" ? "/ hour" : "/ sec";
+  const rateSuffix = pricingView === "hourly" ? "/h" : "/s";
+  const fmtRate = (v: number) =>
+    pricingView === "hourly" ? v.toFixed(2) : formatPerSecondValue(v);
+
   return (
     <div className={cn("max-w-6xl mx-auto flex flex-col", className)}>
       {/* Header */}
@@ -1310,75 +1322,56 @@ export function ProvisioningWizard({
                 </button>
               </div>
             </div>
-            {(() => {
-              // Per-second header derives from the raw float total, not the
-              // already-rounded `hourCost`, so the header and the breakdown
-              // sum stay in lockstep at 8-decimal precision.
-              const displayValue =
-                pricingView === "hourly"
-                  ? hourCost
-                  : formatPerSecondValue(hourlyCostBreakdown.total);
-              const suffix = pricingView === "hourly" ? "/ hour" : "/ sec";
-              const rateSuffix = pricingView === "hourly" ? "/h" : "/s";
-              const fmt = (v: number) =>
-                pricingView === "hourly"
-                  ? v.toFixed(2)
-                  : formatPerSecondValue(v);
-              return (
-                <React.Fragment>
-                  <div className="flex items-baseline gap-2 mb-5 relative z-10">
-                    <span
-                      key={displayValue}
-                      className={cn(
-                        "font-black text-foreground tracking-tighter animate-in fade-in duration-200",
-                        pricingView === "hourly" ? "text-4xl" : "text-2xl",
-                      )}
-                    >
-                      ${displayValue}
-                    </span>
-                    <span className="text-muted-foreground text-sm font-bold">
-                      {suffix}
-                    </span>
-                  </div>
-                  <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
-                    <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                      <span>COMPUTE</span>
-                      <span className="text-foreground">
-                        ${fmt(hourlyCostBreakdown.compute)}
-                        {rateSuffix}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                      <span>MEMORY</span>
-                      <span className="text-foreground/80">
-                        ${fmt(hourlyCostBreakdown.memory)}
-                        {rateSuffix}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
-                      <span>STORAGE</span>
-                      <span className="text-foreground/80">
-                        ${fmt(hourlyCostBreakdown.storage)}
-                        {rateSuffix}
-                      </span>
-                    </div>
-                    {hourlyCostBreakdown.floorApplies && (
-                      <div className="flex justify-between text-xs font-mono tracking-widest text-primary border-t border-border pt-2">
-                        <span>MIN CHARGE</span>
-                        <span>
-                          $
-                          {fmt(
-                            hourlyCostBreakdown.floor -
-                              hourlyCostBreakdown.lineSum,
-                          )}
-                          {rateSuffix}
-                        </span>
-                      </div>
+            <div className="flex items-baseline gap-2 mb-5 relative z-10">
+              <span
+                key={pricingView}
+                className={cn(
+                  "font-black text-foreground tracking-tighter animate-in fade-in duration-200",
+                  pricingView === "hourly" ? "text-4xl" : "text-2xl",
+                )}
+              >
+                ${displayValue}
+              </span>
+              <span className="text-muted-foreground text-sm font-bold">
+                {pricingSuffix}
+              </span>
+            </div>
+            <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
+              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                <span>COMPUTE</span>
+                <span className="text-foreground">
+                  ${fmtRate(hourlyCostBreakdown.compute)}
+                  {rateSuffix}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                <span>MEMORY</span>
+                <span className="text-foreground/80">
+                  ${fmtRate(hourlyCostBreakdown.memory)}
+                  {rateSuffix}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+                <span>STORAGE</span>
+                <span className="text-foreground/80">
+                  ${fmtRate(hourlyCostBreakdown.storage)}
+                  {rateSuffix}
+                </span>
+              </div>
+              {hourlyCostBreakdown.floorApplies && (
+                <div className="flex justify-between text-xs font-mono tracking-widest text-primary border-t border-border pt-2">
+                  <span>MIN CHARGE</span>
+                  <span>
+                    $
+                    {fmtRate(
+                      hourlyCostBreakdown.floor -
+                        hourlyCostBreakdown.lineSum,
                     )}
-                  </div>
-                </React.Fragment>
-              );
-            })()}
+                    {rateSuffix}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Deploy error */}

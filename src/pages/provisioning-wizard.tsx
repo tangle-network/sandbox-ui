@@ -1284,31 +1284,29 @@ export function ProvisioningWizard({
               >
                 <button
                   type="button"
-                  aria-label="Per hour"
                   aria-pressed={pricingView === "hourly"}
                   onClick={() => setPricingView("hourly")}
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-bold transition-all",
+                    "rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all",
                     pricingView === "hourly"
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  /hr
+                  Per Hour
                 </button>
                 <button
                   type="button"
-                  aria-label="Per second"
                   aria-pressed={pricingView === "perSecond"}
                   onClick={() => setPricingView("perSecond")}
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-bold transition-all",
+                    "rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all",
                     pricingView === "perSecond"
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  /sec
+                  Per Second
                 </button>
               </div>
             </div>

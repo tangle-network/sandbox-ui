@@ -717,13 +717,11 @@ export function ProvisioningWizard({
                   // value between this reset and the auto-correct effect.
                   // Falls back to the hardcoded default when the caller
                   // didn't supply options at all.
-                  {
-                    const resetOptions = modelOptions ?? DEFAULT_MODEL_OPTIONS;
-                    const firstAvailable = resetOptions.find(
-                      (o) => !o.disabled,
-                    );
-                    setModelTier(firstAvailable?.value ?? DEFAULT_MODEL_TIER);
-                  }
+                  const resetOptions = modelOptions ?? DEFAULT_MODEL_OPTIONS;
+                  const firstAvailable = resetOptions.find(
+                    (o) => !o.disabled,
+                  );
+                  setModelTier(firstAvailable?.value ?? DEFAULT_MODEL_TIER);
                   setSystemPrompt("");
                   setName("");
                   setGitUrl("");

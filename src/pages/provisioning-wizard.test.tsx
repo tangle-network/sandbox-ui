@@ -324,29 +324,6 @@ describe("ProvisioningWizard — resourceLimits", () => {
     expect(config.storageGB).toBeLessThanOrEqual(64)
   })
 
-  it("'Start from scratch' resets the pricing view to hourly", async () => {
-    const user = userEvent.setup()
-
-    render(
-      <ProvisioningWizard
-        variant="multistep"
-        defaultConfig={{ cpuCores: 1, ramGB: 4, storageGB: 30, environment: "node", modelTier: "claude-sonnet", systemPrompt: "", name: "", gitUrl: "", envVars: [], driver: "docker", bare: false }}
-        skipToReview
-        resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
-      />,
-    )
-
-    // Switch to per-second view, then start over.
-    await user.click(screen.getByRole("button", { name: "Per Second" }))
-    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "true")
-
-    await user.click(screen.getByText("Start from scratch"))
-
-    // The hourly toggle should be active again.
-    expect(screen.getByRole("button", { name: "Per Hour" })).toHaveAttribute("aria-pressed", "true")
-    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "false")
-  })
-
   it("slider max reflects resourceLimits", () => {
     render(
       <ProvisioningWizard
@@ -589,8 +566,9 @@ describe("ProvisioningWizard — pricing view toggle", () => {
     expect(screen.getByText("$0.00011133")).toBeInTheDocument()
     expect(screen.getByText("/ sec")).toBeInTheDocument()
 
-    // And every breakdown line item is rendered at the matching precision so
-    // the columns line up and the line items sum to the header.
+    // Each line item derives from the same raw float / 3600 path as the
+    // header, so rounding drift is bounded to ±1 at the 8th decimal place —
+    // far smaller than the previously-broken parseFloat("0.40") / 3600 path.
     expect(screen.getByText("$0.00005000/s")).toBeInTheDocument()
     expect(screen.getByText("$0.00002222/s")).toBeInTheDocument()
     expect(screen.getByText("$0.00003911/s")).toBeInTheDocument()
@@ -636,6 +614,28 @@ describe("ProvisioningWizard — pricing view toggle", () => {
     // here, this assertion catches the silent invariant break.
     expect(screen.getByText("MIN CHARGE")).toBeInTheDocument()
     expect(screen.getByText("$0.00026389/s")).toBeInTheDocument()
+  })
+
+  it("'Start from scratch' resets the pricing view to hourly", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        defaultConfig={{ cpuCores: 1, ramGB: 4, storageGB: 30, environment: "node", modelTier: "claude-sonnet", systemPrompt: "", name: "", gitUrl: "", envVars: [], driver: "docker", bare: false }}
+        skipToReview
+      />,
+    )
+
+    // Switch to per-second view, then start over.
+    await user.click(screen.getByRole("button", { name: "Per Second" }))
+    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "true")
+
+    await user.click(screen.getByText("Start from scratch"))
+
+    // The hourly toggle should be active again.
+    expect(screen.getByRole("button", { name: "Per Hour" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "false")
   })
 
   it("returns to the hourly view when the user toggles back", async () => {

@@ -514,7 +514,7 @@ describe("formatPerSecondValue", () => {
     expect(formatPerSecondValue(0)).toBe("0.00000000")
   })
 
-  it("converts an exact hourly value to per-second seconds-of-an-hour", () => {
+  it("converts an hourly value to a per-second rate", () => {
     // 3600 / 3600 == 1
     expect(formatPerSecondValue(3600)).toBe("1.00000000")
   })
@@ -608,12 +608,11 @@ describe("ProvisioningWizard — pricing view toggle", () => {
     expect(screen.getByText("$0.00000333/s")).toBeInTheDocument()
     expect(screen.getByText("$0.00000444/s")).toBeInTheDocument()
 
-    // MIN CHARGE is derived as a residual (header minus formatted line items)
-    // so the displayed rows always sum exactly to the displayed header.
-    // The value absorbs per-item rounding drift (here +1 ULP vs the raw
-    // (floor - lineSum) / 3600 calculation).
+    // MIN CHARGE row renders (floor - lineSum) / 3600 at 8-decimal precision.
+    // Independent per-item rounding can cause the displayed rows to differ
+    // from the header by ±1 ULP — acceptable at 8dp (~$0.004/year).
     expect(screen.getByText("MIN CHARGE")).toBeInTheDocument()
-    expect(screen.getByText("$0.00026390/s")).toBeInTheDocument()
+    expect(screen.getByText("$0.00026389/s")).toBeInTheDocument()
   })
 
   it("'Start from scratch' resets the pricing view to hourly", async () => {

@@ -626,6 +626,21 @@ export function ProvisioningWizard({
   const fmtRate = (v: number) =>
     pricingView === "hourly" ? v.toFixed(2) : formatPerSecondValue(v);
 
+  // Format each line item independently, then derive the MIN CHARGE row
+  // as the residual (header minus line-item sum) so the displayed rows
+  // always sum exactly to the displayed header — the standard accounting
+  // "plug" that absorbs per-item rounding drift.
+  const fmtCompute = fmtRate(hourlyCostBreakdown.compute);
+  const fmtMemory = fmtRate(hourlyCostBreakdown.memory);
+  const fmtStorage = fmtRate(hourlyCostBreakdown.storage);
+  const precision = pricingView === "hourly" ? 2 : 8;
+  const fmtMinCharge = (
+    parseFloat(displayValue) -
+    parseFloat(fmtCompute) -
+    parseFloat(fmtMemory) -
+    parseFloat(fmtStorage)
+  ).toFixed(precision);
+
   return (
     <div className={cn("max-w-6xl mx-auto flex flex-col", className)}>
       {/* Header */}
@@ -1338,21 +1353,21 @@ export function ProvisioningWizard({
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>COMPUTE</span>
                 <span className="text-foreground">
-                  ${fmtRate(hourlyCostBreakdown.compute)}
+                  ${fmtCompute}
                   {rateSuffix}
                 </span>
               </div>
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>MEMORY</span>
                 <span className="text-foreground/80">
-                  ${fmtRate(hourlyCostBreakdown.memory)}
+                  ${fmtMemory}
                   {rateSuffix}
                 </span>
               </div>
               <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
                 <span>STORAGE</span>
                 <span className="text-foreground/80">
-                  ${fmtRate(hourlyCostBreakdown.storage)}
+                  ${fmtStorage}
                   {rateSuffix}
                 </span>
               </div>
@@ -1360,11 +1375,7 @@ export function ProvisioningWizard({
                 <div className="flex justify-between text-xs font-mono tracking-widest text-primary border-t border-border pt-2">
                   <span>MIN CHARGE</span>
                   <span>
-                    $
-                    {fmtRate(
-                      hourlyCostBreakdown.floor -
-                        hourlyCostBreakdown.lineSum,
-                    )}
+                    ${fmtMinCharge}
                     {rateSuffix}
                   </span>
                 </div>

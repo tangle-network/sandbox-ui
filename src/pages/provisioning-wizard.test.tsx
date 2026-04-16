@@ -608,12 +608,12 @@ describe("ProvisioningWizard — pricing view toggle", () => {
     expect(screen.getByText("$0.00000333/s")).toBeInTheDocument()
     expect(screen.getByText("$0.00000444/s")).toBeInTheDocument()
 
-    // MIN CHARGE row renders `floor - lineSum` per-second so that, modulo
-    // sub-rounding drift, line items + MIN CHARGE reconcile to the header.
-    // If a future refactor renders `floor` instead of `floor - lineSum`
-    // here, this assertion catches the silent invariant break.
+    // MIN CHARGE is derived as a residual (header minus formatted line items)
+    // so the displayed rows always sum exactly to the displayed header.
+    // The value absorbs per-item rounding drift (here +1 ULP vs the raw
+    // (floor - lineSum) / 3600 calculation).
     expect(screen.getByText("MIN CHARGE")).toBeInTheDocument()
-    expect(screen.getByText("$0.00026389/s")).toBeInTheDocument()
+    expect(screen.getByText("$0.00026390/s")).toBeInTheDocument()
   })
 
   it("'Start from scratch' resets the pricing view to hourly", async () => {

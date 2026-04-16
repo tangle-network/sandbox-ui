@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import {
   ProvisioningWizard,
   resolveEnvironment,
+  formatPerSecondValue,
   type ProvisioningConfig,
   type StartupScriptEntry,
   type EnvironmentEntry,
@@ -505,6 +506,157 @@ describe("ProvisioningWizard — pricingRates", () => {
       />,
     )
     expect(screen.queryByText("MIN CHARGE")).not.toBeInTheDocument()
+  })
+})
+
+describe("formatPerSecondValue", () => {
+  it("formats zero with a stable 8-decimal width", () => {
+    expect(formatPerSecondValue(0)).toBe("0.00000000")
+  })
+
+  it("converts an hourly value to a per-second rate", () => {
+    // 3600 / 3600 == 1
+    expect(formatPerSecondValue(3600)).toBe("1.00000000")
+  })
+
+  it("preserves precision past the 2-decimal hourly rounding", () => {
+    // 4 * 0.045 + 16 * 0.005 + 128 * 0.0011 = 0.4008
+    // The buggy code path used parseFloat("0.40") / 3600 = 0.00011111…
+    // The correct value is 0.4008 / 3600 = 0.00011133…
+    expect(formatPerSecondValue(0.4008)).toBe("0.00011133")
+  })
+
+  it("rounds values smaller than the 8-decimal floor down to zero", () => {
+    // Documents the silent-zero edge case: rates beneath ~3.6e-5 / hr fall
+    // off the per-second display entirely. Acceptable for plausible billing
+    // tiers; flagged here so any future precision bump is intentional.
+    expect(formatPerSecondValue(1e-5)).toBe("0.00000000")
+  })
+})
+
+describe("ProvisioningWizard — pricing view toggle", () => {
+  it("renders header and breakdown in per-second mode without arithmetic drift", async () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        // Limits chosen so the wizard auto-selects the Standard preset
+        // (4 vCPU / 16 GB / 128 GB), reproducing the 0.4008/hr case where
+        // toFixed(2) rounding silently corrupts the per-second header.
+        resourceLimits={{ cpuMax: 4, ramMaxGB: 16, storageMaxGB: 128 }}
+        pricingRates={{
+          cpuPerHr: 0.045,
+          ramPerGbHr: 0.005,
+          diskPerGbHr: 0.0011,
+          minChargePerHr: 0,
+        }}
+      />,
+    )
+
+    // Hourly view starts as the default.
+    expect(screen.getByText("$0.40")).toBeInTheDocument()
+    expect(screen.getByText("/ hour")).toBeInTheDocument()
+
+    const perSecButton = screen.getByRole("button", {
+      name: "Per Second",
+      pressed: false,
+    })
+    await userEvent.click(perSecButton)
+
+    // Header now reflects the *raw* total / 3600, not parseFloat("0.40") / 3600.
+    expect(screen.getByText("$0.00011133")).toBeInTheDocument()
+    expect(screen.getByText("/ sec")).toBeInTheDocument()
+
+    // Each line item derives from the same raw float / 3600 path as the
+    // header, so rounding drift is bounded to ±1 at the 8th decimal place —
+    // far smaller than the previously-broken parseFloat("0.40") / 3600 path.
+    expect(screen.getByText("$0.00005000/s")).toBeInTheDocument()
+    expect(screen.getByText("$0.00002222/s")).toBeInTheDocument()
+    expect(screen.getByText("$0.00003911/s")).toBeInTheDocument()
+
+    // aria-pressed flips so screen readers can announce the active view.
+    expect(perSecButton).toHaveAttribute("aria-pressed", "true")
+    expect(
+      screen.getByRole("button", { name: "Per Hour", pressed: false }),
+    ).toBeInTheDocument()
+  })
+
+  it("renders the MIN CHARGE row in per-second mode using the floor-minus-lineSum value", async () => {
+    // Limits pin the sliders to 2 vCPU / 4 GB / 40 GB so the three line
+    // products are each distinct (0.022 / 0.012 / 0.016 per hour) and the
+    // line sum (0.05/hr) is well below the 1.0/hr floor — exercising the
+    // floorApplies branch that none of the other tests touch.
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 2, ramMaxGB: 4, storageMaxGB: 40 }}
+        pricingRates={{
+          cpuPerHr: 0.011,
+          ramPerGbHr: 0.003,
+          diskPerGbHr: 0.0004,
+          minChargePerHr: 1.0,
+        }}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole("button", { name: "Per Second" }))
+
+    // Header is the floor / 3600, not the line sum / 3600.
+    expect(screen.getByText("$0.00027778")).toBeInTheDocument()
+
+    // Each breakdown row renders at per-second precision from the raw float.
+    expect(screen.getByText("$0.00000611/s")).toBeInTheDocument()
+    expect(screen.getByText("$0.00000333/s")).toBeInTheDocument()
+    expect(screen.getByText("$0.00000444/s")).toBeInTheDocument()
+
+    // MIN CHARGE row renders (floor - lineSum) / 3600 at 8-decimal precision.
+    // Independent per-item rounding can cause the displayed rows to differ
+    // from the header by ±1 ULP — acceptable at 8dp (~$0.004/year).
+    expect(screen.getByText("MIN CHARGE")).toBeInTheDocument()
+    expect(screen.getByText("$0.00026389/s")).toBeInTheDocument()
+  })
+
+  it("'Start from scratch' resets the pricing view to hourly", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        defaultConfig={{ cpuCores: 1, ramGB: 4, storageGB: 30, environment: "node", modelTier: "claude-sonnet", systemPrompt: "", name: "", gitUrl: "", envVars: [], driver: "docker", bare: false }}
+        skipToReview
+      />,
+    )
+
+    // Switch to per-second view, then start over.
+    await user.click(screen.getByRole("button", { name: "Per Second" }))
+    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "true")
+
+    await user.click(screen.getByText("Start from scratch"))
+
+    // The hourly toggle should be active again.
+    expect(screen.getByRole("button", { name: "Per Hour" })).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "false")
+  })
+
+  it("returns to the hourly view when the user toggles back", async () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 4, ramMaxGB: 16, storageMaxGB: 128 }}
+        pricingRates={{
+          cpuPerHr: 0.045,
+          ramPerGbHr: 0.005,
+          diskPerGbHr: 0.0011,
+          minChargePerHr: 0,
+        }}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole("button", { name: "Per Second" }))
+    expect(screen.getByText("$0.00011133")).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Per Hour" }))
+    expect(screen.getByText("$0.40")).toBeInTheDocument()
+    expect(screen.getByText("/ hour")).toBeInTheDocument()
   })
 })
 

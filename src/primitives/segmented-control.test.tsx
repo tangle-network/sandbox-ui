@@ -10,57 +10,57 @@ const options: SegmentedControlOption[] = [
 ]
 
 describe("SegmentedControl", () => {
-  it("renders all options as tabs", () => {
+  it("renders all options as radio buttons", () => {
     render(
       <SegmentedControl value="all" onValueChange={vi.fn()} options={options} />,
     )
-    const tabs = screen.getAllByRole("tab")
-    expect(tabs).toHaveLength(3)
+    const radios = screen.getAllByRole("radio")
+    expect(radios).toHaveLength(3)
     expect(screen.getByText("All")).toBeInTheDocument()
     expect(screen.getByText("Personal")).toBeInTheDocument()
     expect(screen.getByText("Team")).toBeInTheDocument()
   })
 
-  it("marks the active tab with aria-selected", () => {
+  it("marks the active option with aria-checked", () => {
     render(
       <SegmentedControl value="personal" onValueChange={vi.fn()} options={options} />,
     )
-    const personalTab = screen.getByRole("tab", { name: "Personal" })
-    const allTab = screen.getByRole("tab", { name: "All" })
+    const personalRadio = screen.getByRole("radio", { name: "Personal" })
+    const allRadio = screen.getByRole("radio", { name: "All" })
 
-    expect(personalTab).toHaveAttribute("aria-selected", "true")
-    expect(allTab).toHaveAttribute("aria-selected", "false")
+    expect(personalRadio).toHaveAttribute("aria-checked", "true")
+    expect(allRadio).toHaveAttribute("aria-checked", "false")
   })
 
-  it("sets tabIndex 0 on active tab and -1 on inactive tabs", () => {
+  it("sets tabIndex 0 on active option and -1 on inactive options", () => {
     render(
       <SegmentedControl value="all" onValueChange={vi.fn()} options={options} />,
     )
-    const tabs = screen.getAllByRole("tab")
-    expect(tabs[0]).toHaveAttribute("tabindex", "0")
-    expect(tabs[1]).toHaveAttribute("tabindex", "-1")
-    expect(tabs[2]).toHaveAttribute("tabindex", "-1")
+    const radios = screen.getAllByRole("radio")
+    expect(radios[0]).toHaveAttribute("tabindex", "0")
+    expect(radios[1]).toHaveAttribute("tabindex", "-1")
+    expect(radios[2]).toHaveAttribute("tabindex", "-1")
   })
 
-  it("calls onValueChange when clicking an inactive tab", async () => {
+  it("calls onValueChange when clicking an inactive option", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
       <SegmentedControl value="all" onValueChange={onChange} options={options} />,
     )
 
-    await user.click(screen.getByRole("tab", { name: "Team" }))
+    await user.click(screen.getByRole("radio", { name: "Team" }))
     expect(onChange).toHaveBeenCalledWith("team")
   })
 
-  it("does not call onValueChange when clicking the already-active tab", async () => {
+  it("does not call onValueChange when clicking the already-active option", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
       <SegmentedControl value="all" onValueChange={onChange} options={options} />,
     )
 
-    await user.click(screen.getByRole("tab", { name: "All" }))
+    await user.click(screen.getByRole("radio", { name: "All" }))
     expect(onChange).not.toHaveBeenCalled()
   })
 
@@ -78,102 +78,121 @@ describe("SegmentedControl", () => {
 
   // --- Keyboard navigation ---
 
-  it("navigates to next tab on ArrowRight", async () => {
+  it("navigates to next option on ArrowRight", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
       <SegmentedControl value="all" onValueChange={onChange} options={options} />,
     )
 
-    const activeTab = screen.getByRole("tab", { name: "All" })
-    activeTab.focus()
+    screen.getByRole("radio", { name: "All" }).focus()
     await user.keyboard("{ArrowRight}")
 
     expect(onChange).toHaveBeenCalledWith("personal")
   })
 
-  it("moves DOM focus to the target tab on arrow key", async () => {
+  it("moves DOM focus to the target option on arrow key", async () => {
     const user = userEvent.setup()
     render(
       <SegmentedControl value="all" onValueChange={vi.fn()} options={options} />,
     )
 
-    const allTab = screen.getByRole("tab", { name: "All" })
-    const personalTab = screen.getByRole("tab", { name: "Personal" })
-    allTab.focus()
+    const personalRadio = screen.getByRole("radio", { name: "Personal" })
+    screen.getByRole("radio", { name: "All" }).focus()
     await user.keyboard("{ArrowRight}")
 
-    expect(document.activeElement).toBe(personalTab)
+    expect(document.activeElement).toBe(personalRadio)
   })
 
-  it("navigates to previous tab on ArrowLeft", async () => {
+  it("navigates to previous option on ArrowLeft", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
       <SegmentedControl value="personal" onValueChange={onChange} options={options} />,
     )
 
-    const activeTab = screen.getByRole("tab", { name: "Personal" })
-    activeTab.focus()
+    screen.getByRole("radio", { name: "Personal" }).focus()
     await user.keyboard("{ArrowLeft}")
 
     expect(onChange).toHaveBeenCalledWith("all")
   })
 
-  it("wraps around on ArrowRight from last tab", async () => {
+  it("wraps around on ArrowRight from last option", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
       <SegmentedControl value="team" onValueChange={onChange} options={options} />,
     )
 
-    const activeTab = screen.getByRole("tab", { name: "Team" })
-    activeTab.focus()
+    screen.getByRole("radio", { name: "Team" }).focus()
     await user.keyboard("{ArrowRight}")
 
     expect(onChange).toHaveBeenCalledWith("all")
   })
 
-  it("wraps around on ArrowLeft from first tab", async () => {
+  it("wraps around on ArrowLeft from first option", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
       <SegmentedControl value="all" onValueChange={onChange} options={options} />,
     )
 
-    const activeTab = screen.getByRole("tab", { name: "All" })
-    activeTab.focus()
+    screen.getByRole("radio", { name: "All" }).focus()
     await user.keyboard("{ArrowLeft}")
 
     expect(onChange).toHaveBeenCalledWith("team")
   })
 
-  it("navigates to first tab on Home", async () => {
+  it("navigates to first option on Home", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
       <SegmentedControl value="team" onValueChange={onChange} options={options} />,
     )
 
-    const activeTab = screen.getByRole("tab", { name: "Team" })
-    activeTab.focus()
+    screen.getByRole("radio", { name: "Team" }).focus()
     await user.keyboard("{Home}")
 
     expect(onChange).toHaveBeenCalledWith("all")
   })
 
-  it("navigates to last tab on End", async () => {
+  it("navigates to last option on End", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
       <SegmentedControl value="all" onValueChange={onChange} options={options} />,
     )
 
-    const activeTab = screen.getByRole("tab", { name: "All" })
-    activeTab.focus()
+    screen.getByRole("radio", { name: "All" }).focus()
     await user.keyboard("{End}")
 
     expect(onChange).toHaveBeenCalledWith("team")
+  })
+
+  it("does not fire onValueChange when Home is pressed on first option", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <SegmentedControl value="all" onValueChange={onChange} options={options} />,
+    )
+
+    screen.getByRole("radio", { name: "All" }).focus()
+    await user.keyboard("{Home}")
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it("does not fire onValueChange when End is pressed on last option", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <SegmentedControl value="team" onValueChange={onChange} options={options} />,
+    )
+
+    screen.getByRole("radio", { name: "Team" }).focus()
+    await user.keyboard("{End}")
+
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   // --- Edge cases ---
@@ -185,8 +204,8 @@ describe("SegmentedControl", () => {
       <SegmentedControl value="all" onValueChange={onChange} options={[]} />,
     )
 
-    const tablist = container.querySelector("[role='tablist']") as HTMLElement
-    tablist.focus()
+    const radiogroup = container.querySelector("[role='radiogroup']") as HTMLElement
+    radiogroup.focus()
     await user.keyboard("{ArrowRight}")
     await user.keyboard("{Home}")
     await user.keyboard("{End}")
@@ -201,8 +220,7 @@ describe("SegmentedControl", () => {
       <SegmentedControl value={"unknown" as string} onValueChange={onChange} options={options} />,
     )
 
-    const firstTab = screen.getByRole("tab", { name: "All" })
-    firstTab.focus()
+    screen.getByRole("radio", { name: "All" }).focus()
     await user.keyboard("{ArrowRight}")
 
     expect(onChange).not.toHaveBeenCalled()
@@ -214,9 +232,9 @@ describe("SegmentedControl", () => {
     render(
       <SegmentedControl value="all" onValueChange={vi.fn()} options={options} />,
     )
-    const tablist = screen.getByRole("tablist")
-    expect(tablist.className).toContain("rounded-lg")
-    expect(tablist.className).toContain("bg-card")
+    const radiogroup = screen.getByRole("radiogroup")
+    expect(radiogroup.className).toContain("rounded-lg")
+    expect(radiogroup.className).toContain("bg-card")
   })
 
   it("applies tabs variant classes when specified", () => {
@@ -228,12 +246,12 @@ describe("SegmentedControl", () => {
         variant="tabs"
       />,
     )
-    const tablist = screen.getByRole("tablist")
-    expect(tablist.className).toContain("border-b")
-    expect(tablist.className).not.toContain("bg-card")
+    const radiogroup = screen.getByRole("radiogroup")
+    expect(radiogroup.className).toContain("border-b")
+    expect(radiogroup.className).not.toContain("bg-card")
   })
 
-  it("passes aria-label to the tablist", () => {
+  it("passes aria-label to the radiogroup", () => {
     render(
       <SegmentedControl
         value="all"
@@ -242,6 +260,6 @@ describe("SegmentedControl", () => {
         aria-label="Scope filter"
       />,
     )
-    expect(screen.getByRole("tablist")).toHaveAttribute("aria-label", "Scope filter")
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-label", "Scope filter")
   })
 })

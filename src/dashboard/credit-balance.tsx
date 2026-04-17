@@ -46,15 +46,17 @@ export function CreditBalance({
               value={`$${topUpValue}`}
               onChange={(e) => {
                 const raw = e.target.value.replace(/[^0-9.]/g, "");
-                // Allow at most one decimal point with up to 2 digits after
-                const match = raw.match(/^(\d*\.?\d{0,2})/);
-                setTopUpValue(match ? match[1] : "");
+                setTopUpValue(raw.match(/^(\d*\.?\d{0,2})/)?.[1] ?? "");
               }}
               className="bg-transparent border-none text-foreground font-mono text-lg w-full focus:ring-0 px-4 outline-none"
             />
             <button
               type="button"
-              onClick={() => onTopUp(Number.parseFloat(topUpValue))}
+              onClick={() => {
+                const parsed = Number.parseFloat(topUpValue);
+                if (!Number.isFinite(parsed) || parsed <= 0) return;
+                onTopUp(parsed);
+              }}
               className="bg-[var(--accent-surface-soft)] border border-border text-[var(--accent-text)] px-6 py-3 rounded-md font-bold text-xs uppercase tracking-widest active:scale-95 transition-transform hover:bg-[var(--accent-surface-strong)]"
             >
               Top Up

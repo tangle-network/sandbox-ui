@@ -52,9 +52,11 @@ export {
 export {
   SandboxCard,
   NewSandboxCard,
+  canAdminSandbox,
   type SandboxCardProps,
   type SandboxCardData,
   type SandboxStatus,
+  type TeamRole,
   type NewSandboxCardProps,
 } from "./sandbox-card";
 export {
@@ -93,6 +95,7 @@ export {
 } from "./dashboard-layout";
 export {
   PricingPage,
+  formatPrice,
   type PricingPageProps,
   type PricingTier,
 } from "./pricing-page";

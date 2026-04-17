@@ -120,17 +120,15 @@ describe("CreditBalance", () => {
       expect(onTopUp).toHaveBeenCalledWith(25)
     })
 
-    it("does not call onTopUp for invalid quick amounts", async () => {
+    it("does not render buttons for invalid quick amounts", async () => {
       const user = userEvent.setup()
       const onTopUp = vi.fn()
       render(
         <CreditBalance amount={0} onTopUp={onTopUp} quickAmounts={[0, -5, 10]} />,
       )
 
-      await user.click(screen.getByText("+$0"))
-      await user.click(screen.getByText("+$-5"))
-
-      expect(onTopUp).not.toHaveBeenCalled()
+      expect(screen.queryByText("+$0")).not.toBeInTheDocument()
+      expect(screen.queryByText("+$-5")).not.toBeInTheDocument()
 
       await user.click(screen.getByText("+$10"))
       expect(onTopUp).toHaveBeenCalledWith(10)

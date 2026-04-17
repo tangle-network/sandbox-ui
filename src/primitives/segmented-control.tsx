@@ -21,7 +21,6 @@ import { cn } from "../lib/utils"
 export interface SegmentedControlOption<T extends string = string> {
   value: T
   label: React.ReactNode
-  description?: React.ReactNode
   /** Rendered right of the label, typically a count or status pill. */
   adornment?: React.ReactNode
 }
@@ -49,10 +48,27 @@ export function SegmentedControl<T extends string = string>({
   className,
   ...rest
 }: SegmentedControlProps<T>) {
+  const tabRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    const idx = options.findIndex((o) => o.value === value)
+    let next: number | undefined
+    if (e.key === "ArrowRight") next = (idx + 1) % options.length
+    else if (e.key === "ArrowLeft") next = (idx - 1 + options.length) % options.length
+    else if (e.key === "Home") next = 0
+    else if (e.key === "End") next = options.length - 1
+    if (next !== undefined) {
+      e.preventDefault()
+      onValueChange(options[next].value)
+      tabRefs.current.get(options[next].value)?.focus()
+    }
+  }
+
   return (
     <div
       role="tablist"
       aria-label={rest["aria-label"]}
+      onKeyDown={handleKeyDown}
       className={cn(
         "flex flex-wrap gap-1",
         variant === "row" &&
@@ -67,9 +83,14 @@ export function SegmentedControl<T extends string = string>({
         return (
           <button
             key={option.value}
+            ref={(el) => {
+              if (el) tabRefs.current.set(option.value, el)
+              else tabRefs.current.delete(option.value)
+            }}
             type="button"
             role="tab"
             aria-selected={active}
+            tabIndex={active ? 0 : -1}
             onClick={() => {
               if (!active) onValueChange(option.value)
             }}

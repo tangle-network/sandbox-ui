@@ -213,7 +213,17 @@ describe("SegmentedControl", () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
-  it("does not fire onValueChange when value is not in options", async () => {
+  it("gives first option tabIndex 0 when value does not match any option", () => {
+    render(
+      <SegmentedControl value={"unknown" as string} onValueChange={vi.fn()} options={options} />,
+    )
+    const radios = screen.getAllByRole("radio")
+    expect(radios[0]).toHaveAttribute("tabindex", "0")
+    expect(radios[1]).toHaveAttribute("tabindex", "-1")
+    expect(radios[2]).toHaveAttribute("tabindex", "-1")
+  })
+
+  it("navigates from first option when value does not match any option", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
     render(
@@ -223,7 +233,33 @@ describe("SegmentedControl", () => {
     screen.getByRole("radio", { name: "All" }).focus()
     await user.keyboard("{ArrowRight}")
 
-    expect(onChange).not.toHaveBeenCalled()
+    expect(onChange).toHaveBeenCalledWith("personal")
+  })
+
+  it("supports ArrowDown as alias for ArrowRight", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <SegmentedControl value="all" onValueChange={onChange} options={options} />,
+    )
+
+    screen.getByRole("radio", { name: "All" }).focus()
+    await user.keyboard("{ArrowDown}")
+
+    expect(onChange).toHaveBeenCalledWith("personal")
+  })
+
+  it("supports ArrowUp as alias for ArrowLeft", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <SegmentedControl value="personal" onValueChange={onChange} options={options} />,
+    )
+
+    screen.getByRole("radio", { name: "Personal" }).focus()
+    await user.keyboard("{ArrowUp}")
+
+    expect(onChange).toHaveBeenCalledWith("all")
   })
 
   // --- Variants ---
@@ -233,11 +269,12 @@ describe("SegmentedControl", () => {
       <SegmentedControl value="all" onValueChange={vi.fn()} options={options} />,
     )
     const radiogroup = screen.getByRole("radiogroup")
+    expect(radiogroup.className).toContain("flex-wrap")
     expect(radiogroup.className).toContain("rounded-lg")
     expect(radiogroup.className).toContain("bg-card")
   })
 
-  it("applies tabs variant classes when specified", () => {
+  it("applies tabs variant classes with nowrap", () => {
     render(
       <SegmentedControl
         value="all"
@@ -247,6 +284,8 @@ describe("SegmentedControl", () => {
       />,
     )
     const radiogroup = screen.getByRole("radiogroup")
+    expect(radiogroup.className).toContain("flex-nowrap")
+    expect(radiogroup.className).toContain("overflow-x-auto")
     expect(radiogroup.className).toContain("border-b")
     expect(radiogroup.className).not.toContain("bg-card")
   })

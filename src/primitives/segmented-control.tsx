@@ -49,13 +49,16 @@ export function SegmentedControl<T extends string = string>({
 }: SegmentedControlProps<T>) {
   const optionRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
 
+  const hasMatch = options.some((o) => o.value === value)
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (options.length === 0) return
-    const idx = options.findIndex((o) => o.value === value)
-    if (idx === -1) return
+    // When no option matches value, start navigation from the first option
+    let idx = options.findIndex((o) => o.value === value)
+    if (idx === -1) idx = 0
     let next: number | undefined
-    if (e.key === "ArrowRight") next = (idx + 1) % options.length
-    else if (e.key === "ArrowLeft") next = (idx - 1 + options.length) % options.length
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") next = (idx + 1) % options.length
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = (idx - 1 + options.length) % options.length
     else if (e.key === "Home") next = 0
     else if (e.key === "End") next = options.length - 1
     if (next !== undefined) {
@@ -73,16 +76,17 @@ export function SegmentedControl<T extends string = string>({
       aria-label={rest["aria-label"]}
       onKeyDown={handleKeyDown}
       className={cn(
-        "flex flex-wrap gap-1",
+        "flex gap-1",
         variant === "row" &&
-          "items-center rounded-lg border border-border bg-card p-1",
+          "flex-wrap items-center rounded-lg border border-border bg-card p-1",
         variant === "tabs" &&
-          "items-end border-b border-border pb-0",
+          "flex-nowrap items-end border-b border-border pb-0 overflow-x-auto",
         className,
       )}
     >
-      {options.map((option) => {
+      {options.map((option, i) => {
         const active = option.value === value
+        const focusable = active || (!hasMatch && i === 0)
         return (
           <button
             key={option.value}
@@ -93,7 +97,7 @@ export function SegmentedControl<T extends string = string>({
             type="button"
             role="radio"
             aria-checked={active}
-            tabIndex={active ? 0 : -1}
+            tabIndex={focusable ? 0 : -1}
             onClick={() => {
               if (!active) onValueChange(option.value)
             }}

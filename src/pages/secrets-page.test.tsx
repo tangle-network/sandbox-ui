@@ -187,4 +187,51 @@ describe("SecretsPage", () => {
     )
     expect(container.firstElementChild).toHaveClass("test-class")
   })
+
+  // --- teamSecretsHint banner tests ---
+
+  describe("teamSecretsHint", () => {
+    it("renders the team-secrets hint banner when prop is provided", async () => {
+      const onNavigate = vi.fn()
+      render(<SecretsPage apiClient={api} teamSecretsHint={{ onNavigate }} />)
+
+      expect(screen.getByText("Setting up secrets for a team?")).toBeInTheDocument()
+      expect(screen.getByText(/Secrets here are/)).toBeInTheDocument()
+    })
+
+    it("does not render the team-secrets hint banner when prop is omitted", async () => {
+      render(<SecretsPage apiClient={api} />)
+
+      expect(screen.queryByText("Setting up secrets for a team?")).not.toBeInTheDocument()
+    })
+
+    it("uses default CTA label when no custom label is provided", async () => {
+      const onNavigate = vi.fn()
+      render(<SecretsPage apiClient={api} teamSecretsHint={{ onNavigate }} />)
+
+      expect(screen.getByRole("button", { name: /manage team secrets/i })).toBeInTheDocument()
+    })
+
+    it("uses custom CTA label when provided", async () => {
+      const onNavigate = vi.fn()
+      render(
+        <SecretsPage
+          apiClient={api}
+          teamSecretsHint={{ onNavigate, label: "Go to Teams" }}
+        />,
+      )
+
+      expect(screen.getByRole("button", { name: /go to teams/i })).toBeInTheDocument()
+    })
+
+    it("calls onNavigate when the CTA button is clicked", async () => {
+      const user = userEvent.setup()
+      const onNavigate = vi.fn()
+      render(<SecretsPage apiClient={api} teamSecretsHint={{ onNavigate }} />)
+
+      await user.click(screen.getByRole("button", { name: /manage team secrets/i }))
+
+      expect(onNavigate).toHaveBeenCalledTimes(1)
+    })
+  })
 })

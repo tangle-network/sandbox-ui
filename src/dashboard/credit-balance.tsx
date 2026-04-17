@@ -46,7 +46,7 @@ export function CreditBalance({
               value={`$${topUpValue}`}
               onChange={(e) => {
                 const raw = e.target.value.replace(/[^0-9.]/g, "");
-                setTopUpValue(raw.match(/^(\d*\.?\d{0,2})/)![1]);
+                setTopUpValue(raw.match(/^(\d*\.?\d{0,2})/)?.[1] ?? "");
               }}
               className="bg-transparent border-none text-foreground font-mono text-lg w-full focus:ring-0 px-4 outline-none"
             />

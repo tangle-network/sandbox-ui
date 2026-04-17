@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, Shield, CheckCircle } from "lucide-react"
+import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, Shield, CheckCircle, Users, ArrowRight } from "lucide-react"
 import { cn } from "../lib/utils"
 import {
   Dialog,
@@ -28,9 +28,23 @@ export interface SecretsApiClient {
 export interface SecretsPageProps {
   apiClient: SecretsApiClient
   className?: string
+  /**
+   * Optional hint pointing users at team-level secrets. When provided,
+   * renders a persistent informational banner below the header clarifying
+   * that personal secrets are NOT shared with teams and linking the
+   * user to their team-management page to configure shared secrets
+   * there. Omit entirely to hide the banner (e.g. in deployments
+   * without teams).
+   */
+  teamSecretsHint?: {
+    /** Callback fired when the user clicks the banner's CTA. */
+    onNavigate: () => void
+    /** CTA label. Defaults to "Manage team secrets". */
+    label?: string
+  }
 }
 
-export function SecretsPage({ apiClient, className }: SecretsPageProps) {
+export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPageProps) {
   const [secrets, setSecrets] = React.useState<Secret[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -131,6 +145,35 @@ export function SecretsPage({ apiClient, className }: SecretsPageProps) {
           New Secret
         </button>
       </div>
+
+      {/* Team-secrets hint — rendered only when the host app opts in.
+          These secrets are personal; team-scoped credentials live on the
+          team management page. The banner prevents users from pasting
+          shared credentials here and wondering why teammates can't see
+          them. */}
+      {teamSecretsHint && (
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-[var(--accent-surface-soft)]/40 px-4 py-3">
+          <Users className="h-5 w-5 shrink-0 text-[var(--accent-text)]" aria-hidden="true" />
+          <div className="flex-1 text-sm">
+            <p className="font-semibold text-foreground">
+              Setting up secrets for a team?
+            </p>
+            <p className="mt-0.5 text-muted-foreground text-xs">
+              Secrets here are <strong>personal</strong> — only available in
+              sandboxes you create. To share credentials with teammates,
+              configure them on the team page instead.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={teamSecretsHint.onNavigate}
+            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+          >
+            {teamSecretsHint.label ?? "Manage team secrets"}
+            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+          </button>
+        </div>
+      )}
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">

@@ -75,6 +75,12 @@ export {
 
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 
+export { SegmentedControl } from "./segmented-control";
+export type {
+  SegmentedControlOption,
+  SegmentedControlProps,
+} from "./segmented-control";
+
 export { Progress } from "./progress";
 
 export { Switch } from "./switch";

@@ -26,8 +26,17 @@ export interface PricingPageProps {
   cardClassName?: string;
 }
 
-function formatPrice(cents: number): string {
-  return `$${Math.round(cents / 100)}`;
+/**
+ * Formats an integer cent amount as a human-readable USD price.
+ * Whole-dollar amounts omit decimals ($10), fractional amounts show two ($10.99).
+ * Returns "$0" for non-finite or negative inputs.
+ * @param cents - Amount in whole US cents (e.g. 1099 for $10.99).
+ */
+export function formatPrice(cents: number): string {
+  if (!Number.isFinite(cents) || cents < 0) return "$0";
+  return cents % 100 === 0
+    ? `$${cents / 100}`
+    : `$${(cents / 100).toFixed(2)}`;
 }
 
 export function PricingPage({

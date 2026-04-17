@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
+import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight, Users, User } from "lucide-react"
 import { cn } from "../lib/utils"
-import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
+import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
 
 export interface SandboxTableProps {
   sandboxes: SandboxCardData[]
@@ -60,6 +60,7 @@ export function SandboxTable({
 }: SandboxTableProps) {
   const totalCount = total ?? sandboxes.length
   const totalPages = Math.ceil(totalCount / pageSize)
+  const hasTeamSandboxes = sandboxes.some((sb) => sb.team !== undefined)
 
   return (
     <div className={cn("w-full", className)}>
@@ -70,6 +71,7 @@ export function SandboxTable({
               <tr className="bg-background border-b border-border">
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sandbox Name</th>
+                {hasTeamSandboxes && <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scope</th>}
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Environment</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resources</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
@@ -97,6 +99,30 @@ export function SandboxTable({
                         {sb.nodeId && <span className="text-[10px] font-mono text-muted-foreground">{sb.nodeId}</span>}
                       </div>
                     </td>
+                    {hasTeamSandboxes && (
+                      <td className="px-6 py-5">
+                        {sb.team ? (
+                          <div
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
+                            title={`Shared with ${sb.team.name ?? "Team"} · ${sb.team.role}`}
+                          >
+                            <Users className="h-3 w-3" aria-hidden="true" />
+                            <span>{sb.team.name ?? "Team"}</span>
+                            <span className="font-normal text-muted-foreground">
+                              · {sb.team.role}
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                            title="Personal sandbox"
+                          >
+                            <User className="h-3 w-3" aria-hidden="true" />
+                            Personal
+                          </div>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         {sb.imageIcon && (
@@ -150,7 +176,7 @@ export function SandboxTable({
                             <Code2 className="h-4 w-4" />
                           </button>
                         )}
-                        {onDelete && (
+                        {onDelete && canAdminSandbox(sb) && (
                           <button type="button" onClick={() => onDelete(sb.id)} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>

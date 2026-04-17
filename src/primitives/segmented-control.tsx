@@ -1,5 +1,7 @@
 "use client"
 
+declare const process: { env: { NODE_ENV?: string } } | undefined
+
 import * as React from "react"
 import { cn } from "../lib/utils"
 
@@ -9,6 +11,10 @@ import { cn } from "../lib/utils"
  * Uses role="radiogroup" / role="radio" because this is a value-selector
  * with no associated panels — not a tab interface. Arrow keys navigate
  * between options (with wrapping), Home/End jump to first/last.
+ *
+ * **Accessibility:** Provide either `aria-label` or `aria-labelledby` — the
+ * ARIA spec requires every radiogroup to have an accessible name. A dev-mode
+ * console warning fires when both are omitted.
  *
  * Design rules baked into the default variant:
  *   - Only the SELECTED segment shows a surface colour + accent text.
@@ -46,6 +52,17 @@ export function SegmentedControl<T extends string = string>({
   className,
   ...rest
 }: SegmentedControlProps<T>) {
+  if (
+    typeof process !== "undefined" &&
+    process?.env?.NODE_ENV !== "production" &&
+    !rest["aria-label"] &&
+    !rest["aria-labelledby"]
+  ) {
+    console.warn(
+      '[SegmentedControl] role="radiogroup" requires either aria-label or aria-labelledby for accessibility.',
+    )
+  }
+
   const optionRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
 
   const hasMatch = options.some((o) => o.value === value)
@@ -105,7 +122,7 @@ export function SegmentedControl<T extends string = string>({
             className={cn(
               "relative inline-flex items-center gap-2 whitespace-nowrap text-sm transition-colors",
               variant === "row" && "rounded-md px-3 py-1.5",
-              variant === "tabs" && "rounded-none border-b-2 px-4 py-2",
+              variant === "tabs" && "rounded-none border-b-2 -mb-px px-4 py-2",
               // Active styling is the ONLY styled state — unselected
               // segments stay transparent on purpose so they don't
               // compete visually with the selection.

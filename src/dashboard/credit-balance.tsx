@@ -69,7 +69,7 @@ export function CreditBalance({
                 type="button"
                 onClick={() => {
                   if (!Number.isFinite(qa) || qa <= 0) return;
-                  setTopUpValue(String(qa));
+                  setTopUpValue(qa.toFixed(2));
                   onTopUp(qa);
                 }}
                 className="flex-1 py-2 text-[10px] font-mono text-muted-foreground border border-border rounded-md hover:bg-muted/50 hover:text-foreground transition-colors uppercase"

@@ -51,7 +51,7 @@ describe("CreditBalance", () => {
       await user.clear(input)
       await user.type(input, "1.2.3.4")
 
-      // regex /^(\d*\.?\d{0,2})/ captures "1.2" then stops at second dot
+      // Per-keystroke: "1.2" accepted, second "." discarded, "3" appends → "1.23", ".4" discarded
       expect(input).toHaveValue("$1.23")
     })
   })

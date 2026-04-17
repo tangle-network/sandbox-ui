@@ -23,4 +23,18 @@ describe("formatPrice", () => {
     expect(formatPrice(100000)).toBe("$1000")
     expect(formatPrice(99999)).toBe("$999.99")
   })
+
+  it("returns $0 for NaN", () => {
+    expect(formatPrice(NaN)).toBe("$0")
+  })
+
+  it("returns $0 for negative values", () => {
+    expect(formatPrice(-50)).toBe("$0")
+    expect(formatPrice(-1)).toBe("$0")
+  })
+
+  it("returns $0 for Infinity", () => {
+    expect(formatPrice(Infinity)).toBe("$0")
+    expect(formatPrice(-Infinity)).toBe("$0")
+  })
 })

@@ -176,6 +176,38 @@ describe("SegmentedControl", () => {
     expect(onChange).toHaveBeenCalledWith("team")
   })
 
+  // --- Edge cases ---
+
+  it("does not crash on keyboard input when options array is empty", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const { container } = render(
+      <SegmentedControl value="all" onValueChange={onChange} options={[]} />,
+    )
+
+    const tablist = container.querySelector("[role='tablist']") as HTMLElement
+    tablist.focus()
+    await user.keyboard("{ArrowRight}")
+    await user.keyboard("{Home}")
+    await user.keyboard("{End}")
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it("does not fire onValueChange when value is not in options", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <SegmentedControl value={"unknown" as string} onValueChange={onChange} options={options} />,
+    )
+
+    const firstTab = screen.getByRole("tab", { name: "All" })
+    firstTab.focus()
+    await user.keyboard("{ArrowRight}")
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   // --- Variants ---
 
   it("applies row variant classes by default", () => {

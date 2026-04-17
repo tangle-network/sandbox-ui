@@ -51,7 +51,9 @@ export function SegmentedControl<T extends string = string>({
   const tabRefs = React.useRef<Map<string, HTMLButtonElement>>(new Map())
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (options.length === 0) return
     const idx = options.findIndex((o) => o.value === value)
+    if (idx === -1) return
     let next: number | undefined
     if (e.key === "ArrowRight") next = (idx + 1) % options.length
     else if (e.key === "ArrowLeft") next = (idx - 1 + options.length) % options.length

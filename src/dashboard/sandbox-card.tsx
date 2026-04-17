@@ -99,7 +99,7 @@ export function SandboxCard({
             {sandbox.team && (
               <span
                 className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-surface-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-text)]"
-                title={`Shared with ${sandbox.team.name ?? "team"} · ${sandbox.team.role}`}
+                title={`Shared with ${sandbox.team.name ?? "Team"} · ${sandbox.team.role}`}
               >
                 <Users className="h-3 w-3" aria-hidden="true" />
                 {sandbox.team.name ?? "Team"}

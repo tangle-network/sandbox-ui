@@ -102,7 +102,7 @@ export function SandboxTable({
                       {sb.team ? (
                         <div
                           className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
-                          title={`Shared with ${sb.team.name ?? "team"} · ${sb.team.role}`}
+                          title={`Shared with ${sb.team.name ?? "Team"} · ${sb.team.role}`}
                         >
                           <Users className="h-3 w-3" aria-hidden="true" />
                           <span>{sb.team.name ?? "Team"}</span>

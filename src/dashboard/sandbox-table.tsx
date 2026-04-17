@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight, Users, User } from "lucide-react"
 import { cn } from "../lib/utils"
-import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
+import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
 
 export interface SandboxTableProps {
   sandboxes: SandboxCardData[]
@@ -173,7 +173,7 @@ export function SandboxTable({
                             <Code2 className="h-4 w-4" />
                           </button>
                         )}
-                        {onDelete && (
+                        {onDelete && canAdminSandbox(sb) && (
                           <button type="button" onClick={() => onDelete(sb.id)} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>

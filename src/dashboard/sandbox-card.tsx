@@ -61,10 +61,8 @@ export interface SandboxCardProps {
 }
 
 // Personal sandboxes are always admin for the owner; team sandboxes
-// only expose Delete to owner/admin members. Keeping this local avoids
-// threading a capability flag through every caller — the card already
-// receives the team record and can decide for itself.
-function canAdminOnCard(sandbox: SandboxCardData): boolean {
+// only expose destructive actions to owner/admin members.
+export function canAdminSandbox(sandbox: SandboxCardData): boolean {
   if (!sandbox.team) return true
   return sandbox.team.role === "owner" || sandbox.team.role === "admin"
 }
@@ -151,7 +149,7 @@ export function SandboxCard({
                 {(onResume || onFork) && <DropdownMenuSeparator />}
               </>
             )}
-            {onDelete && canAdminOnCard(sandbox) && (
+            {onDelete && canAdminSandbox(sandbox) && (
               <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => onDelete(sandbox.id)}>
                 <Trash2 className="mr-2 h-4 w-4" /> Delete Sandbox
               </DropdownMenuItem>

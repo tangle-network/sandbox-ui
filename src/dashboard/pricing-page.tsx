@@ -26,6 +26,11 @@ export interface PricingPageProps {
   cardClassName?: string;
 }
 
+/**
+ * Formats an integer cent amount as a human-readable USD price.
+ * Whole-dollar amounts omit decimals ($10), fractional amounts show two ($10.99).
+ * @param cents - Amount in whole US cents (e.g. 1099 for $10.99).
+ */
 export function formatPrice(cents: number): string {
   return cents % 100 === 0
     ? `$${cents / 100}`

@@ -30,7 +30,7 @@ export interface SecretsPageProps {
   className?: string
   /**
    * Optional hint pointing users at team-level secrets. When provided,
-   * renders a dismiss-persistent banner below the header clarifying
+   * renders a persistent informational banner below the header clarifying
    * that personal secrets are NOT shared with teams and linking the
    * user to their team-management page to configure shared secrets
    * there. Omit entirely to hide the banner (e.g. in deployments

@@ -26,10 +26,10 @@ export interface PricingPageProps {
   cardClassName?: string;
 }
 
-function formatPrice(cents: number): string {
-  const dollars = cents / 100;
-  // Show whole dollars when there are no cents, decimal otherwise
-  return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`;
+export function formatPrice(cents: number): string {
+  return cents % 100 === 0
+    ? `$${cents / 100}`
+    : `$${(cents / 100).toFixed(2)}`;
 }
 
 export function PricingPage({

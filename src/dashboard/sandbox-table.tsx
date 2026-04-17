@@ -104,7 +104,7 @@ export function SandboxTable({
                           className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
                           title={`Shared with ${sb.team.name ?? "team"} · ${sb.team.role}`}
                         >
-                          <Users className="h-3 w-3" />
+                          <Users className="h-3 w-3" aria-hidden="true" />
                           <span>{sb.team.name ?? "Team"}</span>
                           <span className="font-normal text-muted-foreground">
                             · {sb.team.role}
@@ -115,7 +115,7 @@ export function SandboxTable({
                           className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
                           title="Personal sandbox"
                         >
-                          <User className="h-3 w-3" />
+                          <User className="h-3 w-3" aria-hidden="true" />
                           Personal
                         </div>
                       )}

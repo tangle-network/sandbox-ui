@@ -301,4 +301,28 @@ describe("SegmentedControl", () => {
     )
     expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-label", "Scope filter")
   })
+
+  it("passes aria-labelledby to the radiogroup", () => {
+    render(
+      <SegmentedControl
+        value="all"
+        onValueChange={vi.fn()}
+        options={options}
+        aria-labelledby="heading-id"
+      />,
+    )
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-labelledby", "heading-id")
+  })
+
+  it("passes id to the radiogroup", () => {
+    render(
+      <SegmentedControl
+        value="all"
+        onValueChange={vi.fn()}
+        options={options}
+        id="scope-control"
+      />,
+    )
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("id", "scope-control")
+  })
 })

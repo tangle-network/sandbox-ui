@@ -24,7 +24,8 @@ export interface SegmentedControlOption<T extends string = string> {
   adornment?: React.ReactNode
 }
 
-export interface SegmentedControlProps<T extends string = string> {
+export interface SegmentedControlProps<T extends string = string>
+  extends Pick<React.HTMLAttributes<HTMLDivElement>, "id" | "className" | "aria-label" | "aria-labelledby"> {
   value: T
   onValueChange: (value: T) => void
   options: SegmentedControlOption<T>[]
@@ -35,8 +36,6 @@ export interface SegmentedControlProps<T extends string = string> {
    *              reads as a classic tab (used on the Team page)
    */
   variant?: "row" | "tabs"
-  className?: string
-  "aria-label"?: string
 }
 
 export function SegmentedControl<T extends string = string>({
@@ -73,7 +72,9 @@ export function SegmentedControl<T extends string = string>({
   return (
     <div
       role="radiogroup"
+      id={rest.id}
       aria-label={rest["aria-label"]}
+      aria-labelledby={rest["aria-labelledby"]}
       onKeyDown={handleKeyDown}
       className={cn(
         "flex gap-1",
@@ -110,7 +111,7 @@ export function SegmentedControl<T extends string = string>({
               // compete visually with the selection.
               active
                 ? variant === "row"
-                  ? "bg-[var(--accent-surface)] text-[var(--accent-text)] font-semibold"
+                  ? "border border-transparent bg-[var(--accent-surface)] text-[var(--accent-text)] font-semibold"
                   : "border-[var(--accent-text)] text-[var(--accent-text)] font-semibold"
                 : variant === "row"
                   ? "border border-transparent text-muted-foreground hover:text-foreground"

@@ -153,7 +153,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
           them. */}
       {teamSecretsHint && (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-[var(--accent-surface-soft)]/40 px-4 py-3">
-          <Users className="h-5 w-5 shrink-0 text-[var(--accent-text)]" />
+          <Users className="h-5 w-5 shrink-0 text-[var(--accent-text)]" aria-hidden="true" />
           <div className="flex-1 text-sm">
             <p className="font-semibold text-foreground">
               Setting up secrets for a team?
@@ -170,7 +170,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
           >
             {teamSecretsHint.label ?? "Manage team secrets"}
-            <ArrowRight className="h-3 w-3" />
+            <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </button>
         </div>
       )}

@@ -60,6 +60,7 @@ export function SandboxTable({
 }: SandboxTableProps) {
   const totalCount = total ?? sandboxes.length
   const totalPages = Math.ceil(totalCount / pageSize)
+  const hasTeamSandboxes = sandboxes.some((sb) => sb.team !== undefined)
 
   return (
     <div className={cn("w-full", className)}>
@@ -70,7 +71,7 @@ export function SandboxTable({
               <tr className="bg-background border-b border-border">
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sandbox Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scope</th>
+                {hasTeamSandboxes && <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scope</th>}
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Environment</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resources</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
@@ -98,28 +99,30 @@ export function SandboxTable({
                         {sb.nodeId && <span className="text-[10px] font-mono text-muted-foreground">{sb.nodeId}</span>}
                       </div>
                     </td>
-                    <td className="px-6 py-5">
-                      {sb.team ? (
-                        <div
-                          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
-                          title={`Shared with ${sb.team.name ?? "Team"} · ${sb.team.role}`}
-                        >
-                          <Users className="h-3 w-3" aria-hidden="true" />
-                          <span>{sb.team.name ?? "Team"}</span>
-                          <span className="font-normal text-muted-foreground">
-                            · {sb.team.role}
-                          </span>
-                        </div>
-                      ) : (
-                        <div
-                          className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
-                          title="Personal sandbox"
-                        >
-                          <User className="h-3 w-3" aria-hidden="true" />
-                          Personal
-                        </div>
-                      )}
-                    </td>
+                    {hasTeamSandboxes && (
+                      <td className="px-6 py-5">
+                        {sb.team ? (
+                          <div
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
+                            title={`Shared with ${sb.team.name ?? "Team"} · ${sb.team.role}`}
+                          >
+                            <Users className="h-3 w-3" aria-hidden="true" />
+                            <span>{sb.team.name ?? "Team"}</span>
+                            <span className="font-normal text-muted-foreground">
+                              · {sb.team.role}
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                            title="Personal sandbox"
+                          >
+                            <User className="h-3 w-3" aria-hidden="true" />
+                            Personal
+                          </div>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         {sb.imageIcon && (

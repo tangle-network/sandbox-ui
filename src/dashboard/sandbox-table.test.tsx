@@ -32,9 +32,21 @@ describe("SandboxTable", () => {
     expect(screen.getByText(/admin/)).toBeInTheDocument()
   })
 
-  it("renders 'Personal' badge for non-team sandboxes", () => {
+  it("hides Scope column when no sandboxes have teams", () => {
     render(<SandboxTable sandboxes={[makeSandbox()]} />)
+    expect(screen.queryByText("Scope")).not.toBeInTheDocument()
+    expect(screen.queryByText("Personal")).not.toBeInTheDocument()
+  })
+
+  it("renders Personal badge alongside team sandboxes in Scope column", () => {
+    const sandboxes = [
+      makeSandbox({ id: "1" }),
+      makeSandbox({ id: "2", team: { id: "t1", name: "Infra", role: "admin" } }),
+    ]
+    render(<SandboxTable sandboxes={sandboxes} />)
+    expect(screen.getByText("Scope")).toBeInTheDocument()
     expect(screen.getByText("Personal")).toBeInTheDocument()
+    expect(screen.getByText("Infra")).toBeInTheDocument()
   })
 
   // --- RBAC: delete button visibility ---

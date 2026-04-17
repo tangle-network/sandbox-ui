@@ -27,7 +27,9 @@ export interface PricingPageProps {
 }
 
 function formatPrice(cents: number): string {
-  return `$${Math.round(cents / 100)}`;
+  const dollars = cents / 100;
+  // Show whole dollars when there are no cents, decimal otherwise
+  return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`;
 }
 
 export function PricingPage({

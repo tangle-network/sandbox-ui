@@ -44,9 +44,12 @@ export function CreditBalance({
             <input
               type="text"
               value={`$${topUpValue}`}
-              onChange={(e) =>
-                setTopUpValue(e.target.value.replace(/[^0-9.]/g, ""))
-              }
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9.]/g, "");
+                // Allow at most one decimal point with up to 2 digits after
+                const match = raw.match(/^(\d*\.?\d{0,2})/);
+                setTopUpValue(match ? match[1] : "");
+              }}
               className="bg-transparent border-none text-foreground font-mono text-lg w-full focus:ring-0 px-4 outline-none"
             />
             <button

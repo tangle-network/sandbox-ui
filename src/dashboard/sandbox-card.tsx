@@ -11,10 +11,12 @@ import {
 } from "../primitives/dropdown-menu"
 import {
   MoreVertical, PowerOff, Power, Copy, Clock, Activity,
-  BarChart2, Trash2, Terminal, Code2, Network, Play, Plus
+  BarChart2, Trash2, Terminal, Code2, Network, Play, Plus, Users,
 } from "lucide-react"
 
 export type SandboxStatus = "running" | "hibernating" | "provisioning" | "stopped" | "failed" | "archived" | "creating"
+
+export type TeamRole = "owner" | "admin" | "member" | "viewer"
 
 export interface SandboxCardData {
   id: string
@@ -29,6 +31,17 @@ export interface SandboxCardData {
   provisioningMessage?: string
   provisioningPercent?: number
   archivedAt?: string
+  /**
+   * Populated when the sandbox is shared with a team. Drives a small
+   * "shared with X" badge in the card header so a user can see at a
+   * glance which of their sandboxes are personal vs. collaborative.
+   */
+  team?: {
+    id: string
+    name?: string
+    /** Caller's role in the team — the card uses this to gate the Delete action. */
+    role: TeamRole
+  }
 }
 
 export interface SandboxCardProps {
@@ -45,6 +58,15 @@ export interface SandboxCardProps {
   onUsage?: (id: string) => void
   onHealth?: (id: string) => void
   className?: string
+}
+
+// Personal sandboxes are always admin for the owner; team sandboxes
+// only expose Delete to owner/admin members. Keeping this local avoids
+// threading a capability flag through every caller — the card already
+// receives the team record and can decide for itself.
+function canAdminOnCard(sandbox: SandboxCardData): boolean {
+  if (!sandbox.team) return true
+  return sandbox.team.role === "owner" || sandbox.team.role === "admin"
 }
 
 export function SandboxCard({
@@ -66,17 +88,33 @@ export function SandboxCard({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
-            {sandbox.name}
-            {isRunning && (
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-pulse rounded-full bg-[var(--status-running)] opacity-75"></span>
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--status-running)]"></span>
+          <div className="flex items-center gap-2">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+              {sandbox.name}
+              {isRunning && (
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-pulse rounded-full bg-[var(--status-running)] opacity-75"></span>
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--status-running)]"></span>
+                </span>
+              )}
+            </h3>
+            {sandbox.team && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-surface-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-text)]"
+                title={`Shared with ${sandbox.team.name ?? "team"} · ${sandbox.team.role}`}
+              >
+                <Users className="h-3 w-3" />
+                {sandbox.team.name ?? "Team"}
               </span>
             )}
-          </h3>
+          </div>
           <p className="mt-0.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
             {sandbox.nodeId || "Unknown Node"}
+            {sandbox.team && (
+              <span className="ml-2 normal-case tracking-normal">
+                · your role: {sandbox.team.role}
+              </span>
+            )}
           </p>
         </div>
         <DropdownMenu>
@@ -113,7 +151,7 @@ export function SandboxCard({
                 {(onResume || onFork) && <DropdownMenuSeparator />}
               </>
             )}
-            {onDelete && (
+            {onDelete && canAdminOnCard(sandbox) && (
               <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => onDelete(sandbox.id)}>
                 <Trash2 className="mr-2 h-4 w-4" /> Delete Sandbox
               </DropdownMenuItem>

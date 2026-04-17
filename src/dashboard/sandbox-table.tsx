@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react"
+import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight, Users, User } from "lucide-react"
 import { cn } from "../lib/utils"
 import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
 
@@ -70,6 +70,7 @@ export function SandboxTable({
               <tr className="bg-background border-b border-border">
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sandbox Name</th>
+                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scope</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Environment</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resources</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
@@ -96,6 +97,28 @@ export function SandboxTable({
                         <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{sb.name}</span>
                         {sb.nodeId && <span className="text-[10px] font-mono text-muted-foreground">{sb.nodeId}</span>}
                       </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      {sb.team ? (
+                        <div
+                          className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
+                          title={`Shared with ${sb.team.name ?? "team"} · ${sb.team.role}`}
+                        >
+                          <Users className="h-3 w-3" />
+                          <span>{sb.team.name ?? "Team"}</span>
+                          <span className="font-normal text-muted-foreground">
+                            · {sb.team.role}
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                          title="Personal sandbox"
+                        >
+                          <User className="h-3 w-3" />
+                          Personal
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">

@@ -70,8 +70,9 @@ export function CreditBalance({
                   key={qa}
                   type="button"
                   onClick={() => {
+                    const rounded = parseFloat(qa.toFixed(2));
                     setTopUpValue(qa.toFixed(2));
-                    onTopUp(qa);
+                    onTopUp(rounded);
                   }}
                   className="flex-1 py-2 text-[10px] font-mono text-muted-foreground border border-border rounded-md hover:bg-muted/50 hover:text-foreground transition-colors uppercase"
                 >

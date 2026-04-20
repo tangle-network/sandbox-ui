@@ -3,6 +3,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import postcss from "postcss"
 import tailwindcss from "@tailwindcss/postcss"
+import { validateBuiltCss } from "./validate-built-css.mjs"
 
 const rootDir = dirname(fileURLToPath(new URL("../package.json", import.meta.url)))
 const srcStylesDir = join(rootDir, "src", "styles")
@@ -25,19 +26,7 @@ const result = await postcss([tailwindcss()]).process(globalsCss, { from })
 // the built file silently places the URL @import after ~thousands of rules
 // and downstream bundlers (Vite, webpack) drop it — fonts stop loading in
 // consumers that rely on this library to fetch them. Fail loudly here.
-const firstImport = result.css.match(/^@import[^;]+;/m)
-if (!firstImport || !firstImport[0].includes("fonts.googleapis.com")) {
-  throw new Error(
-    "dist/globals.css: expected Google Fonts `@import url(...)` to be the first @import in the built output. Did src/styles/globals.css reorder the imports? The URL @import must stay ahead of @import \"./tokens.css\" and @import \"tailwindcss\" so it survives PostCSS inlining.",
-  )
-}
-const firstImportIndex = result.css.indexOf(firstImport[0])
-const preamble = result.css.slice(0, firstImportIndex)
-if (/[{};][^\/*]/.test(preamble.replace(/\/\*[\s\S]*?\*\//g, ""))) {
-  throw new Error(
-    "dist/globals.css: found CSS statements before the first @import. @import must precede all statements except @charset/empty @layer.",
-  )
-}
+validateBuiltCss(result.css)
 
 await writeFile(join(distDir, "globals.css"), result.css)
 await writeFile(join(distDir, "styles.css"), result.css)

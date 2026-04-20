@@ -1,7 +1,12 @@
-@import "./tokens.css";
-
 /* Geist (UI) + Geist Mono (code) + Outfit (display) + Manrope (vault headlines) + Inter (vault body) — via Google Fonts */
+/* CSS spec requires @import to precede all other statements. This must
+ * stay ahead of `./tokens.css` and `tailwindcss` because both of those
+ * get inlined by PostCSS at build time — if this @import followed them,
+ * the resulting dist/globals.css would place a URL @import after CSS
+ * rules and PostCSS would reject/drop it in downstream consumers. */
 @import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+
+@import "./tokens.css";
 
 @import "tailwindcss";
 

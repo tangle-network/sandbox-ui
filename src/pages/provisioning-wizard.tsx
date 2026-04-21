@@ -250,6 +250,51 @@ const RAM_MAX = 32;
 const STORAGE_MIN = 20;
 const STORAGE_MAX = 512;
 
+const CPU_STEP = 0.5;
+const RAM_STEP = 1;
+const STORAGE_STEP = 8;
+
+/**
+ * HTML range inputs snap the thumb to the largest step-aligned value
+ * ≤ max. When `(max - min)` is not a multiple of `step` the thumb can
+ * never reach the right edge of the track, producing a visibly
+ * "short" slider whose label claims a bound the user cannot actually
+ * select (e.g. STORAGE_MIN=20, plan max=50, step=8 → thumb caps at 44
+ * while the right-hand label still reads "50GB").
+ *
+ * Adjusting the step down to the largest value ≤ desired that divides
+ * `(max - min)` exactly keeps the thumb's travel coincident with the
+ * labelled range without secretly capping the user's plan allowance.
+ */
+export function alignSliderStep(
+  min: number,
+  max: number,
+  desiredStep: number,
+): number {
+  const range = max - min;
+  if (range <= 0 || desiredStep <= 0) return desiredStep;
+  // RAM/storage pass an integer desired step; a fractional divisor
+  // (e.g. 7.5GB) would be mathematically correct but a poor UX. Keep
+  // the step on the same granularity the caller asked for.
+  if (Number.isInteger(desiredStep)) {
+    if (!Number.isInteger(range)) return desiredStep;
+    for (let c = Math.floor(desiredStep); c >= 1; c--) {
+      if (range % c === 0) return c;
+    }
+    return desiredStep;
+  }
+  // Fractional step (CPU uses 0.5). Scale by 10 to dodge floating-point
+  // modulo quirks — one decimal is enough for every real plan limit the
+  // server produces.
+  const scale = 10;
+  const scaledRange = Math.round(range * scale);
+  const scaledStep = Math.round(desiredStep * scale);
+  for (let c = scaledStep; c >= 1; c--) {
+    if (scaledRange % c === 0) return c / scale;
+  }
+  return desiredStep;
+}
+
 const DEFAULT_PRICING_RATES: PricingRates = {
   cpuPerHr: 0.045,
   ramPerGbHr: 0.005,
@@ -348,6 +393,9 @@ export function ProvisioningWizard({
     STORAGE_MIN,
     Math.min(resourceLimits?.storageMaxGB ?? STORAGE_MAX, STORAGE_MAX),
   );
+  const cpuStep = alignSliderStep(CPU_MIN, cpuMax, CPU_STEP);
+  const ramStep = alignSliderStep(RAM_MIN, ramMax, RAM_STEP);
+  const storageStep = alignSliderStep(STORAGE_MIN, storageMax, STORAGE_STEP);
   const dc = defaultConfig;
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(
     environmentsProp ?? defaultEnvironments,
@@ -885,7 +933,7 @@ export function ProvisioningWizard({
                         setter: setCpuCores,
                         min: CPU_MIN,
                         max: cpuMax,
-                        step: 0.5,
+                        step: cpuStep,
                         unit: "vCPU",
                       },
                       {
@@ -894,7 +942,7 @@ export function ProvisioningWizard({
                         setter: setRamGB,
                         min: RAM_MIN,
                         max: ramMax,
-                        step: 1,
+                        step: ramStep,
                         unit: "GB",
                       },
                       {
@@ -903,7 +951,7 @@ export function ProvisioningWizard({
                         setter: setStorageGB,
                         min: STORAGE_MIN,
                         max: storageMax,
-                        step: 8,
+                        step: storageStep,
                         unit: "GB",
                       },
                     ].map(

@@ -5,6 +5,8 @@ import {
   ProvisioningWizard,
   resolveEnvironment,
   formatPerSecondValue,
+  alignSliderStep,
+  snapSliderValue,
   type ProvisioningConfig,
   type StartupScriptEntry,
   type EnvironmentEntry,
@@ -506,6 +508,137 @@ describe("ProvisioningWizard — pricingRates", () => {
       />,
     )
     expect(screen.queryByText("MIN CHARGE")).not.toBeInTheDocument()
+  })
+})
+
+describe("alignSliderStep", () => {
+  it("keeps the desired step when (max - min) is already a multiple of it", () => {
+    // Pro-tier storage: 20 → 256, step 8. 236 / 8 = 29.5 → the desired
+    // step does NOT actually divide this range, so we expect a reduced
+    // step. Use a case where it does: 20 → 100, step 8 → 80 / 8 = 10.
+    expect(alignSliderStep(20, 100, 8)).toBe(8)
+    expect(alignSliderStep(0.5, 8, 0.5)).toBe(0.5)
+    expect(alignSliderStep(2, 32, 1)).toBe(1)
+  })
+
+  it("reduces the step so the max is reachable when the range is not step-aligned", () => {
+    // The bug from issue #738: STORAGE_MIN=20, plan max=50, step=8.
+    // 30 is not a multiple of 8, so the browser caps the thumb at 44.
+    // Largest divisor of 30 that is ≤ 8 is 6, so the step must fall to 6.
+    expect(alignSliderStep(20, 50, 8)).toBe(6)
+    // Same structural case for RAM: plan max=5, min=2, step=1 → range 3.
+    // 3 % 1 == 0 already, so no adjustment.
+    expect(alignSliderStep(2, 5, 1)).toBe(1)
+    // 0.5-step CPU where the plan cap lands on a half-integer the default
+    // step cannot reach: 0.5 → 0.7, step 0.5. range 0.2, divisor 0.2.
+    expect(alignSliderStep(0.5, 0.7, 0.5)).toBeCloseTo(0.2)
+  })
+
+  it("returns the desired step when range is zero (single-value slider)", () => {
+    // Free-tier RAM: min=2, plan max=2. The slider has no travel, so the
+    // step is irrelevant and we keep the caller's value.
+    expect(alignSliderStep(2, 2, 1)).toBe(1)
+    expect(alignSliderStep(0.5, 0.5, 0.5)).toBe(0.5)
+  })
+
+  it("falls back to the desired step when no smaller divisor exists", () => {
+    // range=7 (prime), desired=8. Divisors of 7 are {1, 7}. Largest ≤ 8
+    // is 7, not 1: the helper should pick 7. We still want the thumb to
+    // reach max, so "7" is the right answer even though it's a weird step.
+    expect(alignSliderStep(0, 7, 8)).toBe(7)
+  })
+
+  it("returns the desired step unchanged for degenerate inputs", () => {
+    // Non-positive desiredStep is echoed back so bad caller input cannot
+    // silently invent a step; likewise a negative range (max < min) is a
+    // caller bug and should not be silently "fixed".
+    expect(alignSliderStep(0, 10, 0)).toBe(0)
+    expect(alignSliderStep(10, 5, 8)).toBe(8)
+  })
+})
+
+describe("snapSliderValue", () => {
+  it("leaves values that already sit on the grid alone", () => {
+    // Storage: grid {20, 26, 32, ..., 50} (step 6 from alignSliderStep
+    // for a 20→50 range). 26 and 50 are both stops, so both echo back.
+    expect(snapSliderValue(26, 20, 50, 6)).toBe(26)
+    expect(snapSliderValue(50, 20, 50, 6)).toBe(50)
+    expect(snapSliderValue(20, 20, 50, 6)).toBe(20)
+  })
+
+  it("snaps off-grid values to the nearest stop (the #738 follow-up bug)", () => {
+    // Saved config storageGB=28 under old step-8 grid, loaded into a new
+    // step-6 grid. Nearest stop to 28 is 26 (|28-26|=2 vs |28-32|=4).
+    expect(snapSliderValue(28, 20, 50, 6)).toBe(26)
+    // Halfway between stops: Math.round ties away from zero, so 29 is
+    // closer to 32 than to 26 only by 3 vs 3 → rounds up.
+    expect(snapSliderValue(29, 20, 50, 6)).toBe(32)
+  })
+
+  it("clamps values outside [min, max] before snapping", () => {
+    // Preset storage=128 with plan storageMax=50 — clamp first, then the
+    // snap is a no-op because max is guaranteed on-grid by alignSliderStep.
+    expect(snapSliderValue(128, 20, 50, 6)).toBe(50)
+    // Below min: clamp up to min, which is trivially on-grid.
+    expect(snapSliderValue(5, 20, 50, 6)).toBe(20)
+  })
+
+  it("handles 0.5-step CPU grids without floating-point drift", () => {
+    // CPU grid: {0.5, 1, 1.5, ..., 8}. 3.3 snaps to 3.5 (closer than 3.0).
+    expect(snapSliderValue(3.3, 0.5, 8, 0.5)).toBe(3.5)
+    // Exact half-integer stays put.
+    expect(snapSliderValue(4, 0.5, 8, 0.5)).toBe(4)
+  })
+
+  it("returns safe fallbacks for degenerate inputs", () => {
+    // NaN input — a non-finite seed must not poison state; fall back to min.
+    expect(snapSliderValue(Number.NaN, 20, 50, 6)).toBe(20)
+    // Zero/negative step — skip the snap math but still clamp to bounds.
+    expect(snapSliderValue(42, 20, 50, 0)).toBe(42)
+    expect(snapSliderValue(999, 20, 50, 0)).toBe(50)
+  })
+})
+
+describe("ProvisioningWizard — slider step alignment (issue #738)", () => {
+  it("storage slider's step divides its range so the thumb can reach max", () => {
+    // Free tier limits reproduce the original bug: max=50, step=8 caps
+    // the thumb at 44 unless the component re-aligns the step.
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 1, ramMaxGB: 2, storageMaxGB: 50 }}
+      />,
+    )
+    const sliders = screen.getAllByRole("slider")
+    const storage = sliders[2]
+    const min = Number(storage.getAttribute("min"))
+    const max = Number(storage.getAttribute("max"))
+    const step = Number(storage.getAttribute("step"))
+    expect(max).toBe(50)
+    expect(min).toBe(20)
+    // Range must be exactly divisible by step so the labelled max is
+    // actually reachable.
+    expect((max - min) % step).toBe(0)
+  })
+
+  it("all three sliders expose a step that divides their visible range", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        resourceLimits={{ cpuMax: 1, ramMaxGB: 2, storageMaxGB: 50 }}
+      />,
+    )
+    const sliders = screen.getAllByRole("slider")
+    for (const slider of sliders) {
+      const min = Number(slider.getAttribute("min"))
+      const max = Number(slider.getAttribute("max"))
+      const step = Number(slider.getAttribute("step"))
+      if (max === min) continue // single-value slider — step is moot
+      // Scale to integers to avoid float modulo noise (smallest step 0.5).
+      const scaledRange = Math.round((max - min) * 10)
+      const scaledStep = Math.round(step * 10)
+      expect(scaledRange % scaledStep).toBe(0)
+    }
   })
 })
 

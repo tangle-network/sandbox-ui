@@ -250,6 +250,86 @@ const RAM_MAX = 32;
 const STORAGE_MIN = 20;
 const STORAGE_MAX = 512;
 
+const CPU_STEP = 0.5;
+const RAM_STEP = 1;
+const STORAGE_STEP = 8;
+
+/**
+ * HTML range inputs snap the thumb to the largest step-aligned value
+ * ≤ max. When `(max - min)` is not a multiple of `step` the thumb can
+ * never reach the right edge of the track, producing a visibly
+ * "short" slider whose label claims a bound the user cannot actually
+ * select (e.g. STORAGE_MIN=20, plan max=50, step=8 → thumb caps at 44
+ * while the right-hand label still reads "50GB").
+ *
+ * Adjusting the step down to the largest value ≤ desired that divides
+ * `(max - min)` exactly keeps the thumb's travel coincident with the
+ * labelled range without secretly capping the user's plan allowance.
+ *
+ * Precision guarantees: integer `desiredStep` → integer result; 0.5
+ * `desiredStep` with a max expressible to one decimal → one-decimal
+ * result. Callers that pass an integer step with a non-integer range
+ * (e.g. `max=50.5`) get `desiredStep` back unchanged — the thumb will
+ * still cap short of `max` in that case, by design (see inline note).
+ */
+export function alignSliderStep(
+  min: number,
+  max: number,
+  desiredStep: number,
+): number {
+  const range = max - min;
+  if (range <= 0 || desiredStep <= 0) return desiredStep;
+  // RAM/storage pass an integer desired step; a fractional divisor
+  // (e.g. 7.5GB) would be mathematically correct but a poor UX. Keep
+  // the step on the same granularity the caller asked for.
+  if (Number.isInteger(desiredStep)) {
+    if (!Number.isInteger(range)) return desiredStep;
+    for (let c = Math.floor(desiredStep); c >= 1; c--) {
+      if (range % c === 0) return c;
+    }
+    // Safety net — unreachable in practice because `c = 1` divides every
+    // integer, but required for the function's return-type contract.
+    return desiredStep;
+  }
+  // Fractional step (CPU uses 0.5). Scale by 10 to dodge floating-point
+  // modulo quirks — one decimal is enough for every real plan limit the
+  // server produces.
+  const scale = 10;
+  const scaledRange = Math.round(range * scale);
+  const scaledStep = Math.round(desiredStep * scale);
+  for (let c = scaledStep; c >= 1; c--) {
+    if (scaledRange % c === 0) return c / scale;
+  }
+  // Safety net — see integer-branch note above; scaledRange is an integer
+  // by construction, so `c = 1` always matches.
+  return desiredStep;
+}
+
+/**
+ * Snap a value onto the step grid anchored at `min` and bounded by `max`.
+ *
+ * Range inputs clamp to the grid visually on interaction, but a value
+ * seeded from `defaultConfig` (or a preset evaluated under different
+ * limits) can sit between stops — e.g. `storageGB=28` on a {20, 26, 32}
+ * grid. The browser paints the thumb at the nearest stop while React
+ * state still holds the off-grid number, so the reading and the visual
+ * disagree until the user drags. Running seed values through this
+ * helper keeps state and paint in lock-step.
+ */
+export function snapSliderValue(
+  value: number,
+  min: number,
+  max: number,
+  step: number,
+): number {
+  if (!Number.isFinite(value)) return min;
+  const clamped = Math.max(min, Math.min(value, max));
+  if (step <= 0) return clamped;
+  const steps = Math.round((clamped - min) / step);
+  const snapped = min + steps * step;
+  return Math.max(min, Math.min(snapped, max));
+}
+
 const DEFAULT_PRICING_RATES: PricingRates = {
   cpuPerHr: 0.045,
   ramPerGbHr: 0.005,
@@ -348,6 +428,9 @@ export function ProvisioningWizard({
     STORAGE_MIN,
     Math.min(resourceLimits?.storageMaxGB ?? STORAGE_MAX, STORAGE_MAX),
   );
+  const cpuStep = alignSliderStep(CPU_MIN, cpuMax, CPU_STEP);
+  const ramStep = alignSliderStep(RAM_MIN, ramMax, RAM_STEP);
+  const storageStep = alignSliderStep(STORAGE_MIN, storageMax, STORAGE_STEP);
   const dc = defaultConfig;
   const [envList, setEnvList] = React.useState<EnvironmentOption[]>(
     environmentsProp ?? defaultEnvironments,
@@ -394,18 +477,22 @@ export function ProvisioningWizard({
     }
   }, [envList, effectiveDefault]);
   const [cpuCores, setCpuCores] = React.useState(
-    Math.min(dc?.cpuCores ?? 4, cpuMax),
+    snapSliderValue(dc?.cpuCores ?? 4, CPU_MIN, cpuMax, cpuStep),
   );
-  const [ramGB, setRamGB] = React.useState(Math.min(dc?.ramGB ?? 16, ramMax));
+  const [ramGB, setRamGB] = React.useState(
+    snapSliderValue(dc?.ramGB ?? 16, RAM_MIN, ramMax, ramStep),
+  );
   const [storageGB, setStorageGB] = React.useState(
-    Math.min(dc?.storageGB ?? 128, storageMax),
+    snapSliderValue(dc?.storageGB ?? 128, STORAGE_MIN, storageMax, storageStep),
   );
 
   React.useEffect(() => {
-    setCpuCores((prev) => Math.min(prev, cpuMax));
-    setRamGB((prev) => Math.min(prev, ramMax));
-    setStorageGB((prev) => Math.min(prev, storageMax));
-  }, [cpuMax, ramMax, storageMax]);
+    setCpuCores((prev) => snapSliderValue(prev, CPU_MIN, cpuMax, cpuStep));
+    setRamGB((prev) => snapSliderValue(prev, RAM_MIN, ramMax, ramStep));
+    setStorageGB((prev) =>
+      snapSliderValue(prev, STORAGE_MIN, storageMax, storageStep),
+    );
+  }, [cpuMax, ramMax, storageMax, cpuStep, ramStep, storageStep]);
 
   const [modelTier, setModelTier] = React.useState(
     dc?.modelTier ?? DEFAULT_MODEL_TIER,
@@ -517,9 +604,9 @@ export function ProvisioningWizard({
     ram: number,
     storage: number,
   ) => {
-    setCpuCores(Math.min(cpu, cpuMax));
-    setRamGB(Math.min(ram, ramMax));
-    setStorageGB(Math.min(storage, storageMax));
+    setCpuCores(snapSliderValue(cpu, CPU_MIN, cpuMax, cpuStep));
+    setRamGB(snapSliderValue(ram, RAM_MIN, ramMax, ramStep));
+    setStorageGB(snapSliderValue(storage, STORAGE_MIN, storageMax, storageStep));
     setActivePreset(name);
   };
 
@@ -709,9 +796,11 @@ export function ProvisioningWizard({
                 onClick={() => {
                   setCurrentStep(1);
                   setSelectedEnv(environments[0]?.id ?? "");
-                  setCpuCores(Math.min(4, cpuMax));
-                  setRamGB(Math.min(16, ramMax));
-                  setStorageGB(Math.min(128, storageMax));
+                  setCpuCores(snapSliderValue(4, CPU_MIN, cpuMax, cpuStep));
+                  setRamGB(snapSliderValue(16, RAM_MIN, ramMax, ramStep));
+                  setStorageGB(
+                    snapSliderValue(128, STORAGE_MIN, storageMax, storageStep),
+                  );
                   // Use the first *available* option from the caller's
                   // `modelOptions` so the <select> never renders an unknown
                   // value between this reset and the auto-correct effect.
@@ -885,7 +974,7 @@ export function ProvisioningWizard({
                         setter: setCpuCores,
                         min: CPU_MIN,
                         max: cpuMax,
-                        step: 0.5,
+                        step: cpuStep,
                         unit: "vCPU",
                       },
                       {
@@ -894,7 +983,7 @@ export function ProvisioningWizard({
                         setter: setRamGB,
                         min: RAM_MIN,
                         max: ramMax,
-                        step: 1,
+                        step: ramStep,
                         unit: "GB",
                       },
                       {
@@ -903,7 +992,7 @@ export function ProvisioningWizard({
                         setter: setStorageGB,
                         min: STORAGE_MIN,
                         max: storageMax,
-                        step: 8,
+                        step: storageStep,
                         unit: "GB",
                       },
                     ].map(

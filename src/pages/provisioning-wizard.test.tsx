@@ -6,6 +6,7 @@ import {
   resolveEnvironment,
   formatPerSecondValue,
   alignSliderStep,
+  snapSliderValue,
   type ProvisioningConfig,
   type StartupScriptEntry,
   type EnvironmentEntry,
@@ -553,6 +554,48 @@ describe("alignSliderStep", () => {
     // caller bug and should not be silently "fixed".
     expect(alignSliderStep(0, 10, 0)).toBe(0)
     expect(alignSliderStep(10, 5, 8)).toBe(8)
+  })
+})
+
+describe("snapSliderValue", () => {
+  it("leaves values that already sit on the grid alone", () => {
+    // Storage: grid {20, 26, 32, ..., 50} (step 6 from alignSliderStep
+    // for a 20→50 range). 26 and 50 are both stops, so both echo back.
+    expect(snapSliderValue(26, 20, 50, 6)).toBe(26)
+    expect(snapSliderValue(50, 20, 50, 6)).toBe(50)
+    expect(snapSliderValue(20, 20, 50, 6)).toBe(20)
+  })
+
+  it("snaps off-grid values to the nearest stop (the #738 follow-up bug)", () => {
+    // Saved config storageGB=28 under old step-8 grid, loaded into a new
+    // step-6 grid. Nearest stop to 28 is 26 (|28-26|=2 vs |28-32|=4).
+    expect(snapSliderValue(28, 20, 50, 6)).toBe(26)
+    // Halfway between stops: Math.round ties away from zero, so 29 is
+    // closer to 32 than to 26 only by 3 vs 3 → rounds up.
+    expect(snapSliderValue(29, 20, 50, 6)).toBe(32)
+  })
+
+  it("clamps values outside [min, max] before snapping", () => {
+    // Preset storage=128 with plan storageMax=50 — clamp first, then the
+    // snap is a no-op because max is guaranteed on-grid by alignSliderStep.
+    expect(snapSliderValue(128, 20, 50, 6)).toBe(50)
+    // Below min: clamp up to min, which is trivially on-grid.
+    expect(snapSliderValue(5, 20, 50, 6)).toBe(20)
+  })
+
+  it("handles 0.5-step CPU grids without floating-point drift", () => {
+    // CPU grid: {0.5, 1, 1.5, ..., 8}. 3.3 snaps to 3.5 (closer than 3.0).
+    expect(snapSliderValue(3.3, 0.5, 8, 0.5)).toBe(3.5)
+    // Exact half-integer stays put.
+    expect(snapSliderValue(4, 0.5, 8, 0.5)).toBe(4)
+  })
+
+  it("returns safe fallbacks for degenerate inputs", () => {
+    // NaN input — a non-finite seed must not poison state; fall back to min.
+    expect(snapSliderValue(Number.NaN, 20, 50, 6)).toBe(20)
+    // Zero/negative step — skip the snap math but still clamp to bounds.
+    expect(snapSliderValue(42, 20, 50, 0)).toBe(42)
+    expect(snapSliderValue(999, 20, 50, 0)).toBe(50)
   })
 })
 

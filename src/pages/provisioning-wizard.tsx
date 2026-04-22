@@ -432,8 +432,17 @@ export function ProvisioningWizard({
   const ramStep = alignSliderStep(RAM_MIN, ramMax, RAM_STEP);
   const storageStep = alignSliderStep(STORAGE_MIN, storageMax, STORAGE_STEP);
   const dc = defaultConfig;
-  const [envList, setEnvList] = React.useState<EnvironmentOption[]>(
-    environmentsProp ?? defaultEnvironments,
+  // When an async loader is provided we must NOT seed with the built-in
+  // `defaultEnvironments` — doing so paints Node/Python/Ubuntu with bogus
+  // descriptions for one frame before the real list arrives. Start empty
+  // and render a skeleton until the loader resolves.
+  const [envList, setEnvList] = React.useState<EnvironmentOption[]>(() => {
+    if (environmentsProp) return environmentsProp;
+    if (onLoadEnvironments) return [];
+    return defaultEnvironments;
+  });
+  const [isLoadingEnvironments, setIsLoadingEnvironments] = React.useState(
+    () => !environmentsProp && !!onLoadEnvironments,
   );
 
   const onLoadEnvironmentsRef = React.useRef(onLoadEnvironments);
@@ -442,18 +451,24 @@ export function ProvisioningWizard({
   React.useEffect(() => {
     let cancelled = false;
     if (onLoadEnvironmentsRef.current) {
+      setIsLoadingEnvironments(true);
       onLoadEnvironmentsRef
         .current()
         .then((entries) => {
-          if (!cancelled) setEnvList(entries.map(resolveEnvironment));
+          if (!cancelled) {
+            setEnvList(entries.map(resolveEnvironment));
+            setIsLoadingEnvironments(false);
+          }
         })
         .catch((err) => {
-          if (!cancelled)
+          if (!cancelled) {
             setLoadError(
               err instanceof Error
                 ? err.message
                 : "Failed to load environments",
             );
+            setIsLoadingEnvironments(false);
+          }
         });
     } else if (environmentsProp) {
       setEnvList(environmentsProp);
@@ -470,11 +485,21 @@ export function ProvisioningWizard({
     effectiveDefault ?? environments[0]?.id ?? "",
   );
 
-  // Sync selection when environments load asynchronously and a default was requested
+  // Sync selection after async load. With an empty initial envList the
+  // state-initializer above sets selectedEnv to "" — once the real list
+  // arrives we must land on the requested default (if present and valid),
+  // otherwise the first real option, otherwise preserve whatever the user
+  // has already clicked.
   React.useEffect(() => {
+    if (envList.length === 0) return;
     if (effectiveDefault && envList.some((e) => e.id === effectiveDefault)) {
       setSelectedEnv(effectiveDefault);
+      return;
     }
+    setSelectedEnv((prev) => {
+      if (prev && envList.some((e) => e.id === prev)) return prev;
+      return envList[0]?.id ?? "";
+    });
   }, [envList, effectiveDefault]);
   const [cpuCores, setCpuCores] = React.useState(
     snapSliderValue(dc?.cpuCores ?? 4, CPU_MIN, cpuMax, cpuStep),
@@ -853,7 +878,24 @@ export function ProvisioningWizard({
                     </h2>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {environments.map((env) => (
+                    {isLoadingEnvironments && environments.length === 0
+                      ? Array.from({ length: 3 }).map((_, i) => (
+                          <div
+                            // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length skeleton placeholder
+                            key={`env-skeleton-${i}`}
+                            className="p-4 rounded-[16px] border border-border bg-card/50 animate-pulse"
+                            aria-hidden="true"
+                          >
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="w-10 h-10 rounded-full bg-muted/60 border border-border" />
+                              <div className="w-5 h-5 rounded-full border-2 border-border" />
+                            </div>
+                            <div className="h-3 w-1/3 rounded bg-muted/60 mb-2" />
+                            <div className="h-2.5 w-5/6 rounded bg-muted/50 mb-1.5" />
+                            <div className="h-2.5 w-2/3 rounded bg-muted/50" />
+                          </div>
+                        ))
+                      : environments.map((env) => (
                       <button
                         key={env.id}
                         type="button"

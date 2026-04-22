@@ -87,6 +87,11 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   // guarantees the server sees one write at a time per terminal.
   const pendingBatchRef = useRef<PendingBatch>(createEmptyBatch());
   const drainPromiseRef = useRef<Promise<void> | null>(null);
+  // Session-scoped controller used to cancel in-flight input POSTs when
+  // `cleanup` runs, so a batch that was swapped out of `pendingBatchRef`
+  // and is awaiting its fetch does not settle invisibly to `cleanup` —
+  // its waiters reject via the drain's catch path instead.
+  const inputAbortRef = useRef<AbortController | null>(null);
   // Indirection ref so `connect` (declared above `ensureDrainRunning`)
   // can poke the input queue once the sessionId lands, without forcing
   // `ensureDrainRunning` into `connect`'s dep array — which would churn
@@ -121,6 +126,15 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
 
   const cleanup = useCallback(() => {
     abortStream();
+    // Abort any in-flight input POST. Its waiters are not visible to
+    // `rejectPendingInput` (they live on a batch the drain loop already
+    // swapped out of `pendingBatchRef`), so without this they would
+    // settle based on a response that is no longer meaningful once the
+    // session has been deleted.
+    if (inputAbortRef.current) {
+      inputAbortRef.current.abort();
+      inputAbortRef.current = null;
+    }
     if (sessionIdRef.current) {
       const sid = sessionIdRef.current;
       sessionIdRef.current = null;
@@ -265,6 +279,10 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
 
       if (!mountedRef.current) return;
       sessionIdRef.current = sessionId;
+      // Paired with the abort in `cleanup`. Lives for the duration of
+      // the session so any input POST issued by the drain loop is
+      // cancellable synchronously with session teardown.
+      inputAbortRef.current = new AbortController();
 
       // Flush any keystrokes that arrived between mount and now. They
       // were accepted into `pendingBatchRef` but the drain loop exited
@@ -339,6 +357,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
           },
           credentials: 'include',
           body: JSON.stringify({ data: batch.data }),
+          signal: inputAbortRef.current?.signal,
         });
         if (!res.ok) {
           const text = await res.text().catch(() => '');
@@ -346,11 +365,20 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         }
         for (const w of batch.waiters) w.resolve();
       } catch (err) {
-        console.error('Failed to send command', err);
-        for (const w of batch.waiters) w.reject(err);
+        // When `cleanup` aborts the controller mid-fetch, surface the
+        // same "not connected" error that `rejectPendingInput` raises
+        // so consumers see a single consistent rejection shape.
+        const isAbort = (err as Error | undefined)?.name === 'AbortError';
+        const rejection = isAbort
+          ? new Error('Terminal session is not connected')
+          : err;
+        if (!isAbort) console.error('Failed to send command', err);
+        for (const w of batch.waiters) w.reject(rejection);
         // Continue the loop: if the failure was transient, subsequent
-        // batches may succeed. Permanent failures (session gone, 4xx)
-        // will re-surface on the next iteration via the same code path.
+        // batches may succeed. Permanent failures (session gone, 4xx,
+        // aborted) will re-surface on the next iteration via the same
+        // code path — when `cleanup` aborted, `sessionIdRef` is now
+        // null so the next iteration exits immediately.
       }
     }
   }, [apiUrl, token]);
@@ -362,9 +390,21 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     // below clearing `drainPromiseRef`, a new waiter can slip in and see
     // the slot as "busy". We detect that here and restart, rather than
     // letting the waiter sit forever.
+    //
+    // The `sessionIdRef.current` guard prevents a microtask starvation
+    // loop when `sendCommand` runs before `connect` has set the session:
+    // `drainInputQueue` exits immediately (sid null), the `.finally`
+    // fires as a microtask, sees pending data, and schedules another
+    // `run()` — which also exits immediately, schedules another finally,
+    // and so on. Each iteration enqueues a fresh microtask, starving
+    // the event loop and preventing the in-flight `POST /terminals`
+    // macrotask from ever being dispatched. Only restart when there is
+    // actually a session to drain into; `connect` pokes
+    // `ensureDrainRunningRef.current?.()` once the sessionId lands,
+    // and the drain picks up the buffered keystrokes from there.
     const run = (): Promise<void> =>
       drainInputQueue().finally(() => {
-        if (pendingBatchRef.current.data.length > 0) {
+        if (pendingBatchRef.current.data.length > 0 && sessionIdRef.current) {
           drainPromiseRef.current = run();
         } else {
           drainPromiseRef.current = null;

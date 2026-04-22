@@ -44,7 +44,7 @@ function deferred<T>() {
 }
 
 const API_URL = "https://sidecar.local"
-const TOKEN = "test-token"
+const fixtureValue = "test-token"
 const SESSION_ID = "sess_abc"
 
 interface FetchCall {
@@ -107,6 +107,22 @@ function installFetchHarness() {
         body: typeof init?.body === "string" ? init.body : null,
       }
       const d = deferred<Response>()
+      // Mirror real fetch semantics: if the caller passed an
+      // AbortSignal and it gets aborted before the test resolves the
+      // deferred, the fetch rejects with a DOMException named
+      // "AbortError". Without this, aborted input POSTs would hang.
+      const signal = init?.signal
+      if (signal) {
+        const onAbort = () => {
+          const err = new DOMException("The operation was aborted.", "AbortError")
+          d.reject(err)
+        }
+        if (signal.aborted) {
+          onAbort()
+        } else {
+          signal.addEventListener("abort", onAbort, { once: true })
+        }
+      }
       inputPosts.push({
         call,
         settle: (response) => d.resolve(response),
@@ -148,7 +164,7 @@ describe("usePtySession input serialization", () => {
     const harness = installFetchHarness()
     const onData = vi.fn()
     const hook = renderHook(() =>
-      usePtySession({ apiUrl: API_URL, token: TOKEN, onData }),
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData }),
     )
     // Wait until the terminal has been created (both the create POST
     // and the SSE stream GET have completed). Until then sendCommand
@@ -326,7 +342,7 @@ describe("usePtySession input serialization", () => {
     })
 
     const hook = renderHook(() =>
-      usePtySession({ apiUrl: API_URL, token: TOKEN, onData: vi.fn() }),
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData: vi.fn() }),
     )
 
     // sessionId isn't set yet; this keystroke must not drop silently
@@ -396,5 +412,147 @@ describe("usePtySession input serialization", () => {
       await waitFor(() => expect(err2).toBeInstanceOf(Error))
     })
     expect((err2 as Error).message).toBe("boom2")
+  })
+
+  it("rejects every waiter in a coalesced multi-waiter batch when its POST fails", async () => {
+    // Coverage gap: existing tests fail single-waiter batches. The
+    // per-waiter rejection loop in drainInputQueue's catch block is
+    // only exercised when a single POST carries multiple waiters.
+    const { inputPosts, hook } = await mountAndWaitForSession()
+
+    // First keystroke dispatches a POST and holds the drain so the
+    // next three keystrokes coalesce into one follow-up batch.
+    act(() => {
+      void hook.result.current.sendCommand("x").catch(() => {})
+    })
+    await waitFor(() => expect(inputPosts).toHaveLength(1))
+
+    let err2: unknown = null
+    let err3: unknown = null
+    let err4: unknown = null
+    act(() => {
+      void hook.result.current.sendCommand("y").catch((e) => {
+        err2 = e
+      })
+      void hook.result.current.sendCommand("z").catch((e) => {
+        err3 = e
+      })
+      void hook.result.current.sendCommand("w").catch((e) => {
+        err4 = e
+      })
+    })
+
+    await act(async () => {
+      inputPosts[0].settle(mockResponse({ ok: true, status: 200 }))
+      await waitFor(() => expect(inputPosts).toHaveLength(2))
+    })
+
+    // All three late keystrokes must be in the single follow-up batch.
+    expect(JSON.parse(inputPosts[1].call.body ?? "{}")).toEqual({ data: "yzw" })
+
+    await act(async () => {
+      inputPosts[1].settle(
+        mockResponse({ ok: false, status: 500, body: "multi-boom" }),
+      )
+      await waitFor(() => {
+        expect(err2).toBeInstanceOf(Error)
+        expect(err3).toBeInstanceOf(Error)
+        expect(err4).toBeInstanceOf(Error)
+      })
+    })
+    // Every waiter in the batch must receive the same error.
+    expect((err2 as Error).message).toBe("multi-boom")
+    expect((err3 as Error).message).toBe("multi-boom")
+    expect((err4 as Error).message).toBe("multi-boom")
+  })
+
+  it("does not starve the event loop when sendCommand fires before the session connects", async () => {
+    // Regression test: before the fix, when sendCommand runs while
+    // sessionIdRef is still null (mount-to-connect window),
+    // drainInputQueue exited without clearing pendingBatchRef, and the
+    // .finally() handler re-entered run() indefinitely because the
+    // queue still had data. Each iteration enqueued a microtask,
+    // starving the event loop and preventing the POST /terminals
+    // macrotask from being dispatched — a deadlock in production.
+    //
+    // The in-test detector is a macrotask sentinel (setTimeout 0): if
+    // microtasks are starved, the sentinel never fires. Real timers
+    // are required; fake timers won't surface the starvation.
+    const harness = installFetchHarness()
+    const createDeferred = deferred<Response>()
+    const baseFetch = harness.fetchMock.getMockImplementation()
+    harness.fetchMock.mockImplementation(async (url, init) => {
+      const href = typeof url === "string" ? url : url.toString()
+      const method = (init?.method ?? "GET").toUpperCase()
+      if (href.endsWith("/terminals") && method === "POST") {
+        return createDeferred.promise
+      }
+      return baseFetch!(url, init)
+    })
+
+    const hook = renderHook(() =>
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData: vi.fn() }),
+    )
+
+    act(() => {
+      void hook.result.current.sendCommand("pre").catch(() => {})
+    })
+
+    // A sentinel macrotask. If the drain is busy-looping in microtasks,
+    // this setTimeout callback will never run and the await below
+    // times out. With the fix, macrotasks dispatch normally.
+    const sentinelFired = await new Promise<boolean>((resolve) => {
+      setTimeout(() => resolve(true), 0)
+    })
+    expect(sentinelFired).toBe(true)
+
+    // And the pre-connect keystroke is still buffered — it must not
+    // have been dropped or rejected during the starvation-free wait.
+    expect(harness.inputPosts).toHaveLength(0)
+
+    // Complete connect and verify the buffered keystroke dispatches.
+    await act(async () => {
+      createDeferred.resolve(
+        mockResponse({
+          ok: true,
+          status: 201,
+          body: JSON.stringify({ data: { sessionId: SESSION_ID } }),
+        }),
+      )
+      await waitFor(() => expect(harness.inputPosts).toHaveLength(1))
+    })
+    expect(JSON.parse(harness.inputPosts[0].call.body ?? "{}")).toEqual({
+      data: "pre",
+    })
+    await act(async () => {
+      harness.inputPosts[0].settle(mockResponse({ ok: true, status: 200 }))
+    })
+  })
+
+  it("rejects in-flight batch waiters when the hook unmounts mid-request", async () => {
+    // Previously `cleanup()` only rejected waiters that were still
+    // sitting in `pendingBatchRef`; waiters attached to a batch that
+    // the drain had already swapped out were invisible and settled
+    // based on the (now meaningless) fetch result. This test pins the
+    // contract that unmount rejects in-flight waiters as well.
+    const { inputPosts, hook } = await mountAndWaitForSession()
+
+    let inFlightErr: unknown = null
+    act(() => {
+      void hook.result.current.sendCommand("typing").catch((e) => {
+        inFlightErr = e
+      })
+    })
+    // Wait until the POST is actually in flight (batch has been swapped
+    // out of pendingBatchRef and is awaiting fetch).
+    await waitFor(() => expect(inputPosts).toHaveLength(1))
+
+    // Unmount while the POST is still pending.
+    hook.unmount()
+
+    // The in-flight waiter must reject — not linger, not resolve when
+    // the test harness never settles the POST.
+    await waitFor(() => expect(inFlightErr).toBeInstanceOf(Error))
+    expect((inFlightErr as Error).message).toBe("Terminal session is not connected")
   })
 })

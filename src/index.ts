@@ -238,6 +238,14 @@ export { useSessionStream } from "./hooks/use-session-stream";
 export { useDropdownMenu } from "./hooks/use-dropdown-menu";
 export { usePtySession } from "./hooks/use-pty-session";
 export { useSidecarAuth } from "./hooks/use-sidecar-auth";
+export { useLiveTime } from "./hooks/use-live-time";
+export {
+  useSandboxMetrics,
+  type SandboxMetrics,
+  type SidecarMetricsPayload,
+  type UseSandboxMetricsOptions,
+  type UseSandboxMetricsResult,
+} from "./hooks/use-sandbox-metrics";
 
 // --- Types ---
 export type { SessionMessage } from "./types/message";
@@ -263,7 +271,7 @@ export type {
 // --- Utils ---
 export { cn } from "./lib/utils";
 export { copyText } from "./utils/copy-text";
-export { formatDuration, truncateText } from "./utils/format";
+export { formatBytes, formatDuration, formatUptime, truncateText } from "./utils/format";
 export { timeAgo } from "./utils/time-ago";
 export { getToolCategory, getToolDisplayMetadata, getToolErrorText, TOOL_CATEGORY_ICONS } from "./utils/tool-display";
 

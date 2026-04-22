@@ -1,5 +1,5 @@
 export { copyText } from './copy-text';
-export { formatDuration, truncateText } from './format';
+export { formatBytes, formatDuration, formatUptime, truncateText } from './format';
 export { timeAgo } from './time-ago';
 export {
   getToolCategory,

@@ -40,7 +40,9 @@ export function formatUptime(ms: number): string {
 
 /**
  * Format a byte count using binary units (KiB/MiB/GiB, surfaced as
- * "KB/MB/GB" for readability). Returns at most one decimal place.
+ * "KB/MB/GB" for readability). KB and MB use one decimal below 10 and
+ * round above; GB keeps two decimals below 10 so half-GB changes stay
+ * visible on memory dashboards, and drops to one decimal above.
  */
 export function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes < 0) return "—";

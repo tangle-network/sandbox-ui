@@ -95,25 +95,30 @@ export function useSandboxMetrics({
   const prevSandboxIdRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
-    if (!enabled || !sandboxId || !apiBaseUrl) {
-      return;
-    }
-
-    // Reset everything the consumer can observe when the target
-    // sandbox changes. This covers both "previous sandbox succeeded"
-    // and "previous sandbox errored without producing a sample", so
-    // no stale metrics or error banners leak across targets.
-    if (
+    // Clear consumer-visible state when the *target* is cleared or
+    // changed. `enabled=false` is a pause (per JSDoc, "Pause polling")
+    // — keep the last-known sample around so consumers don't flash
+    // empty panels when pausing. `sandboxId` going falsy is different:
+    // the JSDoc promises the hook "stays idle", so we must not leak
+    // stale metrics or an error banner from a sandbox that is no
+    // longer selected.
+    const sandboxCleared = !sandboxId || !apiBaseUrl;
+    const sandboxChanged =
       prevSandboxIdRef.current !== null &&
-      prevSandboxIdRef.current !== sandboxId
-    ) {
+      prevSandboxIdRef.current !== sandboxId;
+    if ((sandboxCleared && prevSandboxIdRef.current !== null) || sandboxChanged) {
       sampleRef.current = null;
       hasLoadedRef.current = false;
       setMetrics(null);
       setLastUpdatedAt(null);
       setError(null);
+      if (sandboxCleared) setLoading(false);
     }
-    prevSandboxIdRef.current = sandboxId;
+    prevSandboxIdRef.current = sandboxId ?? null;
+
+    if (!enabled || sandboxCleared) {
+      return;
+    }
 
     const controller = new AbortController();
     let cancelled = false;
@@ -128,7 +133,7 @@ export function useSandboxMetrics({
         const headers: Record<string, string> = {};
         if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(
-          `${apiBaseUrl}/v1/sidecar-proxy/${sandboxId}/metrics/json`,
+          `${apiBaseUrl}/v1/sidecar-proxy/${encodeURIComponent(sandboxId)}/metrics/json`,
           {
             method: "GET",
             credentials: "include",

@@ -275,4 +275,113 @@ describe("useSandboxMetrics", () => {
     );
     expect(result.current.metrics?.rssBytes).toBe(100_000_000);
   });
+
+  it("resets consumer state when sandboxId transitions to null", async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockFetchResponse({
+        process: {
+          memoryBytes: {
+            rss: 100_000_000,
+            heapTotal: 50_000_000,
+            heapUsed: 25_000_000,
+          },
+          cpuSeconds: { user: 1, system: 0.5 },
+        },
+      }),
+    );
+
+    const { result, rerender } = renderHook(
+      ({ sandboxId }) =>
+        useSandboxMetrics({
+          apiBaseUrl: "http://api.test",
+          sandboxId,
+          enabled: true,
+          intervalMs: 60_000,
+        }),
+      { initialProps: { sandboxId: "sb_a" as string | null } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.metrics).not.toBeNull();
+    });
+
+    rerender({ sandboxId: null });
+
+    await waitFor(() => {
+      expect(result.current.metrics).toBeNull();
+      expect(result.current.lastUpdatedAt).toBeNull();
+      expect(result.current.error).toBeNull();
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  it("pausing via enabled=false keeps the last-known sample", async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockFetchResponse({
+        process: {
+          memoryBytes: {
+            rss: 100_000_000,
+            heapTotal: 50_000_000,
+            heapUsed: 25_000_000,
+          },
+          cpuSeconds: { user: 1, system: 0.5 },
+        },
+      }),
+    );
+
+    const { result, rerender } = renderHook(
+      ({ enabled }) =>
+        useSandboxMetrics({
+          apiBaseUrl: "http://api.test",
+          sandboxId: "sb_abc",
+          enabled,
+          intervalMs: 60_000,
+        }),
+      { initialProps: { enabled: true } },
+    );
+
+    await waitFor(() => {
+      expect(result.current.metrics).not.toBeNull();
+    });
+    const snapshot = result.current.metrics;
+
+    rerender({ enabled: false });
+
+    // Paused — no new fetches, and the prior sample is preserved so
+    // consumers aren't forced to flash an empty panel.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.current.metrics).toEqual(snapshot);
+  });
+
+  it("URL-encodes the sandboxId", async () => {
+    fetchMock.mockResolvedValueOnce(
+      mockFetchResponse({
+        process: {
+          memoryBytes: {
+            rss: 1,
+            heapTotal: 1,
+            heapUsed: 1,
+          },
+          cpuSeconds: { user: 0, system: 0 },
+        },
+      }),
+    );
+
+    const { result } = renderHook(() =>
+      useSandboxMetrics({
+        apiBaseUrl: "http://api.test",
+        sandboxId: "weird/id with space",
+        enabled: true,
+        intervalMs: 60_000,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.metrics).not.toBeNull();
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://api.test/v1/sidecar-proxy/weird%2Fid%20with%20space/metrics/json",
+      expect.any(Object),
+    );
+  });
 });

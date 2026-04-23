@@ -1,10 +1,17 @@
-/* Geist (UI) + Geist Mono (code) + Outfit (display) + Manrope (vault headlines) + Inter (vault body) — via Google Fonts */
-/* CSS spec requires @import to precede all other statements. This must
- * stay ahead of `./tokens.css` and `tailwindcss` because both of those
- * get inlined by PostCSS at build time — if this @import followed them,
- * the resulting dist/globals.css would place a URL @import after CSS
- * rules and PostCSS would reject/drop it in downstream consumers. */
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
+/* Fonts are loaded by the consumer, not this library. See README
+ * "Fonts" for the list of font families sandbox-ui references
+ * (Geist, Geist Mono, Outfit, Manrope, Inter) and the recommended
+ * loading strategies (@fontsource packages or an HTML <link>).
+ *
+ * Historical note: previous versions shipped
+ *   @import url("https://fonts.googleapis.com/css2?family=Geist...")
+ * at the top of this file. That pattern broke in downstream apps that
+ * used CSS chain `@import`s — once the dist CSS is inlined after any
+ * rule, the URL @import is no longer at the top of the merged
+ * stylesheet and the CSS spec disallows it (PostCSS rejects the
+ * build). Shipping fonts as a library concern is also undesirable
+ * for privacy (third-party Google Fonts request) and network-failure
+ * reasons. Consumers own font loading now. */
 
 @import "./tokens.css";
 

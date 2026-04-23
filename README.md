@@ -35,6 +35,52 @@ Import styles in your app root:
 import "@tangle-network/sandbox-ui/styles";
 ```
 
+### Fonts
+
+sandbox-ui references the following font families in its design tokens but does **not** bundle them — consumer apps must load the fonts themselves. This is deliberate: a URL `@import` inside a library CSS bundle breaks when downstream apps chain-import the stylesheet (see CHANGELOG 0.10.9 for the full reasoning).
+
+| Family       | Role                                | Used as CSS variable |
+| ------------ | ----------------------------------- | -------------------- |
+| Geist        | UI body text                        | `--font-sans`        |
+| Geist Mono   | Code, terminal                      | `--font-mono`        |
+| Outfit       | Display / headings (default theme)  | `--font-display`     |
+| Manrope      | Display / headings (vault theme)    | `--font-display`     |
+| Inter        | UI body (vault theme)               | `--font-sans`        |
+
+Pick one loading strategy that fits your app:
+
+**1. Self-hosted via `@fontsource/*`** (recommended — no external network request):
+
+```bash
+npm install @fontsource/geist-sans @fontsource/geist-mono @fontsource/outfit @fontsource/manrope @fontsource/inter
+```
+
+```tsx
+// app entry
+import "@fontsource/geist-sans/400.css";
+import "@fontsource/geist-sans/500.css";
+import "@fontsource/geist-sans/600.css";
+import "@fontsource/geist-sans/700.css";
+import "@fontsource/geist-mono/400.css";
+import "@fontsource/geist-mono/500.css";
+import "@fontsource/outfit/500.css";
+import "@fontsource/outfit/700.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/600.css";
+```
+
+**2. Google Fonts via HTML `<link>`:**
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
+```
+
+Any family you omit falls back per the `--font-*` token chain (e.g. `--font-sans` falls back to `"DM Sans", ui-sans-serif, system-ui, sans-serif`).
+
 If you are building on the sandbox SDK directly, use `useSdkSession` to turn raw SDK/session-gateway events into the `messages + partMap` model that `ChatContainer` and `SandboxWorkbench` expect:
 
 ```tsx

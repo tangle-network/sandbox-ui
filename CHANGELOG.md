@@ -1,6 +1,25 @@
 # Changelog
 
 
+## 0.10.9
+
+### Breaking (behavior)
+
+- **Stopped bundling Google Fonts via CSS `@import url(...)`**: `src/styles/globals.css` no longer emits `@import url("https://fonts.googleapis.com/css2?family=Geist...")`. Consumers must load the font families sandbox-ui references (Geist, Geist Mono, Outfit, Manrope, Inter) themselves — either via `@fontsource/*` packages or an HTML `<link>`. See README "Fonts".
+- **Why this changed**: a URL `@import` inside a library CSS file is only spec-valid when the file is loaded as a top-level stylesheet. If a consumer does `@import "@tangle-network/sandbox-ui/globals.css"` from their own CSS (a CSS chain import), PostCSS inlines our file verbatim at that position; any `@import url(...)` in our file then lands after the consumer's preceding rules, which the CSS spec disallows, and PostCSS rejects the build with "@import must precede all other statements". The failure surfaces in the consumer's Vite/webpack output as a blank page. The 0.10.6 validator enforced correct ordering *within* our single built file — it could not and did not protect consumers who chain-imported the file.
+- **Migration**: If your app relied on sandbox-ui to fetch these fonts for you, add them yourself. Example:
+  ```html
+  <!-- index.html -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
+  ```
+  Or, for self-hosted: `npm install @fontsource/geist-sans @fontsource/geist-mono @fontsource/outfit @fontsource/manrope @fontsource/inter` and import the weights you need from your app entry.
+
+### Fixes
+
+- **Validator inverted**: `scripts/validate-built-css.mjs` now *forbids* any URL `@import` in the built output, catching at the library's build boundary the exact pattern that failed for downstream consumers. Tests updated.
+
 ## 0.10.7
 
 ### Fixes

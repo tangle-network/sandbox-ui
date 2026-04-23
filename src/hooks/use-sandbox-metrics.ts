@@ -89,25 +89,35 @@ export function useSandboxMetrics({
   // current `sandboxId`. Gates `loading` so it only reflects the
   // pre-first-sample state rather than flipping on every poll cycle.
   const hasLoadedRef = React.useRef<boolean>(false);
+  // The last `sandboxId` this effect ran against. Tracked independently
+  // of `sampleRef` so that switching away from a sandbox that errored
+  // without ever producing a sample still resets consumer-visible state.
+  const prevSandboxIdRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!enabled || !sandboxId || !apiBaseUrl) {
       return;
     }
 
-    // Reset the sample baseline when the target sandbox changes so a
-    // stale delta from the previous sandbox can't leak a bogus CPU%.
-    // The "have we loaded yet" flag resets too, so the consumer sees
-    // a fresh loading state for the new sandbox.
-    if (sampleRef.current && sampleRef.current.sandboxId !== sandboxId) {
+    // Reset everything the consumer can observe when the target
+    // sandbox changes. This covers both "previous sandbox succeeded"
+    // and "previous sandbox errored without producing a sample", so
+    // no stale metrics or error banners leak across targets.
+    if (
+      prevSandboxIdRef.current !== null &&
+      prevSandboxIdRef.current !== sandboxId
+    ) {
       sampleRef.current = null;
       hasLoadedRef.current = false;
       setMetrics(null);
       setLastUpdatedAt(null);
+      setError(null);
     }
+    prevSandboxIdRef.current = sandboxId;
 
     const controller = new AbortController();
     let cancelled = false;
+    let timeoutId: number | null = null;
     const delay = Math.max(intervalMs, 500);
 
     const fetchOnce = async () => {
@@ -178,12 +188,24 @@ export function useSandboxMetrics({
       }
     };
 
-    fetchOnce();
-    const id = window.setInterval(fetchOnce, delay);
+    // Serial polling: schedule the next fetch only after the current
+    // one has settled. `setInterval` allows overlapping in-flight
+    // requests when fetch latency exceeds `delay`, which lets an older
+    // response land after a newer one and corrupt the CPU-delta
+    // baseline. A chained `setTimeout` makes overlap impossible and
+    // applies natural backpressure under a slow server.
+    const runLoop = async () => {
+      if (cancelled) return;
+      await fetchOnce();
+      if (cancelled) return;
+      timeoutId = window.setTimeout(runLoop, delay);
+    };
+    runLoop();
+
     return () => {
       cancelled = true;
       controller.abort();
-      window.clearInterval(id);
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
   }, [apiBaseUrl, sandboxId, token, enabled, intervalMs]);
 

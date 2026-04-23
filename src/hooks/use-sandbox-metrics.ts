@@ -51,6 +51,12 @@ export interface UseSandboxMetricsOptions {
 
 export interface UseSandboxMetricsResult {
   metrics: SandboxMetrics | null;
+  /**
+   * True only until the first successful sample has arrived (or the
+   * first one after the target `sandboxId` changes). Subsequent polls
+   * do not flip this back to true, so consumers can gate a spinner
+   * on it without it flashing on every cycle.
+   */
   loading: boolean;
   error: Error | null;
   /** Wall-clock ms of the last successful sample, or null. */
@@ -79,6 +85,10 @@ export function useSandboxMetrics({
     wallMs: number;
     sandboxId: string;
   } | null>(null);
+  // Tracks whether this hook has produced a successful sample for the
+  // current `sandboxId`. Gates `loading` so it only reflects the
+  // pre-first-sample state rather than flipping on every poll cycle.
+  const hasLoadedRef = React.useRef<boolean>(false);
 
   React.useEffect(() => {
     if (!enabled || !sandboxId || !apiBaseUrl) {
@@ -87,8 +97,11 @@ export function useSandboxMetrics({
 
     // Reset the sample baseline when the target sandbox changes so a
     // stale delta from the previous sandbox can't leak a bogus CPU%.
+    // The "have we loaded yet" flag resets too, so the consumer sees
+    // a fresh loading state for the new sandbox.
     if (sampleRef.current && sampleRef.current.sandboxId !== sandboxId) {
       sampleRef.current = null;
+      hasLoadedRef.current = false;
       setMetrics(null);
       setLastUpdatedAt(null);
     }
@@ -98,8 +111,10 @@ export function useSandboxMetrics({
     const delay = Math.max(intervalMs, 500);
 
     const fetchOnce = async () => {
+      // Only surface `loading` before the first successful sample.
+      // After that, polls must not flash a spinner in consumer UIs.
+      if (!hasLoadedRef.current) setLoading(true);
       try {
-        setLoading(true);
         const headers: Record<string, string> = {};
         if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(
@@ -120,6 +135,8 @@ export function useSandboxMetrics({
         const cpuSeconds = user + system;
         const wallMs = Date.now();
 
+        if (cancelled) return;
+
         let cpuPercent: number | null = null;
         const prev = sampleRef.current;
         if (prev && prev.sandboxId === sandboxId) {
@@ -132,9 +149,11 @@ export function useSandboxMetrics({
             cpuPercent = (dCpu / dWallSec) * 100;
           }
         }
+        // Only advance the baseline when we're about to commit state,
+        // so a torn-down or superseded fetch can't poison the next
+        // delta with a sample the consumer never saw.
         sampleRef.current = { cpuSeconds, wallMs, sandboxId };
 
-        if (cancelled) return;
         setMetrics({
           cpuPercent,
           rssBytes: data?.process?.memoryBytes?.rss ?? 0,
@@ -143,6 +162,8 @@ export function useSandboxMetrics({
         });
         setLastUpdatedAt(wallMs);
         setError(null);
+        hasLoadedRef.current = true;
+        setLoading(false);
       } catch (err) {
         if (
           cancelled ||
@@ -151,8 +172,9 @@ export function useSandboxMetrics({
           return;
         }
         setError(err instanceof Error ? err : new Error(String(err)));
-      } finally {
-        if (!cancelled) setLoading(false);
+        // Surface a terminal loading=false so consumers can render the
+        // error instead of remaining stuck on a skeleton forever.
+        if (!hasLoadedRef.current) setLoading(false);
       }
     };
 

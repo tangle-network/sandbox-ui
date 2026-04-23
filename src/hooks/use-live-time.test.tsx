@@ -26,4 +26,15 @@ describe("useLiveTime", () => {
     });
     expect(result.current).toBeGreaterThanOrEqual(initial + 3000);
   });
+
+  it("falls back to a safe cadence when intervalMs is NaN", () => {
+    vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
+    const setIntervalSpy = vi.spyOn(window, "setInterval");
+    renderHook(() => useLiveTime(Number.NaN));
+    // Must not pass NaN (browsers coerce to 0 and spin a render loop)
+    // nor drop below the 100ms floor.
+    const [, delay] = setIntervalSpy.mock.calls[0]!;
+    expect(Number.isFinite(delay)).toBe(true);
+    expect(delay).toBeGreaterThanOrEqual(100);
+  });
 });

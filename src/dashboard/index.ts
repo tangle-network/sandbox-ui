@@ -80,6 +80,22 @@ export {
   type Backend,
 } from "./backend-selector";
 export {
+  HarnessPicker,
+  HARNESS_OPTIONS,
+  type HarnessPickerProps,
+  type HarnessType,
+} from "./harness-picker";
+export {
+  ModelPicker,
+  canonicalModelId,
+  formatPricing,
+  formatContext,
+  type ModelPickerProps,
+  type ModelPickerVariant,
+  type ModelInfo,
+  type ModelPreset,
+} from "./model-picker";
+export {
   BillingDashboard,
   type BillingDashboardProps,
   type BillingSubscription,

@@ -197,6 +197,8 @@ export { BillingDashboard, type BillingDashboardProps } from "./dashboard/billin
 export { PricingPage as PricingCards, type PricingPageProps } from "./dashboard/pricing-page";
 export { UsageChart, type UsageChartProps, type UsageDataPoint } from "./dashboard/usage-chart";
 export { BackendSelector, type BackendSelectorProps, type Backend } from "./dashboard/backend-selector";
+export { HarnessPicker, HARNESS_OPTIONS, type HarnessPickerProps, type HarnessType } from "./dashboard/harness-picker";
+export { ModelPicker, canonicalModelId, formatPricing, formatContext, type ModelPickerProps, type ModelPickerVariant, type ModelInfo, type ModelPreset } from "./dashboard/model-picker";
 export { ProfileSelector, type ProfileSelectorProps, ProfileComparison, type ProfileComparisonProps } from "./dashboard/profile-selector";
 export { VariantList, type VariantListProps } from "./dashboard/variant-list";
 

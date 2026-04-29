@@ -169,6 +169,13 @@ export {
   type FileNode,
   type FileTreeVisibilityOptions,
 } from "./files/file-tree";
+export {
+  RichFileTree,
+  type RichFileTreeProps,
+  type RichFileTreeGitEntry,
+  type RichFileTreeGitStatus,
+  type RichFileTreeThemeVars,
+} from "./files/rich-file-tree";
 export { FilePreview, type FilePreviewProps } from "./files/file-preview";
 export { FileTabs, type FileTabsProps, type FileTabData } from "./files/file-tabs";
 export { FileArtifactPane, type FileArtifactPaneProps } from "./files/file-artifact-pane";

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.0
+
+### Breaking (build / install)
+
+- **Design tokens now consumed from `@tangle-network/brand`** — single source of truth across every Tangle app. `src/styles/tokens.css` (492 LOC, byte-identical to brand's) is deleted; `src/styles/globals.css` now does `@import "@tangle-network/brand/styles/tokens.css"`. The build pipeline (`scripts/copy-styles.mjs`) resolves brand's `tokens.css` via Node package-exports and copies it to `dist/tokens.css`, so consumers that hit `@tangle-network/sandbox-ui/tokens.css` directly (e.g. the blueprint-agent SCSS bridge) keep working unchanged.
+- **New required peerDependency: `@tangle-network/brand: ^0.2.0`.** Consumers must add it to their direct deps. pnpm auto-installs peers; npm/yarn users may need to install it explicitly.
+- **`postcss-import` added as a devDep** to resolve the bare-specifier `@import` for brand's tokens; runs before Tailwind v4's plugin (`filter` skips `@import "tailwindcss"` so Tailwind still owns its own resolution).
+
+### Why
+
+`@tangle-network/brand` was extracted from sandbox-ui as the single source of truth for design tokens. Until now sandbox-ui still kept a local copy and diverged by chance only — any drift would have silently broken downstream apps that pull tokens from either package. This release closes the loop: brand changes propagate via npm bumps; sandbox-ui re-ships brand's bytes verbatim.
 
 ## 0.10.9
 

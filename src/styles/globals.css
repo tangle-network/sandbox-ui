@@ -13,7 +13,7 @@
  * for privacy (third-party Google Fonts request) and network-failure
  * reasons. Consumers own font loading now. */
 
-@import "./tokens.css";
+@import "@tangle-network/brand/styles/tokens.css";
 
 @import "tailwindcss";
 

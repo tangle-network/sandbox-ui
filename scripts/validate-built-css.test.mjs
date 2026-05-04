@@ -31,11 +31,11 @@ describe("validateBuiltCss", () => {
     expect(() => validateBuiltCss(css)).not.toThrow()
   })
 
-  it("allows relative @import statements (not URL form)", () => {
+  it("allows bare-specifier @import statements (not URL form)", () => {
     // Non-URL @imports may still appear in intermediate tooling output;
     // this validator only forbids the URL form that breaks downstream
     // CSS chain imports.
-    const css = `@import "./tokens.css";\n:root { color: red; }\n`
+    const css = `@import "@tangle-network/brand/styles/tokens.css";\n:root { color: red; }\n`
     expect(() => validateBuiltCss(css)).not.toThrow()
   })
 })

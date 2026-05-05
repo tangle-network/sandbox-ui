@@ -83,15 +83,24 @@ function toWsUrl(apiUrl: string, sessionId: string, token: string): string | nul
 // Encode stdin text as a UTF-8 binary frame. Distinguishes input from
 // JSON control frames purely by frame type — no in-band marker — so a
 // user typing `{` does not collide with a control message.
-const stdinEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+//
+// `connectWs` surrenders the WS path entirely when `TextEncoder` is
+// missing (see the guard there), so the hook falls back to HTTP+SSE
+// rather than running with a half-broken WS. The runtime check below
+// is therefore unreachable in practice — kept as defense-in-depth so a
+// future refactor that removes the guard fails loudly with a clear
+// message instead of silently sending stdin as a TEXT frame, which the
+// server treats as a JSON control channel and would drop wholesale.
+const stdinEncoder =
+  typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
 
-function encodeStdin(text: string): ArrayBufferView | string {
-  if (stdinEncoder) return stdinEncoder.encode(text);
-  // Fallback for any runtime without TextEncoder: send as text. The
-  // server's text-frame branch treats text frames as control by default,
-  // so we tag with a sentinel that the server unwraps. Not expected to
-  // be reached in any supported browser.
-  return text;
+function encodeStdin(text: string): ArrayBufferView {
+  if (!stdinEncoder) {
+    throw new Error(
+      'TextEncoder is unavailable; WebSocket transport cannot encode stdin',
+    );
+  }
+  return stdinEncoder.encode(text);
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +249,15 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
 
   const connectWs = useCallback((sessionId: string): Promise<boolean> => {
     return new Promise<boolean>((resolve) => {
-      if (typeof WebSocket === 'undefined') {
+      // Both globals are required to drive the WS transport: WebSocket
+      // for the wire and TextEncoder for stdin framing (see encodeStdin).
+      // If either is missing, surrender so the caller falls back to the
+      // HTTP+SSE path rather than opening a socket we can't write to.
+      // We probe `stdinEncoder` rather than `typeof TextEncoder` because
+      // the encoder is captured once at module load — a runtime polyfill
+      // landing after import would lie to a `typeof` check while
+      // `encodeStdin` still throws.
+      if (typeof WebSocket === 'undefined' || stdinEncoder === null) {
         resolve(false);
         return;
       }

@@ -835,6 +835,119 @@ describe("usePtySession WebSocket transport", () => {
     await waitFor(() => expect(hook.result.current.isConnected).toBe(false))
   })
 
+  it("falls back to SSE+POST after a mid-session WS close", async () => {
+    // Pins the core reliability path: when a healthy WS drops mid-session
+    // the hook must (1) flip isConnected to false, (2) schedule the
+    // reconnect timer, (3) open the SSE stream against the same session,
+    // (4) restore isConnected, and (5) route subsequent input through
+    // the HTTP POST path (not back into the dead socket). This is the
+    // user-visible degradation behavior that keeps the terminal alive
+    // through transient network or CF Worker hiccups, and a regression
+    // here would silently strand the terminal until manual reconnect.
+    const wsStub = installOpeningWebSocketStub()
+    const inputPosts: PendingInput[] = []
+    let streamController:
+      | ReadableStreamDefaultController<Uint8Array>
+      | null = null
+
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const href = typeof url === "string" ? url : url.toString()
+      const method = (init?.method ?? "GET").toUpperCase()
+      if (href.endsWith("/terminals") && method === "POST") {
+        return mockResponse({
+          ok: true,
+          status: 201,
+          body: JSON.stringify({ data: { sessionId: SESSION_ID } }),
+        })
+      }
+      if (
+        href.endsWith(`/terminals/${SESSION_ID}/stream`) &&
+        method === "GET"
+      ) {
+        return {
+          ok: true,
+          status: 200,
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              streamController = controller
+            },
+          }),
+        } as unknown as Response
+      }
+      if (
+        href.endsWith(`/terminals/${SESSION_ID}/input`) &&
+        method === "POST"
+      ) {
+        const d = deferred<Response>()
+        inputPosts.push({
+          call: {
+            url: href,
+            method,
+            body: typeof init?.body === "string" ? init.body : null,
+          },
+          settle: (res) => d.resolve(res),
+          reject: (err) => d.reject(err),
+        })
+        return d.promise
+      }
+      if (href.endsWith(`/terminals/${SESSION_ID}`) && method === "DELETE") {
+        return mockResponse({ ok: true, status: 200 })
+      }
+      throw new Error(`Unexpected fetch: ${method} ${href}`)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const hook = renderHook(() =>
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData: vi.fn() }),
+    )
+
+    // Drive the WS handshake to OPEN.
+    await waitFor(() => expect(wsStub.handles).toHaveLength(1))
+    act(() => {
+      wsStub.handles[0].open()
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+    // Confirm we're on the WS path: no SSE stream opened yet.
+    expect(streamController).toBeNull()
+
+    // Drop the socket. The hook treats this as a transient mid-session
+    // failure and schedules a reconnect through the SSE path.
+    act(() => {
+      wsStub.handles[0].close(1006)
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(false))
+    expect(inputPosts).toHaveLength(0)
+
+    // The reconnect setTimeout is hardcoded at 1000ms in the WS onclose
+    // handler. Use a generous waitFor window so this test stays robust
+    // to scheduler jitter without leaning on fake timers (which would
+    // collide with waitFor's polling).
+    await waitFor(
+      () => {
+        expect(streamController).not.toBeNull()
+        expect(hook.result.current.isConnected).toBe(true)
+      },
+      { timeout: 3000 },
+    )
+
+    // Subsequent input must travel over the HTTP /input path, not be
+    // swallowed by a reference to the closed socket.
+    await act(async () => {
+      void hook.result.current.sendCommand("after-failover").catch(() => {})
+      await waitFor(() => expect(inputPosts).toHaveLength(1))
+    })
+    expect(JSON.parse(inputPosts[0].call.body ?? "{}")).toEqual({
+      data: "after-failover",
+    })
+    // And no further bytes were pushed into the dead WebSocket.
+    expect(wsStub.handles[0].sentBinary).toEqual([])
+
+    // Drain the in-flight POST so unmount doesn't leak a rejection.
+    await act(async () => {
+      inputPosts[0].settle(mockResponse({ ok: true, status: 200 }))
+    })
+  })
+
   it("falls back to HTTP+SSE when WebSocket construction throws", async () => {
     // Some browsers throw synchronously on `new WebSocket(...)` if the
     // URL is rejected (e.g. mixed-content blocking). The hook must

@@ -1023,4 +1023,140 @@ describe("usePtySession WebSocket transport", () => {
       inputPosts[0].settle(mockResponse({ ok: true, status: 200 }))
     })
   })
+
+  it("ignores an orphaned onclose from a previous connect cycle", async () => {
+    // The hook's lifecycle effect re-runs whenever apiUrl or token
+    // changes. If WS-A had already reached OPEN when the prop change
+    // fired, real browsers emit its `close` event ASYNCHRONOUSLY —
+    // after cleanup() ran, after the new effect restored
+    // mountedRef=true, and after the new connect() opened WS-B. With
+    // the wasActive snapshot in onclose, the orphan must NOT touch
+    // shared state; without it, the orphan would call
+    // setIsConnected(false) and schedule a reconnect timer that opens
+    // a duplicate SSE stream against the new session.
+    //
+    // The shared `installOpeningWebSocketStub` fires onclose
+    // synchronously inside `close()`, which side-steps the bug
+    // because mountedRef briefly flips to false during cleanup. To
+    // exercise the real-browser ordering we install a custom stub
+    // here whose `close()` is silent — the test then fires the
+    // orphan close manually AFTER the new transport is up.
+    interface ControlledWs {
+      readyState: 0 | 1 | 2 | 3
+      onopen: ((ev: Event) => void) | null
+      onmessage: ((ev: MessageEvent) => void) | null
+      onerror: ((ev: Event) => void) | null
+      onclose: ((ev: CloseEvent) => void) | null
+      send: (data: unknown) => void
+      close: () => void
+      url: string
+    }
+    const instances: ControlledWs[] = []
+    class ControlledWebSocket {
+      static CONNECTING = 0
+      static OPEN = 1
+      static CLOSING = 2
+      static CLOSED = 3
+      readyState: 0 | 1 | 2 | 3 = 0
+      binaryType: BinaryType = "blob"
+      url: string
+      onopen: ((ev: Event) => void) | null = null
+      onmessage: ((ev: MessageEvent) => void) | null = null
+      onerror: ((ev: Event) => void) | null = null
+      onclose: ((ev: CloseEvent) => void) | null = null
+      constructor(url: string) {
+        this.url = url
+        instances.push(this as unknown as ControlledWs)
+      }
+      send() {}
+      // Mark closed but do NOT emit onclose — the test drives the
+      // orphan close event explicitly to mimic real-browser async
+      // emission.
+      close() {
+        if (this.readyState !== 3) this.readyState = 3
+      }
+    }
+    vi.stubGlobal("WebSocket", ControlledWebSocket)
+
+    const SESSION_A = "sess_A"
+    const SESSION_B = "sess_B"
+    let createCalls = 0
+    const stray: FetchCall[] = []
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const href = typeof url === "string" ? url : url.toString()
+      const method = (init?.method ?? "GET").toUpperCase()
+      if (href.endsWith("/terminals") && method === "POST") {
+        createCalls++
+        const sid = createCalls === 1 ? SESSION_A : SESSION_B
+        return mockResponse({
+          ok: true,
+          status: 201,
+          body: JSON.stringify({ data: { sessionId: sid } }),
+        })
+      }
+      if (method === "DELETE" && /\/terminals\/[^/]+$/.test(href)) {
+        return mockResponse({ ok: true, status: 200 })
+      }
+      stray.push({
+        url: href,
+        method,
+        body: typeof init?.body === "string" ? init.body : null,
+      })
+      return mockResponse({ ok: true, status: 200 })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const hook = renderHook(
+      ({ token }) =>
+        usePtySession({ apiUrl: API_URL, token, onData: vi.fn() }),
+      { initialProps: { token: "token-a" } },
+    )
+
+    // WS-A handshake: wait for the constructor, drive open, observe
+    // the hook adopt the WS as its active transport.
+    await waitFor(() => expect(instances).toHaveLength(1))
+    act(() => {
+      instances[0].readyState = 1
+      instances[0].onopen?.({} as Event)
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+
+    // Prop change tears down effect-1 (which calls ws-A.close — silent
+    // in this stub) and runs effect-2, which dials WS-B.
+    hook.rerender({ token: "token-b" })
+    await waitFor(() => expect(instances).toHaveLength(2))
+    act(() => {
+      instances[1].readyState = 1
+      instances[1].onopen?.({} as Event)
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+
+    // Now fire WS-A's orphaned close event. Without the wasActive
+    // guard this would: (a) flip isConnected to false even though
+    // WS-B is healthy, and (b) schedule a reconnect timer that calls
+    // connectStream(SESSION_B), opening a duplicate SSE stream.
+    act(() => {
+      instances[0].onclose?.({
+        code: 1006,
+        reason: "",
+        wasClean: false,
+      } as unknown as CloseEvent)
+    })
+    // Drain any queued state updates.
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // Active transport state is preserved.
+    expect(hook.result.current.isConnected).toBe(true)
+    // No fetch hit anything outside of the create-and-delete
+    // perimeter — specifically no SSE GET against /stream and no
+    // POST to /input.
+    expect(stray).toEqual([])
+
+    // Wait past the reconnect-timer delay (1000ms in WS onclose) to
+    // confirm no deferred SSE open fires either.
+    await new Promise((r) => setTimeout(r, 1100))
+    expect(stray).toEqual([])
+    expect(hook.result.current.isConnected).toBe(true)
+  })
 })

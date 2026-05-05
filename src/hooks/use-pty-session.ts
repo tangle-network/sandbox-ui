@@ -345,7 +345,18 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       };
 
       ws.onclose = () => {
-        if (wsRef.current === ws) {
+        // Snapshot whether THIS socket is the active transport before
+        // we touch any shared state. In real browsers `onclose` is
+        // emitted asynchronously, so a prop change that closed this
+        // WS while it was OPEN can have already advanced the hook to
+        // a new session (cleanup() nulled wsRef, then a new connect()
+        // populated it with a different ws). Without this snapshot
+        // the orphaned `setIsConnected(false)` and reconnect-timer
+        // scheduling below would corrupt the active transport's
+        // state — opening a duplicate SSE stream against the new
+        // session and flickering isConnected.
+        const wasActive = wsRef.current === ws;
+        if (wasActive) {
           wsRef.current = null;
         }
         if (!opened) {
@@ -358,8 +369,10 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         // flight when the socket dropped; subsequent batches fall
         // through to the HTTP path because `wsRef.current` was nulled
         // above. Drop the connected flag and schedule a reconnect
-        // through the same SSE retry policy as the HTTP path.
-        if (!mountedRef.current) return;
+        // through the same SSE retry policy as the HTTP path — but
+        // only if this WS was still the active transport, otherwise
+        // we're an orphan from a torn-down connect cycle.
+        if (!wasActive || !mountedRef.current) return;
         setIsConnected(false);
         if (sessionIdRef.current) {
           retryTimerRef.current = setTimeout(() => {

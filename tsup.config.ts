@@ -32,6 +32,7 @@ export default defineConfig({
     "@xterm/xterm",
     "@xterm/addon-fit",
     "@xterm/addon-web-links",
+    "@xterm/addon-webgl",
     "@tanstack/react-query",
     "nanostores",
     "@nanostores/react",

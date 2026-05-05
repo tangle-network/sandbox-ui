@@ -353,10 +353,12 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
           settle(false);
           return;
         }
-        // Lost the connection mid-session. Reject any in-flight input
-        // so the drain loop doesn't write to a closed socket, drop the
-        // connected flag, and schedule a reconnect through the same
-        // SSE retry policy as the HTTP path.
+        // Lost the connection mid-session. The drain loop's own
+        // try/catch around `ws.send` rejects any batch that was in
+        // flight when the socket dropped; subsequent batches fall
+        // through to the HTTP path because `wsRef.current` was nulled
+        // above. Drop the connected flag and schedule a reconnect
+        // through the same SSE retry policy as the HTTP path.
         if (!mountedRef.current) return;
         setIsConnected(false);
         if (sessionIdRef.current) {

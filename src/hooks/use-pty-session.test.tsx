@@ -60,6 +60,134 @@ interface PendingInput {
 }
 
 /**
+ * Default WebSocket stub: construction succeeds but the connection
+ * fails on the next microtask, so `connectWs` settles `false` quickly
+ * and `connect` falls back to SSE+POST. Tests targeting the HTTP path
+ * stay deterministic (no real handshake, no 1.5s timeout wait).
+ */
+function installFailFastWebSocketStub() {
+  class FailingWebSocket {
+    static CONNECTING = 0
+    static OPEN = 1
+    static CLOSING = 2
+    static CLOSED = 3
+    readyState = 0
+    binaryType: BinaryType = "blob"
+    url: string
+    onopen: ((ev: Event) => void) | null = null
+    onmessage: ((ev: MessageEvent) => void) | null = null
+    onerror: ((ev: Event) => void) | null = null
+    onclose: ((ev: CloseEvent) => void) | null = null
+    constructor(url: string) {
+      this.url = url
+      queueMicrotask(() => {
+        this.readyState = 3
+        this.onclose?.({
+          code: 1006,
+          reason: "",
+          wasClean: false,
+        } as unknown as CloseEvent)
+      })
+    }
+    send() {}
+    close() {
+      this.readyState = 3
+    }
+  }
+  vi.stubGlobal("WebSocket", FailingWebSocket)
+}
+
+/**
+ * Test handle for the openable WebSocket stub. Tests drive the socket
+ * lifecycle explicitly (open, push messages, close) so they don't race
+ * the event loop.
+ */
+interface FakeWsHandle {
+  url: string
+  /** Frames sent by the hook as text (control messages). */
+  sentText: string[]
+  /** Frames sent by the hook as binary (stdin payloads), decoded UTF-8. */
+  sentBinary: string[]
+  /** Drive the open event. */
+  open: () => void
+  /** Push a TEXT frame from server → client. */
+  pushMessage: (data: string) => void
+  /** Drive the close event. */
+  close: (code?: number) => void
+}
+
+/**
+ * Openable WebSocket stub: tests drive the open / message / close
+ * events explicitly. Used by the WS-transport tests below.
+ */
+function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
+  const handles: FakeWsHandle[] = []
+  class OpeningWebSocket {
+    static CONNECTING = 0
+    static OPEN = 1
+    static CLOSING = 2
+    static CLOSED = 3
+    readyState = 0
+    binaryType: BinaryType = "blob"
+    url: string
+    onopen: ((ev: Event) => void) | null = null
+    onmessage: ((ev: MessageEvent) => void) | null = null
+    onerror: ((ev: Event) => void) | null = null
+    onclose: ((ev: CloseEvent) => void) | null = null
+    private sentText: string[] = []
+    private sentBinary: string[] = []
+    constructor(url: string) {
+      this.url = url
+      const decoder = new TextDecoder()
+      const self = this
+      handles.push({
+        url,
+        sentText: this.sentText,
+        sentBinary: this.sentBinary,
+        open() {
+          self.readyState = 1
+          self.onopen?.({} as Event)
+        },
+        pushMessage(data: string) {
+          self.onmessage?.({ data } as MessageEvent)
+        },
+        close(code = 1000) {
+          self.readyState = 3
+          self.onclose?.({
+            code,
+            reason: "",
+            wasClean: true,
+          } as unknown as CloseEvent)
+        },
+      })
+      void decoder // keep ref to silence unused lint in some configs
+    }
+    send(data: string | ArrayBuffer | ArrayBufferView | Blob) {
+      if (typeof data === "string") {
+        this.sentText.push(data)
+      } else if (data instanceof ArrayBuffer) {
+        this.sentBinary.push(new TextDecoder().decode(data))
+      } else if (ArrayBuffer.isView(data)) {
+        this.sentBinary.push(new TextDecoder().decode(data as ArrayBufferView))
+      } else {
+        // Blob — not used by the hook.
+      }
+    }
+    close() {
+      if (this.readyState === 3) return
+      this.readyState = 3
+      this.onclose?.({
+        code: 1000,
+        reason: "",
+        wasClean: true,
+      } as unknown as CloseEvent)
+    }
+  }
+  vi.stubGlobal("WebSocket", OpeningWebSocket)
+  return { handles }
+}
+
+/**
  * Test harness that stubs `fetch` and separates the three surfaces
  * `usePtySession` talks to: terminal creation, SSE stream, and input
  * POSTs. Input POSTs are handed back to the test as pending handles so
@@ -139,6 +267,7 @@ function installFetchHarness() {
   })
 
   vi.stubGlobal("fetch", fetchMock)
+  installFailFastWebSocketStub()
 
   return {
     fetchMock,
@@ -554,5 +683,231 @@ describe("usePtySession input serialization", () => {
     // the test harness never settles the POST.
     await waitFor(() => expect(inFlightErr).toBeInstanceOf(Error))
     expect((inFlightErr as Error).message).toBe("Terminal session is not connected")
+  })
+})
+
+/**
+ * Tests for the WebSocket transport. The WS path replaces per-keystroke
+ * HTTP POSTs with synchronous `ws.send`, eliminating the round-trip cost
+ * that dominated typing latency through edge proxies. These tests pin the
+ * input/output framing contract the matching server endpoint must honor.
+ */
+describe("usePtySession WebSocket transport", () => {
+  beforeEach(() => {
+    vi.useRealTimers()
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  /**
+   * Test harness that pairs the openable WebSocket stub with a fetch
+   * mock that handles only session creation and deletion. Any HTTP
+   * request to `/input`, `/stream`, or PATCH on the session is treated
+   * as a contract violation — when the WS is open the hook MUST NOT
+   * fall back to the HTTP path.
+   */
+  function installWsHarness() {
+    const wsStub = installOpeningWebSocketStub()
+    const stray: FetchCall[] = []
+
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const href = typeof url === "string" ? url : url.toString()
+      const method = (init?.method ?? "GET").toUpperCase()
+
+      if (href.endsWith("/terminals") && method === "POST") {
+        return mockResponse({
+          ok: true,
+          status: 201,
+          body: JSON.stringify({ data: { sessionId: SESSION_ID } }),
+        })
+      }
+      if (href.endsWith(`/terminals/${SESSION_ID}`) && method === "DELETE") {
+        return mockResponse({ ok: true, status: 200 })
+      }
+
+      // Any other request is a fallback we shouldn't be hitting while
+      // the WS is open. Record it so the assertion below can flag it.
+      stray.push({
+        url: href,
+        method,
+        body: typeof init?.body === "string" ? init.body : null,
+      })
+      return mockResponse({ ok: true, status: 200 })
+    })
+
+    vi.stubGlobal("fetch", fetchMock)
+
+    return { ...wsStub, stray, fetchMock }
+  }
+
+  async function mountAndOpenWs() {
+    const harness = installWsHarness()
+    const onData = vi.fn()
+    const hook = renderHook(() =>
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData }),
+    )
+    // Wait for the hook's `connect()` to construct the WebSocket.
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    // Drive the open event the hook is waiting on.
+    act(() => {
+      harness.handles[0].open()
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+    return { ...harness, hook, onData }
+  }
+
+  it("constructs the WebSocket with wss:// + token query param", async () => {
+    const { handles } = await mountAndOpenWs()
+    expect(handles).toHaveLength(1)
+    const url = new URL(handles[0].url)
+    expect(url.protocol).toBe("wss:")
+    expect(url.pathname).toBe(`/terminals/${SESSION_ID}/ws`)
+    expect(url.searchParams.get("token")).toBe(fixtureValue)
+  })
+
+  it("dispatches sendCommand as a UTF-8 binary frame and skips the HTTP /input path", async () => {
+    const { handles, hook, stray } = await mountAndOpenWs()
+
+    await act(async () => {
+      void hook.result.current.sendCommand("hi")
+      // Let the drain loop resolve. WS sends are synchronous so a single
+      // microtask hop is enough.
+      await Promise.resolve()
+    })
+
+    expect(handles[0].sentBinary).toEqual(["hi"])
+    expect(stray).toHaveLength(0)
+  })
+
+  it("coalesces keystrokes that arrive while the drain is running", async () => {
+    // The drain loop processes the queue in batches even on the WS path.
+    // For burst input the user-facing contract is the same as HTTP: bytes
+    // arrive on the wire in submission order.
+    const { handles, hook } = await mountAndOpenWs()
+
+    await act(async () => {
+      void hook.result.current.sendCommand("a")
+      void hook.result.current.sendCommand("b")
+      void hook.result.current.sendCommand("c")
+      await Promise.resolve()
+    })
+
+    // Each batch translates to one ws.send, but all bytes appear in
+    // submission order regardless of batching.
+    expect(handles[0].sentBinary.join("")).toBe("abc")
+  })
+
+  it("delivers server text frames to onData", async () => {
+    const { handles, onData } = await mountAndOpenWs()
+
+    act(() => {
+      handles[0].pushMessage("hello\r\n")
+      handles[0].pushMessage("\x1b[31mred\x1b[0m")
+    })
+
+    expect(onData).toHaveBeenCalledTimes(2)
+    expect(onData).toHaveBeenNthCalledWith(1, "hello\r\n")
+    expect(onData).toHaveBeenNthCalledWith(2, "\x1b[31mred\x1b[0m")
+  })
+
+  it("sends resize as a JSON text frame, not as a PATCH", async () => {
+    const { handles, hook, stray } = await mountAndOpenWs()
+
+    await act(async () => {
+      await hook.result.current.resizeTerminal(120, 40)
+    })
+
+    expect(handles[0].sentText).toEqual([
+      JSON.stringify({ type: "resize", cols: 120, rows: 40 }),
+    ])
+    expect(stray).toHaveLength(0)
+  })
+
+  it("flips isConnected to false when the WS closes mid-session", async () => {
+    const { handles, hook } = await mountAndOpenWs()
+
+    act(() => {
+      handles[0].close(1006)
+    })
+
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(false))
+  })
+
+  it("falls back to HTTP+SSE when WebSocket construction throws", async () => {
+    // Some browsers throw synchronously on `new WebSocket(...)` if the
+    // URL is rejected (e.g. mixed-content blocking). The hook must
+    // surrender the WS path and run the existing SSE+POST flow.
+    class ThrowingWebSocket {
+      static CONNECTING = 0
+      static OPEN = 1
+      static CLOSING = 2
+      static CLOSED = 3
+      constructor() {
+        throw new Error("blocked")
+      }
+    }
+    vi.stubGlobal("WebSocket", ThrowingWebSocket)
+
+    const inputPosts: PendingInput[] = []
+    let streamController: ReadableStreamDefaultController<Uint8Array> | null = null
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const href = typeof url === "string" ? url : url.toString()
+      const method = (init?.method ?? "GET").toUpperCase()
+      if (href.endsWith("/terminals") && method === "POST") {
+        return mockResponse({
+          ok: true,
+          status: 201,
+          body: JSON.stringify({ data: { sessionId: SESSION_ID } }),
+        })
+      }
+      if (href.endsWith(`/terminals/${SESSION_ID}/stream`) && method === "GET") {
+        return {
+          ok: true,
+          status: 200,
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              streamController = controller
+            },
+          }),
+        } as unknown as Response
+      }
+      if (href.endsWith(`/terminals/${SESSION_ID}/input`) && method === "POST") {
+        const d = deferred<Response>()
+        inputPosts.push({
+          call: {
+            url: href,
+            method,
+            body: typeof init?.body === "string" ? init.body : null,
+          },
+          settle: (res) => d.resolve(res),
+          reject: (err) => d.reject(err),
+        })
+        return d.promise
+      }
+      if (href.endsWith(`/terminals/${SESSION_ID}`) && method === "DELETE") {
+        return mockResponse({ ok: true, status: 200 })
+      }
+      throw new Error(`Unexpected fetch: ${method} ${href}`)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const hook = renderHook(() =>
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData: vi.fn() }),
+    )
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+
+    // SSE was opened (otherwise isConnected wouldn't flip).
+    expect(streamController).not.toBeNull()
+
+    // sendCommand reaches the HTTP /input path.
+    await act(async () => {
+      void hook.result.current.sendCommand("z").catch(() => {})
+      await waitFor(() => expect(inputPosts).toHaveLength(1))
+    })
+    await act(async () => {
+      inputPosts[0].settle(mockResponse({ ok: true, status: 200 }))
+    })
   })
 })

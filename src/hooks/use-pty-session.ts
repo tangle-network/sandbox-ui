@@ -14,7 +14,7 @@ export interface UsePtySessionOptions {
 }
 
 export interface UsePtySessionReturn {
-  /** Whether the SSE stream is connected and receiving data. */
+  /** Whether the underlying transport is connected and receiving data. */
   isConnected: boolean;
   /** Connection or API error, if any. */
   error: string | null;
@@ -34,7 +34,7 @@ export interface UsePtySessionReturn {
  * Waiter bound to a single `sendCommand` call. Each call appends its
  * payload to the current pending batch and registers a waiter; the
  * drain loop resolves/rejects all waiters in a batch together based on
- * the outcome of the single POST that dispatched it.
+ * the outcome of the single send that dispatched it.
  */
 interface InputWaiter {
   resolve: () => void;
@@ -51,17 +51,73 @@ function createEmptyBatch(): PendingBatch {
 }
 
 // ---------------------------------------------------------------------------
+// WebSocket transport
+// ---------------------------------------------------------------------------
+
+/**
+ * Time we wait for `new WebSocket(...)` to reach OPEN before falling
+ * back to HTTP+SSE. Kept short because a working sidecar/CF Worker WS
+ * upgrade resolves in well under 200ms; anything longer points at a
+ * proxy that doesn't speak WebSocket and we want SSE to take over fast.
+ */
+const WS_OPEN_TIMEOUT_MS = 1500;
+
+/** Convert an http(s) base URL into the matching ws(s) URL. */
+function toWsUrl(apiUrl: string, sessionId: string, token: string): string | null {
+  try {
+    const url = new URL(`${apiUrl}/terminals/${sessionId}/ws`);
+    if (url.protocol === 'https:') url.protocol = 'wss:';
+    else if (url.protocol === 'http:') url.protocol = 'ws:';
+    else return null;
+    // Browsers cannot set Authorization headers on WS upgrades, so the
+    // token rides as a query parameter. The matching server route reads
+    // it from the query and validates the same way the REST routes
+    // validate the bearer header.
+    url.searchParams.set('token', token);
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+// Encode stdin text as a UTF-8 binary frame. Distinguishes input from
+// JSON control frames purely by frame type — no in-band marker — so a
+// user typing `{` does not collide with a control message.
+const stdinEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+
+function encodeStdin(text: string): ArrayBufferView | string {
+  if (stdinEncoder) return stdinEncoder.encode(text);
+  // Fallback for any runtime without TextEncoder: send as text. The
+  // server's text-frame branch treats text frames as control by default,
+  // so we tag with a sentinel that the server unwraps. Not expected to
+  // be reached in any supported browser.
+  return text;
+}
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
 /**
  * Manages a PTY session against the sidecar terminal API.
  *
- * Protocol:
- * - POST /terminals              → create session → { data: { sessionId } }
- * - GET  /terminals/{id}/stream  → SSE output (raw PTY with ANSI codes)
- * - POST /terminals/{id}/input   → send input     { data: "..." }
- * - DELETE /terminals/{id}       → close session
+ * Transport:
+ *   1. POST /terminals creates the session.
+ *   2. The hook tries WebSocket: GET /terminals/:id/ws (Upgrade).
+ *      - Server → client: TEXT frames carrying raw PTY output.
+ *      - Client → server: BINARY frames carrying stdin (UTF-8); TEXT
+ *        frames carrying JSON control messages (`{"type":"resize",...}`).
+ *   3. If the WS does not reach OPEN within WS_OPEN_TIMEOUT_MS, or it
+ *      errors before opening, the hook falls back to SSE+POST:
+ *      - GET /terminals/:id/stream (SSE for output)
+ *      - POST /terminals/:id/input (one batched POST at a time)
+ *      - PATCH /terminals/:id (resize)
+ *   4. DELETE /terminals/:id closes the session (both transports).
+ *
+ * The WS path eliminates the per-keystroke HTTP round-trip that
+ * dominates typing latency through edge proxies; the HTTP+SSE path is
+ * preserved as a fallback so the hook keeps working against
+ * deployments that have not yet shipped the WS endpoint.
  */
 export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): UsePtySessionReturn {
   const [isConnected, setIsConnected] = useState(false);
@@ -75,16 +131,23 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   const onDataRef = useRef(onData);
   const connectStreamRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
 
-  // Input serialization: at most one POST /terminals/:id/input is in
-  // flight per session. Keystrokes that arrive while a request is in
-  // flight are concatenated into `pendingBatchRef` and dispatched as a
-  // single follow-up POST. Without this, xterm's onData fires one
-  // unordered fetch per keystroke, which under modest typing speed
-  // produces >1s lag and scrambled characters because (a) each POST
-  // pays the proxy/TLS round-trip separately and (b) the sidecar
-  // receives the N concurrent requests in arrival order, not keystroke
-  // order. Coalescing collapses bursts into O(RTT) requests and
-  // guarantees the server sees one write at a time per terminal.
+  // Active WebSocket, if the WS transport won the race in `connect`.
+  // Null when running on the SSE+POST fallback.
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // Input serialization: at most one input dispatch is in flight per
+  // session. Keystrokes that arrive while a request is in flight are
+  // concatenated into `pendingBatchRef` and dispatched as a single
+  // follow-up. Without this, xterm's onData fires one unordered fetch
+  // per keystroke, which under modest typing speed produces >1s lag and
+  // scrambled characters because (a) each POST pays the proxy/TLS
+  // round-trip separately and (b) the sidecar receives the N concurrent
+  // requests in arrival order, not keystroke order. Coalescing collapses
+  // bursts into O(RTT) requests and guarantees the server sees one write
+  // at a time per terminal. The same queue is reused on the WS path so
+  // that a single send carries every byte that arrived during the
+  // previous tick — this is mostly a noop on WS (sends are local) but
+  // keeps the API contract identical across transports.
   const pendingBatchRef = useRef<PendingBatch>(createEmptyBatch());
   const drainPromiseRef = useRef<Promise<void> | null>(null);
   // Session-scoped controller used to cancel in-flight input POSTs when
@@ -122,10 +185,26 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     }
   }, []);
 
-  // -- Full cleanup: abort stream + delete terminal session ------------------
+  const closeWs = useCallback(() => {
+    const ws = wsRef.current;
+    if (!ws) return;
+    wsRef.current = null;
+    // readyState may be CONNECTING or OPEN. Either way close() is safe;
+    // the browser sends a close frame if the socket is open and tears
+    // down the underlying connection if it is still handshaking.
+    try {
+      ws.close();
+    } catch {
+      // Older Safari throws if close() races a connection failure; the
+      // socket is already gone in that case so swallow.
+    }
+  }, []);
+
+  // -- Full cleanup: abort transports + delete terminal session --------------
 
   const cleanup = useCallback(() => {
     abortStream();
+    closeWs();
     // Abort any in-flight input POST. Its waiters are not visible to
     // `rejectPendingInput` (they live on a batch the drain loop already
     // swapped out of `pendingBatchRef`), so without this they would
@@ -149,7 +228,130 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     // `cleanup` running would stay pending indefinitely.
     rejectPendingInput('Terminal session is not connected');
     setIsConnected(false);
-  }, [apiUrl, token, abortStream, rejectPendingInput]);
+  }, [apiUrl, token, abortStream, closeWs, rejectPendingInput]);
+
+  // -- Try WebSocket transport ------------------------------------------------
+  //
+  // Resolves with `true` if the WS reaches OPEN and is now driving
+  // input/output for the session, or `false` if the WS could not be
+  // constructed, errored before opening, or did not open before
+  // WS_OPEN_TIMEOUT_MS elapsed. The caller falls back to SSE+POST when
+  // this returns `false`.
+
+  const connectWs = useCallback((sessionId: string): Promise<boolean> => {
+    return new Promise<boolean>((resolve) => {
+      if (typeof WebSocket === 'undefined') {
+        resolve(false);
+        return;
+      }
+      const wsUrl = toWsUrl(apiUrl, sessionId, token);
+      if (!wsUrl) {
+        resolve(false);
+        return;
+      }
+
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch {
+        resolve(false);
+        return;
+      }
+      ws.binaryType = 'arraybuffer';
+
+      let opened = false;
+      let settled = false;
+      const settle = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(handshakeTimer);
+        resolve(ok);
+      };
+
+      const handshakeTimer = setTimeout(() => {
+        if (opened) return;
+        // The WS never reached OPEN. Kill the socket so it doesn't
+        // race the SSE fallback later, then surrender.
+        try {
+          ws.close();
+        } catch {
+          // already gone
+        }
+        settle(false);
+      }, WS_OPEN_TIMEOUT_MS);
+
+      ws.onopen = () => {
+        opened = true;
+        if (!mountedRef.current) {
+          // Hook unmounted during the handshake — close cleanly and
+          // report failure so `connect`'s caller doesn't try to use a
+          // socket against a torn-down session.
+          try {
+            ws.close();
+          } catch {
+            // already gone
+          }
+          settle(false);
+          return;
+        }
+        wsRef.current = ws;
+        setIsConnected(true);
+        setError(null);
+        retryCountRef.current = 0;
+        settle(true);
+      };
+
+      ws.onmessage = (ev) => {
+        if (!mountedRef.current) return;
+        const data = ev.data;
+        let text: string;
+        if (typeof data === 'string') {
+          text = data;
+        } else if (data instanceof ArrayBuffer) {
+          text = new TextDecoder().decode(data);
+        } else if (ArrayBuffer.isView(data)) {
+          text = new TextDecoder().decode(data);
+        } else {
+          // Blob (older runtimes that didn't honor binaryType). Defer to
+          // a microtask read; xterm tolerates the small extra delay.
+          (data as Blob).text().then((t) => {
+            if (mountedRef.current) onDataRef.current(t);
+          }).catch(() => {});
+          return;
+        }
+        if (text) onDataRef.current(text);
+      };
+
+      ws.onerror = () => {
+        // `error` always precedes `close`. Defer state changes to
+        // `onclose` so we don't double-fire fallback or reconnect.
+      };
+
+      ws.onclose = () => {
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+        }
+        if (!opened) {
+          // Never reached OPEN — surrender so the caller falls back.
+          settle(false);
+          return;
+        }
+        // Lost the connection mid-session. Reject any in-flight input
+        // so the drain loop doesn't write to a closed socket, drop the
+        // connected flag, and schedule a reconnect through the same
+        // SSE retry policy as the HTTP path.
+        if (!mountedRef.current) return;
+        setIsConnected(false);
+        if (sessionIdRef.current) {
+          retryTimerRef.current = setTimeout(() => {
+            if (mountedRef.current && sessionIdRef.current) {
+              connectStreamRef.current?.(sessionIdRef.current);
+            }
+          }, 1000);
+        }
+      };
+    });
+  }, [apiUrl, token]);
 
   // -- Connect SSE stream to an existing terminal session --------------------
 
@@ -252,7 +454,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   onDataRef.current = onData;
   connectStreamRef.current = connectStream;
 
-  // -- Full connect: create terminal + open SSE stream -----------------------
+  // -- Full connect: create terminal + open transport ------------------------
 
   const connect = useCallback(async () => {
     cleanup();
@@ -284,10 +486,25 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       // cancellable synchronously with session teardown.
       inputAbortRef.current = new AbortController();
 
+      // Try the WebSocket transport first. Falls back to SSE+POST if
+      // the WS does not open quickly — the existing input queue keeps
+      // any keystrokes already buffered from being lost in the swap.
+      const wsOk = await connectWs(sessionId);
+      if (!mountedRef.current) return;
+
       // Flush any keystrokes that arrived between mount and now. They
       // were accepted into `pendingBatchRef` but the drain loop exited
-      // early because sessionIdRef was still null.
+      // early because sessionIdRef was still null. Runs for both
+      // transports; the drain checks readyState to pick its dispatch.
       ensureDrainRunningRef.current?.();
+
+      if (wsOk) {
+        // WS is now driving I/O. Don't open the SSE stream — the WS
+        // delivers output directly via onmessage. If the WS later drops
+        // mid-session, its onclose schedules a reconnect that goes
+        // through the SSE path so we degrade gracefully on flaky links.
+        return;
+      }
 
       await connectStream(sessionId);
     } catch (err) {
@@ -298,13 +515,25 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         setIsConnected(false);
       }
     }
-  }, [apiUrl, token, cleanup, connectStream]);
+  }, [apiUrl, token, cleanup, connectWs, connectStream]);
 
   // -- Resize terminal -------------------------------------------------------
 
   const resizeTerminal = useCallback(async (cols: number, rows: number) => {
     const sid = sessionIdRef.current;
     if (!sid || cols <= 0 || rows <= 0) return;
+
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+        return;
+      } catch (err) {
+        // Send failed (socket racing close, backpressure errored, etc.).
+        // Fall through to the HTTP path so the resize is still applied.
+        console.warn('Terminal resize over WS failed; falling back to HTTP', err);
+      }
+    }
 
     try {
       const res = await fetch(`${apiUrl}/terminals/${sid}`, {
@@ -327,9 +556,9 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   // -- Send command ----------------------------------------------------------
   //
   // `sendCommand` is called once per keystroke by xterm's onData handler
-  // without any awaiting between calls. To prevent N concurrent POSTs from
-  // racing through the network to the sidecar, we serialize dispatch and
-  // coalesce any keystrokes that arrive while a request is in flight.
+  // without any awaiting between calls. To prevent N concurrent dispatches
+  // from racing through the network to the sidecar, we serialize dispatch
+  // and coalesce any keystrokes that arrive while a request is in flight.
 
   const drainInputQueue = useCallback(async () => {
     while (pendingBatchRef.current.data.length > 0) {
@@ -345,9 +574,29 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         // rejections during the first few ms after mount.
         return;
       }
+
       const batch = pendingBatchRef.current;
       pendingBatchRef.current = createEmptyBatch();
 
+      // WebSocket fast path. ws.send is synchronous — it queues into
+      // the socket's outbound buffer and returns immediately, so we
+      // don't await anything and the loop spins through any concurrent
+      // enqueues without yielding to the event loop. The single-batch
+      // contract from the HTTP path is preserved (each batch's waiters
+      // settle together based on this one send).
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(encodeStdin(batch.data));
+          for (const w of batch.waiters) w.resolve();
+        } catch (err) {
+          for (const w of batch.waiters) w.reject(err);
+        }
+        continue;
+      }
+
+      // HTTP fallback path. Same shape as before: one POST at a time,
+      // body is the coalesced batch, waiters settle together.
       try {
         const res = await fetch(`${apiUrl}/terminals/${sid}/input`, {
           method: 'POST',

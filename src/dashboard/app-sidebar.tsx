@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cn } from "../lib/utils"
-import { Avatar, AvatarFallback, AvatarImage } from "../primitives/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@tangle-network/ui/primitives"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,9 +10,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../primitives/dropdown-menu"
-import { Logo } from "../primitives/logo"
-import { Skeleton } from "../primitives/skeleton"
+} from "@tangle-network/ui/primitives"
+import { Logo } from "../primitives"
+import { Skeleton } from "@tangle-network/ui/primitives"
 import {
   SIDEBAR_RAIL_WIDTH,
   SIDEBAR_PANEL_WIDTH,

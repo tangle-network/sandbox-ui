@@ -10,8 +10,8 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { Button } from "../primitives/button";
-import { Badge } from "../primitives/badge";
+import { Button } from "@tangle-network/ui/primitives";
+import { Badge } from "@tangle-network/ui/primitives";
 
 export type VariantStatus =
   | "pending"

@@ -1,8 +1,8 @@
 "use client";
 
 import { Check, ChevronDown, Plus, Settings } from "lucide-react";
-import { Button } from "../primitives/button";
-import { Badge } from "../primitives/badge";
+import { Button } from "@tangle-network/ui/primitives";
+import { Badge } from "@tangle-network/ui/primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../primitives/dropdown-menu";
+} from "@tangle-network/ui/primitives";
 
 export interface Profile {
   id: string;

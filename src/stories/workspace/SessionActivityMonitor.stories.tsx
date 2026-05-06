@@ -4,7 +4,7 @@ import { SessionActivityMonitor } from '../../workspace/session-activity-monitor
 import {
   activeSessionsAtom,
   type ActiveSessionRecord,
-} from '../../stores/active-sessions-store'
+} from '@tangle-network/ui/stores'
 
 const meta: Meta<typeof SessionActivityMonitor> = {
   title: 'Workspace/SessionActivityMonitor',

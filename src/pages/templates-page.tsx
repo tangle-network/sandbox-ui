@@ -4,7 +4,7 @@ import * as React from "react"
 import { Layers } from "lucide-react"
 import { cn } from "../lib/utils"
 import { TemplateCard, type TemplateCardData } from "../dashboard/template-card"
-import { Skeleton } from "../primitives/skeleton"
+import { Skeleton } from "@tangle-network/ui/primitives"
 
 export interface TemplatesPageProps {
   templates: TemplateCardData[] | null

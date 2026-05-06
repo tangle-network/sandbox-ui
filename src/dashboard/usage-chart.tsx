@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "../lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "../primitives/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@tangle-network/ui/primitives";
 
 export interface UsageDataPoint {
   date: string;

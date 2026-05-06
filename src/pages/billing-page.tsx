@@ -6,8 +6,8 @@ import {
   type BillingUsage,
 } from "../dashboard/billing-dashboard";
 import { PricingPage, type PricingTier } from "../dashboard/pricing-page";
-import { Skeleton, SkeletonCard } from "../primitives/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../primitives/tabs";
+import { Skeleton, SkeletonCard } from "@tangle-network/ui/primitives";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@tangle-network/ui/primitives";
 import { UsageChart, type UsageDataPoint } from "../dashboard/usage-chart";
 
 export type ProductVariant = "sandbox";

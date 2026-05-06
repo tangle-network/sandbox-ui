@@ -28,7 +28,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../primitives/dialog"
+} from "@tangle-network/ui/primitives"
 import { InfoPanel } from "../dashboard/info-panel"
 
 export type ScriptType = "bash" | "python" | "node" | "ruby" | "custom"

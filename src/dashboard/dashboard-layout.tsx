@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Plus, Bell } from "lucide-react"
 import { cn } from "../lib/utils"
-import { Logo } from "../primitives/logo"
+import { Logo } from "../primitives"
 import {
   Sidebar,
   SidebarRail,

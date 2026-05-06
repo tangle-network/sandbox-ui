@@ -1,14 +1,14 @@
 import { cn } from "../lib/utils";
-import { Button } from "../primitives/button";
-import { Badge } from "../primitives/badge";
+import { Button } from "@tangle-network/ui/primitives";
+import { Badge } from "@tangle-network/ui/primitives";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../primitives/card";
-import { Progress } from "../primitives/progress";
+} from "@tangle-network/ui/primitives";
+import { Progress } from "@tangle-network/ui/primitives";
 
 export interface BillingSubscription {
   status: string;

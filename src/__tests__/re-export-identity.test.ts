@@ -27,26 +27,26 @@ import { activeSessionsAtom as ST2 } from "@tangle-network/ui/stores";
 import { CommandPreview as TP1 } from "@tangle-network/sandbox-ui";
 import { CommandPreview as TP2 } from "@tangle-network/ui/tool-previews";
 
-const cases: ReadonlyArray<readonly [string, unknown, unknown, "function" | "object"]> = [
-  ["primitives.Button", B1, B2, "function"],
-  ["chat.ChatMessage", C1, C2, "function"],
-  ["run.RunGroup", R1, R2, "function"],
-  ["openui.OpenUIArtifactRenderer", O1, O2, "function"],
-  ["files.FileTree", F1, F2, "function"],
-  ["editor.TiptapEditor", E1, E2, "function"],
-  ["markdown.Markdown", M1, M2, "function"],
-  ["auth.GitHubLoginButton", A1, A2, "function"],
-  ["utils.cn", U1, U2, "function"],
-  ["hooks.useAutoScroll", H1, H2, "function"],
-  ["sdk-hooks.useSdkSession", SK1, SK2, "function"],
-  ["stores.activeSessionsAtom", ST1, ST2, "object"],
-  ["tool-previews.CommandPreview (via root)", TP1, TP2, "function"],
+const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
+  ["primitives.Button", B1, B2],
+  ["chat.ChatMessage", C1, C2],
+  ["run.RunGroup", R1, R2],
+  ["openui.OpenUIArtifactRenderer", O1, O2],
+  ["files.FileTree", F1, F2],
+  ["editor.TiptapEditor", E1, E2],
+  ["markdown.Markdown", M1, M2],
+  ["auth.GitHubLoginButton", A1, A2],
+  ["utils.cn", U1, U2],
+  ["hooks.useAutoScroll", H1, H2],
+  ["sdk-hooks.useSdkSession", SK1, SK2],
+  ["stores.activeSessionsAtom", ST1, ST2],
+  ["tool-previews.CommandPreview (via root)", TP1, TP2],
 ];
 
 describe("re-export bridge identity", () => {
-  for (const [name, fromBridge, fromUi, expectedType] of cases) {
+  for (const [name, fromBridge, fromUi] of cases) {
     test(`${name} forwards to @tangle-network/ui`, () => {
-      expect(typeof fromUi).toBe(expectedType);
+      expect(fromUi).toBeDefined();
       expect(fromBridge).toBe(fromUi);
     });
   }

@@ -1,15 +1,37 @@
-export * from "@tangle-network/ui/types";
 export type {
-  SessionProjectKey,
-  ActiveSessionStatus,
-  ActiveSessionReconnectState,
+  AgentBranding,
+  CustomToolRenderer,
+  DisplayVariant,
+  FinalTextPart,
+  GroupedMessage,
+  MessageRun,
+  MessageUser,
+  ReasoningPart,
+  Run,
+  RunStats,
+  SessionMessage,
+  SessionPart,
+  TextPart,
+  ToolCategory,
+  ToolDisplayMetadata,
+  ToolPart,
+  ToolState,
+  ToolStatus,
+  ToolTime,
+} from "@tangle-network/ui/types";
+
+export type {
+  ActiveProjectActivity,
+  ActiveSessionActivityOptions,
+  ActiveSessionConnectionOptions,
   ActiveSessionConnectionState,
-  ActiveSessionTransportMode,
+  ActiveSessionReconnectState,
   ActiveSessionRecord,
+  ActiveSessionStatus,
+  ActiveSessionTransportMode,
   ActiveSessionsState,
   RegisterActiveSessionOptions,
-  ActiveSessionConnectionOptions,
-  ActiveSessionActivityOptions,
-  ActiveProjectActivity,
+  SessionProjectKey,
 } from "@tangle-network/ui/stores";
+
 export * from "./sidecar";

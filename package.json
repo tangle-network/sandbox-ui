@@ -102,7 +102,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:bridge": "pnpm build && vitest run src/__tests__/re-export-identity.test.ts"
   },
   "peerDependencies": {
     "@tangle-network/brand": "^0.3.0",

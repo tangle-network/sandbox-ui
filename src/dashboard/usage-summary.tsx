@@ -3,8 +3,8 @@
 import * as React from "react"
 import { Clock, Layers, MessageSquare, DollarSign } from "lucide-react"
 import { cn } from "../lib/utils"
-import { StatCard } from "../primitives/stat-card"
-import { Skeleton } from "../primitives/skeleton"
+import { StatCard } from "@tangle-network/ui/primitives"
+import { Skeleton } from "@tangle-network/ui/primitives"
 
 export interface UsageSummaryData {
   computeHours: number

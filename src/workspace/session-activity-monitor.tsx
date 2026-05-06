@@ -6,7 +6,7 @@ import {
   useTotalRunningSessions,
   type ActiveSessionRecord,
   type SessionProjectKey,
-} from "../stores/active-sessions-store";
+} from "@tangle-network/ui/stores";
 
 export interface SessionActivityMonitorProps {
   className?: string;

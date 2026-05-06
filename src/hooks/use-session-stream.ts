@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SessionMessage } from '../types/message';
-import type { SessionPart, TextPart, ToolPart, ReasoningPart } from '../types/parts';
+import type { SessionMessage, SessionPart, TextPart, ToolPart, ReasoningPart } from '@tangle-network/ui/types';
 
 // ---------------------------------------------------------------------------
 // Types

@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { RefreshCw, Search, Upload } from "lucide-react";
-import { ArtifactPane } from "./artifact-pane";
+import { ArtifactPane } from "@tangle-network/ui/primitives";
 import {
   FileTree,
   filterFileTree,
   type FileNode,
   type FileTreeVisibilityOptions,
-} from "../files/file-tree";
-import { EmptyState } from "../primitives/empty-state";
-import { Input } from "../primitives/input";
+} from "@tangle-network/ui/files";
+import { EmptyState } from "@tangle-network/ui/primitives";
+import { Input } from "@tangle-network/ui/primitives";
 
 export interface DirectoryPaneProps {
   root: FileNode;

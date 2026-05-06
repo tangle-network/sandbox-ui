@@ -3,7 +3,7 @@ import {
   PricingPage as PricingPageComponent,
   type PricingTier,
 } from "../dashboard/pricing-page";
-import { Skeleton, SkeletonCard } from "../primitives/skeleton";
+import { Skeleton, SkeletonCard } from "@tangle-network/ui/primitives";
 import { cn } from "../lib/utils";
 import { ChevronDown } from "lucide-react";
 

@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../primitives/dropdown-menu"
+} from "@tangle-network/ui/primitives"
 import {
   MoreVertical, PowerOff, Power, Copy, Clock, Activity,
   BarChart2, Trash2, Terminal, Code2, Network, Play, Plus, Users,

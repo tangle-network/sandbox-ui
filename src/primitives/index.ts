@@ -1,55 +1,63 @@
-export { Button, buttonVariants } from "./button";
-export type { ButtonProps } from "./button";
-
+// Bridge to @tangle-network/ui/primitives. Sandbox-ui keeps its own Logo
+// (sandbox-branded with optional "Sandbox" suffix), so brand's Logo / TangleKnot
+// / LogoProps are intentionally not re-exported from this subpath.
 export {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Badge,
+  type BadgeProps,
+  badgeVariants,
+  Button,
+  type ButtonProps,
+  buttonVariants,
   Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
   CardContent,
-} from "./card";
-
-export {
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CodeBlock,
+  type CodeBlockProps,
+  CopyButton,
   Dialog,
-  DialogPortal,
-  DialogOverlay,
   DialogClose,
-  DialogTrigger,
   DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
   DialogDescription,
-} from "./dialog";
-
-export { Input, Textarea } from "./input";
-export type { InputProps, TextareaProps } from "./input";
-
-export { Badge, badgeVariants } from "./badge";
-export type { BadgeProps } from "./badge";
-
-export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
-
-export {
+  DialogFooter,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+  DropZone,
+  type DropZoneProps,
   DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuCheckboxItem,
-  DropdownMenuRadioItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuGroup,
-  DropdownMenuPortal,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuRadioGroup,
-} from "./dropdown-menu";
-
-export {
+  DropdownMenuTrigger,
+  EmptyState,
+  type EmptyStateProps,
+  InlineCode,
+  type InlineCodeProps,
+  Input,
+  type InputProps,
+  Label,
+  Progress,
+  SegmentedControl,
+  type SegmentedControlOption,
+  type SegmentedControlProps,
   Select,
   SelectContent,
   SelectGroup,
@@ -60,54 +68,41 @@ export {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from "./select";
-
-export {
+  SidebarDropZone,
+  type SidebarDropZoneProps,
+  Skeleton,
+  SkeletonCard,
+  SkeletonTable,
+  StatCard,
+  type StatCardProps,
+  Switch,
   Table,
-  TableHeader,
   TableBody,
+  TableCaption,
+  TableCell,
   TableFooter,
   TableHead,
+  TableHeader,
   TableRow,
-  TableCell,
-  TableCaption,
-} from "./table";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  TerminalCursor,
+  TerminalDisplay,
+  TerminalInput,
+  TerminalLine,
+  Textarea,
+  type TextareaProps,
+  ThemeToggle,
+  type Toast,
+  ToastContainer,
+  ToastProvider,
+  type UploadFile,
+  UploadProgress,
+  type UploadProgressProps,
+  useTheme,
+  useToast,
+} from "@tangle-network/ui/primitives";
 
-export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
-
-export { SegmentedControl } from "./segmented-control";
-export type {
-  SegmentedControlOption,
-  SegmentedControlProps,
-} from "./segmented-control";
-
-export { Progress } from "./progress";
-
-export { Switch } from "./switch";
-
-export { Skeleton, SkeletonCard, SkeletonTable } from "./skeleton";
-
-export { ToastContainer, ToastProvider, useToast } from "./toast";
-export type { Toast } from "./toast";
-
-export { Label } from "./label";
-
-export { EmptyState } from "./empty-state";
-export type { EmptyStateProps } from "./empty-state";
-
-export { StatCard } from "./stat-card";
-export type { StatCardProps } from "./stat-card";
-
-export { Logo, TangleKnot } from "./logo";
-export type { LogoProps } from "./logo";
-
-export { TerminalDisplay, TerminalLine, TerminalInput, TerminalCursor } from "./terminal-display";
-
-export { DropZone } from "./drop-zone";
-export type { DropZoneProps } from "./drop-zone";
-
-export { UploadProgress } from "./upload-progress";
-export type { UploadProgressProps, UploadFile } from "./upload-progress";
-
-export { SidebarDropZone } from "./sidebar-drop-zone";
-export type { SidebarDropZoneProps } from "./sidebar-drop-zone";
+export { Logo, TangleKnot, type LogoProps } from "./logo";

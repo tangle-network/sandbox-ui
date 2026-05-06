@@ -9,14 +9,14 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Badge } from "../primitives/badge";
-import { EmptyState } from "../primitives/empty-state";
-import { Markdown } from "../markdown/markdown";
-import { ChatContainer, type ChatContainerProps } from "../chat/chat-container";
-import { FileArtifactPane } from "../files/file-artifact-pane";
-import type { FileTabData } from "../files/file-tabs";
-import { OpenUIArtifactRenderer, type OpenUIAction, type OpenUIComponentNode } from "../openui/openui-artifact-renderer";
-import { ArtifactPane } from "./artifact-pane";
+import { Badge } from "@tangle-network/ui/primitives";
+import { EmptyState } from "@tangle-network/ui/primitives";
+import { Markdown } from "@tangle-network/ui/markdown";
+import { ChatContainer, type ChatContainerProps } from "@tangle-network/ui/chat";
+import { FileArtifactPane } from "@tangle-network/ui/files";
+import type { FileTabData } from "@tangle-network/ui/files";
+import { OpenUIArtifactRenderer, type OpenUIAction, type OpenUIComponentNode } from "@tangle-network/ui/openui";
+import { ArtifactPane } from "@tangle-network/ui/primitives";
 import { DirectoryPane, type DirectoryPaneProps } from "./directory-pane";
 import { RuntimePane, type RuntimePaneProps } from "./runtime-pane";
 import { WorkspaceLayout, type WorkspaceLayoutProps } from "./workspace-layout";

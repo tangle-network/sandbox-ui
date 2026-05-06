@@ -1,8 +1,8 @@
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import { ArrowLeft, FolderTree, GripVertical, MessageSquareText, Plus, Search, Settings, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Badge } from "../primitives/badge";
-import { useNavbarSessions, type ActiveSessionRecord, type ActiveSessionStatus, type SessionProjectKey } from "../stores/active-sessions-store";
+import { Badge } from "@tangle-network/ui/primitives";
+import { useNavbarSessions, type ActiveSessionRecord, type ActiveSessionStatus, type SessionProjectKey } from "@tangle-network/ui/stores";
 
 export interface SessionSidebarItem {
   id: string;

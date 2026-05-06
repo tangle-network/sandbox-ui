@@ -12,9 +12,9 @@ import {
   Trash2,
 } from "lucide-react";
 import * as React from "react";
-import { Button } from "../primitives/button";
-import { Badge } from "../primitives/badge";
-import { Card } from "../primitives/card";
+import { Button } from "@tangle-network/ui/primitives";
+import { Badge } from "@tangle-network/ui/primitives";
+import { Card } from "@tangle-network/ui/primitives";
 import {
   Dialog,
   DialogContent,
@@ -22,9 +22,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../primitives/dialog";
-import { EmptyState } from "../primitives/empty-state";
-import { Input } from "../primitives/input";
+} from "@tangle-network/ui/primitives";
+import { EmptyState } from "@tangle-network/ui/primitives";
+import { Input } from "@tangle-network/ui/primitives";
 
 export interface ProfileMetrics {
   total_runs: number;

@@ -1159,4 +1159,156 @@ describe("usePtySession WebSocket transport", () => {
     expect(stray).toEqual([])
     expect(hook.result.current.isConnected).toBe(true)
   })
+
+  it("aborts a still-handshaking WS on prop change and ignores its delayed open", async () => {
+    // Pins the orphan-handshake race: when a prop change runs cleanup
+    // while a WS is still CONNECTING, the pending socket must be
+    // closed AND any later events from it must not corrupt the new
+    // transport. Without the pendingWsRef tracking, the orphan's
+    // onopen would overwrite wsRef with a socket connected to a now-
+    // deleted session, and its eventual onclose would schedule a
+    // duplicate SSE stream against the new session.
+    interface ControlledWs {
+      readyState: 0 | 1 | 2 | 3
+      onopen: ((ev: Event) => void) | null
+      onmessage: ((ev: MessageEvent) => void) | null
+      onerror: ((ev: Event) => void) | null
+      onclose: ((ev: CloseEvent) => void) | null
+      send: (data: unknown) => void
+      close: () => void
+      sent: unknown[]
+      url: string
+    }
+    const instances: ControlledWs[] = []
+    class ControlledWebSocket {
+      static CONNECTING = 0
+      static OPEN = 1
+      static CLOSING = 2
+      static CLOSED = 3
+      readyState: 0 | 1 | 2 | 3 = 0
+      binaryType: BinaryType = "blob"
+      url: string
+      onopen: ((ev: Event) => void) | null = null
+      onmessage: ((ev: MessageEvent) => void) | null = null
+      onerror: ((ev: Event) => void) | null = null
+      onclose: ((ev: CloseEvent) => void) | null = null
+      sent: unknown[] = []
+      constructor(url: string) {
+        this.url = url
+        instances.push(this as unknown as ControlledWs)
+      }
+      send(data: unknown) {
+        this.sent.push(data)
+      }
+      // Silent close: matches the real-browser semantic of an aborted
+      // CONNECTING handshake (no onopen will follow), but lets the
+      // test drive `onopen` and `onclose` explicitly to exercise the
+      // orphan-event paths without timing assumptions.
+      close() {
+        if (this.readyState !== 3) this.readyState = 3
+      }
+    }
+    vi.stubGlobal("WebSocket", ControlledWebSocket)
+
+    const SESSION_A = "sess_A"
+    const SESSION_B = "sess_B"
+    let createCalls = 0
+    const stray: FetchCall[] = []
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const href = typeof url === "string" ? url : url.toString()
+      const method = (init?.method ?? "GET").toUpperCase()
+      if (href.endsWith("/terminals") && method === "POST") {
+        createCalls++
+        const sid = createCalls === 1 ? SESSION_A : SESSION_B
+        return mockResponse({
+          ok: true,
+          status: 201,
+          body: JSON.stringify({ data: { sessionId: sid } }),
+        })
+      }
+      if (method === "DELETE" && /\/terminals\/[^/]+$/.test(href)) {
+        return mockResponse({ ok: true, status: 200 })
+      }
+      stray.push({
+        url: href,
+        method,
+        body: typeof init?.body === "string" ? init.body : null,
+      })
+      return mockResponse({ ok: true, status: 200 })
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const hook = renderHook(
+      ({ token }) =>
+        usePtySession({ apiUrl: API_URL, token, onData: vi.fn() }),
+      { initialProps: { token: "token-a" } },
+    )
+
+    // Wait for WS-A to be constructed but DO NOT drive its onopen —
+    // it is intentionally left CONNECTING.
+    await waitFor(() => expect(instances).toHaveLength(1))
+    expect(instances[0].readyState).toBe(0)
+
+    // Rerender. cleanup() must abort the pending WS-A so the orphan
+    // can never reach onopen against a session we've already DELETEd.
+    hook.rerender({ token: "token-b" })
+    // After cleanup, WS-A's silent `close()` should have left it in
+    // readyState 3.
+    expect(instances[0].readyState).toBe(3)
+
+    await waitFor(() => expect(instances).toHaveLength(2))
+    act(() => {
+      instances[1].readyState = 1
+      instances[1].onopen?.({} as Event)
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+
+    // Now simulate a runtime that DOES fire `onopen` after a
+    // CONNECTING-time `close()` — this is non-spec but our defenses
+    // must hold either way. The pendingWsRef identity guard makes
+    // the orphan surrender instead of overwriting wsRef.
+    act(() => {
+      instances[0].onopen?.({} as Event)
+    })
+
+    // Active transport state is undisturbed.
+    expect(hook.result.current.isConnected).toBe(true)
+    // The orphan's onopen must NOT have made WS-A the active
+    // transport: a sendCommand should land on WS-B's outbox, not
+    // WS-A's.
+    await act(async () => {
+      void hook.result.current.sendCommand("after-orphan").catch(() => {})
+      await Promise.resolve()
+    })
+    const sentB = instances[1].sent.map((s) => {
+      if (typeof s === "string") return s
+      if (s instanceof ArrayBuffer) return new TextDecoder().decode(s)
+      if (ArrayBuffer.isView(s))
+        return new TextDecoder().decode(s as ArrayBufferView)
+      return ""
+    })
+    expect(sentB.join("")).toContain("after-orphan")
+    expect(instances[0].sent).toEqual([])
+
+    // Fire the orphan's onclose. With the wasActive snapshot guard
+    // (already on the branch from the prior round), this must not
+    // schedule an SSE reconnect against the new session.
+    act(() => {
+      instances[0].onclose?.({
+        code: 1006,
+        reason: "",
+        wasClean: false,
+      } as unknown as CloseEvent)
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(hook.result.current.isConnected).toBe(true)
+    expect(stray).toEqual([])
+
+    // Wait past the (would-be) reconnect-timer window to confirm no
+    // deferred SSE open fires either.
+    await new Promise((r) => setTimeout(r, 1100))
+    expect(stray).toEqual([])
+    expect(hook.result.current.isConnected).toBe(true)
+  })
 })

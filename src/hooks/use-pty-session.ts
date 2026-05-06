@@ -144,6 +144,16 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   // Null when running on the SSE+POST fallback.
   const wsRef = useRef<WebSocket | null>(null);
 
+  // Tracks the in-flight handshake so cleanup can abort a CONNECTING
+  // socket. `wsRef` only gets the socket once `onopen` fires, so
+  // without a separate pending handle a prop change during the
+  // handshake window leaves the socket orphaned. The orphan would
+  // later complete its handshake against a session that's already
+  // been DELETEd, briefly take over `wsRef` in its own `onopen`, and
+  // schedule a duplicate SSE stream against the new session via its
+  // eventual `onclose`.
+  const pendingWsRef = useRef<WebSocket | null>(null);
+
   // Input serialization: at most one input dispatch is in flight per
   // session. Keystrokes that arrive while a request is in flight are
   // concatenated into `pendingBatchRef` and dispatched as a single
@@ -195,17 +205,30 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   }, []);
 
   const closeWs = useCallback(() => {
-    const ws = wsRef.current;
-    if (!ws) return;
-    wsRef.current = null;
-    // readyState may be CONNECTING or OPEN. Either way close() is safe;
-    // the browser sends a close frame if the socket is open and tears
-    // down the underlying connection if it is still handshaking.
-    try {
-      ws.close();
-    } catch {
-      // Older Safari throws if close() races a connection failure; the
-      // socket is already gone in that case so swallow.
+    // Tear down both the active OPEN socket (in `wsRef`) AND any
+    // socket still handshaking (in `pendingWsRef`). Closing during
+    // CONNECTING aborts the handshake so the orphan never reaches
+    // `onopen`; the matching identity-checked clear in the handlers
+    // below ensures a late event from this WS no longer mutates
+    // shared state.
+    const active = wsRef.current;
+    if (active) {
+      wsRef.current = null;
+      try {
+        active.close();
+      } catch {
+        // Older Safari throws if close() races a connection failure;
+        // the socket is already gone in that case so swallow.
+      }
+    }
+    const pending = pendingWsRef.current;
+    if (pending) {
+      pendingWsRef.current = null;
+      try {
+        pending.close();
+      } catch {
+        // already gone
+      }
     }
   }, []);
 
@@ -275,6 +298,12 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         return;
       }
       ws.binaryType = 'arraybuffer';
+      // Register the handshaking socket so a prop-change-driven
+      // `cleanup()` can abort it before it ever reaches `onopen`.
+      // The slot is identity-checked when later events fire so a WS
+      // that's been displaced by a newer connectWs call cannot clear
+      // the new WS's pending entry.
+      pendingWsRef.current = ws;
 
       let opened = false;
       let settled = false;
@@ -299,10 +328,14 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
 
       ws.onopen = () => {
         opened = true;
-        if (!mountedRef.current) {
-          // Hook unmounted during the handshake — close cleanly and
-          // report failure so `connect`'s caller doesn't try to use a
-          // socket against a torn-down session.
+        // If `pendingWsRef` no longer points at us, this WS was
+        // cleaned up while handshaking and a newer connect cycle has
+        // taken over. Spec-compliant runtimes don't fire `onopen`
+        // after a CONNECTING-time `close()`, but treat it as
+        // defense-in-depth: never let an orphan handshake overwrite
+        // the active wsRef or flip `isConnected` on the new
+        // transport's behalf.
+        if (pendingWsRef.current !== ws || !mountedRef.current) {
           try {
             ws.close();
           } catch {
@@ -311,6 +344,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
           settle(false);
           return;
         }
+        pendingWsRef.current = null;
         wsRef.current = ws;
         setIsConnected(true);
         setError(null);
@@ -345,6 +379,13 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       };
 
       ws.onclose = () => {
+        // Identity-checked clear of the pending slot. If the slot
+        // already moved on to a newer connectWs cycle (e.g. cleanup
+        // ran while we were handshaking) we mustn't clobber the
+        // newer WS's entry.
+        if (pendingWsRef.current === ws) {
+          pendingWsRef.current = null;
+        }
         // Snapshot whether THIS socket is the active transport before
         // we touch any shared state. In real browsers `onclose` is
         // emitted asynchronously, so a prop change that closed this
@@ -522,7 +563,14 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       // the WS does not open quickly — the existing input queue keeps
       // any keystrokes already buffered from being lost in the swap.
       const wsOk = await connectWs(sessionId);
-      if (!mountedRef.current) return;
+      // Bail if the hook unmounted OR a newer connect cycle has
+      // taken over (cleanup nulls sessionIdRef, then a subsequent
+      // connect populates it with a new session). Without the
+      // session-supersession check, this stale connect would fall
+      // through to `connectStream(sessionId)` against a session
+      // that's already been DELETEd, opening an SSE stream that
+      // briefly competes with the new transport.
+      if (!mountedRef.current || sessionIdRef.current !== sessionId) return;
 
       // Flush any keystrokes that arrived between mount and now. They
       // were accepted into `pendingBatchRef` but the drain loop exited

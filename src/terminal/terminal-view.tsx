@@ -3,6 +3,15 @@ import { useEffect, useRef, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+// `@xterm/addon-webgl` is a *true* optional peer: xterm falls back to
+// its DOM/canvas renderer when the addon is absent. Keep it out of the
+// static import graph so a consumer who skips installing the package
+// still gets a working terminal — a missing-module error here would
+// otherwise crash the whole module at load time, taking the rest of
+// TerminalView with it. The dynamic import is awaited inside the
+// effect below; the type-only import keeps `WebglAddon` typed without
+// pulling the runtime module.
+import type { WebglAddon as WebglAddonType } from "@xterm/addon-webgl";
 import { usePtySession } from "../hooks/use-pty-session";
 
 // ---------------------------------------------------------------------------
@@ -101,8 +110,26 @@ export default function TerminalView({
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
 
+  // Coalesce PTY output into one xterm.write per animation frame.
+  // The transport (SSE or WS) delivers many small chunks under burst output
+  // (e.g. `ls /usr/bin`, `tail -f`); writing each one immediately drives the
+  // xterm parser through its state machine N times. Joining within a frame
+  // lets the parser process a single contiguous string and lets xterm's
+  // renderer schedule one paint per frame instead of many.
+  const pendingWritesRef = useRef<string[]>([]);
+  const writeRafRef = useRef<number | null>(null);
+
   const onData = useCallback((data: string) => {
-    termRef.current?.write(data);
+    if (!data) return;
+    pendingWritesRef.current.push(data);
+    if (writeRafRef.current !== null) return;
+    writeRafRef.current = requestAnimationFrame(() => {
+      writeRafRef.current = null;
+      const chunks = pendingWritesRef.current;
+      if (chunks.length === 0) return;
+      pendingWritesRef.current = [];
+      termRef.current?.write(chunks.length === 1 ? chunks[0] : chunks.join(""));
+    });
   }, []);
 
   const { isConnected, error, sendCommand, resizeTerminal, reconnect } = usePtySession({
@@ -133,6 +160,44 @@ export default function TerminalView({
     term.loadAddon(fitAddon);
     term.loadAddon(webLinksAddon);
     term.open(containerRef.current);
+
+    // Try to enable GPU-accelerated rendering. xterm falls back to its
+    // DOM renderer if the addon throws (no WebGL context, headless
+    // test environment, etc.) OR the package is not installed at all
+    // (true optional peer). Context loss disposes the addon and lets
+    // xterm fall back live, rather than leaving the terminal frozen.
+    //
+    // The dynamic import keeps `@xterm/addon-webgl` out of the static
+    // import graph so a consumer who skips installing the package
+    // does not crash the whole module at load time. `webglCancelled`
+    // is a flag the cleanup below flips so a late-resolving import
+    // doesn't attach a renderer to a disposed terminal.
+    let webglAddon: WebglAddonType | null = null;
+    let webglCancelled = false;
+    void (async () => {
+      try {
+        const mod = await import("@xterm/addon-webgl");
+        if (webglCancelled) return;
+        try {
+          const addon = new mod.WebglAddon();
+          addon.onContextLoss(() => {
+            webglAddon?.dispose();
+            webglAddon = null;
+          });
+          // Track before loadAddon so a thrown attach (rare but
+          // theoretically possible if xterm rejects the addon) still
+          // gets cleaned up by the dispose path on unmount.
+          webglAddon = addon;
+          term.loadAddon(addon);
+        } catch {
+          // No WebGL context (headless / blocked GPU). xterm's
+          // default renderer takes over silently.
+        }
+      } catch {
+        // Package not installed — not an error, fall through to the
+        // default renderer.
+      }
+    })();
 
     requestAnimationFrame(() => {
       fitAddon.fit();
@@ -176,7 +241,18 @@ export default function TerminalView({
     ro.observe(containerRef.current);
 
     return () => {
+      // Block a late-resolving WebGL import from attaching a renderer
+      // to the about-to-be-disposed terminal. If the import already
+      // resolved, `webglAddon` holds the addon and the dispose call
+      // below tears it down.
+      webglCancelled = true;
       ro.disconnect();
+      if (writeRafRef.current !== null) {
+        cancelAnimationFrame(writeRafRef.current);
+        writeRafRef.current = null;
+      }
+      pendingWritesRef.current = [];
+      webglAddon?.dispose();
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;

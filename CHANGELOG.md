@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.14.0
+
+### New: WebSocket transport for `usePtySession` (with HTTP+SSE fallback)
+
+`usePtySession` (the hook that powers `<TerminalView>`) now opens a WebSocket against `${apiUrl}/terminals/:id/ws` for terminal I/O. Keystrokes flow as binary frames, server output as text frames, and resize as a small JSON control frame. The HTTP+SSE path (`POST /input` + `GET /stream`) is preserved as a fallback so the hook keeps working against backends that don't yet ship the WS endpoint, and against environments where `WebSocket` is unavailable.
+
+- **Why**: the previous HTTP+SSE flow paid a per-keystroke round-trip from browser → edge → orchestrator → sidecar → back. Through Cloudflare that's typically 150–400 ms each direction; users reported "seconds of typing latency" against busy backends. WS collapses the chain onto a single persistent socket.
+- **No `apiUrl`/`token` API changes.** Consumers don't need to do anything to opt in; the hook tries WS first and falls back transparently if the upgrade doesn't open within 1.5 s.
+- **The HTTP+SSE input-coalescing contract is preserved on the WS path.** `sendCommand`'s drain loop still serializes one dispatch at a time and coalesces keystrokes that arrive while a send is in flight — same ordering guarantees, fewer round-trips.
+
+### Bearer auth migrates from URL query to `Sec-WebSocket-Protocol` (security)
+
+The hook used to put the bearer token in the WebSocket URL query string (`wss://…?token=…`). That value shows up in edge-proxy access logs, browser DevTools network panels, referrer headers on internal links, and log-aggregation systems. The token now rides in the `Sec-WebSocket-Protocol` request header instead, base64url-encoded into a `bearer.<encoded>` value (RFC 7230's `token` grammar excludes `+`/`/`/`=`).
+
+- **Non-disruptive against backends that don't consume the subprotocol.** Per RFC 6455 §4.2.2, an unrecognized offered subprotocol is silently dropped from the response and the connection still establishes. Same-origin browser users continue to authenticate via session cookie at the edge.
+- **Backends opting in** to read the bearer subprotocol should: strip `bearer.` prefix → pad to base64 length and swap `-`/`_` for `+`/`/` → `atob` → validate as the bearer value. The matching decoder lives in the agent-dev-container CF Worker / orchestrator chain.
+- **`Authorization: Bearer …`** is unchanged on REST calls (POST /terminals, PATCH, DELETE).
+
+### New: GPU rendering via `@xterm/addon-webgl` (optional peer)
+
+`<TerminalView>` now loads `@xterm/addon-webgl` to render glyphs on the GPU. xterm's DOM/canvas renderer is the fallback in three cases: the addon throws on construction (no WebGL context, headless test env), context loss fires later (the addon disposes itself, xterm reverts), or the package is not installed at all.
+
+- **New optional peerDependency: `@xterm/addon-webgl: ^0.19.0`.** Listed under `peerDependenciesMeta.optional`; the `<TerminalView>` module loads it via dynamic `import()` so a consumer who doesn't install it gets a working terminal with the default renderer instead of a module-load crash.
+- **Build externalization**: the addon is in tsup's `external` list alongside the other xterm peers. Without that fix the build was bundling the full WebGL addon (~50 KB) into `dist/terminal.js`. After the fix, `dist/terminal.js` dropped from ~162 KB to ~6 KB.
+- **`@xterm/addon-fit`, `@xterm/addon-web-links`, `@xterm/xterm`** stay required peers — the terminal can't function without them.
+
+### New: per-frame output coalescing in `<TerminalView>`
+
+PTY output chunks accumulate into a per-frame buffer and flush in a single `xterm.write` per `requestAnimationFrame`. Bursty streams (`ls /usr/bin`, `tail -f`, log dumps) drive the xterm parser once per frame instead of N times, and the renderer schedules one paint aligned to the display refresh.
+
+### Why this whole shape
+
+The latency-driver was the per-keystroke HTTP RTT — that's why the WS transport is the headline change. The WebGL addon and RAF coalescing are paint-side wins that round out the experience under heavy output. The auth-channel move was a related concern surfaced during review of the WS work and is shipped together so the security posture lands with the new transport, not after.
+
 ## 0.13.0
 
 ### Breaking (build / install)

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.1
+
+Republish of 0.15.0 — the 0.15.0 release pipeline silently skipped publish due to `HEAD~1`-diff fragility when the merge commit's parent already carried the bumped version. Contents identical to 0.15.0; this version exists so npm consumers can install the re-export bridge work from PR #36.
+
 ## 0.15.0
 
 ### Changed

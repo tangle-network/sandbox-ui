@@ -1311,4 +1311,135 @@ describe("usePtySession WebSocket transport", () => {
     expect(stray).toEqual([])
     expect(hook.result.current.isConnected).toBe(true)
   })
+
+  it("falls back to SSE+POST when the WS handshake never completes", async () => {
+    // The handshakeTimer in connectWs is the safety net for slow
+    // proxies and stuck upstreams: a WS that lingers in CONNECTING
+    // for WS_OPEN_TIMEOUT_MS (1500ms) must be aborted and the SSE
+    // path must take over. Without this fallback path, a partially
+    // working WS endpoint would strand the terminal indefinitely
+    // showing a "Connecting…" overlay. Lock in the behavior here.
+    //
+    // The stub never fires open/error/close on its own — the hook's
+    // own timer is what triggers fallback. Real timers are used
+    // because vitest's fake timers conflict with waitFor's polling.
+
+    class HangingWebSocket {
+      static CONNECTING = 0
+      static OPEN = 1
+      static CLOSING = 2
+      static CLOSED = 3
+      readyState: 0 | 1 | 2 | 3 = 0
+      binaryType: BinaryType = "blob"
+      url: string
+      onopen: ((ev: Event) => void) | null = null
+      onmessage: ((ev: MessageEvent) => void) | null = null
+      onerror: ((ev: Event) => void) | null = null
+      onclose: ((ev: CloseEvent) => void) | null = null
+      constructor(url: string) {
+        this.url = url
+      }
+      send() {}
+      // The hook calls close() when the handshakeTimer fires.
+      // Synthesize the close event so the cleanup path inside
+      // connectWs's onclose runs end-to-end (it's a no-op for the
+      // not-yet-OPEN case).
+      close() {
+        if (this.readyState === 3) return
+        this.readyState = 3
+        queueMicrotask(() => {
+          this.onclose?.({
+            code: 1006,
+            reason: "",
+            wasClean: false,
+          } as unknown as CloseEvent)
+        })
+      }
+    }
+    vi.stubGlobal("WebSocket", HangingWebSocket)
+
+    const inputPosts: PendingInput[] = []
+    let streamController:
+      | ReadableStreamDefaultController<Uint8Array>
+      | null = null
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
+      const href = typeof url === "string" ? url : url.toString()
+      const method = (init?.method ?? "GET").toUpperCase()
+      if (href.endsWith("/terminals") && method === "POST") {
+        return mockResponse({
+          ok: true,
+          status: 201,
+          body: JSON.stringify({ data: { sessionId: SESSION_ID } }),
+        })
+      }
+      if (
+        href.endsWith(`/terminals/${SESSION_ID}/stream`) &&
+        method === "GET"
+      ) {
+        return {
+          ok: true,
+          status: 200,
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              streamController = controller
+            },
+          }),
+        } as unknown as Response
+      }
+      if (
+        href.endsWith(`/terminals/${SESSION_ID}/input`) &&
+        method === "POST"
+      ) {
+        const d = deferred<Response>()
+        inputPosts.push({
+          call: {
+            url: href,
+            method,
+            body: typeof init?.body === "string" ? init.body : null,
+          },
+          settle: (res) => d.resolve(res),
+          reject: (err) => d.reject(err),
+        })
+        return d.promise
+      }
+      if (href.endsWith(`/terminals/${SESSION_ID}`) && method === "DELETE") {
+        return mockResponse({ ok: true, status: 200 })
+      }
+      throw new Error(`Unexpected fetch: ${method} ${href}`)
+    })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const hook = renderHook(() =>
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData: vi.fn() }),
+    )
+
+    // The handshakeTimer is hardcoded at 1500ms. waitFor's default
+    // poll window is 1000ms; extend it past the timeout so the hook
+    // has time to observe the timer firing, fall back, open SSE, and
+    // flip isConnected.
+    await waitFor(
+      () => {
+        expect(streamController).not.toBeNull()
+        expect(hook.result.current.isConnected).toBe(true)
+      },
+      { timeout: 3000 },
+    )
+
+    // After the fallback, sendCommand must travel over the HTTP
+    // /input path (the WS was closed by the timer's ws.close()).
+    await act(async () => {
+      void hook.result.current
+        .sendCommand("post-fallback")
+        .catch(() => {})
+      await waitFor(() => expect(inputPosts).toHaveLength(1))
+    })
+    expect(JSON.parse(inputPosts[0].call.body ?? "{}")).toEqual({
+      data: "post-fallback",
+    })
+
+    // Drain the in-flight POST so unmount doesn't leak a rejection.
+    await act(async () => {
+      inputPosts[0].settle(mockResponse({ ok: true, status: 200 }))
+    })
+  })
 })

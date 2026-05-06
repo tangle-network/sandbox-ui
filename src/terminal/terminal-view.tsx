@@ -3,7 +3,15 @@ import { useEffect, useRef, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { WebglAddon } from "@xterm/addon-webgl";
+// `@xterm/addon-webgl` is a *true* optional peer: xterm falls back to
+// its DOM/canvas renderer when the addon is absent. Keep it out of the
+// static import graph so a consumer who skips installing the package
+// still gets a working terminal — a missing-module error here would
+// otherwise crash the whole module at load time, taking the rest of
+// TerminalView with it. The dynamic import is awaited inside the
+// effect below; the type-only import keeps `WebglAddon` typed without
+// pulling the runtime module.
+import type { WebglAddon as WebglAddonType } from "@xterm/addon-webgl";
 import { usePtySession } from "../hooks/use-pty-session";
 
 // ---------------------------------------------------------------------------
@@ -154,20 +162,42 @@ export default function TerminalView({
     term.open(containerRef.current);
 
     // Try to enable GPU-accelerated rendering. xterm falls back to its
-    // DOM renderer if the addon throws (no WebGL context, headless test
-    // environment, etc.). Context loss disposes the addon and lets xterm
-    // fall back live, rather than leaving the terminal frozen.
-    let webglAddon: WebglAddon | null = null;
-    try {
-      webglAddon = new WebglAddon();
-      webglAddon.onContextLoss(() => {
-        webglAddon?.dispose();
-        webglAddon = null;
-      });
-      term.loadAddon(webglAddon);
-    } catch {
-      webglAddon = null;
-    }
+    // DOM renderer if the addon throws (no WebGL context, headless
+    // test environment, etc.) OR the package is not installed at all
+    // (true optional peer). Context loss disposes the addon and lets
+    // xterm fall back live, rather than leaving the terminal frozen.
+    //
+    // The dynamic import keeps `@xterm/addon-webgl` out of the static
+    // import graph so a consumer who skips installing the package
+    // does not crash the whole module at load time. `webglCancelled`
+    // is a flag the cleanup below flips so a late-resolving import
+    // doesn't attach a renderer to a disposed terminal.
+    let webglAddon: WebglAddonType | null = null;
+    let webglCancelled = false;
+    void (async () => {
+      try {
+        const mod = await import("@xterm/addon-webgl");
+        if (webglCancelled) return;
+        try {
+          const addon = new mod.WebglAddon();
+          addon.onContextLoss(() => {
+            webglAddon?.dispose();
+            webglAddon = null;
+          });
+          // Track before loadAddon so a thrown attach (rare but
+          // theoretically possible if xterm rejects the addon) still
+          // gets cleaned up by the dispose path on unmount.
+          webglAddon = addon;
+          term.loadAddon(addon);
+        } catch {
+          // No WebGL context (headless / blocked GPU). xterm's
+          // default renderer takes over silently.
+        }
+      } catch {
+        // Package not installed — not an error, fall through to the
+        // default renderer.
+      }
+    })();
 
     requestAnimationFrame(() => {
       fitAddon.fit();
@@ -211,6 +241,11 @@ export default function TerminalView({
     ro.observe(containerRef.current);
 
     return () => {
+      // Block a late-resolving WebGL import from attaching a renderer
+      // to the about-to-be-disposed terminal. If the import already
+      // resolved, `webglAddon` holds the addon and the dispose call
+      // below tears it down.
+      webglCancelled = true;
       ro.disconnect();
       if (writeRafRef.current !== null) {
         cancelAnimationFrame(writeRafRef.current);

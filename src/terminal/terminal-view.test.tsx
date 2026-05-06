@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { act, render } from "@testing-library/react"
+import { act, render, waitFor } from "@testing-library/react"
 
 /**
  * Tests for the presentation-layer behaviors that wrap usePtySession:
@@ -183,9 +183,11 @@ function renderView() {
 }
 
 describe("TerminalView — WebGL renderer load", () => {
-  it("constructs the WebGL addon and loads it onto the terminal", () => {
+  it("constructs the WebGL addon and loads it onto the terminal", async () => {
     renderView()
-    expect(m.WebglAddonCtor).toHaveBeenCalledTimes(1)
+    // The component dynamic-imports `@xterm/addon-webgl` so the addon
+    // loads on a microtask, not synchronously — wait for it.
+    await waitFor(() => expect(m.WebglAddonCtor).toHaveBeenCalledTimes(1))
     expect(m.webglOnContextLoss).toHaveBeenCalledTimes(1)
     expect(m.terminalRef.current).not.toBeNull()
     const calls = m.terminalRef.current?.loadAddon.mock.calls ?? []
@@ -193,22 +195,26 @@ describe("TerminalView — WebGL renderer load", () => {
     // WebGL addon reaches loadAddon, which is what enables the GPU
     // rendering path.
     expect(
-      calls.some(([addon]) =>
-        addon !== null &&
-        typeof addon === "object" &&
-        (addon as { onContextLoss?: unknown }).onContextLoss ===
-          m.webglOnContextLoss,
+      calls.some(
+        ([addon]) =>
+          addon !== null &&
+          typeof addon === "object" &&
+          (addon as { onContextLoss?: unknown }).onContextLoss ===
+            m.webglOnContextLoss,
       ),
     ).toBe(true)
   })
 
-  it("falls back gracefully when the WebGL addon constructor throws", () => {
+  it("falls back gracefully when the WebGL addon constructor throws", async () => {
     m.WebglAddonCtor.mockImplementationOnce(function () {
       throw new Error("no webgl context")
     })
     expect(() => renderView()).not.toThrow()
-    // Other addons still got loaded — the mount path is not aborted by
-    // a missing GPU renderer.
+    // Wait for the dynamic import to resolve and the ctor to be
+    // attempted (and to throw, exercising the inner catch).
+    await waitFor(() => expect(m.WebglAddonCtor).toHaveBeenCalledTimes(1))
+    // Other addons still got loaded — the mount path is not aborted
+    // by a missing GPU renderer.
     expect(m.terminalRef.current).not.toBeNull()
     expect(m.FitAddonCtor).toHaveBeenCalledTimes(1)
     expect(m.WebLinksAddonCtor).toHaveBeenCalledTimes(1)
@@ -217,12 +223,41 @@ describe("TerminalView — WebGL renderer load", () => {
     ).toBeGreaterThanOrEqual(2)
   })
 
-  it("disposes the WebGL addon on unmount", () => {
+  it("disposes the WebGL addon on unmount once it has loaded", async () => {
     const { unmount } = renderView()
+    // Wait until the dynamic import resolves and the addon is wired,
+    // otherwise unmount races the load and the cancellation flag
+    // (correctly) prevents the addon from ever attaching — at which
+    // point dispose has nothing to call.
+    await waitFor(() => expect(m.WebglAddonCtor).toHaveBeenCalledTimes(1))
     expect(m.webglDispose).not.toHaveBeenCalled()
     unmount()
     expect(m.webglDispose).toHaveBeenCalledTimes(1)
     expect(m.terminalRef.current?.dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not attach the addon when unmounted before the import resolves", async () => {
+    // The async IIFE that loads `@xterm/addon-webgl` checks
+    // `webglCancelled` after `await import(...)` resolves. If the
+    // component is unmounted between the effect firing and the
+    // import resolving (which happens on the next microtask under
+    // vitest's `vi.mock` factories), the cancellation must
+    // short-circuit BEFORE the ctor runs — otherwise we'd attach a
+    // GPU renderer to a torn-down terminal, then dispose it
+    // immediately, which is wasteful and racy.
+    const { unmount } = renderView()
+    // Synchronous unmount before microtask flush. webglCancelled is
+    // set during this cleanup; the queued IIFE will observe it once
+    // its `await import(...)` resolves on the next microtask.
+    unmount()
+    // Drain microtasks so the IIFE runs through the cancellation
+    // branch.
+    await Promise.resolve()
+    await Promise.resolve()
+    // The ctor was never reached: cancellation was checked first.
+    expect(m.WebglAddonCtor).not.toHaveBeenCalled()
+    // And consequently dispose has nothing phantom to call.
+    expect(m.webglDispose).not.toHaveBeenCalled()
   })
 })
 

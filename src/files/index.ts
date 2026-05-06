@@ -1,1 +1,19 @@
-export * from "@tangle-network/ui/files";
+export {
+  FileArtifactPane,
+  type FileArtifactPaneProps,
+  type FileNode,
+  FilePreview,
+  type FilePreviewProps,
+  type FileTabData,
+  FileTabs,
+  type FileTabsProps,
+  FileTree,
+  type FileTreeProps,
+  type FileTreeVisibilityOptions,
+  RichFileTree,
+  type RichFileTreeGitEntry,
+  type RichFileTreeGitStatus,
+  type RichFileTreeProps,
+  type RichFileTreeThemeVars,
+  filterFileTree,
+} from "@tangle-network/ui/files";

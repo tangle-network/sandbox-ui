@@ -78,7 +78,13 @@ function installFailFastWebSocketStub() {
     onmessage: ((ev: MessageEvent) => void) | null = null
     onerror: ((ev: Event) => void) | null = null
     onclose: ((ev: CloseEvent) => void) | null = null
-    constructor(url: string) {
+    // Accept (and ignore) the optional `protocols` arg. Real
+    // browsers handle a single string OR an array; we don't care
+    // here — tests for the SSE-fallback path don't probe
+    // subprotocols. The argument is required to satisfy the
+    // `new WebSocket(url, protocols)` call signature the hook
+    // emits for the bearer-subprotocol auth path.
+    constructor(url: string, _protocols?: string | string[]) {
       this.url = url
       queueMicrotask(() => {
         this.readyState = 3
@@ -104,6 +110,8 @@ function installFailFastWebSocketStub() {
  */
 interface FakeWsHandle {
   url: string
+  /** Subprotocols the hook offered (the bearer-auth subprotocol lives here). */
+  protocols: string[]
   /** Frames sent by the hook as text (control messages). */
   sentText: string[]
   /** Frames sent by the hook as binary (stdin payloads), decoded UTF-8. */
@@ -112,6 +120,12 @@ interface FakeWsHandle {
   open: () => void
   /** Push a TEXT frame from server → client. */
   pushMessage: (data: string) => void
+  /** Push a BINARY frame from server → client (ArrayBuffer payload). */
+  pushBinary: (data: ArrayBuffer) => void
+  /** Push a BINARY frame as a Uint8Array view (exercises the ArrayBufferView decode path). */
+  pushBinaryView: (data: ArrayBufferView) => void
+  /** Push a Blob frame (exercises the Blob fallback decode path). */
+  pushBlob: (data: Blob) => void
   /** Drive the close event. */
   close: (code?: number) => void
 }
@@ -136,12 +150,18 @@ function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
     onclose: ((ev: CloseEvent) => void) | null = null
     private sentText: string[] = []
     private sentBinary: string[] = []
-    constructor(url: string) {
+    constructor(url: string, protocols?: string | string[]) {
       this.url = url
-      const decoder = new TextDecoder()
+      const protocolList =
+        protocols === undefined
+          ? []
+          : typeof protocols === "string"
+            ? [protocols]
+            : [...protocols]
       const self = this
       handles.push({
         url,
+        protocols: protocolList,
         sentText: this.sentText,
         sentBinary: this.sentBinary,
         open() {
@@ -149,6 +169,15 @@ function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
           self.onopen?.({} as Event)
         },
         pushMessage(data: string) {
+          self.onmessage?.({ data } as MessageEvent)
+        },
+        pushBinary(data: ArrayBuffer) {
+          self.onmessage?.({ data } as MessageEvent)
+        },
+        pushBinaryView(data: ArrayBufferView) {
+          self.onmessage?.({ data } as MessageEvent)
+        },
+        pushBlob(data: Blob) {
           self.onmessage?.({ data } as MessageEvent)
         },
         close(code = 1000) {
@@ -160,7 +189,6 @@ function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
           } as unknown as CloseEvent)
         },
       })
-      void decoder // keep ref to silence unused lint in some configs
     }
     send(data: string | ArrayBuffer | ArrayBufferView | Blob) {
       if (typeof data === "string") {
@@ -758,13 +786,31 @@ describe("usePtySession WebSocket transport", () => {
     return { ...harness, hook, onData }
   }
 
-  it("constructs the WebSocket with wss:// + token query param", async () => {
+  it("constructs the WebSocket with wss:// and the bearer subprotocol (token NOT in URL)", async () => {
     const { handles } = await mountAndOpenWs()
     expect(handles).toHaveLength(1)
     const url = new URL(handles[0].url)
     expect(url.protocol).toBe("wss:")
     expect(url.pathname).toBe(`/terminals/${SESSION_ID}/ws`)
-    expect(url.searchParams.get("token")).toBe(fixtureValue)
+    // The bearer token MUST NOT appear in the URL query string —
+    // edge proxies and DevTools log URLs but not subprotocol headers.
+    expect(url.searchParams.get("token")).toBeNull()
+    expect(url.search).toBe("")
+
+    // The subprotocol carries a base64url-encoded bearer token under
+    // the `bearer.` prefix. Verify the encoding round-trips cleanly:
+    // backends decode the part after `bearer.` and base64url-decode
+    // it back to the raw token.
+    expect(handles[0].protocols).toHaveLength(1)
+    const proto = handles[0].protocols[0]
+    expect(proto.startsWith("bearer.")).toBe(true)
+    const encoded = proto.slice("bearer.".length)
+    // base64url-safe characters only
+    expect(/^[A-Za-z0-9_-]+$/.test(encoded)).toBe(true)
+    // Round-trip: pad to base64, swap url-safe chars back, atob.
+    const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4)
+    const standard = padded.replace(/-/g, "+").replace(/_/g, "/")
+    expect(atob(standard)).toBe(fixtureValue)
   })
 
   it("dispatches sendCommand as a UTF-8 binary frame and skips the HTTP /input path", async () => {
@@ -810,6 +856,58 @@ describe("usePtySession WebSocket transport", () => {
     expect(onData).toHaveBeenCalledTimes(2)
     expect(onData).toHaveBeenNthCalledWith(1, "hello\r\n")
     expect(onData).toHaveBeenNthCalledWith(2, "\x1b[31mred\x1b[0m")
+  })
+
+  it("decodes ArrayBuffer frames as UTF-8 and forwards to onData", async () => {
+    // The wire contract sends server -> client output as TEXT frames,
+    // but a binary-mode runtime (or an experimental backend) can
+    // legitimately deliver an ArrayBuffer payload. The hook decodes
+    // it as UTF-8; verifying this branch keeps the decode path from
+    // silently dropping output if a frame ever arrives that way.
+    //
+    // Construct the ArrayBuffer with `new ArrayBuffer(...)` (rather
+    // than `Uint8Array#buffer.slice(...)`) so the resulting object is
+    // unambiguously the global `ArrayBuffer` constructor's instance —
+    // jsdom realms can otherwise hand back a buffer that fails
+    // `instanceof ArrayBuffer` against the hook's reference.
+    const { handles, onData } = await mountAndOpenWs()
+    const bytes = new TextEncoder().encode("buf-payload-é") // multi-byte char
+    const buf = new ArrayBuffer(bytes.byteLength)
+    new Uint8Array(buf).set(bytes)
+    act(() => {
+      handles[0].pushBinary(buf)
+    })
+    expect(onData).toHaveBeenCalledTimes(1)
+    expect(onData).toHaveBeenCalledWith("buf-payload-é")
+  })
+
+  it("decodes ArrayBufferView frames as UTF-8 and forwards to onData", async () => {
+    // Some runtimes deliver a typed-array view (Uint8Array, etc.)
+    // rather than the underlying ArrayBuffer. The hook handles both;
+    // exercise the view branch explicitly.
+    const { handles, onData } = await mountAndOpenWs()
+    const view = new TextEncoder().encode("view-payload-✓")
+    act(() => {
+      handles[0].pushBinaryView(view)
+    })
+    expect(onData).toHaveBeenCalledTimes(1)
+    expect(onData).toHaveBeenCalledWith("view-payload-✓")
+  })
+
+  it("decodes Blob frames as UTF-8 and forwards to onData", async () => {
+    // Older runtimes that didn't honor `binaryType = "arraybuffer"`
+    // deliver a Blob. The hook's decode path is async (Blob.text())
+    // — verify it eventually surfaces on onData.
+    const { handles, onData } = await mountAndOpenWs()
+    const blob = new Blob(["blob-payload-🌐"], {
+      type: "application/octet-stream",
+    })
+    act(() => {
+      handles[0].pushBlob(blob)
+    })
+    // Blob.text() is a microtask + Promise; let it settle.
+    await waitFor(() => expect(onData).toHaveBeenCalledTimes(1))
+    expect(onData).toHaveBeenCalledWith("blob-payload-🌐")
   })
 
   it("sends resize as a JSON text frame, not as a PATCH", async () => {

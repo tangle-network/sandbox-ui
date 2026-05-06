@@ -63,21 +63,65 @@ function createEmptyBatch(): PendingBatch {
 const WS_OPEN_TIMEOUT_MS = 1500;
 
 /** Convert an http(s) base URL into the matching ws(s) URL. */
-function toWsUrl(apiUrl: string, sessionId: string, token: string): string | null {
+function toWsUrl(apiUrl: string, sessionId: string): string | null {
   try {
     const url = new URL(`${apiUrl}/terminals/${sessionId}/ws`);
     if (url.protocol === 'https:') url.protocol = 'wss:';
     else if (url.protocol === 'http:') url.protocol = 'ws:';
     else return null;
-    // Browsers cannot set Authorization headers on WS upgrades, so the
-    // token rides as a query parameter. The matching server route reads
-    // it from the query and validates the same way the REST routes
-    // validate the bearer header.
-    url.searchParams.set('token', token);
     return url.toString();
   } catch {
     return null;
   }
+}
+
+/**
+ * Encode the bearer token as a WebSocket subprotocol identifier.
+ *
+ * Browsers cannot set the `Authorization` header on a WebSocket
+ * upgrade. The naive workaround — putting the token in a query
+ * parameter — is a real security risk: query strings are routinely
+ * captured in edge-proxy access logs, browser DevTools network
+ * panels, referrer headers on internal links, and log-aggregation
+ * systems where they may be retained for years. Move the token to
+ * `Sec-WebSocket-Protocol` instead, which is a request *header* and
+ * is treated like other auth headers by the same systems (i.e. not
+ * surfaced in URL-shaped logs).
+ *
+ * Per RFC 7230 a subprotocol identifier is a `token`, which excludes
+ * `+`, `/`, and `=`. Bearer tokens minted by the sandbox API are
+ * not guaranteed to satisfy that grammar, so we base64url-encode the
+ * value first. The matching server reverses the encoding before
+ * validating.
+ *
+ * Per RFC 6455 §4.2.2, if the server doesn't recognize any of the
+ * offered subprotocols it omits `Sec-WebSocket-Protocol` from the
+ * response and the connection is established as if no subprotocol
+ * was requested. Sending `bearer.<…>` is therefore non-disruptive
+ * against backends that don't yet consume it — they can authenticate
+ * the user via a same-origin session cookie, and a future backend
+ * change can start consuming the subprotocol to extend WS auth to
+ * non-cookie consumers.
+ */
+const BEARER_SUBPROTOCOL_PREFIX = 'bearer.';
+
+function toBearerSubprotocol(token: string): string | null {
+  if (typeof btoa === 'undefined') return null;
+  let encoded: string;
+  try {
+    encoded = btoa(token);
+  } catch {
+    // `btoa` rejects strings whose characters exceed U+00FF. Bearer
+    // tokens minted by the sandbox API are ASCII, so this branch is
+    // not expected in production; surrender so the caller falls
+    // back to HTTP+SSE rather than opening a malformed WS.
+    return null;
+  }
+  // base64url: drop padding, swap `+`/`/` for `-`/`_`.
+  return `${BEARER_SUBPROTOCOL_PREFIX}${encoded
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')}`;
 }
 
 // Encode stdin text as a UTF-8 binary frame. Distinguishes input from
@@ -284,15 +328,23 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         resolve(false);
         return;
       }
-      const wsUrl = toWsUrl(apiUrl, sessionId, token);
+      const wsUrl = toWsUrl(apiUrl, sessionId);
       if (!wsUrl) {
+        resolve(false);
+        return;
+      }
+      const subprotocol = toBearerSubprotocol(token);
+      if (!subprotocol) {
         resolve(false);
         return;
       }
 
       let ws: WebSocket;
       try {
-        ws = new WebSocket(wsUrl);
+        // Pass the bearer token in the WebSocket subprotocol header
+        // rather than the URL query string. See `toBearerSubprotocol`
+        // for the encoding contract and the security rationale.
+        ws = new WebSocket(wsUrl, [subprotocol]);
       } catch {
         resolve(false);
         return;

@@ -109,8 +109,11 @@ importers:
         specifier: ^4.2.2
         version: 4.2.2(vite@8.0.7(esbuild@0.27.4)(jiti@2.6.1))
       '@tangle-network/brand':
-        specifier: ^0.2.0
-        version: 0.2.0(react@19.2.4)
+        specifier: ^0.3.0
+        version: 0.3.0(react@19.2.4)
+      '@tangle-network/ui':
+        specifier: ^1.0.0
+        version: 1.0.0(ef3613ed96a09c2bbb91b1e8d1fa37e9)
       '@tanstack/react-query':
         specifier: ^5.91.0
         version: 5.91.3(react@19.2.4)
@@ -1720,12 +1723,50 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tangle-network/brand@0.2.0':
-    resolution: {integrity: sha512-//dWgYZ8xa+C1CMNoX0tUt+1ZBXKmh8fCCdZxqScf/sZfqsEvhAJVNUoeI/xv96MTEPoNWX4gSJtBxlFlOFDWQ==}
+  '@tangle-network/brand@0.3.0':
+    resolution: {integrity: sha512-Jqfa/zNOH6eE2EMye/rI/X/02Hd++lndyC5r9g44QyGpV+yj0xIX1DtKZwyXSwvnDK0hz+H2ICnTYvz2yUKj+w==}
     peerDependencies:
       react: '>=18'
     peerDependenciesMeta:
       react:
+        optional: true
+
+  '@tangle-network/ui@1.0.0':
+    resolution: {integrity: sha512-a0CnJ9CZjpq5Mg5ic9GKpKN8/A9mrkRe2sHJX0H1+k7+qVZztPu8dusYSWbGRLfKpooAupd8eds1xFqaS72lYg==}
+    peerDependencies:
+      '@hocuspocus/provider': '*'
+      '@nanostores/react': '*'
+      '@tangle-network/brand': ^0.3.0
+      '@tanstack/react-query': '*'
+      '@tiptap/core': '*'
+      '@tiptap/extension-collaboration': '*'
+      '@tiptap/extension-collaboration-caret': '*'
+      '@tiptap/react': '*'
+      '@tiptap/starter-kit': '*'
+      nanostores: '*'
+      react: ^18 || ^19
+      react-dom: ^18 || ^19
+      yjs: '*'
+    peerDependenciesMeta:
+      '@hocuspocus/provider':
+        optional: true
+      '@nanostores/react':
+        optional: true
+      '@tanstack/react-query':
+        optional: true
+      '@tiptap/core':
+        optional: true
+      '@tiptap/extension-collaboration':
+        optional: true
+      '@tiptap/extension-collaboration-caret':
+        optional: true
+      '@tiptap/react':
+        optional: true
+      '@tiptap/starter-kit':
+        optional: true
+      nanostores:
+        optional: true
+      yjs:
         optional: true
 
   '@tanstack/query-core@5.91.2':
@@ -5234,9 +5275,53 @@ snapshots:
       tailwindcss: 4.2.2
       vite: 8.0.7(esbuild@0.27.4)(jiti@2.6.1)
 
-  '@tangle-network/brand@0.2.0(react@19.2.4)':
+  '@tangle-network/brand@0.3.0(react@19.2.4)':
     optionalDependencies:
       react: 19.2.4
+
+  '@tangle-network/ui@1.0.0(ef3613ed96a09c2bbb91b1e8d1fa37e9)':
+    dependencies:
+      '@pierre/trees': 1.0.0-beta.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-collapsible': 1.1.12(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-dropdown-menu': 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-label': 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-progress': 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-select': 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-slot': 1.2.4(@types/react@19.2.14)(react@19.2.4)
+      '@radix-ui/react-switch': 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-toast': 1.2.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tangle-network/brand': 0.3.0(react@19.2.4)
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      lucide-react: 0.469.0(react@19.2.4)
+      marked: 17.0.5
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      react-markdown: 10.1.0(@types/react@19.2.14)(react@19.2.4)
+      react-pdf: 9.2.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-syntax-highlighter: 16.1.1(react@19.2.4)
+      rehype-sanitize: 6.0.0
+      remark-gfm: 4.0.1
+      tailwind-merge: 3.5.0
+      turndown: 7.2.2
+    optionalDependencies:
+      '@hocuspocus/provider': 3.4.4(y-protocols@1.0.7(yjs@13.6.30))(yjs@13.6.30)
+      '@nanostores/react': 1.1.0(nanostores@1.2.0)(react@19.2.4)
+      '@tanstack/react-query': 5.91.3(react@19.2.4)
+      '@tiptap/core': 3.20.4(@tiptap/pm@3.20.4)
+      '@tiptap/extension-collaboration': 3.20.4(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4)(@tiptap/y-tiptap@3.0.2(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.7)(y-protocols@1.0.7(yjs@13.6.30))(yjs@13.6.30))(yjs@13.6.30)
+      '@tiptap/extension-collaboration-caret': 3.21.0(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4)(@tiptap/y-tiptap@3.0.2(prosemirror-model@1.25.4)(prosemirror-state@1.4.4)(prosemirror-view@1.41.7)(y-protocols@1.0.7(yjs@13.6.30))(yjs@13.6.30))
+      '@tiptap/react': 3.20.4(@floating-ui/dom@1.7.6)(@tiptap/core@3.20.4(@tiptap/pm@3.20.4))(@tiptap/pm@3.20.4)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tiptap/starter-kit': 3.20.4
+      nanostores: 1.2.0
+      yjs: 13.6.30
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - supports-color
 
   '@tanstack/query-core@5.91.2': {}
 

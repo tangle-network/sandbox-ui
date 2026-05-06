@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.15.0
+
+### Changed
+- Source tree slimmed: ~104 files moved to `@tangle-network/ui@^1.0.1`. Public exports unchanged — every name still resolves; types forward transitively. New peer dep: `@tangle-network/ui@^1.0.1`. `@tangle-network/brand` peer bumped to `^0.3.0`.
+
+### Re-exports kept indefinitely
+No deprecation timeline. Migration is opt-in.
+
+### Migration recipe (optional)
+Consumers wishing to flip imports to the more truthful path:
+
+    pnpm add @tangle-network/ui
+
+    sed -i '' \
+      -e 's|@tangle-network/sandbox-ui/primitives|@tangle-network/ui/primitives|g' \
+      -e 's|@tangle-network/sandbox-ui/chat|@tangle-network/ui/chat|g' \
+      -e 's|@tangle-network/sandbox-ui/run|@tangle-network/ui/run|g' \
+      -e 's|@tangle-network/sandbox-ui/files|@tangle-network/ui/files|g' \
+      -e 's|@tangle-network/sandbox-ui/editor|@tangle-network/ui/editor|g' \
+      -e 's|@tangle-network/sandbox-ui/markdown|@tangle-network/ui/markdown|g' \
+      -e 's|@tangle-network/sandbox-ui/auth|@tangle-network/ui/auth|g' \
+      -e 's|@tangle-network/sandbox-ui/openui|@tangle-network/ui/openui|g' \
+      -e 's|@tangle-network/sandbox-ui/utils|@tangle-network/ui/utils|g' \
+      $(grep -rl '@tangle-network/sandbox-ui/' src/ 2>/dev/null)
+
+DO NOT migrate: `dashboard`, `workspace`, `pages`, `terminal`, `hooks` (partial), `stores` (partial), `types` (partial). Those remain genuinely sandbox-ui surfaces.
+
 ## 0.14.0
 
 ### New: WebSocket transport for `usePtySession` (with HTTP+SSE fallback)

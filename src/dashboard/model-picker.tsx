@@ -80,6 +80,13 @@ export interface ModelPickerProps {
   label?: string;
   placeholder?: string;
   className?: string;
+  /**
+   * Extra classes merged onto the trigger button itself (after the
+   * built-in defaults, so callers can override sizing/radius/font to
+   * match a surrounding form). Distinct from `className`, which on the
+   * "field" variant styles the outer wrapper.
+   */
+  triggerClassName?: string;
   disabled?: boolean;
 }
 
@@ -183,6 +190,7 @@ export function ModelPicker({
   label = "Model",
   placeholder = "Choose a model",
   className,
+  triggerClassName,
   disabled,
 }: ModelPickerProps) {
   const [query, setQuery] = React.useState("");
@@ -251,6 +259,7 @@ export function ModelPicker({
         "data-[state=open]:border-primary/40 data-[state=open]:bg-accent/30",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         className,
+        triggerClassName,
       )}
     >
       <Sparkles className="h-3 w-3 text-muted-foreground" />
@@ -270,6 +279,7 @@ export function ModelPicker({
         "data-[state=open]:border-primary/30 data-[state=open]:bg-accent/30",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         className,
+        triggerClassName,
       )}
     >
       <span className={cn("truncate", current ? "text-foreground font-medium" : "text-muted-foreground")}>

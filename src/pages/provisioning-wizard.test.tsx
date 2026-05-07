@@ -391,37 +391,59 @@ describe("ProvisioningWizard — resourceLimits", () => {
   })
 })
 
-describe("ProvisioningWizard — modelOptions", () => {
-  it("renders the provided model options in the dropdown", () => {
+describe("ProvisioningWizard — models", () => {
+  it("renders models grouped by provider and supports searching", async () => {
     render(
       <ProvisioningWizard
         variant="flat"
-        modelOptions={[
-          { value: "claude-sonnet", label: "Claude Sonnet 4.5" },
-          { value: "gpt-5.2", label: "GPT-5.2" },
+        models={[
+          { id: "openai/gpt-5", name: "GPT-5", _provider: "openai" },
+          { id: "openai/gpt-5-mini", name: "GPT-5 Mini", _provider: "openai" },
+          {
+            id: "anthropic/claude-sonnet-4-6",
+            name: "Claude Sonnet 4.6",
+            _provider: "anthropic",
+          },
+          {
+            id: "anthropic/claude-haiku-4.5",
+            name: "Claude Haiku 4.5",
+            _provider: "anthropic",
+          },
         ]}
       />,
     )
-    expect(screen.getByRole("option", { name: "Claude Sonnet 4.5" })).toBeInTheDocument()
-    expect(screen.getByRole("option", { name: "GPT-5.2" })).toBeInTheDocument()
-    // The default "Mistral"/"Llama" strings must not bleed through
-    expect(screen.queryByText(/Llama/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Mistral/i)).not.toBeInTheDocument()
+    // The picker is a Radix dropdown — items are only mounted while
+    // it's open. Click the trigger first.
+    await userEvent.click(screen.getByRole("button", { name: /GPT-5/i }))
+    expect(await screen.findByPlaceholderText(/search models/i)).toBeInTheDocument()
+    // Provider section headers show up in the grouped list
+    expect(await screen.findByText("openai")).toBeInTheDocument()
+    expect(await screen.findByText("anthropic")).toBeInTheDocument()
+    // Search narrows the list — typing "haiku" filters out the GPT family
+    const search = await screen.findByPlaceholderText(/search models/i)
+    await userEvent.type(search, "haiku")
+    expect(await screen.findByText("Claude Haiku 4.5")).toBeInTheDocument()
+    expect(screen.queryByText("GPT-5 Mini")).not.toBeInTheDocument()
   })
 
-  it("auto-selects the first available option when the current value is not in the list", async () => {
-    // The wizard's internal `modelTier` state starts at "claude-sonnet".
-    // If the caller's option list only contains other ids, the wizard
-    // must switch to the first available option so the <select>
-    // reflects a real value instead of silently dropping to an unknown.
+  it("auto-selects the first model when the initial tier isn't in the list", async () => {
+    // defaultConfig.modelTier names a model that the loaded list
+    // doesn't contain — the wizard must replace it with the first real
+    // entry so the trigger never displays a stale label and the API
+    // never receives an unknown id.
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     render(
       <ProvisioningWizard
         variant="flat"
         onSubmit={onSubmit}
-        modelOptions={[
-          { value: "gpt-5.2", label: "GPT-5.2" },
-          { value: "glm-4.7", label: "GLM 4.7" },
+        defaultConfig={{ modelTier: "ghost/unknown-model" }}
+        models={[
+          { id: "openai/gpt-5", name: "GPT-5", _provider: "openai" },
+          {
+            id: "anthropic/claude-sonnet-4-6",
+            name: "Claude Sonnet 4.6",
+            _provider: "anthropic",
+          },
         ]}
       />,
     )
@@ -430,27 +452,16 @@ describe("ProvisioningWizard — modelOptions", () => {
       expect(onSubmit).toHaveBeenCalledOnce()
     })
     const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
-    expect(config.modelTier).toBe("gpt-5.2")
+    expect(config.modelTier).toBe("openai/gpt-5")
   })
 
-  it("skips past disabled options when auto-selecting", async () => {
-    const onSubmit = vi.fn().mockResolvedValue(undefined)
-    render(
-      <ProvisioningWizard
-        variant="flat"
-        onSubmit={onSubmit}
-        modelOptions={[
-          { value: "gpt-5.2", label: "GPT-5.2", disabled: true },
-          { value: "glm-4.7", label: "GLM 4.7" },
-        ]}
-      />,
-    )
-    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledOnce()
-    })
-    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
-    expect(config.modelTier).toBe("glm-4.7")
+  it("disables the trigger and shows a loading state while models are unset", () => {
+    // `models={undefined}` represents the in-flight router fetch — the
+    // picker should not let the user open it (there's nothing to pick)
+    // and should signal the loading state inline.
+    render(<ProvisioningWizard variant="flat" />)
+    const trigger = screen.getByRole("button", { name: /choose a model/i })
+    expect(trigger).toBeDisabled()
   })
 })
 

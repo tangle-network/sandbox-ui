@@ -7,7 +7,13 @@ export type TemplateCategory =
   | "infrastructure"
   | "general"
 
-export type TemplatePreset = Omit<ProvisioningConfig, "name" | "gitUrl" | "envVars" | "driver" | "startupScriptIds">
+// Templates pin compute size and a system prompt; the model is left to the
+// wizard's auto-select (first router entry) and the user can refine via the
+// picker's Fast/Balanced/Best presets. Pinning a bare `modelTier` like
+// "claude-sonnet" never matched canonical router ids (e.g.
+// "anthropic/claude-sonnet-4-6") so the auto-select silently discarded it
+// anyway — making it explicit rather than fictitious.
+export type TemplatePreset = Omit<ProvisioningConfig, "name" | "gitUrl" | "envVars" | "driver" | "startupScriptIds" | "modelTier">
 
 const BLOCKCHAIN_PATTERNS = [
   "ethereum", "solana", "arbitrum", "base-aa", "base-l2", "polygon",
@@ -52,7 +58,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 4,
     ramGB: 16,
     storageGB: 128,
-    modelTier: "claude-sonnet",
     systemPrompt:
       "You are a blockchain development assistant. Help with smart contract development, testing, and deployment. Follow security best practices and suggest gas optimizations where relevant.",
     bare: false,
@@ -62,7 +67,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 8,
     ramGB: 32,
     storageGB: 256,
-    modelTier: "claude-sonnet",
     systemPrompt:
       "You are an AI/ML development assistant. Help with model training, data processing, and experiment management. Suggest efficient approaches for the available compute resources.",
     bare: false,
@@ -72,7 +76,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 2,
     ramGB: 4,
     storageGB: 50,
-    modelTier: "claude-sonnet",
     systemPrompt:
       "You are a frontend development assistant. Help build modern, accessible, and performant user interfaces.",
     bare: false,
@@ -82,7 +85,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 4,
     ramGB: 16,
     storageGB: 128,
-    modelTier: "claude-sonnet",
     systemPrompt:
       "You are an infrastructure and DevOps assistant. Help with service configuration, deployment, monitoring, and operational best practices.",
     bare: false,
@@ -92,7 +94,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 4,
     ramGB: 16,
     storageGB: 128,
-    modelTier: "claude-sonnet",
     systemPrompt: "",
     bare: false,
   },

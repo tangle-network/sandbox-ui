@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.15.4
+
+### Breaking — `ModelPicker`
+- The `presets` prop, the `ModelPreset` interface, and the built-in
+  `Fast`/`Balanced`/`Best` defaults are removed. The previous matchers were
+  OpenAI-biased (every chain started with a `gpt-5*` regex) and presented a
+  fixed taxonomy that never reflected what users actually wanted.
+- New `popular?: ReadonlyArray<string>` prop replaces it. Pass canonical
+  model ids (`<provider>/<model>`); the picker resolves them against the
+  loaded `models` list and renders them in a "Popular" section above the
+  full provider-grouped list. Ids absent from the catalog are silently
+  skipped, so a stable curation list is safe across catalog rotations.
+- Migration: drop the `presets` prop and pass `popular={[...]}` with the
+  ids you actually want surfaced. Curation is now the consumer's job.
+
+### Added — `ProvisioningWizard`
+- `popular?: ReadonlyArray<string>` — forwarded straight to `ModelPicker`.
+- `defaultModel?: string | null` — the user's saved preferred model. Used
+  as the initial `modelTier` when `defaultConfig.modelTier` isn't set, and
+  as the next-best fallback when the current selection drops out of the
+  loaded list. Resolution order: `defaultConfig.modelTier` → `defaultModel`
+  → first available `popular` id → `models[0]`.
+- `onSetDefault?: (modelId: string) => void` — when provided, the wizard
+  renders a "Save as default" link beneath the picker. Persistence is the
+  consumer's responsibility; the wizard only invokes the callback.
+
 ## 0.15.3
 
 Fix: `ModelPicker`'s search input no longer loses focus after the first matching keystroke. `@radix-ui/react-dropdown-menu`'s Content runs WAI-ARIA menu typeahead on every character keydown that bubbles up — when the typed text matched a model's name, Radix called `setTimeout(() => match.focus())` and yanked focus off the search input. Printable keydowns now stop at the input; Escape (document-level capture listener), Tab, and arrow keys are unaffected.

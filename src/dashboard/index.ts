@@ -93,7 +93,6 @@ export {
   type ModelPickerProps,
   type ModelPickerVariant,
   type ModelInfo,
-  type ModelPreset,
 } from "./model-picker";
 export {
   BillingDashboard,

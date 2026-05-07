@@ -85,6 +85,28 @@ export interface ProvisioningWizardProps {
    * disabled trigger with "no models available" copy.
    */
   models?: ModelInfo[];
+  /**
+   * Canonical model ids to surface in the picker's "Popular" section.
+   * Forwarded straight to ModelPicker. Use this to surface a curated set
+   * of common models (e.g. one per provider/tier) without imposing a
+   * Fast/Balanced/Best taxonomy.
+   */
+  popular?: ReadonlyArray<string>;
+  /**
+   * The user's saved preferred model id (canonical, e.g.
+   * "openai/gpt-5.4"). Used as the initial `modelTier` when
+   * `defaultConfig.modelTier` isn't set, and as the next-best fallback
+   * when the current selection drops out of the loaded model list.
+   * Persistence is the caller's responsibility.
+   */
+  defaultModel?: string | null;
+  /**
+   * Persist the current `modelTier` as the user's default. When provided,
+   * the wizard renders a "Save as default" affordance under the model
+   * picker. The wizard does not store anything itself — the caller owns
+   * persistence (e.g. localStorage, account settings API).
+   */
+  onSetDefault?: (modelId: string) => void;
   /** Real pricing rates from the API for accurate cost calculation */
   pricingRates?: PricingRates;
   /**
@@ -402,6 +424,9 @@ export function ProvisioningWizard({
   onLoadStartupScripts,
   resourceLimits,
   models,
+  popular,
+  defaultModel,
+  onSetDefault,
   pricingRates,
   planTiers,
 }: ProvisioningWizardProps) {
@@ -508,23 +533,32 @@ export function ProvisioningWizard({
     );
   }, [cpuMax, ramMax, storageMax, cpuStep, ramStep, storageStep]);
 
-  const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? "");
+  // Initial selection priority:
+  //   1. `defaultConfig.modelTier` — explicit template pinning (highest)
+  //   2. `defaultModel` — user's saved preference
+  //   3. "" — backfilled by the auto-select effect once `models` loads
+  const [modelTier, setModelTier] = React.useState(
+    dc?.modelTier ?? defaultModel ?? "",
+  );
   const [systemPrompt, setSystemPrompt] = React.useState(
     dc?.systemPrompt ?? "",
   );
 
-  // Auto-select the first model once the caller's list arrives, or
-  // whenever the current `modelTier` falls out of the list (e.g. router
-  // refetch swapped the catalog, or `defaultConfig.modelTier` doesn't
-  // match anything the router returned). Compares against canonical ids
-  // so the trigger never displays a stale label.
+  // Auto-select once the caller's list arrives, or whenever the current
+  // `modelTier` falls out of the list (router refetch swapped the catalog,
+  // `defaultConfig.modelTier` doesn't match, etc.). Fallback chain
+  // mirrors the initial-selection priority and adds `popular` as a
+  // soft-curation hint between user preference and arbitrary first.
   React.useEffect(() => {
     if (!models || models.length === 0) return;
     const ids = models.map(canonicalModelId);
     if (ids.includes(modelTier)) return;
-    const next = ids[0];
+    const next =
+      (defaultModel && ids.includes(defaultModel) ? defaultModel : undefined) ??
+      popular?.find((p) => ids.includes(p)) ??
+      ids[0];
     if (next && next !== modelTier) setModelTier(next);
-  }, [models, modelTier]);
+  }, [models, modelTier, defaultModel, popular]);
   const [name, setName] = React.useState(dc?.name ?? "");
   const [gitUrl, setGitUrl] = React.useState(dc?.gitUrl ?? "");
   const [envVars, setEnvVars] = React.useState<
@@ -1099,8 +1133,16 @@ export function ProvisioningWizard({
                         models={models ?? []}
                         loading={!models}
                         disabled={!models || models.length === 0}
+                        popular={popular}
                         triggerClassName="rounded-xl h-12 px-4 font-bold"
                       />
+                      {onSetDefault && (
+                        <SaveAsDefault
+                          modelTier={modelTier}
+                          defaultModel={defaultModel ?? null}
+                          onSetDefault={onSetDefault}
+                        />
+                      )}
                     </div>
                     <div>
                       <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
@@ -1535,6 +1577,48 @@ export function ProvisioningWizard({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Compact "Save as default" affordance shown beneath the ModelPicker. The
+// wizard owns the layout; persistence is the consumer's job (wizard just
+// invokes `onSetDefault`). Disabled when there's nothing to save (no
+// selection yet) or when the current selection already matches the saved
+// default — keeps the click idempotent.
+function SaveAsDefault({
+  modelTier,
+  defaultModel,
+  onSetDefault,
+}: {
+  modelTier: string;
+  defaultModel: string | null;
+  onSetDefault: (modelId: string) => void;
+}) {
+  const isCurrentDefault = Boolean(modelTier) && modelTier === defaultModel;
+  const disabled = !modelTier || isCurrentDefault;
+  return (
+    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+      <button
+        type="button"
+        onClick={() => {
+          if (!disabled) onSetDefault(modelTier);
+        }}
+        disabled={disabled}
+        className={cn(
+          "underline-offset-2 transition-colors",
+          disabled
+            ? "cursor-default opacity-60"
+            : "hover:text-foreground hover:underline focus:outline-none focus:text-foreground focus:underline",
+        )}
+      >
+        {isCurrentDefault ? "✓ Saved as default" : "Save as default"}
+      </button>
+      {defaultModel && !isCurrentDefault && (
+        <span className="truncate">
+          (current default: <span className="font-mono">{defaultModel}</span>)
+        </span>
+      )}
     </div>
   );
 }

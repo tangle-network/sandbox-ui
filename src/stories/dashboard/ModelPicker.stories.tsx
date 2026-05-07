@@ -85,6 +85,27 @@ export const Default: Story = {
   },
 };
 
+export const Popular: Story = {
+  name: "With popular section",
+  render: () => {
+    const [value, setValue] = useState("openai/gpt-5.4");
+    return (
+      <ModelPicker
+        value={value}
+        onChange={setValue}
+        models={models}
+        popular={[
+          "openai/gpt-5.4",
+          "anthropic/claude-sonnet-4-6",
+          "anthropic/claude-opus-4-7",
+          "openai/gpt-5.4-mini",
+          "anthropic/claude-haiku-4.5",
+        ]}
+      />
+    );
+  },
+};
+
 export const Pill: Story = {
   name: "Pill (chat input)",
   decorators: [

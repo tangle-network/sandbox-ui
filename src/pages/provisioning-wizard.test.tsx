@@ -512,6 +512,137 @@ describe("ProvisioningWizard — models", () => {
   })
 })
 
+describe("ProvisioningWizard — defaultModel + popular", () => {
+  // The wizard's initial-selection priority is documented as:
+  //   defaultConfig.modelTier > defaultModel > "" (then auto-select kicks in)
+  // and the auto-select fallback is:
+  //   defaultModel (if present) > first popular id available > models[0]
+  // These tests exercise each tier so any future regression in the chain
+  // surfaces immediately, instead of silently falling through to ids[0].
+  const MODELS = [
+    { id: "openai/gpt-5", name: "GPT-5", _provider: "openai" },
+    { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", _provider: "anthropic" },
+    { id: "anthropic/claude-haiku-4.5", name: "Claude Haiku 4.5", _provider: "anthropic" },
+  ]
+
+  it("seeds modelTier from defaultModel when defaultConfig.modelTier is unset", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        onSubmit={onSubmit}
+        defaultModel="anthropic/claude-sonnet-4-6"
+        models={MODELS}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
+    expect(config.modelTier).toBe("anthropic/claude-sonnet-4-6")
+  })
+
+  it("prefers defaultConfig.modelTier over defaultModel when both are valid", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        onSubmit={onSubmit}
+        defaultConfig={{ modelTier: "openai/gpt-5" }}
+        defaultModel="anthropic/claude-sonnet-4-6"
+        models={MODELS}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
+    expect(config.modelTier).toBe("openai/gpt-5")
+  })
+
+  it("falls back to defaultModel when defaultConfig.modelTier is invalid", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        onSubmit={onSubmit}
+        defaultConfig={{ modelTier: "ghost/missing" }}
+        defaultModel="anthropic/claude-haiku-4.5"
+        models={MODELS}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
+    expect(config.modelTier).toBe("anthropic/claude-haiku-4.5")
+  })
+
+  it("falls back to first available popular id when defaultModel is also invalid", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        onSubmit={onSubmit}
+        defaultModel="ghost/missing"
+        popular={["ghost/also-missing", "anthropic/claude-haiku-4.5", "openai/gpt-5"]}
+        models={MODELS}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
+    expect(config.modelTier).toBe("anthropic/claude-haiku-4.5")
+  })
+
+  it("renders Save as default and invokes onSetDefault with the current modelTier", async () => {
+    const onSetDefault = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        defaultModel={null}
+        onSetDefault={onSetDefault}
+        models={MODELS}
+      />,
+    )
+    const button = await screen.findByRole("button", { name: /save as default/i })
+    expect(button).not.toBeDisabled()
+    await userEvent.click(button)
+    expect(onSetDefault).toHaveBeenCalledWith("openai/gpt-5")
+  })
+
+  it("disables Save as default when current selection already matches the saved default", async () => {
+    const onSetDefault = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        defaultModel="openai/gpt-5"
+        onSetDefault={onSetDefault}
+        models={MODELS}
+      />,
+    )
+    const button = await screen.findByRole("button", { name: /saved as default/i })
+    expect(button).toBeDisabled()
+  })
+
+  it("does not render Save as default when onSetDefault is not provided", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        defaultModel="openai/gpt-5"
+        models={MODELS}
+      />,
+    )
+    expect(screen.queryByRole("button", { name: /save as default/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /saved as default/i })).not.toBeInTheDocument()
+  })
+})
+
 describe("ProvisioningWizard — pricingRates", () => {
   it("computes the hourly total from caller-supplied rates", () => {
     render(

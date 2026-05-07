@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Search, Sparkles, Zap, Brain, Star, Loader2 } from "lucide-react";
+import { ChevronDown, Search, Sparkles, Loader2 } from "lucide-react";
 import * as Popover from "@radix-ui/react-dropdown-menu";
 import { cn } from "../lib/utils";
 
@@ -35,23 +35,6 @@ export interface ModelInfo {
   };
 }
 
-/**
- * Curated preset bucket. Three are surfaced by default — they map to typical
- * cost/quality tradeoffs without forcing the consumer to pick a specific
- * model. `match` resolves the preset against the loaded model list.
- */
-export interface ModelPreset {
-  id: "fast" | "balanced" | "best" | string;
-  label: string;
-  hint: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  /**
-   * Pick the canonical model id for this preset given the loaded list.
-   * Should return undefined if no acceptable model is loaded yet.
-   */
-  match: (models: ModelInfo[]) => string | undefined;
-}
-
 export type ModelPickerVariant = "field" | "pill";
 
 export interface ModelPickerProps {
@@ -66,10 +49,12 @@ export interface ModelPickerProps {
   /** Recently-used canonical ids to surface at the top. */
   recents?: ReadonlyArray<string>;
   /**
-   * Curated presets shown above the full list. Defaults to Fast/Balanced/Best
-   * resolved against common gpt-5/Claude families.
+   * Canonical model ids to surface in a "Popular" section above the full
+   * list. Each id is resolved against `models`; ids not present in the
+   * loaded catalog are silently skipped, so callers can pass a stable
+   * curation list without worrying about provider availability.
    */
-  presets?: ReadonlyArray<ModelPreset>;
+  popular?: ReadonlyArray<string>;
   /** Drop providers from the picker entirely (e.g. "audio", "embedding"). */
   excludeProviders?: ReadonlyArray<string>;
   /** Restrict to these architectures (e.g. ["text"]). Default: all. */
@@ -127,54 +112,6 @@ export function formatContext(ctx: number | undefined): string | null {
   return `${ctx} ctx`;
 }
 
-const DEFAULT_PRESETS: ReadonlyArray<ModelPreset> = [
-  {
-    id: "fast",
-    label: "Fast",
-    hint: "Cheapest, lowest latency",
-    icon: Zap,
-    match: (models) => {
-      const ids = models.map(canonicalModelId);
-      return (
-        ids.find((m) => /gpt-5\.\d+-mini$/.test(m)) ??
-        ids.find((m) => /gpt-5-mini$/.test(m)) ??
-        ids.find((m) => m.endsWith("/claude-haiku-4.5")) ??
-        ids.find((m) => /haiku/.test(m))
-      );
-    },
-  },
-  {
-    id: "balanced",
-    label: "Balanced",
-    hint: "Best value for most chat",
-    icon: Sparkles,
-    match: (models) => {
-      const ids = models.map(canonicalModelId);
-      return (
-        ids.find((m) => /^openai\/gpt-5\.\d+$/.test(m)) ??
-        ids.find((m) => /^openai\/gpt-5$/.test(m)) ??
-        ids.find((m) => m.endsWith("/claude-sonnet-4-6")) ??
-        ids.find((m) => /sonnet/.test(m))
-      );
-    },
-  },
-  {
-    id: "best",
-    label: "Best",
-    hint: "Hardest reasoning, highest quality",
-    icon: Brain,
-    match: (models) => {
-      const ids = models.map(canonicalModelId);
-      return (
-        ids.find((m) => /^openai\/gpt-5\.\d+-pro$/.test(m)) ??
-        ids.find((m) => /^openai\/o3$/.test(m)) ??
-        ids.find((m) => m.endsWith("/claude-opus-4-7")) ??
-        ids.find((m) => /opus/.test(m))
-      );
-    },
-  },
-] as const;
-
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function ModelPicker({
@@ -183,7 +120,7 @@ export function ModelPicker({
   models,
   loading = false,
   recents,
-  presets = DEFAULT_PRESETS,
+  popular,
   excludeProviders,
   modalities,
   variant = "field",
@@ -239,6 +176,17 @@ export function ModelPicker({
       .filter((m): m is ModelInfo => Boolean(m))
       .slice(0, 4);
   }, [recents, models]);
+
+  // Resolve the curated popular list against the loaded catalog. Order
+  // is preserved from the caller so they control the row sequence;
+  // ids that aren't currently served are silently dropped.
+  const popularModels = React.useMemo(() => {
+    if (!popular?.length) return [];
+    const lookup = new Map(models.map((m) => [canonicalModelId(m), m]));
+    return popular
+      .map((id) => lookup.get(id))
+      .filter((m): m is ModelInfo => Boolean(m));
+  }, [popular, models]);
 
   const handleSelect = (id: string) => {
     onChange(id);
@@ -337,32 +285,17 @@ export function ModelPicker({
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto">
-              {/* Presets */}
-              {!query && presets.length > 0 && (
-                <Section label="Presets">
-                  {presets.map((preset) => {
-                    const Icon = preset.icon ?? Star;
-                    const matchedId = preset.match(models);
-                    if (!matchedId) return null;
-                    const matched = models.find((m) => canonicalModelId(m) === matchedId);
-                    const isCurrent = matchedId === value;
-                    return (
-                      <PickerItem
-                        key={preset.id}
-                        onSelect={() => handleSelect(matchedId)}
-                        active={isCurrent}
-                      >
-                        <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--accent-text)]" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium">{preset.label}</span>
-                            <span className="text-[10px] text-muted-foreground truncate">→ {matched?.name ?? matchedId}</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground">{preset.hint}</span>
-                        </div>
-                      </PickerItem>
-                    );
-                  })}
+              {/* Popular */}
+              {!query && popularModels.length > 0 && (
+                <Section label="Popular">
+                  {popularModels.map((m) => (
+                    <ModelRow
+                      key={`popular-${canonicalModelId(m)}`}
+                      model={m}
+                      active={canonicalModelId(m) === value}
+                      onSelect={handleSelect}
+                    />
+                  ))}
                 </Section>
               )}
 

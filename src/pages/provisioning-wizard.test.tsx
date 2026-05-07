@@ -23,6 +23,13 @@ function makeScript(overrides: Partial<StartupScriptEntry> = {}): StartupScriptE
   }
 }
 
+// Minimal stand-in for the router /v1/models payload — single entry is
+// enough for tests that don't care about the picker UX, just that the
+// wizard reaches its "deploy is enabled" state.
+const TEST_MODELS = [
+  { id: "openai/gpt-5", name: "GPT-5", _provider: "openai" },
+]
+
 describe("ProvisioningWizard — startup scripts integration", () => {
   it("loads and renders startup scripts on mount", async () => {
     const scripts = [
@@ -122,6 +129,7 @@ describe("ProvisioningWizard — startup scripts integration", () => {
         onLoadStartupScripts={onLoadStartupScripts}
         onSubmit={onSubmit}
         variant="flat"
+        models={TEST_MODELS}
       />,
     )
 
@@ -152,7 +160,11 @@ describe("ProvisioningWizard — startup scripts integration", () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("Quota exceeded"))
 
     render(
-      <ProvisioningWizard onSubmit={onSubmit} variant="flat" />,
+      <ProvisioningWizard
+        onSubmit={onSubmit}
+        variant="flat"
+        models={TEST_MODELS}
+      />,
     )
 
     await user.click(screen.getByRole("button", { name: /deploy workspace/i }))
@@ -231,6 +243,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
         variant="flat"
         onSubmit={onSubmit}
         resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
+        models={TEST_MODELS}
       />,
     )
 
@@ -259,6 +272,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
         // fitting preset; Standard (4/16/128) and Performance (8/32/256)
         // both exceed it, so they must be rendered disabled.
         resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
+        models={TEST_MODELS}
       />,
     )
 
@@ -304,6 +318,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
         defaultConfig={{ cpuCores: 1, ramGB: 4, storageGB: 30, environment: "node", modelTier: "claude-sonnet", systemPrompt: "", name: "", gitUrl: "", envVars: [], driver: "docker", bare: false }}
         skipToReview
         resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
+        models={TEST_MODELS}
       />,
     )
 
@@ -462,6 +477,38 @@ describe("ProvisioningWizard — models", () => {
     render(<ProvisioningWizard variant="flat" />)
     const trigger = screen.getByRole("button", { name: /choose a model/i })
     expect(trigger).toBeDisabled()
+  })
+
+  it("blocks deploy while modelTier is empty (router fetch in flight)", () => {
+    // Reproduces the regression that would have shipped if Deploy stayed
+    // gated only on `selectedEnv`: with no defaultConfig and no models
+    // loaded, modelTier is "" — clicking Deploy would have submitted that
+    // empty id straight to the API. The button must be disabled instead.
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(<ProvisioningWizard variant="flat" onSubmit={onSubmit} />)
+    expect(screen.getByRole("button", { name: /deploy workspace/i })).toBeDisabled()
+  })
+
+  it("allows deploy in bare mode even when modelTier is empty", async () => {
+    // Bare mode runs without an embedded agent, so the model id is
+    // irrelevant. The deploy gate must not block this case.
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        onSubmit={onSubmit}
+        defaultConfig={{ bare: true }}
+      />,
+    )
+    const deploy = screen.getByRole("button", { name: /deploy workspace/i })
+    expect(deploy).not.toBeDisabled()
+    await userEvent.click(deploy)
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
+    expect(config.bare).toBe(true)
+    expect(config.modelTier).toBe("")
   })
 })
 

@@ -1492,7 +1492,7 @@ export function ProvisioningWizard({
                   <button
                     type="button"
                     onClick={handleDeploy}
-                    disabled={isDeploying || !selectedEnv}
+                    disabled={isDeploying || !selectedEnv || (!modelTier && !bare)}
                     className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
                   >
                     {isDeploying ? (
@@ -1519,7 +1519,7 @@ export function ProvisioningWizard({
               <button
                 type="button"
                 onClick={handleDeploy}
-                disabled={isDeploying || !selectedEnv}
+                disabled={isDeploying || !selectedEnv || (!modelTier && !bare)}
                 className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
               >
                 {isDeploying ? (

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.2
+
+`ProvisioningWizard` model selection now uses `ModelPicker` — search, provider grouping, presets, pricing, and context-length display in one component instead of a flat HTML `<select>`. The wizard's prop is `models: ModelInfo[]` (the wire-format payload from Tangle Router's `/v1/models`); the prior `modelOptions: ModelOption[]` API and the `ModelOption` export are removed. Adds a `triggerClassName` prop on `ModelPicker` so callers can size the trigger to match surrounding form fields.
+
 ## 0.15.1
 
 Republish of 0.15.0 — the 0.15.0 release pipeline silently skipped publish due to `HEAD~1`-diff fragility when the merge commit's parent already carried the bumped version. Contents identical to 0.15.0; this version exists so npm consumers can install the re-export bridge work from PR #36.

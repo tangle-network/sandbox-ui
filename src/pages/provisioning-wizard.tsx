@@ -14,6 +14,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { ModelPicker, canonicalModelId, type ModelInfo } from "../dashboard/model-picker";
 
 export interface EnvironmentOption {
   id: string;
@@ -33,12 +34,6 @@ export interface ResourceLimits {
   cpuMax?: number;
   ramMaxGB?: number;
   storageMaxGB?: number;
-}
-
-export interface ModelOption {
-  value: string;
-  label: string;
-  disabled?: boolean;
 }
 
 export interface PricingRates {
@@ -81,8 +76,15 @@ export interface ProvisioningWizardProps {
   onLoadStartupScripts?: () => Promise<StartupScriptEntry[]>;
   /** Plan-based resource limits — caps the slider maximums */
   resourceLimits?: ResourceLimits;
-  /** Override the list of model engines shown in step 3 */
-  modelOptions?: ModelOption[];
+  /**
+   * Models to surface in step 3, typically the wire-format payload from
+   * Tangle Router's `/v1/models`. The wizard stores the canonical id
+   * (`<provider>/<model>`) on `ProvisioningConfig.modelTier`, which is
+   * the same shape the API expects for `backend.model.model`. While the
+   * list is empty (e.g. router fetch in flight) the picker renders a
+   * disabled trigger with "no models available" copy.
+   */
+  models?: ModelInfo[];
   /** Real pricing rates from the API for accurate cost calculation */
   pricingRates?: PricingRates;
   /**
@@ -121,19 +123,6 @@ const VALID_DRIVERS: ReadonlySet<string> = new Set([
   "firecracker",
   "tangle",
 ]);
-
-const DEFAULT_MODEL_OPTIONS: ModelOption[] = [
-  { value: "claude-sonnet", label: "Claude Sonnet 4.6 (Highly Capable)" },
-];
-
-/**
- * Fallback modelTier used by the initial state and the "Start from
- * scratch" reset when the caller hasn't supplied `modelOptions`. Kept
- * as a single source of truth so a future rename of the default model
- * doesn't leave any code path out of sync.
- */
-const DEFAULT_MODEL_TIER: string =
-  DEFAULT_MODEL_OPTIONS[0]?.value ?? "claude-sonnet";
 
 const STACK_DISPLAY: Record<
   string,
@@ -412,7 +401,7 @@ export function ProvisioningWizard({
   skipToReview,
   onLoadStartupScripts,
   resourceLimits,
-  modelOptions,
+  models,
   pricingRates,
   planTiers,
 }: ProvisioningWizardProps) {
@@ -519,26 +508,23 @@ export function ProvisioningWizard({
     );
   }, [cpuMax, ramMax, storageMax, cpuStep, ramStep, storageStep]);
 
-  const [modelTier, setModelTier] = React.useState(
-    dc?.modelTier ?? DEFAULT_MODEL_TIER,
-  );
+  const [modelTier, setModelTier] = React.useState(dc?.modelTier ?? "");
   const [systemPrompt, setSystemPrompt] = React.useState(
     dc?.systemPrompt ?? "",
   );
 
-  // If the current modelTier is not in the options list, or is present but disabled,
-  // auto-select the first available option so the <select> always reflects a real value.
+  // Auto-select the first model once the caller's list arrives, or
+  // whenever the current `modelTier` falls out of the list (e.g. router
+  // refetch swapped the catalog, or `defaultConfig.modelTier` doesn't
+  // match anything the router returned). Compares against canonical ids
+  // so the trigger never displays a stale label.
   React.useEffect(() => {
-    const options = modelOptions ?? DEFAULT_MODEL_OPTIONS;
-    if (options.length === 0) return;
-    const currentOption = options.find((o) => o.value === modelTier);
-    if (!currentOption || currentOption.disabled) {
-      const firstAvailable = options.find((o) => !o.disabled);
-      if (firstAvailable && firstAvailable.value !== modelTier) {
-        setModelTier(firstAvailable.value);
-      }
-    }
-  }, [modelOptions, modelTier]);
+    if (!models || models.length === 0) return;
+    const ids = models.map(canonicalModelId);
+    if (ids.includes(modelTier)) return;
+    const next = ids[0];
+    if (next && next !== modelTier) setModelTier(next);
+  }, [models, modelTier]);
   const [name, setName] = React.useState(dc?.name ?? "");
   const [gitUrl, setGitUrl] = React.useState(dc?.gitUrl ?? "");
   const [envVars, setEnvVars] = React.useState<
@@ -826,16 +812,13 @@ export function ProvisioningWizard({
                   setStorageGB(
                     snapSliderValue(128, STORAGE_MIN, storageMax, storageStep),
                   );
-                  // Use the first *available* option from the caller's
-                  // `modelOptions` so the <select> never renders an unknown
-                  // value between this reset and the auto-correct effect.
-                  // Falls back to the hardcoded default when the caller
-                  // didn't supply options at all.
-                  const resetOptions = modelOptions ?? DEFAULT_MODEL_OPTIONS;
-                  const firstAvailable = resetOptions.find(
-                    (o) => !o.disabled,
-                  );
-                  setModelTier(firstAvailable?.value ?? DEFAULT_MODEL_TIER);
+                  // Reset to the first model in the caller's list so the
+                  // trigger never shows an unknown value between this
+                  // reset and the auto-correct effect. Empty list means
+                  // models haven't loaded yet — clear the tier and let
+                  // the effect populate it once the list arrives.
+                  const first = models?.[0];
+                  setModelTier(first ? canonicalModelId(first) : "");
                   setSystemPrompt("");
                   setName("");
                   setGitUrl("");
@@ -1109,36 +1092,15 @@ export function ProvisioningWizard({
                       <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
                         Model Engine
                       </label>
-                      <select
+                      <ModelPicker
+                        label=""
                         value={modelTier}
-                        onChange={(e) => setModelTier(e.target.value)}
-                        disabled={
-                          modelOptions &&
-                          modelOptions.filter((o) => !o.disabled).length === 0
-                        }
-                        className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {(modelOptions ?? DEFAULT_MODEL_OPTIONS).map(
-                          (option) => (
-                            <option
-                              key={option.value}
-                              value={option.value}
-                              disabled={option.disabled}
-                              className="bg-gray-900"
-                            >
-                              {option.label}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                      {modelOptions &&
-                        modelOptions.length > 0 &&
-                        modelOptions.every((o) => o.disabled) && (
-                          <p className="text-xs text-muted-foreground mt-2">
-                            All model options are currently disabled. Please
-                            upgrade your plan or contact support.
-                          </p>
-                        )}
+                        onChange={setModelTier}
+                        models={models ?? []}
+                        loading={!models}
+                        disabled={!models || models.length === 0}
+                        triggerClassName="rounded-xl h-12 px-4 font-bold"
+                      />
                     </div>
                     <div>
                       <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
@@ -1530,7 +1492,7 @@ export function ProvisioningWizard({
                   <button
                     type="button"
                     onClick={handleDeploy}
-                    disabled={isDeploying || !selectedEnv}
+                    disabled={isDeploying || !selectedEnv || (!modelTier && !bare)}
                     className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
                   >
                     {isDeploying ? (
@@ -1557,7 +1519,7 @@ export function ProvisioningWizard({
               <button
                 type="button"
                 onClick={handleDeploy}
-                disabled={isDeploying || !selectedEnv}
+                disabled={isDeploying || !selectedEnv || (!modelTier && !bare)}
                 className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
               >
                 {isDeploying ? (

@@ -23,6 +23,13 @@ function makeScript(overrides: Partial<StartupScriptEntry> = {}): StartupScriptE
   }
 }
 
+// Minimal stand-in for the router /v1/models payload — single entry is
+// enough for tests that don't care about the picker UX, just that the
+// wizard reaches its "deploy is enabled" state.
+const TEST_MODELS = [
+  { id: "openai/gpt-5", name: "GPT-5", _provider: "openai" },
+]
+
 describe("ProvisioningWizard — startup scripts integration", () => {
   it("loads and renders startup scripts on mount", async () => {
     const scripts = [
@@ -122,6 +129,7 @@ describe("ProvisioningWizard — startup scripts integration", () => {
         onLoadStartupScripts={onLoadStartupScripts}
         onSubmit={onSubmit}
         variant="flat"
+        models={TEST_MODELS}
       />,
     )
 
@@ -152,7 +160,11 @@ describe("ProvisioningWizard — startup scripts integration", () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("Quota exceeded"))
 
     render(
-      <ProvisioningWizard onSubmit={onSubmit} variant="flat" />,
+      <ProvisioningWizard
+        onSubmit={onSubmit}
+        variant="flat"
+        models={TEST_MODELS}
+      />,
     )
 
     await user.click(screen.getByRole("button", { name: /deploy workspace/i }))
@@ -231,6 +243,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
         variant="flat"
         onSubmit={onSubmit}
         resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
+        models={TEST_MODELS}
       />,
     )
 
@@ -259,6 +272,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
         // fitting preset; Standard (4/16/128) and Performance (8/32/256)
         // both exceed it, so they must be rendered disabled.
         resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
+        models={TEST_MODELS}
       />,
     )
 
@@ -304,6 +318,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
         defaultConfig={{ cpuCores: 1, ramGB: 4, storageGB: 30, environment: "node", modelTier: "claude-sonnet", systemPrompt: "", name: "", gitUrl: "", envVars: [], driver: "docker", bare: false }}
         skipToReview
         resourceLimits={{ cpuMax: 2, ramMaxGB: 8, storageMaxGB: 64 }}
+        models={TEST_MODELS}
       />,
     )
 
@@ -391,37 +406,59 @@ describe("ProvisioningWizard — resourceLimits", () => {
   })
 })
 
-describe("ProvisioningWizard — modelOptions", () => {
-  it("renders the provided model options in the dropdown", () => {
+describe("ProvisioningWizard — models", () => {
+  it("renders models grouped by provider and supports searching", async () => {
     render(
       <ProvisioningWizard
         variant="flat"
-        modelOptions={[
-          { value: "claude-sonnet", label: "Claude Sonnet 4.5" },
-          { value: "gpt-5.2", label: "GPT-5.2" },
+        models={[
+          { id: "openai/gpt-5", name: "GPT-5", _provider: "openai" },
+          { id: "openai/gpt-5-mini", name: "GPT-5 Mini", _provider: "openai" },
+          {
+            id: "anthropic/claude-sonnet-4-6",
+            name: "Claude Sonnet 4.6",
+            _provider: "anthropic",
+          },
+          {
+            id: "anthropic/claude-haiku-4.5",
+            name: "Claude Haiku 4.5",
+            _provider: "anthropic",
+          },
         ]}
       />,
     )
-    expect(screen.getByRole("option", { name: "Claude Sonnet 4.5" })).toBeInTheDocument()
-    expect(screen.getByRole("option", { name: "GPT-5.2" })).toBeInTheDocument()
-    // The default "Mistral"/"Llama" strings must not bleed through
-    expect(screen.queryByText(/Llama/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Mistral/i)).not.toBeInTheDocument()
+    // The picker is a Radix dropdown — items are only mounted while
+    // it's open. Click the trigger first.
+    await userEvent.click(screen.getByRole("button", { name: /GPT-5/i }))
+    expect(await screen.findByPlaceholderText(/search models/i)).toBeInTheDocument()
+    // Provider section headers show up in the grouped list
+    expect(await screen.findByText("openai")).toBeInTheDocument()
+    expect(await screen.findByText("anthropic")).toBeInTheDocument()
+    // Search narrows the list — typing "haiku" filters out the GPT family
+    const search = await screen.findByPlaceholderText(/search models/i)
+    await userEvent.type(search, "haiku")
+    expect(await screen.findByText("Claude Haiku 4.5")).toBeInTheDocument()
+    expect(screen.queryByText("GPT-5 Mini")).not.toBeInTheDocument()
   })
 
-  it("auto-selects the first available option when the current value is not in the list", async () => {
-    // The wizard's internal `modelTier` state starts at "claude-sonnet".
-    // If the caller's option list only contains other ids, the wizard
-    // must switch to the first available option so the <select>
-    // reflects a real value instead of silently dropping to an unknown.
+  it("auto-selects the first model when the initial tier isn't in the list", async () => {
+    // defaultConfig.modelTier names a model that the loaded list
+    // doesn't contain — the wizard must replace it with the first real
+    // entry so the trigger never displays a stale label and the API
+    // never receives an unknown id.
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     render(
       <ProvisioningWizard
         variant="flat"
         onSubmit={onSubmit}
-        modelOptions={[
-          { value: "gpt-5.2", label: "GPT-5.2" },
-          { value: "glm-4.7", label: "GLM 4.7" },
+        defaultConfig={{ modelTier: "ghost/unknown-model" }}
+        models={[
+          { id: "openai/gpt-5", name: "GPT-5", _provider: "openai" },
+          {
+            id: "anthropic/claude-sonnet-4-6",
+            name: "Claude Sonnet 4.6",
+            _provider: "anthropic",
+          },
         ]}
       />,
     )
@@ -430,27 +467,48 @@ describe("ProvisioningWizard — modelOptions", () => {
       expect(onSubmit).toHaveBeenCalledOnce()
     })
     const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
-    expect(config.modelTier).toBe("gpt-5.2")
+    expect(config.modelTier).toBe("openai/gpt-5")
   })
 
-  it("skips past disabled options when auto-selecting", async () => {
+  it("disables the trigger and shows a loading state while models are unset", () => {
+    // `models={undefined}` represents the in-flight router fetch — the
+    // picker should not let the user open it (there's nothing to pick)
+    // and should signal the loading state inline.
+    render(<ProvisioningWizard variant="flat" />)
+    const trigger = screen.getByRole("button", { name: /choose a model/i })
+    expect(trigger).toBeDisabled()
+  })
+
+  it("blocks deploy while modelTier is empty (router fetch in flight)", () => {
+    // Reproduces the regression that would have shipped if Deploy stayed
+    // gated only on `selectedEnv`: with no defaultConfig and no models
+    // loaded, modelTier is "" — clicking Deploy would have submitted that
+    // empty id straight to the API. The button must be disabled instead.
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(<ProvisioningWizard variant="flat" onSubmit={onSubmit} />)
+    expect(screen.getByRole("button", { name: /deploy workspace/i })).toBeDisabled()
+  })
+
+  it("allows deploy in bare mode even when modelTier is empty", async () => {
+    // Bare mode runs without an embedded agent, so the model id is
+    // irrelevant. The deploy gate must not block this case.
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     render(
       <ProvisioningWizard
         variant="flat"
         onSubmit={onSubmit}
-        modelOptions={[
-          { value: "gpt-5.2", label: "GPT-5.2", disabled: true },
-          { value: "glm-4.7", label: "GLM 4.7" },
-        ]}
+        defaultConfig={{ bare: true }}
       />,
     )
-    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    const deploy = screen.getByRole("button", { name: /deploy workspace/i })
+    expect(deploy).not.toBeDisabled()
+    await userEvent.click(deploy)
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledOnce()
     })
     const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
-    expect(config.modelTier).toBe("glm-4.7")
+    expect(config.bare).toBe(true)
+    expect(config.modelTier).toBe("")
   })
 })
 

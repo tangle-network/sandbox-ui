@@ -117,6 +117,79 @@ describe("ModelPicker search input", () => {
   });
 });
 
+describe("ModelPicker popular section", () => {
+  // The Popular section is opt-in and consumer-driven: callers pass a
+  // curated list of canonical ids and the picker resolves them against
+  // the loaded `models` catalog. Ids that aren't currently served are
+  // silently dropped so the curation list can stay stable across
+  // catalog rotations without producing dead rows.
+  const MODELS: ModelInfo[] = [
+    { id: "gpt-5.4", name: "GPT-5.4", _provider: "openai" },
+    { id: "gpt-5.4-mini", name: "GPT-5.4 mini", _provider: "openai" },
+    { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", _provider: "anthropic" },
+    { id: "anthropic/claude-haiku-4.5", name: "Claude Haiku 4.5", _provider: "anthropic" },
+  ];
+
+  it("renders Popular when ids are provided and at least one resolves", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={MODELS}
+        popular={["openai/gpt-5.4", "anthropic/claude-sonnet-4-6"]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    expect(await screen.findByText("Popular")).toBeInTheDocument();
+  });
+
+  it("omits the section entirely when popular is empty or unset", async () => {
+    const user = userEvent.setup();
+    render(<ModelPicker value="" onChange={() => {}} models={MODELS} />);
+    await user.click(screen.getByRole("button"));
+    expect(screen.queryByText("Popular")).not.toBeInTheDocument();
+  });
+
+  it("silently skips popular ids not present in the loaded list", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={MODELS}
+        popular={["ghost/never-served", "openai/gpt-5.4"]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    expect(await screen.findByText("Popular")).toBeInTheDocument();
+    // The Popular section is rendered above the per-provider groups, so
+    // a resolvable popular id appears in both: a row inside Popular AND
+    // its own row inside the openai group. The ghost id appears in
+    // neither — that's the silent-skip we're testing.
+    expect(screen.getAllByText("GPT-5.4").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/never-served/)).not.toBeInTheDocument();
+  });
+
+  it("hides the Popular section while the user is searching", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={MODELS}
+        popular={["openai/gpt-5.4"]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    expect(await screen.findByText("Popular")).toBeInTheDocument();
+    const input = await screen.findByPlaceholderText("Search models...");
+    input.focus();
+    await user.keyboard("haiku");
+    expect(screen.queryByText("Popular")).not.toBeInTheDocument();
+  });
+});
+
 describe("ModelInfo type compatibility with router /v1/models", () => {
   // Smoke: a row matching exactly the shape our router returns should compile.
   const sample: ModelInfo = {

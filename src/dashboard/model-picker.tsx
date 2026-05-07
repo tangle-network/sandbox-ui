@@ -318,6 +318,16 @@ export function ModelPicker({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  // Radix dropdown-menu Content has built-in typeahead: each
+                  // character keydown that bubbles to the Content moves focus
+                  // to a matching menu item (via setTimeout(item.focus())),
+                  // which would steal focus from this search input as soon as
+                  // the typed text matches any model. Stop printable keys at
+                  // the input so the typeahead never sees them. Non-character
+                  // keys (Escape, Arrow*, Tab, Enter) still propagate.
+                  if (e.key.length === 1) e.stopPropagation();
+                }}
                 placeholder="Search models..."
                 autoFocus
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"

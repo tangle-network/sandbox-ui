@@ -100,6 +100,21 @@ describe("ModelPicker search input", () => {
     expect(document.activeElement).toBe(input);
     expect(input).toHaveValue("gpt");
   });
+
+  it("ArrowDown from the input does not steal focus to a menu item", async () => {
+    // Sanity check against a plausible misreading of the fix: arrow keys are
+    // not stopped, but Radix-menu's FIRST_LAST_KEYS handler short-circuits
+    // when the keydown target is not the Content element itself, and
+    // RovingFocusGroup attaches its arrow handlers to items (not the root),
+    // so neither path moves focus when the input is focused.
+    const user = userEvent.setup();
+    render(<ModelPicker value="" onChange={() => {}} models={MODELS} />);
+    await user.click(screen.getByRole("button"));
+    const input = await screen.findByPlaceholderText("Search models...");
+    input.focus();
+    await user.keyboard("{ArrowDown}");
+    expect(document.activeElement).toBe(input);
+  });
 });
 
 describe("ModelInfo type compatibility with router /v1/models", () => {

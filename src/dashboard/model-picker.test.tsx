@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {
   canonicalModelId,
   formatPricing,
   formatContext,
+  ModelPicker,
   type ModelInfo,
 } from "./model-picker";
 
@@ -63,6 +66,39 @@ describe("formatContext", () => {
 
   it("returns null when undefined", () => {
     expect(formatContext(undefined)).toBeNull();
+  });
+});
+
+describe("ModelPicker search input", () => {
+  // Regression for issue #39: typing into the search input lost focus to a
+  // matching menu item because @radix-ui/react-dropdown-menu's Content runs a
+  // typeahead handler on every character keydown that bubbles up. Focus theft
+  // happened only when the typed text matched a model's textValue, which is
+  // why early users could "type one character" before getting kicked out.
+  const MODELS: ModelInfo[] = [
+    { id: "gpt-5.4", name: "GPT-5.4", _provider: "openai" },
+    { id: "gpt-5-mini", name: "GPT-5 mini", _provider: "openai" },
+    { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", _provider: "anthropic" },
+  ];
+
+  it("retains focus on the search input while typing a query that matches a model", async () => {
+    const user = userEvent.setup();
+    render(<ModelPicker value="" onChange={() => {}} models={MODELS} />);
+
+    await user.click(screen.getByRole("button"));
+    const input = await screen.findByPlaceholderText("Search models...");
+    // Radix may have focused the Content element on mount; the search input
+    // owns text entry, so explicitly seat focus there before typing.
+    input.focus();
+    expect(document.activeElement).toBe(input);
+
+    // Use keyboard() so each keystroke targets document.activeElement — that
+    // way, if focus is stolen mid-typing, subsequent characters land on the
+    // wrong element and the input value comes back short.
+    await user.keyboard("gpt");
+
+    expect(document.activeElement).toBe(input);
+    expect(input).toHaveValue("gpt");
   });
 });
 

@@ -133,9 +133,6 @@ export * from "./openui";
 // --- Chat ---
 export * from "./chat";
 
-// --- Editor / Collaboration ---
-export * from "./editor";
-
 // --- Run / Tool Calls ---
 export * from "./run";
 

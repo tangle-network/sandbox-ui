@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.16.0
+
+### Breaking — root barrel narrows
+
+- `@tangle-network/sandbox-ui` no longer re-exports the editor surface
+  (`TiptapEditor`, `EditorToolbar`, `DocumentEditorPane`, `EditorProvider`,
+  `CollaboratorsList`, the editor hooks `useEditorConnection` / `useYjsState`
+  / `useAwareness` / `useCollaborators` / `useCollaboratorPresence` /
+  `useDocumentChanges`, and their types) from the package root. The editor
+  surface drags `@tiptap/*`, `yjs`, and `@hocuspocus/provider` type chains
+  into the root entrypoint — specialized collaboration tooling, not generic
+  primitives, and not paid for by consumers who don't use them.
+- The `@tangle-network/sandbox-ui/editor` subpath is unchanged and is the
+  canonical entrypoint for editor consumers.
+- Migration:
+
+  ```diff
+  - import { TiptapEditor } from "@tangle-network/sandbox-ui";
+  + import { TiptapEditor } from "@tangle-network/sandbox-ui/editor";
+  ```
+
+  `sed` recipe across a consumer tree:
+
+  ```bash
+  grep -rl '"@tangle-network/sandbox-ui"' src/ \
+    | xargs sed -i '' -E \
+        '/Tiptap|Editor|Collaborat|useYjs|useAwareness|DocumentEditor|ConnectionState/s|"@tangle-network/sandbox-ui"|"@tangle-network/sandbox-ui/editor"|g'
+  ```
+
+- No internal consumer in the tangle-ai monorepo is affected — verified that
+  no file imports from the `@tangle-network/sandbox-ui` root barrel for any
+  editor symbol.
+
 ## 0.15.4
 
 ### Breaking — `ModelPicker`

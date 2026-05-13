@@ -268,4 +268,27 @@ describe("SandboxTable", () => {
     fireEvent.keyDown(row, { key: " " })
     expect(onResume).toHaveBeenCalledTimes(2)
   })
+
+  it.each(["Enter", " "])(
+    "does not fire onResume when %s is pressed on a child action button inside the row",
+    (key) => {
+      // The row's onKeyDown handler calls preventDefault on Enter/Space
+      // to take over keyboard activation. Without a target guard the
+      // bubbled keydown from a focused child button (e.g. Delete) would
+      // ALSO hit that branch — preventDefault would suppress the
+      // button's native activation and the row would fire onResume
+      // instead. A keyboard user trying to delete would see a resume.
+      const onResume = vi.fn()
+      const onDelete = vi.fn()
+      render(
+        <SandboxTable
+          sandboxes={[makeSandbox({ status: "stopped" })]}
+          onResume={onResume}
+          onDelete={onDelete}
+        />,
+      )
+      fireEvent.keyDown(screen.getByTitle("Delete"), { key })
+      expect(onResume).not.toHaveBeenCalled()
+    },
+  )
 })

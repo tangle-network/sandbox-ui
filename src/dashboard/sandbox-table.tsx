@@ -147,6 +147,15 @@ export function SandboxTable({
                     onKeyDown={
                       onRowClick
                         ? (e) => {
+                            // Only respond to keystrokes targeted at the
+                            // row itself. Without this guard, pressing
+                            // Enter on a focused child button (Delete,
+                            // IDE, etc.) bubbles up here — and
+                            // preventDefault on that bubbled event
+                            // would also suppress the button's native
+                            // activation, swapping a delete for a
+                            // resume.
+                            if (e.target !== e.currentTarget) return
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault()
                               onRowClick()

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.17.0
+## 0.16.1
 
 ### `SandboxTable` — surface a resume path for non-running rows
 

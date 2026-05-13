@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.17.0
+
+### `SandboxTable` — surface a resume path for non-running rows
+
+- The table now renders a dedicated Resume / "Wake Up" button for every
+  non-running, non-transitioning row (`stopped`, `failed`, `hibernating`,
+  `archived`). Previously only `hibernating` rows got a Wake action, so a
+  sandbox auto-stopped by an idle timer had no visible affordance to
+  start it again from the dashboard list.
+- The `<tr>` body is now a keyboard-accessible button when there is a
+  primary action to take. Running rows route the click to `onOpenIDE`;
+  resumable rows route it to `onResume`. Action buttons stop event
+  propagation so clicking the trash icon never doubles as a resume.
+- Adds `onResume?: (id: string) => void` prop. `onWake` is kept for
+  back-compat: when `onResume` is absent, a hibernating row still wires
+  up its button to `onWake`. Non-hibernating statuses do **not** fall
+  back to `onWake` — they were never part of `onWake`'s contract, so
+  callers opt in to the new behavior by passing `onResume`.
+
 ## 0.16.0
 
 ### Breaking — root barrel narrows

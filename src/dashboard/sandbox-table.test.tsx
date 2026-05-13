@@ -197,6 +197,19 @@ describe("SandboxTable", () => {
 
   // --- Row-level click handling ---
 
+  // The row's onClick is a sighted-user convenience. It deliberately
+  // does not surface in the a11y tree (no role="button", no tabIndex,
+  // no aria-label) — keyboard and screen-reader users reach the same
+  // actions through the explicit Resume / Open IDE / Delete <button>
+  // elements inside the actions cell. These tests therefore use
+  // closest("tr") to grab the row by its content rather than by role.
+
+  function rowFor(name: string): HTMLTableRowElement {
+    const row = screen.getByText(name).closest("tr")
+    if (!row) throw new Error(`No <tr> ancestor for "${name}"`)
+    return row
+  }
+
   it("invokes onOpenIDE when the row body of a running sandbox is clicked", () => {
     const onOpenIDE = vi.fn()
     render(
@@ -205,7 +218,7 @@ describe("SandboxTable", () => {
         onOpenIDE={onOpenIDE}
       />,
     )
-    fireEvent.click(screen.getByRole("button", { name: /Open My Sandbox/ }))
+    fireEvent.click(rowFor("My Sandbox"))
     expect(onOpenIDE).toHaveBeenCalledWith("sb-1")
   })
 
@@ -217,7 +230,7 @@ describe("SandboxTable", () => {
         onResume={onResume}
       />,
     )
-    fireEvent.click(screen.getByRole("button", { name: /Resume My Sandbox/ }))
+    fireEvent.click(rowFor("My Sandbox"))
     expect(onResume).toHaveBeenCalledWith("sb-1")
   })
 
@@ -225,14 +238,18 @@ describe("SandboxTable", () => {
     // Stacking a second start on top of an in-flight provision would
     // either 409 or race the orchestrator — better to leave the row
     // inert and let the status indicator do its job.
+    const onResume = vi.fn()
+    const onOpenIDE = vi.fn()
     render(
       <SandboxTable
         sandboxes={[makeSandbox({ status: "provisioning" })]}
-        onResume={vi.fn()}
-        onOpenIDE={vi.fn()}
+        onResume={onResume}
+        onOpenIDE={onOpenIDE}
       />,
     )
-    expect(screen.queryByRole("button", { name: /My Sandbox/ })).not.toBeInTheDocument()
+    fireEvent.click(rowFor("My Sandbox"))
+    expect(onResume).not.toHaveBeenCalled()
+    expect(onOpenIDE).not.toHaveBeenCalled()
   })
 
   it("stops row-click propagation from action buttons", () => {
@@ -254,41 +271,21 @@ describe("SandboxTable", () => {
     expect(onResume).not.toHaveBeenCalled()
   })
 
-  it("supports keyboard activation of a clickable row", () => {
-    const onResume = vi.fn()
+  it("does not override the <tr> row role with button on clickable rows", () => {
+    // Regression guard for the a11y review (P3): setting
+    // role="button" on a <tr> would collapse per-cell announcements
+    // for screen-reader users. We rely on the explicit Resume / IDE /
+    // Delete buttons for assistive-tech access and keep the row's
+    // implicit row role intact.
     render(
       <SandboxTable
         sandboxes={[makeSandbox({ status: "stopped" })]}
-        onResume={onResume}
+        onResume={vi.fn()}
       />,
     )
-    const row = screen.getByRole("button", { name: /Resume My Sandbox/ })
-    fireEvent.keyDown(row, { key: "Enter" })
-    expect(onResume).toHaveBeenCalledWith("sb-1")
-    fireEvent.keyDown(row, { key: " " })
-    expect(onResume).toHaveBeenCalledTimes(2)
+    const row = rowFor("My Sandbox")
+    expect(row).not.toHaveAttribute("role", "button")
+    expect(row).not.toHaveAttribute("tabindex")
+    expect(row).not.toHaveAttribute("aria-label")
   })
-
-  it.each(["Enter", " "])(
-    "does not fire onResume when %s is pressed on a child action button inside the row",
-    (key) => {
-      // The row's onKeyDown handler calls preventDefault on Enter/Space
-      // to take over keyboard activation. Without a target guard the
-      // bubbled keydown from a focused child button (e.g. Delete) would
-      // ALSO hit that branch — preventDefault would suppress the
-      // button's native activation and the row would fire onResume
-      // instead. A keyboard user trying to delete would see a resume.
-      const onResume = vi.fn()
-      const onDelete = vi.fn()
-      render(
-        <SandboxTable
-          sandboxes={[makeSandbox({ status: "stopped" })]}
-          onResume={onResume}
-          onDelete={onDelete}
-        />,
-      )
-      fireEvent.keyDown(screen.getByTitle("Delete"), { key })
-      expect(onResume).not.toHaveBeenCalled()
-    },
-  )
 })

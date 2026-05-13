@@ -137,6 +137,18 @@ export function SandboxTable({
                 // resuming a sandbox the user is trying to delete.
                 const stopRowClick = (e: React.MouseEvent) => e.stopPropagation()
                 return (
+                  // onClick is a sighted-user convenience only. We
+                  // deliberately do NOT add role="button" / tabIndex /
+                  // an onKeyDown handler to the row — overriding a
+                  // <tr>'s implicit row role with "button" collapses
+                  // the per-cell announcements (Status, Environment,
+                  // Resources…) that screen-reader users navigate
+                  // through. Keyboard and assistive-tech users reach
+                  // the same actions through the real <button>
+                  // elements inside the actions cell (Resume, Open
+                  // IDE, Delete, …), which keep their native
+                  // semantics. Mouse users get the click-anywhere
+                  // affordance; nobody loses access.
                   <tr
                     key={sb.id}
                     className={cn(
@@ -144,34 +156,6 @@ export function SandboxTable({
                       onRowClick ? "cursor-pointer hover:bg-muted/50" : "hover:bg-muted/30",
                     )}
                     onClick={onRowClick}
-                    onKeyDown={
-                      onRowClick
-                        ? (e) => {
-                            // Only respond to keystrokes targeted at the
-                            // row itself. Without this guard, pressing
-                            // Enter on a focused child button (Delete,
-                            // IDE, etc.) bubbles up here — and
-                            // preventDefault on that bubbled event
-                            // would also suppress the button's native
-                            // activation, swapping a delete for a
-                            // resume.
-                            if (e.target !== e.currentTarget) return
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault()
-                              onRowClick()
-                            }
-                          }
-                        : undefined
-                    }
-                    tabIndex={onRowClick ? 0 : undefined}
-                    role={onRowClick ? "button" : undefined}
-                    aria-label={
-                      onRowClick
-                        ? isActive
-                          ? `Open ${sb.name}`
-                          : `${resumeLabel} ${sb.name}`
-                        : undefined
-                    }
                   >
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">

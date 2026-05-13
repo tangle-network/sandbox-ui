@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight, Users, User } from "lucide-react"
+import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight, Users, User, Play } from "lucide-react"
 import { cn } from "../lib/utils"
 import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
 
@@ -14,6 +14,22 @@ export interface SandboxTableProps {
   onOpenIDE?: (id: string) => void
   onOpenTerminal?: (id: string) => void
   onSSH?: (id: string) => void
+  /**
+   * Resume a stopped / failed / archived sandbox, or wake a hibernating
+   * one. Surfaces an explicit "Resume" (or "Wake Up" for `hibernating`)
+   * button in the actions cell and makes the row body clickable for any
+   * status this prop covers. Preferred over `onWake` for new code — the
+   * two are kept as separate props only so existing consumers that
+   * wired up `onWake` for hibernating continue to work.
+   */
+  onResume?: (id: string) => void
+  /**
+   * @deprecated Use `onResume` instead. Retained for back-compat:
+   * when `onResume` is not provided but `onWake` is, hibernating rows
+   * will still surface a Wake action. New consumers should pass
+   * `onResume` so stopped / failed / archived rows also get a start
+   * affordance.
+   */
   onWake?: (id: string) => void
   onMore?: (id: string) => void
   onDelete?: (id: string) => void
@@ -28,6 +44,15 @@ const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: stri
   stopped: { dot: "bg-muted-foreground", text: "text-foreground", bar: "bg-muted-foreground" },
   failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--code-error)]", bar: "bg-[var(--code-error)]" },
   archived: { dot: "bg-border", text: "text-muted-foreground", bar: "bg-border" },
+}
+
+// A row is "resumable" when there's a meaningful start-it action a user
+// can take. `running` is already up; `provisioning` / `creating` are
+// mid-transition and clicking a start there would either 409 or stack
+// requests. Every other status (stopped, failed, hibernating, archived)
+// goes through the same `/resume` API endpoint downstream.
+function isResumable(status: SandboxStatus): boolean {
+  return status !== "running" && status !== "provisioning" && status !== "creating"
 }
 
 function MiniMeter({ label, percent, className }: { label: string; percent: number; className?: string }) {
@@ -53,6 +78,7 @@ export function SandboxTable({
   onOpenIDE,
   onOpenTerminal,
   onSSH,
+  onResume,
   onWake,
   onMore,
   onDelete,
@@ -61,6 +87,25 @@ export function SandboxTable({
   const totalCount = total ?? sandboxes.length
   const totalPages = Math.ceil(totalCount / pageSize)
   const hasTeamSandboxes = sandboxes.some((sb) => sb.team !== undefined)
+
+  // Hibernating is the one status that historically wired up to `onWake`.
+  // For that status we fall back to `onWake` when `onResume` is absent,
+  // so the v0.16 -> v0.17 upgrade is non-breaking for consumers that
+  // only passed `onWake`.
+  const resolveResumeHandler = (status: SandboxStatus): ((id: string) => void) | undefined => {
+    if (onResume) return onResume
+    if (status === "hibernating") return onWake
+    return undefined
+  }
+
+  const resolveRowClick = (sb: SandboxCardData): (() => void) | undefined => {
+    if (sb.status === "running") {
+      return onOpenIDE ? () => onOpenIDE(sb.id) : undefined
+    }
+    if (!isResumable(sb.status)) return undefined
+    const handler = resolveResumeHandler(sb.status)
+    return handler ? () => handler(sb.id) : undefined
+  }
 
   return (
     <div className={cn("w-full", className)}>
@@ -83,8 +128,35 @@ export function SandboxTable({
                 const isActive = sb.status === "running"
                 const isHibernating = sb.status === "hibernating"
                 const isProvisioning = sb.status === "provisioning"
+                const resumeHandler = isResumable(sb.status) ? resolveResumeHandler(sb.status) : undefined
+                const onRowClick = resolveRowClick(sb)
+                const resumeLabel = isHibernating ? "Wake Up" : "Resume"
+                // Action buttons sit inside the clickable row. Without
+                // this, a click on the trash icon would bubble up and
+                // also fire the row-click handler — accidentally
+                // resuming a sandbox the user is trying to delete.
+                const stopRowClick = (e: React.MouseEvent) => e.stopPropagation()
                 return (
-                  <tr key={sb.id} className="hover:bg-muted/50 transition-colors group relative">
+                  // onClick is a sighted-user convenience only. We
+                  // deliberately do NOT add role="button" / tabIndex /
+                  // an onKeyDown handler to the row — overriding a
+                  // <tr>'s implicit row role with "button" collapses
+                  // the per-cell announcements (Status, Environment,
+                  // Resources…) that screen-reader users navigate
+                  // through. Keyboard and assistive-tech users reach
+                  // the same actions through the real <button>
+                  // elements inside the actions cell (Resume, Open
+                  // IDE, Delete, …), which keep their native
+                  // semantics. Mouse users get the click-anywhere
+                  // affordance; nobody loses access.
+                  <tr
+                    key={sb.id}
+                    className={cn(
+                      "group relative transition-colors",
+                      onRowClick ? "cursor-pointer hover:bg-muted/50" : "hover:bg-muted/30",
+                    )}
+                    onClick={onRowClick}
+                  >
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <span className={cn("flex h-2.5 w-2.5 rounded-full", sc.dot)} />
@@ -155,29 +227,35 @@ export function SandboxTable({
                       <div className="flex items-center justify-end gap-1">
                         {isActive && (
                           <>
-                            <button type="button" onClick={() => onOpenIDE?.(sb.id)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Open IDE">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenIDE?.(sb.id) }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Open IDE">
                               <Code2 className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={() => onOpenTerminal?.(sb.id)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Terminal">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenTerminal?.(sb.id) }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Terminal">
                               <Terminal className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={() => onSSH?.(sb.id)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="SSH">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onSSH?.(sb.id) }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="SSH">
                               <Key className="h-4 w-4" />
                             </button>
                           </>
                         )}
-                        {isHibernating && (
-                          <button type="button" onClick={() => onWake?.(sb.id)} className="px-3 py-1.5 rounded-lg border border-border text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all">
-                            Wake Up
+                        {resumeHandler && (
+                          <button
+                            type="button"
+                            onClick={(e) => { stopRowClick(e); resumeHandler(sb.id) }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all"
+                            title={resumeLabel}
+                          >
+                            <Play className="h-3 w-3" />
+                            {resumeLabel}
                           </button>
                         )}
                         {onMore && (
-                          <button type="button" onClick={() => onMore(sb.id)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90">
+                          <button type="button" onClick={(e) => { stopRowClick(e); onMore(sb.id) }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90">
                             <Code2 className="h-4 w-4" />
                           </button>
                         )}
                         {onDelete && canAdminSandbox(sb) && (
-                          <button type="button" onClick={() => onDelete(sb.id)} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
+                          <button type="button" onClick={(e) => { stopRowClick(e); onDelete(sb.id) }} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}

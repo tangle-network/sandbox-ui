@@ -290,20 +290,7 @@ describe("SandboxTable", () => {
     expect(row).not.toHaveAttribute("aria-label")
   })
 
-  // --- Overflow menu (issue #1190 / sandbox-ui#0.16.2) ---
-
-  // The legacy `onMore` button shared its `Code2` icon with the IDE
-  // quick-action, so a running row rendered two visually identical
-  // buttons that did the same thing. The fix swaps that button for a
-  // `MoreVertical` dropdown trigger and lifts the missing lifecycle/
-  // observability actions out of `SandboxCard` so the two views expose
-  // an identical action set. These tests assert that exposure.
-
-  it("renders exactly one IDE quick-action button on running rows (no duplicate Code2)", () => {
-    // Regression guard for #1190: previously, passing onMore on a
-    // running row drew a second Code2 icon next to the Open IDE
-    // button. The overflow trigger is now a MoreVertical icon, and
-    // onMore lives inside the dropdown menu.
+  it("renders a single IDE quick-action button on running rows", () => {
     render(
       <SandboxTable
         sandboxes={[makeSandbox({ status: "running" })]}
@@ -315,14 +302,10 @@ describe("SandboxTable", () => {
       />,
     )
     expect(screen.getAllByTitle("Open IDE")).toHaveLength(1)
-    // The overflow trigger is rendered, but uses a distinct icon and
-    // title so it is no longer mistaken for the IDE button.
     expect(screen.getByTitle("More actions")).toBeInTheDocument()
   })
 
-  it("does not render the overflow trigger when no overflow callbacks are passed", () => {
-    // Empty menus would be a worse experience than no menu at all.
-    // The trigger only appears when at least one item would render.
+  it("hides the overflow trigger when no overflow callbacks are passed", () => {
     render(
       <SandboxTable
         sandboxes={[makeSandbox({ status: "running" })]}
@@ -332,10 +315,9 @@ describe("SandboxTable", () => {
     expect(screen.queryByTitle("More actions")).not.toBeInTheDocument()
   })
 
-  it("does not render the overflow trigger for provisioning rows without onMore", () => {
-    // Provisioning rows have no lifecycle / fork affordance — Stop /
-    // KeepAlive / Fork are all gated to `isActive`. Without onMore the
-    // menu would be empty.
+  it("hides the overflow trigger on provisioning rows without onMore", () => {
+    // Provisioning gates out every other overflow callback, so the
+    // menu would be empty without onMore.
     render(
       <SandboxTable
         sandboxes={[makeSandbox({ status: "provisioning" })]}
@@ -349,9 +331,7 @@ describe("SandboxTable", () => {
     expect(screen.queryByTitle("More actions")).not.toBeInTheDocument()
   })
 
-  it("renders Stop / Keep Alive / Usage / Health / Fork / View Details for running rows", async () => {
-    // Mirrors `SandboxCard`'s running-state dropdown so the user gets
-    // the same action set regardless of which view they're in.
+  it("exposes the full action set on running rows", async () => {
     const user = userEvent.setup()
     const handlers = {
       onStop: vi.fn(),
@@ -397,10 +377,7 @@ describe("SandboxTable", () => {
     expect(handler).toHaveBeenCalledWith("sb-1")
   })
 
-  it("limits resumable rows to Fork and View Details in the overflow menu", async () => {
-    // Stop / KeepAlive / Usage / Health are running-only — exposing
-    // them on a stopped row would either 4xx or fire on a sandbox the
-    // user can't currently interact with.
+  it("limits resumable rows to Fork and View Details", async () => {
     const user = userEvent.setup()
     render(
       <SandboxTable
@@ -423,7 +400,7 @@ describe("SandboxTable", () => {
     expect(screen.queryByText("Health Check")).not.toBeInTheDocument()
   })
 
-  it("limits transitioning rows to View Details in the overflow menu", async () => {
+  it("limits transitioning rows to View Details", async () => {
     const user = userEvent.setup()
     render(
       <SandboxTable
@@ -437,10 +414,7 @@ describe("SandboxTable", () => {
     expect(screen.queryByText("Fork Sandbox")).not.toBeInTheDocument()
   })
 
-  it("does not fire the row's onResume when the overflow trigger is clicked", async () => {
-    // The trigger sits inside the clickable row. Without
-    // stopPropagation, opening the menu would also fire the row-click
-    // resume action.
+  it("does not bubble the trigger click to the row", async () => {
     const user = userEvent.setup()
     const onResume = vi.fn()
     render(
@@ -454,11 +428,7 @@ describe("SandboxTable", () => {
     expect(onResume).not.toHaveBeenCalled()
   })
 
-  it("does not fire the row's onResume when a menu item is clicked", async () => {
-    // The dropdown content renders through a portal but React's
-    // synthetic events still bubble up the React tree — without
-    // stopPropagation on the item, clicking "Fork Sandbox" inside the
-    // menu would also fire the row's onResume.
+  it("does not bubble a menu item click to the row's resume handler", async () => {
     const user = userEvent.setup()
     const onResume = vi.fn()
     const onFork = vi.fn()
@@ -475,7 +445,7 @@ describe("SandboxTable", () => {
     expect(onResume).not.toHaveBeenCalled()
   })
 
-  it("does not fire the row's onOpenIDE when a menu item is clicked on running rows", async () => {
+  it("does not bubble a menu item click to the row's IDE handler", async () => {
     const user = userEvent.setup()
     const onOpenIDE = vi.fn()
     const onStop = vi.fn()

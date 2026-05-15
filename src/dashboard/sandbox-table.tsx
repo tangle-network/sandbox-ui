@@ -56,36 +56,13 @@ export interface SandboxTableProps {
    * affordance.
    */
   onWake?: (id: string) => void
-  /**
-   * Surfaces a "View Details" entry in the row's overflow menu. The
-   * row already has a click-anywhere navigation affordance, but the
-   * menu item gives keyboard / screen-reader users an explicit route
-   * to the sandbox detail page that does not depend on the row click.
-   */
   onMore?: (id: string) => void
-  /**
-   * Renders the trash quick-action icon in the row. The caller is
-   * expected to surface a confirmation step before invoking the
-   * destructive API — the table fires `onDelete(id)` on the user's
-   * first click without any built-in confirmation.
-   */
+  /** Fired on the user's first click; the caller owns the confirmation step. */
   onDelete?: (id: string) => void
-  /**
-   * Adds a "Stop Sandbox" item to the overflow menu on running rows.
-   * Mirrors the same prop on `SandboxCard` so the two views expose an
-   * identical action set.
-   */
   onStop?: (id: string) => void
-  /** Adds a "Keep Alive" item to the overflow menu on running rows. */
   onKeepAlive?: (id: string) => void
-  /** Adds a "View Usage" item to the overflow menu on running rows. */
   onUsage?: (id: string) => void
-  /** Adds a "Health Check" item to the overflow menu on running rows. */
   onHealth?: (id: string) => void
-  /**
-   * Adds a "Fork Sandbox" item to the overflow menu on running and
-   * resumable rows.
-   */
   onFork?: (id: string) => void
   className?: string
 }
@@ -309,12 +286,8 @@ export function SandboxTable({
                           </button>
                         )}
                         {(() => {
-                          // Radix DropdownMenu renders content in a portal, but
-                          // React's synthetic events still bubble through the
-                          // React tree. Without stopPropagation on each item,
-                          // clicking a menu entry would also fire the row's
-                          // onClick (onOpenIDE for running rows, onResume for
-                          // resumable rows). We wrap every handler here.
+                          // Portaled menu items still bubble through React's
+                          // synthetic event tree to the row's onClick.
                           const runItem = (handler: (id: string) => void) => (e: React.MouseEvent) => {
                             e.stopPropagation()
                             handler(sb.id)

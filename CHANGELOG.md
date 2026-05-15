@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.16.2
+
+### `SandboxTable` — action parity with `SandboxCard`
+
+- The row's overflow button is now a real dropdown menu. Previously it
+  was a plain click handler drawn with the `Code2` icon, which made it
+  visually indistinguishable from the IDE quick-action button next to
+  it (consumer-side bug, tangle-network/agent-dev-container#1190). The
+  trigger now uses `MoreVertical`, opens a `DropdownMenu`, and exposes
+  the same action set the cards view already had.
+- Adds five new optional props mirroring `SandboxCard`: `onStop`,
+  `onKeepAlive`, `onUsage`, `onHealth`, `onFork`. On running rows the
+  menu renders Stop / Keep Alive → ─── → View Usage / Health Check
+  → ─── → Fork → ─── → View Details. On resumable rows
+  (`stopped`/`failed`/`hibernating`/`archived`) it renders Fork →
+  ─── → View Details. On transitioning rows (`provisioning`/`creating`)
+  it renders View Details only. Each item is gated on its callback
+  being passed, and the trigger itself is hidden when no item would
+  render.
+- `onMore` is preserved as the "View Details" item inside the menu, so
+  consumers that already pass it (e.g. for navigating to the sandbox
+  detail page) keep working without any code change — the click just
+  comes from a menu item instead of the (visually-broken) icon button.
+- Quick-action icons (IDE / Terminal / SSH on running rows, the
+  Resume / Wake Up pill on resumable rows) are unchanged.
+- The Delete trash icon is unchanged. The component fires `onDelete`
+  on the user's first click; consumers remain responsible for
+  surfacing a confirmation step before invoking the destructive API.
+- This is an additive change. No props were removed, renamed, or had
+  their types narrowed.
+
 ## 0.16.1
 
 ### `SandboxTable` — surface a resume path for non-running rows

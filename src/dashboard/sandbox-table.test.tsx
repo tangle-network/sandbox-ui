@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { fireEvent, render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { SandboxTable } from "./sandbox-table"
 import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
 
@@ -287,5 +288,177 @@ describe("SandboxTable", () => {
     expect(row).not.toHaveAttribute("role", "button")
     expect(row).not.toHaveAttribute("tabindex")
     expect(row).not.toHaveAttribute("aria-label")
+  })
+
+  it("renders a single IDE quick-action button on running rows", () => {
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "running" })]}
+        onOpenIDE={vi.fn()}
+        onOpenTerminal={vi.fn()}
+        onSSH={vi.fn()}
+        onMore={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    )
+    expect(screen.getAllByTitle("Open IDE")).toHaveLength(1)
+    expect(screen.getByTitle("More actions")).toBeInTheDocument()
+  })
+
+  it("hides the overflow trigger when no overflow callbacks are passed", () => {
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "running" })]}
+        onOpenIDE={vi.fn()}
+      />,
+    )
+    expect(screen.queryByTitle("More actions")).not.toBeInTheDocument()
+  })
+
+  it("hides the overflow trigger on provisioning rows without onMore", () => {
+    // Provisioning gates out every other overflow callback, so the
+    // menu would be empty without onMore.
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "provisioning" })]}
+        onStop={vi.fn()}
+        onKeepAlive={vi.fn()}
+        onFork={vi.fn()}
+        onUsage={vi.fn()}
+        onHealth={vi.fn()}
+      />,
+    )
+    expect(screen.queryByTitle("More actions")).not.toBeInTheDocument()
+  })
+
+  it("exposes the full action set on running rows", async () => {
+    const user = userEvent.setup()
+    const handlers = {
+      onStop: vi.fn(),
+      onKeepAlive: vi.fn(),
+      onUsage: vi.fn(),
+      onHealth: vi.fn(),
+      onFork: vi.fn(),
+      onMore: vi.fn(),
+    }
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "running" })]}
+        {...handlers}
+      />,
+    )
+    await user.click(screen.getByTitle("More actions"))
+    expect(await screen.findByText("Stop Sandbox")).toBeInTheDocument()
+    expect(screen.getByText("Keep Alive")).toBeInTheDocument()
+    expect(screen.getByText("View Usage")).toBeInTheDocument()
+    expect(screen.getByText("Health Check")).toBeInTheDocument()
+    expect(screen.getByText("Fork Sandbox")).toBeInTheDocument()
+    expect(screen.getByText("View Details")).toBeInTheDocument()
+  })
+
+  it.each([
+    { item: "Stop Sandbox", prop: "onStop" as const },
+    { item: "Keep Alive", prop: "onKeepAlive" as const },
+    { item: "View Usage", prop: "onUsage" as const },
+    { item: "Health Check", prop: "onHealth" as const },
+    { item: "Fork Sandbox", prop: "onFork" as const },
+    { item: "View Details", prop: "onMore" as const },
+  ])("fires $prop with the row id when $item is clicked", async ({ item, prop }) => {
+    const user = userEvent.setup()
+    const handler = vi.fn()
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "running" })]}
+        {...{ [prop]: handler }}
+      />,
+    )
+    await user.click(screen.getByTitle("More actions"))
+    await user.click(await screen.findByText(item))
+    expect(handler).toHaveBeenCalledWith("sb-1")
+  })
+
+  it("limits resumable rows to Fork and View Details", async () => {
+    const user = userEvent.setup()
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "stopped" })]}
+        onResume={vi.fn()}
+        onStop={vi.fn()}
+        onKeepAlive={vi.fn()}
+        onUsage={vi.fn()}
+        onHealth={vi.fn()}
+        onFork={vi.fn()}
+        onMore={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByTitle("More actions"))
+    expect(await screen.findByText("Fork Sandbox")).toBeInTheDocument()
+    expect(screen.getByText("View Details")).toBeInTheDocument()
+    expect(screen.queryByText("Stop Sandbox")).not.toBeInTheDocument()
+    expect(screen.queryByText("Keep Alive")).not.toBeInTheDocument()
+    expect(screen.queryByText("View Usage")).not.toBeInTheDocument()
+    expect(screen.queryByText("Health Check")).not.toBeInTheDocument()
+  })
+
+  it("limits transitioning rows to View Details", async () => {
+    const user = userEvent.setup()
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "provisioning" })]}
+        onFork={vi.fn()}
+        onMore={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByTitle("More actions"))
+    expect(await screen.findByText("View Details")).toBeInTheDocument()
+    expect(screen.queryByText("Fork Sandbox")).not.toBeInTheDocument()
+  })
+
+  it("does not bubble the trigger click to the row", async () => {
+    const user = userEvent.setup()
+    const onResume = vi.fn()
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "stopped" })]}
+        onResume={onResume}
+        onFork={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByTitle("More actions"))
+    expect(onResume).not.toHaveBeenCalled()
+  })
+
+  it("does not bubble a menu item click to the row's resume handler", async () => {
+    const user = userEvent.setup()
+    const onResume = vi.fn()
+    const onFork = vi.fn()
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "stopped" })]}
+        onResume={onResume}
+        onFork={onFork}
+      />,
+    )
+    await user.click(screen.getByTitle("More actions"))
+    await user.click(await screen.findByText("Fork Sandbox"))
+    expect(onFork).toHaveBeenCalledWith("sb-1")
+    expect(onResume).not.toHaveBeenCalled()
+  })
+
+  it("does not bubble a menu item click to the row's IDE handler", async () => {
+    const user = userEvent.setup()
+    const onOpenIDE = vi.fn()
+    const onStop = vi.fn()
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ status: "running" })]}
+        onOpenIDE={onOpenIDE}
+        onStop={onStop}
+      />,
+    )
+    await user.click(screen.getByTitle("More actions"))
+    await user.click(await screen.findByText("Stop Sandbox"))
+    expect(onStop).toHaveBeenCalledWith("sb-1")
+    expect(onOpenIDE).not.toHaveBeenCalled()
   })
 })

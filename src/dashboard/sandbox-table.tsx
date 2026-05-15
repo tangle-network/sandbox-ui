@@ -1,7 +1,32 @@
 "use client"
 
 import * as React from "react"
-import { Terminal, Code2, Key, Trash2, RefreshCw, ChevronLeft, ChevronRight, Users, User, Play } from "lucide-react"
+import {
+  Activity,
+  BarChart2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Code2,
+  Copy,
+  ExternalLink,
+  Key,
+  MoreVertical,
+  Play,
+  PowerOff,
+  RefreshCw,
+  Terminal,
+  Trash2,
+  User,
+  Users,
+} from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
 
@@ -32,7 +57,13 @@ export interface SandboxTableProps {
    */
   onWake?: (id: string) => void
   onMore?: (id: string) => void
+  /** Fired on the user's first click; the caller owns the confirmation step. */
   onDelete?: (id: string) => void
+  onStop?: (id: string) => void
+  onKeepAlive?: (id: string) => void
+  onUsage?: (id: string) => void
+  onHealth?: (id: string) => void
+  onFork?: (id: string) => void
   className?: string
 }
 
@@ -82,6 +113,11 @@ export function SandboxTable({
   onWake,
   onMore,
   onDelete,
+  onStop,
+  onKeepAlive,
+  onUsage,
+  onHealth,
+  onFork,
   className,
 }: SandboxTableProps) {
   const totalCount = total ?? sandboxes.length
@@ -249,11 +285,84 @@ export function SandboxTable({
                             {resumeLabel}
                           </button>
                         )}
-                        {onMore && (
-                          <button type="button" onClick={(e) => { stopRowClick(e); onMore(sb.id) }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90">
-                            <Code2 className="h-4 w-4" />
-                          </button>
-                        )}
+                        {(() => {
+                          // Portaled menu items still bubble through React's
+                          // synthetic event tree to the row's onClick.
+                          const runItem = (handler: (id: string) => void) => (e: React.MouseEvent) => {
+                            e.stopPropagation()
+                            handler(sb.id)
+                          }
+                          const overflowSections: React.ReactNode[][] = []
+                          if (isActive) {
+                            const lifecycle: React.ReactNode[] = []
+                            if (onStop) lifecycle.push(
+                              <DropdownMenuItem key="stop" onClick={runItem(onStop)}>
+                                <PowerOff className="mr-2 h-4 w-4" /> Stop Sandbox
+                              </DropdownMenuItem>,
+                            )
+                            if (onKeepAlive) lifecycle.push(
+                              <DropdownMenuItem key="keep-alive" onClick={runItem(onKeepAlive)}>
+                                <Clock className="mr-2 h-4 w-4" /> Keep Alive
+                              </DropdownMenuItem>,
+                            )
+                            if (lifecycle.length) overflowSections.push(lifecycle)
+
+                            const observability: React.ReactNode[] = []
+                            if (onUsage) observability.push(
+                              <DropdownMenuItem key="usage" onClick={runItem(onUsage)}>
+                                <BarChart2 className="mr-2 h-4 w-4" /> View Usage
+                              </DropdownMenuItem>,
+                            )
+                            if (onHealth) observability.push(
+                              <DropdownMenuItem key="health" onClick={runItem(onHealth)}>
+                                <Activity className="mr-2 h-4 w-4" /> Health Check
+                              </DropdownMenuItem>,
+                            )
+                            if (observability.length) overflowSections.push(observability)
+
+                            if (onFork) overflowSections.push([
+                              <DropdownMenuItem key="fork" onClick={runItem(onFork)}>
+                                <Copy className="mr-2 h-4 w-4" /> Fork Sandbox
+                              </DropdownMenuItem>,
+                            ])
+                          } else if (isResumable(sb.status)) {
+                            if (onFork) overflowSections.push([
+                              <DropdownMenuItem key="fork" onClick={runItem(onFork)}>
+                                <Copy className="mr-2 h-4 w-4" /> Fork Sandbox
+                              </DropdownMenuItem>,
+                            ])
+                          }
+                          if (onMore) overflowSections.push([
+                            <DropdownMenuItem key="view-details" onClick={runItem(onMore)}>
+                              <ExternalLink className="mr-2 h-4 w-4" /> View Details
+                            </DropdownMenuItem>,
+                          ])
+
+                          if (overflowSections.length === 0) return null
+                          return (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={stopRowClick}
+                                  className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90 outline-none"
+                                  aria-label="More actions"
+                                  title="More actions"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[180px]">
+                                {overflowSections.map((section, sectionIdx) => (
+                                  <React.Fragment key={sectionIdx}>
+                                    {sectionIdx > 0 && <DropdownMenuSeparator />}
+                                    {section}
+                                  </React.Fragment>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )
+                        })()}
                         {onDelete && canAdminSandbox(sb) && (
                           <button type="button" onClick={(e) => { stopRowClick(e); onDelete(sb.id) }} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
                             <Trash2 className="h-4 w-4" />

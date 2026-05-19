@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ModelPicker, canonicalModelId, type ModelInfo } from "../dashboard/model-picker";
+import { Badge, Button, Textarea } from "../primitives";
 
 export interface EnvironmentOption {
   id: string;
@@ -57,6 +58,21 @@ export interface PlanTierInfo {
   cpuMax: number;
   ramMaxGB: number;
   storageMaxGB: number;
+}
+
+export interface SshKeyOption {
+  id: string;
+  name: string;
+  fingerprint: string;
+  keyType: string;
+}
+
+export interface SshAccessConfig {
+  keys?: SshKeyOption[];
+  selectedKeyIds: string[];
+  inlinePublicKeys: string;
+  onSelectedKeyIdsChange: (keyIds: string[]) => void;
+  onInlinePublicKeysChange: (publicKeys: string) => void;
 }
 
 export interface ProvisioningWizardProps {
@@ -107,6 +123,7 @@ export interface ProvisioningWizardProps {
    * persistence (e.g. localStorage, account settings API).
    */
   onSetDefault?: (modelId: string) => void;
+  sshAccess?: SshAccessConfig;
   /** Real pricing rates from the API for accurate cost calculation */
   pricingRates?: PricingRates;
   /**
@@ -411,6 +428,71 @@ function computeHourlyCost(
   };
 }
 
+function SshAccessStep({ config }: { config: SshAccessConfig }) {
+  const keys = config.keys ?? [];
+  const inlineKeyCount = config.inlinePublicKeys
+    .split(/\r?\n/)
+    .map((key) => key.trim())
+    .filter(Boolean).length;
+  const totalKeyCount = config.selectedKeyIds.length + inlineKeyCount;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-medium text-foreground text-sm">SSH Access</p>
+          <p className="mt-1 text-muted-foreground text-xs">
+            Select stored keys or paste public keys for authorized_keys.
+          </p>
+        </div>
+        <Badge variant="outline">
+          {totalKeyCount} key{totalKeyCount === 1 ? "" : "s"}
+        </Badge>
+      </div>
+
+      {keys.length > 0 && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {keys.map((key) => {
+            const selected = config.selectedKeyIds.includes(key.id);
+            return (
+              <Button
+                key={key.id}
+                type="button"
+                variant={selected ? "sandbox" : "outline"}
+                className="h-auto justify-start p-3 text-left"
+                aria-pressed={selected}
+                onClick={() => {
+                  config.onSelectedKeyIdsChange(
+                    selected
+                      ? config.selectedKeyIds.filter((id) => id !== key.id)
+                      : [...config.selectedKeyIds, key.id],
+                  );
+                }}
+              >
+                <span className="min-w-0">
+                  <span className="block font-medium text-foreground">
+                    {key.name}
+                  </span>
+                  <span className="block truncate font-mono text-muted-foreground text-xs">
+                    {key.keyType} · {key.fingerprint}
+                  </span>
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+      )}
+
+      <Textarea
+        className="min-h-24 font-mono text-xs"
+        placeholder="Paste one public key per line"
+        value={config.inlinePublicKeys}
+        onChange={(event) => config.onInlinePublicKeysChange(event.target.value)}
+      />
+    </div>
+  );
+}
+
 export function ProvisioningWizard({
   environments: environmentsProp,
   onLoadEnvironments,
@@ -427,6 +509,7 @@ export function ProvisioningWizard({
   popular,
   defaultModel,
   onSetDefault,
+  sshAccess,
   pricingRates,
   planTiers,
 }: ProvisioningWizardProps) {
@@ -605,8 +688,12 @@ export function ProvisioningWizard({
   }, []);
 
   const isMultistep = variant === "multistep";
+  const stepLabels = sshAccess
+    ? ["Environment", "Resources", "AI Agent", "Access"]
+    : ["Environment", "Resources", "AI Agent"];
+  const finalStep = stepLabels.length;
   const [currentStep, setCurrentStep] = React.useState(
-    skipToReview && dc && isMultistep ? 3 : 1,
+    skipToReview && dc && isMultistep ? finalStep : 1,
   );
 
   const [isDeploying, setIsDeploying] = React.useState(false);
@@ -786,44 +873,49 @@ export function ProvisioningWizard({
         <div className="col-span-12 xl:col-span-8 flex flex-col min-h-0">
           {isMultistep && (
             <div className="flex items-center gap-2 mb-4 bg-card border border-border p-3 rounded-2xl mx-auto max-w-2xl justify-between shrink-0">
-              {[1, 2, 3].map((s) => (
-                <div key={s} className="flex items-center">
-                  <div
-                    className={cn(
-                      "w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200",
-                      currentStep === s
-                        ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-card shadow-sm"
-                        : currentStep > s
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted border border-border text-muted-foreground",
-                    )}
-                  >
-                    {currentStep > s ? <Check className="h-3.5 w-3.5" /> : s}
-                  </div>
-                  <span
-                    className={cn(
-                      "ml-2 sm:ml-3 font-bold text-sm tracking-tight hidden sm:inline transition-colors duration-200",
-                      currentStep === s
-                        ? "text-foreground"
-                        : currentStep > s
-                          ? "text-primary"
-                          : "text-muted-foreground",
-                    )}
-                  >
-                    {s === 1 && "Environment"}
-                    {s === 2 && "Resources"}
-                    {s === 3 && "AI Agent"}
-                  </span>
-                  {s < 3 && (
+              {stepLabels.map((label, index) => {
+                const s = index + 1;
+                return (
+                  <div key={s} className="flex items-center">
                     <div
                       className={cn(
-                        "w-4 sm:w-8 h-0.5 mx-2 sm:mx-4 rounded-full transition-colors duration-300",
-                        currentStep > s ? "bg-primary" : "bg-border",
+                        "w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200",
+                        currentStep === s
+                          ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-card shadow-sm"
+                          : currentStep > s
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted border border-border text-muted-foreground",
                       )}
-                    />
-                  )}
-                </div>
-              ))}
+                    >
+                      {currentStep > s ? (
+                        <Check className="h-3.5 w-3.5" />
+                      ) : (
+                        s
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "ml-2 sm:ml-3 font-bold text-sm tracking-tight hidden sm:inline transition-colors duration-200",
+                        currentStep === s
+                          ? "text-foreground"
+                          : currentStep > s
+                            ? "text-primary"
+                            : "text-muted-foreground",
+                      )}
+                    >
+                      {label}
+                    </span>
+                    {s < finalStep && (
+                      <div
+                        className={cn(
+                          "w-4 sm:w-8 h-0.5 mx-2 sm:mx-4 rounded-full transition-colors duration-300",
+                          currentStep > s ? "bg-primary" : "bg-border",
+                        )}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -1409,6 +1501,22 @@ export function ProvisioningWizard({
                 </section>
               </React.Fragment>
             )}
+
+            {sshAccess && (!isMultistep || currentStep === 4) && (
+              <React.Fragment>
+                <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
+                      <Settings className="h-5 w-5" />
+                    </div>
+                    <h2 className="text-lg font-bold text-foreground tracking-tight">
+                      Access Configuration
+                    </h2>
+                  </div>
+                  <SshAccessStep config={sshAccess} />
+                </section>
+              </React.Fragment>
+            )}
           </div>
         </div>
 
@@ -1521,14 +1629,13 @@ export function ProvisioningWizard({
           <div className="space-y-3">
             {isMultistep ? (
               <>
-                {currentStep < 3 ? (
+                {currentStep < finalStep ? (
                   <button
                     type="button"
                     onClick={() => setCurrentStep((s) => s + 1)}
                     className="w-full relative overflow-hidden h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl hover:brightness-110 transition-all active:scale-[0.98] shadow-md"
                   >
-                    Continue to{" "}
-                    {currentStep === 1 ? "Resources" : "Agent Config"}
+                    Continue to {stepLabels[currentStep]}
                   </button>
                 ) : (
                   <button

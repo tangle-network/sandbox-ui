@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.17.0
+
+### `TangleLoginButton` (auth) + `IntegrationsPanel` / `useIntegrations` (new `./integrations` subpath)
+
+- `auth`: `TangleLoginButton` mirrors the GitHub button — redirects to a
+  consumer-side endpoint (default `/auth/tangle`) that wraps
+  `PlatformAuthClient.authorizeUrl` from
+  `@tangle-network/agent-runtime/platform`. The existing GitHub /
+  AuthHeader / UserMenu re-exports from `@tangle-network/ui/auth` are
+  unchanged.
+- `./integrations` (new subpath):
+  - `IntegrationsPanel` — presentational. Catalog, connections,
+    optional health map, `onConnect` / `onDisconnect` callbacks. One
+    Card per provider; revoked connections fall back to the Connect
+    button rather than masquerading as live; EmptyState handles "no
+    providers" and "cold-load" states.
+  - `useIntegrations({ apiBaseUrl })` — data hook against a thin REST
+    shim the consumer mounts over `PlatformHubClient`: `GET catalog`,
+    `GET connections`, `GET healthchecks`, `POST auth/start`, `DELETE
+    connections/:id`. Healthchecks are best-effort; a 404 there does
+    not fail the panel load. `connect()` redirects via
+    `window.location.href`; `disconnect()` refreshes the connection
+    list.
+  - `types` mirror the platform's `/v1/integrations/*` response so the
+    UI package has zero dependency on the server-side client.
+
 ## 0.16.2
 
 ### `SandboxTable` — action parity with `SandboxCard`

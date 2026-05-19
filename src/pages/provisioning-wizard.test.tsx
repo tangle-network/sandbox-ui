@@ -31,6 +31,67 @@ const TEST_MODELS = [
 ]
 
 describe("ProvisioningWizard — startup scripts integration", () => {
+  it("renders SSH access configuration as a final wizard step", async () => {
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        sshAccess={{
+          keys: [
+            {
+              id: "key-1",
+              name: "Laptop",
+              keyType: "ssh-ed25519",
+              fingerprint: "SHA256:abc",
+            },
+          ],
+          selectedKeyIds: [],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange: vi.fn(),
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    await userEvent.click(screen.getByText("Continue to Resources"))
+    await userEvent.click(screen.getByText("Continue to AI Agent"))
+    await userEvent.click(screen.getByText("Continue to Access"))
+
+    expect(screen.getByText("Access Configuration")).toBeInTheDocument()
+    expect(screen.getByText("SSH Access")).toBeInTheDocument()
+    expect(screen.getByText("Laptop")).toBeInTheDocument()
+  })
+
+  it("starts on SSH access when template review skips to final step", async () => {
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        defaultConfig={{
+          cpuCores: 1,
+          ramGB: 4,
+          storageGB: 30,
+          environment: "node",
+          modelTier: "claude-sonnet",
+          systemPrompt: "",
+          name: "",
+          gitUrl: "",
+          envVars: [],
+          driver: "docker",
+          bare: false,
+        }}
+        skipToReview
+        sshAccess={{
+          selectedKeyIds: [],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange: vi.fn(),
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Access Configuration")).toBeInTheDocument()
+    expect(screen.getByText("SSH Access")).toBeInTheDocument()
+  })
+
   it("loads and renders startup scripts on mount", async () => {
     const scripts = [
       makeScript({ id: "s1", name: "Setup SSH", description: "Configure SSH keys" }),

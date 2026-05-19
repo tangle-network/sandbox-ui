@@ -62,6 +62,10 @@
       "import": "./dist/auth.js",
       "types": "./dist/auth.d.ts"
     },
+    "./integrations": {
+      "import": "./dist/integrations.js",
+      "types": "./dist/integrations.d.ts"
+    },
     "./pages": {
       "import": "./dist/pages.js",
       "types": "./dist/pages.d.ts"

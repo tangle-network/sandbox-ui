@@ -46,7 +46,7 @@ const result = await postcss([
 ]).process(globalsCss, { from })
 
 // Build-output sanity: no URL @imports leak into dist (see validator for why).
-validateBuiltCss(result.css)
+validateBuiltCss(result.css, { requireForwardedUiUtilities: true })
 
 await writeFile(join(distDir, "globals.css"), result.css)
 await writeFile(join(distDir, "styles.css"), result.css)

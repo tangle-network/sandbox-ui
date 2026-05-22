@@ -1,5 +1,13 @@
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g
 const URL_IMPORT = /@import\s+url\s*\([^)]*\)\s*;?/i
+const REQUIRED_FORWARDED_UI_UTILITY_MARKERS = [
+  "h-\\[var\\(--avatar-size\\)\\]",
+  "px-\\[var\\(--chat-message-px\\)\\]",
+  "py-\\[var\\(--chat-message-py\\)\\]",
+  "h-\\[var\\(--indicator-dot-size\\)\\]",
+  "bg-\\[var\\(--brand-glow\\)\\]",
+  "bg-\\[var\\(--code-error\\)\\]\\/14",
+]
 
 /**
  * Validates that a PostCSS-processed stylesheet contains no URL `@import`
@@ -20,7 +28,7 @@ const URL_IMPORT = /@import\s+url\s*\([^)]*\)\s*;?/i
  *
  * Throws a descriptive Error on violation. Returns nothing on success.
  */
-export function validateBuiltCss(css) {
+export function validateBuiltCss(css, options = {}) {
   // Strip block comments so `@import url(...)` text inside a comment
   // cannot trigger a false positive.
   const stripped = css.replace(BLOCK_COMMENT, "")
@@ -30,5 +38,14 @@ export function validateBuiltCss(css) {
     throw new Error(
       `dist/globals.css: URL @import is not allowed in the built output. Found: ${match[0].trim()}. Remove it from src/styles/globals.css — fonts are loaded by the consumer, not this library. See README "Fonts".`,
     )
+  }
+
+  if (options.requireForwardedUiUtilities) {
+    const missing = REQUIRED_FORWARDED_UI_UTILITY_MARKERS.filter((marker) => !css.includes(marker))
+    if (missing.length > 0) {
+      throw new Error(
+        `dist/globals.css: missing forwarded @tangle-network/ui utilities: ${missing.join(", ")}. Ensure src/styles/globals.css scans @tangle-network/ui source files.`,
+      )
+    }
   }
 }

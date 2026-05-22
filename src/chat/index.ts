@@ -13,14 +13,13 @@ export {
   type ChatContainerProps,
   ChatInput,
   type ChatInputProps,
-  ChatMessage,
-  type ChatMessageProps,
   MessageList,
   type MessageListProps,
-  type MessageRole,
   type PendingFile,
   ThinkingIndicator,
   type ThinkingIndicatorProps,
   UserMessage,
   type UserMessageProps,
 } from "@tangle-network/ui/chat";
+
+export { ChatMessage, type ChatMessageProps, type MessageRole } from "./chat-message";

@@ -3,7 +3,6 @@ import { describe, expect, test } from "vitest";
 import { Button as B1 } from "@tangle-network/sandbox-ui/primitives";
 import { Button as B2 } from "@tangle-network/ui/primitives";
 import { ChatMessage as C1 } from "@tangle-network/sandbox-ui/chat";
-import { ChatMessage as C2 } from "@tangle-network/ui/chat";
 import { RunGroup as R1 } from "@tangle-network/sandbox-ui/run";
 import { RunGroup as R2 } from "@tangle-network/ui/run";
 import { OpenUIArtifactRenderer as O1 } from "@tangle-network/sandbox-ui/openui";
@@ -29,7 +28,6 @@ import { CommandPreview as TP2 } from "@tangle-network/ui/tool-previews";
 
 const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
   ["primitives.Button", B1, B2],
-  ["chat.ChatMessage", C1, C2],
   ["run.RunGroup", R1, R2],
   ["openui.OpenUIArtifactRenderer", O1, O2],
   ["files.FileTree", F1, F2],
@@ -44,6 +42,10 @@ const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
 ];
 
 describe("re-export bridge identity", () => {
+  test("chat.ChatMessage is provided by sandbox-ui", () => {
+    expect(C1).toBeDefined();
+  });
+
   for (const [name, fromBridge, fromUi] of cases) {
     test(`${name} forwards to @tangle-network/ui`, () => {
       expect(fromUi).toBeDefined();

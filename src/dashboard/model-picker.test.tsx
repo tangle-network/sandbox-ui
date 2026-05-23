@@ -5,6 +5,7 @@ import {
   canonicalModelId,
   formatPricing,
   formatContext,
+  resolveModelBrandIdentity,
   ModelPicker,
   type ModelInfo,
 } from "./model-picker";
@@ -66,6 +67,63 @@ describe("formatContext", () => {
 
   it("returns null when undefined", () => {
     expect(formatContext(undefined)).toBeNull();
+  });
+});
+
+describe("resolveModelBrandIdentity", () => {
+  it("combines provider and lab when the same company hosts its own model", () => {
+    const identity = resolveModelBrandIdentity({
+      id: "anthropic/claude-sonnet-4-6",
+      name: "Claude Sonnet 4.6",
+      _provider: "anthropic",
+    });
+
+    expect(identity.combined).toBe(true);
+    expect(identity.host.key).toBe("anthropic");
+    expect(identity.lab.key).toBe("anthropic");
+    expect(identity.lab.logoUrl).toMatch(/^data:image\/svg\+xml/);
+  });
+
+  it("keeps host provider and model lab separate for routed models", () => {
+    const identity = resolveModelBrandIdentity({
+      id: "anthropic/claude-sonnet-4-6",
+      name: "Claude Sonnet 4.6",
+      _provider: "openrouter",
+    });
+
+    expect(identity.combined).toBe(false);
+    expect(identity.host.key).toBe("openrouter");
+    expect(identity.lab.key).toBe("anthropic");
+  });
+
+  it("infers video labs behind hosting providers", () => {
+    const identity = resolveModelBrandIdentity({
+      id: "kling/v2.1",
+      name: "Kling 2.1",
+      _provider: "tcloud",
+      architecture: { modality: "text->video" },
+    });
+
+    expect(identity.combined).toBe(false);
+    expect(identity.host.key).toBe("tcloud");
+    expect(identity.lab.key).toBe("kuaishou");
+    expect(identity.host.logo).toBe("tangle");
+    expect(identity.lab.logoUrl).toMatch(/^data:image\/svg\+xml/);
+  });
+
+  it("carries explicit logo URLs for products with real brand assets", () => {
+    const identity = resolveModelBrandIdentity({
+      id: "anthropic/claude-sonnet-4-6",
+      name: "Claude Sonnet 4.6",
+      _provider: "openrouter",
+      logos: {
+        hostUrl: "/logos/openrouter.svg",
+        labUrl: "/logos/anthropic.svg",
+      },
+    });
+
+    expect(identity.host.logoUrl).toBe("/logos/openrouter.svg");
+    expect(identity.lab.logoUrl).toBe("/logos/anthropic.svg");
   });
 });
 
@@ -187,6 +245,43 @@ describe("ModelPicker popular section", () => {
     input.focus();
     await user.keyboard("haiku");
     expect(screen.queryByText("Popular")).not.toBeInTheDocument();
+  });
+});
+
+describe("ModelPicker brand identity", () => {
+  const MODELS: ModelInfo[] = [
+    { id: "gpt-5.4", name: "GPT-5.4", _provider: "openai" },
+    { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", _provider: "openrouter" },
+    { id: "mystery-model", name: "Mystery Model" },
+  ];
+
+  it("shows routed host to lab identity in model rows", async () => {
+    const user = userEvent.setup();
+    render(<ModelPicker value="openrouter/anthropic/claude-sonnet-4-6" onChange={() => {}} models={MODELS} />);
+    await user.click(screen.getByRole("button"));
+
+    expect(await screen.findByText("OpenRouter → Anthropic")).toBeInTheDocument();
+  });
+
+  it("renders verified logo assets and no fake monogram text", async () => {
+    const user = userEvent.setup();
+    render(<ModelPicker value="openai/gpt-5.4" onChange={() => {}} models={MODELS} />);
+    await user.click(screen.getByRole("button"));
+
+    expect(await screen.findAllByLabelText("OpenAI")).not.toHaveLength(0);
+    expect(screen.queryByText("OR")).not.toBeInTheDocument();
+    expect(screen.queryByText("?")).not.toBeInTheDocument();
+  });
+
+  it("lets users search by inferred lab name even when grouped under a host provider", async () => {
+    const user = userEvent.setup();
+    render(<ModelPicker value="" onChange={() => {}} models={MODELS} />);
+    await user.click(screen.getByRole("button"));
+    const input = await screen.findByPlaceholderText("Search models...");
+    input.focus();
+    await user.keyboard("anthropic");
+
+    expect(screen.getByText("Claude Sonnet 4.6")).toBeInTheDocument();
   });
 });
 

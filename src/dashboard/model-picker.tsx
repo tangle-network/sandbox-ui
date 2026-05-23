@@ -236,6 +236,16 @@ export function ModelPicker({
 }: ModelPickerProps) {
   const [query, setQuery] = React.useState("");
   const [open, setOpen] = React.useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
 
   // Filter once per (models, query, modalities, excludeProviders) change.
   const filtered = React.useMemo(() => {
@@ -379,9 +389,10 @@ export function ModelPicker({
             )}
           >
             {/* Search bar */}
-            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-border bg-background/80 px-3 py-2">
               <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -397,7 +408,7 @@ export function ModelPicker({
                 }}
                 placeholder="Search models..."
                 autoFocus
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                className="flex-1 bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground"
               />
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </div>
@@ -406,13 +417,14 @@ export function ModelPicker({
             <div className="flex-1 overflow-y-auto">
               {/* Popular */}
               {!query && popularModels.length > 0 && (
-                <Section label="Popular">
+                <Section label="Top models" tone="featured">
                   {popularModels.map((m) => (
                     <ModelRow
                       key={`popular-${canonicalModelId(m)}`}
                       model={m}
                       active={canonicalModelId(m) === value}
                       onSelect={handleSelect}
+                      featured
                     />
                   ))}
                 </Section>
@@ -466,11 +478,16 @@ export function ModelPicker({
 
 // ── Subcomponents ──────────────────────────────────────────────────────────
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({ label, children, tone }: { label: string; children: React.ReactNode; tone?: "featured" }) {
   const identity = brandInfo(normalizeBrandKey(label));
   return (
     <div className="py-1">
-      <div className="flex items-center gap-1.5 px-3 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+      <div
+        className={cn(
+          "flex items-center gap-1.5 px-3 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-widest",
+          tone === "featured" ? "text-primary" : "text-muted-foreground",
+        )}
+      >
         {identity.key !== "unknown" && <BrandLogo brand={identity} size="xs" />}
         <span>{label}</span>
       </div>
@@ -482,10 +499,12 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 function PickerItem({
   onSelect,
   active,
+  featured,
   children,
 }: {
   onSelect: () => void;
   active?: boolean;
+  featured?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -498,6 +517,7 @@ function PickerItem({
         "flex cursor-pointer items-start gap-2 px-3 py-2 outline-none",
         "transition-colors duration-[var(--transition-fast)]",
         "hover:bg-accent/40 focus:bg-accent/40",
+        featured && "mx-1 rounded-lg border border-primary/10 bg-primary/[0.035] px-2.5",
         active && "bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
       )}
     >
@@ -510,10 +530,12 @@ function ModelRow({
   model,
   active,
   onSelect,
+  featured,
 }: {
   model: ModelInfo;
   active: boolean;
   onSelect: (id: string) => void;
+  featured?: boolean;
 }) {
   const id = canonicalModelId(model);
   const pricing = formatPricing(model.pricing);
@@ -521,7 +543,7 @@ function ModelRow({
   const identity = resolveModelBrandIdentity(model);
 
   return (
-    <PickerItem onSelect={() => onSelect(id)} active={active}>
+    <PickerItem onSelect={() => onSelect(id)} active={active} featured={featured}>
       <ModelBrandStack identity={identity} size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">

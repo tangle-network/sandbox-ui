@@ -145,9 +145,6 @@ describe("ModelPicker search input", () => {
 
     await user.click(screen.getByRole("button"));
     const input = await screen.findByPlaceholderText("Search models...");
-    // Radix may have focused the Content element on mount; the search input
-    // owns text entry, so explicitly seat focus there before typing.
-    input.focus();
     expect(document.activeElement).toBe(input);
 
     // Use keyboard() so each keystroke targets document.activeElement — that
@@ -199,14 +196,14 @@ describe("ModelPicker popular section", () => {
       />,
     );
     await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("Popular")).toBeInTheDocument();
+    expect(await screen.findByText("Top models")).toBeInTheDocument();
   });
 
   it("omits the section entirely when popular is empty or unset", async () => {
     const user = userEvent.setup();
     render(<ModelPicker value="" onChange={() => {}} models={MODELS} />);
     await user.click(screen.getByRole("button"));
-    expect(screen.queryByText("Popular")).not.toBeInTheDocument();
+    expect(screen.queryByText("Top models")).not.toBeInTheDocument();
   });
 
   it("silently skips popular ids not present in the loaded list", async () => {
@@ -220,8 +217,8 @@ describe("ModelPicker popular section", () => {
       />,
     );
     await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("Popular")).toBeInTheDocument();
-    // The Popular section is rendered above the per-provider groups, so
+    expect(await screen.findByText("Top models")).toBeInTheDocument();
+    // The top-models section is rendered above the per-provider groups, so
     // a resolvable popular id appears in both: a row inside Popular AND
     // its own row inside the openai group. The ghost id appears in
     // neither — that's the silent-skip we're testing.
@@ -240,11 +237,11 @@ describe("ModelPicker popular section", () => {
       />,
     );
     await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("Popular")).toBeInTheDocument();
+    expect(await screen.findByText("Top models")).toBeInTheDocument();
     const input = await screen.findByPlaceholderText("Search models...");
     input.focus();
     await user.keyboard("haiku");
-    expect(screen.queryByText("Popular")).not.toBeInTheDocument();
+    expect(screen.queryByText("Top models")).not.toBeInTheDocument();
   });
 });
 

@@ -145,9 +145,6 @@ describe("ModelPicker search input", () => {
 
     await user.click(screen.getByRole("button"));
     const input = await screen.findByPlaceholderText("Search models...");
-    // Radix may have focused the Content element on mount; the search input
-    // owns text entry, so explicitly seat focus there before typing.
-    input.focus();
     expect(document.activeElement).toBe(input);
 
     // Use keyboard() so each keystroke targets document.activeElement — that
@@ -172,6 +169,34 @@ describe("ModelPicker search input", () => {
     input.focus();
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(input);
+  });
+
+  it("does not modal-lock the page while open", async () => {
+    const user = userEvent.setup();
+    render(<ModelPicker value="" onChange={() => {}} models={MODELS} />);
+
+    await user.click(screen.getByRole("button"));
+
+    expect(await screen.findByPlaceholderText("Search models...")).toBeInTheDocument();
+    expect(document.body.style.pointerEvents).not.toBe("none");
+  });
+
+  it("switches directly between picker triggers without a dead dismiss click", async () => {
+    const user = userEvent.setup();
+    render(
+      <div>
+        <ModelPicker value="" onChange={() => {}} models={MODELS} label="Primary model" />
+        <ModelPicker value="" onChange={() => {}} models={MODELS} label="Fallback model" />
+      </div>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Primary model/i }));
+    expect(await screen.findByPlaceholderText("Search models...")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Fallback model/i }));
+
+    expect(await screen.findByPlaceholderText("Search models...")).toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByPlaceholderText("Search models..."));
   });
 });
 
@@ -199,14 +224,14 @@ describe("ModelPicker popular section", () => {
       />,
     );
     await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("Popular")).toBeInTheDocument();
+    expect(await screen.findByText("Top models")).toBeInTheDocument();
   });
 
   it("omits the section entirely when popular is empty or unset", async () => {
     const user = userEvent.setup();
     render(<ModelPicker value="" onChange={() => {}} models={MODELS} />);
     await user.click(screen.getByRole("button"));
-    expect(screen.queryByText("Popular")).not.toBeInTheDocument();
+    expect(screen.queryByText("Top models")).not.toBeInTheDocument();
   });
 
   it("silently skips popular ids not present in the loaded list", async () => {
@@ -220,8 +245,8 @@ describe("ModelPicker popular section", () => {
       />,
     );
     await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("Popular")).toBeInTheDocument();
-    // The Popular section is rendered above the per-provider groups, so
+    expect(await screen.findByText("Top models")).toBeInTheDocument();
+    // The top-models section is rendered above the per-provider groups, so
     // a resolvable popular id appears in both: a row inside Popular AND
     // its own row inside the openai group. The ghost id appears in
     // neither — that's the silent-skip we're testing.
@@ -240,11 +265,41 @@ describe("ModelPicker popular section", () => {
       />,
     );
     await user.click(screen.getByRole("button"));
-    expect(await screen.findByText("Popular")).toBeInTheDocument();
+    expect(await screen.findByText("Top models")).toBeInTheDocument();
     const input = await screen.findByPlaceholderText("Search models...");
     input.focus();
     await user.keyboard("haiku");
-    expect(screen.queryByText("Popular")).not.toBeInTheDocument();
+    expect(screen.queryByText("Top models")).not.toBeInTheDocument();
+  });
+});
+
+describe("ModelPicker model family ordering", () => {
+  it("pins core model families before the alphabetical remainder", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={[
+          { id: "mistral-large", name: "Mistral Large", _provider: "mistral" },
+          { id: "kimi-k2", name: "Kimi K2", _provider: "openrouter" },
+          { id: "deepseek-v3", name: "DeepSeek V3", _provider: "openrouter" },
+          { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", _provider: "google" },
+          { id: "z-ai/glm-4.6", name: "GLM 4.6", _provider: "openrouter" },
+          { id: "gpt-5.4", name: "GPT-5.4", _provider: "openai" },
+          { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", _provider: "openrouter" },
+          { id: "cohere-command-r", name: "Command R", _provider: "cohere" },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button"));
+
+    const labels = ["Anthropic", "OpenAI", "Google", "DeepSeek", "Z.ai", "Kimi", "Cohere", "Mistral"];
+    const nodes = labels.map((label) => screen.getAllByText(label)[0]);
+    for (let index = 0; index < nodes.length - 1; index += 1) {
+      expect(nodes[index].compareDocumentPosition(nodes[index + 1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 });
 

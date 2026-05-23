@@ -216,6 +216,37 @@ export function resolveModelBrandIdentity(model: ModelInfo): ModelBrandIdentity 
   };
 }
 
+const PRIORITY_MODEL_GROUPS: ModelBrandKey[] = ["anthropic", "openai", "google", "deepseek", "zai", "moonshot"];
+
+function modelGroupKey(model: ModelInfo): string {
+  const identity = resolveModelBrandIdentity(model);
+  if (identity.lab.key !== "unknown") return identity.lab.key;
+  if (identity.host.key !== "unknown") return identity.host.key;
+  return (model._provider ?? model.provider ?? "other").toLowerCase();
+}
+
+function modelGroupLabel(key: string): string {
+  if (key === "moonshot") return "Kimi";
+  const brand = brandInfo(normalizeBrandKey(key));
+  return brand.key === "unknown" ? key : brand.label;
+}
+
+function modelGroupRank(key: string): number {
+  const priorityIndex = PRIORITY_MODEL_GROUPS.indexOf(normalizeBrandKey(key));
+  return priorityIndex === -1 ? Number.POSITIVE_INFINITY : priorityIndex;
+}
+
+function compareModelGroups(a: string, b: string): number {
+  const aRank = modelGroupRank(a);
+  const bRank = modelGroupRank(b);
+  if (aRank !== bRank) return aRank - bRank;
+  return modelGroupLabel(a).localeCompare(modelGroupLabel(b));
+}
+
+function compareModelsByDisplayName(a: ModelInfo, b: ModelInfo): number {
+  return (a.name ?? a.id).localeCompare(b.name ?? b.id);
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function ModelPicker({
@@ -236,6 +267,16 @@ export function ModelPicker({
 }: ModelPickerProps) {
   const [query, setQuery] = React.useState("");
   const [open, setOpen] = React.useState(false);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
 
   // Filter once per (models, query, modalities, excludeProviders) change.
   const filtered = React.useMemo(() => {
@@ -260,16 +301,20 @@ export function ModelPicker({
     });
   }, [models, query, modalities, excludeProviders]);
 
-  // Group filtered models by provider (preserves insertion order).
+  // Group filtered models by model family first, then by provider for
+  // unknown labs. This keeps routed Claude/Gemini/Kimi rows where users
+  // expect them while row metadata still shows the hosting provider.
   const grouped = React.useMemo(() => {
     const groups = new Map<string, ModelInfo[]>();
     for (const m of filtered) {
-      const provider = m._provider ?? m.provider ?? "other";
-      const list = groups.get(provider);
+      const key = modelGroupKey(m);
+      const list = groups.get(key);
       if (list) list.push(m);
-      else groups.set(provider, [m]);
+      else groups.set(key, [m]);
     }
-    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+    return Array.from(groups.entries())
+      .map(([key, list]) => [key, [...list].sort(compareModelsByDisplayName)] as const)
+      .sort(([a], [b]) => compareModelGroups(a, b));
   }, [filtered]);
 
   // Resolve the currently-selected model's display info.
@@ -305,10 +350,12 @@ export function ModelPicker({
     setOpen(false);
     setQuery("");
   };
+  const triggerLabel = label ? `${label}: ${currentLabel || placeholder}` : currentLabel || placeholder;
 
   const trigger = variant === "pill" ? (
     <button
       type="button"
+      aria-label={triggerLabel}
       disabled={disabled}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border border-border bg-card",
@@ -333,6 +380,7 @@ export function ModelPicker({
   ) : (
     <button
       type="button"
+      aria-label={triggerLabel}
       disabled={disabled}
       className={cn(
         "flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)]",
@@ -363,7 +411,7 @@ export function ModelPicker({
           {label}
         </label>
       )}
-      <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Root open={open} onOpenChange={setOpen} modal={false}>
         <Popover.Trigger asChild>{trigger}</Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
@@ -379,9 +427,10 @@ export function ModelPicker({
             )}
           >
             {/* Search bar */}
-            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-border bg-background/80 px-3 py-2">
               <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <input
+                ref={searchInputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -397,7 +446,7 @@ export function ModelPicker({
                 }}
                 placeholder="Search models..."
                 autoFocus
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                className="flex-1 bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground"
               />
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
             </div>
@@ -406,13 +455,14 @@ export function ModelPicker({
             <div className="flex-1 overflow-y-auto">
               {/* Popular */}
               {!query && popularModels.length > 0 && (
-                <Section label="Popular">
+                <Section label="Top models" tone="featured">
                   {popularModels.map((m) => (
                     <ModelRow
                       key={`popular-${canonicalModelId(m)}`}
                       model={m}
                       active={canonicalModelId(m) === value}
                       onSelect={handleSelect}
+                      featured
                     />
                   ))}
                 </Section>
@@ -438,8 +488,8 @@ export function ModelPicker({
                   {loading ? "Loading models..." : query ? "No models match." : "No models available."}
                 </div>
               ) : (
-                grouped.map(([provider, list]) => (
-                  <Section key={provider} label={provider}>
+                grouped.map(([groupKey, list]) => (
+                  <Section key={groupKey} label={modelGroupLabel(groupKey)}>
                     {list.map((m) => (
                       <ModelRow
                         key={canonicalModelId(m)}
@@ -466,11 +516,16 @@ export function ModelPicker({
 
 // ── Subcomponents ──────────────────────────────────────────────────────────
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({ label, children, tone }: { label: string; children: React.ReactNode; tone?: "featured" }) {
   const identity = brandInfo(normalizeBrandKey(label));
   return (
     <div className="py-1">
-      <div className="flex items-center gap-1.5 px-3 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+      <div
+        className={cn(
+          "flex items-center gap-1.5 px-3 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-widest",
+          tone === "featured" ? "text-primary" : "text-muted-foreground",
+        )}
+      >
         {identity.key !== "unknown" && <BrandLogo brand={identity} size="xs" />}
         <span>{label}</span>
       </div>
@@ -482,10 +537,12 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 function PickerItem({
   onSelect,
   active,
+  featured,
   children,
 }: {
   onSelect: () => void;
   active?: boolean;
+  featured?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -498,6 +555,7 @@ function PickerItem({
         "flex cursor-pointer items-start gap-2 px-3 py-2 outline-none",
         "transition-colors duration-[var(--transition-fast)]",
         "hover:bg-accent/40 focus:bg-accent/40",
+        featured && "mx-1 rounded-lg border border-primary/10 bg-primary/[0.035] px-2.5",
         active && "bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
       )}
     >
@@ -510,10 +568,12 @@ function ModelRow({
   model,
   active,
   onSelect,
+  featured,
 }: {
   model: ModelInfo;
   active: boolean;
   onSelect: (id: string) => void;
+  featured?: boolean;
 }) {
   const id = canonicalModelId(model);
   const pricing = formatPricing(model.pricing);
@@ -521,7 +581,7 @@ function ModelRow({
   const identity = resolveModelBrandIdentity(model);
 
   return (
-    <PickerItem onSelect={() => onSelect(id)} active={active}>
+    <PickerItem onSelect={() => onSelect(id)} active={active} featured={featured}>
       <ModelBrandStack identity={identity} size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">

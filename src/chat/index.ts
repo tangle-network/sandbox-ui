@@ -24,3 +24,11 @@ export {
   UserMessage,
   type UserMessageProps,
 } from "@tangle-network/ui/chat";
+
+export {
+  DEFAULT_REASONING_LEVEL_OPTIONS,
+  ReasoningLevelPicker,
+  type ReasoningLevel,
+  type ReasoningLevelOption,
+  type ReasoningLevelPickerProps,
+} from "./reasoning-level-picker";

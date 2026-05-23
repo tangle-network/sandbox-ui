@@ -492,9 +492,9 @@ describe("ProvisioningWizard — models", () => {
     // it's open. Click the trigger first.
     await userEvent.click(screen.getByRole("button", { name: /GPT-5/i }))
     expect(await screen.findByPlaceholderText(/search models/i)).toBeInTheDocument()
-    // Provider section headers show up in the grouped list
-    expect(await screen.findByText("openai")).toBeInTheDocument()
-    expect(await screen.findByText("anthropic")).toBeInTheDocument()
+    // Model-family section headers show up in the grouped list.
+    expect(await screen.findByText("OpenAI")).toBeInTheDocument()
+    expect(await screen.findByText("Anthropic")).toBeInTheDocument()
     // Search narrows the list — typing "haiku" filters out the GPT family
     const search = await screen.findByPlaceholderText(/search models/i)
     await userEvent.type(search, "haiku")

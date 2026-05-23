@@ -55,7 +55,7 @@ export default defineConfig({
     options.jsx = "automatic";
     options.loader = {
       ...options.loader,
-      ".svg": "file",
+      ".svg": "dataurl",
     };
   },
 });

@@ -269,7 +269,7 @@ export function ModelPicker({
   const [open, setOpen] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     if (!open) return;
     const frame = requestAnimationFrame(() => {
       searchInputRef.current?.focus();
@@ -350,10 +350,12 @@ export function ModelPicker({
     setOpen(false);
     setQuery("");
   };
+  const triggerLabel = label ? `${label}: ${currentLabel || placeholder}` : currentLabel || placeholder;
 
   const trigger = variant === "pill" ? (
     <button
       type="button"
+      aria-label={triggerLabel}
       disabled={disabled}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border border-border bg-card",
@@ -378,6 +380,7 @@ export function ModelPicker({
   ) : (
     <button
       type="button"
+      aria-label={triggerLabel}
       disabled={disabled}
       className={cn(
         "flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)]",
@@ -408,7 +411,7 @@ export function ModelPicker({
           {label}
         </label>
       )}
-      <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Root open={open} onOpenChange={setOpen} modal={false}>
         <Popover.Trigger asChild>{trigger}</Popover.Trigger>
         <Popover.Portal>
           <Popover.Content

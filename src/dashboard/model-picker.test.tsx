@@ -170,6 +170,34 @@ describe("ModelPicker search input", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(input);
   });
+
+  it("does not modal-lock the page while open", async () => {
+    const user = userEvent.setup();
+    render(<ModelPicker value="" onChange={() => {}} models={MODELS} />);
+
+    await user.click(screen.getByRole("button"));
+
+    expect(await screen.findByPlaceholderText("Search models...")).toBeInTheDocument();
+    expect(document.body.style.pointerEvents).not.toBe("none");
+  });
+
+  it("switches directly between picker triggers without a dead dismiss click", async () => {
+    const user = userEvent.setup();
+    render(
+      <div>
+        <ModelPicker value="" onChange={() => {}} models={MODELS} label="Primary model" />
+        <ModelPicker value="" onChange={() => {}} models={MODELS} label="Fallback model" />
+      </div>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Primary model/i }));
+    expect(await screen.findByPlaceholderText("Search models...")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Fallback model/i }));
+
+    expect(await screen.findByPlaceholderText("Search models...")).toBeInTheDocument();
+    expect(document.activeElement).toBe(screen.getByPlaceholderText("Search models..."));
+  });
 });
 
 describe("ModelPicker popular section", () => {

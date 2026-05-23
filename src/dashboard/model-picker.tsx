@@ -33,6 +33,66 @@ export interface ModelInfo {
     input_modalities?: string[];
     output_modalities?: string[];
   };
+  /** Hosting company or router that serves the request. Defaults to `_provider` / `provider`. */
+  hostProvider?: string;
+  /** Lab/company that authored the model. Inferred from model id/name when omitted. */
+  modelLab?: string;
+  /** Optional explicit logo keys when provider/lab ids are not stable. */
+  logos?: {
+    host?: ModelBrandKey;
+    lab?: ModelBrandKey;
+    hostUrl?: string;
+    labUrl?: string;
+  };
+}
+
+export type ModelBrandKey =
+  | "ai21"
+  | "alibaba"
+  | "anthropic"
+  | "azure"
+  | "bedrock"
+  | "cartesia"
+  | "cerebras"
+  | "cohere"
+  | "deepseek"
+  | "elevenlabs"
+  | "fal"
+  | "fireworks"
+  | "google"
+  | "groq"
+  | "kuaishou"
+  | "luma"
+  | "meta"
+  | "mistral"
+  | "moonshot"
+  | "openai"
+  | "openrouter"
+  | "perplexity"
+  | "pika"
+  | "replicate"
+  | "runway"
+  | "stability"
+  | "tangle"
+  | "tcloud"
+  | "together"
+  | "vertex"
+  | "xai"
+  | "zai"
+  | "unknown";
+
+export interface ModelBrandIdentity {
+  host: ModelBrandInfo;
+  lab: ModelBrandInfo;
+  combined: boolean;
+}
+
+export interface ModelBrandInfo {
+  key: ModelBrandKey;
+  label: string;
+  shortLabel: string;
+  className: string;
+  logoUrl?: string;
 }
 
 export type ModelPickerVariant = "field" | "pill";
@@ -112,6 +172,19 @@ export function formatContext(ctx: number | undefined): string | null {
   return `${ctx} ctx`;
 }
 
+export function resolveModelBrandIdentity(model: ModelInfo): ModelBrandIdentity {
+  const canonical = canonicalModelId(model);
+  const hostKey = normalizeBrandKey(model.logos?.host ?? model.hostProvider ?? model._provider ?? model.provider ?? firstIdSegment(canonical));
+  const labKey = normalizeBrandKey(model.logos?.lab ?? model.modelLab ?? inferModelLab(model, canonical, hostKey));
+  const host = { ...brandInfo(hostKey), logoUrl: model.logos?.hostUrl };
+  const lab = { ...brandInfo(labKey), logoUrl: model.logos?.labUrl };
+  return {
+    host,
+    lab,
+    combined: host.key === lab.key,
+  };
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function ModelPicker({
@@ -145,7 +218,14 @@ export function ModelPicker({
       if (!q) return true;
       const id = canonicalModelId(m).toLowerCase();
       const name = (m.name ?? "").toLowerCase();
-      return id.includes(q) || name.includes(q) || provider.includes(q);
+      const identity = resolveModelBrandIdentity(m);
+      return (
+        id.includes(q) ||
+        name.includes(q) ||
+        provider.includes(q) ||
+        identity.host.label.toLowerCase().includes(q) ||
+        identity.lab.label.toLowerCase().includes(q)
+      );
     });
   }, [models, query, modalities, excludeProviders]);
 
@@ -167,6 +247,7 @@ export function ModelPicker({
     [models, value],
   );
   const currentLabel = current?.name ?? current?.id ?? value;
+  const currentIdentity = current ? resolveModelBrandIdentity(current) : null;
 
   const recentIds = React.useMemo(() => {
     if (!recents?.length) return [];
@@ -210,7 +291,11 @@ export function ModelPicker({
         triggerClassName,
       )}
     >
-      <Sparkles className="h-3 w-3 text-muted-foreground" />
+      {currentIdentity ? (
+        <ModelBrandStack identity={currentIdentity} size="sm" />
+      ) : (
+        <Sparkles className="h-3 w-3 text-muted-foreground" />
+      )}
       <span className="truncate max-w-[160px]">{currentLabel || placeholder}</span>
       <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
     </button>
@@ -230,8 +315,11 @@ export function ModelPicker({
         triggerClassName,
       )}
     >
-      <span className={cn("truncate", current ? "text-foreground font-medium" : "text-muted-foreground")}>
-        {currentLabel || placeholder}
+      <span className="flex min-w-0 items-center gap-2">
+        {currentIdentity && <ModelBrandStack identity={currentIdentity} size="sm" />}
+        <span className={cn("truncate", current ? "text-foreground font-medium" : "text-muted-foreground")}>
+          {currentLabel || placeholder}
+        </span>
       </span>
       <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
     </button>
@@ -348,10 +436,12 @@ export function ModelPicker({
 // ── Subcomponents ──────────────────────────────────────────────────────────
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  const identity = brandInfo(normalizeBrandKey(label));
   return (
     <div className="py-1">
-      <div className="px-3 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-        {label}
+      <div className="flex items-center gap-1.5 px-3 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        {identity.key !== "unknown" && <BrandLogo brand={identity} size="xs" />}
+        <span>{label}</span>
       </div>
       <div>{children}</div>
     </div>
@@ -397,9 +487,11 @@ function ModelRow({
   const id = canonicalModelId(model);
   const pricing = formatPricing(model.pricing);
   const ctx = formatContext(model.context_length);
+  const identity = resolveModelBrandIdentity(model);
 
   return (
     <PickerItem onSelect={() => onSelect(id)} active={active}>
+      <ModelBrandStack identity={identity} size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-sm font-medium truncate">{model.name ?? model.id}</span>
@@ -407,6 +499,12 @@ function ModelRow({
         </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="truncate">{id}</span>
+          {!identity.combined && (
+            <>
+              <span className="shrink-0">·</span>
+              <span className="shrink-0">{identity.host.label} → {identity.lab.label}</span>
+            </>
+          )}
           {pricing && (
             <>
               <span className="shrink-0">·</span>
@@ -418,3 +516,132 @@ function ModelRow({
     </PickerItem>
   );
 }
+
+function ModelBrandStack({ identity, size }: { identity: ModelBrandIdentity; size: "sm" | "md" }) {
+  if (identity.combined) return <BrandLogo brand={identity.lab} size={size} />;
+  return (
+    <div className={cn("relative shrink-0", size === "sm" ? "h-4 w-6" : "h-7 w-9")} aria-label={`${identity.host.label} hosting ${identity.lab.label}`}>
+      <BrandLogo brand={identity.host} size={size === "sm" ? "xs" : "sm"} className="absolute left-0 top-0" />
+      <BrandLogo brand={identity.lab} size={size === "sm" ? "xs" : "sm"} className="absolute bottom-0 right-0 ring-2 ring-card" />
+    </div>
+  );
+}
+
+function BrandLogo({ brand, size, className }: { brand: ModelBrandInfo; size: "xs" | "sm" | "md"; className?: string }) {
+  return (
+    <span
+      title={brand.label}
+      aria-label={brand.label}
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none text-white shadow-sm",
+        size === "xs" && "h-3.5 w-3.5 text-[7px]",
+        size === "sm" && "h-4 w-4 text-[8px]",
+        size === "md" && "h-7 w-7 text-[11px]",
+        brand.className,
+        className,
+      )}
+    >
+      {brand.logoUrl ? (
+        <img src={brand.logoUrl} alt="" className="h-full w-full rounded-full object-cover" />
+      ) : (
+        brand.shortLabel
+      )}
+    </span>
+  );
+}
+
+function inferModelLab(model: ModelInfo, canonical: string, hostKey: ModelBrandKey): string {
+  const name = model.name ?? "";
+  const idSegments = canonical.split("/");
+  const possibleLab = normalizeBrandKey(idSegments.length > 1 ? idSegments[1] : idSegments[0]);
+  const textKey = normalizeBrandKey(`${canonical} ${name}`);
+  if (hostKey !== possibleLab && possibleLab !== "unknown") return possibleLab;
+  if (textKey !== "unknown") return textKey;
+  return hostKey;
+}
+
+function firstIdSegment(value: string): string {
+  return value.split("/")[0] ?? value;
+}
+
+function normalizeBrandKey(value: string | undefined): ModelBrandKey {
+  const normalized = (value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  if (!normalized) return "unknown";
+  if (/(^|-)anthropic($|-)|claude/.test(normalized)) return "anthropic";
+  if (/(^|-)openai($|-)|(^|-)gpt-|o[1345]($|-)|chatgpt/.test(normalized)) return "openai";
+  if (/(^|-)google($|-)|gemini|palm|imagen|veo/.test(normalized)) return "google";
+  if (/(^|-)xai($|-)|grok/.test(normalized)) return "xai";
+  if (/(^|-)meta($|-)|llama/.test(normalized)) return "meta";
+  if (/(^|-)mistral($|-)|mixtral|codestral/.test(normalized)) return "mistral";
+  if (/(^|-)cohere($|-)|command-r/.test(normalized)) return "cohere";
+  if (/(^|-)deepseek($|-)/.test(normalized)) return "deepseek";
+  if (/(^|-)moonshot($|-)|kimi/.test(normalized)) return "moonshot";
+  if (/(^|-)zai($|-)|z-ai|glm/.test(normalized)) return "zai";
+  if (/(^|-)qwen($|-)|alibaba|wan($|-)/.test(normalized)) return "alibaba";
+  if (/(^|-)perplexity($|-)|sonar/.test(normalized)) return "perplexity";
+  if (/(^|-)ai21($|-)|jamba/.test(normalized)) return "ai21";
+  if (/(^|-)runway($|-)|gen-?[34]/.test(normalized)) return "runway";
+  if (/(^|-)kling($|-)|kuaishou/.test(normalized)) return "kuaishou";
+  if (/(^|-)luma($|-)|ray-?[12]/.test(normalized)) return "luma";
+  if (/(^|-)pika($|-)/.test(normalized)) return "pika";
+  if (/(^|-)stability($|-)|stable-diffusion|sdxl/.test(normalized)) return "stability";
+  if (/(^|-)elevenlabs($|-)|eleven/.test(normalized)) return "elevenlabs";
+  if (/(^|-)cartesia($|-)|sonic/.test(normalized)) return "cartesia";
+  if (/(^|-)openrouter($|-)/.test(normalized)) return "openrouter";
+  if (/(^|-)tcloud($|-)/.test(normalized)) return "tcloud";
+  if (/(^|-)tangle($|-)/.test(normalized)) return "tangle";
+  if (/(^|-)fal($|-)/.test(normalized)) return "fal";
+  if (/(^|-)replicate($|-)/.test(normalized)) return "replicate";
+  if (/(^|-)together($|-)/.test(normalized)) return "together";
+  if (/(^|-)fireworks($|-)/.test(normalized)) return "fireworks";
+  if (/(^|-)groq($|-)/.test(normalized)) return "groq";
+  if (/(^|-)cerebras($|-)/.test(normalized)) return "cerebras";
+  if (/(^|-)bedrock($|-)|amazon/.test(normalized)) return "bedrock";
+  if (/(^|-)vertex($|-)/.test(normalized)) return "vertex";
+  if (/(^|-)azure($|-)/.test(normalized)) return "azure";
+  return "unknown";
+}
+
+function brandInfo(key: ModelBrandKey): ModelBrandInfo {
+  return BRAND_INFO[key] ?? BRAND_INFO.unknown;
+}
+
+const BRAND_INFO: Record<ModelBrandKey, ModelBrandInfo> = {
+  ai21: { key: "ai21", label: "AI21", shortLabel: "21", className: "bg-[#101828]" },
+  alibaba: { key: "alibaba", label: "Alibaba", shortLabel: "Q", className: "bg-[#ff6a00]" },
+  anthropic: { key: "anthropic", label: "Anthropic", shortLabel: "A", className: "bg-[#d4a373] text-[#231f20]" },
+  azure: { key: "azure", label: "Azure", shortLabel: "Az", className: "bg-[#0078d4]" },
+  bedrock: { key: "bedrock", label: "AWS Bedrock", shortLabel: "AWS", className: "bg-[#232f3e] text-[#ff9900]" },
+  cartesia: { key: "cartesia", label: "Cartesia", shortLabel: "C", className: "bg-[#6d28d9]" },
+  cerebras: { key: "cerebras", label: "Cerebras", shortLabel: "Ce", className: "bg-[#111827]" },
+  cohere: { key: "cohere", label: "Cohere", shortLabel: "Co", className: "bg-[#39594d]" },
+  deepseek: { key: "deepseek", label: "DeepSeek", shortLabel: "D", className: "bg-[#2563eb]" },
+  elevenlabs: { key: "elevenlabs", label: "ElevenLabs", shortLabel: "11", className: "bg-[#111111]" },
+  fal: { key: "fal", label: "Fal", shortLabel: "F", className: "bg-[#f97316]" },
+  fireworks: { key: "fireworks", label: "Fireworks", shortLabel: "Fw", className: "bg-[#ef4444]" },
+  google: { key: "google", label: "Google", shortLabel: "G", className: "bg-[#4285f4]" },
+  groq: { key: "groq", label: "Groq", shortLabel: "Gq", className: "bg-[#f55036]" },
+  kuaishou: { key: "kuaishou", label: "Kling", shortLabel: "K", className: "bg-[#ff4d00]" },
+  luma: { key: "luma", label: "Luma", shortLabel: "L", className: "bg-[#0f172a]" },
+  meta: { key: "meta", label: "Meta", shortLabel: "M", className: "bg-[#0668e1]" },
+  mistral: { key: "mistral", label: "Mistral", shortLabel: "M", className: "bg-[#ff7000]" },
+  moonshot: { key: "moonshot", label: "Moonshot", shortLabel: "K", className: "bg-[#111827]" },
+  openai: { key: "openai", label: "OpenAI", shortLabel: "O", className: "bg-[#10a37f]" },
+  openrouter: { key: "openrouter", label: "OpenRouter", shortLabel: "OR", className: "bg-[#4f46e5]" },
+  perplexity: { key: "perplexity", label: "Perplexity", shortLabel: "P", className: "bg-[#1fb8cd]" },
+  pika: { key: "pika", label: "Pika", shortLabel: "P", className: "bg-[#facc15] text-[#111827]" },
+  replicate: { key: "replicate", label: "Replicate", shortLabel: "R", className: "bg-[#111111]" },
+  runway: { key: "runway", label: "Runway", shortLabel: "R", className: "bg-[#000000]" },
+  stability: { key: "stability", label: "Stability AI", shortLabel: "S", className: "bg-[#7c3aed]" },
+  tangle: { key: "tangle", label: "Tangle", shortLabel: "T", className: "bg-[#0ea5e9]" },
+  tcloud: { key: "tcloud", label: "tcloud", shortLabel: "T", className: "bg-[#0ea5e9]" },
+  together: { key: "together", label: "Together", shortLabel: "To", className: "bg-[#111827]" },
+  vertex: { key: "vertex", label: "Vertex AI", shortLabel: "V", className: "bg-[#34a853]" },
+  xai: { key: "xai", label: "xAI", shortLabel: "x", className: "bg-[#111111]" },
+  zai: { key: "zai", label: "Z.ai", shortLabel: "Z", className: "bg-[#111827]" },
+  unknown: { key: "unknown", label: "Unknown", shortLabel: "?", className: "bg-muted text-muted-foreground" },
+};

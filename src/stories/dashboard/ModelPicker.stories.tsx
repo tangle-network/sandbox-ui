@@ -52,6 +52,22 @@ const models: ModelInfo[] = [
     architecture: { modality: "text" },
   },
   {
+    id: "anthropic/claude-sonnet-4-6",
+    name: "Claude Sonnet 4.6 via OpenRouter",
+    _provider: "openrouter",
+    pricing: { prompt: "0.0000035", completion: "0.0000175" },
+    context_length: 200_000,
+    architecture: { modality: "text" },
+  },
+  {
+    id: "kling/v2.1",
+    name: "Kling 2.1",
+    _provider: "tcloud",
+    pricing: { prompt: "0", completion: "0" },
+    context_length: 8_000,
+    architecture: { modality: "text->video" },
+  },
+  {
     id: "anthropic/claude-opus-4-7",
     name: "Claude Opus 4.7",
     _provider: "anthropic",

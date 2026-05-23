@@ -81,6 +81,7 @@ describe("resolveModelBrandIdentity", () => {
     expect(identity.combined).toBe(true);
     expect(identity.host.key).toBe("anthropic");
     expect(identity.lab.key).toBe("anthropic");
+    expect(identity.lab.logoUrl).toMatch(/^data:image\/svg\+xml/);
   });
 
   it("keeps host provider and model lab separate for routed models", () => {
@@ -106,6 +107,8 @@ describe("resolveModelBrandIdentity", () => {
     expect(identity.combined).toBe(false);
     expect(identity.host.key).toBe("tcloud");
     expect(identity.lab.key).toBe("kuaishou");
+    expect(identity.host.logo).toBe("tangle");
+    expect(identity.lab.logoUrl).toMatch(/^data:image\/svg\+xml/);
   });
 
   it("carries explicit logo URLs for products with real brand assets", () => {
@@ -249,6 +252,7 @@ describe("ModelPicker brand identity", () => {
   const MODELS: ModelInfo[] = [
     { id: "gpt-5.4", name: "GPT-5.4", _provider: "openai" },
     { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", _provider: "openrouter" },
+    { id: "mystery-model", name: "Mystery Model" },
   ];
 
   it("shows routed host to lab identity in model rows", async () => {
@@ -257,6 +261,16 @@ describe("ModelPicker brand identity", () => {
     await user.click(screen.getByRole("button"));
 
     expect(await screen.findByText("OpenRouter → Anthropic")).toBeInTheDocument();
+  });
+
+  it("renders verified logo assets and no fake monogram text", async () => {
+    const user = userEvent.setup();
+    render(<ModelPicker value="openai/gpt-5.4" onChange={() => {}} models={MODELS} />);
+    await user.click(screen.getByRole("button"));
+
+    expect(await screen.findAllByLabelText("OpenAI")).not.toHaveLength(0);
+    expect(screen.queryByText("OR")).not.toBeInTheDocument();
+    expect(screen.queryByText("?")).not.toBeInTheDocument();
   });
 
   it("lets users search by inferred lab name even when grouped under a host provider", async () => {

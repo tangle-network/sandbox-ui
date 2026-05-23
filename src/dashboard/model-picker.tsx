@@ -1,9 +1,39 @@
 "use client";
 
 import * as React from "react";
+import { TangleKnot } from "@tangle-network/brand";
 import { ChevronDown, Search, Sparkles, Loader2 } from "lucide-react";
 import * as Popover from "@radix-ui/react-dropdown-menu";
 import { cn } from "../lib/utils";
+import ai21Logo from "@lobehub/icons-static-svg/icons/ai21.svg";
+import alibabaLogo from "@lobehub/icons-static-svg/icons/alibaba.svg";
+import anthropicLogo from "@lobehub/icons-static-svg/icons/anthropic.svg";
+import azureLogo from "@lobehub/icons-static-svg/icons/azure.svg";
+import bedrockLogo from "@lobehub/icons-static-svg/icons/bedrock.svg";
+import cerebrasLogo from "@lobehub/icons-static-svg/icons/cerebras.svg";
+import cohereLogo from "@lobehub/icons-static-svg/icons/cohere.svg";
+import deepseekLogo from "@lobehub/icons-static-svg/icons/deepseek.svg";
+import elevenlabsLogo from "@lobehub/icons-static-svg/icons/elevenlabs.svg";
+import falLogo from "@lobehub/icons-static-svg/icons/fal.svg";
+import fireworksLogo from "@lobehub/icons-static-svg/icons/fireworks.svg";
+import googleLogo from "@lobehub/icons-static-svg/icons/google.svg";
+import groqLogo from "@lobehub/icons-static-svg/icons/groq.svg";
+import klingLogo from "@lobehub/icons-static-svg/icons/kling.svg";
+import lumaLogo from "@lobehub/icons-static-svg/icons/luma.svg";
+import metaLogo from "@lobehub/icons-static-svg/icons/meta.svg";
+import mistralLogo from "@lobehub/icons-static-svg/icons/mistral.svg";
+import moonshotLogo from "@lobehub/icons-static-svg/icons/moonshot.svg";
+import openaiLogo from "@lobehub/icons-static-svg/icons/openai.svg";
+import openrouterLogo from "@lobehub/icons-static-svg/icons/openrouter.svg";
+import perplexityLogo from "@lobehub/icons-static-svg/icons/perplexity.svg";
+import pikaLogo from "@lobehub/icons-static-svg/icons/pika.svg";
+import replicateLogo from "@lobehub/icons-static-svg/icons/replicate.svg";
+import runwayLogo from "@lobehub/icons-static-svg/icons/runway.svg";
+import stabilityLogo from "@lobehub/icons-static-svg/icons/stability.svg";
+import togetherLogo from "@lobehub/icons-static-svg/icons/together.svg";
+import vertexLogo from "@lobehub/icons-static-svg/icons/vertexai.svg";
+import xaiLogo from "@lobehub/icons-static-svg/icons/xai.svg";
+import zaiLogo from "@lobehub/icons-static-svg/icons/zai.svg";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -90,9 +120,8 @@ export interface ModelBrandIdentity {
 export interface ModelBrandInfo {
   key: ModelBrandKey;
   label: string;
-  shortLabel: string;
-  className: string;
   logoUrl?: string;
+  logo?: "tangle";
 }
 
 export type ModelPickerVariant = "field" | "pill";
@@ -176,8 +205,10 @@ export function resolveModelBrandIdentity(model: ModelInfo): ModelBrandIdentity 
   const canonical = canonicalModelId(model);
   const hostKey = normalizeBrandKey(model.logos?.host ?? model.hostProvider ?? model._provider ?? model.provider ?? firstIdSegment(canonical));
   const labKey = normalizeBrandKey(model.logos?.lab ?? model.modelLab ?? inferModelLab(model, canonical, hostKey));
-  const host = { ...brandInfo(hostKey), logoUrl: model.logos?.hostUrl };
-  const lab = { ...brandInfo(labKey), logoUrl: model.logos?.labUrl };
+  const hostBase = brandInfo(hostKey);
+  const labBase = brandInfo(labKey);
+  const host = { ...hostBase, logoUrl: model.logos?.hostUrl ?? hostBase.logoUrl };
+  const lab = { ...labBase, logoUrl: model.logos?.labUrl ?? labBase.logoUrl };
   return {
     host,
     lab,
@@ -519,6 +550,11 @@ function ModelRow({
 
 function ModelBrandStack({ identity, size }: { identity: ModelBrandIdentity; size: "sm" | "md" }) {
   if (identity.combined) return <BrandLogo brand={identity.lab} size={size} />;
+  const hasHostLogo = hasRealLogo(identity.host);
+  const hasLabLogo = hasRealLogo(identity.lab);
+  if (!hasHostLogo && !hasLabLogo) return null;
+  if (!hasHostLogo) return <BrandLogo brand={identity.lab} size={size} />;
+  if (!hasLabLogo) return <BrandLogo brand={identity.host} size={size} />;
   return (
     <div className={cn("relative shrink-0", size === "sm" ? "h-4 w-6" : "h-7 w-9")} aria-label={`${identity.host.label} hosting ${identity.lab.label}`}>
       <BrandLogo brand={identity.host} size={size === "sm" ? "xs" : "sm"} className="absolute left-0 top-0" />
@@ -528,26 +564,109 @@ function ModelBrandStack({ identity, size }: { identity: ModelBrandIdentity; siz
 }
 
 function BrandLogo({ brand, size, className }: { brand: ModelBrandInfo; size: "xs" | "sm" | "md"; className?: string }) {
+  if (!hasRealLogo(brand)) return null;
+  const pixelSize = size === "xs" ? 14 : size === "sm" ? 16 : 28;
   return (
     <span
       title={brand.label}
       aria-label={brand.label}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold leading-none text-white shadow-sm",
-        size === "xs" && "h-3.5 w-3.5 text-[7px]",
-        size === "sm" && "h-4 w-4 text-[8px]",
-        size === "md" && "h-7 w-7 text-[11px]",
-        brand.className,
+        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-background shadow-sm ring-1 ring-border",
+        size === "xs" && "h-3.5 w-3.5",
+        size === "sm" && "h-4 w-4",
+        size === "md" && "h-7 w-7",
         className,
       )}
     >
-      {brand.logoUrl ? (
-        <img src={brand.logoUrl} alt="" className="h-full w-full rounded-full object-cover" />
-      ) : (
-        brand.shortLabel
-      )}
+      {brand.logo === "tangle" ? (
+        <TangleKnot size={pixelSize} className="h-full w-full" />
+      ) : brand.logoUrl ? (
+        <img src={brand.logoUrl} alt="" className="h-[72%] w-[72%] object-contain" />
+      ) : null}
     </span>
   );
+}
+
+function hasRealLogo(brand: ModelBrandInfo): boolean {
+  return Boolean(brand.logoUrl || brand.logo);
+}
+
+function modelLogo(path: string): string {
+  return path;
+}
+
+function brandLogo(key: ModelBrandKey): string | undefined {
+  switch (key) {
+    case "ai21":
+      return modelLogo(ai21Logo);
+    case "alibaba":
+      return modelLogo(alibabaLogo);
+    case "anthropic":
+      return modelLogo(anthropicLogo);
+    case "azure":
+      return modelLogo(azureLogo);
+    case "bedrock":
+      return modelLogo(bedrockLogo);
+    case "cerebras":
+      return modelLogo(cerebrasLogo);
+    case "cohere":
+      return modelLogo(cohereLogo);
+    case "deepseek":
+      return modelLogo(deepseekLogo);
+    case "elevenlabs":
+      return modelLogo(elevenlabsLogo);
+    case "fal":
+      return modelLogo(falLogo);
+    case "fireworks":
+      return modelLogo(fireworksLogo);
+    case "google":
+      return modelLogo(googleLogo);
+    case "groq":
+      return modelLogo(groqLogo);
+    case "kuaishou":
+      return modelLogo(klingLogo);
+    case "luma":
+      return modelLogo(lumaLogo);
+    case "meta":
+      return modelLogo(metaLogo);
+    case "mistral":
+      return modelLogo(mistralLogo);
+    case "moonshot":
+      return modelLogo(moonshotLogo);
+    case "openai":
+      return modelLogo(openaiLogo);
+    case "openrouter":
+      return modelLogo(openrouterLogo);
+    case "perplexity":
+      return modelLogo(perplexityLogo);
+    case "pika":
+      return modelLogo(pikaLogo);
+    case "replicate":
+      return modelLogo(replicateLogo);
+    case "runway":
+      return modelLogo(runwayLogo);
+    case "stability":
+      return modelLogo(stabilityLogo);
+    case "together":
+      return modelLogo(togetherLogo);
+    case "vertex":
+      return modelLogo(vertexLogo);
+    case "xai":
+      return modelLogo(xaiLogo);
+    case "zai":
+      return modelLogo(zaiLogo);
+    case "tangle":
+    case "tcloud":
+    case "cartesia":
+    case "unknown":
+      return undefined;
+  }
+}
+
+function brandMark(key: ModelBrandKey): Pick<ModelBrandInfo, "logo" | "logoUrl"> {
+  if (key === "tangle" || key === "tcloud") return { logo: "tangle" };
+  const logoUrl = brandLogo(key);
+  return logoUrl ? { logoUrl } : {};
 }
 
 function inferModelLab(model: ModelInfo, canonical: string, hostKey: ModelBrandKey): string {
@@ -611,37 +730,37 @@ function brandInfo(key: ModelBrandKey): ModelBrandInfo {
 }
 
 const BRAND_INFO: Record<ModelBrandKey, ModelBrandInfo> = {
-  ai21: { key: "ai21", label: "AI21", shortLabel: "21", className: "bg-[#101828]" },
-  alibaba: { key: "alibaba", label: "Alibaba", shortLabel: "Q", className: "bg-[#ff6a00]" },
-  anthropic: { key: "anthropic", label: "Anthropic", shortLabel: "A", className: "bg-[#d4a373] text-[#231f20]" },
-  azure: { key: "azure", label: "Azure", shortLabel: "Az", className: "bg-[#0078d4]" },
-  bedrock: { key: "bedrock", label: "AWS Bedrock", shortLabel: "AWS", className: "bg-[#232f3e] text-[#ff9900]" },
-  cartesia: { key: "cartesia", label: "Cartesia", shortLabel: "C", className: "bg-[#6d28d9]" },
-  cerebras: { key: "cerebras", label: "Cerebras", shortLabel: "Ce", className: "bg-[#111827]" },
-  cohere: { key: "cohere", label: "Cohere", shortLabel: "Co", className: "bg-[#39594d]" },
-  deepseek: { key: "deepseek", label: "DeepSeek", shortLabel: "D", className: "bg-[#2563eb]" },
-  elevenlabs: { key: "elevenlabs", label: "ElevenLabs", shortLabel: "11", className: "bg-[#111111]" },
-  fal: { key: "fal", label: "Fal", shortLabel: "F", className: "bg-[#f97316]" },
-  fireworks: { key: "fireworks", label: "Fireworks", shortLabel: "Fw", className: "bg-[#ef4444]" },
-  google: { key: "google", label: "Google", shortLabel: "G", className: "bg-[#4285f4]" },
-  groq: { key: "groq", label: "Groq", shortLabel: "Gq", className: "bg-[#f55036]" },
-  kuaishou: { key: "kuaishou", label: "Kling", shortLabel: "K", className: "bg-[#ff4d00]" },
-  luma: { key: "luma", label: "Luma", shortLabel: "L", className: "bg-[#0f172a]" },
-  meta: { key: "meta", label: "Meta", shortLabel: "M", className: "bg-[#0668e1]" },
-  mistral: { key: "mistral", label: "Mistral", shortLabel: "M", className: "bg-[#ff7000]" },
-  moonshot: { key: "moonshot", label: "Moonshot", shortLabel: "K", className: "bg-[#111827]" },
-  openai: { key: "openai", label: "OpenAI", shortLabel: "O", className: "bg-[#10a37f]" },
-  openrouter: { key: "openrouter", label: "OpenRouter", shortLabel: "OR", className: "bg-[#4f46e5]" },
-  perplexity: { key: "perplexity", label: "Perplexity", shortLabel: "P", className: "bg-[#1fb8cd]" },
-  pika: { key: "pika", label: "Pika", shortLabel: "P", className: "bg-[#facc15] text-[#111827]" },
-  replicate: { key: "replicate", label: "Replicate", shortLabel: "R", className: "bg-[#111111]" },
-  runway: { key: "runway", label: "Runway", shortLabel: "R", className: "bg-[#000000]" },
-  stability: { key: "stability", label: "Stability AI", shortLabel: "S", className: "bg-[#7c3aed]" },
-  tangle: { key: "tangle", label: "Tangle", shortLabel: "T", className: "bg-[#0ea5e9]" },
-  tcloud: { key: "tcloud", label: "tcloud", shortLabel: "T", className: "bg-[#0ea5e9]" },
-  together: { key: "together", label: "Together", shortLabel: "To", className: "bg-[#111827]" },
-  vertex: { key: "vertex", label: "Vertex AI", shortLabel: "V", className: "bg-[#34a853]" },
-  xai: { key: "xai", label: "xAI", shortLabel: "x", className: "bg-[#111111]" },
-  zai: { key: "zai", label: "Z.ai", shortLabel: "Z", className: "bg-[#111827]" },
-  unknown: { key: "unknown", label: "Unknown", shortLabel: "?", className: "bg-muted text-muted-foreground" },
+  ai21: { key: "ai21", label: "AI21", ...brandMark("ai21") },
+  alibaba: { key: "alibaba", label: "Alibaba", ...brandMark("alibaba") },
+  anthropic: { key: "anthropic", label: "Anthropic", ...brandMark("anthropic") },
+  azure: { key: "azure", label: "Azure", ...brandMark("azure") },
+  bedrock: { key: "bedrock", label: "AWS Bedrock", ...brandMark("bedrock") },
+  cartesia: { key: "cartesia", label: "Cartesia" },
+  cerebras: { key: "cerebras", label: "Cerebras", ...brandMark("cerebras") },
+  cohere: { key: "cohere", label: "Cohere", ...brandMark("cohere") },
+  deepseek: { key: "deepseek", label: "DeepSeek", ...brandMark("deepseek") },
+  elevenlabs: { key: "elevenlabs", label: "ElevenLabs", ...brandMark("elevenlabs") },
+  fal: { key: "fal", label: "Fal", ...brandMark("fal") },
+  fireworks: { key: "fireworks", label: "Fireworks", ...brandMark("fireworks") },
+  google: { key: "google", label: "Google", ...brandMark("google") },
+  groq: { key: "groq", label: "Groq", ...brandMark("groq") },
+  kuaishou: { key: "kuaishou", label: "Kling", ...brandMark("kuaishou") },
+  luma: { key: "luma", label: "Luma", ...brandMark("luma") },
+  meta: { key: "meta", label: "Meta", ...brandMark("meta") },
+  mistral: { key: "mistral", label: "Mistral", ...brandMark("mistral") },
+  moonshot: { key: "moonshot", label: "Moonshot", ...brandMark("moonshot") },
+  openai: { key: "openai", label: "OpenAI", ...brandMark("openai") },
+  openrouter: { key: "openrouter", label: "OpenRouter", ...brandMark("openrouter") },
+  perplexity: { key: "perplexity", label: "Perplexity", ...brandMark("perplexity") },
+  pika: { key: "pika", label: "Pika", ...brandMark("pika") },
+  replicate: { key: "replicate", label: "Replicate", ...brandMark("replicate") },
+  runway: { key: "runway", label: "Runway", ...brandMark("runway") },
+  stability: { key: "stability", label: "Stability AI", ...brandMark("stability") },
+  tangle: { key: "tangle", label: "Tangle", ...brandMark("tangle") },
+  tcloud: { key: "tcloud", label: "tcloud", ...brandMark("tcloud") },
+  together: { key: "together", label: "Together", ...brandMark("together") },
+  vertex: { key: "vertex", label: "Vertex AI", ...brandMark("vertex") },
+  xai: { key: "xai", label: "xAI", ...brandMark("xai") },
+  zai: { key: "zai", label: "Z.ai", ...brandMark("zai") },
+  unknown: { key: "unknown", label: "Unknown" },
 };

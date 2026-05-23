@@ -26,6 +26,7 @@ export default defineConfig({
   dts: true,
   splitting: true,
   clean: true,
+  noExternal: ["@lobehub/icons-static-svg"],
   external: [
     "react",
     "react-dom",
@@ -52,5 +53,9 @@ export default defineConfig({
   onSuccess: "node scripts/copy-styles.mjs",
   esbuildOptions(options) {
     options.jsx = "automatic";
+    options.loader = {
+      ...options.loader,
+      ".svg": "file",
+    };
   },
 });

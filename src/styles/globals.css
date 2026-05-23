@@ -17,9 +17,11 @@
 
 @import "tailwindcss";
 
-/* Scan all component source files so every Tailwind class used in JSX is generated */
+/* Scan sandbox-ui and forwarded UI component sources so exported components ship their needed utilities. */
 @source "../../src/**/*.tsx";
 @source "../../src/**/*.ts";
+@source "../../node_modules/@tangle-network/ui/src/**/*.tsx";
+@source "../../node_modules/@tangle-network/ui/src/**/*.ts";
 
 @layer base {
   :root {

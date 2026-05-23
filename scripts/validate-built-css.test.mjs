@@ -38,4 +38,20 @@ describe("validateBuiltCss", () => {
     const css = `@import "@tangle-network/brand/styles/tokens.css";\n:root { color: red; }\n`
     expect(() => validateBuiltCss(css)).not.toThrow()
   })
+
+  it("passes when forwarded UI utility markers are present", () => {
+    const css = [
+      ".h-\\[var\\(--avatar-size\\)\\]{}",
+      ".px-\\[var\\(--chat-message-px\\)\\]{}",
+      ".py-\\[var\\(--chat-message-py\\)\\]{}",
+      ".h-\\[var\\(--indicator-dot-size\\)\\]{}",
+      ".bg-\\[var\\(--brand-glow\\)\\]{}",
+      ".bg-\\[var\\(--code-error\\)\\]\\/14{}",
+    ].join("\n")
+    expect(() => validateBuiltCss(css, { requireForwardedUiUtilities: true })).not.toThrow()
+  })
+
+  it("throws when forwarded UI utility markers are missing", () => {
+    expect(() => validateBuiltCss("", { requireForwardedUiUtilities: true })).toThrow(/missing forwarded @tangle-network\/ui utilities/)
+  })
 })

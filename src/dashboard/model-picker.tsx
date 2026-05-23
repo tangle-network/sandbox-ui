@@ -216,6 +216,37 @@ export function resolveModelBrandIdentity(model: ModelInfo): ModelBrandIdentity 
   };
 }
 
+const PRIORITY_MODEL_GROUPS: ModelBrandKey[] = ["anthropic", "openai", "google", "deepseek", "zai", "moonshot"];
+
+function modelGroupKey(model: ModelInfo): string {
+  const identity = resolveModelBrandIdentity(model);
+  if (identity.lab.key !== "unknown") return identity.lab.key;
+  if (identity.host.key !== "unknown") return identity.host.key;
+  return (model._provider ?? model.provider ?? "other").toLowerCase();
+}
+
+function modelGroupLabel(key: string): string {
+  if (key === "moonshot") return "Kimi";
+  const brand = brandInfo(normalizeBrandKey(key));
+  return brand.key === "unknown" ? key : brand.label;
+}
+
+function modelGroupRank(key: string): number {
+  const priorityIndex = PRIORITY_MODEL_GROUPS.indexOf(normalizeBrandKey(key));
+  return priorityIndex === -1 ? Number.POSITIVE_INFINITY : priorityIndex;
+}
+
+function compareModelGroups(a: string, b: string): number {
+  const aRank = modelGroupRank(a);
+  const bRank = modelGroupRank(b);
+  if (aRank !== bRank) return aRank - bRank;
+  return modelGroupLabel(a).localeCompare(modelGroupLabel(b));
+}
+
+function compareModelsByDisplayName(a: ModelInfo, b: ModelInfo): number {
+  return (a.name ?? a.id).localeCompare(b.name ?? b.id);
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function ModelPicker({
@@ -270,16 +301,20 @@ export function ModelPicker({
     });
   }, [models, query, modalities, excludeProviders]);
 
-  // Group filtered models by provider (preserves insertion order).
+  // Group filtered models by model family first, then by provider for
+  // unknown labs. This keeps routed Claude/Gemini/Kimi rows where users
+  // expect them while row metadata still shows the hosting provider.
   const grouped = React.useMemo(() => {
     const groups = new Map<string, ModelInfo[]>();
     for (const m of filtered) {
-      const provider = m._provider ?? m.provider ?? "other";
-      const list = groups.get(provider);
+      const key = modelGroupKey(m);
+      const list = groups.get(key);
       if (list) list.push(m);
-      else groups.set(provider, [m]);
+      else groups.set(key, [m]);
     }
-    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+    return Array.from(groups.entries())
+      .map(([key, list]) => [key, [...list].sort(compareModelsByDisplayName)] as const)
+      .sort(([a], [b]) => compareModelGroups(a, b));
   }, [filtered]);
 
   // Resolve the currently-selected model's display info.
@@ -450,8 +485,8 @@ export function ModelPicker({
                   {loading ? "Loading models..." : query ? "No models match." : "No models available."}
                 </div>
               ) : (
-                grouped.map(([provider, list]) => (
-                  <Section key={provider} label={provider}>
+                grouped.map(([groupKey, list]) => (
+                  <Section key={groupKey} label={modelGroupLabel(groupKey)}>
                     {list.map((m) => (
                       <ModelRow
                         key={canonicalModelId(m)}

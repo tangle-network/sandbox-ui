@@ -245,6 +245,36 @@ describe("ModelPicker popular section", () => {
   });
 });
 
+describe("ModelPicker model family ordering", () => {
+  it("pins core model families before the alphabetical remainder", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={[
+          { id: "mistral-large", name: "Mistral Large", _provider: "mistral" },
+          { id: "kimi-k2", name: "Kimi K2", _provider: "openrouter" },
+          { id: "deepseek-v3", name: "DeepSeek V3", _provider: "openrouter" },
+          { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", _provider: "google" },
+          { id: "z-ai/glm-4.6", name: "GLM 4.6", _provider: "openrouter" },
+          { id: "gpt-5.4", name: "GPT-5.4", _provider: "openai" },
+          { id: "anthropic/claude-sonnet-4-6", name: "Claude Sonnet 4.6", _provider: "openrouter" },
+          { id: "cohere-command-r", name: "Command R", _provider: "cohere" },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button"));
+
+    const labels = ["Anthropic", "OpenAI", "Google", "DeepSeek", "Z.ai", "Kimi", "Cohere", "Mistral"];
+    const nodes = labels.map((label) => screen.getAllByText(label)[0]);
+    for (let index = 0; index < nodes.length - 1; index += 1) {
+      expect(nodes[index].compareDocumentPosition(nodes[index + 1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+});
+
 describe("ModelPicker brand identity", () => {
   const MODELS: ModelInfo[] = [
     { id: "gpt-5.4", name: "GPT-5.4", _provider: "openai" },

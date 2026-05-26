@@ -32,3 +32,14 @@ export {
   type ReasoningLevelOption,
   type ReasoningLevelPickerProps,
 } from "./reasoning-level-picker";
+
+export {
+  ArtifactAgentDock,
+  createFetchTransport,
+  type ArtifactAgentDockProps,
+  type ArtifactAgentDockTransport,
+  type ArtifactDockMessage,
+  type ArtifactDockStreamEvent,
+  type ArtifactKind,
+  type ArtifactScope,
+} from "./artifact-agent-dock";

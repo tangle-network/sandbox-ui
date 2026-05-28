@@ -1,5 +1,13 @@
-import { type KeyboardEvent, type ReactNode, useMemo } from "react";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+  useMemo,
+} from "react";
 import { cn } from "../lib/utils";
+
+const INTERACTIVE_SELECTOR =
+  'button, a, input, textarea, select, [role="button"], [role="link"]';
 
 // ── Types ──
 
@@ -57,7 +65,7 @@ export interface TaskBoardProps {
    * Receives the item, its index, and the default card element.
    * Return a ReactNode that wraps/replaces the default element.
    *
-   * If not provided, the default button card is rendered.
+   * If not provided, the default card is rendered.
    */
   renderItemWrapper?: (
     item: TaskBoardItem,
@@ -109,10 +117,17 @@ export function TaskBoard({
                     key={item.id}
                     role={onClickItem ? "button" : undefined}
                     tabIndex={onClickItem ? 0 : undefined}
-                    onClick={() => onClickItem?.(item)}
+                    onClick={(event: MouseEvent<HTMLDivElement>) => {
+                      if (!onClickItem) return;
+                      const target = event.target as HTMLElement;
+                      const interactive = target.closest(INTERACTIVE_SELECTOR);
+                      if (interactive && interactive !== event.currentTarget) return;
+                      onClickItem(item);
+                    }}
                     onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
                       if (!onClickItem || event.currentTarget !== event.target) return;
                       if (event.key !== "Enter" && event.key !== " ") return;
+                      if (event.repeat) return;
                       event.preventDefault();
                       onClickItem(item);
                     }}

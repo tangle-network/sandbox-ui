@@ -51,4 +51,55 @@ describe("TaskBoard", () => {
     expect(onClickItem).toHaveBeenCalledTimes(2);
     expect(onClickItem).toHaveBeenCalledWith(items[0]);
   });
+
+  it("does not invoke onClickItem when a nested interactive element is clicked", () => {
+    const onClickItem = vi.fn();
+    const { getByText } = render(
+      <TaskBoard
+        items={items}
+        columns={columns}
+        onClickItem={onClickItem}
+        renderItemMeta={() => (
+          <button type="button">Move</button>
+        )}
+      />,
+    );
+
+    fireEvent.click(getByText("Move"));
+    expect(onClickItem).not.toHaveBeenCalled();
+  });
+
+  it("does not invoke onClickItem when keydown originates from a nested element", () => {
+    const onClickItem = vi.fn();
+    const { getByText } = render(
+      <TaskBoard
+        items={items}
+        columns={columns}
+        onClickItem={onClickItem}
+        renderItemMeta={() => (
+          <button type="button">Move</button>
+        )}
+      />,
+    );
+
+    fireEvent.keyDown(getByText("Move"), { key: "Enter" });
+    expect(onClickItem).not.toHaveBeenCalled();
+  });
+
+  it("ignores repeated keydown events while Enter or Space is held", () => {
+    const onClickItem = vi.fn();
+    const { getByRole } = render(
+      <TaskBoard
+        items={items}
+        columns={columns}
+        onClickItem={onClickItem}
+      />,
+    );
+
+    const card = getByRole("button", { name: /Draft storyboard/i });
+    fireEvent.keyDown(card, { key: "Enter", repeat: true });
+    fireEvent.keyDown(card, { key: " ", repeat: true });
+
+    expect(onClickItem).not.toHaveBeenCalled();
+  });
 });

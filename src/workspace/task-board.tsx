@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo } from "react";
+import { type KeyboardEvent, type ReactNode, useMemo } from "react";
 import { cn } from "../lib/utils";
 
 // ── Types ──
@@ -105,10 +105,17 @@ export function TaskBoard({
               {colItems.length === 0 && columnEmptyState}
               {colItems.map((item, index) => {
                 const card = (
-                  <button
+                  <div
                     key={item.id}
-                    type="button"
+                    role={onClickItem ? "button" : undefined}
+                    tabIndex={onClickItem ? 0 : undefined}
                     onClick={() => onClickItem?.(item)}
+                    onKeyDown={(event: KeyboardEvent<HTMLDivElement>) => {
+                      if (!onClickItem || event.currentTarget !== event.target) return;
+                      if (event.key !== "Enter" && event.key !== " ") return;
+                      event.preventDefault();
+                      onClickItem(item);
+                    }}
                     className="group w-full rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-accent/50"
                   >
                     <p className="text-sm font-medium text-foreground">
@@ -144,7 +151,7 @@ export function TaskBoard({
                       </div>
                     )}
                     {renderItemMeta?.(item)}
-                  </button>
+                  </div>
                 );
 
                 return renderItemWrapper

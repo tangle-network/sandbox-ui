@@ -43,6 +43,11 @@ export interface ArtifactAgentDockTransport {
     content: string;
     signal: AbortSignal;
   }): AsyncIterable<ArtifactDockStreamEvent>;
+  /** Stop the server-side run for a thread. Optional — when present, the dock
+   *  calls it on cancel/scope-switch BEFORE aborting the local fetch, so the
+   *  agent run is actually stopped (not orphaned, still billing) rather than
+   *  the client merely closing its reader. */
+  cancel?(args: { threadId: string }): Promise<void> | void;
 }
 
 export interface ArtifactAgentDockProps {
@@ -85,6 +90,22 @@ function normalizeRole(role: string): MessageRole {
   return role === "assistant" || role === "system" ? role : "user";
 }
 
+/** Stable client-side message id. Uses `crypto.randomUUID()` when available,
+ *  else a UUIDv4 from `getRandomValues`. Avoids `Date.now()`, which collides
+ *  when a user+assistant pair are created in the same millisecond. */
+function createDockMessageId(): string {
+  const c = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  if (c && typeof c.getRandomValues === "function") {
+    const b = c.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+  throw new Error("crypto.getRandomValues is required for message ids");
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 /**
@@ -121,6 +142,10 @@ export function ArtifactAgentDock({
   const [loading, setLoading] = React.useState(false);
   const abortRef = React.useRef<AbortController | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  // Bumped on every scope change. The send loop captures the token at send
+  // time and gates every setState on it, so a stream still in flight when the
+  // user switches artifacts cannot write into the new scope's messages.
+  const scopeTokenRef = React.useRef(0);
 
   const reportError = React.useCallback(
     (message: string) => {
@@ -132,6 +157,11 @@ export function ArtifactAgentDock({
 
   React.useEffect(() => {
     if (!open) return;
+    // New scope ⇒ new token; abort any stream still in flight from the prior
+    // scope so its deltas can't land under the new artifact.
+    scopeTokenRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
     let cancelled = false;
     async function bootstrap() {
       setLoading(true);
@@ -173,8 +203,12 @@ export function ArtifactAgentDock({
     const text = composer.trim();
     if (!text || !threadId || sending) return;
 
+    // Capture the scope token; every setState below is gated on it, so if the
+    // user switches artifacts mid-stream this turn's writes are dropped rather
+    // than bleeding into the new scope.
+    const token = scopeTokenRef.current;
     const userMsg: ArtifactDockMessage = {
-      id: `local-${Date.now()}`,
+      id: createDockMessageId(),
       role: "user",
       content: text,
       createdAt: new Date(),
@@ -192,6 +226,7 @@ export function ArtifactAgentDock({
 
     try {
       for await (const event of transport.sendStream({ threadId, content: text, signal: controller.signal })) {
+        if (scopeTokenRef.current !== token) return;
         if (event.type === "delta") {
           assistantContent += event.text;
           setStreamContent(assistantContent);
@@ -201,11 +236,12 @@ export function ArtifactAgentDock({
         }
       }
 
+      if (scopeTokenRef.current !== token) return;
       if (assistantContent && !streamFailed) {
         setMessages((prev) => [
           ...prev,
           {
-            id: `assist-${Date.now()}`,
+            id: createDockMessageId(),
             role: "assistant",
             content: assistantContent,
             createdAt: new Date(),
@@ -215,18 +251,27 @@ export function ArtifactAgentDock({
       setStreamContent("");
     } catch (err) {
       if ((err as Error)?.name === "AbortError") return;
-      reportError(err instanceof Error ? err.message : "Send failed");
+      if (scopeTokenRef.current === token) reportError(err instanceof Error ? err.message : "Send failed");
     } finally {
-      setSending(false);
-      abortRef.current = null;
+      if (scopeTokenRef.current === token) setSending(false);
+      if (abortRef.current === controller) abortRef.current = null;
     }
   }, [composer, threadId, sending, transport, reportError]);
 
   const cancel = React.useCallback(() => {
+    // Stop the server-side run first (if the transport supports it), then
+    // abort the local reader — otherwise the run is orphaned + still billing.
+    if (threadId && transport.cancel) {
+      try {
+        void Promise.resolve(transport.cancel({ threadId })).catch(() => {});
+      } catch {
+        /* best-effort */
+      }
+    }
     abortRef.current?.abort();
     setSending(false);
     setStreamContent("");
-  }, []);
+  }, [threadId, transport]);
 
   if (!open) return null;
 
@@ -335,7 +380,7 @@ export function ArtifactAgentDock({
  * their own transport object.
  *
  * The expected NDJSON event shape:
- *   { type: "message.part.delta", data: { text: string } }   // assistant chunk
+ *   { type: "message.part.updated", data: { delta: string, part?: {type} } }  // assistant chunk
  *   { type: "error", data: { message: string, ... } }        // surface error
  *
  * Other event types are ignored — consumers that need tool-call rendering
@@ -408,10 +453,16 @@ export function createFetchTransport(opts: {
             if (!line.trim()) continue;
             try {
               const event = JSON.parse(line) as { type?: string; data?: Record<string, unknown> };
-              if (event.type === "message.part.delta" && event.data) {
-                const text = event.data.text;
-                if (typeof text === "string" && text.length > 0) {
-                  yield { type: "delta", text };
+              if (event.type === "message.part.updated" && event.data) {
+                // Tangle chat streams emit `message.part.updated` with the
+                // streamed text in `data.delta`. Ignore non-text parts (tool /
+                // reasoning deltas ride the same event type) so they don't
+                // corrupt the rendered assistant text.
+                const delta = event.data.delta;
+                const part = event.data.part as { type?: unknown } | undefined;
+                const isText = !part || typeof part !== "object" || part.type === undefined || part.type === "text";
+                if (isText && typeof delta === "string" && delta.length > 0) {
+                  yield { type: "delta", text: delta };
                 }
               } else if (event.type === "error" && event.data) {
                 const message = typeof event.data.message === "string" ? event.data.message : "Stream error";

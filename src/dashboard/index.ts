@@ -41,6 +41,13 @@ export {
   type CreditBalanceProps,
 } from "./credit-balance";
 export {
+  OutOfCreditsModal,
+  type OutOfCreditsModalProps,
+  parseInsufficientBalance,
+  type InsufficientBalance,
+  INSUFFICIENT_BALANCE_CODE,
+} from "./out-of-credits";
+export {
   ClusterStatusBar,
   type ClusterStatusBarProps,
   type ClusterStatusItem,

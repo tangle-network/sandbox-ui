@@ -48,11 +48,18 @@ jobs:
       - name: Install, build, and publish
         if: steps.version.outputs.changed == 'true'
         run: |
+          # OIDC trusted publishing needs npm >= 11.5.1; Node 22 ships npm 10.x.
+          npm install -g npm@latest
           pnpm install --frozen-lockfile
           pnpm run build
+          # No NODE_AUTH_TOKEN: with id-token:write + a configured trusted
+          # publisher, npm authenticates via OIDC. Passing a token here forces
+          # token-auth instead (and our scoped tokens 404 on this package).
+          # setup-node wrote an _authToken=${NODE_AUTH_TOKEN} line; with the
+          # env unset it expands empty — strip it so npm falls back to OIDC.
+          npm pkg get name >/dev/null 2>&1 || true
+          if [ -f "$HOME/.npmrc" ]; then sed -i '/_authToken=/d' "$HOME/.npmrc" || true; fi
           npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to GitHub Packages
         if: steps.version.outputs.changed == 'true'

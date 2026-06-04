@@ -51,6 +51,94 @@ function defaultConnectorOf(provider: IntegrationProvider): string {
   return provider.connectors?.[0]?.connectorId ?? provider.providerId;
 }
 
+// Map a provider id to a brand logo slug (simpleicons). Keeps the catalog
+// list visually recognizable when the platform catalog omits `iconUrl`.
+const PROVIDER_LOGO_SLUGS: Record<string, string> = {
+  gmail: "gmail",
+  googlemail: "gmail",
+  google: "google",
+  "google-drive": "googledrive",
+  googledrive: "googledrive",
+  drive: "googledrive",
+  "google-calendar": "googlecalendar",
+  googlecalendar: "googlecalendar",
+  calendar: "googlecalendar",
+  "google-sheets": "googlesheets",
+  instagram: "instagram",
+  facebook: "facebook",
+  meta: "meta",
+  linkedin: "linkedin",
+  twitter: "x",
+  x: "x",
+  tiktok: "tiktok",
+  youtube: "youtube",
+  slack: "slack",
+  discord: "discord",
+  notion: "notion",
+  hubspot: "hubspot",
+  salesforce: "salesforce",
+  stripe: "stripe",
+  github: "github",
+  gitlab: "gitlab",
+  linear: "linear",
+  jira: "jira",
+  asana: "asana",
+  trello: "trello",
+  dropbox: "dropbox",
+  box: "box",
+  outlook: "microsoftoutlook",
+  "microsoft-outlook": "microsoftoutlook",
+  "microsoft-teams": "microsoftteams",
+  zoom: "zoom",
+  shopify: "shopify",
+  mailchimp: "mailchimp",
+  airtable: "airtable",
+  zendesk: "zendesk",
+  intercom: "intercom",
+};
+
+function normalizeProviderId(id: string): string {
+  return id
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-")
+    .replace(/-(business|oauth|api|app|v\d+)$/g, "");
+}
+
+function providerLogoUrl(provider: IntegrationProvider): string | undefined {
+  if (provider.iconUrl) return provider.iconUrl;
+  const id = provider.providerId.toLowerCase();
+  const slug = PROVIDER_LOGO_SLUGS[id] ?? PROVIDER_LOGO_SLUGS[normalizeProviderId(id)];
+  return slug ? `https://cdn.simpleicons.org/${slug}` : undefined;
+}
+
+function ProviderLogo({ provider }: { provider: IntegrationProvider }) {
+  const [failed, setFailed] = React.useState(false);
+  const url = providerLogoUrl(provider);
+  const label = (provider.displayName ?? provider.providerId).trim();
+  const initial = label.charAt(0).toUpperCase() || "?";
+  if (!url || failed) {
+    return (
+      <span
+        className="flex size-6 shrink-0 items-center justify-center rounded bg-muted text-[11px] font-semibold text-muted-foreground"
+        aria-hidden
+      >
+        {initial}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={url}
+      alt=""
+      width={24}
+      height={24}
+      loading="lazy"
+      className="size-6 shrink-0 rounded object-contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function buildConnectionIndex(
   connections: IntegrationConnection[],
 ): Map<string, IntegrationConnection> {
@@ -133,6 +221,7 @@ export function IntegrationsPanel({
             <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
+                  <ProviderLogo provider={provider} />
                   <h3 className="text-sm font-semibold capitalize text-foreground">
                     {headline}
                   </h3>

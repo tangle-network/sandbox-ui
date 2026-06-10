@@ -77,6 +77,13 @@ export interface SandboxWorkbenchSessionProps extends Omit<ChatContainerProps, "
   subtitle?: ReactNode;
   meta?: ReactNode;
   headerActions?: ReactNode;
+  /**
+   * Controls rendered as a strip attached beneath the chat composer —
+   * harness/model/effort pickers, token meters, etc. Use
+   * `AgentSessionControls` from `@tangle-network/sandbox-ui/chat` for the
+   * standard set.
+   */
+  composerControls?: ReactNode;
   renderRunActions?: ChatContainerProps["renderRunActions"];
   renderUserMessageActions?: ChatContainerProps["renderUserMessageActions"];
   renderToolActions?: ChatContainerProps["renderToolActions"];
@@ -392,6 +399,7 @@ export function SandboxWorkbench({
     </div>
   );
 
+  const { composerControls, ...chatSession } = session;
   const center = (
     <ArtifactPane
       eyebrow={session.eyebrow ?? "Agent Session"}
@@ -402,11 +410,18 @@ export function SandboxWorkbench({
       className="h-full"
       contentClassName="bg-background"
     >
-      <ChatContainer
-        {...session}
-        className="h-full"
-        presentation={session.presentation ?? "timeline"}
-      />
+      <div className="flex h-full min-h-0 flex-col">
+        <ChatContainer
+          {...chatSession}
+          className="min-h-0 flex-1"
+          presentation={session.presentation ?? "timeline"}
+        />
+        {composerControls && (
+          <div className="shrink-0 border-t border-border bg-muted/30 px-3 py-2">
+            {composerControls}
+          </div>
+        )}
+      </div>
     </ArtifactPane>
   );
 

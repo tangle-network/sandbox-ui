@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   Layers,
   Cpu,
-  Bot,
   Info,
   Loader2,
   Settings,
@@ -14,7 +13,6 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { ModelPicker, canonicalModelId, type ModelInfo } from "../dashboard/model-picker";
 import { Badge, Button, Textarea } from "../primitives";
 
 export interface EnvironmentOption {
@@ -92,37 +90,6 @@ export interface ProvisioningWizardProps {
   onLoadStartupScripts?: () => Promise<StartupScriptEntry[]>;
   /** Plan-based resource limits — caps the slider maximums */
   resourceLimits?: ResourceLimits;
-  /**
-   * Models to surface in step 3, typically the wire-format payload from
-   * Tangle Router's `/v1/models`. The wizard stores the canonical id
-   * (`<provider>/<model>`) on `ProvisioningConfig.modelTier`, which is
-   * the same shape the API expects for `backend.model.model`. While the
-   * list is empty (e.g. router fetch in flight) the picker renders a
-   * disabled trigger with "no models available" copy.
-   */
-  models?: ModelInfo[];
-  /**
-   * Canonical model ids to surface in the picker's "Popular" section.
-   * Forwarded straight to ModelPicker. Use this to surface a curated set
-   * of common models (e.g. one per provider/tier) without imposing a
-   * Fast/Balanced/Best taxonomy.
-   */
-  popular?: ReadonlyArray<string>;
-  /**
-   * The user's saved preferred model id (canonical, e.g.
-   * "openai/gpt-5.4"). Used as the initial `modelTier` when
-   * `defaultConfig.modelTier` isn't set, and as the next-best fallback
-   * when the current selection drops out of the loaded model list.
-   * Persistence is the caller's responsibility.
-   */
-  defaultModel?: string | null;
-  /**
-   * Persist the current `modelTier` as the user's default. When provided,
-   * the wizard renders a "Save as default" affordance under the model
-   * picker. The wizard does not store anything itself — the caller owns
-   * persistence (e.g. localStorage, account settings API).
-   */
-  onSetDefault?: (modelId: string) => void;
   sshAccess?: SshAccessConfig;
   /** Real pricing rates from the API for accurate cost calculation */
   pricingRates?: PricingRates;
@@ -147,8 +114,6 @@ export interface ProvisioningConfig {
   cpuCores: number;
   ramGB: number;
   storageGB: number;
-  modelTier: string;
-  systemPrompt: string;
   name: string;
   gitUrl: string;
   envVars: { key: string; value: string }[];
@@ -505,10 +470,6 @@ export function ProvisioningWizard({
   skipToReview,
   onLoadStartupScripts,
   resourceLimits,
-  models,
-  popular,
-  defaultModel,
-  onSetDefault,
   sshAccess,
   pricingRates,
   planTiers,
@@ -616,32 +577,6 @@ export function ProvisioningWizard({
     );
   }, [cpuMax, ramMax, storageMax, cpuStep, ramStep, storageStep]);
 
-  // Initial selection priority:
-  //   1. `defaultConfig.modelTier` — explicit template pinning (highest)
-  //   2. `defaultModel` — user's saved preference
-  //   3. "" — backfilled by the auto-select effect once `models` loads
-  const [modelTier, setModelTier] = React.useState(
-    dc?.modelTier ?? defaultModel ?? "",
-  );
-  const [systemPrompt, setSystemPrompt] = React.useState(
-    dc?.systemPrompt ?? "",
-  );
-
-  // Auto-select once the caller's list arrives, or whenever the current
-  // `modelTier` falls out of the list (router refetch swapped the catalog,
-  // `defaultConfig.modelTier` doesn't match, etc.). Fallback chain
-  // mirrors the initial-selection priority and adds `popular` as a
-  // soft-curation hint between user preference and arbitrary first.
-  React.useEffect(() => {
-    if (!models || models.length === 0) return;
-    const ids = models.map(canonicalModelId);
-    if (ids.includes(modelTier)) return;
-    const next =
-      (defaultModel && ids.includes(defaultModel) ? defaultModel : undefined) ??
-      popular?.find((p) => ids.includes(p)) ??
-      ids[0];
-    if (next && next !== modelTier) setModelTier(next);
-  }, [models, modelTier, defaultModel, popular]);
   const [name, setName] = React.useState(dc?.name ?? "");
   const [gitUrl, setGitUrl] = React.useState(dc?.gitUrl ?? "");
   const [envVars, setEnvVars] = React.useState<
@@ -689,8 +624,8 @@ export function ProvisioningWizard({
 
   const isMultistep = variant === "multistep";
   const stepLabels = sshAccess
-    ? ["Environment", "Resources", "AI Agent", "Access"]
-    : ["Environment", "Resources", "AI Agent"];
+    ? ["Environment", "Resources", "Access"]
+    : ["Environment", "Resources"];
   const finalStep = stepLabels.length;
   const [currentStep, setCurrentStep] = React.useState(
     skipToReview && dc && isMultistep ? finalStep : 1,
@@ -712,8 +647,6 @@ export function ProvisioningWizard({
         cpuCores,
         ramGB,
         storageGB,
-        modelTier,
-        systemPrompt,
         name,
         gitUrl,
         envVars: envVars.filter((e) => e.key.trim() !== ""),
@@ -863,7 +796,7 @@ export function ProvisioningWizard({
             Sandbox Provisioning
           </h1>
           <p className="text-muted-foreground text-sm">
-            Select your stack, allocate resources, and configure your agent.
+            Select your stack, allocate resources, and deploy.
           </p>
         </div>
       </div>
@@ -938,14 +871,6 @@ export function ProvisioningWizard({
                   setStorageGB(
                     snapSliderValue(128, STORAGE_MIN, storageMax, storageStep),
                   );
-                  // Reset to the first model in the caller's list so the
-                  // trigger never shows an unknown value between this
-                  // reset and the auto-correct effect. Empty list means
-                  // models haven't loaded yet — clear the tier and let
-                  // the effect populate it once the list arrives.
-                  const first = models?.[0];
-                  setModelTier(first ? canonicalModelId(first) : "");
-                  setSystemPrompt("");
                   setName("");
                   setGitUrl("");
                   setEnvVars([{ key: "", value: "" }]);
@@ -1201,56 +1126,12 @@ export function ProvisioningWizard({
               </React.Fragment>
             )}
 
-            {(!isMultistep || currentStep === 3) && (
+            {(!isMultistep || currentStep === 2) && (
               <React.Fragment>
-                {/* Section 3: AI Agent */}
+                {/* Advanced workspace options (collapsed by default) */}
                 <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-                      <Bot className="h-5 w-5" />
-                    </div>
-                    <h2 className="text-lg font-bold text-foreground tracking-tight">
-                      AI Agent Capability
-                    </h2>
-                  </div>
                   <div className="space-y-5">
                     <div>
-                      <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                        Model Engine
-                      </label>
-                      <ModelPicker
-                        label=""
-                        value={modelTier}
-                        onChange={setModelTier}
-                        models={models ?? []}
-                        loading={!models}
-                        disabled={!models || models.length === 0}
-                        popular={popular}
-                        triggerClassName="rounded-xl h-12 px-4 font-bold"
-                      />
-                      {onSetDefault && (
-                        <SaveAsDefault
-                          modelTier={modelTier}
-                          defaultModel={defaultModel ?? null}
-                          onSetDefault={onSetDefault}
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                        Core Directives (System Prompt)
-                      </label>
-                      <textarea
-                        value={systemPrompt}
-                        onChange={(e) => setSystemPrompt(e.target.value)}
-                        maxLength={10000}
-                        className="w-full bg-card border border-border rounded-xl p-4 font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-32 resize-none placeholder:text-muted-foreground"
-                        placeholder="Define the autonomous directives or operational boundaries..."
-                      />
-                    </div>
-
-                    {/* Advanced Options Toggle Section */}
-                    <div className="pt-4 border-t border-border">
                       <button
                         type="button"
                         onClick={() => setShowAdvanced(!showAdvanced)}
@@ -1502,7 +1383,7 @@ export function ProvisioningWizard({
               </React.Fragment>
             )}
 
-            {sshAccess && (!isMultistep || currentStep === 4) && (
+            {sshAccess && (!isMultistep || currentStep === 3) && (
               <React.Fragment>
                 <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <div className="flex items-center gap-3 mb-5">
@@ -1641,7 +1522,7 @@ export function ProvisioningWizard({
                   <button
                     type="button"
                     onClick={handleDeploy}
-                    disabled={isDeploying || !selectedEnv || (!modelTier && !bare)}
+                    disabled={isDeploying || !selectedEnv}
                     className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
                   >
                     {isDeploying ? (
@@ -1668,7 +1549,7 @@ export function ProvisioningWizard({
               <button
                 type="button"
                 onClick={handleDeploy}
-                disabled={isDeploying || !selectedEnv || (!modelTier && !bare)}
+                disabled={isDeploying || !selectedEnv}
                 className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
               >
                 {isDeploying ? (
@@ -1688,44 +1569,3 @@ export function ProvisioningWizard({
   );
 }
 
-// Compact "Save as default" affordance shown beneath the ModelPicker. The
-// wizard owns the layout; persistence is the consumer's job (wizard just
-// invokes `onSetDefault`). Disabled when there's nothing to save (no
-// selection yet) or when the current selection already matches the saved
-// default — keeps the click idempotent.
-function SaveAsDefault({
-  modelTier,
-  defaultModel,
-  onSetDefault,
-}: {
-  modelTier: string;
-  defaultModel: string | null;
-  onSetDefault: (modelId: string) => void;
-}) {
-  const isCurrentDefault = Boolean(modelTier) && modelTier === defaultModel;
-  const disabled = !modelTier || isCurrentDefault;
-  return (
-    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-      <button
-        type="button"
-        onClick={() => {
-          if (!disabled) onSetDefault(modelTier);
-        }}
-        disabled={disabled}
-        className={cn(
-          "underline-offset-2 transition-colors",
-          disabled
-            ? "cursor-default opacity-60"
-            : "hover:text-foreground hover:underline focus:outline-none focus:text-foreground focus:underline",
-        )}
-      >
-        {isCurrentDefault ? "✓ Saved as default" : "Save as default"}
-      </button>
-      {defaultModel && !isCurrentDefault && (
-        <span className="truncate">
-          (current default: <span className="font-mono">{defaultModel}</span>)
-        </span>
-      )}
-    </div>
-  );
-}

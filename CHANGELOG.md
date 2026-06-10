@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.21.0
+
+### ProvisioningWizard: AI Agent step removed (breaking)
+
+- The wizard is now Environment → Resources (→ Access). Agent harness,
+  model, and system prompt are runtime concerns configured in the
+  session chat, not at provisioning.
+- `ProvisioningConfig` no longer has `modelTier` / `systemPrompt`.
+- `ProvisioningWizardProps` no longer accepts `models`, `popular`,
+  `defaultModel`, `onSetDefault`.
+- The Advanced Options block (workspace name, driver, git URL, env
+  vars, startup scripts, bare mode) moved into the Resources step.
+- `TemplatePreset` no longer carries `systemPrompt`.
+
+### Agent chat session controls (new)
+
+- `AgentSessionControls` (`./chat`) — compact composer strip combining
+  an agent-harness dropdown (canonical `HARNESS_OPTIONS`), the
+  `ModelPicker` pill, and `ReasoningLevelPicker`. Sections render only
+  when their control object is provided; `trailing` slot for token/cost
+  meters.
+- `SandboxWorkbench` `session.composerControls` — renders any node as a
+  strip attached beneath the chat composer.
+- `useSessionStream().send(text, options?)` — per-turn overrides
+  (`agent`, `model {providerID, modelID}`, `system`,
+  `reasoningEffort`) forwarded to the sidecar send-message endpoint.
+
+
 ## 0.17.0
 
 ### `TangleLoginButton` (auth) + `IntegrationsPanel` / `useIntegrations` (new `./integrations` subpath)

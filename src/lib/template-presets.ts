@@ -7,13 +7,9 @@ export type TemplateCategory =
   | "infrastructure"
   | "general"
 
-// Templates pin compute size and a system prompt; the model is left to the
-// wizard's auto-select (first router entry) and the user can refine via the
-// picker's Fast/Balanced/Best presets. Pinning a bare `modelTier` like
-// "claude-sonnet" never matched canonical router ids (e.g.
-// "anthropic/claude-sonnet-4-6") so the auto-select silently discarded it
-// anyway — making it explicit rather than fictitious.
-export type TemplatePreset = Omit<ProvisioningConfig, "name" | "gitUrl" | "envVars" | "driver" | "startupScriptIds" | "modelTier">
+// Templates pin compute size only. Agent backend, model, and prompt are
+// runtime concerns configured in the sandbox session, not at provisioning.
+export type TemplatePreset = Omit<ProvisioningConfig, "name" | "gitUrl" | "envVars" | "driver" | "startupScriptIds">
 
 const BLOCKCHAIN_PATTERNS = [
   "ethereum", "solana", "arbitrum", "base-aa", "base-l2", "polygon",
@@ -58,8 +54,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 4,
     ramGB: 16,
     storageGB: 128,
-    systemPrompt:
-      "You are a blockchain development assistant. Help with smart contract development, testing, and deployment. Follow security best practices and suggest gas optimizations where relevant.",
     bare: false,
   },
   "ai-ml": {
@@ -67,8 +61,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 8,
     ramGB: 32,
     storageGB: 256,
-    systemPrompt:
-      "You are an AI/ML development assistant. Help with model training, data processing, and experiment management. Suggest efficient approaches for the available compute resources.",
     bare: false,
   },
   frontend: {
@@ -76,8 +68,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 2,
     ramGB: 4,
     storageGB: 50,
-    systemPrompt:
-      "You are a frontend development assistant. Help build modern, accessible, and performant user interfaces.",
     bare: false,
   },
   infrastructure: {
@@ -85,8 +75,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 4,
     ramGB: 16,
     storageGB: 128,
-    systemPrompt:
-      "You are an infrastructure and DevOps assistant. Help with service configuration, deployment, monitoring, and operational best practices.",
     bare: false,
   },
   general: {
@@ -94,7 +82,6 @@ const CATEGORY_DEFAULTS: Record<TemplateCategory, TemplatePreset> = {
     cpuCores: 4,
     ramGB: 16,
     storageGB: 128,
-    systemPrompt: "",
     bare: false,
   },
 }

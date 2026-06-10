@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.21.1
+
+### Harness ↔ model compatibility + session locking (chat)
+
+- `harness-model-compat` (`./chat`): policy table + pure helpers
+  (`isModelCompatibleWithHarness`, `snapModelToHarness`,
+  `snapHarnessToModel`, `modelProvider`). Native harnesses are
+  vendor-locked (claude-code → Anthropic, codex → OpenAI); opencode is
+  router-backed and runs anything.
+- `AgentSessionControls` keeps the harness/model pair coherent:
+  switching harness snaps an incompatible model to the harness's best
+  catalog option (latest standard-frontier first); picking a model the
+  harness can't run switches to the model's native harness.
+- `AgentSessionHarnessControl.locked` + `lockReason`: a harness bound
+  to an active chat session renders an inert lock trigger and filters
+  the model catalog to compatible entries.
+
+### Wizard design-system alignment
+
+- ProvisioningWizard restyled to the shared dashboard idiom (standard
+  cards, Input/Switch/Button primitives, compact sliders and step
+  indicator). No prop or behavior changes.
+
+
 ## 0.21.0
 
 ### ProvisioningWizard: AI Agent step removed (breaking)

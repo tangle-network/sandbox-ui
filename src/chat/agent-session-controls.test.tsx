@@ -112,3 +112,81 @@ describe("AgentSessionControls", () => {
     expect(screen.getByText("12.4k tokens")).toBeInTheDocument();
   });
 });
+
+describe("AgentSessionControls — harness/model coupling", () => {
+  const COUPLING_MODELS = [
+    { id: "openai/gpt-5.5", name: "GPT-5.5", _provider: "openai" },
+    {
+      id: "anthropic/claude-opus-4-8",
+      name: "Claude Opus 4.8",
+      _provider: "anthropic",
+    },
+  ];
+
+  it("switching harness to codex snaps an Anthropic model to the frontier GPT", async () => {
+    const onHarnessChange = vi.fn();
+    const onModelChange = vi.fn();
+    render(
+      <AgentSessionControls
+        harness={{ value: "opencode", onChange: onHarnessChange }}
+        model={{
+          value: "anthropic/claude-opus-4-8",
+          onChange: onModelChange,
+          models: COUPLING_MODELS,
+        }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    await userEvent.click(await screen.findByText("Codex"));
+    expect(onHarnessChange).toHaveBeenCalledWith("codex");
+    expect(onModelChange).toHaveBeenCalledWith("openai/gpt-5.5");
+  });
+
+  it("keeps the model when the new harness can run it", async () => {
+    const onModelChange = vi.fn();
+    render(
+      <AgentSessionControls
+        harness={{ value: "codex", onChange: () => {} }}
+        model={{
+          value: "openai/gpt-5.5",
+          onChange: onModelChange,
+          models: COUPLING_MODELS,
+        }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    await userEvent.click(await screen.findByText("OpenCode"));
+    expect(onModelChange).not.toHaveBeenCalled();
+  });
+
+  it("locked harness renders an inert trigger and filters the catalog to compatible models", async () => {
+    render(
+      <AgentSessionControls
+        harness={{
+          value: "claude-code",
+          onChange: () => {},
+          locked: true,
+          lockReason: "Harness is locked to this session",
+        }}
+        model={{
+          value: "anthropic/claude-opus-4-8",
+          onChange: () => {},
+          models: COUPLING_MODELS,
+        }}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /agent harness/i });
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveAttribute(
+      "title",
+      "Harness is locked to this session",
+    );
+    // Open the model picker: the OpenAI entry must not be offered.
+    await userEvent.click(screen.getByText("Claude Opus 4.8"));
+    expect(screen.queryByText("GPT-5.5")).not.toBeInTheDocument();
+  });
+});

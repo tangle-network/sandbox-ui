@@ -2,10 +2,19 @@
 
 import * as React from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Bot, ChevronDown } from "lucide-react";
+import { Bot, ChevronDown, Lock } from "lucide-react";
 import { cn } from "../lib/utils";
-import { ModelPicker, type ModelInfo } from "../dashboard/model-picker";
+import {
+  canonicalModelId,
+  ModelPicker,
+  type ModelInfo,
+} from "../dashboard/model-picker";
 import { HARNESS_OPTIONS, type HarnessType } from "../dashboard/harness-picker";
+import {
+  isModelCompatibleWithHarness,
+  snapHarnessToModel,
+  snapModelToHarness,
+} from "./harness-model-compat";
 import {
   ReasoningLevelPicker,
   type ReasoningLevel,
@@ -18,6 +27,15 @@ export interface AgentSessionHarnessControl {
   /** Filter the selectable harnesses (e.g. by plan tier). Defaults to all. */
   available?: ReadonlyArray<HarnessType>;
   disabled?: boolean;
+  /**
+   * A harness is bound to its chat session once the conversation has
+   * started. While locked the dropdown is inert and the model catalog
+   * is filtered to what this harness can run — fork the session to
+   * switch harness.
+   */
+  locked?: boolean;
+  /** Tooltip shown on the locked trigger. */
+  lockReason?: string;
 }
 
 export interface AgentSessionModelControl {
@@ -59,6 +77,8 @@ function HarnessDropdown({
   onChange,
   available,
   disabled,
+  locked,
+  lockReason,
 }: AgentSessionHarnessControl) {
   const allowed = new Set<HarnessType>(
     available ?? HARNESS_OPTIONS.map((h) => h.type),
@@ -71,19 +91,26 @@ function HarnessDropdown({
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          disabled={disabled}
+          disabled={disabled || locked}
+          title={locked ? lockReason : undefined}
           className={cn(
             "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5",
             "text-xs font-medium text-foreground shadow-sm transition-colors",
             "hover:border-primary/30 hover:bg-accent/30 focus:outline-none focus:border-primary/40",
             "data-[state=open]:border-primary/40 data-[state=open]:bg-accent/30",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+            "disabled:cursor-not-allowed disabled:opacity-60",
           )}
           aria-label="Agent harness"
         >
-          <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+          {locked ? (
+            <Lock className="h-3 w-3 text-muted-foreground" />
+          ) : (
+            <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
           <span>{selected?.label ?? value}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          {!locked && (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
@@ -131,6 +158,13 @@ function HarnessDropdown({
  * thinking-effort pickers in one row. Every section is optional and only
  * renders when its control object is provided — never show a dead control.
  *
+ * When BOTH harness and model controls are present the pair is kept
+ * coherent automatically (see harness-model-compat): picking a harness
+ * snaps an incompatible model to that harness's best catalog option;
+ * picking a model the current harness can't run switches to the model's
+ * native harness — unless the harness is `locked`, in which case the
+ * catalog itself is filtered to compatible models.
+ *
  * Designed to slot into `SandboxWorkbench`'s `session.composerControls`.
  */
 export function AgentSessionControls({
@@ -142,23 +176,51 @@ export function AgentSessionControls({
 }: AgentSessionControlsProps) {
   if (!harness && !model && !reasoning && !trailing) return null;
 
+  const handleHarnessChange = (next: HarnessType) => {
+    harness?.onChange(next);
+    if (model) {
+      const snapped = snapModelToHarness(next, model.value, model.models);
+      if (snapped !== model.value) model.onChange(snapped);
+    }
+  };
+
+  const handleModelChange = (nextModelId: string) => {
+    model?.onChange(nextModelId);
+    if (harness && !harness.locked) {
+      const snapped = snapHarnessToModel(harness.value, nextModelId);
+      if (snapped !== harness.value) harness.onChange(snapped);
+    }
+  };
+
+  const visibleModels =
+    model && harness?.locked
+      ? model.models.filter((entry) =>
+          isModelCompatibleWithHarness(
+            harness.value,
+            canonicalModelId(entry),
+          ),
+        )
+      : model?.models;
+
   return (
     <div
       className={cn("flex flex-wrap items-center gap-2", className)}
       data-testid="agent-session-controls"
     >
-      {harness && <HarnessDropdown {...harness} />}
+      {harness && (
+        <HarnessDropdown {...harness} onChange={handleHarnessChange} />
+      )}
       {model && (
         <ModelPicker
           variant="pill"
           label=""
           value={model.value}
-          onChange={model.onChange}
-          models={model.models}
+          onChange={handleModelChange}
+          models={visibleModels ?? []}
           loading={model.loading}
           popular={model.popular}
           recents={model.recents}
-          disabled={model.disabled || model.models.length === 0}
+          disabled={model.disabled || (visibleModels ?? []).length === 0}
         />
       )}
       {reasoning && (

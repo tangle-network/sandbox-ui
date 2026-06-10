@@ -385,3 +385,127 @@ describe("useSandboxMetrics", () => {
     );
   });
 });
+
+describe("useSandboxMetrics — system telemetry + history", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const SYSTEM = {
+    cpuPercent: 42.5,
+    cpuCores: 4,
+    memory: { usedBytes: 2_000_000_000, totalBytes: 8_000_000_000 },
+    disk: { usedBytes: 10_000_000_000, totalBytes: 50_000_000_000, path: "/workspace" },
+    source: "cgroup-v2" as const,
+  };
+
+  it("exposes the system section and appends a history sample", async () => {
+    fetchMock.mockResolvedValue(
+      mockFetchResponse({
+        process: { cpuSeconds: { user: 1, system: 0 } },
+        system: SYSTEM,
+        latency: {
+          ttftMs: { p50: 120, p95: 480, sampleCount: 9 },
+          firstResponseMs: { p50: 300, p95: 900, sampleCount: 9 },
+          runDurationMs: { p50: 4000, p95: 12000, sampleCount: 9 },
+        },
+      }),
+    );
+    const { result } = renderHook(() =>
+      useSandboxMetrics({
+        apiBaseUrl: "http://localhost",
+        sandboxId: "sb-1",
+        intervalMs: 100_000,
+      }),
+    );
+    await waitFor(() => {
+      expect(result.current.system).not.toBeNull();
+    });
+    expect(result.current.system?.cpuPercent).toBe(42.5);
+    expect(result.current.system?.memory?.totalBytes).toBe(8_000_000_000);
+    expect(result.current.latency?.ttftMs.p95).toBe(480);
+    expect(result.current.history).toHaveLength(1);
+    expect(result.current.history[0]).toMatchObject({
+      cpuPercent: 42.5,
+      memoryUsedBytes: 2_000_000_000,
+      diskTotalBytes: 50_000_000_000,
+    });
+  });
+
+  it("keeps system null and history empty when the sidecar omits the section (old sidecar)", async () => {
+    fetchMock.mockResolvedValue(
+      mockFetchResponse({ process: { cpuSeconds: { user: 1, system: 0 } } }),
+    );
+    const { result } = renderHook(() =>
+      useSandboxMetrics({
+        apiBaseUrl: "http://localhost",
+        sandboxId: "sb-1",
+        intervalMs: 100_000,
+      }),
+    );
+    await waitFor(() => {
+      expect(result.current.metrics).not.toBeNull();
+    });
+    expect(result.current.system).toBeNull();
+    expect(result.current.history).toHaveLength(0);
+  });
+
+  it("caps history at historyLimit, dropping oldest samples", async () => {
+    let call = 0;
+    fetchMock.mockImplementation(async () => {
+      call += 1;
+      return mockFetchResponse({
+        process: { cpuSeconds: { user: call, system: 0 } },
+        system: { ...SYSTEM, cpuPercent: call },
+      });
+    });
+    const { result } = renderHook(() =>
+      useSandboxMetrics({
+        apiBaseUrl: "http://localhost",
+        sandboxId: "sb-1",
+        intervalMs: 500,
+        historyLimit: 3,
+      }),
+    );
+    await waitFor(
+      () => {
+        expect(result.current.history).toHaveLength(3);
+        // Oldest sample must have been evicted: window starts above 1.
+        expect(result.current.history[0]?.cpuPercent).toBeGreaterThan(1);
+      },
+      { timeout: 5000 },
+    );
+  });
+
+  it("clears history when the sandbox changes", async () => {
+    fetchMock.mockResolvedValue(
+      mockFetchResponse({
+        process: { cpuSeconds: { user: 1, system: 0 } },
+        system: SYSTEM,
+      }),
+    );
+    const { result, rerender } = renderHook(
+      ({ id }: { id: string }) =>
+        useSandboxMetrics({
+          apiBaseUrl: "http://localhost",
+          sandboxId: id,
+          intervalMs: 100_000,
+        }),
+      { initialProps: { id: "sb-1" } },
+    );
+    await waitFor(() => {
+      expect(result.current.history).toHaveLength(1);
+    });
+    rerender({ id: "sb-2" });
+    expect(result.current.history).toHaveLength(0);
+    expect(result.current.system).toBeNull();
+  });
+});

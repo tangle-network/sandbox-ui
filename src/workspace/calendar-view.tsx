@@ -236,10 +236,12 @@ export function CalendarView({
                 >
                   {date.getDate()}
                 </span>
-                <div className="flex flex-wrap gap-0.5 w-full">
+                <div className="flex flex-col gap-0.5 w-full min-w-0">
                   {dayEvents.slice(0, 3).map((evt) =>
                     renderEventChip ? (
-                      <span key={evt.id}>{renderEventChip(evt)}</span>
+                      <div key={evt.id} className="w-full min-w-0">
+                        {renderEventChip(evt)}
+                      </div>
                     ) : (
                       <div
                         key={evt.id}

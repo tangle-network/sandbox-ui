@@ -34,6 +34,14 @@ export {
 } from "./reasoning-level-picker";
 
 export {
+  AgentSessionControls,
+  type AgentSessionControlsProps,
+  type AgentSessionHarnessControl,
+  type AgentSessionModelControl,
+  type AgentSessionReasoningControl,
+} from "./agent-session-controls";
+
+export {
   ArtifactAgentDock,
   createFetchTransport,
   type ArtifactAgentDockProps,

@@ -1,0 +1,177 @@
+"use client";
+
+import * as React from "react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Bot, ChevronDown } from "lucide-react";
+import { cn } from "../lib/utils";
+import { ModelPicker, type ModelInfo } from "../dashboard/model-picker";
+import { HARNESS_OPTIONS, type HarnessType } from "../dashboard/harness-picker";
+import {
+  ReasoningLevelPicker,
+  type ReasoningLevel,
+  type ReasoningLevelOption,
+} from "./reasoning-level-picker";
+
+export interface AgentSessionHarnessControl {
+  value: HarnessType;
+  onChange: (next: HarnessType) => void;
+  /** Filter the selectable harnesses (e.g. by plan tier). Defaults to all. */
+  available?: ReadonlyArray<HarnessType>;
+  disabled?: boolean;
+}
+
+export interface AgentSessionModelControl {
+  /** Canonical model id (provider-prefixed, e.g. "anthropic/claude-opus-4-8"). */
+  value: string;
+  onChange: (modelId: string) => void;
+  /** Models to choose from. Pass `[]` while loading. */
+  models: ModelInfo[];
+  loading?: boolean;
+  popular?: ReadonlyArray<string>;
+  recents?: ReadonlyArray<string>;
+  disabled?: boolean;
+}
+
+export interface AgentSessionReasoningControl {
+  value: ReasoningLevel;
+  onChange: (value: ReasoningLevel) => void;
+  options?: ReadonlyArray<ReasoningLevelOption>;
+  disabled?: boolean;
+}
+
+export interface AgentSessionControlsProps {
+  /**
+   * Harness (agent backend) selection. Switching harness usually means
+   * re-creating the agent session — the consumer owns that lifecycle.
+   */
+  harness?: AgentSessionHarnessControl;
+  /** Per-turn model override, fed by the router's model catalog. */
+  model?: AgentSessionModelControl;
+  /** Thinking-effort level applied to subsequent turns. */
+  reasoning?: AgentSessionReasoningControl;
+  /** Right-aligned extra content (token meter, cost, status). */
+  trailing?: React.ReactNode;
+  className?: string;
+}
+
+function HarnessDropdown({
+  value,
+  onChange,
+  available,
+  disabled,
+}: AgentSessionHarnessControl) {
+  const allowed = new Set<HarnessType>(
+    available ?? HARNESS_OPTIONS.map((h) => h.type),
+  );
+  const options = HARNESS_OPTIONS.filter((h) => allowed.has(h.type));
+  const selected = options.find((option) => option.type === value);
+
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5",
+            "text-xs font-medium text-foreground shadow-sm transition-colors",
+            "hover:border-primary/30 hover:bg-accent/30 focus:outline-none focus:border-primary/40",
+            "data-[state=open]:border-primary/40 data-[state=open]:bg-accent/30",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+          )}
+          aria-label="Agent harness"
+        >
+          <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+          <span>{selected?.label ?? value}</span>
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="start"
+          sideOffset={6}
+          className={cn(
+            "z-50 w-72 overflow-hidden rounded-[var(--radius-md)] border border-border bg-card p-1",
+            "shadow-[var(--shadow-dropdown)]",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          )}
+        >
+          {options.map((option) => (
+            <DropdownMenu.Item
+              key={option.type}
+              onSelect={(event) => {
+                event.preventDefault();
+                onChange(option.type);
+              }}
+              className={cn(
+                "flex cursor-pointer flex-col gap-0.5 rounded-md px-2.5 py-2 outline-none",
+                "transition-colors hover:bg-accent/40 focus:bg-accent/40",
+                option.type === value &&
+                  "bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
+              )}
+            >
+              <span className="text-sm font-medium">{option.label}</span>
+              {option.description && (
+                <span className="text-xs text-muted-foreground">
+                  {option.description}
+                </span>
+              )}
+            </DropdownMenu.Item>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+/**
+ * Compact control strip for an agent chat composer: harness, model, and
+ * thinking-effort pickers in one row. Every section is optional and only
+ * renders when its control object is provided — never show a dead control.
+ *
+ * Designed to slot into `SandboxWorkbench`'s `session.composerControls`.
+ */
+export function AgentSessionControls({
+  harness,
+  model,
+  reasoning,
+  trailing,
+  className,
+}: AgentSessionControlsProps) {
+  if (!harness && !model && !reasoning && !trailing) return null;
+
+  return (
+    <div
+      className={cn("flex flex-wrap items-center gap-2", className)}
+      data-testid="agent-session-controls"
+    >
+      {harness && <HarnessDropdown {...harness} />}
+      {model && (
+        <ModelPicker
+          variant="pill"
+          label=""
+          value={model.value}
+          onChange={model.onChange}
+          models={model.models}
+          loading={model.loading}
+          popular={model.popular}
+          recents={model.recents}
+          disabled={model.disabled || model.models.length === 0}
+        />
+      )}
+      {reasoning && (
+        <ReasoningLevelPicker
+          value={reasoning.value}
+          onChange={reasoning.onChange}
+          options={reasoning.options}
+          disabled={reasoning.disabled}
+        />
+      )}
+      {trailing && (
+        <div className="ml-auto flex items-center gap-2">{trailing}</div>
+      )}
+    </div>
+  );
+}

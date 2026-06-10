@@ -23,6 +23,22 @@ export interface UseSessionStreamOptions {
   enabled?: boolean;
 }
 
+/**
+ * Per-message overrides forwarded to the sidecar's send-message endpoint.
+ * Every field is optional — omitted fields fall back to the session's
+ * backend configuration. Matches `SendMessageRequestSchema` on the sidecar.
+ */
+export interface SendMessageOptions {
+  /** Backend agent identifier override (e.g. a named opencode agent). */
+  agent?: string;
+  /** Per-turn model override; session backend supplies apiKey/baseUrl. */
+  model?: { providerID: string; modelID: string };
+  /** Per-turn system prompt override. */
+  system?: string;
+  /** Thinking-effort hint; the sidecar maps it to a thinking-token budget. */
+  reasoningEffort?: 'low' | 'medium' | 'high';
+}
+
 export interface UseSessionStreamResult {
   /** All messages in the session (fetched + streaming). */
   messages: SessionMessage[];
@@ -30,8 +46,8 @@ export interface UseSessionStreamResult {
   partMap: Record<string, SessionPart[]>;
   /** Whether the agent is currently streaming a response. */
   isStreaming: boolean;
-  /** Send a text message to the agent. */
-  send: (text: string) => Promise<void>;
+  /** Send a text message to the agent, with optional per-turn overrides. */
+  send: (text: string, options?: SendMessageOptions) => Promise<void>;
   /** Abort the current agent execution. */
   abort: () => Promise<void>;
   /** Refetch full message history from the API. */
@@ -360,13 +376,21 @@ export function useSessionStream({
 
   // ── Send message ───────────────────────────────────────────────────
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, options?: SendMessageOptions) => {
     if (!token || !sessionId || !apiUrl) return;
     try {
       const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}/messages`;
       await fetchJson<unknown>(url, token, {
         method: 'POST',
-        body: JSON.stringify({ parts: [{ type: 'text', text }] }),
+        body: JSON.stringify({
+          parts: [{ type: 'text', text }],
+          ...(options?.agent ? { agent: options.agent } : {}),
+          ...(options?.model ? { model: options.model } : {}),
+          ...(options?.system ? { system: options.system } : {}),
+          ...(options?.reasoningEffort
+            ? { reasoningEffort: options.reasoningEffort }
+            : {}),
+        }),
       });
       setIsStreaming(true);
     } catch (err) {

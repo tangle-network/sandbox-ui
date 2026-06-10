@@ -13,7 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Badge, Button, Textarea } from "../primitives";
+import { Badge, Button, Input, Switch, Textarea } from "../primitives";
 
 export interface EnvironmentOption {
   id: string;
@@ -127,6 +127,11 @@ const VALID_DRIVERS: ReadonlySet<string> = new Set([
   "firecracker",
   "tangle",
 ]);
+
+// Shared design-system idioms (match src/dashboard/* surfaces).
+const SECTION_CARD_CLASS = "rounded-lg border border-border bg-card p-5 shadow-sm";
+const FIELD_LABEL_CLASS =
+  "block text-xs font-medium text-muted-foreground uppercase tracking-[0.06em]";
 
 const STACK_DISPLAY: Record<
   string,
@@ -781,18 +786,20 @@ export function ProvisioningWizard({
   return (
     <div className={cn("max-w-6xl mx-auto flex flex-col", className)}>
       {/* Header */}
-      <div className="mb-6 flex items-center gap-4 shrink-0">
+      <div className="mb-4 flex items-center gap-3 shrink-0">
         {onBack && (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             onClick={onBack}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border hover:bg-muted/50 transition-colors text-foreground"
+            className="h-9 w-9 shrink-0"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
         )}
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground mb-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Sandbox Provisioning
           </h1>
           <p className="text-muted-foreground text-sm">
@@ -801,34 +808,28 @@ export function ProvisioningWizard({
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
+      <div className="grid grid-cols-12 gap-5 flex-1 min-h-0">
         {/* Left: Configuration Form */}
         <div className="col-span-12 xl:col-span-8 flex flex-col min-h-0">
           {isMultistep && (
-            <div className="flex items-center gap-2 mb-4 bg-card border border-border p-3 rounded-2xl mx-auto max-w-2xl justify-between shrink-0">
+            <div className="flex items-center gap-2 mb-4 rounded-lg border border-border bg-card px-4 py-2 shadow-sm mx-auto max-w-2xl justify-between shrink-0">
               {stepLabels.map((label, index) => {
                 const s = index + 1;
                 return (
                   <div key={s} className="flex items-center">
                     <div
                       className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all duration-200",
-                        currentStep === s
-                          ? "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-card shadow-sm"
-                          : currentStep > s
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted border border-border text-muted-foreground",
+                        "h-6 w-6 rounded-full flex items-center justify-center font-semibold text-xs shrink-0 transition-colors duration-200",
+                        currentStep >= s
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted border border-border text-muted-foreground",
                       )}
                     >
-                      {currentStep > s ? (
-                        <Check className="h-3.5 w-3.5" />
-                      ) : (
-                        s
-                      )}
+                      {currentStep > s ? <Check className="h-3 w-3" /> : s}
                     </div>
                     <span
                       className={cn(
-                        "ml-2 sm:ml-3 font-bold text-sm tracking-tight hidden sm:inline transition-colors duration-200",
+                        "ml-2 font-medium text-sm hidden sm:inline transition-colors duration-200",
                         currentStep === s
                           ? "text-foreground"
                           : currentStep > s
@@ -841,7 +842,7 @@ export function ProvisioningWizard({
                     {s < finalStep && (
                       <div
                         className={cn(
-                          "w-4 sm:w-8 h-0.5 mx-2 sm:mx-4 rounded-full transition-colors duration-300",
+                          "w-4 sm:w-8 h-px mx-2 sm:mx-3 transition-colors duration-300",
                           currentStep > s ? "bg-primary" : "bg-border",
                         )}
                       />
@@ -854,15 +855,16 @@ export function ProvisioningWizard({
 
           {/* Template pre-fill banner */}
           {dc && isMultistep && (
-            <div className="flex items-center justify-between bg-card border border-border rounded-2xl px-4 py-3 shrink-0">
+            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm shrink-0 mb-4">
               <div className="flex items-center gap-2 text-sm">
                 <Info className="h-4 w-4 text-primary shrink-0" />
                 <span className="text-muted-foreground">
                   Pre-configured from template.
                 </span>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="link"
                 onClick={() => {
                   setCurrentStep(1);
                   setSelectedEnv(environments[0]?.id ?? "");
@@ -880,16 +882,16 @@ export function ProvisioningWizard({
                   setActivePreset(null);
                   setPricingView("hourly");
                 }}
-                className="text-xs font-bold text-primary hover:text-primary/70 transition-colors"
+                className="h-auto p-0 text-xs"
               >
                 Start from scratch
-              </button>
+              </Button>
             </div>
           )}
 
           {/* Load error */}
           {loadError && (
-            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2 shrink-0">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2 shrink-0 mb-4">
               <Info className="h-4 w-4 text-destructive shrink-0" />
               <p className="text-sm font-medium text-destructive">
                 {loadError}
@@ -902,12 +904,10 @@ export function ProvisioningWizard({
             {(!isMultistep || currentStep === 1) && (
               <React.Fragment>
                 {/* Section 1: Environment */}
-                <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-                      <Layers className="h-5 w-5" />
-                    </div>
-                    <h2 className="text-lg font-bold text-foreground tracking-tight">
+                <section className={SECTION_CARD_CLASS}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Layers className="h-4 w-4 text-primary shrink-0" />
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                       Environment Selection
                     </h2>
                   </div>
@@ -917,12 +917,12 @@ export function ProvisioningWizard({
                           <div
                             // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length skeleton placeholder
                             key={`env-skeleton-${i}`}
-                            className="p-4 rounded-[16px] border border-border bg-card/50 animate-pulse"
+                            className="p-3.5 rounded-lg border border-border bg-card/50 animate-pulse"
                             aria-hidden="true"
                           >
-                            <div className="flex justify-between items-start mb-3">
+                            <div className="flex justify-between items-start mb-2.5">
                               <div className="w-10 h-10 rounded-full bg-muted/60 border border-border" />
-                              <div className="w-5 h-5 rounded-full border-2 border-border" />
+                              <div className="w-4 h-4 rounded-full border-2 border-border" />
                             </div>
                             <div className="h-3 w-1/3 rounded bg-muted/60 mb-2" />
                             <div className="h-2.5 w-5/6 rounded bg-muted/50 mb-1.5" />
@@ -935,36 +935,33 @@ export function ProvisioningWizard({
                         type="button"
                         onClick={() => setSelectedEnv(env.id)}
                         className={cn(
-                          "group relative p-4 rounded-[16px] text-left overflow-hidden border transition-all duration-200",
+                          "group p-3.5 rounded-lg text-left border transition-colors duration-200",
                           selectedEnv === env.id
-                            ? "bg-primary/5 border-primary ring-2 ring-primary/20 shadow-md"
-                            : "bg-card border-border hover:border-primary/30 hover:shadow-sm hover:-translate-y-0.5 active:scale-[0.98]",
+                            ? "bg-primary/5 border-primary ring-1 ring-primary/20"
+                            : "bg-card border-border hover:border-primary/30 active:scale-[0.99]",
                         )}
                       >
-                        {selectedEnv === env.id && (
-                          <div className="absolute inset-0 bg-gradient-to-br from-primary/8 to-transparent pointer-events-none" />
-                        )}
-                        <div className="flex justify-between items-start mb-3 relative z-10">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted/50 border border-border shadow-inner">
+                        <div className="flex justify-between items-start mb-2.5">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted/50 border border-border">
                             {env.icon}
                           </div>
                           <div
                             className={cn(
-                              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200",
+                              "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors duration-200",
                               selectedEnv === env.id
                                 ? "border-primary bg-primary"
                                 : "border-border group-hover:border-primary/40",
                             )}
                           >
                             {selectedEnv === env.id && (
-                              <Check className="h-3 w-3 text-primary-foreground animate-in zoom-in duration-200" />
+                              <Check className="h-2.5 w-2.5 text-primary-foreground" />
                             )}
                           </div>
                         </div>
-                        <h3 className="font-bold text-sm mb-0.5 text-foreground relative z-10">
+                        <h3 className="font-semibold text-sm mb-0.5 text-foreground">
                           {env.name}
                         </h3>
-                        <p className="text-xs text-muted-foreground leading-relaxed relative z-10">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                           {env.description}
                         </p>
                       </button>
@@ -977,21 +974,19 @@ export function ProvisioningWizard({
             {(!isMultistep || currentStep === 2) && (
               <React.Fragment>
                 {/* Section 2: Resources */}
-                <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-                      <Cpu className="h-5 w-5" />
-                    </div>
-                    <h2 className="text-lg font-bold text-foreground tracking-tight">
+                <section className={SECTION_CARD_CLASS}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Cpu className="h-4 w-4 text-primary shrink-0" />
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                       Resource Allocation
                     </h2>
                   </div>
 
-                  <div className="mb-6">
-                    <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                  <div className="mb-4">
+                    <label className={cn(FIELD_LABEL_CLASS, "mb-2")}>
                       Compute Presets
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2">
                       {presets.map((p) => {
                         // A locked preset must never paint as active, even if an
                         // earlier render or stale state set activePreset to its name
@@ -1007,22 +1002,22 @@ export function ProvisioningWizard({
                             }
                             disabled={p.locked}
                             className={cn(
-                              "p-3 rounded-[14px] transition-all duration-200 text-center group border relative",
+                              "p-2.5 rounded-lg transition-colors duration-200 text-center group border relative",
                               active
-                                ? "bg-primary/5 border-primary ring-1 ring-primary/20 shadow-sm"
+                                ? "bg-primary/5 border-primary ring-1 ring-primary/20"
                                 : p.locked
                                   ? "bg-muted/30 border-border opacity-60 cursor-not-allowed"
-                                  : "bg-card border-border hover:border-primary/30 hover:shadow-sm active:scale-[0.97]",
+                                  : "bg-card border-border hover:border-primary/30 active:scale-[0.99]",
                             )}
                           >
                             {p.locked && (
-                              <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                              <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
                                 {p.unlockLabel}
                               </div>
                             )}
                             <div
                               className={cn(
-                                "font-bold text-sm transition-colors duration-200",
+                                "font-semibold text-sm transition-colors duration-200",
                                 active
                                   ? "text-primary"
                                   : p.locked
@@ -1042,7 +1037,7 @@ export function ProvisioningWizard({
                     </div>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {[
                       {
                         label: "Compute Cores (CPU)",
@@ -1079,11 +1074,11 @@ export function ProvisioningWizard({
                             : `${value}${unit}`;
                         return (
                           <div key={label}>
-                            <div className="flex justify-between items-end border-b border-border pb-1.5 mb-2">
-                              <label className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                            <div className="flex justify-between items-end pb-1 mb-1.5">
+                              <label className={FIELD_LABEL_CLASS}>
                                 {label}
                               </label>
-                              <span className="text-xl font-bold text-foreground tracking-tight">
+                              <span className="text-sm font-semibold text-foreground tabular-nums">
                                 {displayUnit}
                               </span>
                             </div>
@@ -1097,7 +1092,7 @@ export function ProvisioningWizard({
                                 setter(+e.target.value);
                                 setActivePreset(null);
                               }}
-                              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-runnable-track]:bg-border [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:h-2 [&::-moz-range-track]:bg-border [&::-moz-range-track]:rounded-full [&::-moz-range-track]:h-2 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[6px] [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary-foreground [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
+                              className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary [&::-webkit-slider-runnable-track]:bg-border [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:h-1.5 [&::-moz-range-track]:bg-border [&::-moz-range-track]:rounded-full [&::-moz-range-track]:h-1.5 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary-foreground"
                             />
                             <div className="flex justify-between text-[10px] font-mono text-muted-foreground/60 mt-1">
                               <span>
@@ -1129,255 +1124,253 @@ export function ProvisioningWizard({
             {(!isMultistep || currentStep === 2) && (
               <React.Fragment>
                 {/* Advanced workspace options (collapsed by default) */}
-                <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="space-y-5">
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="flex items-center gap-2 text-foreground/70 hover:text-foreground transition-colors text-sm font-bold focus:outline-none"
-                      >
-                        <Settings className="w-4 h-4" />
-                        {showAdvanced
-                          ? "Hide Advanced Options"
-                          : "Show Advanced Options"}
-                      </button>
+                <section className={SECTION_CARD_CLASS}>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium focus:outline-none"
+                    >
+                      <Settings className="w-4 h-4" />
+                      {showAdvanced
+                        ? "Hide Advanced Options"
+                        : "Show Advanced Options"}
+                    </button>
 
-                      {showAdvanced && (
-                        <div className="mt-6 space-y-5 animate-in slide-in-from-top-4 fade-in duration-300">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                                Workspace Name
-                              </label>
-                              <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                maxLength={128}
-                                className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground"
-                                placeholder="my-cool-sandbox"
-                              />
-                            </div>
-                            <div>
-                              <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                                Virtualization Driver
-                              </label>
-                              <select
-                                value={driver}
-                                onChange={(e) => {
-                                  if (VALID_DRIVERS.has(e.target.value))
-                                    setDriver(
-                                      e.target
-                                        .value as ProvisioningConfig["driver"],
-                                    );
-                                }}
-                                className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none"
-                              >
-                                <option value="docker" className="bg-gray-900">
-                                  Docker container (Default)
-                                </option>
-                                <option
-                                  value="firecracker"
-                                  className="bg-gray-900"
-                                >
-                                  Firecracker microVM (Secure)
-                                </option>
-                                <option value="tangle" className="bg-gray-900">
-                                  Tangle Distributed Node
-                                </option>
-                              </select>
-                            </div>
-                          </div>
-
+                    {showAdvanced && (
+                      <div className="mt-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                              Git Repository URL
+                            <label className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
+                              Workspace Name
                             </label>
-                            <input
+                            <Input
                               type="text"
-                              value={gitUrl}
-                              onChange={(e) => setGitUrl(e.target.value)}
-                              className="w-full bg-card border border-border rounded-xl h-12 px-4 font-bold text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-muted-foreground"
-                              placeholder="https://github.com/my-org/my-repo.git"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                              maxLength={128}
+                              className="h-9 px-3 text-sm"
+                              placeholder="my-cool-sandbox"
                             />
                           </div>
-
                           <div>
-                            <div className="flex justify-between items-center mb-2">
-                              <label className="block font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                                Environment Variables
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setEnvVars([
-                                    ...envVars,
-                                    { key: "", value: "" },
-                                  ])
-                                }
-                                className="flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors font-bold"
-                              >
-                                <Plus className="h-3 w-3" /> Add Var
-                              </button>
-                            </div>
-                            <div className="space-y-2">
-                              {envVars.map((env, i) => (
-                                <div key={i} className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={env.key}
-                                    onChange={(e) =>
-                                      setEnvVars(
-                                        envVars.map((v, idx) =>
-                                          idx === i
-                                            ? { ...v, key: e.target.value }
-                                            : v,
-                                        ),
-                                      )
-                                    }
-                                    className="flex-1 bg-card border border-border rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-                                    placeholder="API_KEY"
-                                  />
-                                  <input
-                                    type="password"
-                                    value={env.value}
-                                    onChange={(e) =>
-                                      setEnvVars(
-                                        envVars.map((v, idx) =>
-                                          idx === i
-                                            ? { ...v, value: e.target.value }
-                                            : v,
-                                        ),
-                                      )
-                                    }
-                                    className="flex-[2] bg-card border border-border rounded-xl h-10 px-3 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground"
-                                    placeholder="sk-xxxxxxxxxxx"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setEnvVars(
-                                        envVars.filter((_, idx) => idx !== i),
-                                      )
-                                    }
-                                    className="h-10 w-10 flex items-center justify-center shrink-0 rounded-xl bg-card border border-border text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              ))}
-                              {envVars.length === 0 && (
-                                <div className="text-center p-3 bg-card border border-border rounded-xl text-muted-foreground/60 text-sm italic">
-                                  No environment variables set
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Startup Scripts */}
-                          {availableScripts.length > 0 && (
-                            <div>
-                              <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                                Startup Scripts
-                              </div>
-                              <div className="space-y-2">
-                                {availableScripts
-                                  .filter((s) => s.enabled)
-                                  .map((script) => {
-                                    const selected = startupScriptIds.includes(
-                                      script.id,
-                                    );
-                                    return (
-                                      <label
-                                        key={script.id}
-                                        className="flex items-start gap-3 cursor-pointer group rounded-lg border border-border p-3 transition-colors hover:border-primary/30"
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={selected}
-                                          onChange={() =>
-                                            setStartupScriptIds((prev) =>
-                                              selected
-                                                ? prev.filter(
-                                                    (id) => id !== script.id,
-                                                  )
-                                                : [...prev, script.id],
-                                            )
-                                          }
-                                          className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                          <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                                            {script.name}
-                                          </div>
-                                          {script.description && (
-                                            <div className="text-xs text-muted-foreground mt-0.5">
-                                              {script.description}
-                                            </div>
-                                          )}
-                                          {script.injectSecrets.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-1.5">
-                                              {script.injectSecrets.map((s) => (
-                                                <span
-                                                  key={s}
-                                                  className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
-                                                >
-                                                  <svg
-                                                    className="h-2.5 w-2.5"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                  >
-                                                    <rect
-                                                      x="3"
-                                                      y="11"
-                                                      width="18"
-                                                      height="11"
-                                                      rx="2"
-                                                      ry="2"
-                                                    />
-                                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                                                  </svg>
-                                                  {s}
-                                                </span>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </label>
-                                    );
-                                  })}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="pt-2 border-t border-border">
-                            <label className="flex items-center gap-3 cursor-pointer group">
-                              <div className="relative flex items-center justify-center shrink-0">
-                                <input
-                                  type="checkbox"
-                                  className="sr-only peer"
-                                  checked={bare}
-                                  onChange={(e) => setBare(e.target.checked)}
-                                />
-                                <div className="w-10 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary hover:bg-muted/80 transition-colors"></div>
-                              </div>
-                              <div>
-                                <div className="text-sm font-bold text-foreground mb-0.5 group-hover:text-primary transition-colors">
-                                  Bare Mode
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Start as a raw container without an embedded
-                                  AI Agent backend.
-                                </div>
-                              </div>
+                            <label className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
+                              Virtualization Driver
                             </label>
+                            <select
+                              value={driver}
+                              onChange={(e) => {
+                                if (VALID_DRIVERS.has(e.target.value))
+                                  setDriver(
+                                    e.target
+                                      .value as ProvisioningConfig["driver"],
+                                  );
+                              }}
+                              className="w-full bg-card border border-border rounded-lg h-9 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
+                            >
+                              <option value="docker" className="bg-gray-900">
+                                Docker container (Default)
+                              </option>
+                              <option
+                                value="firecracker"
+                                className="bg-gray-900"
+                              >
+                                Firecracker microVM (Secure)
+                              </option>
+                              <option value="tangle" className="bg-gray-900">
+                                Tangle Distributed Node
+                              </option>
+                            </select>
                           </div>
                         </div>
-                      )}
-                    </div>
+
+                        <div>
+                          <label className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
+                            Git Repository URL
+                          </label>
+                          <Input
+                            type="text"
+                            value={gitUrl}
+                            onChange={(e) => setGitUrl(e.target.value)}
+                            className="h-9 px-3 text-sm"
+                            placeholder="https://github.com/my-org/my-repo.git"
+                          />
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between items-center mb-1.5">
+                            <label className={FIELD_LABEL_CLASS}>
+                              Environment Variables
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEnvVars([
+                                  ...envVars,
+                                  { key: "", value: "" },
+                                ])
+                              }
+                              className="flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors font-medium"
+                            >
+                              <Plus className="h-3 w-3" /> Add Var
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {envVars.map((env, i) => (
+                              <div key={i} className="flex gap-2">
+                                <Input
+                                  type="text"
+                                  value={env.key}
+                                  onChange={(e) =>
+                                    setEnvVars(
+                                      envVars.map((v, idx) =>
+                                        idx === i
+                                          ? { ...v, key: e.target.value }
+                                          : v,
+                                      ),
+                                    )
+                                  }
+                                  className="flex-1 h-9 px-3 font-mono text-sm"
+                                  placeholder="API_KEY"
+                                />
+                                <Input
+                                  type="password"
+                                  value={env.value}
+                                  onChange={(e) =>
+                                    setEnvVars(
+                                      envVars.map((v, idx) =>
+                                        idx === i
+                                          ? { ...v, value: e.target.value }
+                                          : v,
+                                      ),
+                                    )
+                                  }
+                                  className="flex-[2] h-9 px-3 font-mono text-sm"
+                                  placeholder="sk-xxxxxxxxxxx"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() =>
+                                    setEnvVars(
+                                      envVars.filter((_, idx) => idx !== i),
+                                    )
+                                  }
+                                  className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:border-destructive/30"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            {envVars.length === 0 && (
+                              <div className="text-center p-3 border border-dashed border-border rounded-lg text-muted-foreground/60 text-xs italic">
+                                No environment variables set
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Startup Scripts */}
+                        {availableScripts.length > 0 && (
+                          <div>
+                            <div className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
+                              Startup Scripts
+                            </div>
+                            <div className="space-y-2">
+                              {availableScripts
+                                .filter((s) => s.enabled)
+                                .map((script) => {
+                                  const selected = startupScriptIds.includes(
+                                    script.id,
+                                  );
+                                  return (
+                                    <label
+                                      key={script.id}
+                                      className="flex items-start gap-3 cursor-pointer group rounded-lg border border-border p-3 transition-colors hover:border-primary/30"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selected}
+                                        onChange={() =>
+                                          setStartupScriptIds((prev) =>
+                                            selected
+                                              ? prev.filter(
+                                                  (id) => id !== script.id,
+                                                )
+                                              : [...prev, script.id],
+                                          )
+                                        }
+                                        className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                          {script.name}
+                                        </div>
+                                        {script.description && (
+                                          <div className="text-xs text-muted-foreground mt-0.5">
+                                            {script.description}
+                                          </div>
+                                        )}
+                                        {script.injectSecrets.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-1.5">
+                                            {script.injectSecrets.map((s) => (
+                                              <span
+                                                key={s}
+                                                className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                                              >
+                                                <svg
+                                                  className="h-2.5 w-2.5"
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth="2"
+                                                >
+                                                  <rect
+                                                    x="3"
+                                                    y="11"
+                                                    width="18"
+                                                    height="11"
+                                                    rx="2"
+                                                    ry="2"
+                                                  />
+                                                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                                </svg>
+                                                {s}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-3 border-t border-border flex items-start justify-between gap-3">
+                          <div>
+                            <label
+                              htmlFor="wizard-bare-mode"
+                              className="block text-sm font-medium text-foreground cursor-pointer"
+                            >
+                              Bare Mode
+                            </label>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Start as a raw container without an embedded AI
+                              Agent backend.
+                            </p>
+                          </div>
+                          <Switch
+                            id="wizard-bare-mode"
+                            checked={bare}
+                            onCheckedChange={setBare}
+                            className="mt-0.5"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </section>
               </React.Fragment>
@@ -1385,12 +1378,10 @@ export function ProvisioningWizard({
 
             {sshAccess && (!isMultistep || currentStep === 3) && (
               <React.Fragment>
-                <section className="bg-card border border-border rounded-[24px] p-6 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-                      <Settings className="h-5 w-5" />
-                    </div>
-                    <h2 className="text-lg font-bold text-foreground tracking-tight">
+                <section className={SECTION_CARD_CLASS}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Settings className="h-4 w-4 text-primary shrink-0" />
+                    <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                       Access Configuration
                     </h2>
                   </div>
@@ -1404,24 +1395,20 @@ export function ProvisioningWizard({
         {/* Right: Cost estimator */}
         <div className="col-span-12 xl:col-span-4 sticky top-4 space-y-4">
           {/* Cost card */}
-          <div className="p-6 rounded-[24px] bg-card border border-primary/15 relative overflow-hidden">
-            <div className="hidden" />
-
-            <div className="flex justify-between items-center mb-4 relative z-10">
-              <span className="font-label text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Run Cost
-              </span>
+          <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className="flex justify-between items-center mb-3">
+              <span className={FIELD_LABEL_CLASS}>Run Cost</span>
               <div
                 role="group"
                 aria-label="Pricing view"
-                className="inline-flex items-center rounded-full border border-border bg-muted/50 p-0.5"
+                className="inline-flex items-center rounded-md border border-border bg-muted/50 p-0.5"
               >
                 <button
                   type="button"
                   aria-pressed={pricingView === "hourly"}
                   onClick={() => setPricingView("hourly")}
                   className={cn(
-                    "rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all",
+                    "rounded px-2.5 py-0.5 text-[10px] font-medium transition-all",
                     pricingView === "hourly"
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -1434,7 +1421,7 @@ export function ProvisioningWizard({
                   aria-pressed={pricingView === "perSecond"}
                   onClick={() => setPricingView("perSecond")}
                   className={cn(
-                    "rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-all",
+                    "rounded px-2.5 py-0.5 text-[10px] font-medium transition-all",
                     pricingView === "perSecond"
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -1444,36 +1431,36 @@ export function ProvisioningWizard({
                 </button>
               </div>
             </div>
-            <div className="flex items-baseline gap-2 mb-5 relative z-10">
+            <div className="flex items-baseline gap-2 mb-4">
               <span
                 key={pricingView}
                 className={cn(
-                  "font-black text-foreground tracking-tighter animate-in fade-in duration-200",
-                  pricingView === "hourly" ? "text-4xl" : "text-2xl",
+                  "font-semibold text-foreground tracking-tight tabular-nums animate-in fade-in duration-200",
+                  pricingView === "hourly" ? "text-3xl" : "text-xl",
                 )}
               >
                 ${displayValue}
               </span>
-              <span className="text-muted-foreground text-sm font-bold">
+              <span className="text-muted-foreground text-sm">
                 {pricingSuffix}
               </span>
             </div>
-            <div className="space-y-2 relative z-10 bg-card border border-border rounded-xl p-3">
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+              <div className="flex justify-between text-xs font-mono tracking-wide text-muted-foreground">
                 <span>COMPUTE</span>
                 <span className="text-foreground">
                   ${fmtRate(hourlyCostBreakdown.compute)}
                   {rateSuffix}
                 </span>
               </div>
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+              <div className="flex justify-between text-xs font-mono tracking-wide text-muted-foreground">
                 <span>MEMORY</span>
                 <span className="text-foreground/80">
                   ${fmtRate(hourlyCostBreakdown.memory)}
                   {rateSuffix}
                 </span>
               </div>
-              <div className="flex justify-between text-xs font-mono tracking-widest text-muted-foreground">
+              <div className="flex justify-between text-xs font-mono tracking-wide text-muted-foreground">
                 <span>STORAGE</span>
                 <span className="text-foreground/80">
                   ${fmtRate(hourlyCostBreakdown.storage)}
@@ -1481,7 +1468,7 @@ export function ProvisioningWizard({
                 </span>
               </div>
               {hourlyCostBreakdown.floorApplies && (
-                <div className="flex justify-between text-xs font-mono tracking-widest text-primary border-t border-border pt-2">
+                <div className="flex justify-between text-xs font-mono tracking-wide text-primary border-t border-border pt-2">
                   <span>MIN CHARGE</span>
                   <span>
                     $
@@ -1498,7 +1485,7 @@ export function ProvisioningWizard({
 
           {/* Deploy error */}
           {deployError && (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2">
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2">
               <Info className="h-4 w-4 text-destructive shrink-0" />
               <p className="text-sm font-medium text-destructive">
                 {deployError}
@@ -1507,23 +1494,23 @@ export function ProvisioningWizard({
           )}
 
           {/* Navigation buttons */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {isMultistep ? (
               <>
                 {currentStep < finalStep ? (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setCurrentStep((s) => s + 1)}
-                    className="w-full relative overflow-hidden h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl hover:brightness-110 transition-all active:scale-[0.98] shadow-md"
+                    className="w-full"
                   >
                     Continue to {stepLabels[currentStep]}
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
                     type="button"
                     onClick={handleDeploy}
                     disabled={isDeploying || !selectedEnv}
-                    className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
+                    className="w-full"
                   >
                     {isDeploying ? (
                       <span className="flex items-center justify-center gap-2">
@@ -1533,24 +1520,25 @@ export function ProvisioningWizard({
                     ) : (
                       "Deploy Workspace"
                     )}
-                  </button>
+                  </Button>
                 )}
                 {currentStep > 1 && (
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={() => setCurrentStep((s) => s - 1)}
-                    className="w-full h-10 bg-secondary text-secondary-foreground border border-border font-bold text-sm rounded-2xl hover:brightness-95 active:scale-[0.98] transition-all"
+                    className="w-full"
                   >
                     Back
-                  </button>
+                  </Button>
                 )}
               </>
             ) : (
-              <button
+              <Button
                 type="button"
                 onClick={handleDeploy}
                 disabled={isDeploying || !selectedEnv}
-                className="w-full h-12 bg-primary text-primary-foreground font-extrabold text-sm rounded-2xl tracking-wide shadow-md disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all"
+                className="w-full"
               >
                 {isDeploying ? (
                   <span className="flex items-center justify-center gap-2">
@@ -1560,7 +1548,7 @@ export function ProvisioningWizard({
                 ) : (
                   "Deploy Workspace"
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>

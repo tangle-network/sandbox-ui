@@ -122,6 +122,13 @@ export interface ModelBrandInfo {
   label: string;
   logoUrl?: string;
   logo?: "tangle";
+  /**
+   * True for the bundled single-color brand glyphs, which are rendered as a
+   * CSS mask filled with the foreground token so they stay visible in both
+   * themes. Caller-supplied logo URLs (`ModelInfo.logos.*Url`) may be
+   * full-color artwork and are rendered as-is.
+   */
+  monochrome?: boolean;
 }
 
 export type ModelPickerVariant = "field" | "pill";
@@ -207,8 +214,12 @@ export function resolveModelBrandIdentity(model: ModelInfo): ModelBrandIdentity 
   const labKey = normalizeBrandKey(model.logos?.lab ?? model.modelLab ?? inferModelLab(model, canonical, hostKey));
   const hostBase = brandInfo(hostKey);
   const labBase = brandInfo(labKey);
-  const host = { ...hostBase, logoUrl: model.logos?.hostUrl ?? hostBase.logoUrl };
-  const lab = { ...labBase, logoUrl: model.logos?.labUrl ?? labBase.logoUrl };
+  const host = model.logos?.hostUrl
+    ? { ...hostBase, logoUrl: model.logos.hostUrl, monochrome: false }
+    : hostBase;
+  const lab = model.logos?.labUrl
+    ? { ...labBase, logoUrl: model.logos.labUrl, monochrome: false }
+    : labBase;
   return {
     host,
     lab,
@@ -640,6 +651,22 @@ function BrandLogo({ brand, size, className }: { brand: ModelBrandInfo; size: "x
     >
       {brand.logo === "tangle" ? (
         <TangleKnot size={pixelSize} className="h-full w-full" />
+      ) : brand.logoUrl && brand.monochrome ? (
+        <span
+          aria-hidden
+          className="h-[72%] w-[72%]"
+          style={{
+            backgroundColor: "hsl(var(--foreground))",
+            maskImage: cssUrl(brand.logoUrl),
+            maskSize: "contain",
+            maskRepeat: "no-repeat",
+            maskPosition: "center",
+            WebkitMaskImage: cssUrl(brand.logoUrl),
+            WebkitMaskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+          }}
+        />
       ) : brand.logoUrl ? (
         <img src={brand.logoUrl} alt="" className="h-[72%] w-[72%] object-contain" />
       ) : null}
@@ -649,6 +676,16 @@ function BrandLogo({ brand, size, className }: { brand: ModelBrandInfo; size: "x
 
 function hasRealLogo(brand: ModelBrandInfo): boolean {
   return Boolean(brand.logoUrl || brand.logo);
+}
+
+/**
+ * Wrap a URL for use inside a CSS `url("…")` value. The bundled SVG data
+ * URLs contain raw quotes and hashes — valid in an <img src> attribute but
+ * terminal inside a CSS string — so percent-encode the characters CSS
+ * cannot carry.
+ */
+function cssUrl(url: string): string {
+  return `url("${url.replace(/[\\"'#\n]/g, (char) => encodeURIComponent(char))}")`;
 }
 
 function modelLogo(path: string): string {
@@ -723,10 +760,10 @@ function brandLogo(key: ModelBrandKey): string | undefined {
   }
 }
 
-function brandMark(key: ModelBrandKey): Pick<ModelBrandInfo, "logo" | "logoUrl"> {
+function brandMark(key: ModelBrandKey): Pick<ModelBrandInfo, "logo" | "logoUrl" | "monochrome"> {
   if (key === "tangle" || key === "tcloud") return { logo: "tangle" };
   const logoUrl = brandLogo(key);
-  return logoUrl ? { logoUrl } : {};
+  return logoUrl ? { logoUrl, monochrome: true } : {};
 }
 
 function inferModelLab(model: ModelInfo, canonical: string, hostKey: ModelBrandKey): string {

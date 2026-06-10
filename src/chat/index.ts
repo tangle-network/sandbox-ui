@@ -42,6 +42,14 @@ export {
 } from "./agent-session-controls";
 
 export {
+  HARNESS_MODEL_POLICIES,
+  isModelCompatibleWithHarness,
+  modelProvider,
+  snapHarnessToModel,
+  snapModelToHarness,
+} from "./harness-model-compat";
+
+export {
   ArtifactAgentDock,
   createFetchTransport,
   type ArtifactAgentDockProps,

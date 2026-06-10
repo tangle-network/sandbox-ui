@@ -3,6 +3,32 @@
 import * as React from "react";
 
 /**
+ * Sandbox-level telemetry collected by the sidecar from cgroup v2
+ * (Docker) or /proc (Firecracker guest). `cpuPercent` is computed
+ * server-side from consecutive samples; sections are null when the
+ * source cannot provide them.
+ */
+export interface SystemMetricsSnapshot {
+  cpuPercent: number | null;
+  cpuCores: number;
+  memory: { usedBytes: number; totalBytes: number } | null;
+  disk: { usedBytes: number; totalBytes: number; path: string } | null;
+  source: "cgroup-v2" | "proc";
+}
+
+export interface LatencyPercentiles {
+  p50: number | null;
+  p95: number | null;
+  sampleCount: number;
+}
+
+export interface SandboxLatencyMetrics {
+  ttftMs: LatencyPercentiles;
+  firstResponseMs: LatencyPercentiles;
+  runDurationMs: LatencyPercentiles;
+}
+
+/**
  * Shape returned by the sidecar `/metrics/json` endpoint. Only the
  * fields read by this hook are modeled; the sidecar may add more.
  */
@@ -20,6 +46,23 @@ export interface SidecarMetricsPayload {
       system?: number;
     };
   };
+  system?: SystemMetricsSnapshot | null;
+  latency?: SandboxLatencyMetrics;
+}
+
+/**
+ * One polled time-series point, sourced from the sandbox-level
+ * `system` section. Null values mean the sidecar could not provide
+ * that reading — charts must render a gap, not a zero.
+ */
+export interface SandboxMetricsSample {
+  /** Wall-clock ms when the sample was committed client-side. */
+  at: number;
+  cpuPercent: number | null;
+  memoryUsedBytes: number | null;
+  memoryTotalBytes: number | null;
+  diskUsedBytes: number | null;
+  diskTotalBytes: number | null;
 }
 
 export interface SandboxMetrics {
@@ -47,10 +90,25 @@ export interface UseSandboxMetricsOptions {
   enabled?: boolean;
   /** Poll cadence; clamped to a 500ms floor. Defaults to 3000. */
   intervalMs?: number;
+  /** Max retained history samples for charting. Defaults to 120. */
+  historyLimit?: number;
 }
 
 export interface UseSandboxMetricsResult {
   metrics: SandboxMetrics | null;
+  /**
+   * Sandbox-level (container/VM) telemetry. Null until the sidecar
+   * reports a `system` section — older sidecars never will, and
+   * consumers must surface that as "unavailable", not zeros.
+   */
+  system: SystemMetricsSnapshot | null;
+  /** Agent latency percentiles (TTFT, first response, run duration). */
+  latency: SandboxLatencyMetrics | null;
+  /**
+   * Rolling window of system samples (oldest first), capped at
+   * `historyLimit`. Cleared when the target sandbox changes.
+   */
+  history: SandboxMetricsSample[];
   /**
    * True only until the first successful sample has arrived (or the
    * first one after the target `sandboxId` changes). Subsequent polls
@@ -74,8 +132,12 @@ export function useSandboxMetrics({
   token,
   enabled = true,
   intervalMs = 3000,
+  historyLimit = 120,
 }: UseSandboxMetricsOptions): UseSandboxMetricsResult {
   const [metrics, setMetrics] = React.useState<SandboxMetrics | null>(null);
+  const [system, setSystem] = React.useState<SystemMetricsSnapshot | null>(null);
+  const [latency, setLatency] = React.useState<SandboxLatencyMetrics | null>(null);
+  const [history, setHistory] = React.useState<SandboxMetricsSample[]>([]);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<Error | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = React.useState<number | null>(null);
@@ -110,6 +172,9 @@ export function useSandboxMetrics({
       sampleRef.current = null;
       hasLoadedRef.current = false;
       setMetrics(null);
+      setSystem(null);
+      setLatency(null);
+      setHistory([]);
       setLastUpdatedAt(null);
       setError(null);
       if (sandboxCleared) setLoading(false);
@@ -175,6 +240,25 @@ export function useSandboxMetrics({
           heapUsedBytes: data?.process?.memoryBytes?.heapUsed ?? 0,
           heapTotalBytes: data?.process?.memoryBytes?.heapTotal ?? 0,
         });
+        const sys = data?.system ?? null;
+        setSystem(sys);
+        setLatency(data?.latency ?? null);
+        if (sys) {
+          const sample: SandboxMetricsSample = {
+            at: wallMs,
+            cpuPercent: sys.cpuPercent,
+            memoryUsedBytes: sys.memory?.usedBytes ?? null,
+            memoryTotalBytes: sys.memory?.totalBytes ?? null,
+            diskUsedBytes: sys.disk?.usedBytes ?? null,
+            diskTotalBytes: sys.disk?.totalBytes ?? null,
+          };
+          setHistory((prevHistory) => {
+            const next = [...prevHistory, sample];
+            return next.length > historyLimit
+              ? next.slice(next.length - historyLimit)
+              : next;
+          });
+        }
         setLastUpdatedAt(wallMs);
         setError(null);
         hasLoadedRef.current = true;
@@ -212,7 +296,7 @@ export function useSandboxMetrics({
       controller.abort();
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [apiBaseUrl, sandboxId, token, enabled, intervalMs]);
+  }, [apiBaseUrl, sandboxId, token, enabled, intervalMs, historyLimit]);
 
-  return { metrics, loading, error, lastUpdatedAt };
+  return { metrics, system, latency, history, loading, error, lastUpdatedAt };
 }

@@ -129,6 +129,12 @@ export {
   type Profile as DashboardProfile,
 } from "./profile-selector";
 export {
+  MetricAreaChart,
+  type MetricAreaChartProps,
+  type MetricChartPoint,
+  type MetricChartTone,
+} from "./metric-area-chart";
+export {
   UsageChart,
   type UsageChartProps,
   type UsageDataPoint,

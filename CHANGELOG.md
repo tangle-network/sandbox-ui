@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.23.0
+
+### `SidebarLayout` (dashboard) + SSR-safe sidebar core
+
+- `dashboard`: new `SidebarLayout` — a top-nav-less app shell built on the
+  sidebar rail + slide-out panel, configured by data (nav items, panel
+  content, profile/branding) so consumer apps don't hand-roll or re-style
+  their own rail. Options: `railLabels` (labeled rail vs. 64px icon-only),
+  `closePanelOnNavigate` (close a section-contextual panel on link nav),
+  `hideBelow` (responsive hide), plus an account-section divider.
+- `SidebarProvider`: optional controlled `panelOpen` / `onPanelOpenChange`.
+  When provided the provider never touches `localStorage`, so SSR apps can
+  seed the panel from a cookie and avoid the React 19 hydration mismatch that
+  left a persisted-open panel stuck closed after reload. The uncontrolled
+  `localStorage` path is unchanged.
+- `SidebarProvider`: `switchMode` no longer nests `setState` inside the
+  `setModeState` updater — fixes the same-mode double-toggle where React's
+  eager-bailout ran the nested toggle twice and cancelled it.
+- `RailButton`: new `asChild` (via `cloneElement`) renders the rail-button
+  styling onto a child link, so nav items stay real anchors without copying
+  the class recipe or nesting `<a><button>`. New configurable `railWidth`
+  (default 64) backs the labeled rail.
+- `ProfileAvatar`: new `showDetails` renders the name/email beside the avatar
+  for a labeled rail footer.
+- All new props are optional and default to existing behavior; `DashboardLayout`
+  and the icon-only rail are unchanged.
+
 ## 0.22.1
 
 The `0.22.0` version number was already taken on the registry, so the release

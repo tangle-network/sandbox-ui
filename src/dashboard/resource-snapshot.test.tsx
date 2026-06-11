@@ -46,4 +46,27 @@ describe("ResourceSnapshot", () => {
     expect(screen.getByText("1 GB / 4 GB")).toBeInTheDocument()
     expect(screen.getByText("3 GB / 8 GB")).toBeInTheDocument()
   })
+
+  it("renders duplicate labels without ids via the index fallback", () => {
+    render(
+      <ResourceSnapshot
+        items={[
+          { label: "Disk", value: 1, max: 4, valueLabel: "root" },
+          { label: "Disk", value: 3, max: 8, valueLabel: "data" },
+        ]}
+      />,
+    )
+    expect(screen.getAllByText("Disk")).toHaveLength(2)
+    expect(screen.getByText("root")).toBeInTheDocument()
+    expect(screen.getByText("data")).toBeInTheDocument()
+  })
+
+  it("forwards unit to ResourceMeter when valueLabel is omitted", () => {
+    render(
+      <ResourceSnapshot
+        items={[{ label: "Disk", value: 3, max: 10, unit: "GB" }]}
+      />,
+    )
+    expect(screen.getByText("3GB/10GB")).toBeInTheDocument()
+  })
 })

@@ -13,6 +13,8 @@ export interface ResourceSnapshotItem {
   value: number
   /** Full-scale value. Omit to treat `value` as a 0-100 percent. */
   max?: number
+  /** Unit suffix for the default `value{unit}/max{unit}` readout. */
+  unit?: string
   /** Right-hand readout override (e.g. "1.2 GB / 4 GB"). */
   valueLabel?: string
   icon?: React.ReactNode
@@ -66,12 +68,13 @@ export function ResourceSnapshot({
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((item) => (
+          {items.map((item, idx) => (
             <ResourceMeter
-              key={item.id ?? item.label}
+              key={item.id ?? `${item.label}-${idx}`}
               label={item.label}
               value={item.value}
               max={item.max}
+              unit={item.unit}
               valueLabel={item.valueLabel}
               icon={item.icon}
             />

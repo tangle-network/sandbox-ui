@@ -126,6 +126,11 @@ export {
   type ProductVariant,
 } from "./dashboard-layout";
 export {
+  SidebarLayout,
+  type SidebarLayoutProps,
+  type SidebarLayoutNavItem,
+} from "./sidebar-layout";
+export {
   PricingPage,
   formatPrice,
   type PricingPageProps,

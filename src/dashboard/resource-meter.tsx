@@ -9,6 +9,12 @@ export interface ResourceMeterProps {
   max?: number
   unit?: string
   icon?: React.ReactNode
+  /**
+   * Overrides the right-hand readout. Use for values the raw
+   * `value{unit}/max{unit}` template can't express, e.g. byte sizes
+   * ("1.2 GB / 4 GB"). The bar fill still derives from value/max.
+   */
+  valueLabel?: string
   className?: string
 }
 
@@ -18,9 +24,10 @@ function getBarColor(percent: number): string {
   return "bg-primary"
 }
 
-export function ResourceMeter({ label, value, max = 100, unit, icon, className }: ResourceMeterProps) {
-  const percent = max > 0 ? Math.min((value / max) * 100, 100) : 0
+export function ResourceMeter({ label, value, max = 100, unit, valueLabel, icon, className }: ResourceMeterProps) {
+  const percent = max > 0 ? Math.max(0, Math.min((value / max) * 100, 100)) : 0
   const barColor = getBarColor(percent)
+  const readout = valueLabel ?? (unit ? `${value}${unit}/${max}${unit}` : `${Math.round(percent)}%`)
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
@@ -35,7 +42,7 @@ export function ResourceMeter({ label, value, max = 100, unit, icon, className }
         />
       </div>
       <span className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground">
-        {unit ? `${value}${unit}/${max}${unit}` : `${Math.round(percent)}%`}
+        {readout}
       </span>
     </div>
   )

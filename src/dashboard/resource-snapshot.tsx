@@ -6,6 +6,8 @@ import { cn } from "../lib/utils"
 import { ResourceMeter } from "./resource-meter"
 
 export interface ResourceSnapshotItem {
+  /** Stable React key; falls back to `label` when omitted. */
+  id?: string
   label: string
   /** Current value, in the same unit as `max`. */
   value: number
@@ -66,7 +68,7 @@ export function ResourceSnapshot({
         <div className="space-y-3">
           {items.map((item) => (
             <ResourceMeter
-              key={item.label}
+              key={item.id ?? item.label}
               label={item.label}
               value={item.value}
               max={item.max}

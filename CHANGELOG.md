@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.22.1
+
+The `0.22.0` version number was already taken on the registry, so the release
+workflow could not publish it. This release ships the same dashboard additions
+under a clean version.
+
+### Dashboard
+
+- `ResourceSnapshot` (`./dashboard`): compact panel stacking `ResourceMeter`
+  rows for an at-a-glance CPU / memory / disk read, with loading and error
+  states and an optional header action slot.
+- `ActivityFeed` (`./dashboard`): newest-first list of timestamped activity
+  items (commits, snapshots, lifecycle events) with relative times.
+- `ResourceMeter` (`./dashboard`): new `valueLabel` override for readouts the
+  `value{unit}/max{unit}` template can't express (e.g. byte sizes); bar fill
+  clamped to `[0, 100]`. `ResourceSnapshotItem` carries optional `id` and
+  `unit`, forwarded to the meter.
+
 ## 0.21.1
 
 ### Harness ↔ model compatibility + session locking (chat)

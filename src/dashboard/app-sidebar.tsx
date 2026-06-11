@@ -14,9 +14,7 @@ import {
 import { Logo } from "../primitives"
 import { Skeleton } from "@tangle-network/ui/primitives"
 import {
-  SIDEBAR_RAIL_WIDTH,
   SIDEBAR_PANEL_WIDTH,
-  SIDEBAR_TOTAL_WIDTH,
   useSidebar,
 } from "./sidebar-context"
 
@@ -93,7 +91,7 @@ export interface SidebarProps {
 }
 
 export function Sidebar({ children, className, style }: SidebarProps) {
-  const { panelOpen, hidden, hasPanels } = useSidebar()
+  const { panelOpen, hidden, hasPanels, railWidth } = useSidebar()
 
   return (
     <div
@@ -103,7 +101,7 @@ export function Sidebar({ children, className, style }: SidebarProps) {
         hidden && "-translate-x-full",
         className,
       )}
-      style={{ width: (panelOpen && hasPanels) ? SIDEBAR_TOTAL_WIDTH : SIDEBAR_RAIL_WIDTH, ...style }}
+      style={{ width: (panelOpen && hasPanels) ? railWidth + SIDEBAR_PANEL_WIDTH : railWidth, ...style }}
     >
       {children}
     </div>
@@ -126,13 +124,15 @@ export interface SidebarRailProps {
 }
 
 export function SidebarRail({ children, className, wide = false }: SidebarRailProps) {
+  const { railWidth } = useSidebar()
   return (
     <div
       className={cn(
         "flex flex-col h-full shrink-0 bg-transparent",
-        wide ? "w-full" : "w-16",
+        wide && "w-full",
         className,
       )}
+      style={wide ? undefined : { width: railWidth }}
     >
       {children}
     </div>
@@ -215,25 +215,31 @@ export interface RailButtonProps {
   className?: string
   /** Show label text next to icon (for mobile drawer) */
   showLabel?: boolean
+  /**
+   * Render the rail-button styling onto a single child element (e.g. a router
+   * `<Link>`) instead of an inner `<button>`. The child receives the button
+   * classes, `title`, and the icon/label/badge as its content — so navigation
+   * items stay real anchors (keyboard, cmd-click, prefetch) without copying the
+   * class recipe or nesting `<a><button>`.
+   */
+  asChild?: boolean
+  children?: React.ReactNode
 }
 
-export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel }: RailButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      className={cn(
-        "group relative flex items-center justify-center rounded-xl transition-all duration-200",
-        showLabel ? "w-full justify-start px-3 h-11 gap-3" : "w-11 h-11 justify-center",
-        "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
-        "active:scale-95",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        isActive && "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]",
-        !isActive && "text-muted-foreground",
-        className,
-      )}
-    >
+export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children }: RailButtonProps) {
+  const classes = cn(
+    "group relative flex items-center justify-center rounded-xl transition-all duration-200",
+    showLabel ? "w-full justify-start px-3 h-11 gap-3" : "w-11 h-11 justify-center",
+    "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
+    "active:scale-95",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+    isActive && "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]",
+    !isActive && "text-muted-foreground",
+    className,
+  )
+
+  const content = (
+    <>
       <Icon className="h-5 w-5 shrink-0" />
       {showLabel && (
         <span className="text-sm font-medium">{label}</span>
@@ -243,6 +249,22 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
           {badge > 99 ? "99+" : badge}
         </span>
       )}
+    </>
+  )
+
+  if (asChild && React.isValidElement(children)) {
+    // biome-ignore lint/suspicious/noExplicitAny: merge onto an unknown child element (Link/anchor)
+    const child = children as React.ReactElement<any>
+    return React.cloneElement(
+      child,
+      { className: cn(classes, child.props.className), title: child.props.title ?? label },
+      content,
+    )
+  }
+
+  return (
+    <button type="button" onClick={onClick} title={label} className={classes}>
+      {content}
     </button>
   )
 }
@@ -381,6 +403,8 @@ export interface ProfileAvatarProps {
   /** Extra dropdown items rendered before settings/logout */
   children?: React.ReactNode
   className?: string
+  /** Show name/email beside the avatar (for a labeled rail) instead of an icon-only avatar button. */
+  showDetails?: boolean
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
 }
@@ -393,6 +417,7 @@ export function ProfileAvatar({
   settingsHref = "/dashboard/settings",
   children,
   className,
+  showDetails = false,
   LinkComponent,
 }: ProfileAvatarProps) {
   const Link = LinkComponent ?? DefaultLink
@@ -403,21 +428,41 @@ export function ProfileAvatar({
         <button
           type="button"
           className={cn(
-            "flex items-center justify-center w-12 h-12 rounded-lg transition-colors hover:bg-[var(--accent-surface-soft)]",
+            "flex items-center rounded-lg transition-colors hover:bg-[var(--accent-surface-soft)]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            showDetails ? "w-full gap-2.5 px-3 py-2 text-left" : "justify-center w-12 h-12",
             className,
           )}
           aria-label="User menu"
         >
           {isLoading ? (
-            <Skeleton className="h-7 w-7 rounded-full" />
+            <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
           ) : (
-            <Avatar className="h-7 w-7">
+            <Avatar className="h-7 w-7 shrink-0">
               {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
               <AvatarFallback className="text-[10px] bg-violet-500/20 text-violet-300">
                 {getInitials(user?.name, user?.email)}
               </AvatarFallback>
             </Avatar>
+          )}
+          {showDetails && (
+            <div className="min-w-0 flex-1">
+              {isLoading ? (
+                <>
+                  <Skeleton className="mb-1 h-3.5 w-20" />
+                  <Skeleton className="h-3 w-28" />
+                </>
+              ) : (
+                <>
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {user?.name ?? user?.email ?? "Not signed in"}
+                  </p>
+                  {user?.email && user?.name && (
+                    <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </button>
       </DropdownMenuTrigger>

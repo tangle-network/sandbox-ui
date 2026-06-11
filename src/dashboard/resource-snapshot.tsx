@@ -6,7 +6,7 @@ import { cn } from "../lib/utils"
 import { ResourceMeter } from "./resource-meter"
 
 export interface ResourceSnapshotItem {
-  /** Stable React key; falls back to `label` when omitted. */
+  /** Stable React key; falls back to `label` plus row index when omitted. */
   id?: string
   label: string
   /** Current value, in the same unit as `max`. */

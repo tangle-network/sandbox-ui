@@ -57,6 +57,16 @@ export {
   type ResourceMeterProps,
 } from "./resource-meter";
 export {
+  ResourceSnapshot,
+  type ResourceSnapshotProps,
+  type ResourceSnapshotItem,
+} from "./resource-snapshot";
+export {
+  ActivityFeed,
+  type ActivityFeedProps,
+  type ActivityItem,
+} from "./activity-feed";
+export {
   SandboxCard,
   NewSandboxCard,
   canAdminSandbox,

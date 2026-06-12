@@ -50,6 +50,8 @@ export interface SidebarLayoutProps {
   settingsHref?: string
   /** Extra items rendered before settings/logout in the profile menu. */
   profileMenuItems?: React.ReactNode
+  /** Render a light/dark theme switch in the profile menu (uses the shared `useTheme`). */
+  showThemeToggle?: boolean
   /** Extra content in the rail footer, above the profile avatar. */
   railFooter?: React.ReactNode
   // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
@@ -120,6 +122,7 @@ function SidebarLayoutInner({
   onSettingsClick,
   settingsHref,
   profileMenuItems,
+  showThemeToggle = false,
   railFooter,
   LinkComponent,
   hideBelow,
@@ -187,6 +190,7 @@ function SidebarLayoutInner({
                     onSettingsClick={onSettingsClick}
                     settingsHref={settingsHref}
                     showDetails={railLabels}
+                    showThemeToggle={showThemeToggle}
                     LinkComponent={Link}
                   >
                     {profileMenuItems}

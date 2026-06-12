@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.23.2
+
+### Sidebar rail scroll + shared theme toggle
+
+- `SidebarLayout` / rail: the rail nav now scrolls when there are more items
+  than fit the viewport height, instead of compressing the items or pushing the
+  profile footer off-screen. `SidebarRailNav` is `overflow-y-auto min-h-0`,
+  `RailButton` is `shrink-0`, and the header/footer are pinned (`shrink-0`) — so
+  the logo stays on top and the profile (settings / sign-out) stays reachable at
+  the bottom on short screens.
+- `SidebarLayout`: new `showThemeToggle` prop renders a light/dark switch in the
+  profile dropdown, driven by the shared `useTheme` hook — so apps get one
+  consistent theme control instead of hand-rolling their own. Also exposed as
+  `showThemeToggle` on `ProfileAvatar`.
+
 ## 0.23.1
 
 ### `assets` module

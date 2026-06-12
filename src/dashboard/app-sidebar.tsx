@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@tangle-network/ui/primitives"
 import { Logo } from "../primitives"
-import { Skeleton } from "@tangle-network/ui/primitives"
+import { Skeleton, useTheme } from "@tangle-network/ui/primitives"
 import {
   SIDEBAR_PANEL_WIDTH,
   useSidebar,
@@ -77,6 +77,53 @@ function LogOutIcon({ className }: { className?: string }) {
       <polyline points="16,17 21,12 16,7" />
       <line x1="21" x2="9" y1="12" y2="12" />
     </svg>
+  )
+}
+
+function SunIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <title>Light mode icon</title>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+  )
+}
+
+function MoonIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <title>Dark mode icon</title>
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+    </svg>
+  )
+}
+
+// Theme row for the profile dropdown, driven by the shared `useTheme` hook so
+// every app gets one consistent light/dark switch instead of hand-rolling one.
+function ThemeMenuItem() {
+  const { theme, setTheme } = useTheme()
+  const isDark =
+    theme === "dark" ||
+    (theme === "system" &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches)
+
+  return (
+    <DropdownMenuItem
+      onSelect={(e) => {
+        // Keep the menu open so the switch can be flipped back and forth.
+        e.preventDefault()
+        setTheme(isDark ? "light" : "dark")
+      }}
+    >
+      {isDark ? (
+        <SunIcon className="mr-2 h-4 w-4" />
+      ) : (
+        <MoonIcon className="mr-2 h-4 w-4" />
+      )}
+      {isDark ? "Light mode" : "Dark mode"}
+    </DropdownMenuItem>
   )
 }
 
@@ -150,7 +197,7 @@ export interface SidebarRailHeaderProps {
 
 export function SidebarRailHeader({ children, className }: SidebarRailHeaderProps) {
   return (
-    <div className={cn("flex h-14 items-center justify-center border-b border-border", className)}>
+    <div className={cn("flex h-14 shrink-0 items-center justify-center border-b border-border", className)}>
       {children}
     </div>
   )
@@ -167,7 +214,7 @@ export interface SidebarRailNavProps {
 
 export function SidebarRailNav({ children, className }: SidebarRailNavProps) {
   return (
-    <nav className={cn("flex flex-col items-center gap-1 py-3 flex-1", className)}>
+    <nav className={cn("flex flex-col items-center gap-1 py-3 flex-1 min-h-0 overflow-y-auto", className)}>
       {children}
     </nav>
   )
@@ -184,7 +231,7 @@ export interface SidebarRailFooterProps {
 
 export function SidebarRailFooter({ children, className }: SidebarRailFooterProps) {
   return (
-    <div className={cn("flex flex-col items-center gap-1 pb-3", className)}>
+    <div className={cn("flex flex-col items-center gap-1 pb-3 shrink-0", className)}>
       {children}
     </div>
   )
@@ -228,7 +275,7 @@ export interface RailButtonProps {
 
 export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children }: RailButtonProps) {
   const classes = cn(
-    "group relative flex items-center justify-center rounded-xl transition-all duration-200",
+    "group relative flex shrink-0 items-center justify-center rounded-xl transition-all duration-200",
     showLabel ? "w-full justify-start px-3 h-11 gap-3" : "w-11 h-11 justify-center",
     "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
     "active:scale-95",
@@ -405,6 +452,8 @@ export interface ProfileAvatarProps {
   className?: string
   /** Show name/email beside the avatar (for a labeled rail) instead of an icon-only avatar button. */
   showDetails?: boolean
+  /** Render a light/dark theme switch (driven by the shared `useTheme` hook) in the dropdown. */
+  showThemeToggle?: boolean
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
 }
@@ -418,6 +467,7 @@ export function ProfileAvatar({
   children,
   className,
   showDetails = false,
+  showThemeToggle = false,
   LinkComponent,
 }: ProfileAvatarProps) {
   const Link = LinkComponent ?? DefaultLink
@@ -497,6 +547,7 @@ export function ProfileAvatar({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {children}
+        {showThemeToggle && <ThemeMenuItem />}
         {onSettingsClick ? (
           <DropdownMenuItem onClick={onSettingsClick}>
             <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />

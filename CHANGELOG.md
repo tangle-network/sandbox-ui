@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.23.1
+
+### `assets` module
+
+- `assets`: restores the asset-studio component set under the
+  `@tangle-network/sandbox-ui/assets` entry point — `ApprovalQueue`,
+  `AssetCard`, `AssetEditor`, `VariantCompare`, and the `EmailPreview` /
+  `ImagePreview` / `VideoPreview` / `CopyPreview` previews — with the same API
+  as 0.22.0. The marketing-asset domain types the components use are vendored
+  into the module (`assets/types`), so the package takes no new runtime
+  dependency.
+
 ## 0.23.0
 
 ### `SidebarLayout` (dashboard) + SSR-safe sidebar core

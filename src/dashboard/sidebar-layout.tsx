@@ -12,6 +12,7 @@ import {
   SidebarContent,
   RailButton,
   ProfileAvatar,
+  RailThemeToggle,
 } from "./app-sidebar"
 import type { SidebarUser } from "./app-sidebar"
 import { SidebarProvider, useSidebar, SIDEBAR_RAIL_LABELED_WIDTH } from "./sidebar-context"
@@ -50,6 +51,8 @@ export interface SidebarLayoutProps {
   settingsHref?: string
   /** Extra items rendered before settings/logout in the profile menu. */
   profileMenuItems?: React.ReactNode
+  /** Render a light/dark theme switch in the profile menu (uses the shared `useTheme`). */
+  showThemeToggle?: boolean
   /** Extra content in the rail footer, above the profile avatar. */
   railFooter?: React.ReactNode
   // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
@@ -120,6 +123,7 @@ function SidebarLayoutInner({
   onSettingsClick,
   settingsHref,
   profileMenuItems,
+  showThemeToggle = false,
   railFooter,
   LinkComponent,
   hideBelow,
@@ -179,19 +183,35 @@ function SidebarLayoutInner({
             {(railFooter !== undefined || hasProfile) && (
               <SidebarRailFooter className={cn("border-t border-border pt-2", railLabels && "items-stretch px-2")}>
                 {railFooter}
-                {hasProfile && (
-                  <ProfileAvatar
-                    user={user ?? undefined}
-                    isLoading={isLoading}
-                    onLogout={onLogout}
-                    onSettingsClick={onSettingsClick}
-                    settingsHref={settingsHref}
-                    showDetails={railLabels}
-                    LinkComponent={Link}
-                  >
-                    {profileMenuItems}
-                  </ProfileAvatar>
-                )}
+                {hasProfile && (() => {
+                  const profile = (
+                    <ProfileAvatar
+                      user={user ?? undefined}
+                      isLoading={isLoading}
+                      onLogout={onLogout}
+                      onSettingsClick={onSettingsClick}
+                      settingsHref={settingsHref}
+                      showDetails={railLabels}
+                      LinkComponent={Link}
+                    >
+                      {profileMenuItems}
+                    </ProfileAvatar>
+                  )
+                  if (!showThemeToggle) return profile
+                  // Visible compact theme switch beside the profile (a row on the
+                  // labeled rail, stacked above the avatar on the icon-only rail).
+                  return railLabels ? (
+                    <div className="flex w-full items-center gap-1">
+                      <div className="min-w-0 flex-1">{profile}</div>
+                      <RailThemeToggle />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
+                      <RailThemeToggle />
+                      {profile}
+                    </div>
+                  )
+                })()}
               </SidebarRailFooter>
             )}
           </SidebarRail>

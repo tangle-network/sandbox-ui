@@ -99,31 +99,37 @@ function MoonIcon({ className }: { className?: string }) {
   )
 }
 
-// Theme row for the profile dropdown, driven by the shared `useTheme` hook so
-// every app gets one consistent light/dark switch instead of hand-rolling one.
-function ThemeMenuItem() {
+// Compact light/dark switch for the rail footer, driven by the shared
+// `useTheme` hook so every app gets one consistent toggle instead of
+// hand-rolling its own. The `mounted` guard keeps the server and first client
+// render identical (no theme-dependent icon during SSR) to avoid a hydration
+// mismatch, then resolves to the persisted theme after mount.
+export function RailThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => setMounted(true), [])
   const isDark =
-    theme === "dark" ||
-    (theme === "system" &&
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches)
+    mounted &&
+    (theme === "dark" ||
+      (theme === "system" &&
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches))
 
   return (
-    <DropdownMenuItem
-      onSelect={(e) => {
-        // Keep the menu open so the switch can be flipped back and forth.
-        e.preventDefault()
-        setTheme(isDark ? "light" : "dark")
-      }}
-    >
-      {isDark ? (
-        <SunIcon className="mr-2 h-4 w-4" />
-      ) : (
-        <MoonIcon className="mr-2 h-4 w-4" />
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label="Toggle theme"
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors",
+        "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        className,
       )}
-      {isDark ? "Light mode" : "Dark mode"}
-    </DropdownMenuItem>
+    >
+      {isDark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+    </button>
   )
 }
 
@@ -452,8 +458,6 @@ export interface ProfileAvatarProps {
   className?: string
   /** Show name/email beside the avatar (for a labeled rail) instead of an icon-only avatar button. */
   showDetails?: boolean
-  /** Render a light/dark theme switch (driven by the shared `useTheme` hook) in the dropdown. */
-  showThemeToggle?: boolean
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
 }
@@ -467,7 +471,6 @@ export function ProfileAvatar({
   children,
   className,
   showDetails = false,
-  showThemeToggle = false,
   LinkComponent,
 }: ProfileAvatarProps) {
   const Link = LinkComponent ?? DefaultLink
@@ -498,19 +501,11 @@ export function ProfileAvatar({
           {showDetails && (
             <div className="min-w-0 flex-1">
               {isLoading ? (
-                <>
-                  <Skeleton className="mb-1 h-3.5 w-20" />
-                  <Skeleton className="h-3 w-28" />
-                </>
+                <Skeleton className="h-3.5 w-24" />
               ) : (
-                <>
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {user?.name ?? user?.email ?? "Not signed in"}
-                  </p>
-                  {user?.email && user?.name && (
-                    <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                  )}
-                </>
+                <p className="truncate text-sm font-medium text-foreground">
+                  {user?.name ?? user?.email ?? "Not signed in"}
+                </p>
               )}
             </div>
           )}
@@ -547,7 +542,6 @@ export function ProfileAvatar({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {children}
-        {showThemeToggle && <ThemeMenuItem />}
         {onSettingsClick ? (
           <DropdownMenuItem onClick={onSettingsClick}>
             <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />

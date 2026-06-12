@@ -12,6 +12,7 @@ import {
   SidebarContent,
   RailButton,
   ProfileAvatar,
+  RailThemeToggle,
 } from "./app-sidebar"
 import type { SidebarUser } from "./app-sidebar"
 import { SidebarProvider, useSidebar, SIDEBAR_RAIL_LABELED_WIDTH } from "./sidebar-context"
@@ -182,20 +183,35 @@ function SidebarLayoutInner({
             {(railFooter !== undefined || hasProfile) && (
               <SidebarRailFooter className={cn("border-t border-border pt-2", railLabels && "items-stretch px-2")}>
                 {railFooter}
-                {hasProfile && (
-                  <ProfileAvatar
-                    user={user ?? undefined}
-                    isLoading={isLoading}
-                    onLogout={onLogout}
-                    onSettingsClick={onSettingsClick}
-                    settingsHref={settingsHref}
-                    showDetails={railLabels}
-                    showThemeToggle={showThemeToggle}
-                    LinkComponent={Link}
-                  >
-                    {profileMenuItems}
-                  </ProfileAvatar>
-                )}
+                {hasProfile && (() => {
+                  const profile = (
+                    <ProfileAvatar
+                      user={user ?? undefined}
+                      isLoading={isLoading}
+                      onLogout={onLogout}
+                      onSettingsClick={onSettingsClick}
+                      settingsHref={settingsHref}
+                      showDetails={railLabels}
+                      LinkComponent={Link}
+                    >
+                      {profileMenuItems}
+                    </ProfileAvatar>
+                  )
+                  if (!showThemeToggle) return profile
+                  // Visible compact theme switch beside the profile (a row on the
+                  // labeled rail, stacked above the avatar on the icon-only rail).
+                  return railLabels ? (
+                    <div className="flex w-full items-center gap-1">
+                      <div className="min-w-0 flex-1">{profile}</div>
+                      <RailThemeToggle />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
+                      <RailThemeToggle />
+                      {profile}
+                    </div>
+                  )
+                })()}
               </SidebarRailFooter>
             )}
           </SidebarRail>

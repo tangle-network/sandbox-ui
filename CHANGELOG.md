@@ -10,10 +10,13 @@
   `RailButton` is `shrink-0`, and the header/footer are pinned (`shrink-0`) — so
   the logo stays on top and the profile (settings / sign-out) stays reachable at
   the bottom on short screens.
-- `SidebarLayout`: new `showThemeToggle` prop renders a light/dark switch in the
-  profile dropdown, driven by the shared `useTheme` hook — so apps get one
-  consistent theme control instead of hand-rolling their own. Also exposed as
-  `showThemeToggle` on `ProfileAvatar`.
+- `SidebarLayout`: new `showThemeToggle` prop renders a compact light/dark
+  switch (`RailThemeToggle`) in the rail footer beside the profile avatar,
+  driven by the shared `useTheme` hook — so apps get one consistent theme
+  control instead of hand-rolling their own. The footer shows the user's name
+  only (the email stays in the profile dropdown) to leave room for the toggle.
+  The toggle is SSR-safe (a `mounted` guard avoids a theme-dependent hydration
+  mismatch).
 
 ## 0.23.1
 

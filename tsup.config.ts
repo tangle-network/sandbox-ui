@@ -21,6 +21,7 @@ export default defineConfig({
     stores: "src/stores/index.ts",
     types: "src/types/index.ts",
     utils: "src/utils/index.ts",
+    assets: "src/assets/index.ts",
   },
   format: ["esm"],
   dts: true,

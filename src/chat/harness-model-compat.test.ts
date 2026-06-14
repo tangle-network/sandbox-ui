@@ -16,6 +16,7 @@ const CATALOG = [
     _provider: "anthropic",
   },
   { id: "zai/glm-4.7", name: "GLM 4.7", _provider: "zai" },
+  { id: "moonshot/kimi-k2", name: "Kimi K2", _provider: "moonshot" },
 ];
 
 describe("isModelCompatibleWithHarness", () => {
@@ -36,6 +37,26 @@ describe("isModelCompatibleWithHarness", () => {
       true,
     );
     expect(isModelCompatibleWithHarness("opencode", "zai/glm-4.7")).toBe(true);
+  });
+
+  it("kimi-code rejects non-Moonshot models and accepts Moonshot", () => {
+    expect(isModelCompatibleWithHarness("kimi-code", "openai/gpt-5.5")).toBe(
+      false,
+    );
+    expect(isModelCompatibleWithHarness("kimi-code", "moonshot/kimi-k2")).toBe(
+      true,
+    );
+  });
+
+  it("openclaw and hermes are router-backed and accept any provider", () => {
+    expect(isModelCompatibleWithHarness("openclaw", "openai/gpt-5.5")).toBe(
+      true,
+    );
+    expect(isModelCompatibleWithHarness("openclaw", "anthropic/claude-opus-4-8")).toBe(
+      true,
+    );
+    expect(isModelCompatibleWithHarness("hermes", "zai/glm-4.7")).toBe(true);
+    expect(isModelCompatibleWithHarness("hermes", "moonshot/kimi-k2")).toBe(true);
   });
 
   it("prefix-less sentinel ids are compatible everywhere", () => {
@@ -72,6 +93,12 @@ describe("snapModelToHarness", () => {
     ).toBe("anthropic/claude-sonnet-4-6");
   });
 
+  it("switching to kimi-code snaps a non-Moonshot model to the Moonshot model", () => {
+    expect(snapModelToHarness("kimi-code", "openai/gpt-5.5", CATALOG)).toBe(
+      "moonshot/kimi-k2",
+    );
+  });
+
   it("returns the original id when the catalog has nothing compatible", () => {
     const anthropicOnly = CATALOG.filter((m) =>
       m.id.startsWith("anthropic/"),
@@ -91,6 +118,19 @@ describe("snapHarnessToModel", () => {
 
   it("picking an OpenAI model under claude-code switches to codex", () => {
     expect(snapHarnessToModel("claude-code", "openai/gpt-5.5")).toBe("codex");
+  });
+
+  it("picking a Moonshot model under claude-code switches to kimi-code", () => {
+    expect(snapHarnessToModel("claude-code", "moonshot/kimi-k2")).toBe(
+      "kimi-code",
+    );
+  });
+
+  it("openclaw and hermes run everything, so no harness change occurs", () => {
+    expect(snapHarnessToModel("openclaw", "anthropic/claude-opus-4-8")).toBe(
+      "openclaw",
+    );
+    expect(snapHarnessToModel("hermes", "openai/gpt-5.5")).toBe("hermes");
   });
 
   it("opencode runs everything, so no harness change occurs", () => {

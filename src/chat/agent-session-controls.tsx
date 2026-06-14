@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Bot, ChevronDown, Lock } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 import { cn } from "../lib/utils";
 import {
   canonicalModelId,
@@ -10,6 +10,7 @@ import {
   type ModelInfo,
 } from "../dashboard/model-picker";
 import { HARNESS_OPTIONS, type HarnessType } from "../dashboard/harness-picker";
+import { HarnessLogo } from "../dashboard/harness-logo";
 import {
   isModelCompatibleWithHarness,
   snapHarnessToModel,
@@ -105,7 +106,7 @@ function HarnessDropdown({
           {locked ? (
             <Lock className="h-3 w-3 text-muted-foreground" />
           ) : (
-            <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+            <HarnessLogo type={value} size={16} />
           )}
           <span>{selected?.label ?? value}</span>
           {!locked && (
@@ -133,18 +134,21 @@ function HarnessDropdown({
                 onChange(option.type);
               }}
               className={cn(
-                "flex cursor-pointer flex-col gap-0.5 rounded-md px-2.5 py-2 outline-none",
+                "flex cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-2 outline-none",
                 "transition-colors hover:bg-accent/40 focus:bg-accent/40",
                 option.type === value &&
                   "bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
               )}
             >
-              <span className="text-sm font-medium">{option.label}</span>
-              {option.description && (
-                <span className="text-xs text-muted-foreground">
-                  {option.description}
-                </span>
-              )}
+              <HarnessLogo type={option.type} size={20} className="mt-0.5" />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-sm font-medium">{option.label}</span>
+                {option.description && (
+                  <span className="text-xs text-muted-foreground">
+                    {option.description}
+                  </span>
+                )}
+              </span>
             </DropdownMenu.Item>
           ))}
         </DropdownMenu.Content>

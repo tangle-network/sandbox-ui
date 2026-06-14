@@ -2,10 +2,46 @@
 
 import * as React from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Brain, ChevronDown } from "lucide-react";
+import { Brain, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
 
 export type ReasoningLevel = "auto" | "low" | "medium" | "high";
+
+/** Filled-bar count per level, so the rows read as an intensity scale. */
+const INTENSITY_BARS: Record<Exclude<ReasoningLevel, "auto">, number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+};
+
+/**
+ * Three-bar meter that fills left-to-right with the level's intensity. Auto
+ * has no fixed depth, so it shows a Sparkles glyph instead of a bar count.
+ */
+function ReasoningGlyph({ level }: { level: ReasoningLevel }) {
+  if (level === "auto") {
+    return <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />;
+  }
+  const filled = INTENSITY_BARS[level];
+  return (
+    <span
+      aria-hidden
+      className="inline-flex h-3.5 items-end gap-px"
+      style={{ width: 14 }}
+    >
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className={cn(
+            "w-1 rounded-[1px]",
+            i < filled ? "bg-foreground" : "bg-border",
+          )}
+          style={{ height: `${40 + i * 30}%` }}
+        />
+      ))}
+    </span>
+  );
+}
 
 export interface ReasoningLevelOption {
   value: ReasoningLevel;
@@ -82,13 +118,18 @@ export function ReasoningLevelPicker({
                 onChange(option.value);
               }}
               className={cn(
-                "flex cursor-pointer flex-col gap-0.5 rounded-md px-2.5 py-2 outline-none",
+                "flex cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-2 outline-none",
                 "transition-colors hover:bg-accent/40 focus:bg-accent/40",
                 option.value === value && "bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
               )}
             >
-              <span className="text-sm font-medium">{option.label}</span>
-              <span className="text-xs text-muted-foreground">{option.description}</span>
+              <span className="mt-0.5 flex w-3.5 shrink-0 justify-center">
+                <ReasoningGlyph level={option.value} />
+              </span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-sm font-medium">{option.label}</span>
+                <span className="text-xs text-muted-foreground">{option.description}</span>
+              </span>
             </DropdownMenu.Item>
           ))}
         </DropdownMenu.Content>

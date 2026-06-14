@@ -103,6 +103,12 @@ export {
   type HarnessType,
 } from "./harness-picker";
 export {
+  HarnessLogo,
+  HARNESS_BRAND,
+  type HarnessBrand,
+  type HarnessLogoProps,
+} from "./harness-logo";
+export {
   ModelPicker,
   canonicalModelId,
   formatPricing,

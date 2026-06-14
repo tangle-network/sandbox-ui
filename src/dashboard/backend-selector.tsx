@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import * as Select from "@radix-ui/react-select";
 import { cn } from "../lib/utils";
@@ -8,6 +9,8 @@ export interface Backend {
   type: string;
   label: string;
   description?: string;
+  /** Optional leading brand glyph (e.g. a HarnessLogo) shown in the trigger and rows. */
+  icon?: ReactNode;
 }
 
 export interface BackendSelectorProps {
@@ -48,18 +51,21 @@ export function BackendSelector({
             "data-[state=open]:border-primary/30 data-[state=open]:bg-accent/30",
           )}
         >
-          <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             {current ? (
-              <div>
-                <span className="font-medium text-foreground">
-                  {current.label}
-                </span>
-                {current.description && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {current.description}
+              <>
+                {current.icon}
+                <span className="min-w-0 truncate">
+                  <span className="font-medium text-foreground">
+                    {current.label}
                   </span>
-                )}
-              </div>
+                  {current.description && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {current.description}
+                    </span>
+                  )}
+                </span>
+              </>
             ) : (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
@@ -89,21 +95,26 @@ export function BackendSelector({
                   key={backend.type}
                   value={backend.type}
                   className={cn(
-                    "relative flex cursor-pointer select-none flex-col rounded-[var(--radius-sm)]",
+                    "relative flex cursor-pointer select-none items-start gap-2.5 rounded-[var(--radius-sm)]",
                     "px-3 py-2.5 text-sm outline-none",
                     "transition-colors duration-[var(--transition-fast)]",
                     "hover:bg-accent/50 focus:bg-accent/50",
                     "data-[state=checked]:bg-[var(--accent-surface-soft)] data-[state=checked]:text-[var(--brand-primary)]",
                   )}
                 >
-                  <Select.ItemText>
-                    <span className="font-medium">{backend.label}</span>
-                  </Select.ItemText>
-                  {backend.description && (
-                    <span className="mt-0.5 text-xs text-muted-foreground data-[state=checked]:text-[var(--accent-text)]">
-                      {backend.description}
-                    </span>
+                  {backend.icon && (
+                    <span className="mt-0.5 shrink-0">{backend.icon}</span>
                   )}
+                  <span className="flex min-w-0 flex-col">
+                    <Select.ItemText>
+                      <span className="font-medium">{backend.label}</span>
+                    </Select.ItemText>
+                    {backend.description && (
+                      <span className="mt-0.5 text-xs text-muted-foreground data-[state=checked]:text-[var(--accent-text)]">
+                        {backend.description}
+                      </span>
+                    )}
+                  </span>
                 </Select.Item>
               ))}
             </Select.Viewport>

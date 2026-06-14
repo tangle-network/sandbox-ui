@@ -42,12 +42,20 @@ export const HARNESS_MODEL_POLICIES: Record<HarnessType, HarnessModelPolicy> =
     amp: { providers: null, preferred: [] },
     "factory-droids": { providers: null, preferred: [] },
     "cli-base": { providers: null, preferred: [] },
+    "kimi-code": {
+      providers: ["moonshot"],
+      preferred: [/^moonshot\//],
+    },
+    openclaw: { providers: null, preferred: [] },
+    nanoclaw: { providers: null, preferred: [] },
+    hermes: { providers: null, preferred: [] },
   };
 
 /** Harness to adopt when the current one can't run the chosen model. */
 const PROVIDER_PREFERRED_HARNESS: Record<string, HarnessType> = {
   anthropic: "claude-code",
   openai: "codex",
+  moonshot: "kimi-code",
 };
 
 /** Provider prefix of a canonical id ("anthropic/claude-…" → "anthropic"). */

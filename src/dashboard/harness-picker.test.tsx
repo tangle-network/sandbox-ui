@@ -5,12 +5,18 @@ import { HARNESS_OPTIONS, HarnessPicker, type HarnessType } from "./harness-pick
 describe("HARNESS_OPTIONS", () => {
   it("matches the BackendType enum exported by the sandbox SDK", () => {
     // If the SDK adds a backend, this list must be extended in lockstep.
+    // The SDK's pi/forge/acp/cursor backends are deliberately deferred
+    // (not yet surfaced) and so are absent here on purpose.
     const expected: HarnessType[] = [
       "opencode",
       "claude-code",
       "codex",
       "amp",
       "factory-droids",
+      "kimi-code",
+      "openclaw",
+      "nanoclaw",
+      "hermes",
       "cli-base",
     ];
     expect(HARNESS_OPTIONS.map((h) => h.type)).toEqual(expected);

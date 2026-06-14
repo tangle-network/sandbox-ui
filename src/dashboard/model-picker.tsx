@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { TangleKnot } from "@tangle-network/brand";
+import { ProviderLogo } from "./provider-logo";
 import { ChevronDown, Search, Sparkles, Loader2 } from "lucide-react";
 import * as Popover from "@radix-ui/react-dropdown-menu";
 import { cn } from "../lib/utils";
@@ -369,8 +370,8 @@ export function ModelPicker({
       aria-label={triggerLabel}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-border bg-card",
-        "px-2.5 py-1 text-xs font-medium text-foreground",
+        "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card",
+        "px-2.5 text-xs font-medium text-foreground shadow-sm",
         "transition-colors duration-[var(--transition-fast)]",
         "hover:border-primary/30 hover:bg-accent/30",
         "focus:outline-none focus:border-primary/40",
@@ -634,9 +635,31 @@ function ModelBrandStack({ identity, size }: { identity: ModelBrandIdentity; siz
   );
 }
 
+/**
+ * Provider keys for which the vendored {@link ProviderLogo} ships a real
+ * full-color brand mark (vs. a tinted monogram). These render in color; every
+ * other brand falls through to the bundled lobehub monochrome mask. Kept in
+ * sync with provider-logo.tsx's LOGOS table.
+ */
+const COLOR_MARK_PROVIDERS: ReadonlySet<string> = new Set([
+  "anthropic",
+  "openai",
+  "google",
+  "deepseek",
+  "mistral",
+  "xai",
+  "nvidia",
+  "meta",
+  "moonshot",
+]);
+
 function BrandLogo({ brand, size, className }: { brand: ModelBrandInfo; size: "xs" | "sm" | "md"; className?: string }) {
   if (!hasRealLogo(brand)) return null;
   const pixelSize = size === "xs" ? 14 : size === "sm" ? 16 : 28;
+  // Near-black marks (xai #000, moonshot #16191E) stay inside the light
+  // `bg-background` ring chip so they remain visible against dark themes.
+  const useColorMark =
+    brand.logo !== "tangle" && COLOR_MARK_PROVIDERS.has(brand.key);
   return (
     <span
       title={brand.label}
@@ -651,6 +674,8 @@ function BrandLogo({ brand, size, className }: { brand: ModelBrandInfo; size: "x
     >
       {brand.logo === "tangle" ? (
         <TangleKnot size={pixelSize} className="h-full w-full" />
+      ) : useColorMark ? (
+        <ProviderLogo provider={brand.key} size={Math.round(pixelSize * 0.72)} />
       ) : brand.logoUrl && brand.monochrome ? (
         <span
           aria-hidden

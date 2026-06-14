@@ -1,11 +1,14 @@
 "use client";
 
 import { BackendSelector, type BackendSelectorProps, type Backend } from "./backend-selector";
+import { HarnessLogo } from "./harness-logo";
 
 /**
  * Sandbox agent harness types — mirrors `BackendType` from
  * `@tangle-network/sandbox` SDK. Kept in lockstep with that enum:
- * if the SDK adds a backend, add it here too.
+ * if the SDK adds a backend, add it here too. The SDK's `pi`, `forge`,
+ * `acp`, and `cursor` backends are deliberately deferred (not yet
+ * surfaced in the picker) until their copy and compat policies land.
  */
 export type HarnessType =
   | "opencode"
@@ -13,7 +16,11 @@ export type HarnessType =
   | "codex"
   | "amp"
   | "factory-droids"
-  | "cli-base";
+  | "cli-base"
+  | "kimi-code"
+  | "openclaw"
+  | "nanoclaw"
+  | "hermes";
 
 interface HarnessOption extends Backend {
   type: HarnessType;
@@ -48,6 +55,27 @@ export const HARNESS_OPTIONS: readonly HarnessOption[] = [
     type: "factory-droids",
     label: "Factory Droids",
     description: "Factory Droid agent",
+  },
+  {
+    type: "kimi-code",
+    label: "Kimi Code",
+    description:
+      "Moonshot Kimi Code CLI (Kimi subscription OAuth or MOONSHOT_API_KEY)",
+  },
+  {
+    type: "openclaw",
+    label: "OpenClaw",
+    description: "Dispatcher routing to Claude / Codex / Gemini CLIs",
+  },
+  {
+    type: "nanoclaw",
+    label: "NanoClaw",
+    description: "Local socket-bridge agent backend",
+  },
+  {
+    type: "hermes",
+    label: "Hermes",
+    description: "Hermes inference-router agent",
   },
   {
     type: "cli-base",
@@ -88,6 +116,7 @@ export function HarnessPicker({
       type: h.type,
       label: override?.label ?? h.label,
       description: override?.description ?? h.description,
+      icon: <HarnessLogo type={h.type} size={20} />,
     };
   });
 

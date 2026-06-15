@@ -338,10 +338,16 @@ describe("StartupScriptsPage", () => {
     expect(nameInput).toBeInTheDocument()
   })
 
-  it("applies className prop", () => {
+  it("renders inside the standard constrained page wrapper", () => {
     const { container } = render(
       <StartupScriptsPage apiClient={api} className="test-class" />,
     )
-    expect(container.firstElementChild).toHaveClass("test-class")
+    expect(container.firstElementChild).toHaveClass(
+      "mx-auto",
+      "w-full",
+      "max-w-7xl",
+      "space-y-6",
+      "test-class",
+    )
   })
 })

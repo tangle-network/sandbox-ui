@@ -441,7 +441,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
   const activeCount = scripts.filter((s) => s.enabled).length
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("mx-auto w-full max-w-7xl space-y-6", className)}>
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>

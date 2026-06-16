@@ -75,6 +75,13 @@ export interface ModelInfo {
     hostUrl?: string;
     labUrl?: string;
   };
+  /**
+   * Marks a model as recommended. When any catalog row carries this flag the
+   * picker surfaces those rows in a "Recommended" section at the top. When no
+   * row is flagged the picker falls back to {@link DEFAULT_FEATURED_MODEL_IDS}
+   * (matched by dedup key) so the section is never empty for a router catalog.
+   */
+  featured?: boolean;
 }
 
 export type ModelBrandKey =
@@ -187,6 +194,65 @@ export function canonicalModelId(model: ModelInfo): string {
   return provider ? `${provider}/${id}` : id;
 }
 
+/**
+ * Stable key used to collapse catalog duplicates. The Tangle Router lists the
+ * same underlying model under several host prefixes (e.g. `openai/gpt-5.4`,
+ * `tcloud/gpt-5.4`, `openrouter/openai/gpt-5.4`); they all name one model and
+ * should occupy a single row. The key is `<lab>/<model-id>`: the authoring lab
+ * (inferred via {@link resolveModelBrandIdentity}, which already maps
+ * `gpt-5.4` → openai, `kimi-k2` → moonshot, etc.) plus the final id segment,
+ * so a model collapses to one identity regardless of which host serves it.
+ */
+export function modelDedupKey(model: ModelInfo): string {
+  const canonical = canonicalModelId(model).toLowerCase();
+  const segments = canonical.split("/").filter(Boolean);
+  const modelId = segments[segments.length - 1] ?? canonical;
+  const lab = resolveModelBrandIdentity(model).lab.key;
+  // `unknown` lab → fall back to the full canonical id so unrelated unknown
+  // models never accidentally collapse onto one another.
+  return lab === "unknown" ? canonical : `${lab}/${modelId}`;
+}
+
+/**
+ * Collapse catalog duplicates to one row per {@link modelDedupKey}. When a
+ * model is served under multiple hosts the preferred row wins: a `featured`
+ * row beats a non-featured one, otherwise the first occurrence is kept (so
+ * caller-controlled catalog order still decides ties). Input order is
+ * preserved for the surviving rows.
+ */
+export function dedupeModels(models: ReadonlyArray<ModelInfo>): ModelInfo[] {
+  const byKey = new Map<string, number>();
+  const result: ModelInfo[] = [];
+  for (const model of models) {
+    const key = modelDedupKey(model);
+    const existingIndex = byKey.get(key);
+    if (existingIndex === undefined) {
+      byKey.set(key, result.length);
+      result.push(model);
+      continue;
+    }
+    const existing = result[existingIndex];
+    if (!existing.featured && model.featured) {
+      result[existingIndex] = model;
+    }
+  }
+  return result;
+}
+
+/**
+ * Fallback "Recommended" seed — latest frontier models per major lab, matched
+ * by {@link modelDedupKey} against the loaded catalog. Used only when no
+ * catalog row carries an explicit `featured` flag, so a standard router
+ * catalog still gets a curated top section without per-deployment config.
+ */
+export const DEFAULT_FEATURED_MODEL_IDS: ReadonlyArray<string> = [
+  "anthropic/claude-opus-4-8",
+  "anthropic/claude-sonnet-4-6",
+  "openai/gpt-5.4",
+  "google/gemini-2.5-pro",
+  "deepseek/deepseek-v3",
+];
+
 /** Format $/M tokens. Returns null if pricing is missing or zero. */
 export function formatPricing(pricing: ModelInfo["pricing"]): string | null {
   const prompt = Number(pricing?.prompt ?? 0);
@@ -290,12 +356,16 @@ export function ModelPicker({
     return () => cancelAnimationFrame(frame);
   }, [open]);
 
-  // Filter once per (models, query, modalities, excludeProviders) change.
+  // Collapse router duplicates (same model served under many host prefixes)
+  // to a single row before any sectioning. Featured rows win the collapse.
+  const deduped = React.useMemo(() => dedupeModels(models), [models]);
+
+  // Filter once per (deduped, query, modalities, excludeProviders) change.
   const filtered = React.useMemo(() => {
     const excluded = new Set((excludeProviders ?? []).map((p) => p.toLowerCase()));
     const allowedModalities = modalities ? new Set(modalities) : null;
     const q = query.trim().toLowerCase();
-    return models.filter((m) => {
+    return deduped.filter((m) => {
       const provider = (m._provider ?? m.provider ?? "").toLowerCase();
       if (excluded.has(provider)) return false;
       if (allowedModalities && m.architecture?.modality && !allowedModalities.has(m.architecture.modality)) return false;
@@ -311,7 +381,7 @@ export function ModelPicker({
         identity.lab.label.toLowerCase().includes(q)
       );
     });
-  }, [models, query, modalities, excludeProviders]);
+  }, [deduped, query, modalities, excludeProviders]);
 
   // Group filtered models by model family first, then by provider for
   // unknown labs. This keeps routed Claude/Gemini/Kimi rows where users
@@ -356,6 +426,24 @@ export function ModelPicker({
       .map((id) => lookup.get(id))
       .filter((m): m is ModelInfo => Boolean(m));
   }, [popular, models]);
+
+  // Recommended section. Prefer rows the catalog explicitly flags
+  // `featured`; if none are flagged, fall back to the curated seed list
+  // matched by dedup key against the loaded (deduped) catalog. Either way
+  // the rows come from `deduped`, so a selection here is a real catalog row.
+  const featuredModels = React.useMemo(() => {
+    const flagged = deduped.filter((m) => m.featured);
+    if (flagged.length > 0) return flagged;
+    const seedKeys = new Set(
+      DEFAULT_FEATURED_MODEL_IDS.map((id) => modelDedupKey({ id })),
+    );
+    const seeded = deduped.filter((m) => seedKeys.has(modelDedupKey(m)));
+    // Preserve the seed-list order so the recommended row sequence is stable.
+    const order = DEFAULT_FEATURED_MODEL_IDS.map((id) => modelDedupKey({ id }));
+    return seeded.sort(
+      (a, b) => order.indexOf(modelDedupKey(a)) - order.indexOf(modelDedupKey(b)),
+    );
+  }, [deduped]);
 
   const handleSelect = (id: string) => {
     onChange(id);
@@ -465,6 +553,21 @@ export function ModelPicker({
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto">
+              {/* Recommended (catalog `featured` flag, or curated fallback) */}
+              {!query && featuredModels.length > 0 && (
+                <Section label="Recommended" tone="featured">
+                  {featuredModels.map((m) => (
+                    <ModelRow
+                      key={`featured-${canonicalModelId(m)}`}
+                      model={m}
+                      active={canonicalModelId(m) === value}
+                      onSelect={handleSelect}
+                      featured
+                    />
+                  ))}
+                </Section>
+              )}
+
               {/* Popular */}
               {!query && popularModels.length > 0 && (
                 <Section label="Top models" tone="featured">
@@ -517,7 +620,7 @@ export function ModelPicker({
 
             {/* Footer count */}
             <div className="border-t border-border px-3 py-1.5 text-[10px] text-muted-foreground">
-              {filtered.length} of {models.length} model{models.length === 1 ? "" : "s"}
+              {filtered.length} of {deduped.length} model{deduped.length === 1 ? "" : "s"}
             </div>
           </Popover.Content>
         </Popover.Portal>
@@ -564,11 +667,12 @@ function PickerItem({
         onSelect();
       }}
       className={cn(
-        "flex cursor-pointer items-start gap-2 px-3 py-2 outline-none",
+        "flex cursor-pointer items-start gap-2 rounded-md px-3 py-2 outline-none",
         "transition-colors duration-[var(--transition-fast)]",
-        "hover:bg-accent/40 focus:bg-accent/40",
-        featured && "mx-1 rounded-lg border border-primary/10 bg-primary/[0.035] px-2.5",
-        active && "bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
+        "hover:bg-accent/50 focus:bg-accent/50",
+        featured && "mx-1 border border-primary/10 bg-primary/[0.04] px-2.5",
+        active &&
+          "bg-primary/10 font-medium text-foreground ring-1 ring-inset ring-primary/25 hover:bg-primary/15 focus:bg-primary/15",
       )}
     >
       {children}

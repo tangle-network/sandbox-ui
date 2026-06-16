@@ -3,6 +3,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   canonicalModelId,
+  modelDedupKey,
+  dedupeModels,
+  DEFAULT_FEATURED_MODEL_IDS,
   formatPricing,
   formatContext,
   resolveModelBrandIdentity,
@@ -31,6 +34,122 @@ describe("canonicalModelId", () => {
 
   it("does not double-prefix even when provider matches the prefix", () => {
     expect(canonicalModelId({ id: "openai/gpt-5.4", _provider: "openai" })).toBe("openai/gpt-5.4");
+  });
+});
+
+describe("modelDedupKey", () => {
+  it("collapses the same model served under different host/router prefixes", () => {
+    const a = modelDedupKey({ id: "gpt-5.4", _provider: "openai" });
+    const b = modelDedupKey({ id: "openai/gpt-5.4", _provider: "tcloud" });
+    const c = modelDedupKey({ id: "openrouter/openai/gpt-5.4" });
+    expect(a).toBe("openai/gpt-5.4");
+    expect(b).toBe(a);
+    expect(c).toBe(a);
+  });
+
+  it("keeps distinct models distinct", () => {
+    expect(modelDedupKey({ id: "anthropic/claude-opus-4-8" })).not.toBe(
+      modelDedupKey({ id: "anthropic/claude-sonnet-4-6" }),
+    );
+  });
+
+  it("falls back to the full canonical id for an unknown-lab bare model", () => {
+    expect(modelDedupKey({ id: "mystery-model" })).toBe("mystery-model");
+  });
+});
+
+describe("dedupeModels", () => {
+  it("collapses router duplicates to one row per model", () => {
+    const out = dedupeModels([
+      { id: "gpt-5.4", name: "GPT-5.4", _provider: "openai" },
+      { id: "gpt-5.4", name: "GPT-5.4 (tcloud)", _provider: "tcloud" },
+      { id: "openrouter/openai/gpt-5.4", name: "GPT-5.4 (OR)" },
+      { id: "anthropic/claude-opus-4-8", name: "Claude Opus 4.8", _provider: "anthropic" },
+    ]);
+    expect(out).toHaveLength(2);
+    expect(out.map((m) => m.name)).toEqual(["GPT-5.4", "Claude Opus 4.8"]);
+  });
+
+  it("prefers a featured row when collapsing duplicates", () => {
+    const out = dedupeModels([
+      { id: "gpt-5.4", name: "Plain", _provider: "tcloud" },
+      { id: "openai/gpt-5.4", name: "Featured", _provider: "openai", featured: true },
+    ]);
+    expect(out).toHaveLength(1);
+    expect(out[0].name).toBe("Featured");
+  });
+
+  it("is order-stable for surviving rows", () => {
+    const out = dedupeModels([
+      { id: "z", name: "Z" },
+      { id: "a", name: "A" },
+      { id: "z", name: "Z dup" },
+    ]);
+    expect(out.map((m) => m.id)).toEqual(["z", "a"]);
+  });
+});
+
+describe("ModelPicker dedup + recommended", () => {
+  it("renders a single row per model even when the catalog lists it under many hosts", async () => {
+    const user = userEvent.setup();
+    // Use gpt-5-mini (not on the Recommended seed list) so the only way it
+    // can appear twice would be a dedup failure, not the Recommended echo.
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={[
+          { id: "gpt-5-mini", name: "GPT-5 mini", _provider: "openai" },
+          { id: "openai/gpt-5-mini", name: "GPT-5 mini", _provider: "tcloud" },
+          { id: "openrouter/openai/gpt-5-mini", name: "GPT-5 mini" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    expect(screen.getAllByText("GPT-5 mini")).toHaveLength(1);
+    expect(screen.getByText(/1 of 1 model/)).toBeInTheDocument();
+  });
+
+  it("shows a Recommended section seeded from curated ids when no row is flagged", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={[
+          { id: "anthropic/claude-opus-4-8", name: "Claude Opus 4.8", _provider: "anthropic" },
+          { id: "some/obscure-model", name: "Obscure" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    expect(await screen.findByText("Recommended")).toBeInTheDocument();
+    // The opus seed resolves; it appears in Recommended AND its group.
+    expect(screen.getAllByText("Claude Opus 4.8").length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("prefers an explicit catalog `featured` flag over the curated fallback", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={[
+          { id: "x/handpicked", name: "Handpicked", featured: true },
+          { id: "anthropic/claude-opus-4-8", name: "Claude Opus 4.8", _provider: "anthropic" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    expect(await screen.findByText("Recommended")).toBeInTheDocument();
+    // Flagged row is recommended; the opus seed is NOT promoted because an
+    // explicit flag exists.
+    expect(screen.getAllByText("Handpicked").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Claude Opus 4.8")).toHaveLength(1);
+  });
+
+  it("exposes a non-empty default featured seed list", () => {
+    expect(DEFAULT_FEATURED_MODEL_IDS.length).toBeGreaterThan(0);
   });
 });
 
@@ -315,7 +434,10 @@ describe("ModelPicker brand identity", () => {
     render(<ModelPicker value="openrouter/anthropic/claude-sonnet-4-6" onChange={() => {}} models={MODELS} />);
     await user.click(screen.getByRole("button"));
 
-    expect(await screen.findByText("OpenRouter → Anthropic")).toBeInTheDocument();
+    // This model is also recommended (matches a curated seed by dedup key),
+    // so its row — and the routed host→lab line — renders in both the
+    // Recommended section and its provider group.
+    expect((await screen.findAllByText("OpenRouter → Anthropic")).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders verified logo assets and no fake monogram text", async () => {

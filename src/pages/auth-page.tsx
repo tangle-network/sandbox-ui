@@ -38,9 +38,15 @@ export interface AuthPageProps {
   /**
    * Email/password handler. Return an error message to show, or null on success
    * (the caller handles navigation). If omitted, the email form is hidden —
-   * SSO/social only.
+   * SSO/social only. In signup mode the third arg is the entered display name
+   * (empty string when name collection is disabled).
    */
-  onEmailSubmit?: (email: string, password: string) => Promise<string | null>;
+  onEmailSubmit?: (email: string, password: string, name: string) => Promise<string | null>;
+  /**
+   * Collect a display name in the email form. Defaults to true in signup mode,
+   * false in signin. Set false to suppress it even on signup.
+   */
+  collectName?: boolean;
   /** Footer link target for the opposite mode (signup from signin, vice versa). */
   altHref?: string;
   /** Primary (Tangle) button background. Default Tangle ink `#0f172a`. */
@@ -98,6 +104,7 @@ export function AuthPage({
   providers = ["github", "google"],
   socialHref = (p) => `/api/auth/sign-in/social?provider=${p}&callbackURL=/app`,
   onEmailSubmit,
+  collectName,
   altHref,
   accent = "#0f172a",
   accentHover = "#1e293b",
@@ -106,12 +113,14 @@ export function AuthPage({
   style,
   children,
 }: AuthPageProps) {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const isSignup = mode === "signup";
+  const showName = collectName ?? isSignup;
   const tangleLabel = isSignup ? "Sign up with Tangle" : "Continue with Tangle";
   const emailLabel = isSignup ? "Create account with email" : "Sign in with email";
 
@@ -121,7 +130,7 @@ export function AuthPage({
     setLoading(true);
     setError("");
     try {
-      const err = await onEmailSubmit(email, password);
+      const err = await onEmailSubmit(email, password, name);
       if (err) setError(err);
     } catch {
       setError("Connection error — please try again");
@@ -238,6 +247,9 @@ export function AuthPage({
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {showName && (
+                <input type="text" required aria-label="Name" placeholder="Name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+              )}
               <input type="email" required aria-label="Email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
               <input type="password" required aria-label="Password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
               {error && (

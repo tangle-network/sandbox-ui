@@ -1399,6 +1399,25 @@ describe("ProvisioningWizard — environment section visibility", () => {
       screen.getByRole("button", { name: /deploy workspace/i }),
     ).toBeDisabled()
   })
+
+  it("keeps the section visible with skeletons while environments load", () => {
+    // A never-resolving loader holds the wizard in its loading state. The
+    // section must stay visible and show skeleton placeholders (not the
+    // empty-state, and not a hidden section).
+    const { container } = render(
+      <ProvisioningWizard
+        onLoadEnvironments={() => new Promise<EnvironmentEntry[]>(() => {})}
+      />,
+    )
+
+    expect(screen.getByText("Environment Selection")).toBeInTheDocument()
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0,
+    )
+    expect(
+      screen.queryByText(/no environments are available/i),
+    ).not.toBeInTheDocument()
+  })
 })
 
 describe("ProvisioningWizard — driver selection", () => {

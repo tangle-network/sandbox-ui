@@ -14,6 +14,9 @@ import {
 import { InfoPanel } from "../dashboard/info-panel"
 import { parseEnvText, type EnvImportResult } from "./env-importer"
 
+/** Cap pasted/uploaded import sources so a pathological file cannot blow up the parser/UI. */
+const MAX_IMPORT_FILE_BYTES = 256 * 1024 // 256 KiB
+
 export interface Secret {
   name: string
   createdAt: string
@@ -70,6 +73,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
   const [rowMessages, setRowMessages] = React.useState<string[]>([])
   const [isImportSaving, setIsImportSaving] = React.useState(false)
   const [showImportValues, setShowImportValues] = React.useState(false)
+  const [importFileError, setImportFileError] = React.useState<string | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const apiRef = React.useRef(apiClient)
   apiRef.current = apiClient
@@ -132,6 +136,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
     setRowStatus([])
     setRowMessages([])
     setShowImportValues(false)
+    setImportFileError(null)
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
@@ -148,6 +153,12 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
 
   const handleImportFile = async (file: File | null) => {
     if (!file) return
+    setImportFileError(null)
+    if (file.size > MAX_IMPORT_FILE_BYTES) {
+      setImportFileError(`File is too large (${Math.round(file.size / 1024)} KiB). Limit is ${MAX_IMPORT_FILE_BYTES / 1024} KiB.`)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+      return
+    }
     const text = await file.text()
     setImportText(text)
     runParse(text)
@@ -196,23 +207,27 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
     setIsImportSaving(true)
     const statuses: ImportRowStatus[] = new Array(rows.length).fill("idle")
     const messages: string[] = new Array(rows.length).fill("")
-    for (let i = 0; i < rows.length; i++) {
-      try {
-        await apiRef.current.createSecret(rows[i].key, rows[i].value)
-        statuses[i] = "success"
-      } catch (err) {
-        statuses[i] = "error"
-        messages[i] = err instanceof Error ? err.message : "Failed to create secret"
+    try {
+      for (let i = 0; i < rows.length; i++) {
+        try {
+          await apiRef.current.createSecret(rows[i].key, rows[i].value)
+          statuses[i] = "success"
+        } catch (err) {
+          statuses[i] = "error"
+          messages[i] = err instanceof Error ? err.message : "Failed to create secret"
+        }
       }
-    }
-    setRowStatus(statuses)
-    setRowMessages(messages)
-    setIsImportSaving(false)
-    // Refresh so successful secrets appear in the (masked) list.
-    await loadSecrets(false)
-    if (statuses.every((s) => s === "success")) {
-      setIsImportOpen(false)
-      resetImportState()
+      setRowStatus(statuses)
+      setRowMessages(messages)
+      // Refresh so successful secrets appear in the (masked) list.
+      // Holds the interaction lock open until the refresh completes.
+      await loadSecrets(false)
+      if (statuses.every((s) => s === "success")) {
+        setIsImportOpen(false)
+        resetImportState()
+      }
+    } finally {
+      setIsImportSaving(false)
     }
   }
 
@@ -398,7 +413,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
       </Dialog>
 
       {/* Bulk .env import dialog */}
-      <Dialog open={isImportOpen} onOpenChange={(open) => { if (!open) { setIsImportOpen(false); resetImportState() } }}>
+      <Dialog open={isImportOpen} onOpenChange={(open) => { if (!open && !isImportSaving) { setIsImportOpen(false); resetImportState() } }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Import Secrets</DialogTitle>
@@ -445,6 +460,12 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 spellCheck={false}
                 className="w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
+              <p className="text-[11px] text-muted-foreground">
+                Lines starting with <span className="font-mono">#</span> are comments. Text after <span className="font-mono">#</span> inside a value is preserved.
+              </p>
+              {importFileError && (
+                <p className="text-xs text-destructive" role="alert">{importFileError}</p>
+              )}
             </div>
 
             {/* Parse errors */}
@@ -456,7 +477,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 <ul className="space-y-1">
                   {importResult.errors.map((err) => (
                     <li key={err.lineNumber} className="text-xs text-destructive" role="alert">
-                      Line {err.lineNumber}: {err.message} — <span className="font-mono">{err.rawLine.trim()}</span>
+                      Line {err.lineNumber}: {err.message}
                     </li>
                   ))}
                 </ul>
@@ -490,14 +511,16 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                           aria-label={`Import row ${index + 1} key`}
                           value={row.key}
                           onChange={(e) => updateRowKey(index, e.target.value)}
-                          className="w-2/5 rounded border border-border bg-card px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          disabled={isImportSaving}
+                          className="w-2/5 rounded border border-border bg-card px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
                         />
                         <input
                           type={showImportValues ? "text" : "password"}
                           aria-label={`Import row ${index + 1} value`}
                           value={row.value}
                           onChange={(e) => updateRowValue(index, e.target.value)}
-                          className="w-2/5 rounded border border-border bg-card px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          disabled={isImportSaving}
+                          className="w-2/5 rounded border border-border bg-card px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
                         />
                         <div className="flex w-1/5 flex-col items-end gap-1">
                           {status === "success" && (
@@ -513,8 +536,9 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                           <button
                             type="button"
                             onClick={() => removeImportRow(index)}
+                            disabled={isImportSaving}
                             aria-label={`Remove import row ${index + 1}`}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-destructive"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50 disabled:pointer-events-none"
                           >
                             <Trash2 className="h-3.5 w-3.5" /> Remove
                           </button>
@@ -536,7 +560,8 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             <button
               type="button"
               onClick={() => { setIsImportOpen(false); resetImportState() }}
-              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              disabled={isImportSaving}
+              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:pointer-events-none"
             >
               Cancel
             </button>

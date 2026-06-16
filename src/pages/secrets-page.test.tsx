@@ -290,6 +290,9 @@ describe("SecretsPage", () => {
 
       expect(await within(dialog).findByText(/could not be parsed/i)).toBeInTheDocument()
       expect(within(dialog).getByText(/Missing '=' separator/i)).toBeInTheDocument()
+      // raw line content (which may contain secrets/tokens) must NOT be echoed in error messages
+      const errorAlerts = within(dialog).getAllByRole("alert")
+      expect(errorAlerts.some((el) => /BROKEN_NO_EQUALS/.test(el.textContent ?? ""))).toBe(false)
 
       const saveBtn = within(dialog).getByRole("button", { name: /import \d+ secret/i })
       expect(saveBtn).toBeDisabled()
@@ -398,6 +401,57 @@ describe("SecretsPage", () => {
       // values are gone from the DOM
       expect(screen.queryByLabelText("Import row 1 value")).not.toBeInTheDocument()
       expect(screen.queryByText("topsecret-value")).not.toBeInTheDocument()
+    })
+
+    it("rejects an oversized file before parsing and surfaces an error", async () => {
+      const { dialog } = await openImportDialog()
+
+      const oversized = new File(["x".repeat(256 * 1024 + 1)], "big.env", { type: "text/plain" })
+      const input = within(dialog).getByLabelText("Upload .env file") as HTMLInputElement
+      fireEvent.change(input, { target: { files: [oversized] } })
+
+      expect(await within(dialog).findByText(/too large/i)).toBeInTheDocument()
+      // nothing parsed
+      expect(within(dialog).queryByLabelText("Import row 1 key")).not.toBeInTheDocument()
+      expect(api.createSecret).not.toHaveBeenCalled()
+    })
+
+    it("locks the modal during save: rows and remove are disabled, no duplicate save", async () => {
+      // Make createSecret hang until we release it, so we can inspect mid-save state.
+      let releaseSave: () => void = () => {}
+      const createSecret = vi.fn().mockImplementation(
+        () => new Promise<void>((resolve) => { releaseSave = resolve }),
+      )
+      api.createSecret = createSecret
+      api.listSecrets = vi.fn().mockResolvedValue([])
+
+      const { user, dialog } = await openImportDialog()
+
+      const textarea = within(dialog).getByLabelText("Paste .env contents")
+      await user.type(textarea, "ONE=1")
+      await user.click(within(dialog).getByRole("button", { name: /^Parse$/ }))
+
+      const saveBtn = await within(dialog).findByRole("button", { name: /import 1 secret/i })
+      await user.click(saveBtn)
+
+      // mid-save: importing, inputs locked, remove locked, cancel locked
+      await waitFor(() => {
+        expect(within(dialog).getByRole("button", { name: /importing/i })).toBeDisabled()
+      })
+      expect(within(dialog).getByLabelText("Import row 1 key")).toBeDisabled()
+      expect(within(dialog).getByLabelText("Remove import row 1")).toBeDisabled()
+      expect(within(dialog).getByRole("button", { name: /cancel/i })).toBeDisabled()
+
+      // a second click on the now-disabled import button must not fire another save
+      const callsBefore = createSecret.mock.calls.length
+      await user.click(within(dialog).getByRole("button", { name: /importing/i })).catch(() => {})
+      expect(createSecret.mock.calls.length).toBe(callsBefore)
+
+      // release the in-flight save and confirm it completes
+      releaseSave()
+      await waitFor(() => {
+        expect(api.listSecrets).toHaveBeenCalledTimes(2) // initial load + post-save refresh
+      })
     })
   })
 })

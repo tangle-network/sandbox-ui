@@ -79,12 +79,19 @@ export interface ProvisioningWizardProps {
   onSubmit?: (config: ProvisioningConfig) => void | Promise<void>;
   onBack?: () => void;
   className?: string;
+  /**
+   * @deprecated The wizard now always renders as a single scrolling page.
+   * Kept for backwards compatibility — no longer changes the layout.
+   */
   variant?: "flat" | "multistep";
   /** Pre-select an environment by ID (e.g. from a template link) */
   defaultEnvironment?: string;
   /** Pre-fill all form fields from a template preset */
   defaultConfig?: Partial<ProvisioningConfig>;
-  /** When true and defaultConfig is provided, start on the final step */
+  /**
+   * @deprecated No-op. The wizard no longer uses steps. Kept for
+   * backwards compatibility.
+   */
   skipToReview?: boolean;
   /** Load user's startup scripts for the advanced options selector */
   onLoadStartupScripts?: () => Promise<StartupScriptEntry[]>;
@@ -425,11 +432,9 @@ function SshAccessStep({ config }: { config: SshAccessConfig }) {
           {keys.map((key) => {
             const selected = config.selectedKeyIds.includes(key.id);
             return (
-              <Button
+              <button
                 key={key.id}
                 type="button"
-                variant={selected ? "sandbox" : "outline"}
-                className="h-auto justify-start p-3 text-left"
                 aria-pressed={selected}
                 onClick={() => {
                   config.onSelectedKeyIdsChange(
@@ -438,16 +443,37 @@ function SshAccessStep({ config }: { config: SshAccessConfig }) {
                       : [...config.selectedKeyIds, key.id],
                   );
                 }}
+                className={cn(
+                  "group p-3 text-left rounded-lg border transition-colors duration-200",
+                  selected
+                    ? "bg-primary/5 border-primary ring-1 ring-primary/20"
+                    : "bg-card border-border hover:border-primary/30 active:scale-[0.99]",
+                )}
               >
-                <span className="min-w-0">
-                  <span className="block font-medium text-foreground">
-                    {key.name}
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="block font-medium text-sm text-foreground">
+                      {key.name}
+                    </span>
+                    <span className="block truncate font-mono text-muted-foreground text-xs">
+                      {key.keyType} · {key.fingerprint}
+                    </span>
                   </span>
-                  <span className="block truncate font-mono text-muted-foreground text-xs">
-                    {key.keyType} · {key.fingerprint}
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border-2 transition-colors duration-200",
+                      selected
+                        ? "border-primary bg-primary"
+                        : "border-border group-hover:border-primary/40",
+                    )}
+                  >
+                    {selected && (
+                      <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                    )}
                   </span>
-                </span>
-              </Button>
+                </div>
+              </button>
             );
           })}
         </div>
@@ -469,10 +495,8 @@ export function ProvisioningWizard({
   onSubmit,
   onBack,
   className,
-  variant = "flat",
   defaultEnvironment,
   defaultConfig,
-  skipToReview,
   onLoadStartupScripts,
   resourceLimits,
   sshAccess,
@@ -626,15 +650,6 @@ export function ProvisioningWizard({
       cancelled = true;
     };
   }, []);
-
-  const isMultistep = variant === "multistep";
-  const stepLabels = sshAccess
-    ? ["Environment", "Resources", "Access"]
-    : ["Environment", "Resources"];
-  const finalStep = stepLabels.length;
-  const [currentStep, setCurrentStep] = React.useState(
-    skipToReview && dc && isMultistep ? finalStep : 1,
-  );
 
   const [isDeploying, setIsDeploying] = React.useState(false);
   const [deployError, setDeployError] = React.useState<string | null>(null);
@@ -811,84 +826,6 @@ export function ProvisioningWizard({
       <div className="grid grid-cols-12 gap-5 flex-1 min-h-0">
         {/* Left: Configuration Form */}
         <div className="col-span-12 xl:col-span-8 flex flex-col min-h-0">
-          {isMultistep && (
-            <div className="flex items-center gap-2 mb-4 rounded-lg border border-border bg-card px-4 py-2 shadow-sm mx-auto max-w-2xl justify-between shrink-0">
-              {stepLabels.map((label, index) => {
-                const s = index + 1;
-                return (
-                  <div key={s} className="flex items-center">
-                    <div
-                      className={cn(
-                        "h-6 w-6 rounded-full flex items-center justify-center font-semibold text-xs shrink-0 transition-colors duration-200",
-                        currentStep >= s
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted border border-border text-muted-foreground",
-                      )}
-                    >
-                      {currentStep > s ? <Check className="h-3 w-3" /> : s}
-                    </div>
-                    <span
-                      className={cn(
-                        "ml-2 font-medium text-sm hidden sm:inline transition-colors duration-200",
-                        currentStep === s
-                          ? "text-foreground"
-                          : currentStep > s
-                            ? "text-primary"
-                            : "text-muted-foreground",
-                      )}
-                    >
-                      {label}
-                    </span>
-                    {s < finalStep && (
-                      <div
-                        className={cn(
-                          "w-4 sm:w-8 h-px mx-2 sm:mx-3 transition-colors duration-300",
-                          currentStep > s ? "bg-primary" : "bg-border",
-                        )}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Template pre-fill banner */}
-          {dc && isMultistep && (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm shrink-0 mb-4">
-              <div className="flex items-center gap-2 text-sm">
-                <Info className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-muted-foreground">
-                  Pre-configured from template.
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant="link"
-                onClick={() => {
-                  setCurrentStep(1);
-                  setSelectedEnv(environments[0]?.id ?? "");
-                  setCpuCores(snapSliderValue(4, CPU_MIN, cpuMax, cpuStep));
-                  setRamGB(snapSliderValue(16, RAM_MIN, ramMax, ramStep));
-                  setStorageGB(
-                    snapSliderValue(128, STORAGE_MIN, storageMax, storageStep),
-                  );
-                  setName("");
-                  setGitUrl("");
-                  setEnvVars([{ key: "", value: "" }]);
-                  setDriver("docker");
-                  setBare(false);
-                  setStartupScriptIds([]);
-                  setActivePreset(null);
-                  setPricingView("hourly");
-                }}
-                className="h-auto p-0 text-xs"
-              >
-                Start from scratch
-              </Button>
-            </div>
-          )}
-
           {/* Load error */}
           {loadError && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 flex items-center gap-2 shrink-0 mb-4">
@@ -901,9 +838,7 @@ export function ProvisioningWizard({
 
           {/* Scrollable step content */}
           <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
-            {(!isMultistep || currentStep === 1) && (
-              <React.Fragment>
-                {/* Section 1: Environment */}
+            {/* Section 1: Environment */}
                 <section className={SECTION_CARD_CLASS}>
                   <div className="flex items-center gap-2 mb-4">
                     <Layers className="h-4 w-4 text-primary shrink-0" />
@@ -968,11 +903,7 @@ export function ProvisioningWizard({
                     ))}
                   </div>
                 </section>
-              </React.Fragment>
-            )}
 
-            {(!isMultistep || currentStep === 2) && (
-              <React.Fragment>
                 {/* Section 2: Resources */}
                 <section className={SECTION_CARD_CLASS}>
                   <div className="flex items-center gap-2 mb-4">
@@ -1118,11 +1049,7 @@ export function ProvisioningWizard({
                     )}
                   </div>
                 </section>
-              </React.Fragment>
-            )}
 
-            {(!isMultistep || currentStep === 2) && (
-              <React.Fragment>
                 {/* Advanced workspace options (collapsed by default) */}
                 <section className={SECTION_CARD_CLASS}>
                   <div>
@@ -1373,11 +1300,8 @@ export function ProvisioningWizard({
                     )}
                   </div>
                 </section>
-              </React.Fragment>
-            )}
 
-            {sshAccess && (!isMultistep || currentStep === 3) && (
-              <React.Fragment>
+            {sshAccess && (
                 <section className={SECTION_CARD_CLASS}>
                   <div className="flex items-center gap-2 mb-4">
                     <Settings className="h-4 w-4 text-primary shrink-0" />
@@ -1387,7 +1311,6 @@ export function ProvisioningWizard({
                   </div>
                   <SshAccessStep config={sshAccess} />
                 </section>
-              </React.Fragment>
             )}
           </div>
         </div>
@@ -1495,61 +1418,21 @@ export function ProvisioningWizard({
 
           {/* Navigation buttons */}
           <div className="space-y-2">
-            {isMultistep ? (
-              <>
-                {currentStep < finalStep ? (
-                  <Button
-                    type="button"
-                    onClick={() => setCurrentStep((s) => s + 1)}
-                    className="w-full"
-                  >
-                    Continue to {stepLabels[currentStep]}
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={handleDeploy}
-                    disabled={isDeploying || !selectedEnv}
-                    className="w-full"
-                  >
-                    {isDeploying ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Deploying...
-                      </span>
-                    ) : (
-                      "Deploy Workspace"
-                    )}
-                  </Button>
-                )}
-                {currentStep > 1 && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setCurrentStep((s) => s - 1)}
-                    className="w-full"
-                  >
-                    Back
-                  </Button>
-                )}
-              </>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleDeploy}
-                disabled={isDeploying || !selectedEnv}
-                className="w-full"
-              >
-                {isDeploying ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Spinning up environment...
-                  </span>
-                ) : (
-                  "Deploy Workspace"
-                )}
-              </Button>
-            )}
+            <Button
+              type="button"
+              onClick={handleDeploy}
+              disabled={isDeploying || !selectedEnv}
+              className="w-full"
+            >
+              {isDeploying ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Spinning up environment...
+                </span>
+              ) : (
+                "Deploy Workspace"
+              )}
+            </Button>
           </div>
         </div>
       </div>

@@ -33,7 +33,11 @@ export function SystemLogsViewer({ apiUrl, token, className }: SystemLogsViewerP
 
     async function fetchLogs() {
       try {
-        const res = await fetch(`${apiUrl}/debug/logs`, {
+        // `/logs` is the ungated sidecar log reader. The operator `/debug/logs`
+        // surface is capability-gated (cap:["debug"]) and deploy-switched, so a
+        // customer proxy carrying the master token can never reach it — fetching
+        // it always failed. Both endpoints return the same redacted buffer.
+        const res = await fetch(`${apiUrl}/logs`, {
           headers: {
              Authorization: `Bearer ${token}`
           },

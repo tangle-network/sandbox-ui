@@ -1385,6 +1385,20 @@ describe("ProvisioningWizard — environment section visibility", () => {
     expect(screen.getByText("Environment Selection")).toBeInTheDocument()
     expect(screen.getByText("My Template")).toBeInTheDocument()
   })
+
+  it("shows the section with an empty-state (not a silent dead-end) when no options load", () => {
+    render(<ProvisioningWizard environments={[]} />)
+
+    // With zero options the section must stay visible and explain the empty
+    // state, rather than vanishing and leaving deploy disabled with no context.
+    expect(screen.getByText("Environment Selection")).toBeInTheDocument()
+    expect(
+      screen.getByText(/no environments are available/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /deploy workspace/i }),
+    ).toBeDisabled()
+  })
 })
 
 describe("ProvisioningWizard — driver selection", () => {

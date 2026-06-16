@@ -674,13 +674,14 @@ export function ProvisioningWizard({
 
   const environments = envList;
 
-  // Only surface environment selection when there's an actual choice to make.
-  // With a single option (e.g. just the default image and no templates) the
-  // picker is a no-op, so the section is omitted and that one option is used
-  // implicitly. While the list is still loading we keep the section so its
-  // skeleton communicates progress.
+  // Hide environment selection only when there's exactly one option: a single
+  // choice (e.g. just the default image and no templates) is a no-op, so the
+  // picker is omitted and that lone option is used implicitly. Zero options (an
+  // empty or failed load) still render the section so the user sees an
+  // explanation rather than a silently-disabled deploy button; while loading,
+  // the skeleton communicates progress.
   const showEnvironmentSection =
-    isLoadingEnvironments || environments.length > 1;
+    isLoadingEnvironments || environments.length !== 1;
 
   const effectiveDefault = dc?.environment ?? defaultEnvironment;
   const [selectedEnv, setSelectedEnv] = React.useState(
@@ -976,6 +977,12 @@ export function ProvisioningWizard({
                       Environment Selection
                     </h2>
                   </div>
+                  {!isLoadingEnvironments && environments.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No environments are available to select right now. Refresh
+                      to try again.
+                    </p>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {isLoadingEnvironments && environments.length === 0
                       ? Array.from({ length: 3 }).map((_, i) => (

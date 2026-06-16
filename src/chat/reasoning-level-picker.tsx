@@ -5,38 +5,62 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Brain, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
 
-export type ReasoningLevel = "auto" | "low" | "medium" | "high";
+/**
+ * Thinking-effort ladder — the superset of the per-harness reasoning scales so
+ * one control covers every backend. Consumers map each level onto what the
+ * chosen harness/model supports (and degrade unsupported ones):
+ *   - OpenAI / Codex reasoning_effort: minimal · low · medium · high · xhigh
+ *   - Anthropic (Claude) extended thinking: … · high · max
+ *   - Claude Code: … · high · max · ultracode
+ *   - generic: low · medium · high
+ */
+export type ReasoningLevel =
+  | "auto"
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh"
+  | "max"
+  | "ultracode";
 
-/** Filled-bar count per level, so the rows read as an intensity scale. */
-const INTENSITY_BARS: Record<Exclude<ReasoningLevel, "auto">, number> = {
-  low: 1,
-  medium: 2,
-  high: 3,
-};
+/** Ordered ascending intensity (excludes "auto"). Glyph + ranking derive from this. */
+export const REASONING_LADDER: ReadonlyArray<Exclude<ReasoningLevel, "auto">> = [
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+  "ultracode",
+];
 
 /**
- * Three-bar meter that fills left-to-right with the level's intensity. Auto
- * has no fixed depth, so it shows a Sparkles glyph instead of a bar count.
+ * Proportional intensity meter. Auto shows a Sparkles glyph (no fixed depth);
+ * every other level fills a fixed-width bar meter to its rank in the ladder, so
+ * the rows read as an ascending scale regardless of how many levels exist.
  */
 function ReasoningGlyph({ level }: { level: ReasoningLevel }) {
   if (level === "auto") {
     return <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />;
   }
-  const filled = INTENSITY_BARS[level];
+  const BARS = 4;
+  const rank = REASONING_LADDER.indexOf(level) + 1; // 1..ladder.length
+  const filled = Math.max(1, Math.ceil((rank / REASONING_LADDER.length) * BARS));
   return (
     <span
       aria-hidden
       className="inline-flex h-3.5 items-end gap-px"
-      style={{ width: 14 }}
+      style={{ width: 16 }}
     >
-      {[0, 1, 2].map((i) => (
+      {Array.from({ length: BARS }).map((_, i) => (
         <span
           key={i}
           className={cn(
             "w-1 rounded-[1px]",
             i < filled ? "bg-foreground" : "bg-border",
           )}
-          style={{ height: `${40 + i * 30}%` }}
+          style={{ height: `${35 + i * 22}%` }}
         />
       ))}
     </span>
@@ -60,9 +84,13 @@ export interface ReasoningLevelPickerProps {
 
 export const DEFAULT_REASONING_LEVEL_OPTIONS: ReadonlyArray<ReasoningLevelOption> = [
   { value: "auto", label: "Auto", description: "Let the agent pick the right depth." },
+  { value: "minimal", label: "Minimal", description: "Almost no deliberation — fastest, cheapest." },
   { value: "low", label: "Low", description: "Fast, direct answers." },
   { value: "medium", label: "Medium", description: "Inspect context before acting." },
   { value: "high", label: "High", description: "Deeper planning and edge-case checks." },
+  { value: "xhigh", label: "Extra High", description: "Extended reasoning for hard problems (Codex/OpenAI)." },
+  { value: "max", label: "Max", description: "Maximum extended thinking budget (Claude)." },
+  { value: "ultracode", label: "Ultracode", description: "Exhaustive multi-pass reasoning (Claude Code)." },
 ];
 
 export function ReasoningLevelPicker({

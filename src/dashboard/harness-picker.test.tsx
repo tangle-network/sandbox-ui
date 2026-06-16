@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { HARNESS_OPTIONS, HarnessPicker, type HarnessType } from "./harness-picker";
+import {
+  HARNESS_OPTIONS,
+  chatCapableHarnesses,
+  HarnessPicker,
+  type HarnessType,
+} from "./harness-picker";
 
 describe("HARNESS_OPTIONS", () => {
   it("matches the BackendType enum exported by the sandbox SDK", () => {
@@ -30,6 +35,16 @@ describe("HARNESS_OPTIONS", () => {
     for (const h of HARNESS_OPTIONS) {
       expect(h.description, `harness ${h.type} missing description`).toBeTruthy();
     }
+  });
+
+  it("flags cli-base as the only non-chat-capable harness", () => {
+    const nonChat = HARNESS_OPTIONS.filter((h) => !h.chatCapable).map((h) => h.type);
+    expect(nonChat).toEqual(["cli-base"]);
+  });
+
+  it("chatCapableHarnesses excludes cli-base and includes opencode", () => {
+    expect(chatCapableHarnesses).not.toContain("cli-base");
+    expect(chatCapableHarnesses).toContain("opencode");
   });
 });
 

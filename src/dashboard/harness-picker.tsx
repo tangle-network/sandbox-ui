@@ -24,6 +24,13 @@ export type HarnessType =
 
 interface HarnessOption extends Backend {
   type: HarnessType;
+  /**
+   * Whether this harness can drive an interactive chat session. `false` for
+   * shell-only backends (`cli-base`) that have no conversational agent — the
+   * chat composer filters these out (see {@link chatCapableHarnesses}) while
+   * scheduled/non-chat surfaces keep them.
+   */
+  chatCapable: boolean;
 }
 
 /**
@@ -35,54 +42,69 @@ export const HARNESS_OPTIONS: readonly HarnessOption[] = [
     type: "opencode",
     label: "OpenCode",
     description: "Default agent — broad model support, deterministic streaming",
+    chatCapable: true,
   },
   {
     type: "claude-code",
     label: "Claude Code",
     description: "Native Claude skills and tools (requires ANTHROPIC_API_KEY)",
+    chatCapable: true,
   },
   {
     type: "codex",
     label: "Codex",
     description: "OpenAI Codex CLI (requires OPENAI_API_KEY)",
+    chatCapable: true,
   },
   {
     type: "amp",
     label: "AMP",
     description: "Sourcegraph AMP agent",
+    chatCapable: true,
   },
   {
     type: "factory-droids",
     label: "Factory Droids",
     description: "Factory Droid agent",
+    chatCapable: true,
   },
   {
     type: "kimi-code",
     label: "Kimi Code",
     description:
       "Moonshot Kimi Code CLI (Kimi subscription OAuth or MOONSHOT_API_KEY)",
+    chatCapable: true,
   },
   {
     type: "openclaw",
     label: "OpenClaw",
     description: "Dispatcher routing to Claude / Codex / Gemini CLIs",
+    chatCapable: true,
   },
   {
     type: "nanoclaw",
     label: "NanoClaw",
     description: "Local socket-bridge agent backend",
+    chatCapable: true,
   },
   {
     type: "hermes",
     label: "Hermes",
     description: "Hermes inference-router agent",
+    chatCapable: true,
   },
   {
     type: "cli-base",
     label: "CLI base (no agent)",
     description: "Shell tools only — for non-AI scheduled tasks",
+    chatCapable: false,
   },
 ] as const;
+
+/** Harness types that can drive an interactive chat session. */
+export const chatCapableHarnesses: ReadonlyArray<HarnessType> = HARNESS_OPTIONS
+  .filter((h) => h.chatCapable)
+  .map((h) => h.type);
 
 export interface HarnessPickerProps
   extends Omit<BackendSelectorProps, "backends" | "selected" | "onChange"> {

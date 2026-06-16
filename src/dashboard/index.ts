@@ -99,6 +99,7 @@ export {
 export {
   HarnessPicker,
   HARNESS_OPTIONS,
+  chatCapableHarnesses,
   type HarnessPickerProps,
   type HarnessType,
 } from "./harness-picker";
@@ -111,6 +112,9 @@ export {
 export {
   ModelPicker,
   canonicalModelId,
+  modelDedupKey,
+  dedupeModels,
+  DEFAULT_FEATURED_MODEL_IDS,
   formatPricing,
   formatContext,
   type ModelPickerProps,

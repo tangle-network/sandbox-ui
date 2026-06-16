@@ -47,6 +47,46 @@ describe("AgentSessionControls", () => {
     expect(onChange).toHaveBeenCalledWith("claude-code");
   });
 
+  it("excludes the shell-only cli-base harness from the chat surface by default", async () => {
+    render(<AgentSessionControls harness={{ value: "opencode", onChange: () => {} }} />);
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    expect(await screen.findByText("Codex")).toBeInTheDocument();
+    expect(screen.queryByText("CLI base (no agent)")).not.toBeInTheDocument();
+  });
+
+  it("keeps cli-base when context is `all` (scheduled / non-chat surfaces)", async () => {
+    render(
+      <AgentSessionControls
+        context="all"
+        harness={{ value: "opencode", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    expect(await screen.findByText("CLI base (no agent)")).toBeInTheDocument();
+  });
+
+  it("an explicit available list overrides the chat-context filter", async () => {
+    render(
+      <AgentSessionControls
+        harness={{
+          value: "opencode",
+          onChange: () => {},
+          available: ["cli-base", "opencode"],
+        }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    // cli-base is present only as a menu item (trigger shows OpenCode), so a
+    // single match proves the explicit list won over the chat filter.
+    expect(await screen.findByText("CLI base (no agent)")).toBeInTheDocument();
+  });
+
   it("filters harness options through `available`", async () => {
     render(
       <AgentSessionControls
@@ -100,6 +140,30 @@ describe("AgentSessionControls", () => {
     );
     await userEvent.click(await screen.findByText("High"));
     expect(onChange).toHaveBeenCalledWith("high");
+  });
+
+  it("gear layout collapses the pickers behind a single controls button", async () => {
+    render(
+      <AgentSessionControls
+        layout="gear"
+        harness={{ value: "opencode", onChange: () => {} }}
+        reasoning={{ value: "auto", onChange: () => {} }}
+      />,
+    );
+    // Inline pickers are not shown until the gear is opened.
+    expect(
+      screen.queryByRole("button", { name: /agent harness/i }),
+    ).not.toBeInTheDocument();
+    const gear = screen.getByRole("button", { name: /session controls/i });
+    expect(gear).toBeInTheDocument();
+
+    await userEvent.click(gear);
+    expect(
+      await screen.findByRole("button", { name: /agent harness/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /reasoning level/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders trailing content right-aligned", () => {

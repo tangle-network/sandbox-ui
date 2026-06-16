@@ -2,14 +2,18 @@
 
 import * as React from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, Lock } from "lucide-react";
+import { ChevronDown, Lock, SlidersHorizontal } from "lucide-react";
 import { cn } from "../lib/utils";
 import {
   canonicalModelId,
   ModelPicker,
   type ModelInfo,
 } from "../dashboard/model-picker";
-import { HARNESS_OPTIONS, type HarnessType } from "../dashboard/harness-picker";
+import {
+  HARNESS_OPTIONS,
+  chatCapableHarnesses,
+  type HarnessType,
+} from "../dashboard/harness-picker";
 import { HarnessLogo } from "../dashboard/harness-logo";
 import {
   isModelCompatibleWithHarness,
@@ -71,6 +75,29 @@ export interface AgentSessionControlsProps {
   /** Right-aligned extra content (token meter, cost, status). */
   trailing?: React.ReactNode;
   className?: string;
+  /**
+   * Which surface these controls live on. `"chat"` (default) restricts the
+   * harness list to chat-capable backends — shell-only `cli-base` is hidden
+   * because it has no conversational agent. `"all"` keeps every harness for
+   * scheduled / non-chat surfaces. An explicit `harness.available` list still
+   * wins; this only trims the default-everything set.
+   */
+  context?: "chat" | "all";
+  /**
+   * Trigger layout. `"inline"` (default) lays the pickers out in a row — the
+   * existing behavior. `"gear"` collapses them behind a single compact gear
+   * button whose menu opens up-and-left, for right-anchored copilots where
+   * the composer is tight. Nested model/harness/effort menus render adjacent
+   * on the left of the gear menu.
+   */
+  layout?: "inline" | "gear";
+}
+
+interface HarnessDropdownProps extends AgentSessionHarnessControl {
+  /** Side the menu opens toward. Defaults to bottom (inline strip). */
+  side?: DropdownMenu.DropdownMenuContentProps["side"];
+  /** Cross-axis alignment of the menu. Defaults to start. */
+  align?: DropdownMenu.DropdownMenuContentProps["align"];
 }
 
 function HarnessDropdown({
@@ -80,7 +107,9 @@ function HarnessDropdown({
   disabled,
   locked,
   lockReason,
-}: AgentSessionHarnessControl) {
+  side = "bottom",
+  align = "start",
+}: HarnessDropdownProps) {
   const allowed = new Set<HarnessType>(
     available ?? HARNESS_OPTIONS.map((h) => h.type),
   );
@@ -97,8 +126,8 @@ function HarnessDropdown({
           className={cn(
             "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5",
             "text-xs font-medium text-foreground shadow-sm transition-colors",
-            "hover:border-primary/30 hover:bg-accent/30 focus:outline-none focus:border-primary/40",
-            "data-[state=open]:border-primary/40 data-[state=open]:bg-accent/30",
+            "hover:border-primary/30 hover:bg-accent/40 focus:outline-none focus:border-primary/40",
+            "data-[state=open]:border-primary/40 data-[state=open]:bg-accent/40",
             "disabled:cursor-not-allowed disabled:opacity-60",
           )}
           aria-label="Agent harness"
@@ -116,7 +145,8 @@ function HarnessDropdown({
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          align="start"
+          side={side}
+          align={align}
           sideOffset={6}
           className={cn(
             "z-50 w-72 overflow-hidden rounded-[var(--radius-md)] border border-border bg-card p-1",
@@ -135,9 +165,9 @@ function HarnessDropdown({
               }}
               className={cn(
                 "flex cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-2 outline-none",
-                "transition-colors hover:bg-accent/40 focus:bg-accent/40",
+                "transition-colors hover:bg-accent/50 focus:bg-accent/50",
                 option.type === value &&
-                  "bg-[var(--accent-surface-soft)] text-[var(--accent-text)]",
+                  "bg-primary/10 font-medium text-foreground ring-1 ring-inset ring-primary/25 hover:bg-primary/15 focus:bg-primary/15",
               )}
             >
               <HarnessLogo type={option.type} size={20} className="mt-0.5" />
@@ -177,6 +207,8 @@ export function AgentSessionControls({
   reasoning,
   trailing,
   className,
+  context = "chat",
+  layout = "inline",
 }: AgentSessionControlsProps) {
   if (!harness && !model && !reasoning && !trailing) return null;
 
@@ -206,38 +238,177 @@ export function AgentSessionControls({
         )
       : model?.models;
 
+  // Restrict the harness list for chat surfaces to chat-capable backends.
+  // An explicit `available` list always wins; otherwise the chat context
+  // drops shell-only harnesses (cli-base) while "all" keeps everything.
+  const harnessAvailable =
+    harness?.available ??
+    (context === "chat" ? chatCapableHarnesses : undefined);
+
+  // The menu opens up-and-left in the gear layout (right-anchored copilot),
+  // and bottom-start inline.
+  const menuSide = layout === "gear" ? "left" : "bottom";
+  const menuAlign = layout === "gear" ? "end" : "start";
+
+  const harnessNode = harness && (
+    <HarnessDropdown
+      {...harness}
+      available={harnessAvailable}
+      onChange={handleHarnessChange}
+      side={menuSide}
+      align={menuAlign}
+    />
+  );
+  const modelNode = model && (
+    <ModelPicker
+      variant="pill"
+      label=""
+      value={model.value}
+      onChange={handleModelChange}
+      models={visibleModels ?? []}
+      loading={model.loading}
+      popular={model.popular}
+      recents={model.recents}
+      disabled={model.disabled || (visibleModels ?? []).length === 0}
+    />
+  );
+  const reasoningNode = reasoning && (
+    <ReasoningLevelPicker
+      value={reasoning.value}
+      onChange={reasoning.onChange}
+      options={reasoning.options}
+      disabled={reasoning.disabled}
+    />
+  );
+
+  if (layout === "gear") {
+    return (
+      <GearControls
+        className={className}
+        harnessNode={harnessNode}
+        modelNode={modelNode}
+        reasoningNode={reasoningNode}
+        trailing={trailing}
+      />
+    );
+  }
+
   return (
     <div
       className={cn("flex flex-wrap items-center gap-2", className)}
       data-testid="agent-session-controls"
     >
-      {harness && (
-        <HarnessDropdown {...harness} onChange={handleHarnessChange} />
-      )}
-      {model && (
-        <ModelPicker
-          variant="pill"
-          label=""
-          value={model.value}
-          onChange={handleModelChange}
-          models={visibleModels ?? []}
-          loading={model.loading}
-          popular={model.popular}
-          recents={model.recents}
-          disabled={model.disabled || (visibleModels ?? []).length === 0}
-        />
-      )}
-      {reasoning && (
-        <ReasoningLevelPicker
-          value={reasoning.value}
-          onChange={reasoning.onChange}
-          options={reasoning.options}
-          disabled={reasoning.disabled}
-        />
-      )}
+      {harnessNode}
+      {modelNode}
+      {reasoningNode}
       {trailing && (
         <div className="ml-auto flex items-center gap-2">{trailing}</div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Right-anchored compact layout: a single gear button whose menu opens
+ * up-and-left and stacks the (already-wired) harness / model / effort
+ * pickers vertically, so the composer stays uncluttered. Each picker keeps
+ * its own dropdown; in this layout those nested menus are configured to
+ * open to the left (see `menuSide`/`menuAlign`), rendering adjacent to the
+ * gear menu where there is room.
+ */
+function GearControls({
+  className,
+  harnessNode,
+  modelNode,
+  reasoningNode,
+  trailing,
+}: {
+  className?: string;
+  harnessNode: React.ReactNode;
+  modelNode: React.ReactNode;
+  reasoningNode: React.ReactNode;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn("flex items-center gap-2", className)}
+      data-testid="agent-session-controls"
+    >
+      {trailing && (
+        <div className="flex items-center gap-2">{trailing}</div>
+      )}
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            aria-label="Session controls"
+            className={cn(
+              "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card",
+              "text-foreground shadow-sm transition-colors",
+              "hover:border-primary/30 hover:bg-accent/40 focus:outline-none focus:border-primary/40",
+              "data-[state=open]:border-primary/40 data-[state=open]:bg-accent/40",
+            )}
+          >
+            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            side="top"
+            align="end"
+            sideOffset={8}
+            onInteractOutside={(event) => {
+              // The nested model / harness / effort pickers portal their menus
+              // to <body>, i.e. outside this Content's DOM subtree. Without
+              // this guard, interacting with a nested menu reads as an outside
+              // click and collapses the gear menu. Keep the gear open while
+              // the pointer lands inside any Radix popper/portal.
+              const target = event.target as HTMLElement | null;
+              if (
+                target?.closest(
+                  "[data-radix-popper-content-wrapper],[data-radix-menu-content],[role=menu],[role=listbox]",
+                )
+              ) {
+                event.preventDefault();
+              }
+            }}
+            className={cn(
+              "z-50 flex w-56 flex-col gap-2 rounded-[var(--radius-md)] border border-border bg-card p-2",
+              "shadow-[var(--shadow-dropdown)]",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+              "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            )}
+          >
+            {harnessNode && (
+              <GearSection label="Harness">{harnessNode}</GearSection>
+            )}
+            {modelNode && (
+              <GearSection label="Model">{modelNode}</GearSection>
+            )}
+            {reasoningNode && (
+              <GearSection label="Effort">{reasoningNode}</GearSection>
+            )}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+    </div>
+  );
+}
+
+function GearSection({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
+        {label}
+      </span>
+      {children}
     </div>
   );
 }

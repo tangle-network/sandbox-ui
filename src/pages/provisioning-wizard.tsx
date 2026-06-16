@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Badge, Button, Input, Switch, Textarea } from "../primitives";
+import { AddSshKeyDialog } from "./add-ssh-key-dialog";
 
 export interface EnvironmentOption {
   id: string;
@@ -71,6 +72,19 @@ export interface SshAccessConfig {
   inlinePublicKeys: string;
   onSelectedKeyIdsChange: (keyIds: string[]) => void;
   onInlinePublicKeysChange: (publicKeys: string) => void;
+  /**
+   * When provided, the SSH step renders an "Add SSH key" action that
+   * opens a dialog for saving a new public key. The host owns the
+   * persistence (POST) — this package only exposes the UI and reports
+   * the draft. Omit to hide the add-key action entirely.
+   */
+  onCreateKey?: (input: { name: string; publicKey: string }) => Promise<SshKeyOption | void>;
+  /**
+   * Optional refresh of the host's key list, called after a successful
+   * create so the parent re-syncs its `keys` prop before the new key is
+   * selected.
+   */
+  onRefreshKeys?: () => Promise<SshKeyOption[] | void>;
 }
 
 export interface ProvisioningWizardProps {
@@ -407,6 +421,8 @@ function computeHourlyCost(
 
 function SshAccessStep({ config }: { config: SshAccessConfig }) {
   const keys = config.keys ?? [];
+  const canAddKey = typeof config.onCreateKey === "function";
+  const [isAddKeyOpen, setIsAddKeyOpen] = React.useState(false);
   const inlineKeyCount = config.inlinePublicKeys
     .split(/\r?\n/)
     .map((key) => key.trim())
@@ -422,9 +438,22 @@ function SshAccessStep({ config }: { config: SshAccessConfig }) {
             Select stored keys or paste public keys for authorized_keys.
           </p>
         </div>
-        <Badge variant="outline">
-          {totalKeyCount} key{totalKeyCount === 1 ? "" : "s"}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {canAddKey && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAddKeyOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add SSH key
+            </Button>
+          )}
+          <Badge variant="outline">
+            {totalKeyCount} key{totalKeyCount === 1 ? "" : "s"}
+          </Badge>
+        </div>
       </div>
 
       {keys.length > 0 && (
@@ -485,6 +514,22 @@ function SshAccessStep({ config }: { config: SshAccessConfig }) {
         value={config.inlinePublicKeys}
         onChange={(event) => config.onInlinePublicKeysChange(event.target.value)}
       />
+
+      {canAddKey && (
+        <AddSshKeyDialog
+          open={isAddKeyOpen}
+          onOpenChange={setIsAddKeyOpen}
+          onCreateKey={config.onCreateKey!}
+          onRefreshKeys={config.onRefreshKeys}
+          onCreatedKeyId={(id) =>
+            config.onSelectedKeyIdsChange(
+              config.selectedKeyIds.includes(id)
+                ? config.selectedKeyIds
+                : [...config.selectedKeyIds, id],
+            )
+          }
+        />
+      )}
     </div>
   );
 }

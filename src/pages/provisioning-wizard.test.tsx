@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   ProvisioningWizard,
@@ -10,6 +10,8 @@ import {
   type ProvisioningConfig,
   type StartupScriptEntry,
   type EnvironmentEntry,
+  type SshAccessConfig,
+  type SshKeyOption,
 } from "./provisioning-wizard"
 
 function makeScript(overrides: Partial<StartupScriptEntry> = {}): StartupScriptEntry {
@@ -22,6 +24,30 @@ function makeScript(overrides: Partial<StartupScriptEntry> = {}): StartupScriptE
     ...overrides,
   }
 }
+
+function makeSshKey(overrides: Partial<SshKeyOption> = {}): SshKeyOption {
+  return {
+    id: "key-1",
+    name: "Laptop",
+    keyType: "ssh-ed25519",
+    fingerprint: "SHA256:abc",
+    ...overrides,
+  }
+}
+
+function makeSshAccess(overrides: Partial<SshAccessConfig> = {}): SshAccessConfig {
+  return {
+    keys: [],
+    selectedKeyIds: [],
+    inlinePublicKeys: "",
+    onSelectedKeyIdsChange: vi.fn(),
+    onInlinePublicKeysChange: vi.fn(),
+    ...overrides,
+  }
+}
+
+const VALID_PUBLIC_KEY =
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIabcd1234 test@example"
 
 
 describe("ProvisioningWizard — startup scripts integration", () => {
@@ -1015,5 +1041,259 @@ describe("ProvisioningWizard — planTiers", () => {
       // the locked rows should carry it (they use `border-border` instead).
       expect(btn.className).not.toContain("border-primary")
     }
+  })
+})
+
+describe("ProvisioningWizard — add SSH key dialog", () => {
+  it("hides the add-key action when onCreateKey is not provided", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={{
+          keys: [makeSshKey()],
+          selectedKeyIds: [],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange: vi.fn(),
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: /add ssh key/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders the add-key action when onCreateKey is provided", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({ onCreateKey: vi.fn() })}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: /add ssh key/i }),
+    ).toBeInTheDocument()
+  })
+
+  it("opens the dialog with Name and Public key fields", async () => {
+    const user = userEvent.setup()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({ onCreateKey: vi.fn() })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByLabelText("Name")).toBeInTheDocument()
+    expect(within(dialog).getByLabelText("Public key")).toBeInTheDocument()
+  })
+
+  it("shows inline validation errors and does not call create on empty submit", async () => {
+    const user = userEvent.setup()
+    const onCreateKey = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({ onCreateKey })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    expect(within(dialog).getByText("Name is required")).toBeInTheDocument()
+    expect(within(dialog).getByText("Public key is required")).toBeInTheDocument()
+    expect(onCreateKey).not.toHaveBeenCalled()
+  })
+
+  it("rejects a malformed public key with an inline error", async () => {
+    const user = userEvent.setup()
+    const onCreateKey = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({ onCreateKey })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "My key")
+    await user.type(within(dialog).getByLabelText("Public key"), "not-a-key")
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    expect(
+      within(dialog).getByText(/enter a valid public key/i),
+    ).toBeInTheDocument()
+    expect(onCreateKey).not.toHaveBeenCalled()
+  })
+
+  it("on success calls create + refresh, closes, clears, and selects the new key id", async () => {
+    const user = userEvent.setup()
+    const created = makeSshKey({ id: "new-1", name: "New" })
+    const onCreateKey = vi.fn().mockResolvedValue(created)
+    const onRefreshKeys = vi.fn().mockResolvedValue([created])
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey,
+          onRefreshKeys,
+          onSelectedKeyIdsChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "New")
+    await user.type(within(dialog).getByLabelText("Public key"), VALID_PUBLIC_KEY)
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    await waitFor(() => {
+      expect(onCreateKey).toHaveBeenCalledWith({
+        name: "New",
+        publicKey: VALID_PUBLIC_KEY,
+      })
+    })
+    expect(onRefreshKeys).toHaveBeenCalledOnce()
+    // New key selected by id; selection cleared of duplicates.
+    expect(onSelectedKeyIdsChange).toHaveBeenCalledWith(["new-1"])
+    // Dialog closed.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
+  it("does not call onRefreshKeys when it is not provided", async () => {
+    const user = userEvent.setup()
+    const created = makeSshKey({ id: "new-1", name: "New" })
+    const onCreateKey = vi.fn().mockResolvedValue(created)
+    const onRefreshKeys = undefined
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey,
+          onRefreshKeys,
+          onSelectedKeyIdsChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "New")
+    await user.type(within(dialog).getByLabelText("Public key"), VALID_PUBLIC_KEY)
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    await waitFor(() => {
+      expect(onCreateKey).toHaveBeenCalledOnce()
+    })
+    expect(onSelectedKeyIdsChange).toHaveBeenCalledWith(["new-1"])
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
+  it("does not auto-select when onCreateKey returns no key", async () => {
+    const user = userEvent.setup()
+    const onCreateKey = vi.fn().mockResolvedValue(undefined)
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey,
+          onSelectedKeyIdsChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "New")
+    await user.type(within(dialog).getByLabelText("Public key"), VALID_PUBLIC_KEY)
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    await waitFor(() => {
+      expect(onCreateKey).toHaveBeenCalledOnce()
+    })
+    expect(onSelectedKeyIdsChange).not.toHaveBeenCalled()
+  })
+
+  it("on failure shows an inline error, keeps the dialog open and values intact", async () => {
+    const user = userEvent.setup()
+    const onCreateKey = vi.fn().mockRejectedValue(new Error("Key already exists"))
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey,
+          onSelectedKeyIdsChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "Dup")
+    await user.type(within(dialog).getByLabelText("Public key"), VALID_PUBLIC_KEY)
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    await waitFor(() => {
+      expect(within(dialog).getByText("Key already exists")).toBeInTheDocument()
+    })
+    // Dialog still present and draft preserved.
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(within(dialog).getByLabelText("Name")).toHaveValue("Dup")
+    expect(within(dialog).getByLabelText("Public key")).toHaveValue(VALID_PUBLIC_KEY)
+    // No selection change on failure.
+    expect(onSelectedKeyIdsChange).not.toHaveBeenCalled()
+  })
+
+  it("cancel closes the dialog without changing selected keys or inline public keys", async () => {
+    const user = userEvent.setup()
+    const onSelectedKeyIdsChange = vi.fn()
+    const onInlinePublicKeysChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey: vi.fn(),
+          selectedKeyIds: ["k1"],
+          inlinePublicKeys: VALID_PUBLIC_KEY,
+          onSelectedKeyIdsChange,
+          onInlinePublicKeysChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "Draft")
+    await user.click(within(dialog).getByRole("button", { name: /cancel/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+    expect(onSelectedKeyIdsChange).not.toHaveBeenCalled()
+    expect(onInlinePublicKeysChange).not.toHaveBeenCalled()
   })
 })

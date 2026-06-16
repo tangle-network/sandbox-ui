@@ -715,10 +715,11 @@ describe("usePtySession input serialization", () => {
 })
 
 /**
- * Tests for the WebSocket transport. The WS path replaces per-keystroke
- * HTTP POSTs with synchronous `ws.send`, eliminating the round-trip cost
- * that dominated typing latency through edge proxies. These tests pin the
- * input/output framing contract the matching server endpoint must honor.
+ * Tests for the WebSocket transport. The current sidecar creates or attaches
+ * the PTY from the WebSocket itself: the browser opens `/terminals/:id/ws`,
+ * sends a JSON `init` control frame, and then sends JSON `input` frames.
+ * These tests pin the input/output framing contract the matching server
+ * endpoint must honor.
  */
 describe("usePtySession WebSocket transport", () => {
   beforeEach(() => {
@@ -731,7 +732,7 @@ describe("usePtySession WebSocket transport", () => {
 
   /**
    * Test harness that pairs the openable WebSocket stub with a fetch
-   * mock that handles only session creation and deletion. Any HTTP
+   * mock that records any HTTP
    * request to `/input`, `/stream`, or PATCH on the session is treated
    * as a contract violation — when the WS is open the hook MUST NOT
    * fall back to the HTTP path.
@@ -744,19 +745,9 @@ describe("usePtySession WebSocket transport", () => {
       const href = typeof url === "string" ? url : url.toString()
       const method = (init?.method ?? "GET").toUpperCase()
 
-      if (href.endsWith("/terminals") && method === "POST") {
-        return mockResponse({
-          ok: true,
-          status: 201,
-          body: JSON.stringify({ data: { sessionId: SESSION_ID } }),
-        })
-      }
-      if (href.endsWith(`/terminals/${SESSION_ID}`) && method === "DELETE") {
-        return mockResponse({ ok: true, status: 200 })
-      }
-
-      // Any other request is a fallback we shouldn't be hitting while
-      // the WS is open. Record it so the assertion below can flag it.
+      // Any request is a fallback we shouldn't be hitting while the
+      // current sidecar WS protocol is open. Record it so the assertion
+      // below can flag it.
       stray.push({
         url: href,
         method,
@@ -770,11 +761,11 @@ describe("usePtySession WebSocket transport", () => {
     return { ...wsStub, stray, fetchMock }
   }
 
-  async function mountAndOpenWs() {
+  async function mountAndOpenWs(apiUrl = API_URL) {
     const harness = installWsHarness()
     const onData = vi.fn()
     const hook = renderHook(() =>
-      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData }),
+      usePtySession({ apiUrl, token: fixtureValue, onData }),
     )
     // Wait for the hook's `connect()` to construct the WebSocket.
     await waitFor(() => expect(harness.handles).toHaveLength(1))
@@ -782,6 +773,9 @@ describe("usePtySession WebSocket transport", () => {
     act(() => {
       harness.handles[0].open()
     })
+    expect(harness.handles[0].sentText).toEqual([
+      JSON.stringify({ type: "init", cols: 80, rows: 24 }),
+    ])
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
     return { ...harness, hook, onData }
   }
@@ -791,7 +785,7 @@ describe("usePtySession WebSocket transport", () => {
     expect(handles).toHaveLength(1)
     const url = new URL(handles[0].url)
     expect(url.protocol).toBe("wss:")
-    expect(url.pathname).toBe(`/terminals/${SESSION_ID}/ws`)
+    expect(url.pathname).toMatch(/^\/terminals\/terminal-[^/]+\/ws$/)
     // The bearer token MUST NOT appear in the URL query string —
     // edge proxies and DevTools log URLs but not subprotocol headers.
     expect(url.searchParams.get("token")).toBeNull()
@@ -813,7 +807,102 @@ describe("usePtySession WebSocket transport", () => {
     expect(atob(standard)).toBe(fixtureValue)
   })
 
-  it("dispatches sendCommand as a UTF-8 binary frame and skips the HTTP /input path", async () => {
+  it("constructs a same-origin WebSocket when apiUrl is relative", async () => {
+    const { handles } = await mountAndOpenWs("/api/runtime/sandbox-123")
+    expect(handles).toHaveLength(1)
+    const url = new URL(handles[0].url)
+    expect(url.protocol).toBe("ws:")
+    expect(url.host).toBe(window.location.host)
+    expect(url.pathname).toMatch(
+      /^\/api\/runtime\/sandbox-123\/terminals\/terminal-[^/]+\/ws$/,
+    )
+  })
+
+  it("reuses a provided connectionId across remounts so the sidecar restores the session", async () => {
+    const harness = installWsHarness()
+    const onData = vi.fn()
+    const CONNECTION_ID = "terminal-stable-abc123"
+
+    // First mount opens a WS keyed by the provided id.
+    const first = renderHook(() =>
+      usePtySession({
+        apiUrl: API_URL,
+        token: fixtureValue,
+        onData,
+        connectionId: CONNECTION_ID,
+      }),
+    )
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    expect(new URL(harness.handles[0].url).pathname).toBe(
+      `/terminals/${CONNECTION_ID}/ws`,
+    )
+    act(() => harness.handles[0].open())
+    await waitFor(() => expect(first.result.current.isConnected).toBe(true))
+    first.unmount()
+
+    // Remount (tab switch back) must reuse the SAME id — not a fresh
+    // random one — so the sidecar reattaches the existing PTY instead
+    // of spawning a new shell.
+    const second = renderHook(() =>
+      usePtySession({
+        apiUrl: API_URL,
+        token: fixtureValue,
+        onData,
+        connectionId: CONNECTION_ID,
+      }),
+    )
+    await waitFor(() => expect(harness.handles).toHaveLength(2))
+    expect(new URL(harness.handles[1].url).pathname).toBe(
+      `/terminals/${CONNECTION_ID}/ws`,
+    )
+    act(() => harness.handles[1].open())
+    second.unmount()
+  })
+
+  it("does not reconnect or fall through to POST when only the token changes", async () => {
+    // The connection endpoint mints a fresh token on every call (incl.
+    // the dev double-invoke and periodic refresh). A new token must NOT
+    // tear down the live socket and re-dial the same stable id — that
+    // overlapping churn is what left the terminal stuck reconnecting.
+    const harness = installWsHarness()
+    const onData = vi.fn()
+    const CONNECTION_ID = "terminal-stable-race"
+
+    const hook = renderHook(
+      ({ token }: { token: string }) =>
+        usePtySession({
+          apiUrl: API_URL,
+          token,
+          onData,
+          connectionId: CONNECTION_ID,
+        }),
+      { initialProps: { token: "tok-1" } },
+    )
+
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    act(() => harness.handles[0].open())
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+
+    // A freshly minted token must not open a new socket or reconnect.
+    act(() => hook.rerender({ token: "tok-2" }))
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(harness.handles).toHaveLength(1) // no second WS dialed
+    expect(hook.result.current.isConnected).toBe(true) // live socket kept
+    expect(
+      harness.stray.filter(
+        (c) => c.url.endsWith("/terminals") && c.method === "POST",
+      ),
+    ).toEqual([]) // no REST fallback
+    expect(hook.result.current.error).toBeNull()
+
+    hook.unmount()
+  })
+
+  it("dispatches sendCommand as a JSON input frame and skips the HTTP /input path", async () => {
     const { handles, hook, stray } = await mountAndOpenWs()
 
     await act(async () => {
@@ -823,7 +912,11 @@ describe("usePtySession WebSocket transport", () => {
       await Promise.resolve()
     })
 
-    expect(handles[0].sentBinary).toEqual(["hi"])
+    expect(handles[0].sentText).toEqual([
+      JSON.stringify({ type: "init", cols: 80, rows: 24 }),
+      JSON.stringify({ type: "input", data: "hi" }),
+    ])
+    expect(handles[0].sentBinary).toEqual([])
     expect(stray).toHaveLength(0)
   })
 
@@ -840,9 +933,13 @@ describe("usePtySession WebSocket transport", () => {
       await Promise.resolve()
     })
 
+    const inputFrames = handles[0].sentText
+      .map((frame) => JSON.parse(frame))
+      .filter((frame) => frame.type === "input")
+      .map((frame) => frame.data)
     // Each batch translates to one ws.send, but all bytes appear in
     // submission order regardless of batching.
-    expect(handles[0].sentBinary.join("")).toBe("abc")
+    expect(inputFrames.join("")).toBe("abc")
   })
 
   it("delivers server text frames to onData", async () => {
@@ -918,6 +1015,7 @@ describe("usePtySession WebSocket transport", () => {
     })
 
     expect(handles[0].sentText).toEqual([
+      JSON.stringify({ type: "init", cols: 80, rows: 24 }),
       JSON.stringify({ type: "resize", cols: 120, rows: 40 }),
     ])
     expect(stray).toHaveLength(0)
@@ -933,65 +1031,24 @@ describe("usePtySession WebSocket transport", () => {
     await waitFor(() => expect(hook.result.current.isConnected).toBe(false))
   })
 
-  it("falls back to SSE+POST after a mid-session WS close", async () => {
-    // Pins the core reliability path: when a healthy WS drops mid-session
-    // the hook must (1) flip isConnected to false, (2) schedule the
-    // reconnect timer, (3) open the SSE stream against the same session,
-    // (4) restore isConnected, and (5) route subsequent input through
-    // the HTTP POST path (not back into the dead socket). This is the
-    // user-visible degradation behavior that keeps the terminal alive
-    // through transient network or CF Worker hiccups, and a regression
-    // here would silently strand the terminal until manual reconnect.
+  it("opens a fresh sidecar WebSocket after a mid-session WS close", async () => {
+    // Pins the current sidecar reliability path: sessions born from
+    // WS `init` do not have a REST/SSE session to fall back to. When a
+    // healthy WS drops mid-session the hook must (1) flip isConnected
+    // to false, (2) schedule the reconnect timer, (3) open a fresh WS,
+    // and (4) route subsequent input through the new socket.
     const wsStub = installOpeningWebSocketStub()
-    const inputPosts: PendingInput[] = []
-    let streamController:
-      | ReadableStreamDefaultController<Uint8Array>
-      | null = null
+    const stray: FetchCall[] = []
 
     const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
       const href = typeof url === "string" ? url : url.toString()
       const method = (init?.method ?? "GET").toUpperCase()
-      if (href.endsWith("/terminals") && method === "POST") {
-        return mockResponse({
-          ok: true,
-          status: 201,
-          body: JSON.stringify({ data: { sessionId: SESSION_ID } }),
-        })
-      }
-      if (
-        href.endsWith(`/terminals/${SESSION_ID}/stream`) &&
-        method === "GET"
-      ) {
-        return {
-          ok: true,
-          status: 200,
-          body: new ReadableStream<Uint8Array>({
-            start(controller) {
-              streamController = controller
-            },
-          }),
-        } as unknown as Response
-      }
-      if (
-        href.endsWith(`/terminals/${SESSION_ID}/input`) &&
-        method === "POST"
-      ) {
-        const d = deferred<Response>()
-        inputPosts.push({
-          call: {
-            url: href,
-            method,
-            body: typeof init?.body === "string" ? init.body : null,
-          },
-          settle: (res) => d.resolve(res),
-          reject: (err) => d.reject(err),
-        })
-        return d.promise
-      }
-      if (href.endsWith(`/terminals/${SESSION_ID}`) && method === "DELETE") {
-        return mockResponse({ ok: true, status: 200 })
-      }
-      throw new Error(`Unexpected fetch: ${method} ${href}`)
+      stray.push({
+        url: href,
+        method,
+        body: typeof init?.body === "string" ? init.body : null,
+      })
+      return mockResponse({ ok: true, status: 200 })
     })
     vi.stubGlobal("fetch", fetchMock)
 
@@ -1005,16 +1062,15 @@ describe("usePtySession WebSocket transport", () => {
       wsStub.handles[0].open()
     })
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
-    // Confirm we're on the WS path: no SSE stream opened yet.
-    expect(streamController).toBeNull()
+    expect(stray).toEqual([])
 
     // Drop the socket. The hook treats this as a transient mid-session
-    // failure and schedules a reconnect through the SSE path.
+    // failure and schedules a fresh sidecar WS.
     act(() => {
       wsStub.handles[0].close(1006)
     })
     await waitFor(() => expect(hook.result.current.isConnected).toBe(false))
-    expect(inputPosts).toHaveLength(0)
+    expect(stray).toEqual([])
 
     // The reconnect setTimeout is hardcoded at 1000ms in the WS onclose
     // handler. Use a generous waitFor window so this test stays robust
@@ -1022,28 +1078,25 @@ describe("usePtySession WebSocket transport", () => {
     // collide with waitFor's polling).
     await waitFor(
       () => {
-        expect(streamController).not.toBeNull()
-        expect(hook.result.current.isConnected).toBe(true)
+        expect(wsStub.handles).toHaveLength(2)
       },
       { timeout: 3000 },
     )
+    act(() => {
+      wsStub.handles[1].open()
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
 
-    // Subsequent input must travel over the HTTP /input path, not be
+    // Subsequent input must travel over the new WebSocket, not be
     // swallowed by a reference to the closed socket.
     await act(async () => {
       void hook.result.current.sendCommand("after-failover").catch(() => {})
-      await waitFor(() => expect(inputPosts).toHaveLength(1))
+      await Promise.resolve()
     })
-    expect(JSON.parse(inputPosts[0].call.body ?? "{}")).toEqual({
-      data: "after-failover",
-    })
-    // And no further bytes were pushed into the dead WebSocket.
-    expect(wsStub.handles[0].sentBinary).toEqual([])
-
-    // Drain the in-flight POST so unmount doesn't leak a rejection.
-    await act(async () => {
-      inputPosts[0].settle(mockResponse({ ok: true, status: 200 }))
-    })
+    expect(wsStub.handles[1].sentText).toContain(
+      JSON.stringify({ type: "input", data: "after-failover" }),
+    )
+    expect(stray).toEqual([])
   })
 
   it("falls back to HTTP+SSE when WebSocket construction throws", async () => {
@@ -1219,9 +1272,12 @@ describe("usePtySession WebSocket transport", () => {
     })
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
 
-    // Prop change tears down effect-1 (which calls ws-A.close — silent
-    // in this stub) and runs effect-2, which dials WS-B.
-    hook.rerender({ token: "token-b" })
+    // Reconnect tears down the active WS-A (silent close in this stub)
+    // and dials WS-B. A token change no longer reconnects (the token is
+    // read from a ref), so drive the reconnect explicitly.
+    act(() => {
+      void hook.result.current.reconnect()
+    })
     await waitFor(() => expect(instances).toHaveLength(2))
     act(() => {
       instances[1].readyState = 1
@@ -1347,9 +1403,12 @@ describe("usePtySession WebSocket transport", () => {
     await waitFor(() => expect(instances).toHaveLength(1))
     expect(instances[0].readyState).toBe(0)
 
-    // Rerender. cleanup() must abort the pending WS-A so the orphan
+    // Reconnect. cleanup() must abort the pending WS-A so the orphan
     // can never reach onopen against a session we've already DELETEd.
-    hook.rerender({ token: "token-b" })
+    // A token change no longer reconnects; drive it explicitly.
+    act(() => {
+      void hook.result.current.reconnect()
+    })
     // After cleanup, WS-A's silent `close()` should have left it in
     // readyState 3.
     expect(instances[0].readyState).toBe(3)
@@ -1410,19 +1469,15 @@ describe("usePtySession WebSocket transport", () => {
     expect(hook.result.current.isConnected).toBe(true)
   })
 
-  it("falls back to SSE+POST when the WS handshake never completes", async () => {
-    // The handshakeTimer in connectWs is the safety net for slow
-    // proxies and stuck upstreams: a WS that lingers in CONNECTING
-    // for WS_OPEN_TIMEOUT_MS (1500ms) must be aborted and the SSE
-    // path must take over. Without this fallback path, a partially
-    // working WS endpoint would strand the terminal indefinitely
-    // showing a "Connecting…" overlay. Lock in the behavior here.
-    //
-    // The stub never fires open/error/close on its own — the hook's
-    // own timer is what triggers fallback. Real timers are used
-    // because vitest's fake timers conflict with waitFor's polling.
+  it("falls back to SSE+POST when the WebSocket fails to open", async () => {
+    // A WS that never reaches OPEN (connection refused, a proxy that
+    // doesn't speak WebSocket, a stuck upstream) must surrender so the
+    // SSE+POST path takes over instead of stranding the terminal on a
+    // "Connecting…" overlay. Both the direct and fallback dials hit
+    // this stub; each closes without ever opening, driving the chain
+    // POST /terminals -> SSE.
 
-    class HangingWebSocket {
+    class FailingWebSocket {
       static CONNECTING = 0
       static OPEN = 1
       static CLOSING = 2
@@ -1436,25 +1491,31 @@ describe("usePtySession WebSocket transport", () => {
       onclose: ((ev: CloseEvent) => void) | null = null
       constructor(url: string) {
         this.url = url
-      }
-      send() {}
-      // The hook calls close() when the handshakeTimer fires.
-      // Synthesize the close event so the cleanup path inside
-      // connectWs's onclose runs end-to-end (it's a no-op for the
-      // not-yet-OPEN case).
-      close() {
-        if (this.readyState === 3) return
-        this.readyState = 3
-        queueMicrotask(() => {
+        // Fail the handshake on the next tick: error then close,
+        // without ever reaching OPEN, so connectWs settles false fast.
+        setTimeout(() => {
+          if (this.readyState === 3) return
+          this.readyState = 3
+          this.onerror?.({} as Event)
           this.onclose?.({
             code: 1006,
             reason: "",
             wasClean: false,
           } as unknown as CloseEvent)
-        })
+        }, 5)
+      }
+      send() {}
+      close() {
+        if (this.readyState === 3) return
+        this.readyState = 3
+        this.onclose?.({
+          code: 1006,
+          reason: "",
+          wasClean: false,
+        } as unknown as CloseEvent)
       }
     }
-    vi.stubGlobal("WebSocket", HangingWebSocket)
+    vi.stubGlobal("WebSocket", FailingWebSocket)
 
     const inputPosts: PendingInput[] = []
     let streamController:
@@ -1511,16 +1572,15 @@ describe("usePtySession WebSocket transport", () => {
       usePtySession({ apiUrl: API_URL, token: fixtureValue, onData: vi.fn() }),
     )
 
-    // The handshakeTimer is hardcoded at 1500ms. waitFor's default
-    // poll window is 1000ms; extend it past the timeout so the hook
-    // has time to observe the timer firing, fall back, open SSE, and
-    // flip isConnected.
+    // Both dials fail fast (close-without-open), then POST /terminals
+    // + SSE take over. Give waitFor a generous window to observe the
+    // chain settle and flip isConnected.
     await waitFor(
       () => {
         expect(streamController).not.toBeNull()
         expect(hook.result.current.isConnected).toBe(true)
       },
-      { timeout: 3000 },
+      { timeout: 5000 },
     )
 
     // After the fallback, sendCommand must travel over the HTTP

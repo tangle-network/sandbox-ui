@@ -11,9 +11,22 @@ import {
   Plus,
   Trash2,
   Check,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Badge, Button, Input, Switch, Textarea } from "../primitives";
+import {
+  Badge,
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+  Textarea,
+} from "../primitives";
 import { AddSshKeyDialog } from "./add-ssh-key-dialog";
 
 export interface EnvironmentOption {
@@ -534,6 +547,56 @@ function SshAccessStep({ config }: { config: SshAccessConfig }) {
   );
 }
 
+/**
+ * Internal env-var row. `uid` is a stable per-row identity used as the React
+ * key so each row's local reveal state stays bound to its own value across
+ * insertions and deletions. It is stripped before submit — `ProvisioningConfig`
+ * only carries `{ key, value }`.
+ */
+interface EnvVarRow {
+  uid: string;
+  key: string;
+  value: string;
+}
+
+/**
+ * Environment-variable value field with a reveal toggle. Values are masked by
+ * default (they commonly hold secrets); the eye button flips to plaintext so
+ * the user can verify what they typed without re-entering it.
+ */
+function EnvVarValueInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [revealed, setRevealed] = React.useState(false);
+  return (
+    <div className="relative flex-[2]">
+      <Input
+        type={revealed ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoComplete="off"
+        className="h-9 px-3 pr-10 font-mono text-sm"
+        placeholder={placeholder}
+      />
+      <button
+        type="button"
+        onClick={() => setRevealed((s) => !s)}
+        aria-label={revealed ? "Hide value" : "Show value"}
+        aria-pressed={revealed}
+        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
+
 export function ProvisioningWizard({
   environments: environmentsProp,
   onLoadEnvironments,
@@ -548,17 +611,16 @@ export function ProvisioningWizard({
   pricingRates,
   planTiers,
 }: ProvisioningWizardProps) {
-  const cpuMax = Math.max(
-    CPU_MIN,
-    Math.min(resourceLimits?.cpuMax ?? CPU_MAX, CPU_MAX),
-  );
-  const ramMax = Math.max(
-    RAM_MIN,
-    Math.min(resourceLimits?.ramMaxGB ?? RAM_MAX, RAM_MAX),
-  );
+  // CPU_MAX / RAM_MAX / STORAGE_MAX are fallback ceilings, applied only when
+  // the caller supplies no plan limits. When `resourceLimits` is present it is
+  // authoritative and must not be capped to the fallback — otherwise a
+  // higher-tier plan (e.g. Enterprise's 12 vCPU) could never allocate past
+  // the default 8.
+  const cpuMax = Math.max(CPU_MIN, resourceLimits?.cpuMax ?? CPU_MAX);
+  const ramMax = Math.max(RAM_MIN, resourceLimits?.ramMaxGB ?? RAM_MAX);
   const storageMax = Math.max(
     STORAGE_MIN,
-    Math.min(resourceLimits?.storageMaxGB ?? STORAGE_MAX, STORAGE_MAX),
+    resourceLimits?.storageMaxGB ?? STORAGE_MAX,
   );
   const cpuStep = alignSliderStep(CPU_MIN, cpuMax, CPU_STEP);
   const ramStep = alignSliderStep(RAM_MIN, ramMax, RAM_STEP);
@@ -612,6 +674,15 @@ export function ProvisioningWizard({
 
   const environments = envList;
 
+  // Hide environment selection only when there's exactly one option: a single
+  // choice (e.g. just the default image and no templates) is a no-op, so the
+  // picker is omitted and that lone option is used implicitly. Zero options (an
+  // empty or failed load) still render the section so the user sees an
+  // explanation rather than a silently-disabled deploy button; while loading,
+  // the skeleton communicates progress.
+  const showEnvironmentSection =
+    isLoadingEnvironments || environments.length !== 1;
+
   const effectiveDefault = dc?.environment ?? defaultEnvironment;
   const [selectedEnv, setSelectedEnv] = React.useState(
     effectiveDefault ?? environments[0]?.id ?? "",
@@ -653,9 +724,21 @@ export function ProvisioningWizard({
 
   const [name, setName] = React.useState(dc?.name ?? "");
   const [gitUrl, setGitUrl] = React.useState(dc?.gitUrl ?? "");
-  const [envVars, setEnvVars] = React.useState<
-    { key: string; value: string }[]
-  >(dc?.envVars ?? [{ key: "", value: "" }]);
+  // Env-var rows carry a stable `uid` so each row's local reveal state stays
+  // bound to its own value. Keying the list by array index instead would let a
+  // revealed-plaintext state migrate onto a different secret when a row above
+  // it is removed.
+  const envVarUidRef = React.useRef(0);
+  const makeEnvVarRow = (key = "", value = ""): EnvVarRow => ({
+    uid: `env-${envVarUidRef.current++}`,
+    key,
+    value,
+  });
+  const [envVars, setEnvVars] = React.useState<EnvVarRow[]>(() =>
+    (dc?.envVars ?? [{ key: "", value: "" }]).map((e) =>
+      makeEnvVarRow(e.key, e.value),
+    ),
+  );
   const [driver, setDriver] = React.useState<
     "docker" | "firecracker" | "tangle"
   >(dc?.driver ?? "docker");
@@ -714,7 +797,9 @@ export function ProvisioningWizard({
         storageGB,
         name,
         gitUrl,
-        envVars: envVars.filter((e) => e.key.trim() !== ""),
+        envVars: envVars
+          .filter((e) => e.key.trim() !== "")
+          .map(({ key, value }) => ({ key, value })),
         driver,
         bare,
         startupScriptIds: startupScriptIds.filter((id) =>
@@ -883,7 +968,8 @@ export function ProvisioningWizard({
 
           {/* Scrollable step content */}
           <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
-            {/* Section 1: Environment */}
+            {/* Section 1: Environment — only shown when there's a real choice */}
+            {showEnvironmentSection && (
                 <section className={SECTION_CARD_CLASS}>
                   <div className="flex items-center gap-2 mb-4">
                     <Layers className="h-4 w-4 text-primary shrink-0" />
@@ -891,6 +977,12 @@ export function ProvisioningWizard({
                       Environment Selection
                     </h2>
                   </div>
+                  {!isLoadingEnvironments && environments.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No environments are available to select right now. Refresh
+                      to try again.
+                    </p>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {isLoadingEnvironments && environments.length === 0
                       ? Array.from({ length: 3 }).map((_, i) => (
@@ -948,6 +1040,7 @@ export function ProvisioningWizard({
                     ))}
                   </div>
                 </section>
+            )}
 
                 {/* Section 2: Resources */}
                 <section className={SECTION_CARD_CLASS}>
@@ -1129,30 +1222,30 @@ export function ProvisioningWizard({
                             <label className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
                               Virtualization Driver
                             </label>
-                            <select
+                            <Select
                               value={driver}
-                              onChange={(e) => {
-                                if (VALID_DRIVERS.has(e.target.value))
+                              onValueChange={(value) => {
+                                if (VALID_DRIVERS.has(value))
                                   setDriver(
-                                    e.target
-                                      .value as ProvisioningConfig["driver"],
+                                    value as ProvisioningConfig["driver"],
                                   );
                               }}
-                              className="w-full bg-card border border-border rounded-lg h-9 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent appearance-none"
                             >
-                              <option value="docker" className="bg-gray-900">
-                                Docker container (Default)
-                              </option>
-                              <option
-                                value="firecracker"
-                                className="bg-gray-900"
-                              >
-                                Firecracker microVM (Secure)
-                              </option>
-                              <option value="tangle" className="bg-gray-900">
-                                Tangle Distributed Node
-                              </option>
-                            </select>
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="docker">
+                                  Docker container (Default)
+                                </SelectItem>
+                                <SelectItem value="firecracker">
+                                  Firecracker microVM (Secure)
+                                </SelectItem>
+                                <SelectItem value="tangle">
+                                  Tangle Distributed Node
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
 
@@ -1177,10 +1270,7 @@ export function ProvisioningWizard({
                             <button
                               type="button"
                               onClick={() =>
-                                setEnvVars([
-                                  ...envVars,
-                                  { key: "", value: "" },
-                                ])
+                                setEnvVars([...envVars, makeEnvVarRow()])
                               }
                               className="flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors font-medium"
                             >
@@ -1188,15 +1278,15 @@ export function ProvisioningWizard({
                             </button>
                           </div>
                           <div className="space-y-2">
-                            {envVars.map((env, i) => (
-                              <div key={i} className="flex gap-2">
+                            {envVars.map((env) => (
+                              <div key={env.uid} className="flex gap-2">
                                 <Input
                                   type="text"
                                   value={env.key}
                                   onChange={(e) =>
                                     setEnvVars(
-                                      envVars.map((v, idx) =>
-                                        idx === i
+                                      envVars.map((v) =>
+                                        v.uid === env.uid
                                           ? { ...v, key: e.target.value }
                                           : v,
                                       ),
@@ -1205,28 +1295,25 @@ export function ProvisioningWizard({
                                   className="flex-1 h-9 px-3 font-mono text-sm"
                                   placeholder="API_KEY"
                                 />
-                                <Input
-                                  type="password"
+                                <EnvVarValueInput
                                   value={env.value}
-                                  onChange={(e) =>
+                                  onChange={(value) =>
                                     setEnvVars(
-                                      envVars.map((v, idx) =>
-                                        idx === i
-                                          ? { ...v, value: e.target.value }
-                                          : v,
+                                      envVars.map((v) =>
+                                        v.uid === env.uid ? { ...v, value } : v,
                                       ),
                                     )
                                   }
-                                  className="flex-[2] h-9 px-3 font-mono text-sm"
                                   placeholder="sk-xxxxxxxxxxx"
                                 />
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="icon"
+                                  aria-label="Remove variable"
                                   onClick={() =>
                                     setEnvVars(
-                                      envVars.filter((_, idx) => idx !== i),
+                                      envVars.filter((v) => v.uid !== env.uid),
                                     )
                                   }
                                   className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:border-destructive/30"
@@ -1341,22 +1428,16 @@ export function ProvisioningWizard({
                             className="mt-0.5"
                           />
                         </div>
+
+                        {sshAccess && (
+                          <div className="pt-3 border-t border-border">
+                            <SshAccessStep config={sshAccess} />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 </section>
-
-            {sshAccess && (
-                <section className={SECTION_CARD_CLASS}>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Settings className="h-4 w-4 text-primary shrink-0" />
-                    <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                      Access Configuration
-                    </h2>
-                  </div>
-                  <SshAccessStep config={sshAccess} />
-                </section>
-            )}
           </div>
         </div>
 

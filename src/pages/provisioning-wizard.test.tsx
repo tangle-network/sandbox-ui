@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   ProvisioningWizard,
@@ -49,6 +49,13 @@ function makeSshAccess(overrides: Partial<SshAccessConfig> = {}): SshAccessConfi
 const VALID_PUBLIC_KEY =
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIabcd1234 test@example"
 
+// SSH access and the other advanced fields live inside the collapsible
+// "Advanced Options" drawer (single-page wizard). Tests that exercise those
+// controls open the drawer first.
+function openAdvanced() {
+  fireEvent.click(screen.getByText("Show Advanced Options"))
+}
+
 
 describe("ProvisioningWizard — startup scripts integration", () => {
   it("renders environment, resources, and access together as one page (no stepper)", async () => {
@@ -77,7 +84,8 @@ describe("ProvisioningWizard — startup scripts integration", () => {
     expect(screen.queryByText(/continue to/i)).not.toBeInTheDocument()
     expect(screen.getByText("Environment Selection")).toBeInTheDocument()
     expect(screen.getByText("Resource Allocation")).toBeInTheDocument()
-    expect(screen.getByText("Access Configuration")).toBeInTheDocument()
+    // SSH access lives in the Advanced Options drawer on the same page.
+    openAdvanced()
     expect(screen.getByText("SSH Access")).toBeInTheDocument()
     expect(screen.getByText("Laptop")).toBeInTheDocument()
   })
@@ -107,10 +115,10 @@ describe("ProvisioningWizard — startup scripts integration", () => {
       />,
     )
 
-    // No stepper / Continue navigation — the access section is reachable
-    // immediately alongside the others.
+    // No stepper / Continue navigation — the access section is reachable on
+    // the same page via the Advanced Options drawer.
     expect(screen.queryByText(/continue to/i)).not.toBeInTheDocument()
-    expect(screen.getByText("Access Configuration")).toBeInTheDocument()
+    openAdvanced()
     expect(screen.getByText("SSH Access")).toBeInTheDocument()
   })
 
@@ -299,10 +307,13 @@ describe("ProvisioningWizard — one-page layout (issue #79)", () => {
       />,
     )
 
-    // All four sections visible at once — no step navigation needed.
+    // Environment + resources render up front; access lives in the Advanced
+    // Options drawer on the same page — no step navigation needed.
     expect(screen.getByText("Environment Selection")).toBeInTheDocument()
     expect(screen.getByText("Resource Allocation")).toBeInTheDocument()
-    expect(screen.getByText("Access Configuration")).toBeInTheDocument()
+    expect(screen.getByText("Show Advanced Options")).toBeInTheDocument()
+    openAdvanced()
+    expect(screen.getByText("SSH Access")).toBeInTheDocument()
     // Deploy is reachable immediately in the summary panel.
     expect(
       screen.getByRole("button", { name: /deploy workspace/i }),
@@ -318,7 +329,8 @@ describe("ProvisioningWizard — one-page layout (issue #79)", () => {
 
     expect(screen.getByText("Environment Selection")).toBeInTheDocument()
     expect(screen.getByText("Resource Allocation")).toBeInTheDocument()
-    expect(screen.queryByText("Access Configuration")).not.toBeInTheDocument()
+    // Even inside the advanced drawer there's no SSH section without sshAccess.
+    openAdvanced()
     expect(screen.queryByText("SSH Access")).not.toBeInTheDocument()
   })
 
@@ -362,6 +374,7 @@ describe("ProvisioningWizard — SSH key selection (issue #79)", () => {
       />,
     )
 
+    openAdvanced()
     const laptopBtn = screen.getByText("Laptop").closest("button") as HTMLButtonElement
     const desktopBtn = screen.getByText("Desktop").closest("button") as HTMLButtonElement
 
@@ -402,6 +415,7 @@ describe("ProvisioningWizard — SSH key selection (issue #79)", () => {
 
     // The name and fingerprint text are present and legible regardless of
     // selection state — they use foreground tokens, not the gradient bg.
+    openAdvanced()
     const laptopBtn = screen.getByText("Laptop").closest("button") as HTMLButtonElement
     expect(laptopBtn).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByText("ssh-ed25519 · SHA256:abcd1234")).toBeInTheDocument()
@@ -429,6 +443,7 @@ describe("ProvisioningWizard — SSH key selection (issue #79)", () => {
     )
 
     // Selecting the key propagates to the controlled handler.
+    openAdvanced()
     const laptopBtn = screen.getByText("Laptop").closest("button") as HTMLButtonElement
     await userEvent.click(laptopBtn)
     expect(onSelectedKeyIdsChange).toHaveBeenCalledWith(["k1"])
@@ -1059,6 +1074,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     expect(
       screen.queryByRole("button", { name: /add ssh key/i }),
     ).not.toBeInTheDocument()
@@ -1072,6 +1088,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     expect(
       screen.getByRole("button", { name: /add ssh key/i }),
     ).toBeInTheDocument()
@@ -1086,6 +1103,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     await user.click(screen.getByRole("button", { name: /add ssh key/i }))
 
     const dialog = await screen.findByRole("dialog")
@@ -1103,6 +1121,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     await user.click(screen.getByRole("button", { name: /add ssh key/i }))
     const dialog = await screen.findByRole("dialog")
 
@@ -1123,6 +1142,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     await user.click(screen.getByRole("button", { name: /add ssh key/i }))
     const dialog = await screen.findByRole("dialog")
 
@@ -1153,6 +1173,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     await user.click(screen.getByRole("button", { name: /add ssh key/i }))
     const dialog = await screen.findByRole("dialog")
 
@@ -1192,6 +1213,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     await user.click(screen.getByRole("button", { name: /add ssh key/i }))
     const dialog = await screen.findByRole("dialog")
 
@@ -1222,6 +1244,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     await user.click(screen.getByRole("button", { name: /add ssh key/i }))
     const dialog = await screen.findByRole("dialog")
 
@@ -1249,6 +1272,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     await user.click(screen.getByRole("button", { name: /add ssh key/i }))
     const dialog = await screen.findByRole("dialog")
 
@@ -1284,6 +1308,7 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
       />,
     )
 
+    openAdvanced()
     await user.click(screen.getByRole("button", { name: /add ssh key/i }))
     const dialog = await screen.findByRole("dialog")
 
@@ -1295,5 +1320,105 @@ describe("ProvisioningWizard — add SSH key dialog", () => {
     })
     expect(onSelectedKeyIdsChange).not.toHaveBeenCalled()
     expect(onInlinePublicKeysChange).not.toHaveBeenCalled()
+  })
+})
+
+describe("ProvisioningWizard — resourceLimits above the default ceiling", () => {
+  it("lets a plan exceed the hardcoded fallback ceilings (e.g. 12 vCPU)", () => {
+    // Enterprise-class limits sit above the built-in CPU_MAX(8)/RAM_MAX(32)/
+    // STORAGE_MAX(512) fallbacks. The plan must be authoritative — the
+    // sliders have to reach the plan's real maxima, not the fallbacks.
+    render(
+      <ProvisioningWizard
+        resourceLimits={{ cpuMax: 12, ramMaxGB: 64, storageMaxGB: 1024 }}
+      />,
+    )
+
+    const sliders = screen.getAllByRole("slider")
+    expect(sliders[0]).toHaveAttribute("max", "12")
+    expect(sliders[1]).toHaveAttribute("max", "64")
+    expect(sliders[2]).toHaveAttribute("max", "1024")
+  })
+})
+
+describe("ProvisioningWizard — environment section visibility", () => {
+  it("hides the environment section when only one option exists", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        onSubmit={onSubmit}
+        environments={[
+          {
+            id: "universal",
+            name: "Default",
+            description: "The only option",
+            icon: null,
+            color: "violet",
+          },
+        ]}
+      />,
+    )
+
+    // The picker is a no-op with a single option, so it's omitted entirely…
+    expect(screen.queryByText("Environment Selection")).not.toBeInTheDocument()
+
+    // …but the lone option is still used implicitly on deploy.
+    await userEvent.click(
+      screen.getByRole("button", { name: /deploy workspace/i }),
+    )
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    expect(onSubmit.mock.calls[0][0].environment).toBe("universal")
+  })
+
+  it("shows the environment section when more than one option exists", () => {
+    render(
+      <ProvisioningWizard
+        environments={[
+          { id: "universal", name: "Default", description: "", icon: null, color: "violet" },
+          { id: "template:abc", name: "My Template", description: "", icon: null, color: "green" },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText("Environment Selection")).toBeInTheDocument()
+    expect(screen.getByText("My Template")).toBeInTheDocument()
+  })
+})
+
+describe("ProvisioningWizard — driver selection", () => {
+  it("submits the controlled driver chosen via the Select primitive", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <ProvisioningWizard
+        onSubmit={onSubmit}
+        defaultConfig={{ driver: "firecracker" }}
+      />,
+    )
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /deploy workspace/i }),
+    )
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    expect(onSubmit.mock.calls[0][0].driver).toBe("firecracker")
+  })
+})
+
+describe("ProvisioningWizard — environment variable value reveal", () => {
+  it("masks the value by default and reveals it on toggle", async () => {
+    render(<ProvisioningWizard />)
+
+    openAdvanced()
+    const valueInput = screen.getByPlaceholderText("sk-xxxxxxxxxxx")
+    expect(valueInput).toHaveAttribute("type", "password")
+
+    await userEvent.click(screen.getByRole("button", { name: /show value/i }))
+    expect(valueInput).toHaveAttribute("type", "text")
+
+    await userEvent.click(screen.getByRole("button", { name: /hide value/i }))
+    expect(valueInput).toHaveAttribute("type", "password")
   })
 })

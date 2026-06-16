@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   ProvisioningWizard,
@@ -10,6 +10,8 @@ import {
   type ProvisioningConfig,
   type StartupScriptEntry,
   type EnvironmentEntry,
+  type SshAccessConfig,
+  type SshKeyOption,
 } from "./provisioning-wizard"
 
 function makeScript(overrides: Partial<StartupScriptEntry> = {}): StartupScriptEntry {
@@ -23,9 +25,33 @@ function makeScript(overrides: Partial<StartupScriptEntry> = {}): StartupScriptE
   }
 }
 
+function makeSshKey(overrides: Partial<SshKeyOption> = {}): SshKeyOption {
+  return {
+    id: "key-1",
+    name: "Laptop",
+    keyType: "ssh-ed25519",
+    fingerprint: "SHA256:abc",
+    ...overrides,
+  }
+}
+
+function makeSshAccess(overrides: Partial<SshAccessConfig> = {}): SshAccessConfig {
+  return {
+    keys: [],
+    selectedKeyIds: [],
+    inlinePublicKeys: "",
+    onSelectedKeyIdsChange: vi.fn(),
+    onInlinePublicKeysChange: vi.fn(),
+    ...overrides,
+  }
+}
+
+const VALID_PUBLIC_KEY =
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIabcd1234 test@example"
+
 
 describe("ProvisioningWizard — startup scripts integration", () => {
-  it("renders SSH access configuration as a final wizard step", async () => {
+  it("renders environment, resources, and access together as one page (no stepper)", async () => {
     render(
       <ProvisioningWizard
         variant="multistep"
@@ -46,15 +72,17 @@ describe("ProvisioningWizard — startup scripts integration", () => {
       />,
     )
 
-    await userEvent.click(screen.getByText("Continue to Resources"))
-    await userEvent.click(screen.getByText("Continue to Access"))
-
+    // Even with variant="multistep", every section renders together and
+    // no stepper navigation is required.
+    expect(screen.queryByText(/continue to/i)).not.toBeInTheDocument()
+    expect(screen.getByText("Environment Selection")).toBeInTheDocument()
+    expect(screen.getByText("Resource Allocation")).toBeInTheDocument()
     expect(screen.getByText("Access Configuration")).toBeInTheDocument()
     expect(screen.getByText("SSH Access")).toBeInTheDocument()
     expect(screen.getByText("Laptop")).toBeInTheDocument()
   })
 
-  it("starts on SSH access when template review skips to final step", async () => {
+  it("renders the access section with SSH keys as one page when pre-configured via template", async () => {
     render(
       <ProvisioningWizard
         variant="multistep"
@@ -79,6 +107,9 @@ describe("ProvisioningWizard — startup scripts integration", () => {
       />,
     )
 
+    // No stepper / Continue navigation — the access section is reachable
+    // immediately alongside the others.
+    expect(screen.queryByText(/continue to/i)).not.toBeInTheDocument()
     expect(screen.getByText("Access Configuration")).toBeInTheDocument()
     expect(screen.getByText("SSH Access")).toBeInTheDocument()
   })
@@ -251,6 +282,181 @@ describe("ProvisioningWizard — startup scripts integration", () => {
   })
 })
 
+describe("ProvisioningWizard — one-page layout (issue #79)", () => {
+  it("renders environment, resources, advanced, and access sections together without a stepper", () => {
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        sshAccess={{
+          keys: [
+            { id: "k1", name: "Laptop", keyType: "ssh-ed25519", fingerprint: "SHA256:aa" },
+          ],
+          selectedKeyIds: [],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange: vi.fn(),
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    // All four sections visible at once — no step navigation needed.
+    expect(screen.getByText("Environment Selection")).toBeInTheDocument()
+    expect(screen.getByText("Resource Allocation")).toBeInTheDocument()
+    expect(screen.getByText("Access Configuration")).toBeInTheDocument()
+    // Deploy is reachable immediately in the summary panel.
+    expect(
+      screen.getByRole("button", { name: /deploy workspace/i }),
+    ).toBeInTheDocument()
+    // No stepper affordances.
+    expect(screen.queryByText("Continue to Resources")).not.toBeInTheDocument()
+    expect(screen.queryByText("Continue to Access")).not.toBeInTheDocument()
+    expect(screen.queryByText("Start from scratch")).not.toBeInTheDocument()
+  })
+
+  it("omits the access section when sshAccess is not provided", () => {
+    render(<ProvisioningWizard variant="multistep" />)
+
+    expect(screen.getByText("Environment Selection")).toBeInTheDocument()
+    expect(screen.getByText("Resource Allocation")).toBeInTheDocument()
+    expect(screen.queryByText("Access Configuration")).not.toBeInTheDocument()
+    expect(screen.queryByText("SSH Access")).not.toBeInTheDocument()
+  })
+
+  it("preserves the back action and cost summary in one-page mode", () => {
+    const onBack = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        onBack={onBack}
+        sshAccess={{
+          keys: [],
+          selectedKeyIds: [],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange: vi.fn(),
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Run Cost")).toBeInTheDocument()
+    expect(screen.getByText("Sandbox Provisioning")).toBeInTheDocument()
+  })
+})
+
+describe("ProvisioningWizard — SSH key selection (issue #79)", () => {
+  it("marks a selected SSH key with aria-pressed and a visible non-color cue", async () => {
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        sshAccess={{
+          keys: [
+            { id: "k1", name: "Laptop", keyType: "ssh-ed25519", fingerprint: "SHA256:aa" },
+            { id: "k2", name: "Desktop", keyType: "ssh-rsa", fingerprint: "SHA256:bb" },
+          ],
+          selectedKeyIds: ["k1"],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange,
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    const laptopBtn = screen.getByText("Laptop").closest("button") as HTMLButtonElement
+    const desktopBtn = screen.getByText("Desktop").closest("button") as HTMLButtonElement
+
+    // ARIA state reflects selection for assistive tech.
+    expect(laptopBtn).toHaveAttribute("aria-pressed", "true")
+    expect(desktopBtn).toHaveAttribute("aria-pressed", "false")
+
+    // Non-color cue: only the selected key's button carries the selected
+    // styling (ring + primary border) AND renders a check glyph, while the
+    // unselected one does not.
+    expect(laptopBtn.className).toContain("ring-1")
+    expect(laptopBtn.className).toContain("ring-primary/20")
+    expect(desktopBtn.className).toContain("border-border")
+    expect(desktopBtn.className).not.toContain("ring-1")
+
+    // The check icon is the non-color affordance — it only appears for the
+    // selected key.
+    const laptopSvg = laptopBtn.querySelectorAll("svg")
+    const desktopSvg = desktopBtn.querySelectorAll("svg")
+    expect(laptopSvg.length).toBeGreaterThan(desktopSvg.length)
+  })
+
+  it("keeps the selected key name and fingerprint readable on the selected background", () => {
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        sshAccess={{
+          keys: [
+            { id: "k1", name: "Laptop", keyType: "ssh-ed25519", fingerprint: "SHA256:abcd1234" },
+          ],
+          selectedKeyIds: ["k1"],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange: vi.fn(),
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    // The name and fingerprint text are present and legible regardless of
+    // selection state — they use foreground tokens, not the gradient bg.
+    const laptopBtn = screen.getByText("Laptop").closest("button") as HTMLButtonElement
+    expect(laptopBtn).toHaveAttribute("aria-pressed", "true")
+    expect(screen.getByText("ssh-ed25519 · SHA256:abcd1234")).toBeInTheDocument()
+    // Foreground-readable text classes must be present on the selected key.
+    expect(laptopBtn.innerHTML).toContain("text-foreground")
+  })
+
+  it("toggles SSH key selection and preserves the deploy payload shape", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="multistep"
+        onSubmit={onSubmit}
+        sshAccess={{
+          keys: [
+            { id: "k1", name: "Laptop", keyType: "ssh-ed25519", fingerprint: "SHA256:aa" },
+          ],
+          selectedKeyIds: [],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange,
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    // Selecting the key propagates to the controlled handler.
+    const laptopBtn = screen.getByText("Laptop").closest("button") as HTMLButtonElement
+    await userEvent.click(laptopBtn)
+    expect(onSelectedKeyIdsChange).toHaveBeenCalledWith(["k1"])
+
+    // Deploy still fires and the submit payload keeps its existing shape
+    // (no new SSH fields leaked into ProvisioningConfig).
+    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    const config: ProvisioningConfig = onSubmit.mock.calls[0][0]
+    expect(Object.keys(config).sort()).toEqual(
+      [
+        "bare",
+        "cpuCores",
+        "driver",
+        "environment",
+        "envVars",
+        "gitUrl",
+        "name",
+        "ramGB",
+        "startupScriptIds",
+        "storageGB",
+      ].sort(),
+    )
+  })
+})
+
 describe("resolveEnvironment", () => {
   it("resolves a known stack ID to its display info", () => {
     const entry: EnvironmentEntry = { id: "ethereum", description: "Ethereum dev env" }
@@ -355,8 +561,7 @@ describe("ProvisioningWizard — resourceLimits", () => {
     expect(config.storageGB).toBeLessThan(256)
   })
 
-  it("'Start from scratch' clamps values to resourceLimits", async () => {
-    const user = userEvent.setup()
+  it("clamps default config values to resourceLimits as one page", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined)
 
     render(
@@ -369,13 +574,10 @@ describe("ProvisioningWizard — resourceLimits", () => {
       />,
     )
 
-    // Click "Start from scratch"
-    await user.click(screen.getByText("Start from scratch"))
+    // No stepper navigation is present; deploy is immediately available.
+    expect(screen.queryByText(/continue to/i)).not.toBeInTheDocument()
 
-    // Navigate to the final step so deploy is available
-    await user.click(screen.getByText(/continue to/i))
-
-    await user.click(screen.getByRole("button", { name: /deploy workspace/i }))
+    await userEvent.click(screen.getByRole("button", { name: /deploy workspace/i }))
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledOnce()
@@ -746,9 +948,7 @@ describe("ProvisioningWizard — pricing view toggle", () => {
     expect(screen.getByText("$0.00026389/s")).toBeInTheDocument()
   })
 
-  it("'Start from scratch' resets the pricing view to hourly", async () => {
-    const user = userEvent.setup()
-
+  it("starts in hourly view by default as one page", async () => {
     render(
       <ProvisioningWizard
         variant="multistep"
@@ -757,13 +957,8 @@ describe("ProvisioningWizard — pricing view toggle", () => {
       />,
     )
 
-    // Switch to per-second view, then start over.
-    await user.click(screen.getByRole("button", { name: "Per Second" }))
-    expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "true")
-
-    await user.click(screen.getByText("Start from scratch"))
-
-    // The hourly toggle should be active again.
+    // The hourly toggle is active by default; no stepper navigation is present.
+    expect(screen.queryByText(/continue to/i)).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Per Hour" })).toHaveAttribute("aria-pressed", "true")
     expect(screen.getByRole("button", { name: "Per Second" })).toHaveAttribute("aria-pressed", "false")
   })
@@ -846,5 +1041,259 @@ describe("ProvisioningWizard — planTiers", () => {
       // the locked rows should carry it (they use `border-border` instead).
       expect(btn.className).not.toContain("border-primary")
     }
+  })
+})
+
+describe("ProvisioningWizard — add SSH key dialog", () => {
+  it("hides the add-key action when onCreateKey is not provided", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={{
+          keys: [makeSshKey()],
+          selectedKeyIds: [],
+          inlinePublicKeys: "",
+          onSelectedKeyIdsChange: vi.fn(),
+          onInlinePublicKeysChange: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: /add ssh key/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders the add-key action when onCreateKey is provided", () => {
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({ onCreateKey: vi.fn() })}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: /add ssh key/i }),
+    ).toBeInTheDocument()
+  })
+
+  it("opens the dialog with Name and Public key fields", async () => {
+    const user = userEvent.setup()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({ onCreateKey: vi.fn() })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByLabelText("Name")).toBeInTheDocument()
+    expect(within(dialog).getByLabelText("Public key")).toBeInTheDocument()
+  })
+
+  it("shows inline validation errors and does not call create on empty submit", async () => {
+    const user = userEvent.setup()
+    const onCreateKey = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({ onCreateKey })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    expect(within(dialog).getByText("Name is required")).toBeInTheDocument()
+    expect(within(dialog).getByText("Public key is required")).toBeInTheDocument()
+    expect(onCreateKey).not.toHaveBeenCalled()
+  })
+
+  it("rejects a malformed public key with an inline error", async () => {
+    const user = userEvent.setup()
+    const onCreateKey = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({ onCreateKey })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "My key")
+    await user.type(within(dialog).getByLabelText("Public key"), "not-a-key")
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    expect(
+      within(dialog).getByText(/enter a valid public key/i),
+    ).toBeInTheDocument()
+    expect(onCreateKey).not.toHaveBeenCalled()
+  })
+
+  it("on success calls create + refresh, closes, clears, and selects the new key id", async () => {
+    const user = userEvent.setup()
+    const created = makeSshKey({ id: "new-1", name: "New" })
+    const onCreateKey = vi.fn().mockResolvedValue(created)
+    const onRefreshKeys = vi.fn().mockResolvedValue([created])
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey,
+          onRefreshKeys,
+          onSelectedKeyIdsChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "New")
+    await user.type(within(dialog).getByLabelText("Public key"), VALID_PUBLIC_KEY)
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    await waitFor(() => {
+      expect(onCreateKey).toHaveBeenCalledWith({
+        name: "New",
+        publicKey: VALID_PUBLIC_KEY,
+      })
+    })
+    expect(onRefreshKeys).toHaveBeenCalledOnce()
+    // New key selected by id; selection cleared of duplicates.
+    expect(onSelectedKeyIdsChange).toHaveBeenCalledWith(["new-1"])
+    // Dialog closed.
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
+  it("does not call onRefreshKeys when it is not provided", async () => {
+    const user = userEvent.setup()
+    const created = makeSshKey({ id: "new-1", name: "New" })
+    const onCreateKey = vi.fn().mockResolvedValue(created)
+    const onRefreshKeys = undefined
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey,
+          onRefreshKeys,
+          onSelectedKeyIdsChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "New")
+    await user.type(within(dialog).getByLabelText("Public key"), VALID_PUBLIC_KEY)
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    await waitFor(() => {
+      expect(onCreateKey).toHaveBeenCalledOnce()
+    })
+    expect(onSelectedKeyIdsChange).toHaveBeenCalledWith(["new-1"])
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+  })
+
+  it("does not auto-select when onCreateKey returns no key", async () => {
+    const user = userEvent.setup()
+    const onCreateKey = vi.fn().mockResolvedValue(undefined)
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey,
+          onSelectedKeyIdsChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "New")
+    await user.type(within(dialog).getByLabelText("Public key"), VALID_PUBLIC_KEY)
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    await waitFor(() => {
+      expect(onCreateKey).toHaveBeenCalledOnce()
+    })
+    expect(onSelectedKeyIdsChange).not.toHaveBeenCalled()
+  })
+
+  it("on failure shows an inline error, keeps the dialog open and values intact", async () => {
+    const user = userEvent.setup()
+    const onCreateKey = vi.fn().mockRejectedValue(new Error("Key already exists"))
+    const onSelectedKeyIdsChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey,
+          onSelectedKeyIdsChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "Dup")
+    await user.type(within(dialog).getByLabelText("Public key"), VALID_PUBLIC_KEY)
+    await user.click(within(dialog).getByRole("button", { name: /add key/i }))
+
+    await waitFor(() => {
+      expect(within(dialog).getByText("Key already exists")).toBeInTheDocument()
+    })
+    // Dialog still present and draft preserved.
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(within(dialog).getByLabelText("Name")).toHaveValue("Dup")
+    expect(within(dialog).getByLabelText("Public key")).toHaveValue(VALID_PUBLIC_KEY)
+    // No selection change on failure.
+    expect(onSelectedKeyIdsChange).not.toHaveBeenCalled()
+  })
+
+  it("cancel closes the dialog without changing selected keys or inline public keys", async () => {
+    const user = userEvent.setup()
+    const onSelectedKeyIdsChange = vi.fn()
+    const onInlinePublicKeysChange = vi.fn()
+    render(
+      <ProvisioningWizard
+        variant="flat"
+        sshAccess={makeSshAccess({
+          onCreateKey: vi.fn(),
+          selectedKeyIds: ["k1"],
+          inlinePublicKeys: VALID_PUBLIC_KEY,
+          onSelectedKeyIdsChange,
+          onInlinePublicKeysChange,
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /add ssh key/i }))
+    const dialog = await screen.findByRole("dialog")
+
+    await user.type(within(dialog).getByLabelText("Name"), "Draft")
+    await user.click(within(dialog).getByRole("button", { name: /cancel/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+    expect(onSelectedKeyIdsChange).not.toHaveBeenCalled()
+    expect(onInlinePublicKeysChange).not.toHaveBeenCalled()
   })
 })

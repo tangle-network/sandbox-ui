@@ -30,6 +30,12 @@ export interface SidebarLayoutNavItem {
   /** Render this item as the panel toggle instead of a link. */
   togglesPanel?: boolean
   badge?: number
+  /**
+   * React Router prefetch behavior for this link, forwarded to the underlying
+   * `<Link prefetch>`. Omit to preserve the router's default (no prefetch).
+   * Ignored for panel-toggle items and for `LinkComponent`s that don't support it.
+   */
+  prefetch?: "none" | "intent" | "render" | "viewport"
 }
 
 export interface SidebarLayoutProps {
@@ -174,7 +180,12 @@ function SidebarLayoutInner({
                   />
                 ) : (
                   <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={railLabels} asChild>
-                    <Link href={item.href} to={item.href} onClick={handleNavClick} />
+                    <Link
+                      href={item.href}
+                      to={item.href}
+                      onClick={handleNavClick}
+                      {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
+                    />
                   </RailButton>
                 ),
               )}

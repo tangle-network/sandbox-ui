@@ -1,6 +1,7 @@
 export {
   IntegrationsPanel,
   type IntegrationsPanelProps,
+  type IntegrationSort,
 } from "./integrations-panel";
 export {
   useIntegrations,

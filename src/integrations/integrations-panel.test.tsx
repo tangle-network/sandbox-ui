@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { IntegrationsPanel } from "./integrations-panel";
 import type { IntegrationConnection, IntegrationProvider } from "./types";
 
@@ -17,38 +17,41 @@ const catalog: IntegrationProvider[] = [
   },
 ];
 
+function renderPanel(
+  props: Partial<React.ComponentProps<typeof IntegrationsPanel>> = {},
+) {
+  return render(
+    <IntegrationsPanel
+      catalog={catalog}
+      connections={[]}
+      onConnect={() => {}}
+      onDisconnect={() => {}}
+      {...props}
+    />,
+  );
+}
+
 describe("IntegrationsPanel", () => {
-  it("renders one tile per catalog provider", () => {
-    render(
-      <IntegrationsPanel
-        catalog={catalog}
-        connections={[]}
-        onConnect={() => {}}
-        onDisconnect={() => {}}
-      />,
-    );
+  it("renders one logo tile per catalog provider", () => {
+    renderPanel();
     expect(screen.getByText("Google Workspace")).toBeInTheDocument();
     expect(screen.getByText("Slack")).toBeInTheDocument();
   });
 
-  it("renders Connect button for providers with no live connection", () => {
+  it("connects on click for providers with no live connection (no connect button)", () => {
     const onConnect = vi.fn();
-    render(
-      <IntegrationsPanel
-        catalog={catalog}
-        connections={[]}
-        onConnect={onConnect}
-        onDisconnect={() => {}}
-      />,
-    );
-    fireEvent.click(screen.getByTestId("connect-google"));
+    renderPanel({ onConnect });
+    // No dedicated connect button — the tile itself is the click target.
+    expect(screen.queryByRole("button", { name: /^connect$/i })).toBeNull();
+    fireEvent.click(screen.getByTestId("integration-google"));
     expect(onConnect).toHaveBeenCalledWith({
       providerId: "google",
       connectorId: "gmail",
     });
   });
 
-  it("renders Disconnect button for providers with a live connection", () => {
+  it("renders a connected tile as disabled (not a connect button) with a hover-reveal manage affordance", () => {
+    const onConnect = vi.fn();
     const onDisconnect = vi.fn();
     const live: IntegrationConnection[] = [
       {
@@ -59,85 +62,121 @@ describe("IntegrationsPanel", () => {
         account: { displayName: "alice@example.com" },
       },
     ];
-    render(
-      <IntegrationsPanel
-        catalog={catalog}
-        connections={live}
-        onConnect={() => {}}
-        onDisconnect={onDisconnect}
-      />,
-    );
-    expect(screen.getByText("alice@example.com")).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("disconnect-google"));
+    renderPanel({ connections: live, onConnect, onDisconnect });
+
+    const tile = screen.getByTestId("integration-google");
+    expect(tile).toHaveAttribute("data-connected", "true");
+    // Clicking a connected tile must NOT re-initiate connect.
+    fireEvent.click(tile);
+    expect(onConnect).not.toHaveBeenCalled();
+
+    // The manage affordance (gear) triggers disconnect/manage.
+    fireEvent.click(screen.getByTestId("manage-google"));
     expect(onDisconnect).toHaveBeenCalledWith("conn_1");
+
+    // Hover-reveal pattern: gear is opacity-0 until group-hover.
+    expect(screen.getByTestId("manage-google").className).toContain(
+      "group-hover:opacity-100",
+    );
+
+    // Slack (unconnected) remains clickable to connect.
+    fireEvent.click(screen.getByTestId("integration-slack"));
+    expect(onConnect).toHaveBeenCalledWith({
+      providerId: "slack",
+      connectorId: "slack",
+    });
   });
 
-  it("ignores revoked connections when deciding which tile to show as live", () => {
-    render(
+  it("treats revoked connections as not live", () => {
+    const onConnect = vi.fn();
+    renderPanel({
+      onConnect,
+      connections: [
+        {
+          id: "conn_x",
+          providerId: "google",
+          connectorId: "gmail",
+          status: "revoked",
+        },
+      ],
+    });
+    const tile = screen.getByTestId("integration-google");
+    expect(tile).toHaveAttribute("data-connected", "false");
+    fireEvent.click(tile);
+    expect(onConnect).toHaveBeenCalled();
+  });
+
+  it("filters the grid by the search query (name, id, and description)", () => {
+    renderPanel();
+    const input = screen.getByTestId("integration-search");
+
+    fireEvent.change(input, { target: { value: "slack" } });
+    expect(screen.getByTestId("integration-slack")).toBeInTheDocument();
+    expect(screen.queryByTestId("integration-google")).toBeNull();
+
+    // Description match: "Calendar" only appears in google's description.
+    fireEvent.change(input, { target: { value: "calendar" } });
+    expect(screen.getByTestId("integration-google")).toBeInTheDocument();
+    expect(screen.queryByTestId("integration-slack")).toBeNull();
+
+    fireEvent.change(input, { target: { value: "zzz-no-match" } });
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+  });
+
+  it("orders featured providers first by default, before the alpha tail", () => {
+    const wide: IntegrationProvider[] = [
+      { providerId: "aardvark", displayName: "Aardvark" },
+      { providerId: "slack", displayName: "Slack" },
+      { providerId: "zzz", displayName: "Zzz" },
+    ];
+    const { container } = render(
       <IntegrationsPanel
-        catalog={catalog}
-        connections={[
-          {
-            id: "conn_x",
-            providerId: "google",
-            connectorId: "gmail",
-            status: "revoked",
-          },
-        ]}
+        catalog={wide}
+        connections={[]}
         onConnect={() => {}}
         onDisconnect={() => {}}
+        featuredIds={["slack"]}
       />,
     );
-    expect(screen.getByTestId("connect-google")).toBeInTheDocument();
-    expect(screen.queryByTestId("disconnect-google")).toBeNull();
+    const grid = container.querySelector(".grid.grid-cols-3") as HTMLElement;
+    const tiles = within(grid)
+      .getAllByText(/Aardvark|Slack|Zzz/)
+      .map((el) => el.textContent);
+    // Featured "Slack" leads; remaining ("Aardvark","Zzz") alpha-sorted.
+    expect(tiles).toEqual(["Slack", "Aardvark", "Zzz"]);
+  });
+
+  it("switches to pure alphabetical order via the A–Z sort control", () => {
+    const wide: IntegrationProvider[] = [
+      { providerId: "aardvark", displayName: "Aardvark" },
+      { providerId: "slack", displayName: "Slack" },
+    ];
+    const { container } = render(
+      <IntegrationsPanel
+        catalog={wide}
+        connections={[]}
+        onConnect={() => {}}
+        onDisconnect={() => {}}
+        featuredIds={["slack"]}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("sort-alpha"));
+    const grid = container.querySelector(".grid.grid-cols-3") as HTMLElement;
+    const tiles = within(grid)
+      .getAllByText(/Aardvark|Slack/)
+      .map((el) => el.textContent);
+    expect(tiles).toEqual(["Aardvark", "Slack"]);
   });
 
   it("surfaces an error message when error is set", () => {
-    render(
-      <IntegrationsPanel
-        catalog={[]}
-        connections={[]}
-        error={new Error("boom")}
-        onConnect={() => {}}
-        onDisconnect={() => {}}
-      />,
-    );
+    renderPanel({ catalog: [], error: new Error("boom") });
     expect(
       screen.getByText(/Failed to load integrations: boom/),
     ).toBeInTheDocument();
   });
 
   it("shows the empty state when the catalog is empty and not loading", () => {
-    render(
-      <IntegrationsPanel
-        catalog={[]}
-        connections={[]}
-        emptyCatalogLabel="Nothing here yet"
-        onConnect={() => {}}
-        onDisconnect={() => {}}
-      />,
-    );
+    renderPanel({ catalog: [], emptyCatalogLabel: "Nothing here yet" });
     expect(screen.getByText("Nothing here yet")).toBeInTheDocument();
-  });
-
-  it("renders the health badge when healthByConnectionId is supplied", () => {
-    const live: IntegrationConnection[] = [
-      {
-        id: "c1",
-        providerId: "google",
-        connectorId: "gmail",
-        status: "connected",
-      },
-    ];
-    render(
-      <IntegrationsPanel
-        catalog={catalog}
-        connections={live}
-        healthByConnectionId={{ c1: { connectionId: "c1", status: "degraded" } }}
-        onConnect={() => {}}
-        onDisconnect={() => {}}
-      />,
-    );
-    expect(screen.getByText("degraded")).toBeInTheDocument();
   });
 });

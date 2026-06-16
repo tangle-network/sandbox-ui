@@ -182,6 +182,21 @@ function renderView() {
   return render(<TerminalView apiUrl="https://test.local" token="t" />)
 }
 
+describe("TerminalView — connectionId passthrough", () => {
+  it("forwards a provided connectionId into usePtySession", () => {
+    render(
+      <TerminalView
+        apiUrl="https://test.local"
+        token="t"
+        connectionId="terminal-xyz"
+      />,
+    )
+    expect(m.usePtySessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ connectionId: "terminal-xyz" }),
+    )
+  })
+})
+
 describe("TerminalView — WebGL renderer load", () => {
   it("constructs the WebGL addon and loads it onto the terminal", async () => {
     renderView()

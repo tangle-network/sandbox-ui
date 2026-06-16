@@ -58,6 +58,12 @@ export interface TerminalViewProps {
   prompt?: string;
   /** Whether the terminal tab is currently active and visible. */
   isActive?: boolean;
+  /**
+   * Stable id reused across remounts so the sidecar restores the same
+   * PTY session instead of spawning a fresh shell. Omit for a new
+   * session per mount.
+   */
+  connectionId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -100,6 +106,7 @@ export default function TerminalView({
   title = "Terminal",
   subtitle = "Connected to PTY session",
   isActive = true,
+  connectionId,
 }: TerminalViewProps) {
   const resolvedTheme = useMemo(
     () => ({ ...DEFAULT_TERMINAL_THEME, ...theme }),
@@ -136,6 +143,7 @@ export default function TerminalView({
     apiUrl,
     token,
     onData,
+    connectionId,
   });
 
   // Initialize xterm

@@ -11,6 +11,14 @@ export interface UsePtySessionOptions {
   token: string;
   /** Called with raw PTY output (may contain ANSI escape codes). */
   onData: (data: string) => void;
+  /**
+   * Stable id identifying this terminal connection to the sidecar.
+   * Reused on every connect/reconnect so the sidecar restores the same
+   * PTY session (within its reconnect window) instead of spawning a
+   * fresh shell. When omitted, a random id is generated per connect —
+   * so the session does not survive a remount.
+   */
+  connectionId?: string;
 }
 
 export interface UsePtySessionReturn {
@@ -56,16 +64,20 @@ function createEmptyBatch(): PendingBatch {
 
 /**
  * Time we wait for `new WebSocket(...)` to reach OPEN before falling
- * back to HTTP+SSE. Kept short because a working sidecar/CF Worker WS
- * upgrade resolves in well under 200ms; anything longer points at a
- * proxy that doesn't speak WebSocket and we want SSE to take over fast.
+ * back to the HTTP+SSE transport. The cold terminal-WS upgrade can
+ * traverse several proxy hops (browser → app worker → sandbox edge →
+ * orchestrator dial → host-agent → sidecar) and take a few seconds to
+ * establish; the budget must cover that so the direct WS path — the
+ * only one that sends `init` — wins instead of dropping through to the
+ * fallback dial on a cold connect.
  */
-const WS_OPEN_TIMEOUT_MS = 1500;
+const WS_OPEN_TIMEOUT_MS = 10000;
 
 /** Convert an http(s) base URL into the matching ws(s) URL. */
 function toWsUrl(apiUrl: string, sessionId: string): string | null {
   try {
-    const url = new URL(`${apiUrl}/terminals/${sessionId}/ws`);
+    const base = typeof window !== 'undefined' ? window.location.href : undefined;
+    const url = new URL(`${apiUrl}/terminals/${sessionId}/ws`, base);
     if (url.protocol === 'https:') url.protocol = 'wss:';
     else if (url.protocol === 'http:') url.protocol = 'ws:';
     else return null;
@@ -124,27 +136,15 @@ function toBearerSubprotocol(token: string): string | null {
     .replace(/=+$/, '')}`;
 }
 
-// Encode stdin text as a UTF-8 binary frame. Distinguishes input from
-// JSON control frames purely by frame type — no in-band marker — so a
-// user typing `{` does not collide with a control message.
-//
-// `connectWs` surrenders the WS path entirely when `TextEncoder` is
-// missing (see the guard there), so the hook falls back to HTTP+SSE
-// rather than running with a half-broken WS. The runtime check below
-// is therefore unreachable in practice — kept as defense-in-depth so a
-// future refactor that removes the guard fails loudly with a clear
-// message instead of silently sending stdin as a TEXT frame, which the
-// server treats as a JSON control channel and would drop wholesale.
-const stdinEncoder =
-  typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+const DEFAULT_TERMINAL_COLS = 80;
+const DEFAULT_TERMINAL_ROWS = 24;
 
-function encodeStdin(text: string): ArrayBufferView {
-  if (!stdinEncoder) {
-    throw new Error(
-      'TextEncoder is unavailable; WebSocket transport cannot encode stdin',
-    );
+function createTerminalConnectionId(): string {
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi && typeof cryptoApi.randomUUID === 'function') {
+    return `terminal-${cryptoApi.randomUUID()}`;
   }
-  return stdinEncoder.encode(text);
+  return `terminal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -155,34 +155,54 @@ function encodeStdin(text: string): ArrayBufferView {
  * Manages a PTY session against the sidecar terminal API.
  *
  * Transport:
- *   1. POST /terminals creates the session.
- *   2. The hook tries WebSocket: GET /terminals/:id/ws (Upgrade).
- *      - Server → client: TEXT frames carrying raw PTY output.
- *      - Client → server: BINARY frames carrying stdin (UTF-8); TEXT
- *        frames carrying JSON control messages (`{"type":"resize",...}`).
- *   3. If the WS does not reach OPEN within WS_OPEN_TIMEOUT_MS, or it
- *      errors before opening, the hook falls back to SSE+POST:
+ *   1. Try the current sidecar WebSocket contract directly:
+ *      GET /terminals/:id/ws, then send `{"type":"init",...}`.
+ *      - Server → client: BINARY frames carrying PTY output; TEXT frames
+ *        carrying lifecycle/control messages.
+ *      - Client → server: TEXT frames carrying JSON input/resize messages.
+ *   2. If direct WS does not reach OPEN within WS_OPEN_TIMEOUT_MS, or it
+ *      errors before opening, fall back to the older terminal contract:
+ *      - POST /terminals creates the session.
+ *      - GET /terminals/:id/ws tries the older WS transport.
  *      - GET /terminals/:id/stream (SSE for output)
  *      - POST /terminals/:id/input (one batched POST at a time)
  *      - PATCH /terminals/:id (resize)
- *   4. DELETE /terminals/:id closes the session (both transports).
+ *   3. DELETE /terminals/:id closes sessions created by the older REST API.
  *
  * The WS path eliminates the per-keystroke HTTP round-trip that
  * dominates typing latency through edge proxies; the HTTP+SSE path is
  * preserved as a fallback so the hook keeps working against
  * deployments that have not yet shipped the WS endpoint.
  */
-export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): UsePtySessionReturn {
+export function usePtySession({ apiUrl, token, onData, connectionId: providedConnectionId }: UsePtySessionOptions): UsePtySessionReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sessionIdRef = useRef<string | null>(null);
+  // Monotonic token bumped once per `connect()` call. Each cycle captures
+  // its value and bails when it no longer matches, so a superseded cycle
+  // stops instead of running the fallback. This must NOT key off the
+  // connection id: a caller-supplied stable `connectionId` is identical
+  // across concurrent cycles (StrictMode double-invoke, token refresh
+  // mid-handshake), so an id comparison cannot tell cycles apart.
+  const connectGenRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const retryCountRef = useRef(0);
   const mountedRef = useRef(true);
   const onDataRef = useRef(onData);
+  // Latest token, read at dial/request time. Kept in a ref — NOT a
+  // dependency — so a freshly minted token (the connection endpoint
+  // mints a new one on every call, incl. the dev double-invoke and the
+  // periodic refresh) does not re-run the connect effect and tear down
+  // a live/connecting socket. The token only matters at handshake time.
+  const tokenRef = useRef(token);
   const connectStreamRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
+  const reconnectRef = useRef<(() => void) | null>(null);
+  const shouldDeleteSessionRef = useRef(false);
+  const transportReadyRef = useRef(false);
+  const colsRef = useRef(DEFAULT_TERMINAL_COLS);
+  const rowsRef = useRef(DEFAULT_TERMINAL_ROWS);
 
   // Active WebSocket, if the WS transport won the race in `connect`.
   // Null when running on the SSE+POST fallback.
@@ -290,21 +310,26 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       inputAbortRef.current.abort();
       inputAbortRef.current = null;
     }
+    transportReadyRef.current = false;
     if (sessionIdRef.current) {
       const sid = sessionIdRef.current;
+      const shouldDeleteSession = shouldDeleteSessionRef.current;
       sessionIdRef.current = null;
-      fetch(`${apiUrl}/terminals/${sid}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: 'include',
-      }).catch(() => {});
+      shouldDeleteSessionRef.current = false;
+      if (shouldDeleteSession) {
+        fetch(`${apiUrl}/terminals/${sid}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${tokenRef.current}` },
+          credentials: 'include',
+        }).catch(() => {});
+      }
     }
     // Reject any keystrokes that were buffered waiting for a session.
     // Without this, waiters enqueued between `connect` starting and
     // `cleanup` running would stay pending indefinitely.
     rejectPendingInput('Terminal session is not connected');
     setIsConnected(false);
-  }, [apiUrl, token, abortStream, closeWs, rejectPendingInput]);
+  }, [apiUrl, abortStream, closeWs, rejectPendingInput]);
 
   // -- Try WebSocket transport ------------------------------------------------
   //
@@ -314,17 +339,12 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   // WS_OPEN_TIMEOUT_MS elapsed. The caller falls back to SSE+POST when
   // this returns `false`.
 
-  const connectWs = useCallback((sessionId: string): Promise<boolean> => {
+  const connectWs = useCallback((
+    sessionId: string,
+    options: { initOnOpen?: boolean } = {},
+  ): Promise<boolean> => {
     return new Promise<boolean>((resolve) => {
-      // Both globals are required to drive the WS transport: WebSocket
-      // for the wire and TextEncoder for stdin framing (see encodeStdin).
-      // If either is missing, surrender so the caller falls back to the
-      // HTTP+SSE path rather than opening a socket we can't write to.
-      // We probe `stdinEncoder` rather than `typeof TextEncoder` because
-      // the encoder is captured once at module load — a runtime polyfill
-      // landing after import would lie to a `typeof` check while
-      // `encodeStdin` still throws.
-      if (typeof WebSocket === 'undefined' || stdinEncoder === null) {
+      if (typeof WebSocket === 'undefined') {
         resolve(false);
         return;
       }
@@ -333,7 +353,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         resolve(false);
         return;
       }
-      const subprotocol = toBearerSubprotocol(token);
+      const subprotocol = toBearerSubprotocol(tokenRef.current);
       if (!subprotocol) {
         resolve(false);
         return;
@@ -397,7 +417,25 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
           return;
         }
         pendingWsRef.current = null;
+        if (options.initOnOpen) {
+          try {
+            ws.send(JSON.stringify({
+              type: 'init',
+              cols: colsRef.current,
+              rows: rowsRef.current,
+            }));
+          } catch {
+            try {
+              ws.close();
+            } catch {
+              // already gone
+            }
+            settle(false);
+            return;
+          }
+        }
         wsRef.current = ws;
+        transportReadyRef.current = true;
         setIsConnected(true);
         setError(null);
         retryCountRef.current = 0;
@@ -421,6 +459,27 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
             if (mountedRef.current) onDataRef.current(t);
           }).catch(() => {});
           return;
+        }
+        if (typeof data === 'string') {
+          try {
+            const event = JSON.parse(text);
+            if (event?.type === 'ready') {
+              return;
+            }
+            if (event?.type === 'error') {
+              const message = typeof event.message === 'string'
+                ? event.message
+                : 'Terminal WebSocket error';
+              setError(message);
+              return;
+            }
+            if (event?.type === 'exit') {
+              setIsConnected(false);
+              return;
+            }
+          } catch {
+            // Not a lifecycle/control JSON frame; forward as PTY output.
+          }
         }
         if (text) onDataRef.current(text);
       };
@@ -451,6 +510,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         const wasActive = wsRef.current === ws;
         if (wasActive) {
           wsRef.current = null;
+          transportReadyRef.current = false;
         }
         if (!opened) {
           // Never reached OPEN — surrender so the caller falls back.
@@ -470,13 +530,17 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         if (sessionIdRef.current) {
           retryTimerRef.current = setTimeout(() => {
             if (mountedRef.current && sessionIdRef.current) {
-              connectStreamRef.current?.(sessionIdRef.current);
+              if (shouldDeleteSessionRef.current) {
+                connectStreamRef.current?.(sessionIdRef.current);
+              } else {
+                reconnectRef.current?.();
+              }
             }
           }, 1000);
         }
       };
     });
-  }, [apiUrl, token]);
+  }, [apiUrl]);
 
   // -- Connect SSE stream to an existing terminal session --------------------
 
@@ -489,7 +553,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       abortRef.current = controller;
 
       const streamRes = await fetch(`${apiUrl}/terminals/${sessionId}/stream`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${tokenRef.current}` },
         credentials: 'include',
         signal: controller.signal,
       });
@@ -501,9 +565,11 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       }
 
       if (mountedRef.current) {
+        transportReadyRef.current = true;
         setIsConnected(true);
         setError(null);
         retryCountRef.current = 0;
+        ensureDrainRunningRef.current?.();
       }
 
       const reader = streamRes.body.getReader();
@@ -545,6 +611,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
 
       // Stream ended cleanly (server closed connection) — reconnect to existing session
       if (mountedRef.current) {
+        transportReadyRef.current = false;
         setIsConnected(false);
         retryTimerRef.current = setTimeout(() => {
           if (mountedRef.current && sessionIdRef.current) {
@@ -557,6 +624,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       if (mountedRef.current) {
         const message = err instanceof Error ? err.message : 'Stream connection failed';
         setError(message);
+        transportReadyRef.current = false;
         setIsConnected(false);
 
         // Don't retry on client errors (4xx) — they won't resolve on retry
@@ -574,23 +642,51 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         }
       }
     }
-  }, [apiUrl, token, abortStream]);
+  }, [apiUrl, abortStream]);
 
   onDataRef.current = onData;
+  tokenRef.current = token;
   connectStreamRef.current = connectStream;
 
   // -- Full connect: create terminal + open transport ------------------------
 
   const connect = useCallback(async () => {
     cleanup();
+    const myGen = ++connectGenRef.current;
     retryCountRef.current = 0;
     setError(null);
 
     try {
+      // Reuse the caller-supplied stable id when present so the sidecar
+      // restores the same PTY across remounts; otherwise mint a throwaway
+      // id (session does not survive a remount).
+      const connectionId = providedConnectionId ?? createTerminalConnectionId();
+      if (!mountedRef.current) return;
+      sessionIdRef.current = connectionId;
+      shouldDeleteSessionRef.current = false;
+      transportReadyRef.current = false;
+      inputAbortRef.current = new AbortController();
+
+      const directWsOk = await connectWs(connectionId, { initOnOpen: true });
+      if (!mountedRef.current || connectGenRef.current !== myGen) return;
+
+      ensureDrainRunningRef.current?.();
+
+      if (directWsOk) {
+        return;
+      }
+
+      sessionIdRef.current = null;
+      transportReadyRef.current = false;
+      if (inputAbortRef.current) {
+        inputAbortRef.current.abort();
+        inputAbortRef.current = null;
+      }
+
       const res = await fetch(`${apiUrl}/terminals`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenRef.current}`,
           'Content-Type': 'application/json',
         },
         credentials: 'include',
@@ -606,6 +702,8 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
 
       if (!mountedRef.current) return;
       sessionIdRef.current = sessionId;
+      shouldDeleteSessionRef.current = true;
+      transportReadyRef.current = false;
       // Paired with the abort in `cleanup`. Lives for the duration of
       // the session so any input POST issued by the drain loop is
       // cancellable synchronously with session teardown.
@@ -614,15 +712,15 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       // Try the WebSocket transport first. Falls back to SSE+POST if
       // the WS does not open quickly — the existing input queue keeps
       // any keystrokes already buffered from being lost in the swap.
-      const wsOk = await connectWs(sessionId);
-      // Bail if the hook unmounted OR a newer connect cycle has
-      // taken over (cleanup nulls sessionIdRef, then a subsequent
-      // connect populates it with a new session). Without the
-      // session-supersession check, this stale connect would fall
-      // through to `connectStream(sessionId)` against a session
-      // that's already been DELETEd, opening an SSE stream that
-      // briefly competes with the new transport.
-      if (!mountedRef.current || sessionIdRef.current !== sessionId) return;
+      // `initOnOpen` is required: the sidecar WS contract rejects any
+      // first frame that is not `init`, so this dial must send it too.
+      const wsOk = await connectWs(sessionId, { initOnOpen: true });
+      // Bail if the hook unmounted OR a newer connect cycle has taken
+      // over. Without this supersession check, a stale connect would
+      // fall through to `connectStream(sessionId)` against a session
+      // that's already been DELETEd, opening an SSE stream that briefly
+      // competes with the new transport.
+      if (!mountedRef.current || connectGenRef.current !== myGen) return;
 
       // Flush any keystrokes that arrived between mount and now. They
       // were accepted into `pendingBatchRef` but the drain loop exited
@@ -644,14 +742,19 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       if (mountedRef.current) {
         const message = err instanceof Error ? err.message : 'Terminal connection failed';
         setError(message);
+        transportReadyRef.current = false;
         setIsConnected(false);
       }
     }
-  }, [apiUrl, token, cleanup, connectWs, connectStream]);
+  }, [apiUrl, providedConnectionId, cleanup, connectWs, connectStream]);
+  reconnectRef.current = connect;
 
   // -- Resize terminal -------------------------------------------------------
 
   const resizeTerminal = useCallback(async (cols: number, rows: number) => {
+    if (cols > 0) colsRef.current = cols;
+    if (rows > 0) rowsRef.current = rows;
+
     const sid = sessionIdRef.current;
     if (!sid || cols <= 0 || rows <= 0) return;
 
@@ -671,7 +774,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       const res = await fetch(`${apiUrl}/terminals/${sid}`, {
         method: 'PATCH',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenRef.current}`,
           'Content-Type': 'application/json',
         },
         credentials: 'include',
@@ -683,7 +786,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     } catch (err) {
       console.error('Failed to resize terminal', err);
     }
-  }, [apiUrl, token]);
+  }, [apiUrl]);
 
   // -- Send command ----------------------------------------------------------
   //
@@ -695,7 +798,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
   const drainInputQueue = useCallback(async () => {
     while (pendingBatchRef.current.data.length > 0) {
       const sid = sessionIdRef.current;
-      if (!sid) {
+      if (!sid || !transportReadyRef.current) {
         // No session yet (mount-time race: xterm is already accepting
         // input while `connect()` is still awaiting POST /terminals) or
         // we're between sessions after cleanup. Leave the buffer intact
@@ -719,7 +822,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
       const ws = wsRef.current;
       if (ws && ws.readyState === WebSocket.OPEN) {
         try {
-          ws.send(encodeStdin(batch.data));
+          ws.send(JSON.stringify({ type: 'input', data: batch.data }));
           for (const w of batch.waiters) w.resolve();
         } catch (err) {
           for (const w of batch.waiters) w.reject(err);
@@ -733,7 +836,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         const res = await fetch(`${apiUrl}/terminals/${sid}/input`, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${tokenRef.current}`,
             'Content-Type': 'application/json',
           },
           credentials: 'include',
@@ -762,7 +865,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
         // null so the next iteration exits immediately.
       }
     }
-  }, [apiUrl, token]);
+  }, [apiUrl]);
 
   const ensureDrainRunning = useCallback(() => {
     if (drainPromiseRef.current) return;
@@ -772,7 +875,7 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     // the slot as "busy". We detect that here and restart, rather than
     // letting the waiter sit forever.
     //
-    // The `sessionIdRef.current` guard prevents a microtask starvation
+    // The session/transport-ready guard prevents a microtask starvation
     // loop when `sendCommand` runs before `connect` has set the session:
     // `drainInputQueue` exits immediately (sid null), the `.finally`
     // fires as a microtask, sees pending data, and schedules another
@@ -785,7 +888,11 @@ export function usePtySession({ apiUrl, token, onData }: UsePtySessionOptions): 
     // and the drain picks up the buffered keystrokes from there.
     const run = (): Promise<void> =>
       drainInputQueue().finally(() => {
-        if (pendingBatchRef.current.data.length > 0 && sessionIdRef.current) {
+        if (
+          pendingBatchRef.current.data.length > 0 &&
+          sessionIdRef.current &&
+          transportReadyRef.current
+        ) {
           drainPromiseRef.current = run();
         } else {
           drainPromiseRef.current = null;

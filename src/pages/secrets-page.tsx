@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, Shield, CheckCircle, Users, ArrowRight } from "lucide-react"
+import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, Shield, CheckCircle, Users, ArrowRight, Upload } from "lucide-react"
 import { cn } from "../lib/utils"
 import {
   Dialog,
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@tangle-network/ui/primitives"
 import { InfoPanel } from "../dashboard/info-panel"
+import { parseEnvText, type EnvImportResult } from "./env-importer"
 
 export interface Secret {
   name: string
@@ -24,6 +25,8 @@ export interface SecretsApiClient {
   createSecret: (name: string, value: string) => Promise<void>
   deleteSecret: (name: string) => Promise<void>
 }
+
+type ImportRowStatus = "idle" | "success" | "error"
 
 export interface SecretsPageProps {
   apiClient: SecretsApiClient
@@ -58,6 +61,16 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
 
   const [deleteTarget, setDeleteTarget] = React.useState<string | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
+
+  // --- Bulk .env import state ---
+  const [isImportOpen, setIsImportOpen] = React.useState(false)
+  const [importText, setImportText] = React.useState("")
+  const [importResult, setImportResult] = React.useState<EnvImportResult | null>(null)
+  const [rowStatus, setRowStatus] = React.useState<ImportRowStatus[]>([])
+  const [rowMessages, setRowMessages] = React.useState<string[]>([])
+  const [isImportSaving, setIsImportSaving] = React.useState(false)
+  const [showImportValues, setShowImportValues] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
   const apiRef = React.useRef(apiClient)
   apiRef.current = apiClient
   const loadGenRef = React.useRef(0)
@@ -113,6 +126,96 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
     }
   }
 
+  const resetImportState = () => {
+    setImportText("")
+    setImportResult(null)
+    setRowStatus([])
+    setRowMessages([])
+    setShowImportValues(false)
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
+
+  const runParse = (text: string) => {
+    const result = parseEnvText(text)
+    setImportResult(result)
+    setRowStatus(new Array(result.rows.length).fill("idle"))
+    setRowMessages(new Array(result.rows.length).fill(""))
+  }
+
+  const handleParse = () => {
+    runParse(importText)
+  }
+
+  const handleImportFile = async (file: File | null) => {
+    if (!file) return
+    const text = await file.text()
+    setImportText(text)
+    runParse(text)
+  }
+
+  const updateRowKey = (index: number, next: string) => {
+    setImportResult((prev) => {
+      if (!prev) return prev
+      const rows = prev.rows.slice()
+      rows[index] = { ...rows[index], key: next.toUpperCase().replace(/[^A-Z0-9_]/g, "_") }
+      return { ...prev, rows }
+    })
+  }
+
+  const updateRowValue = (index: number, next: string) => {
+    setImportResult((prev) => {
+      if (!prev) return prev
+      const rows = prev.rows.slice()
+      rows[index] = { ...rows[index], value: next }
+      return { ...prev, rows }
+    })
+  }
+
+  const removeImportRow = (index: number) => {
+    setImportResult((prev) => {
+      if (!prev) return prev
+      const rows = prev.rows.slice()
+      rows.splice(index, 1)
+      return { ...prev, rows }
+    })
+    setRowStatus((prev) => { const next = prev.slice(); next.splice(index, 1); return next })
+    setRowMessages((prev) => { const next = prev.slice(); next.splice(index, 1); return next })
+  }
+
+  const importRows = importResult?.rows ?? []
+  const hasImportErrors = !!(importResult && importResult.errors.length > 0)
+  const importSaveDisabled =
+    isImportSaving ||
+    importRows.length === 0 ||
+    hasImportErrors ||
+    importRows.some((r) => !r.key || !/[A-Z0-9]/.test(r.key) || !r.value.trim())
+
+  const handleImportSave = async () => {
+    if (!importResult || importSaveDisabled) return
+    const rows = importResult.rows
+    setIsImportSaving(true)
+    const statuses: ImportRowStatus[] = new Array(rows.length).fill("idle")
+    const messages: string[] = new Array(rows.length).fill("")
+    for (let i = 0; i < rows.length; i++) {
+      try {
+        await apiRef.current.createSecret(rows[i].key, rows[i].value)
+        statuses[i] = "success"
+      } catch (err) {
+        statuses[i] = "error"
+        messages[i] = err instanceof Error ? err.message : "Failed to create secret"
+      }
+    }
+    setRowStatus(statuses)
+    setRowMessages(messages)
+    setIsImportSaving(false)
+    // Refresh so successful secrets appear in the (masked) list.
+    await loadSecrets(false)
+    if (statuses.every((s) => s === "success")) {
+      setIsImportOpen(false)
+      resetImportState()
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     try {
       const ts = /^\d+$/.test(dateStr) ? Number(dateStr) : dateStr
@@ -136,14 +239,24 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             Secrets are securely stored and automatically exposed as environment variables across all your sandboxes.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
-        >
-          <Plus className="h-4 w-4" />
-          New Secret
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsImportOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors active:scale-[0.97]"
+          >
+            <Upload className="h-4 w-4" />
+            Import .env
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
+          >
+            <Plus className="h-4 w-4" />
+            New Secret
+          </button>
+        </div>
       </div>
 
       {/* Team-secrets hint — rendered only when the host app opts in.
@@ -279,6 +392,165 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
               className="rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 active:scale-[0.97]"
             >
               {isCreating ? "Creating..." : "Create Secret"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk .env import dialog */}
+      <Dialog open={isImportOpen} onOpenChange={(open) => { if (!open) { setIsImportOpen(false); resetImportState() } }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Import Secrets</DialogTitle>
+            <DialogDescription>
+              Upload a <span className="font-mono">.env</span> file or paste key-value pairs. Review and edit each row before saving.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Source controls */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".env,.txt,text/plain"
+                  aria-label="Upload .env file"
+                  className="hidden"
+                  onChange={(e) => handleImportFile(e.target.files?.[0] ?? null)}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  Choose .env file
+                </button>
+                <button
+                  type="button"
+                  onClick={handleParse}
+                  disabled={!importText.trim()}
+                  className="rounded-md bg-[var(--btn-primary-bg)] px-3 py-2 text-xs font-bold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50"
+                >
+                  Parse
+                </button>
+              </div>
+              <textarea
+                aria-label="Paste .env contents"
+                placeholder={"Paste .env contents, e.g.\nAPI_KEY=abc123\n# comment\nexport DB_URL=postgres://localhost"}
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                rows={6}
+                spellCheck={false}
+                className="w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            {/* Parse errors */}
+            {importResult && importResult.errors.length > 0 && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
+                <p className="mb-1 text-xs font-bold uppercase tracking-widest text-destructive">
+                  {importResult.errors.length} line{importResult.errors.length !== 1 ? "s" : ""} could not be parsed
+                </p>
+                <ul className="space-y-1">
+                  {importResult.errors.map((err) => (
+                    <li key={err.lineNumber} className="text-xs text-destructive" role="alert">
+                      Line {err.lineNumber}: {err.message} — <span className="font-mono">{err.rawLine.trim()}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Parsed, editable rows */}
+            {importResult && importResult.rows.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    {importResult.rows.length} secret{importResult.rows.length !== 1 ? "s" : ""} ready
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowImportValues((s) => !s)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  >
+                    {showImportValues ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {showImportValues ? "Hide values" : "Show values"}
+                  </button>
+                </div>
+                <div className="max-h-64 space-y-2 overflow-y-auto">
+                  {importResult.rows.map((row, index) => {
+                    const status = rowStatus[index]
+                    const message = rowMessages[index]
+                    return (
+                      <div key={`${row.lineNumber}-${index}`} className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-2">
+                        <input
+                          type="text"
+                          aria-label={`Import row ${index + 1} key`}
+                          value={row.key}
+                          onChange={(e) => updateRowKey(index, e.target.value)}
+                          className="w-2/5 rounded border border-border bg-card px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                        <input
+                          type={showImportValues ? "text" : "password"}
+                          aria-label={`Import row ${index + 1} value`}
+                          value={row.value}
+                          onChange={(e) => updateRowValue(index, e.target.value)}
+                          className="w-2/5 rounded border border-border bg-card px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                        <div className="flex w-1/5 flex-col items-end gap-1">
+                          {status === "success" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--surface-success-text,#047857)]">
+                              <CheckCircle className="h-3.5 w-3.5" /> Saved
+                            </span>
+                          )}
+                          {status === "error" && (
+                            <span className="text-right text-xs font-semibold text-destructive" title={message}>
+                              {message || "Failed"}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeImportRow(index)}
+                            aria-label={`Remove import row ${index + 1}`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Remove
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Nothing parseable */}
+            {importResult && importResult.rows.length === 0 && importResult.errors.length === 0 && (
+              <p className="text-xs text-muted-foreground">No secrets found. Add at least one KEY=value line.</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => { setIsImportOpen(false); resetImportState() }}
+              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleImportSave}
+              disabled={importSaveDisabled}
+              className="rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 active:scale-[0.97]"
+            >
+              {isImportSaving
+                ? "Importing..."
+                : importRows.length > 0
+                  ? `Import ${importRows.length} secret${importRows.length === 1 ? "" : "s"}`
+                  : "Import secrets"}
             </button>
           </DialogFooter>
         </DialogContent>

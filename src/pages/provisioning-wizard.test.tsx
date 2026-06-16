@@ -1422,3 +1422,80 @@ describe("ProvisioningWizard — environment variable value reveal", () => {
     expect(valueInput).toHaveAttribute("type", "password")
   })
 })
+
+describe("ProvisioningWizard — async single-environment selection", () => {
+  it("submits the sole async-loaded environment even though the picker is hidden", async () => {
+    // Reproduces the exact async pattern of the real consumer: environments
+    // arrive after mount (so environments[0] is undefined on the first
+    // render) and there's a single option, so the picker is hidden. The
+    // post-load sync effect must still land selectedEnv on that option, and
+    // deploy must submit it — not an empty string.
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    const onLoadEnvironments = vi
+      .fn()
+      .mockResolvedValue([{ id: "universal", description: "Default" }])
+
+    render(
+      <ProvisioningWizard
+        onSubmit={onSubmit}
+        onLoadEnvironments={onLoadEnvironments}
+      />,
+    )
+
+    // Single option → the picker is omitted once loading resolves.
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Environment Selection"),
+      ).not.toBeInTheDocument()
+    })
+
+    const deployBtn = screen.getByRole("button", {
+      name: /deploy workspace/i,
+    })
+    // Deploy is gated on a non-empty selection, so it only enables once the
+    // sole option has been adopted.
+    await waitFor(() => expect(deployBtn).toBeEnabled())
+    await userEvent.click(deployBtn)
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    expect(onSubmit.mock.calls[0][0].environment).toBe("universal")
+  })
+
+  it("falls back to the sole loaded option when the requested default is stale", async () => {
+    // A caller passes a default that no longer exists (e.g. a deleted
+    // template) while the loaded list contains a single valid option. The
+    // picker is hidden, so the sync effect must drop the invalid default and
+    // submit the real option rather than the stale id.
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    const onLoadEnvironments = vi
+      .fn()
+      .mockResolvedValue([{ id: "universal", description: "Default" }])
+
+    render(
+      <ProvisioningWizard
+        onSubmit={onSubmit}
+        onLoadEnvironments={onLoadEnvironments}
+        defaultEnvironment="deleted-template"
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Environment Selection"),
+      ).not.toBeInTheDocument()
+    })
+
+    const deployBtn = screen.getByRole("button", {
+      name: /deploy workspace/i,
+    })
+    await waitFor(() => expect(deployBtn).toBeEnabled())
+    await userEvent.click(deployBtn)
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce()
+    })
+    expect(onSubmit.mock.calls[0][0].environment).toBe("universal")
+  })
+})

@@ -548,6 +548,18 @@ function SshAccessStep({ config }: { config: SshAccessConfig }) {
 }
 
 /**
+ * Internal env-var row. `uid` is a stable per-row identity used as the React
+ * key so each row's local reveal state stays bound to its own value across
+ * insertions and deletions. It is stripped before submit — `ProvisioningConfig`
+ * only carries `{ key, value }`.
+ */
+interface EnvVarRow {
+  uid: string;
+  key: string;
+  value: string;
+}
+
+/**
  * Environment-variable value field with a reveal toggle. Values are masked by
  * default (they commonly hold secrets); the eye button flips to plaintext so
  * the user can verify what they typed without re-entering it.
@@ -577,7 +589,7 @@ function EnvVarValueInput({
         onClick={() => setRevealed((s) => !s)}
         aria-label={revealed ? "Hide value" : "Show value"}
         aria-pressed={revealed}
-        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
@@ -711,9 +723,21 @@ export function ProvisioningWizard({
 
   const [name, setName] = React.useState(dc?.name ?? "");
   const [gitUrl, setGitUrl] = React.useState(dc?.gitUrl ?? "");
-  const [envVars, setEnvVars] = React.useState<
-    { key: string; value: string }[]
-  >(dc?.envVars ?? [{ key: "", value: "" }]);
+  // Env-var rows carry a stable `uid` so each row's local reveal state stays
+  // bound to its own value. Keying the list by array index instead would let a
+  // revealed-plaintext state migrate onto a different secret when a row above
+  // it is removed.
+  const envVarUidRef = React.useRef(0);
+  const makeEnvVarRow = (key = "", value = ""): EnvVarRow => ({
+    uid: `env-${envVarUidRef.current++}`,
+    key,
+    value,
+  });
+  const [envVars, setEnvVars] = React.useState<EnvVarRow[]>(() =>
+    (dc?.envVars ?? [{ key: "", value: "" }]).map((e) =>
+      makeEnvVarRow(e.key, e.value),
+    ),
+  );
   const [driver, setDriver] = React.useState<
     "docker" | "firecracker" | "tangle"
   >(dc?.driver ?? "docker");
@@ -772,7 +796,9 @@ export function ProvisioningWizard({
         storageGB,
         name,
         gitUrl,
-        envVars: envVars.filter((e) => e.key.trim() !== ""),
+        envVars: envVars
+          .filter((e) => e.key.trim() !== "")
+          .map(({ key, value }) => ({ key, value })),
         driver,
         bare,
         startupScriptIds: startupScriptIds.filter((id) =>
@@ -1237,10 +1263,7 @@ export function ProvisioningWizard({
                             <button
                               type="button"
                               onClick={() =>
-                                setEnvVars([
-                                  ...envVars,
-                                  { key: "", value: "" },
-                                ])
+                                setEnvVars([...envVars, makeEnvVarRow()])
                               }
                               className="flex items-center gap-1 text-xs text-primary hover:text-primary/70 transition-colors font-medium"
                             >
@@ -1248,15 +1271,15 @@ export function ProvisioningWizard({
                             </button>
                           </div>
                           <div className="space-y-2">
-                            {envVars.map((env, i) => (
-                              <div key={i} className="flex gap-2">
+                            {envVars.map((env) => (
+                              <div key={env.uid} className="flex gap-2">
                                 <Input
                                   type="text"
                                   value={env.key}
                                   onChange={(e) =>
                                     setEnvVars(
-                                      envVars.map((v, idx) =>
-                                        idx === i
+                                      envVars.map((v) =>
+                                        v.uid === env.uid
                                           ? { ...v, key: e.target.value }
                                           : v,
                                       ),
@@ -1269,8 +1292,8 @@ export function ProvisioningWizard({
                                   value={env.value}
                                   onChange={(value) =>
                                     setEnvVars(
-                                      envVars.map((v, idx) =>
-                                        idx === i ? { ...v, value } : v,
+                                      envVars.map((v) =>
+                                        v.uid === env.uid ? { ...v, value } : v,
                                       ),
                                     )
                                   }
@@ -1280,9 +1303,10 @@ export function ProvisioningWizard({
                                   type="button"
                                   variant="outline"
                                   size="icon"
+                                  aria-label="Remove variable"
                                   onClick={() =>
                                     setEnvVars(
-                                      envVars.filter((_, idx) => idx !== i),
+                                      envVars.filter((v) => v.uid !== env.uid),
                                     )
                                   }
                                   className="h-9 w-9 shrink-0 text-destructive hover:bg-destructive/10 hover:border-destructive/30"

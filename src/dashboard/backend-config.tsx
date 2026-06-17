@@ -170,21 +170,21 @@ export function BackendConfig({
               placeholder="Server name"
               value={mcpName}
               onChange={(e) => setMcpName(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <input
               type="text"
               placeholder="Command (e.g. npx @server/mcp)"
               value={mcpCommand}
               onChange={(e) => setMcpCommand(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <input
               type="text"
               placeholder="Arguments (space-separated, optional)"
               value={mcpArgs}
               onChange={(e) => setMcpArgs(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <div className="flex justify-end gap-2 pt-1">
               <button

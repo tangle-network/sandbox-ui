@@ -176,14 +176,14 @@ describe("SidebarLayout — collapse control + icon rail", () => {
       </SidebarLayout>,
     )
     fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }))
-    // Label text is gone (icon-only rail); tooltip still available via title attr.
-    expect(screen.queryByText("Home")).not.toBeInTheDocument()
+    // Icon-only rail: no inline visible label; the affordance is now a styled
+    // tooltip (role="tooltip", hidden until hover) plus the button's aria-label.
+    expect(screen.getByText("Home", { selector: '[role="tooltip"]' })).toBeInTheDocument()
     const expand = screen.getByRole("button", { name: "Expand sidebar" })
     expect(expand).toBeInTheDocument()
-    expect(expand).toHaveAttribute("title", "Expand sidebar")
-    // Icon-only nav buttons keep their label as a hover tooltip.
+    // Icon-only nav buttons expose their label via the tooltip + accessible name.
     const homeLink = document.querySelector('a[href="/home"]')
-    expect(homeLink).toHaveAttribute("title", "Home")
+    expect(homeLink).toHaveAttribute("aria-label", "Home")
   })
 
   it("does NOT render a collapse control when railLabels is omitted (backward-compat)", () => {
@@ -194,8 +194,9 @@ describe("SidebarLayout — collapse control + icon rail", () => {
     )
     expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).not.toBeInTheDocument()
-    // Icon-only rail: no label text rendered for nav items.
-    expect(screen.queryByText("Home")).not.toBeInTheDocument()
+    // Icon-only rail: no inline visible label; label lives in the hover tooltip.
+    expect(screen.queryByText("Home", { selector: 'span:not([role="tooltip"])' })).not.toBeInTheDocument()
+    expect(screen.getByText("Home", { selector: '[role="tooltip"]' })).toBeInTheDocument()
   })
 
   it("respects controlled railCollapsed + reports changes", () => {
@@ -211,8 +212,8 @@ describe("SidebarLayout — collapse control + icon rail", () => {
         <div>content</div>
       </SidebarLayout>,
     )
-    // Controlled-collapsed: labels hidden, expand control shown.
-    expect(screen.queryByText("Home")).not.toBeInTheDocument()
+    // Controlled-collapsed: inline label hidden (tooltip only), expand control shown.
+    expect(screen.queryByText("Home", { selector: 'span:not([role="tooltip"])' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "Expand sidebar" }))
     expect(onChange).toHaveBeenCalledWith(false)
   })

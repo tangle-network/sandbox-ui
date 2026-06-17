@@ -22,7 +22,7 @@ export function TemplateCard({ template, onUseTemplate, className }: TemplateCar
   return (
     <div
       className={cn(
-        "group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/30 hover:shadow-md",
+        "group relative flex flex-col justify-between rounded-xl border border-border bg-card p-6 transition-colors hover:border-[var(--border-accent)]",
         className,
       )}
     >

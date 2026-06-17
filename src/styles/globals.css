@@ -46,11 +46,11 @@
   }
 
   ::selection {
-    background: rgba(56, 178, 172, 0.22);
+    background: var(--bg-selection);
     color: hsl(var(--hsl-foreground));
   }
 
-  /* Custom scrollbar */
+  /* Thin neutral scrollbar — recedes until hovered. */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -61,12 +61,18 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border) / 0.7);
-    border-radius: 3px;
+    background: hsl(var(--border) / 0.6);
+    border-radius: 9999px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.4);
+  }
+
+  /* Firefox: thin neutral track. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border) / 0.6) transparent;
   }
 }
 
@@ -79,9 +85,10 @@
     color: transparent;
   }
 
-  /* Glow effects */
+  /* Tangle Quiet has no glow chrome. Class retained as a flat no-op so any
+     stray consumer renders without a halo. */
   .glow-sandbox {
-    box-shadow: 0 0 48px -10px hsl(var(--sandbox) / 0.45);
+    box-shadow: none;
   }
 
   /* Solid depth cards */
@@ -100,39 +107,35 @@
     border: 1px solid hsl(var(--border));
   }
 
-  /* Elevated glassmorphism utilities */
+  /* Flat panels — no backdrop blur, hairline border, flat card shadow. Same
+     visual language in both themes (the vault override below is now a no-op). */
   .glass-panel {
-    background: hsl(var(--card) / 0.4);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid hsl(var(--primary) / 0.1);
-    box-shadow: 0 4px 30px hsl(var(--background) / 0.3);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
   }
 
   .glass-panel-heavy {
-    background: hsl(var(--card) / 0.7);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid hsl(var(--primary) / 0.12);
-    box-shadow: 0 8px 32px hsl(var(--background) / 0.5);
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
   }
 
   .glass-panel:hover {
-    border-color: hsl(var(--primary) / 0.25);
+    border-color: hsl(var(--border));
   }
 
-  /* Pulsing magical glow */
+  /* Glow utilities retained as flat no-ops — Tangle Quiet has no halos. */
   .glow-primary {
-    box-shadow: 0 0 40px hsl(var(--primary) / 0.25);
-    transition: box-shadow 0.4s ease-in-out;
+    box-shadow: none;
   }
 
   .glow-primary:hover {
-    box-shadow: 0 0 60px hsl(var(--primary) / 0.4);
+    box-shadow: none;
   }
 
   .text-glow {
-    text-shadow: 0 0 16px hsl(var(--primary) / 0.6);
+    text-shadow: none;
   }
 
   /* Radiant gradient text */
@@ -147,13 +150,9 @@
     background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(var(--primary) / 0.05) 100%);
   }
 
+  /* Retained as a flat no-op — the mesh texture belongs to the glow era. */
   .neural-mesh {
-    background-image: radial-gradient(
-      circle at 2px 2px,
-      hsl(var(--primary) / 0.07) 1px,
-      transparent 0
-    );
-    background-size: 32px 32px;
+    background-image: none;
   }
 
   .nav-active-indicator {
@@ -170,7 +169,6 @@
     width: 3px;
     background-color: hsl(var(--primary));
     border-radius: 0 4px 4px 0;
-    box-shadow: 0 0 10px hsl(var(--primary));
   }
 
   /* Legacy alias */
@@ -184,21 +182,13 @@
     position: relative;
   }
 
+  /* Mesh + noise retained as flat no-ops — atmospheric texture is the glow era. */
   .bg-mesh::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 80% 50% at 20% 40%, var(--mesh-teal), transparent),
-      radial-gradient(ellipse 60% 40% at 80% 20%, var(--mesh-violet), transparent),
-      radial-gradient(ellipse 50% 60% at 50% 80%, var(--mesh-blue), transparent);
-    pointer-events: none;
-    z-index: 0;
+    content: none;
   }
 
-  /* Subtle noise texture */
   .noise {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+    background-image: none;
     pointer-events: none;
   }
 
@@ -213,7 +203,6 @@
 
   .status-dot-running {
     background: var(--status-running);
-    box-shadow: var(--shadow-status-running);
   }
 
   .status-dot-creating {
@@ -235,7 +224,6 @@
 
   .status-dot-error {
     background: var(--status-error);
-    box-shadow: var(--shadow-status-error);
   }
 
   .status-dot-deleted {
@@ -267,6 +255,16 @@
   /* Fade in animation */
   .animate-in {
     animation: fade-in 0.25s ease-out;
+  }
+
+  /* Quiet enter for optimistically-inserted list rows. */
+  .animate-row-in {
+    animation: row-in 0.18s ease-out;
+  }
+
+  @keyframes row-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   /* Pulse ring animation */

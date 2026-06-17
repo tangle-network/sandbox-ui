@@ -298,8 +298,9 @@ export function SessionSidebar({
       className={cn("relative flex shrink-0 flex-col border-r border-border bg-card", className)}
       style={{ width: resizable ? resize.width : defaultWidth }}
     >
-      {/* Header — fixed 56px (h-14) to stay flush with the rail/panel headers */}
-      <div className="flex h-14 shrink-0 items-center border-b border-border px-3">
+      {/* Header — matches the layout panel header rhythm (px-3 py-1.5, muted
+          band) so the top border and baseline line up with adjacent panels. */}
+      <div className="flex shrink-0 items-center border-b border-border bg-muted/20 px-3 py-1.5">
         <div className="flex w-full items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary">
@@ -343,7 +344,7 @@ export function SessionSidebar({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
-                className="h-8 w-full rounded-[var(--radius-sm)] border border-border bg-muted pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]"
+                className="h-8 w-full rounded-[var(--radius-sm)] border border-transparent bg-muted/40 pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:border-[var(--border-accent)] focus-visible:bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]"
               />
             </div>
           )}
@@ -377,8 +378,9 @@ export function SessionSidebar({
       {/* Session list */}
       <nav aria-label="Sessions" className="flex-1 overflow-y-auto px-1.5 py-1.5">
         {visibleItems.length === 0 ? (
-          <div className="rounded-[var(--radius-lg)] border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
-            {query.trim() ? `No sessions match "${query.trim()}".` : emptyMessage}
+          <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-muted-foreground">
+            <MessageSquareText className="h-5 w-5 opacity-50" aria-hidden="true" />
+            <p>{query.trim() ? `No sessions match "${query.trim()}".` : emptyMessage}</p>
           </div>
         ) : (
           <ul className="space-y-px">
@@ -387,17 +389,17 @@ export function SessionSidebar({
               const isActive = currentItemId === item.id;
               const status = session?.status ?? item.status;
               const visibleBadges = [
-                ...(item.isPinned ? [{ id: `${item.id}-pinned`, label: "Pinned", tone: "accent" as const }] : []),
+                ...(item.isPinned ? [{ id: `${item.id}-pinned`, label: "Pinned", tone: "neutral" as const }] : []),
                 ...(item.badges ?? []),
               ];
 
               return (
-                <li key={item.id}>
+                <li key={item.id} className="animate-row-in">
                   <div
                     className={cn(
-                      "group relative flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 transition-colors",
+                      "group relative flex items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 transition-colors",
                       isActive
-                        ? "bg-primary/10 font-medium text-foreground"
+                        ? "bg-accent font-medium text-foreground"
                         : "text-muted-foreground hover:bg-accent/30",
                     )}
                   >
@@ -442,7 +444,7 @@ export function SessionSidebar({
                         </span>
                       ))}
                       {session?.isForeground && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" title="Live" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-running)]" title="Live" />
                       )}
                       {renderItemActions ? (
                         <div

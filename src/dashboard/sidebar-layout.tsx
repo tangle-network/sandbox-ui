@@ -12,11 +12,12 @@ import {
   SidebarContent,
   RailButton,
   RailFlyout,
+  RailCollapseToggle,
   ProfileAvatar,
   RailThemeToggle,
 } from "./app-sidebar"
 import type { SidebarUser } from "./app-sidebar"
-import { SidebarProvider, useSidebar, SIDEBAR_RAIL_LABELED_WIDTH } from "./sidebar-context"
+import { SidebarProvider, useSidebar } from "./sidebar-context"
 
 // ============================================================================
 // Types
@@ -98,8 +99,24 @@ export interface SidebarLayoutProps {
   defaultPanelOpen?: boolean
   /** Hide the whole sidebar below this breakpoint (content spans full width). */
   hideBelow?: "md" | "lg"
-  /** Show text labels beside the rail icons on a wider rail (vs. icon-only with hover tooltips). */
+  /**
+   * Make the rail label-capable: it renders labels beside the icons on a wider
+   * rail and gains a collapse/expand control that toggles between the labeled
+   * width and the icon-only rail (icons + hover tooltips). When omitted the rail
+   * is permanently icon-only with no collapse control.
+   */
   railLabels?: boolean
+  /**
+   * Controlled rail-collapsed state. Provide it (seeded from a server-readable
+   * source such as a cookie) in SSR apps so the collapsed/expanded rail survives
+   * reload without a hydration mismatch. Omit to let the rail persist to
+   * localStorage. Independent of `panelOpen` — the nav rail and the slide-out
+   * panel collapse separately. Only meaningful with `railLabels`.
+   */
+  railCollapsed?: boolean
+  onRailCollapsedChange?: (collapsed: boolean) => void
+  /** Initial rail-collapsed state when uncontrolled (default: expanded). */
+  defaultRailCollapsed?: boolean
   /**
    * Close the panel when a link nav item is clicked. Useful when the panel is
    * contextual to one section (e.g. a chat thread list) rather than a global
@@ -166,9 +183,13 @@ function SidebarLayoutInner({
   contentClassName,
 }: SidebarLayoutProps) {
   const Link = LinkComponent ?? DefaultLink
-  const { panelOpen, togglePanel, setPanelOpen } = useSidebar()
+  const { panelOpen, togglePanel, setPanelOpen, railCollapsed, toggleRail } = useSidebar()
   const handleNavClick = closePanelOnNavigate && panelOpen ? () => setPanelOpen(false) : undefined
   const hasProfile = user !== undefined || onLogout !== undefined || onSettingsClick !== undefined
+  // The rail shows labels only when it is label-capable AND the user has not
+  // collapsed it. Collapsing a labeled rail returns the icon-only look (with
+  // hover tooltips via each RailButton's `title`).
+  const showLabels = railLabels && !railCollapsed
 
   return (
     <div className={cn("min-h-screen bg-background text-foreground", className)}>
@@ -181,7 +202,7 @@ function SidebarLayoutInner({
         <Sidebar className={sidebarClassName}>
           <SidebarRail>
             {(railHeaderContent !== undefined || logo !== undefined) && (
-              <SidebarRailHeader className={cn(railLabels && (railHeaderContent !== undefined ? "px-2" : "justify-start px-4"))}>
+              <SidebarRailHeader className={cn(showLabels && (railHeaderContent !== undefined ? "px-2" : "justify-start px-4"))}>
                 {railHeaderContent !== undefined ? (
                   railHeaderContent
                 ) : (
@@ -196,7 +217,7 @@ function SidebarLayoutInner({
               </SidebarRailHeader>
             )}
 
-            <SidebarRailNav className={railLabels ? "px-2" : undefined}>
+            <SidebarRailNav className={showLabels ? "px-2" : undefined}>
               {navItems.map((item) => {
                 if (item.flyoutItems && item.flyoutItems.length > 0) {
                   const activeSet = new Set(item.flyoutActiveIds ?? [])
@@ -206,7 +227,7 @@ function SidebarLayoutInner({
                       icon={item.icon}
                       label={item.label}
                       title={item.label}
-                      showLabel={railLabels}
+                      showLabel={showLabels}
                       isActive={activeId === item.id || item.flyoutItems.some((f) => activeSet.has(f.id))}
                     >
                       {item.flyoutItems.map((f) => {
@@ -242,10 +263,10 @@ function SidebarLayoutInner({
                     badge={item.badge}
                     isActive={panelOpen}
                     onClick={togglePanel}
-                    showLabel={railLabels}
+                    showLabel={showLabels}
                   />
                 ) : (
-                  <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={railLabels} asChild>
+                  <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={showLabels} asChild>
                     <Link
                       href={item.href}
                       to={item.href}
@@ -257,8 +278,11 @@ function SidebarLayoutInner({
               })}
             </SidebarRailNav>
 
-            {(railFooter !== undefined || hasProfile) && (
-              <SidebarRailFooter className={cn("border-t border-border pt-2", railLabels && "items-stretch px-2")}>
+            {(railLabels || railFooter !== undefined || hasProfile) && (
+              <SidebarRailFooter className={cn("border-t border-border pt-2", showLabels && "items-stretch px-2")}>
+                {railLabels && (
+                  <RailCollapseToggle collapsed={railCollapsed} showLabel={showLabels} onToggle={toggleRail} />
+                )}
                 {railFooter}
                 {hasProfile && (() => {
                   const profile = (
@@ -268,7 +292,7 @@ function SidebarLayoutInner({
                       onLogout={onLogout}
                       onSettingsClick={onSettingsClick}
                       settingsHref={settingsHref}
-                      showDetails={railLabels}
+                      showDetails={showLabels}
                       LinkComponent={Link}
                     >
                       {profileMenuItems}
@@ -277,7 +301,7 @@ function SidebarLayoutInner({
                   if (!showThemeToggle) return profile
                   // Visible compact theme switch beside the profile (a row on the
                   // labeled rail, stacked above the avatar on the icon-only rail).
-                  return railLabels ? (
+                  return showLabels ? (
                     <div className="flex w-full items-center gap-1">
                       <div className="min-w-0 flex-1">{profile}</div>
                       <RailThemeToggle />
@@ -317,6 +341,9 @@ export function SidebarLayout({
   panelOpen,
   onPanelOpenChange,
   defaultPanelOpen,
+  railCollapsed,
+  onRailCollapsedChange,
+  defaultRailCollapsed,
   ...props
 }: SidebarLayoutProps) {
   return (
@@ -324,8 +351,11 @@ export function SidebarLayout({
       panelOpen={panelOpen}
       onPanelOpenChange={onPanelOpenChange}
       defaultPanelOpen={defaultPanelOpen}
+      railCollapsed={railCollapsed}
+      onRailCollapsedChange={onRailCollapsedChange}
+      defaultRailCollapsed={defaultRailCollapsed}
       hasPanels={props.panel != null}
-      railWidth={props.railLabels ? SIDEBAR_RAIL_LABELED_WIDTH : undefined}
+      labeledRail={props.railLabels ?? false}
     >
       <SidebarLayoutInner {...props} />
     </SidebarProvider>

@@ -3,6 +3,7 @@
 import * as React from "react"
 
 const PANEL_OPEN_KEY = "sandbox-sidebar-panel-open"
+const RAIL_COLLAPSED_KEY = "sandbox-sidebar-rail-collapsed"
 const SIDEBAR_MODE_KEY = "sandbox-sidebar-mode"
 
 /** Width constants (px) — Tangle Quiet density (ChatGPT-minimal) */
@@ -39,7 +40,20 @@ interface SidebarContextValue {
   contentMargin: number
   /** Whether there are panels at all */
   hasPanels: boolean
-  /** Rail width in px — 64 for the icon-only rail, wider when labels show */
+  /**
+   * Whether the labeled nav rail is collapsed to the icon-only width. Independent
+   * of {@link panelOpen} (the slide-out content panel) — two separate collapses.
+   * Only meaningful when the rail is label-capable; an icon-only rail stays
+   * icon-only regardless.
+   */
+  railCollapsed: boolean
+  setRailCollapsed: (collapsed: boolean) => void
+  toggleRail: () => void
+  /**
+   * Rail width in px — derived from {@link railCollapsed}: the icon-only width
+   * when collapsed (or when the rail is not label-capable), the labeled width
+   * when expanded.
+   */
   railWidth: number
 }
 
@@ -63,8 +77,14 @@ export interface SidebarProviderProps {
   defaultPanelOpen?: boolean
   defaultMode?: string
   hasPanels?: boolean
-  /** Rail width in px. Defaults to the 64px icon-only rail. */
-  railWidth?: number
+  /**
+   * Whether the rail can show labels beside icons. When `true`, the expanded
+   * rail renders at {@link SIDEBAR_RAIL_LABELED_WIDTH} and the user can collapse
+   * it to the icon-only {@link SIDEBAR_RAIL_WIDTH} via {@link toggleRail}. When
+   * `false` (default) the rail is permanently icon-only and `railCollapsed` has
+   * no width effect.
+   */
+  labeledRail?: boolean
   /**
    * Controlled panel-open state. When provided, the provider treats panel
    * visibility as controlled: it never reads or writes localStorage and
@@ -75,6 +95,16 @@ export interface SidebarProviderProps {
    */
   panelOpen?: boolean
   onPanelOpenChange?: (open: boolean) => void
+  /**
+   * Controlled rail-collapsed state. Parallels {@link panelOpen}: when provided
+   * the provider never touches localStorage for the rail and reports changes
+   * through {@link onRailCollapsedChange}. Seed it from a cookie in SSR apps so
+   * the rail width survives reload without a hydration mismatch.
+   */
+  railCollapsed?: boolean
+  onRailCollapsedChange?: (collapsed: boolean) => void
+  /** Initial rail-collapsed state for the uncontrolled path. Default: expanded. */
+  defaultRailCollapsed?: boolean
   children: React.ReactNode
 }
 
@@ -82,9 +112,12 @@ export function SidebarProvider({
   defaultPanelOpen = true,
   defaultMode = "projects",
   hasPanels = true,
-  railWidth = SIDEBAR_RAIL_WIDTH,
+  labeledRail = false,
   panelOpen: controlledPanelOpen,
   onPanelOpenChange,
+  railCollapsed: controlledRailCollapsed,
+  onRailCollapsedChange,
+  defaultRailCollapsed = false,
   children,
 }: SidebarProviderProps) {
   const isControlled = controlledPanelOpen !== undefined
@@ -97,6 +130,16 @@ export function SidebarProvider({
       : readStorage(PANEL_OPEN_KEY, String(defaultPanelOpen)) === "true",
   )
   const panelOpen = isControlled ? (controlledPanelOpen as boolean) : uncontrolledPanelOpen
+
+  // Rail-collapse mirrors the panel-open controlled/uncontrolled split so SSR
+  // apps can cookie-seed the rail width without a hydration mismatch.
+  const isRailControlled = controlledRailCollapsed !== undefined
+  const [uncontrolledRailCollapsed, setUncontrolledRailCollapsed] = React.useState(
+    () => isRailControlled
+      ? (controlledRailCollapsed as boolean)
+      : readStorage(RAIL_COLLAPSED_KEY, String(defaultRailCollapsed)) === "true",
+  )
+  const railCollapsed = isRailControlled ? (controlledRailCollapsed as boolean) : uncontrolledRailCollapsed
 
   const [mode, setModeState] = React.useState(
     () => isControlled ? defaultMode : readStorage(SIDEBAR_MODE_KEY, defaultMode),
@@ -114,6 +157,18 @@ export function SidebarProvider({
   const togglePanel = React.useCallback(() => {
     setPanelOpen(!panelOpen)
   }, [setPanelOpen, panelOpen])
+
+  const setRailCollapsed = React.useCallback((collapsed: boolean) => {
+    if (!isRailControlled) {
+      setUncontrolledRailCollapsed(collapsed)
+      writeStorage(RAIL_COLLAPSED_KEY, String(collapsed))
+    }
+    onRailCollapsedChange?.(collapsed)
+  }, [isRailControlled, onRailCollapsedChange])
+
+  const toggleRail = React.useCallback(() => {
+    setRailCollapsed(!railCollapsed)
+  }, [setRailCollapsed, railCollapsed])
 
   const setMode = React.useCallback((m: string) => {
     setModeState(m)
@@ -134,6 +189,11 @@ export function SidebarProvider({
     setPanelOpen(true)
   }, [mode, panelOpen, isControlled, setPanelOpen])
 
+  // Width follows state: the labeled width only when the rail is label-capable
+  // AND expanded; the icon-only width otherwise. contentMargin keys off
+  // railWidth, so it tracks the collapse automatically.
+  const railWidth = labeledRail && !railCollapsed ? SIDEBAR_RAIL_LABELED_WIDTH : SIDEBAR_RAIL_WIDTH
+
   const contentMargin = hidden ? 0 : (panelOpen && hasPanels) ? (railWidth + SIDEBAR_PANEL_WIDTH) : railWidth
 
   const value = React.useMemo<SidebarContextValue>(
@@ -148,9 +208,12 @@ export function SidebarProvider({
       setHidden,
       contentMargin,
       hasPanels,
+      railCollapsed,
+      setRailCollapsed,
+      toggleRail,
       railWidth,
     }),
-    [panelOpen, setPanelOpen, togglePanel, mode, setMode, switchMode, hidden, setHidden, contentMargin, hasPanels, railWidth],
+    [panelOpen, setPanelOpen, togglePanel, mode, setMode, switchMode, hidden, setHidden, contentMargin, hasPanels, railCollapsed, setRailCollapsed, toggleRail, railWidth],
   )
 
   return (

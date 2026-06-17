@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
 import { SidebarLayout, type SidebarLayoutNavItem } from "./sidebar-layout"
 
 function Icon() {
@@ -101,5 +101,66 @@ describe("SidebarLayout — link prefetch forwarding", () => {
     // A toggle renders a <button>, so the spy Link is never called for it.
     expect(calls.find((c) => c.prefetch === "render")).toBeUndefined()
     expect(screen.getByRole("button", { name: "Toggle" })).toBeInTheDocument()
+  })
+})
+
+describe("SidebarLayout — railHeaderContent slot", () => {
+  it("renders railHeaderContent in place of the logo link", () => {
+    render(
+      <SidebarLayout
+        railHeaderContent={<div data-testid="switcher">Switcher</div>}
+        logo={<span>LOGO</span>}
+        logoHref="/home"
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    expect(screen.getByTestId("switcher")).toBeInTheDocument()
+    // logo link is suppressed when the header slot is provided
+    expect(screen.queryByText("LOGO")).not.toBeInTheDocument()
+  })
+})
+
+describe("SidebarLayout — flyout nav item", () => {
+  const flyoutNav: SidebarLayoutNavItem = {
+    id: "studio",
+    label: "Studio",
+    icon: Icon,
+    flyoutItems: [
+      { id: "designs", label: "Designs", icon: Icon, href: "/designs" },
+      { id: "ads", label: "Ads", icon: Icon, href: "/ads" },
+    ],
+  }
+
+  it("renders a trigger button (not a link) and hides children until opened", () => {
+    render(
+      <SidebarLayout navItems={[flyoutNav]}>
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    expect(screen.getByRole("button", { name: "Studio" })).toBeInTheDocument()
+    expect(screen.queryByText("Designs")).not.toBeInTheDocument()
+  })
+
+  it("reveals the sub-destinations on click", () => {
+    render(
+      <SidebarLayout navItems={[flyoutNav]}>
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Studio" }))
+    expect(screen.getByText("Designs")).toBeInTheDocument()
+    expect(screen.getByText("Ads")).toBeInTheDocument()
+  })
+
+  it("highlights the door when a flyout child is active", () => {
+    render(
+      <SidebarLayout navItems={[{ ...flyoutNav, flyoutActiveIds: ["designs"] }]}>
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    const trigger = screen.getByRole("button", { name: "Studio" })
+    expect(trigger.className).toContain("accent-surface-strong")
   })
 })

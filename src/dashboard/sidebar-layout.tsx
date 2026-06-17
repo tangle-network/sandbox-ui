@@ -11,6 +11,7 @@ import {
   SidebarPanel,
   SidebarContent,
   RailButton,
+  RailFlyout,
   ProfileAvatar,
   RailThemeToggle,
 } from "./app-sidebar"
@@ -21,14 +22,31 @@ import { SidebarProvider, useSidebar, SIDEBAR_RAIL_LABELED_WIDTH } from "./sideb
 // Types
 // ============================================================================
 
+/** A sub-destination revealed inside a nav item's right-flyout. */
+export interface SidebarLayoutFlyoutItem {
+  id: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  href: string
+  prefetch?: "none" | "intent" | "render" | "viewport"
+}
+
 export interface SidebarLayoutNavItem {
   id: string
   label: string
   icon: React.ComponentType<{ className?: string }>
-  /** Destination for link items. Omit when `togglesPanel` is set. */
+  /** Destination for link items. Omit when `togglesPanel` or `flyoutItems` is set. */
   href?: string
   /** Render this item as the panel toggle instead of a link. */
   togglesPanel?: boolean
+  /**
+   * Render this item as a right-flyout "door" fronting these sub-destinations
+   * instead of a link. The flyout opens to the right of the rail item. Takes
+   * precedence over `href`/`togglesPanel`.
+   */
+  flyoutItems?: SidebarLayoutFlyoutItem[]
+  /** Ids of `flyoutItems` whose route is currently active (drives the door highlight). */
+  flyoutActiveIds?: string[]
   badge?: number
   /**
    * React Router prefetch behavior for this link, forwarded to the underlying
@@ -50,6 +68,13 @@ export interface SidebarLayoutProps {
   logo?: React.ReactNode
   /** Destination for the logo link. */
   logoHref?: string
+  /**
+   * Content rendered in the rail header in place of the logo link — e.g. a
+   * project/workspace switcher. Spans the header so the app's primary
+   * orientation control sits at the top of the rail. When set, `logo`/`logoHref`
+   * are ignored. The header keeps its `h-14` height for cross-view alignment.
+   */
+  railHeaderContent?: React.ReactNode
   user?: SidebarUser | null
   isLoading?: boolean
   onLogout?: () => void
@@ -123,6 +148,7 @@ function SidebarLayoutInner({
   panel,
   logo,
   logoHref,
+  railHeaderContent,
   user,
   isLoading = false,
   onLogout,
@@ -154,21 +180,61 @@ function SidebarLayoutInner({
       <div className={cn(hideBelow && HIDE_BELOW_CLASS[hideBelow])}>
         <Sidebar className={sidebarClassName}>
           <SidebarRail>
-            {logo !== undefined && (
-              <SidebarRailHeader className={railLabels ? "justify-start px-4" : undefined}>
-                <Link
-                  href={logoHref}
-                  to={logoHref}
-                  className="flex items-center justify-center rounded-lg p-1 transition-colors hover:bg-muted/50"
-                >
-                  {logo}
-                </Link>
+            {(railHeaderContent !== undefined || logo !== undefined) && (
+              <SidebarRailHeader className={cn(railLabels && (railHeaderContent !== undefined ? "px-2" : "justify-start px-4"))}>
+                {railHeaderContent !== undefined ? (
+                  railHeaderContent
+                ) : (
+                  <Link
+                    href={logoHref}
+                    to={logoHref}
+                    className="flex items-center justify-center rounded-lg p-1 transition-colors hover:bg-muted/50"
+                  >
+                    {logo}
+                  </Link>
+                )}
               </SidebarRailHeader>
             )}
 
             <SidebarRailNav className={railLabels ? "px-2" : undefined}>
-              {navItems.map((item) =>
-                item.togglesPanel ? (
+              {navItems.map((item) => {
+                if (item.flyoutItems && item.flyoutItems.length > 0) {
+                  const activeSet = new Set(item.flyoutActiveIds ?? [])
+                  return (
+                    <RailFlyout
+                      key={item.id}
+                      icon={item.icon}
+                      label={item.label}
+                      title={item.label}
+                      showLabel={railLabels}
+                      isActive={activeId === item.id || item.flyoutItems.some((f) => activeSet.has(f.id))}
+                    >
+                      {item.flyoutItems.map((f) => {
+                        const FIcon = f.icon
+                        const active = activeSet.has(f.id)
+                        return (
+                          <Link
+                            key={f.id}
+                            href={f.href}
+                            to={f.href}
+                            onClick={handleNavClick}
+                            {...(f.prefetch !== undefined ? { prefetch: f.prefetch } : {})}
+                            className={cn(
+                              "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",
+                              active
+                                ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
+                                : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
+                            )}
+                          >
+                            <FIcon className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{f.label}</span>
+                          </Link>
+                        )
+                      })}
+                    </RailFlyout>
+                  )
+                }
+                return item.togglesPanel ? (
                   <RailButton
                     key={item.id}
                     icon={item.icon}
@@ -187,8 +253,8 @@ function SidebarLayoutInner({
                       {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
                     />
                   </RailButton>
-                ),
-              )}
+                )
+              })}
             </SidebarRailNav>
 
             {(railFooter !== undefined || hasProfile) && (

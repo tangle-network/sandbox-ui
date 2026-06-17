@@ -323,6 +323,124 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
 }
 
 // ============================================================================
+// RailFlyout — a rail item whose children open in a panel to the RIGHT of the rail
+// ============================================================================
+
+export interface RailFlyoutProps {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  /** Highlight the trigger (e.g. when a child route is active). */
+  isActive?: boolean
+  /** Show the label text beside the icon (labeled rail) vs. icon-only. */
+  showLabel?: boolean
+  /** Heading rendered at the top of the open flyout. Defaults to `label`. */
+  title?: string
+  /** Flyout body — the sub-surfaces revealed when the item is opened. */
+  children: React.ReactNode
+  className?: string
+}
+
+/**
+ * A rail entry that reveals its sub-surfaces in a small panel anchored to the
+ * RIGHT of the rail item, rather than pushing the rail open with an inline
+ * accordion. Opens on click, closes on outside-click, Escape, or selecting an
+ * item inside it. Use for a single "door" (e.g. Studio) that fronts several
+ * related destinations without permanently spending rail height on them.
+ */
+export function RailFlyout({
+  icon: Icon,
+  label,
+  isActive,
+  showLabel,
+  title,
+  children,
+  className,
+}: RailFlyoutProps) {
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    if (!open) return
+    const onPointer = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", onPointer)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onPointer)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  const triggerClasses = cn(
+    "group relative flex shrink-0 items-center rounded-xl transition-all duration-200",
+    showLabel ? "w-full justify-start px-3 h-11 gap-3" : "w-11 h-11 justify-center",
+    "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
+    "active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+    (isActive || open) ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]" : "text-muted-foreground",
+    className,
+  )
+
+  return (
+    <div ref={ref} className={cn("relative", showLabel && "w-full")}>
+      <button
+        type="button"
+        title={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={triggerClasses}
+      >
+        <Icon className="h-5 w-5 shrink-0" />
+        {showLabel && <span className="text-sm font-medium">{label}</span>}
+        {showLabel && (
+          <ChevronRightIcon
+            className={cn(
+              "ml-auto h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200",
+              open && "rotate-180",
+            )}
+          />
+        )}
+      </button>
+
+      {open && (
+        // Anchored to the right edge of the rail item; full-height-independent
+        // floating card. `onClickCapture` closes after a child link/button fires
+        // so selecting a sub-surface dismisses the flyout.
+        <div
+          role="menu"
+          onClickCapture={(e) => {
+            const el = e.target as HTMLElement
+            if (el.closest("a,button")) setOpen(false)
+          }}
+          className={cn(
+            "absolute top-0 z-50 min-w-[12rem] rounded-xl border border-border bg-card p-1.5 shadow-lg",
+            showLabel ? "left-full ml-2" : "left-full ml-2",
+          )}
+        >
+          <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+            {title ?? label}
+          </p>
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <title>Expand</title>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  )
+}
+
+// ============================================================================
 // RailModeButton — RailButton wired to sidebar mode switching
 // ============================================================================
 

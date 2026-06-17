@@ -9,6 +9,7 @@ export {
   SidebarPanelContent,
   SidebarContent,
   RailButton,
+  RailFlyout,
   RailModeButton,
   RailSeparator,
   ProfileAvatar,
@@ -22,6 +23,7 @@ export {
   type SidebarPanelContentProps,
   type SidebarContentProps,
   type RailButtonProps,
+  type RailFlyoutProps,
   type RailModeButtonProps,
   type RailSeparatorProps,
   type ProfileAvatarProps,
@@ -139,6 +141,7 @@ export {
   SidebarLayout,
   type SidebarLayoutProps,
   type SidebarLayoutNavItem,
+  type SidebarLayoutFlyoutItem,
 } from "./sidebar-layout";
 export {
   PricingPage,

@@ -5,9 +5,9 @@ import * as React from "react"
 const PANEL_OPEN_KEY = "sandbox-sidebar-panel-open"
 const SIDEBAR_MODE_KEY = "sandbox-sidebar-mode"
 
-/** Width constants (px) matching blueprint-agent layout */
-export const SIDEBAR_RAIL_WIDTH = 64
-export const SIDEBAR_PANEL_WIDTH = 260
+/** Width constants (px) — Tangle Quiet density (ChatGPT-minimal) */
+export const SIDEBAR_RAIL_WIDTH = 56
+export const SIDEBAR_PANEL_WIDTH = 268
 export const SIDEBAR_TOTAL_WIDTH = SIDEBAR_RAIL_WIDTH + SIDEBAR_PANEL_WIDTH
 /**
  * Width of the mobile drawer when the rail is rendered with labels
@@ -20,7 +20,7 @@ export const SIDEBAR_MOBILE_WIDTH = 256
  * icon-only at {@link SIDEBAR_RAIL_WIDTH}; a labeled rail needs room for the
  * longest nav label plus its badge.
  */
-export const SIDEBAR_RAIL_LABELED_WIDTH = 224
+export const SIDEBAR_RAIL_LABELED_WIDTH = 248
 
 interface SidebarContextValue {
   /** Whether the content panel beside the rail is open */

@@ -122,8 +122,8 @@ export function RailThemeToggle({ className }: { className?: string }) {
       aria-label="Toggle theme"
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={cn(
-        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors",
-        "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+        "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         className,
       )}
@@ -281,9 +281,9 @@ export interface RailButtonProps {
 
 export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children }: RailButtonProps) {
   const classes = cn(
-    "group relative flex shrink-0 items-center justify-center rounded-xl transition-all duration-200",
-    showLabel ? "w-full justify-start px-3 h-11 gap-3" : "w-11 h-11 justify-center",
-    "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
+    "group relative flex shrink-0 items-center justify-center rounded-md transition-all duration-200",
+    showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
+    "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
     "active:scale-95",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
     isActive && "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]",
@@ -293,9 +293,9 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
 
   const content = (
     <>
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon className="h-[17px] w-[17px] shrink-0" />
       {showLabel && (
-        <span className="text-sm font-medium">{label}</span>
+        <span className="text-[13.5px] font-medium">{label}</span>
       )}
       {badge !== undefined && badge > 0 && (
         <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-[var(--md3-on-primary)] px-1 shadow-sm">
@@ -376,9 +376,9 @@ export function RailFlyout({
   }, [open])
 
   const triggerClasses = cn(
-    "group relative flex shrink-0 items-center rounded-xl transition-all duration-200",
-    showLabel ? "w-full justify-start px-3 h-11 gap-3" : "w-11 h-11 justify-center",
-    "hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
+    "group relative flex shrink-0 items-center rounded-md transition-all duration-200",
+    showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
+    "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
     "active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
     (isActive || open) ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]" : "text-muted-foreground",
     className,
@@ -417,7 +417,7 @@ export function RailFlyout({
             if (el.closest("a,button")) setOpen(false)
           }}
           className={cn(
-            "absolute top-0 z-50 min-w-[12rem] rounded-xl border border-border bg-card p-1.5 shadow-lg",
+            "absolute top-0 z-50 min-w-[12rem] rounded-md border border-border bg-popover p-1.5 shadow-dropdown",
             showLabel ? "left-full ml-2" : "left-full ml-2",
           )}
         >
@@ -485,11 +485,11 @@ export function SidebarPanel({ children, className }: SidebarPanelProps) {
     <div
       className={cn(
         "transition-[opacity] duration-150 h-full overflow-hidden border-l border-border bg-card",
-        panelOpen ? "w-[260px] opacity-100" : "w-0 opacity-0 pointer-events-none",
+        panelOpen ? "w-[268px] opacity-100" : "w-0 opacity-0 pointer-events-none",
         className,
       )}
     >
-      <div className="flex flex-col h-full w-[260px]">
+      <div className="flex flex-col h-full w-[268px]">
         {children}
       </div>
     </div>

@@ -1,8 +1,13 @@
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, type Ref, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { ArrowLeft, FolderTree, GripVertical, MessageSquareText, Plus, Search, Settings, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Badge } from "@tangle-network/ui/primitives";
 import { useNavbarSessions, type ActiveSessionRecord, type ActiveSessionStatus, type SessionProjectKey } from "@tangle-network/ui/stores";
+import {
+  useOptimisticSessionItems,
+  type SessionOptimisticController,
+  type UseOptimisticSessionItemsOptions,
+} from "./session-optimistic";
 
 export interface SessionSidebarItem {
   id: string;
@@ -72,7 +77,28 @@ export interface SessionSidebarProps {
       isActive: boolean;
     },
   ) => ReactNode;
+  /**
+   * Opt into optimistic item updates: the sidebar keeps a local mirror of
+   * `items` so a just-created / renamed / deleted thread shows instantly,
+   * before the loader round-trips. Pass `true` for defaults, or an options
+   * object to tune the window create-event. Off by default — existing callers
+   * render `items` verbatim and are unaffected.
+   */
+  optimistic?: boolean | UseOptimisticSessionItemsOptions;
+  /**
+   * Ref to the imperative optimistic controller (`add` / `update` / `remove` /
+   * `reset`). Drive optimistic edits from the consumer's own rename/delete/pin
+   * handlers. Only populated when `optimistic` is enabled.
+   */
+  optimisticRef?: Ref<SessionOptimisticController | null>;
 }
+
+const NO_CONTROLLER: SessionOptimisticController = {
+  add: () => {},
+  update: () => {},
+  remove: () => {},
+  reset: () => {},
+};
 
 function statusDot(status?: ActiveSessionStatus) {
   switch (status) {
@@ -210,17 +236,33 @@ export function SessionSidebar({
   maxWidth = 400,
   onWidthChange,
   renderItemActions,
+  optimistic = false,
+  optimisticRef,
 }: SessionSidebarProps) {
   const [query, setQuery] = useState("");
   const [activeFilterId, setActiveFilterId] = useState(defaultFilterId ?? filters[0]?.id ?? "all");
+  // Always call the hook (Rules of Hooks); it's a thin mirror when optimistic is
+  // off, and we only surface its items/controller when the consumer opted in.
+  const optimisticOptions = typeof optimistic === "object" ? optimistic : undefined;
+  const optimisticState = useOptimisticSessionItems(
+    items,
+    optimistic === false ? { listenForCreate: false } : optimisticOptions,
+  );
+  const optimisticEnabled = optimistic !== false;
+  const effectiveItems = optimisticEnabled ? optimisticState.items : items;
+  useImperativeHandle(
+    optimisticRef,
+    () => (optimisticEnabled ? optimisticState.controller : NO_CONTROLLER),
+    [optimisticEnabled, optimisticState.controller],
+  );
   const activeSessions = useNavbarSessions(projectId);
   const sessionsById = useMemo(
     () => new Map(activeSessions.map((session) => [session.sessionId, session])),
     [activeSessions],
   );
   const orderedItems = useMemo(
-    () => sortItems(items, sessionsById),
-    [items, sessionsById],
+    () => sortItems(effectiveItems, sessionsById),
+    [effectiveItems, sessionsById],
   );
   const visibleItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -293,7 +335,7 @@ export function SessionSidebar({
       {/* Search + filters */}
       {((enableSearch && items.length > 0) || filters.length > 0) && (
         <div className="shrink-0 border-b border-border px-3 py-2.5">
-          {enableSearch && items.length > 0 && (
+          {enableSearch && effectiveItems.length > 0 && (
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <input

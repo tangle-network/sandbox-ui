@@ -10,6 +10,20 @@ export {
   type SessionSidebarFilter,
   type SessionSidebarBadge,
 } from "./session-sidebar";
+export {
+  createShellShouldRevalidate,
+  shellShouldRevalidate,
+  type ShellShouldRevalidateArgs,
+  type ShellShouldRevalidateOptions,
+} from "./shell-revalidation";
+export {
+  useOptimisticSessionItems,
+  dispatchSessionCreated,
+  SESSION_CREATED_EVENT,
+  type SessionCreatedDetail,
+  type SessionOptimisticController,
+  type UseOptimisticSessionItemsOptions,
+} from "./session-optimistic";
 export { SessionActivityMonitor, type SessionActivityMonitorProps } from "./session-activity-monitor";
 export {
   SandboxWorkbench,

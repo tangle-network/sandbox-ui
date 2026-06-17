@@ -360,7 +360,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 onChange={(e) => setNewName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"))}
                 placeholder="MY_SECRET_KEY"
                 autoComplete="off"
-                className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
             <div>
@@ -374,7 +374,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                   onChange={(e) => setNewValue(e.target.value)}
                   placeholder="Enter secret value..."
                   autoComplete="new-password"
-                  className="w-full rounded-md border border-border bg-card px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full rounded-md border border-border bg-card px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
                 <button
                   type="button"
@@ -458,7 +458,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 onChange={(e) => setImportText(e.target.value)}
                 rows={6}
                 spellCheck={false}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <p className="text-[11px] text-muted-foreground">
                 Lines starting with <span className="font-mono">#</span> are comments. Text after <span className="font-mono">#</span> inside a value is preserved.

@@ -106,7 +106,7 @@ export function OutOfCreditsModal({
     >
       <div
         className={cn(
-          "bg-card border border-border rounded-xl p-6 max-w-md w-full shadow-xl",
+          "bg-card border border-border rounded-xl p-6 max-w-md w-full shadow-[var(--shadow-dropdown)]",
           className,
         )}
         onClick={(e) => e.stopPropagation()}

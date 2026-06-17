@@ -113,8 +113,8 @@ export function ReasoningLevelPicker({
           className={cn(
             "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5",
             "text-xs font-medium text-foreground shadow-sm transition-colors",
-            "hover:border-primary/30 hover:bg-accent/30 focus:outline-none focus:border-primary/40",
-            "data-[state=open]:border-primary/40 data-[state=open]:bg-accent/30",
+            "hover:border-border hover:bg-muted/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            "data-[state=open]:border-border data-[state=open]:bg-muted/40",
             "disabled:cursor-not-allowed disabled:opacity-50",
             className,
             triggerClassName,

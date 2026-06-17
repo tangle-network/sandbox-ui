@@ -17,6 +17,7 @@ import {
   SIDEBAR_PANEL_WIDTH,
   useSidebar,
 } from "./sidebar-context"
+import { RailTooltip } from "./rail-tooltip"
 
 // ============================================================================
 // Types
@@ -124,7 +125,7 @@ export function RailThemeToggle({ className }: { className?: string }) {
       className={cn(
         "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
         "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         className,
       )}
     >
@@ -161,29 +162,30 @@ export interface RailCollapseToggleProps {
 }
 
 // Collapse/expand control for the labeled nav rail. A chevron-only button when
-// collapsed (with a hover tooltip via `title`), a labeled row when expanded.
+// collapsed (with a styled hover tooltip), a labeled row when expanded.
 // Independent of the panel toggle — this only changes the rail width.
 export function RailCollapseToggle({ collapsed, showLabel, onToggle, className }: RailCollapseToggleProps) {
   const label = collapsed ? "Expand sidebar" : "Collapse sidebar"
   const Icon = collapsed ? ChevronsRightIcon : ChevronsLeftIcon
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label={label}
-      aria-pressed={collapsed}
-      title={label}
-      className={cn(
-        "group flex shrink-0 items-center rounded-md text-muted-foreground transition-colors",
-        showLabel ? "h-9 w-full justify-start gap-2.5 px-2.5" : "h-9 w-9 justify-center",
-        "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        className,
-      )}
-    >
-      <Icon className="h-[17px] w-[17px] shrink-0" />
-      {showLabel && <span className="text-[13.5px] font-medium">{label}</span>}
-    </button>
+    <RailTooltip label={label} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={label}
+        aria-pressed={collapsed}
+        className={cn(
+          "flex shrink-0 items-center rounded-md text-muted-foreground transition-colors",
+          showLabel ? "h-9 w-full justify-start gap-2.5 px-2.5" : "h-9 w-9 justify-center",
+          "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          className,
+        )}
+      >
+        <Icon className="h-[17px] w-[17px] shrink-0" />
+        {showLabel && <span className="text-[13.5px] font-medium">{label}</span>}
+      </button>
+    </RailTooltip>
   )
 }
 
@@ -335,44 +337,57 @@ export interface RailButtonProps {
 
 export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children }: RailButtonProps) {
   const classes = cn(
-    "group relative flex shrink-0 items-center justify-center rounded-md transition-all duration-200",
+    "relative flex shrink-0 items-center justify-center rounded-md transition-colors duration-150",
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
-    "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-    "active:scale-95",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-    isActive && "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]",
-    !isActive && "text-muted-foreground",
+    // Quiet press feedback via color only — no scale on the full-width row.
+    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+    isActive
+      ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]"
+      : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
     className,
+  )
+
+  // Badge anchored to the icon (not the row) so it stays on the icon corner in
+  // both icon-only and labeled modes, and through the collapse transition.
+  const iconWithBadge = (
+    <span className="relative flex shrink-0 items-center justify-center">
+      <Icon className="h-[17px] w-[17px] shrink-0" />
+      {badge !== undefined && badge > 0 && (
+        <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-[var(--md3-on-primary)] px-1">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
+    </span>
   )
 
   const content = (
     <>
-      <Icon className="h-[17px] w-[17px] shrink-0" />
-      {showLabel && (
-        <span className="text-[13.5px] font-medium">{label}</span>
-      )}
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-[var(--md3-on-primary)] px-1 shadow-sm">
-          {badge > 99 ? "99+" : badge}
-        </span>
-      )}
+      {iconWithBadge}
+      {showLabel && <span className="text-[13.5px] font-medium">{label}</span>}
     </>
   )
 
   if (asChild && React.isValidElement(children)) {
     // biome-ignore lint/suspicious/noExplicitAny: merge onto an unknown child element (Link/anchor)
     const child = children as React.ReactElement<any>
-    return React.cloneElement(
+    const merged = React.cloneElement(
       child,
-      { className: cn(classes, child.props.className), title: child.props.title ?? label },
+      { className: cn(classes, child.props.className), "aria-label": child.props["aria-label"] ?? label },
       content,
+    )
+    return (
+      <RailTooltip label={label} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
+        {merged}
+      </RailTooltip>
     )
   }
 
   return (
-    <button type="button" onClick={onClick} title={label} className={classes}>
-      {content}
-    </button>
+    <RailTooltip label={label} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
+      <button type="button" onClick={onClick} aria-label={label} className={classes}>
+        {content}
+      </button>
+    </RailTooltip>
   )
 }
 
@@ -429,26 +444,29 @@ export function RailFlyout({
     }
   }, [open])
 
+  const active = isActive || open
   const triggerClasses = cn(
-    "group relative flex shrink-0 items-center rounded-md transition-all duration-200",
+    "relative flex shrink-0 items-center rounded-md transition-colors duration-150",
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
-    "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-    "active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-    (isActive || open) ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]" : "text-muted-foreground",
+    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+    active
+      ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]"
+      : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
     className,
   )
 
   return (
     <div ref={ref} className={cn("relative", showLabel && "w-full")}>
+      <RailTooltip label={label} disabled={showLabel || open} className={showLabel ? "w-full" : undefined}>
       <button
         type="button"
-        title={label}
+        aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className={triggerClasses}
       >
-        <Icon className="h-5 w-5 shrink-0" />
+        <Icon className="h-[17px] w-[17px] shrink-0" />
         {showLabel && <span className="text-sm font-medium">{label}</span>}
         {showLabel && (
           <ChevronRightIcon
@@ -459,6 +477,7 @@ export function RailFlyout({
           />
         )}
       </button>
+      </RailTooltip>
 
       {open && (
         // Anchored to the right edge of the rail item; full-height-independent
@@ -471,7 +490,7 @@ export function RailFlyout({
             if (el.closest("a,button")) setOpen(false)
           }}
           className={cn(
-            "absolute top-0 z-50 min-w-[12rem] rounded-md border border-border bg-popover p-1.5 shadow-dropdown",
+            "absolute top-0 z-50 min-w-[12rem] rounded-md border border-border bg-popover p-1.5 shadow-[var(--shadow-dropdown)]",
             showLabel ? "left-full ml-2" : "left-full ml-2",
           )}
         >
@@ -654,7 +673,7 @@ export function ProfileAvatar({
           type="button"
           className={cn(
             "flex items-center rounded-lg transition-colors hover:bg-[var(--accent-surface-soft)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             showDetails ? "w-full gap-2.5 px-3 py-2 text-left" : "justify-center w-12 h-12",
             className,
           )}

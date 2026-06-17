@@ -383,7 +383,7 @@ function DashboardLayoutInner({
               )}
             </button>
             {notificationsOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-border bg-card shadow-lg z-50">
+              <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-border bg-card shadow-[var(--shadow-dropdown)] z-50">
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
                   <p className="font-bold text-foreground text-sm">Notifications</p>
                   {(notifData?.unreadCount ?? 0) > 0 && notifData?.onMarkAllRead && (

@@ -119,7 +119,7 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
           value={newPort}
           onChange={(e) => setNewPort(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleExpose()}
-          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <button
           type="button"

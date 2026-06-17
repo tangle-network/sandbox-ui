@@ -32,6 +32,7 @@ export {
   type ProfileAvatarProps,
   type SidebarUser,
 } from "./app-sidebar";
+export { RailTooltip, type RailTooltipProps } from "./rail-tooltip";
 export {
   SidebarProvider,
   useSidebar,

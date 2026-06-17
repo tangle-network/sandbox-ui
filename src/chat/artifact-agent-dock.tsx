@@ -280,14 +280,14 @@ export function ArtifactAgentDock({
   return (
     <aside
       className={cn(
-        "flex h-full w-[420px] min-w-[360px] max-w-[480px] flex-col border-l border-border bg-card/95 shadow-xl",
+        "flex h-full w-[420px] min-w-[360px] max-w-[480px] flex-col border-l border-border bg-card/95 shadow-[var(--shadow-dropdown)]",
         className,
       )}
       aria-label={`Agent chat about ${heading}`}
     >
       <header className="flex items-center justify-between border-b border-border bg-background/60 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+          <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
             <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Discussing</div>
             <div className="truncate text-sm font-semibold text-foreground">{heading}</div>
@@ -342,7 +342,7 @@ export function ArtifactAgentDock({
             placeholder={`Ask about ${heading}…`}
             rows={2}
             disabled={!threadId}
-            className="min-h-[44px] flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 disabled:opacity-50"
+            className="min-h-[44px] flex-1 resize-none rounded-[20px] border border-border bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:outline-none focus:border-[var(--border-accent)] disabled:opacity-50"
           />
           {sending ? (
             <button
@@ -358,7 +358,7 @@ export function ArtifactAgentDock({
               type="submit"
               disabled={!composer.trim() || !threadId}
               aria-label="Send"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
             </button>

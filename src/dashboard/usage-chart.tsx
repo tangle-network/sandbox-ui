@@ -77,7 +77,7 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
                 >
                   {/* Tooltip */}
                   {isHovered && (
-                    <div className="absolute -top-12 z-10 rounded-lg bg-popover px-3 py-1.5 text-sm shadow-lg">
+                    <div className="absolute -top-12 z-10 rounded-lg border border-border bg-popover px-3 py-1.5 text-sm shadow-[var(--shadow-dropdown)]">
                       <p className="font-medium">
                         {formatValue(point.value)} {unit}
                       </p>

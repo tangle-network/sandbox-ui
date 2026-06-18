@@ -30,7 +30,7 @@ interface FakeTerminal {
   writeln: ReturnType<typeof vi.fn>
   cols: number
   rows: number
-  options: { theme?: unknown }
+  options: { theme?: unknown; fontSize?: number }
 }
 
 const m = vi.hoisted(() => {
@@ -194,6 +194,35 @@ describe("TerminalView — connectionId passthrough", () => {
     expect(m.usePtySessionMock).toHaveBeenCalledWith(
       expect.objectContaining({ connectionId: "terminal-xyz" }),
     )
+  })
+})
+
+describe("TerminalView — font size", () => {
+  it("defaults the xterm font size to 13 when no prop is given", () => {
+    renderView()
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+  })
+
+  it("applies the provided fontSize to the terminal on mount", () => {
+    render(<TerminalView apiUrl="https://test.local" token="t" fontSize={16} />)
+    expect(m.terminalRef.current?.options.fontSize).toBe(16)
+  })
+
+  it("updates the font size in place when the prop changes", () => {
+    const { rerender } = render(
+      <TerminalView apiUrl="https://test.local" token="t" fontSize={13} />,
+    )
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+
+    act(() => {
+      rerender(
+        <TerminalView apiUrl="https://test.local" token="t" fontSize={18} />,
+      )
+    })
+
+    // Updated in place — the same terminal instance, no re-construction.
+    expect(m.TerminalCtor).toHaveBeenCalledTimes(1)
+    expect(m.terminalRef.current?.options.fontSize).toBe(18)
   })
 })
 

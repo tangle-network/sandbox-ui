@@ -24,7 +24,9 @@ export interface HarnessBrand {
   icon?: React.ComponentType<{ className?: string }>;
 }
 
-export const HARNESS_BRAND: Record<HarnessType, HarnessBrand> = {
+// Presentation only — a Partial over the canonical HarnessType: the UI provides brand marks for the
+// harnesses it surfaces, and any other canonical harness falls back to its name + a generic glyph.
+export const HARNESS_BRAND: Partial<Record<HarnessType, HarnessBrand>> = {
   opencode: { label: "OpenCode", logoUrl: opencodeLogo },
   "claude-code": { label: "Claude Code", logoUrl: claudeCodeLogo },
   codex: { label: "Codex", logoUrl: codexLogo },
@@ -52,7 +54,7 @@ export interface HarnessLogoProps {
  * glyph. Keeps harness pills visually consistent with model pills.
  */
 export function HarnessLogo({ type, size = 16, className }: HarnessLogoProps) {
-  const brand = HARNESS_BRAND[type];
+  const brand: HarnessBrand = HARNESS_BRAND[type] ?? { label: type, icon: Bot };
   const Icon = brand.icon;
   return (
     <span

@@ -1,3 +1,4 @@
+import type { ReasoningEffort } from '@tangle-network/agent-interface';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SessionMessage, SessionPart, TextPart, ToolPart, ReasoningPart } from '@tangle-network/ui/types';
 
@@ -35,8 +36,10 @@ export interface SendMessageOptions {
   model?: { providerID: string; modelID: string };
   /** Per-turn system prompt override. */
   system?: string;
-  /** Thinking-effort hint; the sidecar maps it to a thinking-token budget. */
-  reasoningEffort?: 'low' | 'medium' | 'high';
+  /** Thinking-effort hint; the sidecar maps it to a thinking-token budget. The full canonical
+   *  `ReasoningEffort` (`@tangle-network/agent-interface`) — the UI shows only the levels the
+   *  selected harness/model actually supports (a capability filter), never a hard-coded subset. */
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface UseSessionStreamResult {

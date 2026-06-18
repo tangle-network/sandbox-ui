@@ -21,6 +21,7 @@ import {
   Layers,
 } from "lucide-react"
 import { cn } from "../lib/utils"
+import { PageHeader } from "../primitives"
 import {
   Dialog,
   DialogContent,
@@ -441,26 +442,21 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
   const activeCount = scripts.filter((s) => s.enabled).length
 
   return (
-    <div className={cn("mx-auto w-full max-w-7xl space-y-6", className)}>
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-foreground">
-            Startup Scripts
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Define scripts that run automatically when your sandboxes start. Scripts can access your encrypted secrets.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
-        >
-          <Plus className="h-4 w-4" />
-          New Script
-        </button>
-      </div>
+    <div className={cn("mx-auto w-full max-w-6xl space-y-8", className)}>
+      <PageHeader
+        title="Startup Scripts"
+        description="Define scripts that run automatically when your sandboxes start. Scripts can access your encrypted secrets."
+        action={
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
+          >
+            <Plus className="h-4 w-4" />
+            New Script
+          </button>
+        }
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">

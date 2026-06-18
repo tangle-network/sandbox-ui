@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, Shield, CheckCircle, Users, ArrowRight, Upload } from "lucide-react"
 import { cn } from "../lib/utils"
+import { PageHeader } from "../primitives"
 import {
   Dialog,
   DialogContent,
@@ -243,36 +244,31 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
   }
 
   return (
-    <div className={cn("mx-auto w-full max-w-7xl space-y-8", className)}>
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-foreground">
-            Environment Secrets
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Secrets are securely stored and automatically exposed as environment variables across all your sandboxes.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsImportOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors active:scale-[0.97]"
-          >
-            <Upload className="h-4 w-4" />
-            Import .env
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
-          >
-            <Plus className="h-4 w-4" />
-            New Secret
-          </button>
-        </div>
-      </div>
+    <div className={cn("mx-auto w-full max-w-6xl space-y-8", className)}>
+      <PageHeader
+        title="Environment Secrets"
+        description="Secrets are securely stored and automatically exposed as environment variables across all your sandboxes."
+        action={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsImportOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors active:scale-[0.97]"
+            >
+              <Upload className="h-4 w-4" />
+              Import .env
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
+            >
+              <Plus className="h-4 w-4" />
+              New Secret
+            </button>
+          </>
+        }
+      />
 
       {/* Team-secrets hint — rendered only when the host app opts in.
           These secrets are personal; team-scoped credentials live on the

@@ -77,6 +77,21 @@ export interface DashboardLayoutProps {
   activeTopNavHref?: string
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
+  /**
+   * Where the in-app logo links. Defaults to "/dashboard" so the logo never
+   * bounces an authenticated user back out to the public marketing homepage.
+   */
+  logoHref?: string
+  /**
+   * If provided, the rail logo becomes a button calling this instead of
+   * navigating — e.g. to toggle the sidebar. Takes precedence over logoHref.
+   */
+  onLogoClick?: () => void
+  /**
+   * Let the icon rail expand to a labeled rail. When true, the rail logo
+   * toggles between icon-only and labeled instead of navigating.
+   */
+  labeledRail?: boolean
   footer?: React.ReactNode
   defaultPanelOpen?: boolean
   defaultMode?: string
@@ -177,6 +192,9 @@ function DashboardLayoutInner({
   topNavLinks,
   activeTopNavHref,
   LinkComponent = DefaultLink,
+  logoHref = "/dashboard",
+  onLogoClick,
+  labeledRail = false,
   footer,
   railFooter,
   profileMenuItems,
@@ -204,7 +222,8 @@ function DashboardLayoutInner({
       document.removeEventListener("keydown", keyHandler)
     }
   }, [notificationsOpen])
-  const { contentMargin, hidden, mode, hasPanels, panelOpen } = useSidebar()
+  const { contentMargin, hidden, mode, hasPanels, panelOpen, toggleRail, railCollapsed } =
+    useSidebar()
   const modeSet = React.useMemo(() => new Set(modeItems), [modeItems])
 
   // Memoised so the `buildSidebarContent` callback below (which depends on
@@ -229,9 +248,34 @@ function DashboardLayoutInner({
       <>
         <SidebarRail wide={showLabels}>
           <SidebarRailHeader>
-            <Link href="/" to="/" className="p-1 rounded-md transition-colors hover:bg-muted/50">
-              <Logo variant={variant} size="sm" iconOnly />
-            </Link>
+            {onLogoClick ? (
+              <button
+                type="button"
+                onClick={onLogoClick}
+                aria-label="Toggle navigation"
+                className="p-1 rounded-md transition-colors hover:bg-muted/50"
+              >
+                <Logo variant={variant} size="sm" iconOnly />
+              </button>
+            ) : labeledRail ? (
+              <button
+                type="button"
+                onClick={toggleRail}
+                aria-label={railCollapsed ? "Expand navigation" : "Collapse navigation"}
+                aria-expanded={!railCollapsed}
+                className="p-1 rounded-md transition-colors hover:bg-muted/50"
+              >
+                <Logo variant={variant} size="sm" iconOnly />
+              </button>
+            ) : (
+              <Link
+                href={logoHref}
+                to={logoHref}
+                className="p-1 rounded-md transition-colors hover:bg-muted/50"
+              >
+                <Logo variant={variant} size="sm" iconOnly />
+              </Link>
+            )}
           </SidebarRailHeader>
 
           <SidebarRailNav>
@@ -301,6 +345,11 @@ function DashboardLayoutInner({
     [
       Link,
       variant,
+      onLogoClick,
+      logoHref,
+      labeledRail,
+      toggleRail,
+      railCollapsed,
       navItems,
       modeSet,
       activeNavId,
@@ -318,7 +367,10 @@ function DashboardLayoutInner({
     ],
   )
 
-  const sidebarContent = React.useMemo(() => buildSidebarContent(false), [buildSidebarContent])
+  const sidebarContent = React.useMemo(
+    () => buildSidebarContent(labeledRail && !railCollapsed),
+    [buildSidebarContent, labeledRail, railCollapsed],
+  )
   const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true), [buildSidebarContent])
 
   return (
@@ -335,7 +387,7 @@ function DashboardLayoutInner({
           {/* Mobile-only brand — the desktop sidebar rail carries the logo
               on lg+, but on mobile the rail is hidden behind the drawer and
               the top bar otherwise contained only a bell + hamburger. */}
-          <Link href="/" to="/" className="lg:hidden flex items-center p-1 rounded-md hover:bg-muted/50 transition-colors">
+          <Link href={logoHref} to={logoHref} className="lg:hidden flex items-center p-1 rounded-md hover:bg-muted/50 transition-colors">
             <Logo variant={variant} size="sm" iconOnly />
           </Link>
           {topNavLinks && topNavLinks.length > 0 && (
@@ -486,10 +538,10 @@ function DashboardLayoutInner({
 // Public export — wraps in SidebarProvider
 // ============================================================================
 
-export function DashboardLayout({ defaultPanelOpen, defaultMode, ...props }: DashboardLayoutProps) {
+export function DashboardLayout({ defaultPanelOpen, defaultMode, labeledRail, ...props }: DashboardLayoutProps) {
   return (
-    <SidebarProvider defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} hasPanels={(props.panels?.length ?? 0) > 0}>
-      <DashboardLayoutInner defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} {...props} />
+    <SidebarProvider defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} labeledRail={labeledRail} hasPanels={(props.panels?.length ?? 0) > 0}>
+      <DashboardLayoutInner defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} labeledRail={labeledRail} {...props} />
     </SidebarProvider>
   )
 }

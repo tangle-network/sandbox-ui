@@ -1,8 +1,9 @@
 "use client";
 
-import * as React from "react";
+import { type ReasoningEffort, reasoningEffortsFor } from "@tangle-network/agent-interface";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown, Lock, SlidersHorizontal } from "lucide-react";
+import * as React from "react";
 import { cn } from "../lib/utils";
 import {
   canonicalModelId,
@@ -60,6 +61,11 @@ export interface AgentSessionReasoningControl {
   onChange: (value: ReasoningLevel) => void;
   options?: ReadonlyArray<ReasoningLevelOption>;
   disabled?: boolean;
+  /**
+   * Reasoning efforts to offer when no harness is selected (e.g. a model-derived capability set).
+   * When a harness IS present the strip derives this from `reasoningEffortsFor(harness)` instead.
+   */
+  available?: ReadonlyArray<ReasoningEffort>;
 }
 
 export interface AgentSessionControlsProps {
@@ -278,6 +284,10 @@ export function AgentSessionControls({
       onChange={reasoning.onChange}
       options={reasoning.options}
       disabled={reasoning.disabled}
+      // Smart switch: when a harness is selected, only show the reasoning levels it supports
+      // (codex caps at high, cli-base only `none`, claude the full range). The per-model dimension
+      // refines this further once the catalog's reasoning support is threaded in.
+      available={harness ? reasoningEffortsFor(harness.value) : reasoning.available}
     />
   );
 

@@ -345,8 +345,8 @@ describe("StartupScriptsPage", () => {
     expect(container.firstElementChild).toHaveClass(
       "mx-auto",
       "w-full",
-      "max-w-7xl",
-      "space-y-6",
+      "max-w-6xl",
+      "space-y-8",
       "test-class",
     )
   })

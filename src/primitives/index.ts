@@ -110,10 +110,10 @@ export {
   Heading,
   type HeadingProps,
   type HeadingRole,
+  type HeadingVariant,
   PageHeader,
   type PageHeaderProps,
-  PageShell,
-  type PageShellProps,
   SectionTitle,
   type SectionTitleProps,
 } from "./heading";
+export { PageShell, type PageShellProps } from "./page-shell";

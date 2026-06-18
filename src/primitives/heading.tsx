@@ -1,4 +1,9 @@
-import type { ElementType, ReactNode } from "react";
+import {
+  type ElementType,
+  forwardRef,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 import { cn } from "../lib/utils";
 
 /**
@@ -11,8 +16,13 @@ import { cn } from "../lib/utils";
  *
  * Weights are deliberately quiet (Tangle Quiet): heroes at 700, titles at 600
  * — never extrabold.
+ *
+ * Semantic-tag invariant: both `display` and `page` default to <h1>. Use at
+ * most one of them per page (the marketing hero OR the dashboard page title);
+ * if a page needs both, override the secondary one with `as` to keep a single
+ * <h1> for accessibility and SEO.
  */
-export type HeadingRole =
+export type HeadingVariant =
   | "display" // marketing hero headline
   | "hero" // secondary hero / large marketing section head
   | "page" // the page title (dashboard h1, marketing section h2)
@@ -20,7 +30,10 @@ export type HeadingRole =
   | "subsection" // sub-section heading (h3)
   | "eyebrow"; // uppercase label above a title
 
-const ROLE_CLASS: Record<HeadingRole, string> = {
+/** @deprecated Renamed to {@link HeadingVariant}; kept as an alias. */
+export type HeadingRole = HeadingVariant;
+
+const VARIANT_CLASS: Record<HeadingVariant, string> = {
   display:
     "font-display font-bold text-foreground text-[length:var(--font-size-display,3rem)] leading-[var(--line-height-display,1.05)] tracking-[var(--tracking-tight,-0.02em)]",
   hero: "font-display font-bold text-foreground text-[length:var(--font-size-hero,2.5rem)] leading-[1.1] tracking-[var(--tracking-tight,-0.02em)]",
@@ -33,7 +46,7 @@ const ROLE_CLASS: Record<HeadingRole, string> = {
     "font-semibold uppercase text-muted-foreground text-[length:var(--font-size-sm,0.75rem)] leading-none tracking-[var(--tracking-wide,0.08em)]",
 };
 
-const DEFAULT_TAG: Record<HeadingRole, ElementType> = {
+const DEFAULT_TAG: Record<HeadingVariant, ElementType> = {
   display: "h1",
   hero: "h2",
   page: "h1",
@@ -42,23 +55,31 @@ const DEFAULT_TAG: Record<HeadingRole, ElementType> = {
   eyebrow: "p",
 };
 
-export interface HeadingProps {
-  role: HeadingRole;
+export interface HeadingProps
+  extends Omit<HTMLAttributes<HTMLElement>, "role"> {
+  /** Type role from the design system (size + weight + tracking + leading). */
+  role: HeadingVariant;
   /** Override the rendered element (defaults to the semantic tag for the role). */
   as?: ElementType;
-  className?: string;
   children: ReactNode;
-  id?: string;
 }
 
-export function Heading({ role, as, className, children, ...rest }: HeadingProps) {
-  const Tag = as ?? DEFAULT_TAG[role];
+/**
+ * Role-based heading. Forwards a ref to the underlying element and passes
+ * through standard HTML/ARIA/data-* attributes so it drops into tests,
+ * scroll-spy, and a11y tooling without friction.
+ */
+export const Heading = forwardRef<HTMLElement, HeadingProps>(function Heading(
+  { role, as, className, children, ...rest },
+  ref,
+) {
+  const Tag = (as ?? DEFAULT_TAG[role]) as ElementType;
   return (
-    <Tag className={cn(ROLE_CLASS[role], className)} {...rest}>
+    <Tag ref={ref} className={cn(VARIANT_CLASS[role], className)} {...rest}>
       {children}
     </Tag>
   );
-}
+});
 
 export interface PageHeaderProps {
   title: ReactNode;
@@ -139,28 +160,6 @@ export function SectionTitle({
         ) : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
-    </div>
-  );
-}
-
-export interface PageShellProps {
-  children: ReactNode;
-  className?: string;
-}
-
-/**
- * Canonical page container — one max-width, one gutter, one vertical rhythm
- * so every page sits on the same grid. Gutter widens on large viewports.
- */
-export function PageShell({ children, className }: PageShellProps) {
-  return (
-    <div
-      className={cn(
-        "mx-auto w-full max-w-6xl space-y-8 px-6 py-8 lg:px-8",
-        className,
-      )}
-    >
-      {children}
     </div>
   );
 }

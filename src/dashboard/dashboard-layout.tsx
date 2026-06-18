@@ -89,6 +89,12 @@ export interface DashboardLayoutProps {
    */
   onLogoClick?: () => void
   /**
+   * Accessible label for the logo button when onLogoClick is set. Defaults to
+   * "Toggle navigation"; set it to match what onLogoClick actually does (e.g.
+   * "Open command palette") so screen readers don't announce a stale action.
+   */
+  logoAriaLabel?: string
+  /**
    * Let the icon rail expand to a labeled rail. When true, the rail logo
    * toggles between icon-only and labeled instead of navigating.
    */
@@ -195,6 +201,7 @@ function DashboardLayoutInner({
   LinkComponent = DefaultLink,
   logoHref = "/",
   onLogoClick,
+  logoAriaLabel = "Toggle navigation",
   labeledRail = false,
   footer,
   railFooter,
@@ -253,7 +260,7 @@ function DashboardLayoutInner({
               <button
                 type="button"
                 onClick={onLogoClick}
-                aria-label="Toggle navigation"
+                aria-label={logoAriaLabel}
                 className="p-1 rounded-md transition-colors hover:bg-muted/50"
               >
                 <Logo variant={variant} size="sm" iconOnly />
@@ -347,6 +354,7 @@ function DashboardLayoutInner({
       Link,
       variant,
       onLogoClick,
+      logoAriaLabel,
       logoHref,
       labeledRail,
       toggleRail,

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReasoningEffort } from "@tangle-network/agent-interface";
 import * as React from "react";
 import { TangleKnot } from "@tangle-network/brand";
 import { ProviderLogo } from "./provider-logo";
@@ -82,6 +83,14 @@ export interface ModelInfo {
    * (matched by dedup key) so the section is never empty for a router catalog.
    */
   featured?: boolean;
+  /**
+   * Per-model reasoning capability, fed to the reasoning-effort picker's capability filter. Source it
+   * from your model catalog (e.g. the router's `supported_parameters` containing `reasoning`). When
+   * `false`, only `none` is offered for this model regardless of harness.
+   */
+  supportsReasoning?: boolean;
+  /** The model's own reasoning ceiling, if narrower than its harness's (e.g. a model capped at `high`). */
+  maxReasoningEffort?: ReasoningEffort;
 }
 
 export type ModelBrandKey =

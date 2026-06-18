@@ -278,16 +278,31 @@ export function AgentSessionControls({
       disabled={model.disabled || (visibleModels ?? []).length === 0}
     />
   );
+  // The selected model's reasoning capability (from the catalog) refines the harness clamp: a model
+  // that doesn't reason collapses to `none`; a lower model ceiling caps the list there.
+  const selectedModel = model?.models.find(
+    (entry) => canonicalModelId(entry) === model.value,
+  );
+  const modelReasoning = selectedModel
+    ? {
+        supportsReasoning: selectedModel.supportsReasoning,
+        maxEffort: selectedModel.maxReasoningEffort,
+      }
+    : null;
   const reasoningNode = reasoning && (
     <ReasoningLevelPicker
       value={reasoning.value}
       onChange={reasoning.onChange}
       options={reasoning.options}
       disabled={reasoning.disabled}
-      // Smart switch: when a harness is selected, only show the reasoning levels it supports
-      // (codex caps at high, cli-base only `none`, claude the full range). The per-model dimension
-      // refines this further once the catalog's reasoning support is threaded in.
-      available={harness ? reasoningEffortsFor(harness.value) : reasoning.available}
+      // Smart switch: show only the reasoning levels the selected (harness, model) pair supports —
+      // the harness clamp (codex caps high, cli-base only `none`, claude full) intersected with the
+      // model's own capability. Driven entirely by agent-interface's `reasoningEffortsFor`.
+      available={
+        harness
+          ? reasoningEffortsFor(harness.value, modelReasoning)
+          : reasoning.available
+      }
     />
   );
 

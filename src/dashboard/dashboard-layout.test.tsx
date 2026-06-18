@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { DashboardLayout } from "./dashboard-layout"
+import { DashboardLayout, type NavItem } from "./dashboard-layout"
+
+function NavIcon() {
+  return <svg data-testid="nav-icon" />
+}
 
 function renderLayout(notifications?: Parameters<typeof DashboardLayout>[0]["notifications"]) {
   return render(
@@ -10,6 +14,53 @@ function renderLayout(notifications?: Parameters<typeof DashboardLayout>[0]["not
     </DashboardLayout>,
   )
 }
+
+describe("DashboardLayout — labeled rail nav alignment", () => {
+  const navItems: NavItem[] = [
+    { id: "sandboxes", label: "Sandboxes", href: "/sandboxes", icon: NavIcon },
+    { id: "templates", label: "Templates", href: "/templates", icon: NavIcon },
+    { id: "team", label: "Team", href: "/team", icon: NavIcon },
+  ]
+
+  it("renders nav links as full-width rows on the anchor (asChild), not a nested button", () => {
+    render(
+      <DashboardLayout navItems={navItems} activeNavId="sandboxes" labeledRail>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    // Every nav anchor (desktop rail + mobile drawer render the same tree)
+    // must carry the row class itself and contain no nested <button> — the
+    // pre-fix markup was <a><button class="w-full">, which shrank the row to
+    // its label width and centered it, leaving each item a different width.
+    const links = document.querySelectorAll('nav a[href="/sandboxes"], nav a[href="/templates"], nav a[href="/team"]')
+    expect(links.length).toBeGreaterThan(0)
+    links.forEach((link) => {
+      expect(link.className).toMatch(/w-full/)
+      expect(link.querySelector("button")).toBeNull()
+    })
+  })
+
+  it("keeps active and inactive nav items the same width", () => {
+    render(
+      <DashboardLayout navItems={navItems} activeNavId="sandboxes" labeledRail>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    const active = document.querySelector('nav a[href="/sandboxes"]') as HTMLElement
+    const inactive = document.querySelector('nav a[href="/templates"]') as HTMLElement
+    expect(active).toBeTruthy()
+    expect(inactive).toBeTruthy()
+    // Strip the active/inactive color tokens; the remaining geometry classes
+    // (width, height, padding, layout) must match so the rows align exactly.
+    const geometry = (cls: string) =>
+      cls
+        .split(/\s+/)
+        .filter((c) => !/(accent-surface|accent-text|muted-foreground|hover:|foreground)/.test(c))
+        .sort()
+        .join(" ")
+    expect(geometry(active.className)).toBe(geometry(inactive.className))
+  })
+})
 
 describe("DashboardLayout — notification dropdown", () => {
   it("renders the bell button", () => {

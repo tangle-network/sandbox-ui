@@ -106,3 +106,14 @@ export {
 } from "@tangle-network/ui/primitives";
 
 export { Logo, TangleKnot, type LogoProps } from "./logo";
+export {
+  Heading,
+  type HeadingProps,
+  type HeadingRole,
+  PageHeader,
+  type PageHeaderProps,
+  PageShell,
+  type PageShellProps,
+  SectionTitle,
+  type SectionTitleProps,
+} from "./heading";

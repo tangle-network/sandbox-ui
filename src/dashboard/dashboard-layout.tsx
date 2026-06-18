@@ -78,8 +78,9 @@ export interface DashboardLayoutProps {
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
   /**
-   * Where the in-app logo links. Defaults to "/dashboard" so the logo never
-   * bounces an authenticated user back out to the public marketing homepage.
+   * Where the in-app logo links. Defaults to "/" (backward compatible);
+   * pass an in-app path (e.g. "/dashboard") so the logo never bounces an
+   * authenticated user back out to the public marketing homepage.
    */
   logoHref?: string
   /**
@@ -192,7 +193,7 @@ function DashboardLayoutInner({
   topNavLinks,
   activeTopNavHref,
   LinkComponent = DefaultLink,
-  logoHref = "/dashboard",
+  logoHref = "/",
   onLogoClick,
   labeledRail = false,
   footer,

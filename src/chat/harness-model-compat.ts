@@ -22,7 +22,9 @@ interface HarnessModelPolicy {
   preferred: ReadonlyArray<RegExp>;
 }
 
-export const HARNESS_MODEL_POLICIES: Record<HarnessType, HarnessModelPolicy> =
+// Partial over the canonical HarnessType: a harness with no policy is treated as router-backed
+// (runs any model) — see `isModelCompatibleWithHarness`. Only vendor-locked harnesses need an entry.
+export const HARNESS_MODEL_POLICIES: Partial<Record<HarnessType, HarnessModelPolicy>> =
   {
     opencode: { providers: null, preferred: [] },
     "claude-code": {
@@ -100,6 +102,7 @@ export function snapModelToHarness(
   if (isModelCompatibleWithHarness(harness, modelId)) return modelId;
   const ids = models.map(canonicalModelId);
   const policy = HARNESS_MODEL_POLICIES[harness];
+  if (!policy) return modelId; // router-backed (no vendor lock) — handled by the early return above
   for (const pattern of policy.preferred) {
     const matches = ids
       .filter((id) => pattern.test(id))

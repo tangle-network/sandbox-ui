@@ -54,6 +54,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.2.2
         version: 4.2.2(vite@8.0.7(esbuild@0.27.4)(jiti@2.6.1))
+      '@tangle-network/agent-interface':
+        specifier: ^0.8.0
+        version: 0.8.0
       '@tangle-network/brand':
         specifier: ^0.4.0
         version: 0.4.0(react@19.2.4)
@@ -1683,6 +1686,9 @@ packages:
     resolution: {integrity: sha512-mEiF5HO1QqCLXoNEfXVA1Tzo+cYsrqV7w9Juj2wdUFyW07JRenqMG225MvPwr3ZD9N1bFQj46X7r33iHxLUW0w==}
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
+
+  '@tangle-network/agent-interface@0.8.0':
+    resolution: {integrity: sha512-okz9LGKwPNKODNyT9Y7+T+sQsJ4g6oTy/hpWpxR6r2BI7pS6WqIdgCOQcx98+WtlPoibkY3ewRRAb8YJMrPHog==}
 
   '@tangle-network/brand@0.4.0':
     resolution: {integrity: sha512-mKtptHyk8olnh1WXSgG2fK2y6dp9GPRpBaqa9GuE/G34YHLu7a9jAJiFBRfuoGQRV5fjmCvxtlPdjTYIC/KyMQ==}
@@ -3870,6 +3876,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@4.4.3:
+    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
@@ -5168,6 +5177,10 @@ snapshots:
       '@tailwindcss/oxide': 4.2.2
       tailwindcss: 4.2.2
       vite: 8.0.7(esbuild@0.27.4)(jiti@2.6.1)
+
+  '@tangle-network/agent-interface@0.8.0':
+    dependencies:
+      zod: 4.4.3
 
   '@tangle-network/brand@0.4.0(react@19.2.4)':
     optionalDependencies:
@@ -7658,5 +7671,7 @@ snapshots:
       lib0: 0.2.117
 
   yocto-queue@0.1.0: {}
+
+  zod@4.4.3: {}
 
   zwitch@2.0.4: {}

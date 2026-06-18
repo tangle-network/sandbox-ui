@@ -1,26 +1,15 @@
 "use client";
 
+import type { HarnessType } from "@tangle-network/agent-interface";
 import { BackendSelector, type BackendSelectorProps, type Backend } from "./backend-selector";
 import { HarnessLogo } from "./harness-logo";
 
 /**
- * Sandbox agent harness types — mirrors `BackendType` from
- * `@tangle-network/sandbox` SDK. Kept in lockstep with that enum:
- * if the SDK adds a backend, add it here too. The SDK's `pi`, `forge`,
- * `acp`, and `cursor` backends are deliberately deferred (not yet
- * surfaced in the picker) until their copy and compat policies land.
+ * The canonical harness value-space comes from `@tangle-network/agent-interface` — the single source
+ * of truth. The sandbox UI does NOT redefine the set; it re-exports the canonical type and provides
+ * presentation metadata (labels/logos) for the harnesses it surfaces.
  */
-export type HarnessType =
-  | "opencode"
-  | "claude-code"
-  | "codex"
-  | "amp"
-  | "factory-droids"
-  | "cli-base"
-  | "kimi-code"
-  | "openclaw"
-  | "nanoclaw"
-  | "hermes";
+export type { HarnessType };
 
 interface HarnessOption extends Backend {
   type: HarnessType;

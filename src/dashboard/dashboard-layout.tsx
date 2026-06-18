@@ -304,14 +304,15 @@ function DashboardLayoutInner({
                       showLabel={showLabels}
                     />
                   ) : (
-                    <Link href={item.href} to={item.href}>
-                      <RailButton
-                        icon={item.icon}
-                        label={item.label}
-                        isActive={activeNavId === item.id}
-                        showLabel={showLabels}
-                      />
-                    </Link>
+                    <RailButton
+                      icon={item.icon}
+                      label={item.label}
+                      isActive={activeNavId === item.id}
+                      showLabel={showLabels}
+                      asChild
+                    >
+                      <Link href={item.href} to={item.href} />
+                    </RailButton>
                   )}
                 </React.Fragment>
               )
@@ -322,9 +323,9 @@ function DashboardLayoutInner({
             {onSettingsClick ? (
               <RailButton icon={SettingsIconSmall} label="Settings" onClick={onSettingsClick} showLabel={showLabels} />
             ) : (
-              <Link href={settingsHref} to={settingsHref}>
-                <RailButton icon={SettingsIconSmall} label="Settings" showLabel={showLabels} />
-              </Link>
+              <RailButton icon={SettingsIconSmall} label="Settings" showLabel={showLabels} asChild>
+                <Link href={settingsHref} to={settingsHref} />
+              </RailButton>
             )}
             {railFooter}
             <RailSeparator />

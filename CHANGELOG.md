@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.37.1
+
+### Dashboard labeled-rail nav alignment
+
+- `DashboardLayout`: nav link items and the settings link on the labeled rail
+  now render as full-width rows on the anchor (`RailButton asChild`), matching
+  `SidebarLayout`. Previously they wrapped `<Link><RailButton/></Link>`, which
+  left the anchor width-less inside the `items-center` rail nav — every item
+  shrank to its label width and centered, so active and inactive items sat at
+  different widths/offsets (visible misalignment / active-item offset). Removes
+  the nested `<button>` inside the anchor at the same time. Fixes the sidebar
+  misalignment reported on narrow/tall and standard desktop rails.
+
 ## 0.23.2
 
 ### Sidebar rail scroll + shared theme toggle

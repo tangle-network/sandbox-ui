@@ -48,11 +48,16 @@ export interface SandboxCardProps {
   sandbox: SandboxCardData
   onOpenIDE?: (id: string) => void
   onOpenTerminal?: (id: string) => void
+  /** Preferred start handler; drives the footer + dropdown Resume action. */
+  onResume?: (id: string) => void
+  /**
+   * @deprecated Use `onResume`. Retained for back-compat: only a
+   * `hibernating` card falls back to `onWake` when `onResume` is absent.
+   */
   onWake?: (id: string) => void
   onRestore?: (id: string) => void
   onDelete?: (id: string) => void
   onStop?: (id: string) => void
-  onResume?: (id: string) => void
   onFork?: (id: string) => void
   onKeepAlive?: (id: string) => void
   onUsage?: (id: string) => void
@@ -74,6 +79,20 @@ export function SandboxCard({
   const isRunning = sandbox.status === "running"
   const isTransitioning = sandbox.status === "provisioning" || sandbox.status === "creating"
   const isStopped = !isRunning && !isTransitioning
+  const isHibernating = sandbox.status === "hibernating"
+
+  // Footer + dropdown share one resolved start handler so they can never
+  // disagree. Mirrors SandboxTable: prefer onResume, fall back to onWake
+  // only for a hibernating card (its historical contract). Without this,
+  // a card rendered with onResume but not onWake showed an enabled footer
+  // button that silently no-op'd on click.
+  const resolveResumeHandler = (status: SandboxStatus): ((id: string) => void) | undefined => {
+    if (onResume) return onResume
+    if (status === "hibernating") return onWake
+    return undefined
+  }
+  const resumeLabel = isHibernating ? "Wake Sandbox" : "Resume Sandbox"
+  const resumeHandler = isStopped ? resolveResumeHandler(sandbox.status) : undefined
 
   return (
     <div className={cn(
@@ -144,9 +163,9 @@ export function SandboxCard({
             )}
             {isStopped && (
               <>
-                {onResume && <DropdownMenuItem onClick={() => onResume(sandbox.id)}><Power className="mr-2 h-4 w-4" /> Resume Sandbox</DropdownMenuItem>}
+                {resumeHandler && <DropdownMenuItem onClick={() => resumeHandler(sandbox.id)}><Power className="mr-2 h-4 w-4" /> {resumeLabel}</DropdownMenuItem>}
                 {onFork && <DropdownMenuItem onClick={() => onFork(sandbox.id)}><Copy className="mr-2 h-4 w-4" /> Fork Sandbox</DropdownMenuItem>}
-                {(onResume || onFork) && <DropdownMenuSeparator />}
+                {(resumeHandler || onFork) && <DropdownMenuSeparator />}
               </>
             )}
             {onDelete && canAdminSandbox(sandbox) && (
@@ -203,17 +222,17 @@ export function SandboxCard({
         ) : (
           <button
             type="button"
-            onClick={() => onWake?.(sandbox.id)}
-            disabled={isTransitioning}
+            onClick={() => resumeHandler?.(sandbox.id)}
+            disabled={isTransitioning || !resumeHandler}
             className={cn(
               "flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors border",
-              isTransitioning
+              isTransitioning || !resumeHandler
                 ? "bg-muted text-muted-foreground cursor-not-allowed border-border"
                 : "bg-card text-foreground hover:bg-muted border-border active:scale-[0.97]"
             )}
           >
             <Play className="h-4 w-4" />
-            {isTransitioning ? "Starting..." : "Wake Sandbox"}
+            {isTransitioning ? "Starting..." : resumeLabel}
           </button>
         )}
       </div>

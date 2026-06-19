@@ -299,11 +299,15 @@ export default function TerminalView({
   // Update font size in place and refit. xterm derives cell metrics
   // (and therefore cols/rows) from the font size, so the fit must run
   // after the option changes to keep wrapping and box-drawing aligned.
+  // The deferred fit is canceled on unmount (and before a newer change
+  // supersedes it), matching the write-coalescing rAF above, so a
+  // pending fit never fires against a disposed addon.
   useEffect(() => {
     const term = termRef.current;
     if (!term || term.options.fontSize === resolvedFontSize) return;
     term.options.fontSize = resolvedFontSize;
-    requestAnimationFrame(() => fitAddonRef.current?.fit());
+    const rafId = requestAnimationFrame(() => fitAddonRef.current?.fit());
+    return () => cancelAnimationFrame(rafId);
   }, [resolvedFontSize]);
 
   // Synchronize size with sidecar once connected to trigger SIGWINCH

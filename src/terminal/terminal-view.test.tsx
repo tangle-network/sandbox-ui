@@ -233,6 +233,34 @@ describe("TerminalView — font size", () => {
     expect(m.terminalRef.current?.options.fontSize).toBe(13)
   })
 
+  it("cancels a pending font-size refit on unmount", () => {
+    const { rerender, unmount } = render(
+      <TerminalView apiUrl="https://test.local" token="t" fontSize={13} />,
+    )
+    // Drain the mount-time fits so only the font-size refit is pending.
+    act(() => {
+      flushRaf()
+    })
+    const fit = m.FitAddonCtor.mock.results[0]?.value.fit as ReturnType<
+      typeof vi.fn
+    >
+    fit.mockClear()
+
+    act(() => {
+      rerender(
+        <TerminalView apiUrl="https://test.local" token="t" fontSize={18} />,
+      )
+    })
+    // The refit is scheduled for the next frame, not run yet.
+    expect(fit).not.toHaveBeenCalled()
+
+    unmount()
+    // The unmount cleanup cancels the queued frame, so flushing it must
+    // not fit a disposed addon.
+    flushRaf()
+    expect(fit).not.toHaveBeenCalled()
+  })
+
   it("updates the font size in place when the prop changes", () => {
     const { rerender } = render(
       <TerminalView apiUrl="https://test.local" token="t" fontSize={13} />,

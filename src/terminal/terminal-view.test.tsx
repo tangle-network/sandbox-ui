@@ -208,6 +208,31 @@ describe("TerminalView — font size", () => {
     expect(m.terminalRef.current?.options.fontSize).toBe(16)
   })
 
+  it("falls back to 13 for non-positive or non-finite font sizes", () => {
+    const { rerender } = render(
+      <TerminalView apiUrl="https://test.local" token="t" fontSize={0} />,
+    )
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+
+    act(() => {
+      rerender(
+        <TerminalView
+          apiUrl="https://test.local"
+          token="t"
+          fontSize={Number.NaN}
+        />,
+      )
+    })
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+
+    act(() => {
+      rerender(
+        <TerminalView apiUrl="https://test.local" token="t" fontSize={-5} />,
+      )
+    })
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+  })
+
   it("updates the font size in place when the prop changes", () => {
     const { rerender } = render(
       <TerminalView apiUrl="https://test.local" token="t" fontSize={13} />,

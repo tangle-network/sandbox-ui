@@ -121,12 +121,18 @@ export default function TerminalView({
     [theme],
   );
 
+  // Reject non-positive / non-finite sizes (0, negative, NaN, Infinity)
+  // before they reach xterm — those produce broken cell measurements and
+  // an unusable terminal. Out-of-range values fall back to the default.
+  const resolvedFontSize =
+    Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 13;
+
   // Read at terminal-creation time only. Kept in a ref so a fontSize
   // change does not land in the creation effect's dependency array and
   // re-create the terminal — live updates are applied by the dedicated
   // effect below, mirroring how the theme is updated in place.
-  const fontSizeRef = useRef(fontSize);
-  fontSizeRef.current = fontSize;
+  const fontSizeRef = useRef(resolvedFontSize);
+  fontSizeRef.current = resolvedFontSize;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -294,10 +300,10 @@ export default function TerminalView({
   // after the option changes to keep wrapping and box-drawing aligned.
   useEffect(() => {
     const term = termRef.current;
-    if (!term || term.options.fontSize === fontSize) return;
-    term.options.fontSize = fontSize;
+    if (!term || term.options.fontSize === resolvedFontSize) return;
+    term.options.fontSize = resolvedFontSize;
     requestAnimationFrame(() => fitAddonRef.current?.fit());
-  }, [fontSize]);
+  }, [resolvedFontSize]);
 
   // Synchronize size with sidecar once connected to trigger SIGWINCH
   useEffect(() => {

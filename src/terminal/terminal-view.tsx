@@ -123,7 +123,8 @@ export default function TerminalView({
 
   // Reject non-positive / non-finite sizes (0, negative, NaN, Infinity)
   // before they reach xterm — those produce broken cell measurements and
-  // an unusable terminal. Out-of-range values fall back to the default.
+  // an unusable terminal, and fall back to the default. Any positive
+  // finite size is passed through; callers clamp their own upper bound.
   const resolvedFontSize =
     Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 13;
 

@@ -137,10 +137,7 @@ export function ReasoningLevelPicker({
           {shown.map((option) => (
             <DropdownMenu.Item
               key={option.value}
-              onSelect={(event) => {
-                event.preventDefault();
-                onChange(option.value);
-              }}
+              onSelect={() => onChange(option.value)}
               className={cn(
                 "flex cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-2 outline-none",
                 "transition-colors hover:bg-accent/40 focus:bg-accent/40",

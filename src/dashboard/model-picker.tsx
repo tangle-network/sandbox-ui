@@ -334,6 +334,32 @@ function compareModelsByDisplayName(a: ModelInfo, b: ModelInfo): number {
   return (a.name ?? a.id).localeCompare(b.name ?? b.id);
 }
 
+/**
+ * Drop a leading lab/host label from a model name so it isn't repeated next to
+ * the brand icon — but only when the name actually begins with that exact label
+ * (e.g. "Anthropic: Claude 3 Haiku" → "Claude 3 Haiku"). Names without such a
+ * prefix ("Gemini 2.5 Pro", "Claude Opus 4.8") are returned unchanged, so the
+ * router's inconsistent naming can't produce a wrong result.
+ */
+function stripBrandPrefix(
+  name: string,
+  identity: ModelBrandIdentity | null,
+): string {
+  if (!identity) return name;
+  for (const label of [identity.lab.label, identity.host.label]) {
+    if (!label) continue;
+    if (name.toLowerCase().startsWith(label.toLowerCase())) {
+      const after = name.slice(label.length);
+      // Require a separator so e.g. lab "Meta" doesn't eat "Metamodel".
+      if (/^[\s:]/.test(after)) {
+        const rest = after.replace(/^[\s:]+/, "").trim();
+        if (rest) return rest;
+      }
+    }
+  }
+  return name;
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function ModelPicker({
@@ -413,8 +439,11 @@ export function ModelPicker({
     () => models.find((m) => canonicalModelId(m) === value),
     [models, value],
   );
-  const currentLabel = current?.name ?? current?.id ?? value;
   const currentIdentity = current ? resolveModelBrandIdentity(current) : null;
+  const currentLabel = stripBrandPrefix(
+    current?.name ?? current?.id ?? value,
+    currentIdentity,
+  );
 
   const recentIds = React.useMemo(() => {
     if (!recents?.length) return [];

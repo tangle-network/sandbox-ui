@@ -6,6 +6,7 @@ import {
   canAdminSandbox,
   type SandboxCardData,
 } from "./sandbox-card"
+import type { SandboxStatus } from "./sandbox-card"
 
 function makeSandbox(overrides: Partial<SandboxCardData> = {}): SandboxCardData {
   return {
@@ -136,5 +137,138 @@ describe("SandboxCard", () => {
 
     await user.click(screen.getByLabelText("Sandbox options"))
     expect(screen.queryByText("Delete Sandbox")).not.toBeInTheDocument()
+  })
+})
+
+// --- Footer + dropdown Resume/Wake handler resolution (issue #114) ---
+//
+// The footer action and the dropdown "Resume" item must resolve to the
+// same single start handler. Prefer onResume; fall back to onWake only
+// for a hibernating card. A clickable start must never silently no-op.
+
+describe("SandboxCard resume/wake resolution", () => {
+  it("footer calls onResume when only onResume is provided (no silent no-op)", async () => {
+    const user = userEvent.setup()
+    const onResume = vi.fn()
+    render(
+      <SandboxCard
+        sandbox={makeSandbox({ status: "stopped" })}
+        onResume={onResume}
+      />,
+    )
+    await user.click(screen.getByRole("button", { name: /resume sandbox/i }))
+    expect(onResume).toHaveBeenCalledWith("sb-1")
+  })
+
+  it("footer prefers onResume over onWake when both are provided", async () => {
+    const user = userEvent.setup()
+    const onResume = vi.fn()
+    const onWake = vi.fn()
+    render(
+      <SandboxCard
+        sandbox={makeSandbox({ status: "hibernating" })}
+        onResume={onResume}
+        onWake={onWake}
+      />,
+    )
+    await user.click(screen.getByRole("button", { name: /wake sandbox/i }))
+    expect(onResume).toHaveBeenCalledWith("sb-1")
+    expect(onWake).not.toHaveBeenCalled()
+  })
+
+  it("footer falls back to onWake for a hibernating card when onResume is absent", async () => {
+    const user = userEvent.setup()
+    const onWake = vi.fn()
+    render(
+      <SandboxCard
+        sandbox={makeSandbox({ status: "hibernating" })}
+        onWake={onWake}
+      />,
+    )
+    await user.click(screen.getByRole("button", { name: /wake sandbox/i }))
+    expect(onWake).toHaveBeenCalledWith("sb-1")
+  })
+
+  it.each(["stopped", "failed", "archived"] satisfies SandboxStatus[])(
+    "disables the footer for a %s card when only onWake is provided",
+    (status) => {
+      // onWake's historical contract was hibernating-only. We do not
+      // extend it to stopped/failed/archived, so the start affordance
+      // must be inert rather than fire-and-nothing.
+      render(
+        <SandboxCard
+          sandbox={makeSandbox({ status })}
+          onWake={vi.fn()}
+        />,
+      )
+      expect(
+        screen.getByRole("button", { name: /resume sandbox/i }),
+      ).toBeDisabled()
+    },
+  )
+
+  it("disables the footer action when neither onResume nor onWake is provided", () => {
+    render(<SandboxCard sandbox={makeSandbox({ status: "stopped" })} />)
+    expect(
+      screen.getByRole("button", { name: /resume sandbox/i }),
+    ).toBeDisabled()
+  })
+
+  it("keeps the footer disabled with 'Starting...' while transitioning", () => {
+    render(
+      <SandboxCard
+        sandbox={makeSandbox({ status: "provisioning" })}
+        onResume={vi.fn()}
+      />,
+    )
+    const button = screen.getByRole("button", { name: /starting/i })
+    expect(button).toBeDisabled()
+  })
+
+  it("dropdown Resume calls the resolved onResume handler", async () => {
+    const user = userEvent.setup()
+    const onResume = vi.fn()
+    render(
+      <SandboxCard
+        sandbox={makeSandbox({ status: "stopped" })}
+        onResume={onResume}
+      />,
+    )
+    await user.click(screen.getByLabelText("Sandbox options"))
+    await user.click(screen.getByRole("menuitem", { name: /resume sandbox/i }))
+    expect(onResume).toHaveBeenCalledWith("sb-1")
+  })
+
+  it("footer and dropdown resolve to the same single handler", async () => {
+    // With both onResume and onWake wired, each control fires exactly
+    // one handler (onResume), and onWake is never reached.
+    const user = userEvent.setup()
+    const onResume = vi.fn()
+    const onWake = vi.fn()
+    render(
+      <SandboxCard
+        sandbox={makeSandbox({ status: "stopped" })}
+        onResume={onResume}
+        onWake={onWake}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: /resume sandbox/i }))
+    await user.click(screen.getByLabelText("Sandbox options"))
+    await user.click(screen.getByRole("menuitem", { name: /resume sandbox/i }))
+
+    expect(onResume).toHaveBeenCalledTimes(2)
+    expect(onResume).toHaveBeenNthCalledWith(1, "sb-1")
+    expect(onResume).toHaveBeenNthCalledWith(2, "sb-1")
+    expect(onWake).not.toHaveBeenCalled()
+  })
+
+  it("does not render a dropdown Resume item when no start handler is provided", async () => {
+    const user = userEvent.setup()
+    render(<SandboxCard sandbox={makeSandbox({ status: "stopped" })} />)
+    await user.click(screen.getByLabelText("Sandbox options"))
+    expect(
+      screen.queryByRole("menuitem", { name: /resume sandbox/i }),
+    ).not.toBeInTheDocument()
   })
 })

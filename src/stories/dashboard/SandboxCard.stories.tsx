@@ -8,6 +8,7 @@ const meta: Meta<typeof SandboxCard> = {
   args: {
     onOpenIDE: (id) => console.log('open IDE', id),
     onOpenTerminal: (id) => console.log('open terminal', id),
+    onResume: (id) => console.log('resume', id),
     onWake: (id) => console.log('wake', id),
     onRestore: (id) => console.log('restore', id),
   },

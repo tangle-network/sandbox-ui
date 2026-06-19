@@ -56,6 +56,13 @@ export interface TerminalViewProps {
   subtitle?: string;
   /** @deprecated No longer used — the PTY provides its own prompt. */
   prompt?: string;
+  /**
+   * Monospace font size in CSS pixels. Default 13. Changing it updates
+   * the live terminal and refits so xterm recomputes cols/rows from the
+   * new measured cell size instead of re-creating the terminal (which
+   * would drop scrollback).
+   */
+  fontSize?: number;
   /** Whether the terminal tab is currently active and visible. */
   isActive?: boolean;
   /**
@@ -107,11 +114,26 @@ export default function TerminalView({
   subtitle = "Connected to PTY session",
   isActive = true,
   connectionId,
+  fontSize = 13,
 }: TerminalViewProps) {
   const resolvedTheme = useMemo(
     () => ({ ...DEFAULT_TERMINAL_THEME, ...theme }),
     [theme],
   );
+
+  // Reject non-positive / non-finite sizes (0, negative, NaN, Infinity)
+  // before they reach xterm — those produce broken cell measurements and
+  // an unusable terminal, and fall back to the default. Any positive
+  // finite size is passed through; callers clamp their own upper bound.
+  const resolvedFontSize =
+    Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 13;
+
+  // Read at terminal-creation time only. Kept in a ref so a fontSize
+  // change does not land in the creation effect's dependency array and
+  // re-create the terminal — live updates are applied by the dedicated
+  // effect below, mirroring how the theme is updated in place.
+  const fontSizeRef = useRef(resolvedFontSize);
+  fontSizeRef.current = resolvedFontSize;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -153,7 +175,7 @@ export default function TerminalView({
     const term = new Terminal({
       theme: resolvedTheme,
       fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, monospace',
-      fontSize: 13,
+      fontSize: fontSizeRef.current,
       lineHeight: 1.4,
       cursorBlink: true,
       cursorStyle: "bar",
@@ -273,6 +295,20 @@ export default function TerminalView({
       termRef.current.options.theme = resolvedTheme;
     }
   }, [resolvedTheme]);
+
+  // Update font size in place and refit. xterm derives cell metrics
+  // (and therefore cols/rows) from the font size, so the fit must run
+  // after the option changes to keep wrapping and box-drawing aligned.
+  // The deferred fit is canceled on unmount (and before a newer change
+  // supersedes it), matching the write-coalescing rAF above, so a
+  // pending fit never fires against a disposed addon.
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term || term.options.fontSize === resolvedFontSize) return;
+    term.options.fontSize = resolvedFontSize;
+    const rafId = requestAnimationFrame(() => fitAddonRef.current?.fit());
+    return () => cancelAnimationFrame(rafId);
+  }, [resolvedFontSize]);
 
   // Synchronize size with sidecar once connected to trigger SIGWINCH
   useEffect(() => {

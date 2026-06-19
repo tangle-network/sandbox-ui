@@ -30,7 +30,7 @@ interface FakeTerminal {
   writeln: ReturnType<typeof vi.fn>
   cols: number
   rows: number
-  options: { theme?: unknown }
+  options: { theme?: unknown; fontSize?: number }
 }
 
 const m = vi.hoisted(() => {
@@ -194,6 +194,88 @@ describe("TerminalView — connectionId passthrough", () => {
     expect(m.usePtySessionMock).toHaveBeenCalledWith(
       expect.objectContaining({ connectionId: "terminal-xyz" }),
     )
+  })
+})
+
+describe("TerminalView — font size", () => {
+  it("defaults the xterm font size to 13 when no prop is given", () => {
+    renderView()
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+  })
+
+  it("applies the provided fontSize to the terminal on mount", () => {
+    render(<TerminalView apiUrl="https://test.local" token="t" fontSize={16} />)
+    expect(m.terminalRef.current?.options.fontSize).toBe(16)
+  })
+
+  it("falls back to 13 for non-positive or non-finite font sizes", () => {
+    const { rerender } = render(
+      <TerminalView apiUrl="https://test.local" token="t" fontSize={0} />,
+    )
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+
+    act(() => {
+      rerender(
+        <TerminalView
+          apiUrl="https://test.local"
+          token="t"
+          fontSize={Number.NaN}
+        />,
+      )
+    })
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+
+    act(() => {
+      rerender(
+        <TerminalView apiUrl="https://test.local" token="t" fontSize={-5} />,
+      )
+    })
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+  })
+
+  it("cancels a pending font-size refit on unmount", () => {
+    const { rerender, unmount } = render(
+      <TerminalView apiUrl="https://test.local" token="t" fontSize={13} />,
+    )
+    // Drain the mount-time fits so only the font-size refit is pending.
+    act(() => {
+      flushRaf()
+    })
+    const fit = m.FitAddonCtor.mock.results[0]?.value.fit as ReturnType<
+      typeof vi.fn
+    >
+    fit.mockClear()
+
+    act(() => {
+      rerender(
+        <TerminalView apiUrl="https://test.local" token="t" fontSize={18} />,
+      )
+    })
+    // The refit is scheduled for the next frame, not run yet.
+    expect(fit).not.toHaveBeenCalled()
+
+    unmount()
+    // The unmount cleanup cancels the queued frame, so flushing it must
+    // not fit a disposed addon.
+    flushRaf()
+    expect(fit).not.toHaveBeenCalled()
+  })
+
+  it("updates the font size in place when the prop changes", () => {
+    const { rerender } = render(
+      <TerminalView apiUrl="https://test.local" token="t" fontSize={13} />,
+    )
+    expect(m.terminalRef.current?.options.fontSize).toBe(13)
+
+    act(() => {
+      rerender(
+        <TerminalView apiUrl="https://test.local" token="t" fontSize={18} />,
+      )
+    })
+
+    // Updated in place — the same terminal instance, no re-construction.
+    expect(m.TerminalCtor).toHaveBeenCalledTimes(1)
+    expect(m.terminalRef.current?.options.fontSize).toBe(18)
   })
 })
 

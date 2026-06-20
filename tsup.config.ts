@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     primitives: "src/primitives/index.ts",
     chat: "src/chat/index.ts",
+    assistant: "src/assistant/index.ts",
     run: "src/run/index.ts",
     workspace: "src/workspace/index.ts",
     openui: "src/openui/index.ts",

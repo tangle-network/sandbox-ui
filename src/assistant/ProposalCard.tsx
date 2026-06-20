@@ -165,10 +165,14 @@ export function ProposalCard({
 }
 
 function openConnect(target: string, navigate?: (path: string) => void) {
-  if (/^https?:\/\//.test(target)) {
+  if (/^https?:\/\//i.test(target)) {
     window.open(target, "_blank", "noopener,noreferrer");
     return;
   }
+  // Anything else must be a same-origin RELATIVE path. Reject a URL scheme
+  // (data:/blob:/javascript:/…) or a protocol-relative URL so a malformed or
+  // hostile connectUrl can't drive navigation to a non-http(s) target.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//")) return;
   if (navigate) navigate(target);
   else window.location.assign(target);
 }

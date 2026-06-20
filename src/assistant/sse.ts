@@ -127,6 +127,12 @@ export async function readSSEEvents(
       for (const event of parser.push(tail)) onEvent(event);
     }
     for (const event of parser.flush()) onEvent(event);
+  } catch (err) {
+    // Cancel the underlying stream so a read error or a throwing handler doesn't
+    // leave the response open and buffering for the rest of the session. Swallow
+    // a cancel failure so it can't mask the original error.
+    await reader.cancel(err).catch(() => {});
+    throw err;
   } finally {
     reader.releaseLock();
   }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readSSEEvents } from "./sse";
 
 function streamOf(chunks: string[]): ReadableStream<Uint8Array> {
@@ -52,5 +52,22 @@ describe("readSSEEvents", () => {
     ).rejects.toThrow("boom");
     // Lock released by the finally → a new reader can be acquired.
     expect(() => stream.getReader()).not.toThrow();
+  });
+
+  it("cancels the underlying stream when a handler throws", async () => {
+    const cancel = vi.fn();
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new TextEncoder().encode("event: a\ndata: 1\n\n"));
+      },
+      cancel,
+    });
+    await expect(
+      readSSEEvents(stream, () => {
+        throw new Error("boom");
+      }),
+    ).rejects.toThrow("boom");
+    // A failed turn must not leave the response open and buffering.
+    expect(cancel).toHaveBeenCalled();
   });
 });

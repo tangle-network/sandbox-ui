@@ -71,6 +71,46 @@ describe("useAssistantModels", () => {
     expect(fetchModels).toHaveBeenCalledTimes(1);
   });
 
+  it("scopes the cache per client — a different client fetches its own catalog", async () => {
+    const { AssistantClientProvider } = await import("./client-context");
+    const { useAssistantModels } = await import("./useAssistantModels");
+    const makeClient = (models: AssistantModelsResult): AssistantClient => ({
+      fetchModels: vi.fn().mockResolvedValue(models),
+      fetchThreads: vi.fn(),
+      fetchThreadHistory: vi.fn(),
+      streamChat: vi.fn(),
+      confirmProposal: vi.fn(),
+    });
+    const clientA = makeClient(OK_NONEMPTY);
+    const clientB = makeClient({
+      ok: true,
+      data: {
+        default: "b/m",
+        models: [
+          { slug: "b/m", label: "B" },
+          { slug: "b/m2", label: "B2" },
+        ],
+      },
+    });
+    const wrap =
+      (client: AssistantClient) =>
+      ({ children }: { children: React.ReactNode }) => (
+        <AssistantClientProvider client={client}>
+          {children}
+        </AssistantClientProvider>
+      );
+
+    const a = renderHook(() => useAssistantModels(), { wrapper: wrap(clientA) });
+    await waitFor(() => expect(a.result.current.models).toHaveLength(1));
+    expect(clientA.fetchModels).toHaveBeenCalledTimes(1);
+
+    // A different client must fetch its OWN catalog, never serve A's cache.
+    const b = renderHook(() => useAssistantModels(), { wrapper: wrap(clientB) });
+    await waitFor(() => expect(b.result.current.models).toHaveLength(2));
+    expect(clientB.fetchModels).toHaveBeenCalledTimes(1);
+    expect(b.result.current.models[0].slug).toBe("b/m");
+  });
+
   it("does not cache a FAILED fetch — the next mount retries", async () => {
     const { useAssistantModels, fetchModels, wrapper } = await load();
     fetchModels

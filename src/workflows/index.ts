@@ -14,5 +14,9 @@ export {
   type WfNodeData,
   type WfNodeTone,
 } from "./model";
-export { WorkflowGraph, type WorkflowGraphProps } from "./WorkflowGraph";
+// Only the LAZY wrapper is exported as a value: it defers the `@xyflow/react`
+// import (and its CSS) to render time, so importing this entry — e.g. for the
+// pure `buildWorkflowGraph` — never eagerly loads the optional peer. The eager
+// WorkflowGraph component is reached only through the lazy wrapper's import().
+export type { WorkflowGraphProps } from "./WorkflowGraph";
 export { WorkflowGraph as WorkflowGraphLazy } from "./WorkflowGraphLazy";

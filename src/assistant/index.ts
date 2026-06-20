@@ -11,3 +11,10 @@
 export * from "./types";
 export * from "./client";
 export * from "./client-context";
+export {
+  useAssistantChat,
+  type AssistantChat,
+  type UseAssistantChatOptions,
+} from "./useAssistantChat";
+export { useAssistantModels } from "./useAssistantModels";
+export { useAssistantThreads, type AssistantThreads } from "./useAssistantThreads";

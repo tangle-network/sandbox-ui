@@ -202,6 +202,10 @@ function toStreamEvent(
       if (typeof obj.text !== "string") return null;
       return { type: "delta", data: { text: obj.text } };
     }
+    case "reasoning": {
+      if (typeof obj.text !== "string") return null;
+      return { type: "reasoning", data: { text: obj.text } };
+    }
     case "tool_call": {
       const callId = reqStr(obj.callId);
       const name = reqStr(obj.name);

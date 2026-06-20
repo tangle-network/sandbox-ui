@@ -29,6 +29,13 @@ export interface DeltaEventData {
   text: string;
 }
 
+/** A chunk of the model's reasoning/thinking, streamed BEFORE the answer for
+ *  reasoning models. Surfaced as a dim "thinking" block so a long reasoning gap
+ *  doesn't read as a frozen panel. Absent for non-reasoning models. */
+export interface ReasoningEventData {
+  text: string;
+}
+
 /** Emitted when a read-only tool STARTS running, before its result. Lets the
  *  panel show live "running <tool>…" progress instead of a silent gap. */
 export interface ToolCallEventData {
@@ -104,6 +111,7 @@ export interface ErrorEventData {
 export type AssistantStreamEvent =
   | { type: "thread"; data: ThreadEventData }
   | { type: "delta"; data: DeltaEventData }
+  | { type: "reasoning"; data: ReasoningEventData }
   | { type: "tool_call"; data: ToolCallEventData }
   | { type: "tool_result"; data: ToolResultEventData }
   | { type: "tool_proposal"; data: ToolProposalEventData }

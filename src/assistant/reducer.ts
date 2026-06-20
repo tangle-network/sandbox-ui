@@ -52,6 +52,10 @@ export interface AssistantState {
   /** Model slug the current/most-recent turn ran against (from the thread
    *  event), or null before any turn this session. */
   model: string | null;
+  /** The current turn's accumulated reasoning/thinking text (reasoning models
+   *  stream this before the answer). Shown dim while the answer is still pending;
+   *  reset at the start of each turn. Null when the model emits no reasoning. */
+  reasoning: string | null;
   error: { code: string; message: string } | null;
 }
 
@@ -112,6 +116,7 @@ export function initialAssistantState(): AssistantState {
     pendingProposals: [],
     usage: null,
     model: null,
+    reasoning: null,
     error: null,
   };
 }
@@ -196,6 +201,14 @@ function applyStreamEvent(
         ]),
       };
     }
+
+    case "reasoning":
+      // Accumulate the turn's reasoning text; the panel shows it dim while the
+      // answer is still pending so a long thinking gap doesn't read as frozen.
+      return {
+        ...state,
+        reasoning: (state.reasoning ?? "") + event.data.text,
+      };
 
     case "tool_call": {
       // A read-only tool started. Finalize the current text segment (dropping it
@@ -338,6 +351,7 @@ export function assistantReducer(
         streamBaseId: action.assistantId,
         segmentSeq: 0,
         usage: null,
+        reasoning: null,
         error: null,
       };
 

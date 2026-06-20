@@ -18,7 +18,7 @@
  * dedup holds, no torn state.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useReducer } from "react";
 import type {
   AssistantClient,
   AssistantModels,
@@ -46,17 +46,15 @@ function cacheFor(client: AssistantClient): ModelCache {
 
 export function useAssistantModels(): AssistantModels {
   const client = useAssistantClient();
-  const [models, setModels] = useState<AssistantModels>(
-    () => cacheFor(client).cache ?? EMPTY,
-  );
+  // The per-client cache is the source of truth; `bump` just forces a re-read
+  // once an async fetch settles. Deriving the return value during render (below)
+  // — rather than mirroring it into state via an effect — means a client swap
+  // shows the new client's catalog (or empty) on the SAME commit, with no stale
+  // frame from the previous client.
+  const [, bump] = useReducer((n: number) => n + 1, 0);
 
   useEffect(() => {
     const entry = cacheFor(client);
-    // Reset the visible catalog to THIS client's cache (or empty) up front, so a
-    // transport swap never leaves the previous client's models on screen while
-    // the new request is pending (or indefinitely if it fails). A catalog already
-    // fetched for this client is served without a refetch.
-    setModels(entry.cache ?? EMPTY);
     if (entry.cache) return;
     let active = true;
     entry.inflight ??= client.fetchModels();
@@ -68,7 +66,7 @@ export function useAssistantModels(): AssistantModels {
         // unset so the next mount retries instead of serving an empty picker.
         if (result.ok) entry.cache = result.data;
         entry.inflight = null;
-        if (active) setModels(result.data);
+        if (active) bump();
       })
       .catch(() => {
         // fetchModels swallows its own errors, so this only fires if a future
@@ -80,5 +78,6 @@ export function useAssistantModels(): AssistantModels {
     };
   }, [client]);
 
-  return models;
+  // Always the CURRENT client's catalog — synchronously correct across a swap.
+  return cacheFor(client).cache ?? EMPTY;
 }

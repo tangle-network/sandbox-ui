@@ -244,4 +244,63 @@ describe("useAssistantModels", () => {
     expect(errs).toHaveLength(0);
     spy.mockRestore();
   });
+
+  it("ignores a late result from a swapped-away client", async () => {
+    const { AssistantClientProvider } = await import("./client-context");
+    const { useAssistantModels } = await import("./useAssistantModels");
+
+    let resolveA: (v: AssistantModelsResult) => void = () => {};
+    const clientA: AssistantClient = {
+      fetchModels: vi.fn().mockReturnValue(
+        new Promise<AssistantModelsResult>((r) => {
+          resolveA = r;
+        }),
+      ),
+      fetchThreads: vi.fn(),
+      fetchThreadHistory: vi.fn(),
+      streamChat: vi.fn(),
+      confirmProposal: vi.fn(),
+    };
+    const clientB: AssistantClient = {
+      fetchModels: vi.fn().mockResolvedValue({
+        ok: true,
+        data: { default: "b/m", models: [{ slug: "b/m", label: "B" }] },
+      }),
+      fetchThreads: vi.fn(),
+      fetchThreadHistory: vi.fn(),
+      streamChat: vi.fn(),
+      confirmProposal: vi.fn(),
+    };
+
+    function Show() {
+      const m = useAssistantModels();
+      return (
+        <div data-testid="models">{m.models.map((x) => x.slug).join(",")}</div>
+      );
+    }
+    function Harness({ client }: { client: AssistantClient }) {
+      return (
+        <AssistantClientProvider client={client}>
+          <Show />
+        </AssistantClientProvider>
+      );
+    }
+
+    const { rerender } = render(<Harness client={clientA} />); // A's fetch pending
+    expect(clientA.fetchModels).toHaveBeenCalledTimes(1);
+
+    rerender(<Harness client={clientB} />); // swap to B (resolves immediately)
+    await waitFor(() =>
+      expect(screen.getByTestId("models").textContent).toBe("b/m"),
+    );
+
+    // A's request resolves LATE — it must not replace the displayed (B's) catalog.
+    await act(async () => {
+      resolveA({
+        ok: true,
+        data: { default: "a/m", models: [{ slug: "a/m", label: "A" }] },
+      });
+    });
+    expect(screen.getByTestId("models").textContent).toBe("b/m");
+  });
 });

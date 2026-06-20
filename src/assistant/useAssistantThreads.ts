@@ -6,15 +6,15 @@
  * thread into being. It does NOT fetch on mount, so `threads` stays empty and
  * `loaded` false until the first `refresh()`.
  *
- * Self-protective across account AND transport swaps: a `userId` or `client`
- * change immediately clears the list and aborts any in-flight fetch, and a late
- * result is dropped if either the user or the client changed while it was in
- * flight — so one account's (or one transport's) threads can never render under
- * another, regardless of whether the host remounts the hook.
+ * Self-protective across account AND transport swaps. The list is tagged with the
+ * (user, client) it belongs to and is masked to empty on the SAME commit if that
+ * no longer matches the current props — so a swap never shows the prior scope's
+ * threads for even one frame. In flight, a late result is dropped if either the
+ * user or the client changed, and the request is aborted on the swap.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AssistantThreadSummary } from "./client";
+import type { AssistantClient, AssistantThreadSummary } from "./client";
 import { useAssistantClient } from "./client-context";
 
 export interface AssistantThreads {
@@ -27,35 +27,57 @@ export interface AssistantThreads {
   refresh: () => void;
 }
 
+interface ThreadsState {
+  threads: AssistantThreadSummary[];
+  loading: boolean;
+  loaded: boolean;
+  /** The (user, client) the data belongs to; the hook masks to empty unless both
+   *  match the current props, so a swap can't show the prior scope's list. */
+  ownerUserId: string | null;
+  ownerClient: AssistantClient | null;
+}
+
 export function useAssistantThreads(userId: string | null): AssistantThreads {
-  const [threads, setThreads] = useState<AssistantThreadSummary[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const abortRef = useRef<AbortController | null>(null);
+  const client = useAssistantClient();
   const userRef = useRef(userId);
   userRef.current = userId;
-  // Held in a ref so `refresh`'s identity stays stable (empty deps) while still
-  // reaching the current client — the same posture as `userRef` above.
-  const client = useAssistantClient();
   const clientRef = useRef(client);
   clientRef.current = client;
+  const abortRef = useRef<AbortController | null>(null);
+
+  const [state, setState] = useState<ThreadsState>(() => ({
+    threads: [],
+    loading: false,
+    loaded: false,
+    ownerUserId: userId,
+    ownerClient: client,
+  }));
 
   const refresh = useCallback(() => {
-    // Capture the user AND client this fetch is FOR; a result that resolves after
-    // either changed must not commit (it would show one account's/transport's
-    // threads under another).
+    // Capture the user AND client this fetch is FOR; the commit and the owner tag
+    // both use them, so a result can never land under a different scope.
     const requestedUserId = userRef.current;
     const requestedClient = clientRef.current;
     if (!requestedUserId) {
-      setThreads([]);
-      setLoaded(true);
+      setState({
+        threads: [],
+        loading: false,
+        loaded: true,
+        ownerUserId: requestedUserId,
+        ownerClient: requestedClient,
+      });
       return;
     }
     // Supersede any in-flight fetch so a rapid re-open can't land a stale list.
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
-    setLoading(true);
+    setState((s) => ({
+      ...s,
+      loading: true,
+      ownerUserId: requestedUserId,
+      ownerClient: requestedClient,
+    }));
     const isCurrent = () =>
       !ac.signal.aborted &&
       userRef.current === requestedUserId &&
@@ -64,35 +86,36 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
       .fetchThreads(ac.signal)
       .then((result) => {
         if (!isCurrent()) return;
-        // null = transient failure: keep the prior list, just drop the spinner.
-        if (result) setThreads(result);
-        setLoading(false);
-        setLoaded(true);
+        setState((s) => ({
+          // null = transient failure: keep the prior list, just drop the spinner.
+          threads: result ?? s.threads,
+          loading: false,
+          loaded: true,
+          ownerUserId: requestedUserId,
+          ownerClient: requestedClient,
+        }));
       })
       .catch(() => {
         // fetchThreads returns null rather than rejecting; this guards a future
-        // change (or a throw in a state setter) from leaking an unhandled
-        // rejection or wedging the spinner in a perpetual loading state.
+        // change (or a throw in a state setter) from wedging the spinner.
         if (isCurrent()) {
-          setLoading(false);
-          setLoaded(true);
+          setState((s) => ({ ...s, loading: false, loaded: true }));
         }
       });
   }, []);
 
-  // Reset on an account OR transport swap: clear the prior list and abort any
-  // in-flight fetch the moment `userId` or `client` changes, so the hook stays
-  // safe even if the host keeps it mounted across those changes.
-  useEffect(() => {
-    abortRef.current?.abort();
-    setThreads([]);
-    setLoading(false);
-    setLoaded(false);
-  }, [userId, client]);
+  // Abort an in-flight fetch on a scope swap (its result is already masked and
+  // the commit guard rejects it; this just frees the network promptly) and on
+  // unmount, so a late `.then` can't act after the panel closed.
+  useEffect(() => () => abortRef.current?.abort(), [userId, client]);
 
-  // Abort an in-flight fetch on unmount so its `.then` can't set state after the
-  // panel has closed.
-  useEffect(() => () => abortRef.current?.abort(), []);
-
-  return { threads, loading, loaded, refresh };
+  // Mask synchronously: a list owned by a different (user, client) than the
+  // current props is hidden on the same commit — no one-frame cross-scope leak.
+  const stale = state.ownerUserId !== userId || state.ownerClient !== client;
+  return {
+    threads: stale ? [] : state.threads,
+    loading: stale ? false : state.loading,
+    loaded: stale ? false : state.loaded,
+    refresh,
+  };
 }

@@ -52,12 +52,12 @@ export function useAssistantModels(): AssistantModels {
 
   useEffect(() => {
     const entry = cacheFor(client);
-    // A catalog already fetched for THIS client (another mount, or a switch back
-    // to it) is served without a refetch.
-    if (entry.cache) {
-      setModels(entry.cache);
-      return;
-    }
+    // Reset the visible catalog to THIS client's cache (or empty) up front, so a
+    // transport swap never leaves the previous client's models on screen while
+    // the new request is pending (or indefinitely if it fails). A catalog already
+    // fetched for this client is served without a refetch.
+    setModels(entry.cache ?? EMPTY);
+    if (entry.cache) return;
     let active = true;
     entry.inflight ??= client.fetchModels();
     void entry.inflight

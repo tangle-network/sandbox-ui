@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AssistantClient,
@@ -109,6 +109,65 @@ describe("useAssistantModels", () => {
     await waitFor(() => expect(b.result.current.models).toHaveLength(2));
     expect(clientB.fetchModels).toHaveBeenCalledTimes(1);
     expect(b.result.current.models[0].slug).toBe("b/m");
+  });
+
+  it("clears the previous catalog immediately when the client is swapped", async () => {
+    const { AssistantClientProvider } = await import("./client-context");
+    const { useAssistantModels } = await import("./useAssistantModels");
+
+    const clientA: AssistantClient = {
+      fetchModels: vi.fn().mockResolvedValue(OK_NONEMPTY),
+      fetchThreads: vi.fn(),
+      fetchThreadHistory: vi.fn(),
+      streamChat: vi.fn(),
+      confirmProposal: vi.fn(),
+    };
+    let resolveB: (v: AssistantModelsResult) => void = () => {};
+    const clientB: AssistantClient = {
+      fetchModels: vi.fn().mockReturnValue(
+        new Promise<AssistantModelsResult>((r) => {
+          resolveB = r;
+        }),
+      ),
+      fetchThreads: vi.fn(),
+      fetchThreadHistory: vi.fn(),
+      streamChat: vi.fn(),
+      confirmProposal: vi.fn(),
+    };
+
+    function Show() {
+      const m = useAssistantModels();
+      return (
+        <div data-testid="models">{m.models.map((x) => x.slug).join(",")}</div>
+      );
+    }
+    function Harness({ client }: { client: AssistantClient }) {
+      return (
+        <AssistantClientProvider client={client}>
+          <Show />
+        </AssistantClientProvider>
+      );
+    }
+
+    const { rerender } = render(<Harness client={clientA} />);
+    await waitFor(() =>
+      expect(screen.getByTestId("models").textContent).toBe("anthropic/m"),
+    );
+
+    // Swap to a client whose fetch is still pending — the old catalog must vanish
+    // immediately, not linger until the new request resolves.
+    rerender(<Harness client={clientB} />);
+    expect(screen.getByTestId("models").textContent).toBe("");
+
+    await act(async () => {
+      resolveB({
+        ok: true,
+        data: { default: "b/m", models: [{ slug: "b/m", label: "B" }] },
+      });
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("models").textContent).toBe("b/m"),
+    );
   });
 
   it("does not cache a FAILED fetch — the next mount retries", async () => {

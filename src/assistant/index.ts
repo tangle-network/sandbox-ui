@@ -18,3 +18,12 @@ export {
 } from "./useAssistantChat";
 export { useAssistantModels } from "./useAssistantModels";
 export { useAssistantThreads, type AssistantThreads } from "./useAssistantThreads";
+
+export { AssistantDock, type AssistantDockProps } from "./AssistantDock";
+export { AssistantPanel, type AssistantPanelProps } from "./AssistantPanel";
+export { ProposalCard, type ProposalCardProps } from "./ProposalCard";
+export {
+  AssistantLauncherProvider,
+  useAssistantLauncher,
+  type AssistantLauncher,
+} from "./launcher";

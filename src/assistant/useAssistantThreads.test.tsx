@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
-import { act, renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { type ReactNode, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AssistantClient, AssistantThreadSummary } from "./client";
 import { AssistantClientProvider } from "./client-context";
@@ -83,5 +89,59 @@ describe("useAssistantThreads", () => {
     act(() => rerender({ uid: "userB" }));
     expect(result.current.threads).toEqual([]);
     expect(result.current.loaded).toBe(false);
+  });
+
+  it("drops an old client's result after a transport swap for the same user", async () => {
+    let resolveOld: (v: AssistantThreadSummary[] | null) => void = () => {};
+    const oldClient: AssistantClient = {
+      fetchThreads: vi.fn().mockReturnValue(
+        new Promise<AssistantThreadSummary[] | null>((r) => {
+          resolveOld = r;
+        }),
+      ),
+      fetchModels: vi.fn(),
+      fetchThreadHistory: vi.fn(),
+      streamChat: vi.fn(),
+      confirmProposal: vi.fn(),
+    };
+    const newClient: AssistantClient = {
+      fetchThreads: vi.fn().mockResolvedValue([]),
+      fetchModels: vi.fn(),
+      fetchThreadHistory: vi.fn(),
+      streamChat: vi.fn(),
+      confirmProposal: vi.fn(),
+    };
+
+    function Show() {
+      const t = useAssistantThreads("userA");
+      const { refresh } = t;
+      // Fire one fetch on mount so the OLD client's request is in flight.
+      useEffect(() => {
+        refresh();
+      }, [refresh]);
+      return (
+        <div data-testid="threads">{t.threads.map((x) => x.id).join(",")}</div>
+      );
+    }
+    function Harness({ client }: { client: AssistantClient }) {
+      return (
+        <AssistantClientProvider client={client}>
+          <Show />
+        </AssistantClientProvider>
+      );
+    }
+
+    const { rerender } = render(<Harness client={oldClient} />);
+    expect(oldClient.fetchThreads).toHaveBeenCalledTimes(1);
+
+    // Swap the transport for the SAME user before the old request resolves.
+    rerender(<Harness client={newClient} />);
+
+    // The old client's request now resolves — its threads must NOT land under the
+    // new client (aborted + guarded by the captured client).
+    await act(async () => {
+      resolveOld([thread("old-thread")]);
+    });
+    expect(screen.getByTestId("threads").textContent).toBe("");
   });
 });

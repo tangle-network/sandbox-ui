@@ -60,10 +60,13 @@ export function AssistantPanel({
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const { state } = chat;
+  // Prefer the just-settled turn's balance (from the usage event, immediate)
+  // over the injected fetched balance, which may lag a turn behind.
+  const effectiveBalance = state.usage?.balanceUsd ?? balanceUsd;
   const errorView = state.error
     ? presentError(state.error.code, state.error.message)
     : null;
-  const low = isLowBalance(balanceUsd) && !errorView;
+  const low = isLowBalance(effectiveBalance) && !errorView;
   const streaming = state.status === "streaming";
 
   const renderProposal = (proposal: (typeof state.pendingProposals)[number]) => (
@@ -99,7 +102,7 @@ export function AssistantPanel({
             aria-label="Your credit balance"
             className="text-muted-foreground text-xs"
           >
-            {formatMoney(balanceUsd)}
+            {formatMoney(effectiveBalance)}
           </span>
         </div>
         <div className="flex items-center gap-1">

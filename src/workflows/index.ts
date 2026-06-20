@@ -1,9 +1,13 @@
 /**
- * `@tangle-network/sandbox-ui/workflows` — workflow visualisation. The
- * node-graph view (`@xyflow/react`-backed, an optional peer) renders a workflow
- * YAML definition; use the lazy wrapper to keep the graph dependency out of the
- * initial bundle until a graph is actually shown (e.g. wired as the assistant
- * proposal card's `renderGraph`).
+ * `@tangle-network/sandbox-ui/workflows` — workflow visualisation.
+ *
+ * Optional-peer contract: `buildWorkflowGraph` and importing this entry need NO
+ * extra dependency. RENDERING the graph requires the `@xyflow/react` optional
+ * peer to be installed — `WorkflowGraphLazy` defers its `import('@xyflow/react')`
+ * (and the React Flow CSS) to render time, so the import stays cheap and the peer
+ * is needed only if/when a graph is actually shown (e.g. wired as the assistant
+ * proposal card's `renderGraph`). A host that renders the graph without the peer
+ * installed gets a clear module-load error at that point, by design.
  */
 
 export {

@@ -17,7 +17,9 @@ export function ResizeHandle({
 }: {
   width: number;
   maxWidth: number;
-  /** Live (non-persisted) width update during a drag. */
+  /** Live (non-persisted) width update during a drag. The value is the raw
+   *  pointer-derived width and is NOT clamped — the consumer must clamp it to its
+   *  own min/max (the bundled `usePanelWidth.previewWidth` does). */
   onPreview: (next: number) => void;
   /** Persist the final width (drag end). */
   onCommit: (next: number) => void;

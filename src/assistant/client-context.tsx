@@ -6,7 +6,7 @@
  * portable across hosts.
  */
 
-import { createContext, useContext } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import type { AssistantClient } from "./client";
 
 const AssistantClientContext = createContext<AssistantClient | null>(null);
@@ -16,7 +16,7 @@ export function AssistantClientProvider({
   children,
 }: {
   client: AssistantClient;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <AssistantClientContext.Provider value={client}>

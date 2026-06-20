@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { type KeyboardEvent, type PointerEvent, useRef } from "react";
 import { MIN_PANEL_WIDTH } from "./usePanelPrefs";
 
 /**
@@ -32,7 +32,7 @@ export function ResizeHandle({
     lastWidth: number;
   } | null>(null);
 
-  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return; // primary button / touch / pen only
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -43,7 +43,7 @@ export function ResizeHandle({
     };
   };
 
-  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
     // Update the in-memory width every tick (smooth), but don't persist — that
@@ -56,7 +56,7 @@ export function ResizeHandle({
     onPreview(next);
   };
 
-  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+  const endDrag = (e: PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
     dragRef.current = null;
@@ -67,7 +67,7 @@ export function ResizeHandle({
     onCommit(drag.lastWidth);
   };
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const STEP = 24;
     if (e.key === "ArrowLeft") {
       e.preventDefault();

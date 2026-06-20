@@ -11,7 +11,12 @@
  */
 
 import { MessageSquare } from "lucide-react";
-import { type ReactNode, useEffect, useRef } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+} from "react";
 import { AssistantPanel } from "./AssistantPanel";
 import { useAssistantLauncher } from "./launcher";
 import { ResizeHandle } from "./ResizeHandle";
@@ -111,7 +116,7 @@ export function AssistantDock({
   }
 
   // Keep Tab focus within the dialog while it's open.
-  const trapTab = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const trapTab = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.key !== "Tab") return;
     const dialog = dialogRef.current;
     if (!dialog) return;

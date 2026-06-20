@@ -61,8 +61,8 @@ const TONE_DOT: Record<WfNodeTone, string> = {
 // connect to the node body for a clean diagram look.
 const HANDLE_CLASS = "!h-2 !w-2 !min-w-0 !border-0 !bg-transparent opacity-0";
 
-function WorkflowNode({ data }: NodeProps) {
-  const d = data as unknown as WfNodeData;
+function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
+  const d = data;
   return (
     <div
       className={`relative w-[240px] rounded-lg border px-3 py-2 shadow-sm ${TONE_CARD[d.tone]}`}
@@ -140,11 +140,11 @@ export function WorkflowGraph({
     return {
       error: graph.error,
       nodes: graph.nodes.map(
-        (n): Node => ({
+        (n): Node<WfNodeData> => ({
           id: n.id,
           type: "wfNode",
           position: n.position,
-          data: n.data as unknown as Record<string, unknown>,
+          data: n.data,
         }),
       ),
       edges: graph.edges.map((e) => ({

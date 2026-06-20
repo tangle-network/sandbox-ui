@@ -15,7 +15,10 @@ import { providerLabel } from "../assistant/provider-label";
 
 export type WfNodeTone = "trigger" | "structural" | "action";
 
-export interface WfNodeData {
+// Extends Record<string, unknown> so it satisfies React Flow's node-data
+// constraint — letting the graph use the typed `Node<WfNodeData>` /
+// `NodeProps<Node<WfNodeData>>` generics instead of unsafe `as unknown as` casts.
+export interface WfNodeData extends Record<string, unknown> {
   /** Headline for the node, e.g. "Run agent". */
   title: string;
   /** Secondary detail, e.g. an integration path or a cron expression. */

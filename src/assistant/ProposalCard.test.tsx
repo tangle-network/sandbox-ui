@@ -151,4 +151,26 @@ describe("ProposalCard", () => {
     expect(navigate).not.toHaveBeenCalled();
     expect(openSpy).not.toHaveBeenCalled();
   });
+
+  // Browsers strip leading whitespace and embedded tabs/newlines before scheme
+  // detection, so a plain regex guard can be smuggled past — the URL-canonical
+  // protocol check must still reject these.
+  it.each([" javascript:alert(1)", "java\tscript:alert(1)", "\njavascript:x"])(
+    "rejects a scheme-smuggled connect target %j",
+    (connectUrl) => {
+      const navigate = vi.fn();
+      render(
+        <ProposalCard
+          proposal={withReq({ provider: "slack", connected: false, connectUrl })}
+          confirming={false}
+          onConfirm={noop}
+          onCancel={noop}
+          navigate={navigate}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Connect/ }));
+      expect(navigate).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+    },
+  );
 });

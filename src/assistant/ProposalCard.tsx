@@ -165,16 +165,29 @@ export function ProposalCard({
 }
 
 function openConnect(target: string, navigate?: (path: string) => void) {
-  if (/^https?:\/\//i.test(target)) {
-    window.open(target, "_blank", "noopener,noreferrer");
+  // Protocol-relative URLs (//host) inherit the page scheme and point off-site —
+  // never a legitimate connect target, so reject outright.
+  if (target.startsWith("//")) return;
+  // Canonicalize before the scheme check so it can't be smuggled past with
+  // leading whitespace or an embedded tab/newline that browsers strip (a regex
+  // guard misses those). Only http(s) may EVER navigate — via window.open OR
+  // window.location.assign — which closes the `javascript:`/`data:` XSS vector.
+  let url: URL;
+  try {
+    url = new URL(target, window.location.origin);
+  } catch {
     return;
   }
-  // Anything else must be a same-origin RELATIVE path. Reject a URL scheme
-  // (data:/blob:/javascript:/…) or a protocol-relative URL so a malformed or
-  // hostile connectUrl can't drive navigation to a non-http(s) target.
-  if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//")) return;
-  if (navigate) navigate(target);
-  else window.location.assign(target);
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
+  // A bare relative path (no scheme) is in-app navigation → host router; an
+  // absolute http(s) URL is an external link → new tab.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(target)) {
+    window.open(url.href, "_blank", "noopener,noreferrer");
+  } else if (navigate) {
+    navigate(target);
+  } else {
+    window.location.assign(url.href);
+  }
 }
 
 function RequirementRow({

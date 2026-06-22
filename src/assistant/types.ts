@@ -5,6 +5,8 @@
  * is the source of truth for what it accepts and emits.
  */
 
+import type { ReactNode } from "react";
+
 /** Request body for `POST /api/v1/assistant/chat`. */
 export interface ChatRequest {
   message: string;
@@ -128,12 +130,21 @@ export type ChatRole = "user" | "assistant" | "status" | "tool";
 /** Live status of a tool-activity chip. */
 export type ToolActivityStatus = "running" | "ok" | "failed";
 
+/** The outcome of a finished read-only tool, retained on the chip so a renderer
+ *  can show the result body (not just the name + status). Mirrors the
+ *  `tool_result` event: a success carries the tool's `result`; a failure carries
+ *  the error. Absent while the tool is still running. */
+export type ToolOutcome =
+  | { ok: true; result?: unknown }
+  | { ok: false; error?: { code: string; message: string } };
+
 export interface ChatMessage {
   id: string;
   role: ChatRole;
   text: string;
-  /** Present only on `tool` messages — the activity's tool name and state. */
-  tool?: { name: string; status: ToolActivityStatus };
+  /** Present only on `tool` messages — the activity's tool name, state, and (once
+   *  finished) its outcome. */
+  tool?: { name: string; status: ToolActivityStatus; outcome?: ToolOutcome };
 }
 
 /** A mutating action the assistant proposed, awaiting the user's confirmation. */
@@ -155,4 +166,33 @@ export interface UsageInfo {
   costUsd: number | null;
   balanceUsd: number | null;
   replayed: boolean;
+}
+
+/**
+ * The transcript slice handed to a host-supplied `renderTranscript` (see
+ * {@link AssistantPanelProps}). It lets a host swap ONLY the conversation
+ * rendering — to use its own message renderer — while the panel keeps owning the
+ * dock chrome, composer, model picker, history, transport, and proposal
+ * orchestration. The bound `renderProposal` returns the panel's own proposal
+ * card so the host can place it (e.g. inline after the proposing turn) without
+ * re-implementing the confirm/cancel flow.
+ */
+export interface AssistantTranscriptView {
+  messages: ChatMessage[];
+  /** The current turn's reasoning/thinking text, if any (streamed before the
+   *  answer for reasoning models). */
+  reasoning: string | null;
+  /** Id of the assistant message currently accumulating deltas, if any. */
+  streamingId: string | null;
+  /** Model slug the current/most-recent turn ran against, or null. */
+  model: string | null;
+  /** True while a turn is streaming. */
+  isStreaming: boolean;
+  /** True while the agent is working but has produced no visible output yet
+   *  (drives a "thinking" affordance). */
+  isThinking: boolean;
+  pendingProposals: PendingProposal[];
+  /** The panel's bound proposal card for a pending proposal — render it where the
+   *  confirm/cancel UI should appear. */
+  renderProposal: (proposal: PendingProposal) => ReactNode;
 }

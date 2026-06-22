@@ -370,6 +370,43 @@ describe("transcript edge cases", () => {
     expect(chip?.text).toBe("not found");
   });
 
+  it("retains the tool result outcome on the chip so a renderer can show the body", () => {
+    let s = send(initialAssistantState(), "list my workflows");
+    s = stream(s, {
+      type: "tool_call",
+      data: { callId: "c1", name: "list_workflows" },
+    });
+    s = stream(s, {
+      type: "tool_result",
+      data: { callId: "c1", name: "list_workflows", ok: true, output: { count: 2 } },
+    });
+    expect(s.messages.find((m) => m.id === "tool-c1")?.tool?.outcome).toEqual({
+      ok: true,
+      result: { count: 2 },
+    });
+  });
+
+  it("retains the error outcome on a failed tool chip", () => {
+    let s = send(initialAssistantState(), "get workflow zzz");
+    s = stream(s, {
+      type: "tool_call",
+      data: { callId: "c1", name: "get_workflow" },
+    });
+    s = stream(s, {
+      type: "tool_result",
+      data: {
+        callId: "c1",
+        name: "get_workflow",
+        ok: false,
+        error: { code: "UNKNOWN", message: "not found" },
+      },
+    });
+    expect(s.messages.find((m) => m.id === "tool-c1")?.tool?.outcome).toEqual({
+      ok: false,
+      error: { code: "UNKNOWN", message: "not found" },
+    });
+  });
+
   it("splits pre- and post-tool reasoning into distinct assistant bubbles", () => {
     let s = send(initialAssistantState(), "build a workflow");
     s = stream(s, {

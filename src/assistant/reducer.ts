@@ -9,6 +9,7 @@ import type {
   AssistantStreamEvent,
   ChatMessage,
   PendingProposal,
+  ToolOutcome,
   UsageInfo,
 } from "./types";
 
@@ -242,12 +243,22 @@ function applyStreamEvent(
       const errText = event.data.ok
         ? ""
         : (event.data.error?.message ?? "unknown error");
+      // Retain the outcome on the chip so a renderer can show the tool's result
+      // body, not just name + status. (The error text stays in `.text` too, for
+      // the built-in timeline's one-line chip.)
+      const outcome: ToolOutcome = event.data.ok
+        ? { ok: true, result: event.data.output }
+        : { ok: false, error: event.data.error };
       if (state.messages.some((m) => m.id === chipId)) {
         return {
           ...state,
           messages: state.messages.map((m) =>
             m.id === chipId
-              ? { ...m, text: errText, tool: { name: event.data.name, status } }
+              ? {
+                  ...m,
+                  text: errText,
+                  tool: { name: event.data.name, status, outcome },
+                }
               : m,
           ),
         };
@@ -259,7 +270,7 @@ function applyStreamEvent(
         id: chipId,
         role: "tool",
         text: errText,
-        tool: { name: event.data.name, status },
+        tool: { name: event.data.name, status, outcome },
       };
       return { ...state, messages: capMessages([...state.messages, chip]) };
     }

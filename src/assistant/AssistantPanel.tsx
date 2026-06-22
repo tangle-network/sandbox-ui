@@ -14,6 +14,7 @@ import { type ReactNode, useState } from "react";
 import { assistantIsThinking, buildAssistantTimeline } from "./build-timeline";
 import { isLowBalance, presentError } from "./presentation";
 import { ProposalCard } from "./ProposalCard";
+import type { AssistantTranscriptView } from "./types";
 import type { AssistantChat } from "./useAssistantChat";
 import { useAssistantModels } from "./useAssistantModels";
 import { useAssistantThreads } from "./useAssistantThreads";
@@ -32,6 +33,12 @@ export interface AssistantPanelProps {
   /** Render workflow YAML as a node graph in a proposal card (the `./workflows`
    *  WorkflowGraph). When absent, proposals show YAML as text. */
   renderGraph?: (yaml: string) => ReactNode;
+  /** Swap ONLY the conversation rendering for a host-supplied renderer (e.g. a
+   *  different chat-message component), while the panel keeps owning the header,
+   *  composer, model picker, history, transport, and proposal orchestration.
+   *  Receives the transcript slice plus a bound proposal card to place. When
+   *  absent, the built-in `AgentTimeline` renders the conversation. */
+  renderTranscript?: (view: AssistantTranscriptView) => ReactNode;
 }
 
 const EMPTY_STATE =
@@ -53,6 +60,7 @@ export function AssistantPanel({
   balanceUsd = null,
   formatMoney = defaultFormatMoney,
   renderGraph,
+  renderTranscript,
 }: AssistantPanelProps) {
   const models = useAssistantModels();
   const threads = useAssistantThreads(userId);
@@ -82,7 +90,7 @@ export function AssistantPanel({
     />
   );
 
-  const items = buildAssistantTimeline(state, renderProposal);
+  const isThinking = assistantIsThinking(state);
 
   const openHistory = () => {
     setHistoryOpen((v) => {
@@ -207,7 +215,7 @@ export function AssistantPanel({
         </div>
       )}
 
-      {/* Conversation */}
+      {/* Conversation — host-swappable renderer, else the built-in timeline. */}
       <div
         role="log"
         aria-label="Conversation"
@@ -215,15 +223,28 @@ export function AssistantPanel({
         className="min-h-0 flex-1 overflow-y-auto px-2 py-3"
         style={{ fontSize: `${font.scale}rem` }}
       >
-        <AgentTimeline
-          items={items}
-          isThinking={assistantIsThinking(state)}
-          emptyState={
-            <p className="px-4 py-8 text-center text-muted-foreground text-sm">
-              {EMPTY_STATE}
-            </p>
-          }
-        />
+        {renderTranscript ? (
+          renderTranscript({
+            messages: state.messages,
+            reasoning: state.reasoning,
+            streamingId: state.streamingId,
+            model: state.model,
+            isStreaming: streaming,
+            isThinking,
+            pendingProposals: state.pendingProposals,
+            renderProposal,
+          })
+        ) : (
+          <AgentTimeline
+            items={buildAssistantTimeline(state, renderProposal)}
+            isThinking={isThinking}
+            emptyState={
+              <p className="px-4 py-8 text-center text-muted-foreground text-sm">
+                {EMPTY_STATE}
+              </p>
+            }
+          />
+        )}
       </div>
 
       {/* Error / low-balance banners */}

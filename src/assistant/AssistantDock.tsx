@@ -20,6 +20,7 @@ import {
 import { AssistantPanel } from "./AssistantPanel";
 import { useAssistantLauncher } from "./launcher";
 import { ResizeHandle } from "./ResizeHandle";
+import type { AssistantTranscriptView } from "./types";
 import { useAssistantChat } from "./useAssistantChat";
 import { useIsDesktop, usePanelWidth } from "./usePanelPrefs";
 
@@ -34,6 +35,10 @@ export interface AssistantDockProps {
   renderGraph?: (yaml: string) => ReactNode;
   /** Called after a workflow-mutating tool is confirmed (host re-fetches its list). */
   onWorkflowMutation?: () => void;
+  /** Swap the conversation rendering for a host-supplied renderer (see
+   *  {@link AssistantPanelProps.renderTranscript}); the dock chrome, composer,
+   *  transport, and proposal flow stay owned by the panel. */
+  renderTranscript?: (view: AssistantTranscriptView) => ReactNode;
 }
 
 /** Visible, focusable descendants of a container, in tab order. Visibility is
@@ -54,6 +59,7 @@ export function AssistantDock({
   formatMoney,
   renderGraph,
   onWorkflowMutation,
+  renderTranscript,
 }: AssistantDockProps) {
   const { open, openAssistant, closeAssistant } = useAssistantLauncher();
   const chat = useAssistantChat(userId, { onWorkflowMutation });
@@ -167,6 +173,7 @@ export function AssistantDock({
           balanceUsd={balanceUsd}
           formatMoney={formatMoney}
           renderGraph={renderGraph}
+          renderTranscript={renderTranscript}
         />
         {isDesktop && (
           <ResizeHandle

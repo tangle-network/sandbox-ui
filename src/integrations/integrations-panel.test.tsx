@@ -87,6 +87,33 @@ describe("IntegrationsPanel", () => {
     });
   });
 
+  it("matches a provider-only connection that omits connectorId (platform hub shape)", () => {
+    const onConnect = vi.fn();
+    const onDisconnect = vi.fn();
+    // The platform hub keys connections by provider only: catalog providers
+    // carry no connectors[] and connection rows carry no connectorId.
+    const hubCatalog: IntegrationProvider[] = [
+      { providerId: "slack", displayName: "Slack" },
+    ];
+    const live: IntegrationConnection[] = [
+      { id: "conn_hub", providerId: "slack", status: "active" },
+    ];
+    renderPanel({
+      catalog: hubCatalog,
+      connections: live,
+      onConnect,
+      onDisconnect,
+    });
+
+    const tile = screen.getByTestId("integration-slack");
+    expect(tile).toHaveAttribute("data-connected", "true");
+    // Clicking an already-connected provider must not re-initiate OAuth.
+    fireEvent.click(tile);
+    expect(onConnect).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("manage-slack"));
+    expect(onDisconnect).toHaveBeenCalledWith("conn_hub");
+  });
+
   it("treats revoked connections as not live", () => {
     const onConnect = vi.fn();
     renderPanel({

@@ -284,7 +284,9 @@ function buildConnectionIndex(
   const index = new Map<string, IntegrationConnection>();
   for (const conn of connections) {
     if (conn.status === "revoked") continue;
-    index.set(`${conn.providerId}:${conn.connectorId}`, conn);
+    // Key on providerId when the connection carries no connectorId, matching
+    // defaultConnectorOf's fallback so the lookup on the provider side hits.
+    index.set(`${conn.providerId}:${conn.connectorId ?? conn.providerId}`, conn);
   }
   return index;
 }

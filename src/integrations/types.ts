@@ -9,7 +9,9 @@
 export interface IntegrationConnection {
   id: string;
   providerId: string;
-  connectorId: string;
+  // Absent on provider-keyed hubs (no per-connector identity); matchers fall
+  // back to providerId, mirroring defaultConnectorOf on the provider side.
+  connectorId?: string;
   status: "connected" | "pending" | "revoked" | "expired" | (string & {});
   grantedScopes?: string[];
   account?: {

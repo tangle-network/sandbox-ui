@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import {
   afterEach,
@@ -229,5 +229,28 @@ describe("AssistantPanel thread deletion", () => {
     expect(
       screen.queryByRole("button", { name: "Delete conversation" }),
     ).toBeNull();
+  });
+
+  it("does not reset when the active thread became busy while the delete was in flight", async () => {
+    let resolveDelete: (v: { ok: boolean }) => void = () => {};
+    const del = vi.fn(
+      () =>
+        new Promise<{ ok: boolean }>((r) => {
+          resolveDelete = r;
+        }),
+    );
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")], del));
+    await openHistory("t1");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Delete conversation" }),
+    );
+    await waitFor(() => expect(del).toHaveBeenCalled());
+    // The user starts a turn on the active thread while the delete is in flight.
+    chat.state.status = "streaming";
+    await act(async () => {
+      resolveDelete({ ok: true });
+    });
+    expect(chat.reset).not.toHaveBeenCalled();
   });
 });

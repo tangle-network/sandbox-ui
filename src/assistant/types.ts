@@ -209,8 +209,9 @@ export interface AssistantTranscriptView {
   isThinking: boolean;
   pendingProposals: PendingProposal[];
   /** Cost/tokens/duration for the most recently settled turn, or null before any
-   *  turn settles. Lets a host renderer show the turn cost + per-message metrics. */
-  usage: UsageInfo | null;
+   *  turn settles. Optional so a host predating the field stays a valid consumer;
+   *  a renderer treats a missing value the same as null. */
+  usage?: UsageInfo | null;
   /** The panel's bound proposal card for a pending proposal — render it where the
    *  confirm/cancel UI should appear. */
   renderProposal: (proposal: PendingProposal) => ReactNode;

@@ -51,6 +51,10 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
   const clientRef = useRef(client);
   clientRef.current = client;
   const abortRef = useRef<AbortController | null>(null);
+  // Ids being (or already) deleted. A refresh whose fetch began before the
+  // server delete completed can return a row we optimistically removed; filter
+  // these out of every refresh commit so a deleted thread never reappears.
+  const pendingDeletesRef = useRef<Set<string>>(new Set());
 
   const [state, setState] = useState<ThreadsState>(() => ({
     threads: [],
@@ -95,7 +99,11 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
         if (!isCurrent()) return;
         setState((s) => ({
           // null = transient failure: keep the prior list, just drop the spinner.
-          threads: result ?? s.threads,
+          // Drop any in-flight/finished deletions so a stale fetch can't resurrect
+          // a row we already removed.
+          threads: (result ?? s.threads).filter(
+            (t) => !pendingDeletesRef.current.has(t.id),
+          ),
           loading: false,
           loaded: true,
           ownerUserId: requestedUserId,
@@ -118,8 +126,10 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
       // A client without delete support can't remove anything — no-op rather
       // than optimistically drop a row that will never be deleted server-side.
       if (!requestedClient.deleteThread) return { ok: false };
-      // Optimistically drop the row, but only if the visible list still belongs
-      // to the scope we're deleting under — never mutate a swapped-in scope's list.
+      // Mark it deleting so a concurrent refresh's commit filters it out, then
+      // optimistically drop the row — but only within the scope we're deleting
+      // under (never mutate a swapped-in scope's list).
+      pendingDeletesRef.current.add(threadId);
       setState((s) =>
         s.ownerClient === requestedClient && s.ownerUserId === requestedUserId
           ? { ...s, threads: s.threads.filter((t) => t.id !== threadId) }
@@ -133,14 +143,17 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
       } catch {
         res = { ok: false };
       }
-      // On failure, reload to restore the row we optimistically removed (only if
-      // we're still in the same scope).
-      if (
-        !res.ok &&
-        userRef.current === requestedUserId &&
-        clientRef.current === requestedClient
-      ) {
-        refresh();
+      // On failure, un-mark it and reload to restore the row we optimistically
+      // removed (only if we're still in the same scope). On success it stays
+      // marked — the thread is gone for good and must never resurface.
+      if (!res.ok) {
+        pendingDeletesRef.current.delete(threadId);
+        if (
+          userRef.current === requestedUserId &&
+          clientRef.current === requestedClient
+        ) {
+          refresh();
+        }
       }
       return res;
     },

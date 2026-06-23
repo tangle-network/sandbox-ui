@@ -92,6 +92,45 @@ describe("useAssistantThreads", () => {
     );
   });
 
+  it("a refresh during a pending delete does not resurrect the removed row", async () => {
+    const { fetchThreads, deleteThread, wrapper } = setup();
+    fetchThreads.mockResolvedValue([thread("t1"), thread("t2")]);
+    let resolveDelete: (v: { ok: boolean }) => void = () => {};
+    deleteThread.mockReturnValue(
+      new Promise<{ ok: boolean }>((r) => {
+        resolveDelete = r;
+      }),
+    );
+    const { result } = renderHook(() => useAssistantThreads("userA"), {
+      wrapper,
+    });
+    act(() => result.current.refresh());
+    await waitFor(() => expect(result.current.threads).toHaveLength(2));
+
+    // Begin deleting t2 (stays pending) — optimistically removed.
+    let removed!: Promise<{ ok: boolean }>;
+    act(() => {
+      removed = result.current.remove("t2");
+    });
+    expect(result.current.threads.map((t) => t.id)).toEqual(["t1"]);
+
+    // A refresh resolves while the delete is still in flight, returning [t1, t2]
+    // (the server hasn't applied the delete yet) — t2 must stay filtered.
+    await act(async () => {
+      result.current.refresh();
+    });
+    await waitFor(() =>
+      expect(result.current.threads.map((t) => t.id)).toEqual(["t1"]),
+    );
+
+    // The delete then succeeds; the row remains gone.
+    await act(async () => {
+      resolveDelete({ ok: true });
+      await removed;
+    });
+    expect(result.current.threads.map((t) => t.id)).toEqual(["t1"]);
+  });
+
   it("drops a result that resolves after the user changed", async () => {
     const { fetchThreads, wrapper } = setup();
     let resolveA: (v: AssistantThreadSummary[] | null) => void = () => {};

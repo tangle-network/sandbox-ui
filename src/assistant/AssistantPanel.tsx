@@ -10,7 +10,7 @@
 
 import { AgentTimeline, ChatInput } from "@tangle-network/ui/chat";
 import { History, Minus, Plus, RotateCcw, Trash2, X } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { assistantIsThinking, buildAssistantTimeline } from "./build-timeline";
 import { isLowBalance, presentError } from "./presentation";
 import { ProposalCard } from "./ProposalCard";
@@ -68,6 +68,10 @@ export function AssistantPanel({
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const { state } = chat;
+  // Always-current chat handle, so an async delete can re-check the LIVE thread
+  // + status after awaiting (the closure's `chat`/`state` are render-time stale).
+  const chatRef = useRef(chat);
+  chatRef.current = chat;
   // Prefer the just-settled turn's balance (from the usage event, immediate)
   // over the injected fetched balance, which may lag a turn behind.
   const effectiveBalance = state.usage?.balanceUsd ?? balanceUsd;
@@ -106,13 +110,19 @@ export function AssistantPanel({
   // the server confirms the delete — so a failed delete never strands the user
   // on a fresh thread while the server still has the conversation.
   const deleteThread = async (threadId: string) => {
-    const isActive = state.threadId === threadId;
-    if (isActive && state.status !== "idle") return;
+    if (state.threadId === threadId && state.status !== "idle") return;
     if (!window.confirm("Delete this conversation? This can't be undone.")) {
       return;
     }
     const res = await threads.remove(threadId);
-    if (isActive && res.ok) chat.reset();
+    // Reset the live conversation only if the just-deleted thread is STILL the
+    // active, idle one. Re-checked through the ref because the user may have
+    // switched threads or started a turn while the delete was in flight —
+    // resetting then would wipe a different or now-busy conversation.
+    const live = chatRef.current.state;
+    if (res.ok && live.threadId === threadId && live.status === "idle") {
+      chatRef.current.reset();
+    }
   };
 
   return (

@@ -87,9 +87,12 @@ export function AssistantPanel({
   const firstUserText = state.messages
     .find((m) => m.role === "user")
     ?.text.trim();
+  // Truncate by code point (Array.from), not UTF-16 code unit, so a 60-char cut
+  // can't split a surrogate pair (emoji / astral script) into a replacement char.
+  const titleChars = firstUserText ? Array.from(firstUserText) : [];
   const conversationTitle = firstUserText
-    ? firstUserText.length > 60
-      ? `${firstUserText.slice(0, 60)}…`
+    ? titleChars.length > 60
+      ? `${titleChars.slice(0, 60).join("")}…`
       : firstUserText
     : null;
 

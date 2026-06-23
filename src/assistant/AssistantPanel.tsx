@@ -9,7 +9,7 @@
  */
 
 import { AgentTimeline, ChatInput } from "@tangle-network/ui/chat";
-import { History, Minus, Plus, RotateCcw, X } from "lucide-react";
+import { History, Minus, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { assistantIsThinking, buildAssistantTimeline } from "./build-timeline";
 import { isLowBalance, presentError } from "./presentation";
@@ -98,6 +98,20 @@ export function AssistantPanel({
       if (next) threads.refresh();
       return next;
     });
+  };
+
+  // Delete a past conversation. Deleting the *active* thread is refused while it
+  // is mid-turn (the stream is still writing to it); otherwise the live state is
+  // reset to a fresh thread so it doesn't pin a now-deleted id.
+  const deleteThread = (threadId: string) => {
+    const isActive = state.threadId === threadId;
+    if (isActive && state.status !== "idle") return;
+    if (
+      !window.confirm("Delete this conversation? This can't be undone.")
+    )
+      return;
+    if (isActive) chat.reset();
+    void threads.remove(threadId);
   };
 
   return (
@@ -196,20 +210,38 @@ export function AssistantPanel({
             </p>
           ) : (
             <ul>
-              {threads.threads.map((t) => (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      chat.switchThread(t.id);
-                      setHistoryOpen(false);
-                    }}
-                    className="block w-full truncate px-4 py-2 text-left text-foreground text-xs hover:bg-muted/50"
-                  >
-                    {t.title ?? "Untitled conversation"}
-                  </button>
-                </li>
-              ))}
+              {threads.threads.map((t) => {
+                const busyActive =
+                  state.threadId === t.id && state.status !== "idle";
+                return (
+                  <li key={t.id} className="group flex items-center hover:bg-muted/50">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        chat.switchThread(t.id);
+                        setHistoryOpen(false);
+                      }}
+                      className="min-w-0 flex-1 truncate px-4 py-2 text-left text-foreground text-xs"
+                    >
+                      {t.title ?? "Untitled conversation"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteThread(t.id)}
+                      disabled={busyActive}
+                      aria-label="Delete conversation"
+                      title={
+                        busyActive
+                          ? "Can't delete while this conversation is active"
+                          : "Delete conversation"
+                      }
+                      className="shrink-0 p-2 text-muted-foreground opacity-0 transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -232,6 +264,7 @@ export function AssistantPanel({
             isStreaming: streaming,
             isThinking,
             pendingProposals: state.pendingProposals,
+            usage: state.usage,
             renderProposal,
           })
         ) : (

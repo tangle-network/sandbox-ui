@@ -18,17 +18,19 @@ function thread(id: string): AssistantThreadSummary {
 
 function setup() {
   const fetchThreads = vi.fn();
+  const deleteThread = vi.fn();
   const client: AssistantClient = {
     fetchModels: vi.fn(),
     fetchThreads,
     fetchThreadHistory: vi.fn(),
     streamChat: vi.fn(),
     confirmProposal: vi.fn(),
+    deleteThread,
   };
   const wrapper = ({ children }: { children: ReactNode }) => (
     <AssistantClientProvider client={client}>{children}</AssistantClientProvider>
   );
-  return { fetchThreads, wrapper };
+  return { fetchThreads, deleteThread, wrapper };
 }
 
 beforeEach(() => {
@@ -52,6 +54,42 @@ describe("useAssistantThreads", () => {
     act(() => result.current.refresh());
     await waitFor(() => expect(result.current.threads).toHaveLength(1));
     expect(result.current.loaded).toBe(true);
+  });
+
+  it("optimistically removes a thread and calls deleteThread", async () => {
+    const { fetchThreads, deleteThread, wrapper } = setup();
+    fetchThreads.mockResolvedValue([thread("t1"), thread("t2")]);
+    deleteThread.mockResolvedValue({ ok: true });
+    const { result } = renderHook(() => useAssistantThreads("userA"), {
+      wrapper,
+    });
+    act(() => result.current.refresh());
+    await waitFor(() => expect(result.current.threads).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.remove("t1");
+    });
+    expect(deleteThread).toHaveBeenCalledWith("t1");
+    expect(result.current.threads.map((t) => t.id)).toEqual(["t2"]);
+  });
+
+  it("restores the list when a delete fails", async () => {
+    const { fetchThreads, deleteThread, wrapper } = setup();
+    fetchThreads.mockResolvedValue([thread("t1"), thread("t2")]);
+    deleteThread.mockResolvedValue({ ok: false });
+    const { result } = renderHook(() => useAssistantThreads("userA"), {
+      wrapper,
+    });
+    act(() => result.current.refresh());
+    await waitFor(() => expect(result.current.threads).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.remove("t1");
+    });
+    // The optimistic removal is rolled back by a reload, so the row returns.
+    await waitFor(() =>
+      expect(result.current.threads.map((t) => t.id)).toEqual(["t1", "t2"]),
+    );
   });
 
   it("drops a result that resolves after the user changed", async () => {
@@ -103,6 +141,7 @@ describe("useAssistantThreads", () => {
       fetchThreadHistory: vi.fn(),
       streamChat: vi.fn(),
       confirmProposal: vi.fn(),
+      deleteThread: vi.fn(),
     };
     const newClient: AssistantClient = {
       fetchThreads: vi.fn().mockResolvedValue([]),
@@ -110,6 +149,7 @@ describe("useAssistantThreads", () => {
       fetchThreadHistory: vi.fn(),
       streamChat: vi.fn(),
       confirmProposal: vi.fn(),
+      deleteThread: vi.fn(),
     };
 
     function Show() {

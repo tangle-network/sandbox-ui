@@ -25,6 +25,9 @@ export interface AssistantThreads {
   /** Load (or reload) the thread list. Must be called to populate `threads` —
    *  the hook never fetches on mount (the panel calls this when history opens). */
   refresh: () => void;
+  /** Delete a thread. Optimistically drops it from the list (within the current
+   *  owner scope); on failure the list is reloaded to restore the true state. */
+  remove: (threadId: string) => Promise<{ ok: boolean }>;
 }
 
 interface ThreadsState {
@@ -104,6 +107,32 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
       });
   }, []);
 
+  const remove = useCallback(
+    async (threadId: string) => {
+      const requestedClient = clientRef.current;
+      const requestedUserId = userRef.current;
+      // Optimistically drop the row, but only if the visible list still belongs
+      // to the scope we're deleting under — never mutate a swapped-in scope's list.
+      setState((s) =>
+        s.ownerClient === requestedClient && s.ownerUserId === requestedUserId
+          ? { ...s, threads: s.threads.filter((t) => t.id !== threadId) }
+          : s,
+      );
+      const res = await requestedClient.deleteThread(threadId);
+      // On failure, reload to restore the row we optimistically removed (only if
+      // we're still in the same scope).
+      if (
+        !res.ok &&
+        userRef.current === requestedUserId &&
+        clientRef.current === requestedClient
+      ) {
+        refresh();
+      }
+      return res;
+    },
+    [refresh],
+  );
+
   // Abort an in-flight fetch on a scope swap (its result is already masked and
   // the commit guard rejects it; this just frees the network promptly) and on
   // unmount, so a late `.then` can't act after the panel closed.
@@ -117,5 +146,6 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
     loading: stale ? false : state.loading,
     loaded: stale ? false : state.loaded,
     refresh,
+    remove,
   };
 }

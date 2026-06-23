@@ -107,6 +107,9 @@ export interface AssistantClient {
     signal: AbortSignal,
   ): Promise<void>;
   confirmProposal(proposalId: string): Promise<ConfirmResult>;
+  /** Delete a thread and its server-side turns/proposals. Resolves `{ ok }`; a
+   *  404 (already gone) is treated as success so a double-delete is harmless. */
+  deleteThread(threadId: string): Promise<{ ok: boolean }>;
 }
 
 const EMPTY_MODELS: AssistantModels = { default: null, models: [] };
@@ -592,6 +595,20 @@ export function createAssistantClient(
         ok: false,
         error: body?.error?.message ?? "The action could not be completed",
       };
+    },
+
+    async deleteThread(threadId) {
+      try {
+        const res = await fetch(url(`/threads/${encodeURIComponent(threadId)}`), {
+          method: "DELETE",
+          headers: authHeaders(),
+          credentials,
+        });
+        // 404 ⇒ already gone; treat as success so a retry/double-delete is a no-op.
+        return { ok: res.ok || res.status === 404 };
+      } catch {
+        return { ok: false };
+      }
     },
   };
 }

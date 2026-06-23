@@ -43,7 +43,7 @@ describe("send", () => {
     const dirty: AssistantState = {
       ...initialAssistantState(),
       error: { code: "X", message: "old" },
-      usage: { costUsd: 1, balanceUsd: 1, replayed: false },
+      usage: { costUsd: 1, balanceUsd: 1, promptTokens: null, completionTokens: null, durationMs: null, replayed: false },
     };
     const s = send(dirty, "again");
     expect(s.error).toBeNull();
@@ -94,6 +94,9 @@ describe("streaming renders incrementally", () => {
     expect(s.usage).toEqual({
       costUsd: 0.0002,
       balanceUsd: 4.5,
+      promptTokens: 10,
+      completionTokens: 5,
+      durationMs: null,
       replayed: false,
     });
     // The fully streamed reply is preserved.
@@ -348,6 +351,47 @@ describe("transcript edge cases", () => {
     expect(s.messages.filter((m) => m.id === "tool-c1")).toHaveLength(1);
     expect(s.messages.find((m) => m.id === "tool-c1")?.tool?.status).toBe("ok");
     expect(s.status).toBe("streaming");
+  });
+
+  it("carries tool args on the chip and preserves them across tool_result", () => {
+    let s = send(initialAssistantState(), "get workflow wf_1");
+    s = stream(s, {
+      type: "tool_call",
+      data: { callId: "c1", name: "get_workflow", args: { id: "wf_1" } },
+    });
+    expect(s.messages.find((m) => m.id === "tool-c1")?.tool?.args).toEqual({
+      id: "wf_1",
+    });
+    s = stream(s, {
+      type: "tool_result",
+      data: { callId: "c1", name: "get_workflow", ok: true, output: {} },
+    });
+    // tool_result carries no args of its own, so the call's args must survive.
+    expect(s.messages.find((m) => m.id === "tool-c1")?.tool?.args).toEqual({
+      id: "wf_1",
+    });
+  });
+
+  it("records cost, tokens, and duration from the usage event", () => {
+    let s = send(initialAssistantState(), "hi");
+    s = stream(s, {
+      type: "usage",
+      data: {
+        promptTokens: 12,
+        completionTokens: 34,
+        costUsd: 0.001,
+        balanceUsd: 9.5,
+        durationMs: 1500,
+      },
+    });
+    expect(s.usage).toEqual({
+      costUsd: 0.001,
+      balanceUsd: 9.5,
+      promptTokens: 12,
+      completionTokens: 34,
+      durationMs: 1500,
+      replayed: false,
+    });
   });
 
   it("marks the tool chip failed and carries the error text", () => {

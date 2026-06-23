@@ -39,6 +39,7 @@ async function load() {
     fetchThreadHistory: vi.fn(),
     streamChat: vi.fn(),
     confirmProposal: vi.fn(),
+    deleteThread: vi.fn(),
   };
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <AssistantClientProvider client={client}>
@@ -80,6 +81,7 @@ describe("useAssistantModels", () => {
       fetchThreadHistory: vi.fn(),
       streamChat: vi.fn(),
       confirmProposal: vi.fn(),
+      deleteThread: vi.fn(),
     });
     const clientA = makeClient(OK_NONEMPTY);
     const clientB = makeClient({
@@ -121,6 +123,7 @@ describe("useAssistantModels", () => {
       fetchThreadHistory: vi.fn(),
       streamChat: vi.fn(),
       confirmProposal: vi.fn(),
+      deleteThread: vi.fn(),
     };
     let resolveB: (v: AssistantModelsResult) => void = () => {};
     const clientB: AssistantClient = {
@@ -133,6 +136,7 @@ describe("useAssistantModels", () => {
       fetchThreadHistory: vi.fn(),
       streamChat: vi.fn(),
       confirmProposal: vi.fn(),
+      deleteThread: vi.fn(),
     };
 
     function Show() {
@@ -260,6 +264,7 @@ describe("useAssistantModels", () => {
       fetchThreadHistory: vi.fn(),
       streamChat: vi.fn(),
       confirmProposal: vi.fn(),
+      deleteThread: vi.fn(),
     };
     const clientB: AssistantClient = {
       fetchModels: vi.fn().mockResolvedValue({
@@ -270,6 +275,7 @@ describe("useAssistantModels", () => {
       fetchThreadHistory: vi.fn(),
       streamChat: vi.fn(),
       confirmProposal: vi.fn(),
+      deleteThread: vi.fn(),
     };
 
     function Show() {

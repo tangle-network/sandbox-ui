@@ -43,6 +43,9 @@ export interface ReasoningEventData {
 export interface ToolCallEventData {
   callId: string;
   name: string;
+  /** The parsed arguments the agent invoked the tool with. Lets a renderer show
+   *  exactly what was called. Omitted by servers predating the field. */
+  args?: Record<string, unknown>;
 }
 
 export interface ToolResultEventData {
@@ -91,6 +94,9 @@ export interface UsageEventData {
   completionTokens: number | null;
   costUsd: number | null;
   balanceUsd: number | null;
+  /** Wall-clock duration of the turn in milliseconds, when the server measures
+   *  it. Drives the renderer's tokens/sec figure. Omitted by older servers. */
+  durationMs?: number | null;
   /** True when a completed turn was replayed from storage (no charge). */
   replayed?: boolean;
 }
@@ -142,9 +148,14 @@ export interface ChatMessage {
   id: string;
   role: ChatRole;
   text: string;
-  /** Present only on `tool` messages — the activity's tool name, state, and (once
-   *  finished) its outcome. */
-  tool?: { name: string; status: ToolActivityStatus; outcome?: ToolOutcome };
+  /** Present only on `tool` messages — the activity's tool name, the arguments it
+   *  was called with, its state, and (once finished) its outcome. */
+  tool?: {
+    name: string;
+    status: ToolActivityStatus;
+    args?: Record<string, unknown>;
+    outcome?: ToolOutcome;
+  };
 }
 
 /** A mutating action the assistant proposed, awaiting the user's confirmation. */
@@ -165,6 +176,11 @@ export interface PendingProposal {
 export interface UsageInfo {
   costUsd: number | null;
   balanceUsd: number | null;
+  /** Token counts + wall-clock duration for the settled turn, when the server
+   *  reports them — drive per-message tokens/sec + cost in a renderer. */
+  promptTokens: number | null;
+  completionTokens: number | null;
+  durationMs: number | null;
   replayed: boolean;
 }
 
@@ -192,6 +208,9 @@ export interface AssistantTranscriptView {
    *  (drives a "thinking" affordance). */
   isThinking: boolean;
   pendingProposals: PendingProposal[];
+  /** Cost/tokens/duration for the most recently settled turn, or null before any
+   *  turn settles. Lets a host renderer show the turn cost + per-message metrics. */
+  usage: UsageInfo | null;
   /** The panel's bound proposal card for a pending proposal — render it where the
    *  confirm/cancel UI should appear. */
   renderProposal: (proposal: PendingProposal) => ReactNode;

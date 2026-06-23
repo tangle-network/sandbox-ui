@@ -177,10 +177,12 @@ export interface UsageInfo {
   costUsd: number | null;
   balanceUsd: number | null;
   /** Token counts + wall-clock duration for the settled turn, when the server
-   *  reports them — drive per-message tokens/sec + cost in a renderer. */
-  promptTokens: number | null;
-  completionTokens: number | null;
-  durationMs: number | null;
+   *  reports them — drive per-message tokens/sec + cost in a renderer. Optional
+   *  so a consumer constructing this on the prior `{ costUsd, balanceUsd,
+   *  replayed }` shape stays valid; a renderer treats a missing value as null. */
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  durationMs?: number | null;
   replayed: boolean;
 }
 

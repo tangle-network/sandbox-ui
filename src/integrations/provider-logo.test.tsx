@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import {
   normalizeProviderId,
   ProviderIcon,
@@ -60,5 +60,26 @@ describe("ProviderIcon", () => {
     );
     expect(container.querySelector("img")).toBeNull();
     expect(container.textContent).toBe("Z");
+  });
+
+  it("resets the candidate cursor when iconUrl changes for the same id", () => {
+    const { container, rerender } = render(
+      <ProviderIcon id="acme" iconUrl="https://a.test/old.png" size={16} />,
+    );
+    const first = container.querySelector("img");
+    expect(first?.getAttribute("src")).toBe("https://a.test/old.png");
+    // The explicit icon fails to load → cursor advances off it.
+    fireEvent.error(first as HTMLImageElement);
+    expect(container.querySelector("img")?.getAttribute("src")).not.toBe(
+      "https://a.test/old.png",
+    );
+    // A new iconUrl for the SAME id must reset the cursor and be tried first —
+    // not stay stranded on the prior, exhausted chain.
+    rerender(
+      <ProviderIcon id="acme" iconUrl="https://a.test/new.png" size={16} />,
+    );
+    expect(container.querySelector("img")?.getAttribute("src")).toBe(
+      "https://a.test/new.png",
+    );
   });
 });

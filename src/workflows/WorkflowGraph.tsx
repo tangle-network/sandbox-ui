@@ -23,6 +23,7 @@ import {
   type WfNodeTone,
 } from "./model";
 import { providerLabel } from "../assistant/provider-label";
+import { ProviderIcon } from "../integrations/provider-logo";
 
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
  *  background) themes with the rest of the app. */
@@ -95,7 +96,13 @@ function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
         </p>
       )}
       {d.provider && (
-        <span className="mt-1.5 inline-block rounded bg-background-tertiary px-1.5 py-0.5 text-[10px] text-text-muted">
+        <span className="mt-1.5 inline-flex items-center gap-1 rounded bg-background-tertiary px-1.5 py-0.5 text-[10px] text-text-muted">
+          <ProviderIcon
+            id={d.provider}
+            displayName={providerLabel(d.provider)}
+            size={12}
+            className="rounded-[2px]"
+          />
           {providerLabel(d.provider)}
         </span>
       )}

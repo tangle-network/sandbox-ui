@@ -5,14 +5,52 @@
  * in `Layout`). The Suspense fallback keeps the caller's height so layout
  * doesn't jump; the error boundary degrades to the raw YAML if the chunk fails
  * to load (offline) or React Flow throws, instead of crashing the panel tree.
+ *
+ * The chunk import auto-retries a transient failure (a flaky network or an
+ * HMR/cache miss) before degrading, and the fallback offers a manual retry that
+ * re-attempts the import — so a recoverable failure isn't permanently pinned to
+ * the YAML view. A chunk that is gone for good (e.g. an old hash after a deploy)
+ * still degrades to the fully-legible YAML; the host can recover those globally
+ * via a Vite `vite:preloadError` reload guard.
  */
 
-import { Component, lazy, type ReactNode, Suspense } from "react";
+import {
+  Component,
+  type ComponentType,
+  lazy,
+  type ReactNode,
+  Suspense,
+  useMemo,
+  useState,
+} from "react";
 import type { WorkflowGraphProps } from "./WorkflowGraph";
 
-const WorkflowGraphImpl = lazy(() =>
-  import("./WorkflowGraph").then((m) => ({ default: m.WorkflowGraph })),
-);
+/** Re-run `factory` up to `retries` times with a short backoff before giving up.
+ *  Covers a transient dynamic-import rejection (network blip, a chunk briefly
+ *  unavailable behind a CDN) without bothering the user. */
+function retryImport<T>(
+  factory: () => Promise<T>,
+  retries = 2,
+  delayMs = 350,
+): Promise<T> {
+  return factory().catch((err) => {
+    if (retries <= 0) throw err;
+    return new Promise<T>((resolve, reject) => {
+      setTimeout(
+        () => retryImport(factory, retries - 1, delayMs).then(resolve, reject),
+        delayMs,
+      );
+    });
+  });
+}
+
+function lazyWorkflowGraph(): ComponentType<WorkflowGraphProps> {
+  return lazy(() =>
+    retryImport(() =>
+      import("./WorkflowGraph").then((m) => ({ default: m.WorkflowGraph })),
+    ),
+  );
+}
 
 class GraphErrorBoundary extends Component<
   { fallback: ReactNode; children: ReactNode },
@@ -30,15 +68,28 @@ class GraphErrorBoundary extends Component<
 }
 
 /** Graceful degradation when the graph can't render: the workflow is still
- *  fully legible as YAML. */
-function GraphFallback({ yaml, className }: WorkflowGraphProps) {
+ *  fully legible as YAML, with a retry for a recoverable load failure. */
+function GraphFallback({
+  yaml,
+  className,
+  onRetry,
+}: WorkflowGraphProps & { onRetry: () => void }) {
   return (
     <div
       className={`overflow-auto rounded-lg border border-border bg-background p-2 ${className ?? ""}`}
     >
-      <p className="mb-1 text-text-muted text-xs">
-        Couldn't render the graph — showing the definition.
-      </p>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="text-text-muted text-xs">
+          Couldn't render the graph — showing the definition.
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="shrink-0 rounded border border-border px-1.5 py-0.5 text-text-muted text-xs transition hover:text-text"
+        >
+          Retry
+        </button>
+      </div>
       <pre className="text-text text-xs">
         <code>{yaml}</code>
       </pre>
@@ -47,13 +98,24 @@ function GraphFallback({ yaml, className }: WorkflowGraphProps) {
 }
 
 export function WorkflowGraph(props: WorkflowGraphProps) {
+  // A manual retry bumps `attempt`, which both recreates the lazy component
+  // (React.lazy permanently caches a rejected import, so a fresh one is needed
+  // to re-run it) and re-keys the boundary to clear its error state.
+  const [attempt, setAttempt] = useState(0);
+  // A fresh lazy() per attempt is intentional: it re-runs the import after a
+  // failure (React.lazy caches a rejected import, so the prior one can't recover).
+  const Impl = useMemo(() => lazyWorkflowGraph(), [attempt]);
+
   return (
-    // Key the boundary by the workflow so a different/edited definition remounts
-    // it and re-attempts the graph — a transient chunk/render failure on one
-    // workflow doesn't permanently pin the YAML fallback for the next.
+    // Key the boundary by the workflow AND the attempt so a different/edited
+    // definition or a manual retry remounts it and re-attempts the graph — a
+    // transient chunk/render failure on one workflow doesn't permanently pin the
+    // YAML fallback.
     <GraphErrorBoundary
-      key={props.yaml}
-      fallback={<GraphFallback {...props} />}
+      key={`${props.yaml}::${attempt}`}
+      fallback={
+        <GraphFallback {...props} onRetry={() => setAttempt((a) => a + 1)} />
+      }
     >
       <Suspense
         fallback={
@@ -64,7 +126,7 @@ export function WorkflowGraph(props: WorkflowGraphProps) {
           </div>
         }
       >
-        <WorkflowGraphImpl {...props} />
+        <Impl {...props} />
       </Suspense>
     </GraphErrorBoundary>
   );

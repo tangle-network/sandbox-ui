@@ -131,6 +131,39 @@ describe("useAssistantThreads", () => {
     expect(result.current.threads.map((t) => t.id)).toEqual(["t1"]);
   });
 
+  it("keeps a pending delete filtered across a scope swap and back", async () => {
+    const { fetchThreads, deleteThread, wrapper } = setup();
+    fetchThreads.mockResolvedValue([thread("t1"), thread("t2")]);
+    // The DELETE never resolves — it is still in flight across the swap.
+    deleteThread.mockReturnValue(new Promise<{ ok: boolean }>(() => {}));
+    const { result, rerender } = renderHook(
+      ({ uid }) => useAssistantThreads(uid),
+      { initialProps: { uid: "userA" }, wrapper },
+    );
+    act(() => result.current.refresh());
+    await waitFor(() => expect(result.current.threads).toHaveLength(2));
+
+    // Delete t2 (stays pending) — optimistically removed under userA.
+    act(() => {
+      result.current.remove("t2");
+    });
+    expect(result.current.threads.map((t) => t.id)).toEqual(["t1"]);
+
+    // Swap to userB and back to userA while the DELETE is still in flight. The
+    // scope swap must NOT clear the pending-delete set.
+    act(() => rerender({ uid: "userB" }));
+    act(() => rerender({ uid: "userA" }));
+
+    // A refresh returns [t1, t2] (the server has not applied the delete yet);
+    // t2 must stay filtered rather than resurrecting.
+    await act(async () => {
+      result.current.refresh();
+    });
+    await waitFor(() =>
+      expect(result.current.threads.map((t) => t.id)).toEqual(["t1"]),
+    );
+  });
+
   it("drops a result that resolves after the user changed", async () => {
     const { fetchThreads, wrapper } = setup();
     let resolveA: (v: AssistantThreadSummary[] | null) => void = () => {};

@@ -162,16 +162,20 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
 
   // Abort an in-flight fetch on a scope swap (its result is already masked and
   // the commit guard rejects it; this just frees the network promptly) and on
-  // unmount, so a late `.then` can't act after the panel closed. Also drop the
-  // pending-delete ids: they belong to the previous (user, client) scope, so
-  // clearing them here both prevents a cross-scope filter and bounds the set to
-  // a single scope-session (it never leaks across scope swaps or remounts).
+  // unmount, so a late `.then` can't act after the panel closed.
   useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-      pendingDeletesRef.current.clear();
-    };
+    return () => abortRef.current?.abort();
   }, [userId, client]);
+
+  // Drop the pending-delete ids only on true unmount — NOT on a scope swap. A
+  // remove() awaiting its DELETE can outlive a swap-and-return to the same
+  // scope; clearing on the swap would un-filter that id and let a stale refresh
+  // resurrect the row. Thread ids are server-minted and globally unique, so the
+  // set never false-filters another scope's list, and within one mount it only
+  // grows by the user's own deletions (released here on unmount).
+  useEffect(() => {
+    return () => pendingDeletesRef.current.clear();
+  }, []);
 
   // Mask synchronously: a list owned by a different (user, client) than the
   // current props is hidden on the same commit — no one-frame cross-scope leak.

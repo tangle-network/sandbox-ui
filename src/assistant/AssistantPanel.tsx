@@ -110,7 +110,12 @@ export function AssistantPanel({
   // the server confirms the delete — so a failed delete never strands the user
   // on a fresh thread while the server still has the conversation.
   const deleteThread = async (threadId: string) => {
-    if (state.threadId === threadId && state.status !== "idle") return;
+    // Refuse deleting the active thread while it is mid-turn. Read LIVE status
+    // through the ref (not the render-time `state`) so the guard is authoritative
+    // regardless of when this closure was created or how long the confirm sat
+    // open — never delete a thread the stream is still writing to.
+    const pre = chatRef.current.state;
+    if (pre.threadId === threadId && pre.status !== "idle") return;
     if (!window.confirm("Delete this conversation? This can't be undone.")) {
       return;
     }

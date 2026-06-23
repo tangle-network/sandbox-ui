@@ -4,6 +4,11 @@ import * as React from "react";
 import { Card, CardContent, EmptyState } from "@tangle-network/ui/primitives";
 import { cn } from "@tangle-network/ui/utils";
 import { Check, Search, Settings2 } from "lucide-react";
+import {
+  monogramColor,
+  normalizeProviderId,
+  providerLogoCandidates,
+} from "./provider-logo";
 import type {
   IntegrationConnection,
   IntegrationHealth,
@@ -84,157 +89,6 @@ function defaultConnectorOf(provider: IntegrationProvider): string {
   return provider.connectors?.[0]?.connectorId ?? provider.providerId;
 }
 
-function normalizeProviderId(id: string): string {
-  return id
-    .toLowerCase()
-    .replace(/[_\s]+/g, "-")
-    .replace(/-(business|oauth|api|app|mail|sms|pack|connector|v\d+)$/g, "");
-}
-
-/**
- * Curated map of provider ids → simpleicons slug. Covers cases where the
- * normalized id does not match the simpleicons slug (compound brands,
- * Google/Microsoft suite members, renamed brands).
- */
-const PROVIDER_LOGO_SLUGS: Record<string, string> = {
-  gmail: "gmail",
-  googlemail: "gmail",
-  google: "google",
-  "google-drive": "googledrive",
-  "google-calendar": "googlecalendar",
-  "google-sheets": "googlesheets",
-  "google-docs": "googledocs",
-  "google-meet": "googlemeet",
-  "google-forms": "googleforms",
-  "google-ads": "googleads",
-  "google-analytics": "googleanalytics",
-  outlook: "microsoftoutlook",
-  "outlook-mail": "microsoftoutlook",
-  "microsoft-outlook": "microsoftoutlook",
-  "microsoft-calendar": "microsoftoutlook",
-  "microsoft-teams": "microsoftteams",
-  teams: "microsoftteams",
-  "microsoft-excel": "microsoftexcel",
-  excel: "microsoftexcel",
-  onedrive: "microsoftonedrive",
-  sharepoint: "microsoftsharepoint",
-  twitter: "x",
-  x: "x",
-  meta: "meta",
-  "stripe-pack": "stripe",
-  "twilio-sms": "twilio",
-  webhook: "webhooks",
-  webhooks: "webhooks",
-  hubspot: "hubspot",
-  salesforce: "salesforce",
-  pipedrive: "pipedrive",
-  zoho: "zoho",
-  quickbooks: "quickbooks",
-  intercom: "intercom",
-  zendesk: "zendesk",
-  freshdesk: "freshdesk",
-  monday: "mondaydotcom",
-  "monday-com": "mondaydotcom",
-  clickup: "clickup",
-  basecamp: "basecamp",
-  todoist: "todoist",
-  calendly: "calendly",
-  typeform: "typeform",
-  surveymonkey: "surveymonkey",
-  klaviyo: "klaviyo",
-  sendinblue: "brevo",
-  brevo: "brevo",
-  "constant-contact": "constantcontact",
-  "active-campaign": "activecampaign",
-  activecampaign: "activecampaign",
-  "google-chat": "googlechat",
-  whatsapp: "whatsapp",
-  telegram: "telegram",
-  bigquery: "googlebigquery",
-  snowflake: "snowflake",
-  postgres: "postgresql",
-  postgresql: "postgresql",
-  mysql: "mysql",
-  mongodb: "mongodb",
-  redis: "redis",
-  supabase: "supabase",
-  firebase: "firebase",
-  "aws-s3": "amazons3",
-  s3: "amazons3",
-  woocommerce: "woocommerce",
-  bigcommerce: "bigcommerce",
-  squarespace: "squarespace",
-  wix: "wix",
-  webflow: "webflow",
-  wordpress: "wordpress",
-  contentful: "contentful",
-  sanity: "sanity",
-  figma: "figma",
-  miro: "miro",
-  confluence: "confluence",
-  bitbucket: "bitbucket",
-  pagerduty: "pagerduty",
-  datadog: "datadog",
-  sentry: "sentry",
-  segment: "segment",
-  amplitude: "amplitude",
-  mixpanel: "mixpanel",
-  posthog: "posthog",
-  facebook: "facebook",
-  instagram: "instagram",
-  tiktok: "tiktok",
-  youtube: "youtube",
-  reddit: "reddit",
-  pinterest: "pinterest",
-  buffer: "buffer",
-  hootsuite: "hootsuite",
-};
-
-/**
- * Build the ordered list of candidate logo URLs for a provider, most
- * specific first. Renderer walks the chain on each onError until one loads,
- * then falls back to the monogram tile.
- */
-function logoCandidates(provider: IntegrationProvider): string[] {
-  const out: string[] = [];
-  if (provider.iconUrl) out.push(provider.iconUrl);
-  const raw = provider.providerId.toLowerCase();
-  const norm = normalizeProviderId(raw);
-  const slugs = new Set<string>();
-  const curated = PROVIDER_LOGO_SLUGS[raw] ?? PROVIDER_LOGO_SLUGS[norm];
-  if (curated) slugs.add(curated);
-  // Derived slug: simpleicons slugs are the brand name with separators
-  // stripped, lowercased. This covers the long tail (notion, airtable,
-  // linear, asana, trello, dropbox, …) without an explicit map entry.
-  slugs.add(norm.replace(/-/g, ""));
-  slugs.add(raw.replace(/[-_\s]/g, ""));
-  for (const slug of slugs) {
-    if (slug) out.push(`https://cdn.simpleicons.org/${slug}`);
-  }
-  return out;
-}
-
-/** Deterministic accent color for the monogram fallback, keyed off the id. */
-function monogramColor(seed: string): string {
-  const palette = [
-    "#6366f1",
-    "#8b5cf6",
-    "#ec4899",
-    "#f43f5e",
-    "#f97316",
-    "#eab308",
-    "#22c55e",
-    "#14b8a6",
-    "#0ea5e9",
-    "#3b82f6",
-  ];
-  let hash = 0;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return palette[hash % palette.length];
-}
-
 function ProviderLogo({
   provider,
   size = 56,
@@ -242,7 +96,14 @@ function ProviderLogo({
   provider: IntegrationProvider;
   size?: number;
 }) {
-  const candidates = React.useMemo(() => logoCandidates(provider), [provider]);
+  const candidates = React.useMemo(
+    () =>
+      providerLogoCandidates({
+        id: provider.providerId,
+        iconUrl: provider.iconUrl,
+      }),
+    [provider],
+  );
   const [index, setIndex] = React.useState(0);
   const label = (provider.displayName ?? provider.providerId).trim();
   const initial = label.charAt(0).toUpperCase() || "?";

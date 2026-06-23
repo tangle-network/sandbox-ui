@@ -62,6 +62,56 @@ describe("DashboardLayout — labeled rail nav alignment", () => {
   })
 })
 
+describe("DashboardLayout — rail collapse control", () => {
+  const navItems: NavItem[] = [
+    { id: "sandboxes", label: "Sandboxes", href: "/sandboxes", icon: NavIcon },
+  ]
+
+  it("renders a discoverable collapse toggle on the labeled rail", () => {
+    render(
+      <DashboardLayout navItems={navItems} labeledRail>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    // Expanded by default, so the control offers to collapse. Only the desktop
+    // rail renders it — the mobile drawer is always labeled and never collapses.
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull()
+  })
+
+  it("starts collapsed when defaultRailCollapsed is set", () => {
+    render(
+      <DashboardLayout navItems={navItems} labeledRail defaultRailCollapsed>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).toBeNull()
+  })
+
+  it("renders no collapse toggle when labeledRail is omitted", () => {
+    render(
+      <DashboardLayout navItems={navItems}>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    expect(
+      screen.queryByRole("button", { name: /Collapse sidebar|Expand sidebar/ }),
+    ).toBeNull()
+  })
+
+  it("collapses the rail when the control is clicked", async () => {
+    const user = userEvent.setup()
+    render(
+      <DashboardLayout navItems={navItems} labeledRail>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
+  })
+})
+
 describe("DashboardLayout — notification dropdown", () => {
   it("renders the bell button", () => {
     renderLayout()

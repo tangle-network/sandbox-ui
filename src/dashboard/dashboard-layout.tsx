@@ -17,6 +17,7 @@ import {
   RailButton,
   RailModeButton,
   RailSeparator,
+  RailCollapseToggle,
   ProfileAvatar,
 } from "./app-sidebar"
 import type { SidebarUser } from "./app-sidebar"
@@ -99,6 +100,12 @@ export interface DashboardLayoutProps {
    * toggles between icon-only and labeled instead of navigating.
    */
   labeledRail?: boolean
+  /**
+   * Initial rail-collapsed state when `labeledRail` is set and the rail is
+   * uncontrolled. Defaults to expanded (`false`). Pass `true` to start on the
+   * compact icon rail — the user's choice then persists to localStorage.
+   */
+  defaultRailCollapsed?: boolean
   footer?: React.ReactNode
   defaultPanelOpen?: boolean
   defaultMode?: string
@@ -252,10 +259,10 @@ function DashboardLayoutInner({
   // trees so a state change that only affects one (e.g. toggling
   // `mobileMenuOpen`) doesn't force the other to reconcile.
   const buildSidebarContent = React.useCallback(
-    (showLabels: boolean) => (
+    (showLabels: boolean, allowCollapse: boolean) => (
       <>
         <SidebarRail wide={showLabels}>
-          <SidebarRailHeader>
+          <SidebarRailHeader className={cn(showLabels && "justify-start px-3")}>
             {onLogoClick ? (
               <button
                 type="button"
@@ -286,7 +293,7 @@ function DashboardLayoutInner({
             )}
           </SidebarRailHeader>
 
-          <SidebarRailNav>
+          <SidebarRailNav className={showLabels ? "px-2" : undefined}>
             {navItems.map((item, i) => {
               const isMode = modeSet.has(item.id)
               const prevIsMode = i > 0 && modeSet.has(navItems[i - 1].id)
@@ -294,7 +301,11 @@ function DashboardLayoutInner({
 
               return (
                 <React.Fragment key={item.id}>
-                  {showSep && <RailSeparator />}
+                  {showSep && (
+                    <RailSeparator
+                      className={showLabels ? "w-full" : undefined}
+                    />
+                  )}
                   {isMode ? (
                     <RailModeButton
                       mode={item.id}
@@ -319,7 +330,14 @@ function DashboardLayoutInner({
             })}
           </SidebarRailNav>
 
-          <SidebarRailFooter>
+          <SidebarRailFooter className={cn(showLabels && "items-stretch px-2")}>
+            {allowCollapse && (
+              <RailCollapseToggle
+                collapsed={railCollapsed}
+                showLabel={showLabels}
+                onToggle={toggleRail}
+              />
+            )}
             {onSettingsClick ? (
               <RailButton icon={SettingsIconSmall} label="Settings" onClick={onSettingsClick} showLabel={showLabels} />
             ) : (
@@ -328,13 +346,14 @@ function DashboardLayoutInner({
               </RailButton>
             )}
             {railFooter}
-            <RailSeparator />
+            <RailSeparator className={showLabels ? "w-full" : undefined} />
             <ProfileAvatar
               user={sidebarUser}
               isLoading={isLoading}
               onLogout={onLogout}
               onSettingsClick={onSettingsClick}
               settingsHref={settingsHref}
+              showDetails={showLabels}
               LinkComponent={LinkComponent}
             >
               {profileMenuItems}
@@ -377,11 +396,14 @@ function DashboardLayoutInner({
     ],
   )
 
+  // The collapse toggle only belongs on the desktop rail (where collapsing
+  // changes the layout). The mobile drawer is always labeled and doesn't
+  // collapse, so it never renders the toggle.
   const sidebarContent = React.useMemo(
-    () => buildSidebarContent(labeledRail && !railCollapsed),
+    () => buildSidebarContent(labeledRail && !railCollapsed, labeledRail),
     [buildSidebarContent, labeledRail, railCollapsed],
   )
-  const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true), [buildSidebarContent])
+  const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true, false), [buildSidebarContent])
 
   return (
     <div className={cn("min-h-screen bg-background text-foreground", className)}>
@@ -548,9 +570,9 @@ function DashboardLayoutInner({
 // Public export — wraps in SidebarProvider
 // ============================================================================
 
-export function DashboardLayout({ defaultPanelOpen, defaultMode, labeledRail, ...props }: DashboardLayoutProps) {
+export function DashboardLayout({ defaultPanelOpen, defaultMode, labeledRail, defaultRailCollapsed, ...props }: DashboardLayoutProps) {
   return (
-    <SidebarProvider defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} labeledRail={labeledRail} hasPanels={(props.panels?.length ?? 0) > 0}>
+    <SidebarProvider defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} labeledRail={labeledRail} defaultRailCollapsed={defaultRailCollapsed} hasPanels={(props.panels?.length ?? 0) > 0}>
       <DashboardLayoutInner defaultPanelOpen={defaultPanelOpen} defaultMode={defaultMode} labeledRail={labeledRail} {...props} />
     </SidebarProvider>
   )

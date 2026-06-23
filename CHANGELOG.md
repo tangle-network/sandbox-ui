@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.42.0
+
+### Dashboard labeled rail: collapsible + polished expanded state
+
+- `DashboardLayout`: the labeled rail (`labeledRail`) gains a discoverable
+  collapse control (`RailCollapseToggle`) in the rail footer — a labeled
+  "Collapse" row when expanded, an "Expand" chevron when collapsed. Shown only
+  on the desktop rail; the mobile drawer is always labeled and does not collapse.
+- New `defaultRailCollapsed` prop, forwarded to `SidebarProvider`, so a consumer
+  can start on the compact icon rail (the choice then persists to localStorage).
+  Defaults to expanded, so existing consumers are unaffected.
+- Expanded-rail styling now matches `SidebarLayout`: a `px-2` nav gutter (no more
+  edge-to-edge rows), an `items-stretch px-2` footer, a labeled profile row
+  (`showDetails`), full-width separators, and a left-aligned logo.
+
 ## 0.37.1
 
 ### Dashboard labeled-rail nav alignment

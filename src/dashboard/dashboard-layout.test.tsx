@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { beforeEach, describe, it, expect, vi } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { DashboardLayout, type NavItem } from "./dashboard-layout"
@@ -66,6 +66,18 @@ describe("DashboardLayout — rail collapse control", () => {
   const navItems: NavItem[] = [
     { id: "sandboxes", label: "Sandboxes", href: "/sandboxes", icon: NavIcon },
   ]
+
+  // The collapse toggle persists rail state to localStorage; reset it so each
+  // test starts from the provider's default (expanded), independent of order.
+  // localStorage is unavailable in some jsdom setups (opaque origin) where the
+  // provider's writes are already no-ops, so guard the clear.
+  beforeEach(() => {
+    try {
+      localStorage.clear()
+    } catch {
+      /* localStorage unavailable — nothing was persisted to reset */
+    }
+  })
 
   it("renders a discoverable collapse toggle on the labeled rail", () => {
     render(

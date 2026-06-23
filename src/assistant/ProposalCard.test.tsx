@@ -173,4 +173,25 @@ describe("ProposalCard", () => {
       expect(openSpy).not.toHaveBeenCalled();
     },
   );
+
+  it("shows the provider's brand icon next to a requirement", () => {
+    render(
+      <ProposalCard
+        proposal={withReq({
+          provider: "github",
+          kind: "github_app",
+          connected: true,
+        })}
+        confirming={false}
+        onConfirm={noop}
+        onCancel={noop}
+      />,
+    );
+    expect(
+      document.querySelector('img[src="https://cdn.simpleicons.org/github"]'),
+    ).not.toBeNull();
+    // The label + status still render alongside the icon.
+    expect(screen.getByText("GitHub App")).toBeTruthy();
+    expect(screen.getByText("installed")).toBeTruthy();
+  });
 });

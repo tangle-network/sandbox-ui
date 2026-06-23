@@ -27,8 +27,8 @@ import type { WorkflowGraphProps } from "./WorkflowGraph";
 
 /** Re-run `factory` up to `retries` times with a short backoff before giving up.
  *  Covers a transient dynamic-import rejection (network blip, a chunk briefly
- *  unavailable behind a CDN) without bothering the user. */
-function retryImport<T>(
+ *  unavailable behind a CDN) without bothering the user. Exported for tests. */
+export function retryImport<T>(
   factory: () => Promise<T>,
   retries = 2,
   delayMs = 350,

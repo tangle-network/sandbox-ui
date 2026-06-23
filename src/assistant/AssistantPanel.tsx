@@ -101,17 +101,18 @@ export function AssistantPanel({
   };
 
   // Delete a past conversation. Deleting the *active* thread is refused while it
-  // is mid-turn (the stream is still writing to it); otherwise the live state is
-  // reset to a fresh thread so it doesn't pin a now-deleted id.
-  const deleteThread = (threadId: string) => {
+  // is mid-turn (the stream is still writing to it). The list row drops
+  // optimistically (in the hook), but the LIVE conversation is only reset once
+  // the server confirms the delete — so a failed delete never strands the user
+  // on a fresh thread while the server still has the conversation.
+  const deleteThread = async (threadId: string) => {
     const isActive = state.threadId === threadId;
     if (isActive && state.status !== "idle") return;
-    if (
-      !window.confirm("Delete this conversation? This can't be undone.")
-    )
+    if (!window.confirm("Delete this conversation? This can't be undone.")) {
       return;
-    if (isActive) chat.reset();
-    void threads.remove(threadId);
+    }
+    const res = await threads.remove(threadId);
+    if (isActive && res.ok) chat.reset();
   };
 
   return (
@@ -225,20 +226,22 @@ export function AssistantPanel({
                     >
                       {t.title ?? "Untitled conversation"}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => deleteThread(t.id)}
-                      disabled={busyActive}
-                      aria-label="Delete conversation"
-                      title={
-                        busyActive
-                          ? "Can't delete while this conversation is active"
-                          : "Delete conversation"
-                      }
-                      className="shrink-0 p-2 text-muted-foreground opacity-0 transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {threads.canRemove && (
+                      <button
+                        type="button"
+                        onClick={() => void deleteThread(t.id)}
+                        disabled={busyActive}
+                        aria-label="Delete conversation"
+                        title={
+                          busyActive
+                            ? "Can't delete while this conversation is active"
+                            : "Delete conversation"
+                        }
+                        className="shrink-0 p-2 text-muted-foreground opacity-0 transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </li>
                 );
               })}

@@ -108,8 +108,10 @@ export interface AssistantClient {
   ): Promise<void>;
   confirmProposal(proposalId: string): Promise<ConfirmResult>;
   /** Delete a thread and its server-side turns/proposals. Resolves `{ ok }`; a
-   *  404 (already gone) is treated as success so a double-delete is harmless. */
-  deleteThread(threadId: string): Promise<{ ok: boolean }>;
+   *  404 (already gone) is treated as success so a double-delete is harmless.
+   *  Optional so a host with no delete endpoint stays a valid client — the panel
+   *  hides the delete affordance when it's absent (see `useAssistantThreads`). */
+  deleteThread?(threadId: string): Promise<{ ok: boolean }>;
 }
 
 const EMPTY_MODELS: AssistantModels = { default: null, models: [] };

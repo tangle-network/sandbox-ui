@@ -26,8 +26,12 @@ export interface AssistantThreads {
    *  the hook never fetches on mount (the panel calls this when history opens). */
   refresh: () => void;
   /** Delete a thread. Optimistically drops it from the list (within the current
-   *  owner scope); on failure the list is reloaded to restore the true state. */
+   *  owner scope); on failure the list is reloaded to restore the true state. A
+   *  no-op resolving `{ ok: false }` when the client has no `deleteThread`. */
   remove: (threadId: string) => Promise<{ ok: boolean }>;
+  /** Whether the configured client supports deletion — drives whether a host
+   *  shows the delete affordance. */
+  canRemove: boolean;
 }
 
 interface ThreadsState {
@@ -111,6 +115,9 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
     async (threadId: string) => {
       const requestedClient = clientRef.current;
       const requestedUserId = userRef.current;
+      // A client without delete support can't remove anything — no-op rather
+      // than optimistically drop a row that will never be deleted server-side.
+      if (!requestedClient.deleteThread) return { ok: false };
       // Optimistically drop the row, but only if the visible list still belongs
       // to the scope we're deleting under — never mutate a swapped-in scope's list.
       setState((s) =>
@@ -118,7 +125,14 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
           ? { ...s, threads: s.threads.filter((t) => t.id !== threadId) }
           : s,
       );
-      const res = await requestedClient.deleteThread(threadId);
+      // Normalize a rejecting client to `{ ok: false }` so the rollback below
+      // always runs (the bundled client resolves, but the interface allows any).
+      let res: { ok: boolean };
+      try {
+        res = await requestedClient.deleteThread(threadId);
+      } catch {
+        res = { ok: false };
+      }
       // On failure, reload to restore the row we optimistically removed (only if
       // we're still in the same scope).
       if (
@@ -147,5 +161,6 @@ export function useAssistantThreads(userId: string | null): AssistantThreads {
     loaded: stale ? false : state.loaded,
     refresh,
     remove,
+    canRemove: typeof client.deleteThread === "function",
   };
 }

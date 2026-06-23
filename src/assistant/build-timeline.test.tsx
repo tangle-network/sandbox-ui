@@ -110,7 +110,7 @@ describe("buildAssistantTimeline", () => {
     const s = state({
       messages: [{ id: "a1", role: "assistant", text: "done" }],
       status: "idle",
-      usage: { costUsd: 0.0049, balanceUsd: 5, replayed: false },
+      usage: { costUsd: 0.0049, balanceUsd: 5, promptTokens: null, completionTokens: null, durationMs: null, replayed: false },
     });
     const cost = buildAssistantTimeline(s, renderProposal).find(
       (i) => i.id === "usage",

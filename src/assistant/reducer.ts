@@ -225,7 +225,11 @@ function applyStreamEvent(
         id: chipId,
         role: "tool",
         text: "",
-        tool: { name: event.data.name, status: "running" },
+        tool: {
+          name: event.data.name,
+          status: "running",
+          args: event.data.args,
+        },
       };
       return {
         ...state,
@@ -257,7 +261,14 @@ function applyStreamEvent(
               ? {
                   ...m,
                   text: errText,
-                  tool: { name: event.data.name, status, outcome },
+                  // Preserve the args the matching tool_call recorded — the
+                  // result event doesn't carry them.
+                  tool: {
+                    name: event.data.name,
+                    status,
+                    args: m.tool?.args,
+                    outcome,
+                  },
                 }
               : m,
           ),
@@ -293,6 +304,9 @@ function applyStreamEvent(
         usage: {
           costUsd: event.data.costUsd,
           balanceUsd: event.data.balanceUsd,
+          promptTokens: event.data.promptTokens,
+          completionTokens: event.data.completionTokens,
+          durationMs: event.data.durationMs ?? null,
           replayed: event.data.replayed ?? false,
         },
       };

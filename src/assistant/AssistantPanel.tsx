@@ -9,8 +9,8 @@
  */
 
 import { AgentTimeline, ChatInput } from "@tangle-network/ui/chat";
-import { History, Minus, Plus, RotateCcw, X } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { History, Minus, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { type ReactNode, useRef, useState } from "react";
 import { assistantIsThinking, buildAssistantTimeline } from "./build-timeline";
 import { isLowBalance, presentError } from "./presentation";
 import { ProposalCard } from "./ProposalCard";
@@ -68,6 +68,10 @@ export function AssistantPanel({
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const { state } = chat;
+  // Always-current chat handle, so an async delete can re-check the LIVE thread
+  // + status after awaiting (the closure's `chat`/`state` are render-time stale).
+  const chatRef = useRef(chat);
+  chatRef.current = chat;
   // Prefer the just-settled turn's balance (from the usage event, immediate)
   // over the injected fetched balance, which may lag a turn behind.
   const effectiveBalance = state.usage?.balanceUsd ?? balanceUsd;
@@ -98,6 +102,32 @@ export function AssistantPanel({
       if (next) threads.refresh();
       return next;
     });
+  };
+
+  // Delete a past conversation. Deleting the *active* thread is refused while it
+  // is mid-turn (the stream is still writing to it). The list row drops
+  // optimistically (in the hook), but the LIVE conversation is only reset once
+  // the server confirms the delete — so a failed delete never strands the user
+  // on a fresh thread while the server still has the conversation.
+  const deleteThread = async (threadId: string) => {
+    // Refuse deleting the active thread while it is mid-turn. Read LIVE status
+    // through the ref (not the render-time `state`) so the guard is authoritative
+    // regardless of when this closure was created or how long the confirm sat
+    // open — never delete a thread the stream is still writing to.
+    const pre = chatRef.current.state;
+    if (pre.threadId === threadId && pre.status !== "idle") return;
+    if (!window.confirm("Delete this conversation? This can't be undone.")) {
+      return;
+    }
+    const res = await threads.remove(threadId);
+    // Reset the live conversation only if the just-deleted thread is STILL the
+    // active, idle one. Re-checked through the ref because the user may have
+    // switched threads or started a turn while the delete was in flight —
+    // resetting then would wipe a different or now-busy conversation.
+    const live = chatRef.current.state;
+    if (res.ok && live.threadId === threadId && live.status === "idle") {
+      chatRef.current.reset();
+    }
   };
 
   return (
@@ -196,20 +226,40 @@ export function AssistantPanel({
             </p>
           ) : (
             <ul>
-              {threads.threads.map((t) => (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      chat.switchThread(t.id);
-                      setHistoryOpen(false);
-                    }}
-                    className="block w-full truncate px-4 py-2 text-left text-foreground text-xs hover:bg-muted/50"
-                  >
-                    {t.title ?? "Untitled conversation"}
-                  </button>
-                </li>
-              ))}
+              {threads.threads.map((t) => {
+                const busyActive =
+                  state.threadId === t.id && state.status !== "idle";
+                return (
+                  <li key={t.id} className="group flex items-center hover:bg-muted/50">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        chat.switchThread(t.id);
+                        setHistoryOpen(false);
+                      }}
+                      className="min-w-0 flex-1 truncate px-4 py-2 text-left text-foreground text-xs"
+                    >
+                      {t.title ?? "Untitled conversation"}
+                    </button>
+                    {threads.canRemove && (
+                      <button
+                        type="button"
+                        onClick={() => void deleteThread(t.id)}
+                        disabled={busyActive}
+                        aria-label="Delete conversation"
+                        title={
+                          busyActive
+                            ? "Can't delete while this conversation is active"
+                            : "Delete conversation"
+                        }
+                        className="shrink-0 p-2 text-muted-foreground opacity-0 transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -232,6 +282,7 @@ export function AssistantPanel({
             isStreaming: streaming,
             isThinking,
             pendingProposals: state.pendingProposals,
+            usage: state.usage,
             renderProposal,
           })
         ) : (

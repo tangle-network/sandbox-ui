@@ -132,6 +132,57 @@ describe("AssistantPanel transcript seam", () => {
   });
 });
 
+describe("AssistantPanel composer running indicator", () => {
+  it("shows a running indicator while a turn is streaming", () => {
+    const { container } = renderPanel(
+      makeChat({ status: "streaming", streamingId: "a" }),
+      () => <div data-testid="host-transcript" />,
+    );
+    expect(
+      container.querySelector('[aria-label="Assistant is working"]'),
+    ).not.toBeNull();
+  });
+
+  it("hides the running indicator when idle", () => {
+    const { container } = renderPanel(makeChat({ status: "idle" }), () => (
+      <div data-testid="host-transcript" />
+    ));
+    expect(
+      container.querySelector('[aria-label="Assistant is working"]'),
+    ).toBeNull();
+  });
+});
+
+describe("AssistantPanel conversation title", () => {
+  it("shows the first user message as the conversation title", () => {
+    renderPanel(
+      makeChat({
+        messages: [
+          { id: "u", role: "user", text: "Create a PR review workflow" },
+          { id: "a", role: "assistant", text: "On it." },
+        ],
+      }),
+      () => <div data-testid="host-transcript" />,
+    );
+    expect(screen.getByText("Create a PR review workflow")).toBeTruthy();
+  });
+
+  it("truncates a long first user message", () => {
+    const long = "x".repeat(120);
+    renderPanel(
+      makeChat({ messages: [{ id: "u", role: "user", text: long }] }),
+      () => <div data-testid="host-transcript" />,
+    );
+    expect(screen.getByText(`${"x".repeat(60)}…`)).toBeTruthy();
+  });
+
+  it("shows no conversation title on a fresh chat", () => {
+    renderPanel(makeChat(), () => <div data-testid="host-transcript" />);
+    // Only the static "Assistant" label is present, no derived title line.
+    expect(screen.getByText("Assistant")).toBeTruthy();
+  });
+});
+
 function thread(id: string): AssistantThreadSummary {
   return { id, title: id, createdAt: "", updatedAt: "" };
 }

@@ -223,10 +223,21 @@ function RequirementRow({
           className="rounded"
         />
         <span className="truncate text-foreground">{kindLabel}</span>
-        <span
-          className={req.connected ? "text-primary" : "text-muted-foreground"}
-        >
-          {statusText}
+        <span className="flex shrink-0 items-center gap-1">
+          {/* Filled vs outlined dot is a non-color (shape) cue for the
+              connected state, so it reads for color-blind users too — the
+              status text alone would lean on color. */}
+          <span
+            aria-hidden="true"
+            className={`h-1.5 w-1.5 rounded-full ${
+              req.connected ? "bg-primary" : "border border-muted-foreground"
+            }`}
+          />
+          <span
+            className={req.connected ? "text-primary" : "text-muted-foreground"}
+          >
+            {statusText}
+          </span>
         </span>
       </span>
       {canConnect && (

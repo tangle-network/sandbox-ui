@@ -194,4 +194,27 @@ describe("ProposalCard", () => {
     expect(screen.getByText("GitHub App")).toBeTruthy();
     expect(screen.getByText("installed")).toBeTruthy();
   });
+
+  it("falls back to a monogram when the requirement's provider icon fails to load", () => {
+    render(
+      <ProposalCard
+        proposal={withReq({
+          provider: "github",
+          kind: "github_app",
+          connected: true,
+        })}
+        confirming={false}
+        onConfirm={noop}
+        onCancel={noop}
+      />,
+    );
+    const img = document.querySelector(
+      'img[src="https://cdn.simpleicons.org/github"]',
+    );
+    expect(img).not.toBeNull();
+    fireEvent.error(img as HTMLImageElement);
+    // The chain is exhausted → no image, the monogram tile ("G") renders.
+    expect(document.querySelector("img")).toBeNull();
+    expect(screen.getByText("G")).toBeTruthy();
+  });
 });

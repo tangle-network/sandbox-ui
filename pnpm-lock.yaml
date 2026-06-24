@@ -24,8 +24,8 @@ importers:
         specifier: ^2.1.0
         version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       diff:
-        specifier: ^9.0.0
-        version: 9.0.0
+        specifier: ^5.2.0
+        version: 5.2.2
       lucide-react:
         specifier: ^0.469.0
         version: 0.469.0(react@19.2.4)
@@ -67,11 +67,11 @@ importers:
         specifier: '>=0.10.0 <1.0.0'
         version: 0.10.0
       '@tangle-network/brand':
-        specifier: ^0.5.0
-        version: 0.5.0(react@19.2.4)
+        specifier: ^0.6.0
+        version: 0.6.0(react@19.2.4)
       '@tangle-network/ui':
         specifier: ^4.1.0
-        version: 4.1.0(635a7ce5cd55506e1c876781f06c71b6)
+        version: 4.1.0(f9b35c7527b40d8efcca5ac1c8084e23)
       '@tanstack/react-query':
         specifier: ^5.91.0
         version: 5.91.3(react@19.2.4)
@@ -1744,8 +1744,8 @@ packages:
   '@tangle-network/agent-interface@0.10.0':
     resolution: {integrity: sha512-oiREgihkeX/xcGEtFfi9AkAfU2VzuF7SSla2s0iliXPUXyHCIIx6jwzHiYdwb1ZGCfvC+T+0SWOIa6fN5u195g==}
 
-  '@tangle-network/brand@0.5.0':
-    resolution: {integrity: sha512-9J4JN/AxkpqOx2yektrko3FVlM7XSyBOpo7mJSI4qyPKCQhyIfeboyJZedVAn56oXIMnOVkPI035Xnr28hInXw==}
+  '@tangle-network/brand@0.6.0':
+    resolution: {integrity: sha512-QYBAuDRK/6ffQQNfm87AGw2KcK1+23GLJxwozQBP70RViC+fJPR/rvSDyISK/Y+h3isJ+dExPLH3swN1C+6GYw==}
     peerDependencies:
       react: '>=18'
     peerDependenciesMeta:
@@ -2461,12 +2461,12 @@ packages:
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
 
-  diff@8.0.3:
-    resolution: {integrity: sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ==}
+  diff@5.2.2:
+    resolution: {integrity: sha512-vtcDfH3TOjP8UekytvnHH1o1P4FcUdt4eQ1Y+Abap1tk/OB2MWQvcwS2ClCd1zuIhc3JKOx6p3kod8Vfys3E+A==}
     engines: {node: '>=0.3.1'}
 
-  diff@9.0.0:
-    resolution: {integrity: sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw==}
+  diff@8.0.3:
+    resolution: {integrity: sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ==}
     engines: {node: '>=0.3.1'}
 
   doctrine@3.0.0:
@@ -5435,11 +5435,11 @@ snapshots:
     dependencies:
       zod: 4.4.3
 
-  '@tangle-network/brand@0.5.0(react@19.2.4)':
+  '@tangle-network/brand@0.6.0(react@19.2.4)':
     optionalDependencies:
       react: 19.2.4
 
-  '@tangle-network/ui@4.1.0(635a7ce5cd55506e1c876781f06c71b6)':
+  '@tangle-network/ui@4.1.0(f9b35c7527b40d8efcca5ac1c8084e23)':
     dependencies:
       '@pierre/trees': 1.0.0-beta.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -5453,7 +5453,7 @@ snapshots:
       '@radix-ui/react-switch': 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-toast': 1.2.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@tangle-network/brand': 0.5.0(react@19.2.4)
+      '@tangle-network/brand': 0.6.0(react@19.2.4)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       lucide-react: 0.469.0(react@19.2.4)
@@ -6163,9 +6163,9 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  diff@8.0.3: {}
+  diff@5.2.2: {}
 
-  diff@9.0.0: {}
+  diff@8.0.3: {}
 
   doctrine@3.0.0:
     dependencies:

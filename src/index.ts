@@ -127,6 +127,9 @@ export {
 // --- Workspace ---
 export * from "./workspace";
 
+// --- Workbench (artifact pane: code/diff/preview/ports/terminal) ---
+export * from "./workbench";
+
 // --- OpenUI ---
 export * from "./openui";
 

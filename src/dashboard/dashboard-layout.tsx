@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Bell } from "lucide-react"
+import { Plus, Bell, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { cn } from "../lib/utils"
 import { Logo } from "../primitives"
 import {
@@ -273,14 +273,27 @@ function DashboardLayoutInner({
                 <Logo variant={variant} size="sm" iconOnly />
               </button>
             ) : labeledRail ? (
+              // The logo IS the collapse/expand control. Expanded: full
+              // logotype with a collapse chevron that fades in on hover.
+              // Collapsed: the mark, with an expand chevron overlay on hover.
               <button
                 type="button"
                 onClick={toggleRail}
                 aria-label={railCollapsed ? "Expand navigation" : "Collapse navigation"}
                 aria-expanded={!railCollapsed}
-                className="p-1 rounded-md transition-colors hover:bg-surface-container-high"
+                className={cn(
+                  "group/logo relative flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-surface-container-high",
+                  showLabels && "w-full",
+                )}
               >
-                <Logo variant={variant} size="sm" iconOnly />
+                <Logo variant={variant} size="sm" iconOnly={!showLabels} />
+                {showLabels ? (
+                  <ChevronsLeft className="ml-auto h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/logo:opacity-100" />
+                ) : (
+                  <span className="absolute inset-0 flex items-center justify-center rounded-md bg-surface-container-high opacity-0 transition-opacity group-hover/logo:opacity-100">
+                    <ChevronsRight className="h-4 w-4 text-foreground" />
+                  </span>
+                )}
               </button>
             ) : (
               <Link
@@ -331,13 +344,7 @@ function DashboardLayoutInner({
           </SidebarRailNav>
 
           <SidebarRailFooter className={cn(showLabels && "items-stretch px-2")}>
-            {allowCollapse && (
-              <RailCollapseToggle
-                collapsed={railCollapsed}
-                showLabel={showLabels}
-                onToggle={toggleRail}
-              />
-            )}
+            {/* Collapse is driven by the logo header now (no separate button). */}
             {onSettingsClick ? (
               <RailButton icon={SettingsIconSmall} label="Settings" onClick={onSettingsClick} showLabel={showLabels} />
             ) : (
@@ -345,19 +352,56 @@ function DashboardLayoutInner({
                 <Link href={settingsHref} to={settingsHref} />
               </RailButton>
             )}
-            {railFooter}
             <RailSeparator className={showLabels ? "w-full" : undefined} />
-            <ProfileAvatar
-              user={sidebarUser}
-              isLoading={isLoading}
-              onLogout={onLogout}
-              onSettingsClick={onSettingsClick}
-              settingsHref={settingsHref}
-              showDetails={showLabels}
-              LinkComponent={LinkComponent}
-            >
-              {profileMenuItems}
-            </ProfileAvatar>
+            {/* Theme toggle sits with the avatar: a row beside it when expanded,
+                stacked above it when collapsed — never orphaned at the bottom. */}
+            {railFooter !== undefined ? (
+              showLabels ? (
+                <div className="flex w-full items-center gap-1">
+                  <div className="min-w-0 flex-1">
+                    <ProfileAvatar
+                      user={sidebarUser}
+                      isLoading={isLoading}
+                      onLogout={onLogout}
+                      onSettingsClick={onSettingsClick}
+                      settingsHref={settingsHref}
+                      showDetails={showLabels}
+                      LinkComponent={LinkComponent}
+                    >
+                      {profileMenuItems}
+                    </ProfileAvatar>
+                  </div>
+                  <div className="shrink-0">{railFooter}</div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  {railFooter}
+                  <ProfileAvatar
+                    user={sidebarUser}
+                    isLoading={isLoading}
+                    onLogout={onLogout}
+                    onSettingsClick={onSettingsClick}
+                    settingsHref={settingsHref}
+                    showDetails={showLabels}
+                    LinkComponent={LinkComponent}
+                  >
+                    {profileMenuItems}
+                  </ProfileAvatar>
+                </div>
+              )
+            ) : (
+              <ProfileAvatar
+                user={sidebarUser}
+                isLoading={isLoading}
+                onLogout={onLogout}
+                onSettingsClick={onSettingsClick}
+                settingsHref={settingsHref}
+                showDetails={showLabels}
+                LinkComponent={LinkComponent}
+              >
+                {profileMenuItems}
+              </ProfileAvatar>
+            )}
           </SidebarRailFooter>
         </SidebarRail>
 

@@ -18,25 +18,41 @@ describe("normalizeProviderId", () => {
 });
 
 describe("providerLogoCandidates", () => {
-  it("derives a simpleicons URL for a plain slug", () => {
+  it("resolves the ActivePieces CDN by id, then a simpleicons slug", () => {
     expect(providerLogoCandidates({ id: "github" })).toEqual([
+      "https://cdn.activepieces.com/pieces/github.png",
       "https://cdn.simpleicons.org/github",
     ]);
   });
 
-  it("maps a curated compound brand to its simpleicons slug", () => {
-    expect(providerLogoCandidates({ id: "google-sheets" })[0]).toBe(
-      "https://cdn.simpleicons.org/googlesheets",
+  it("puts the ActivePieces CDN first for a long-tail provider", () => {
+    expect(providerLogoCandidates({ id: "attio" })[0]).toBe(
+      "https://cdn.activepieces.com/pieces/attio.png",
     );
   });
 
-  it("tries an explicit iconUrl before the derived slugs", () => {
+  it("uses a pinned override before the default ActivePieces path", () => {
+    const out = providerLogoCandidates({ id: "anthropic" });
+    expect(out[0]).toBe("https://cdn.activepieces.com/pieces/claude.png");
+    // The default `/anthropic.png` path still follows as a candidate.
+    expect(out).toContain("https://cdn.activepieces.com/pieces/anthropic.png");
+  });
+
+  it("keeps the curated simpleicons slug as a fallback after the CDN", () => {
+    const out = providerLogoCandidates({ id: "google-sheets" });
+    expect(out[0]).toBe(
+      "https://cdn.activepieces.com/pieces/google-sheets.png",
+    );
+    expect(out).toContain("https://cdn.simpleicons.org/googlesheets");
+  });
+
+  it("tries an explicit iconUrl before everything else", () => {
     const out = providerLogoCandidates({
       id: "github",
       iconUrl: "https://example.test/gh.png",
     });
     expect(out[0]).toBe("https://example.test/gh.png");
-    expect(out).toContain("https://cdn.simpleicons.org/github");
+    expect(out).toContain("https://cdn.activepieces.com/pieces/github.png");
   });
 
   it("yields no candidates for an empty id (drives the monogram fallback)", () => {
@@ -50,7 +66,7 @@ describe("ProviderIcon", () => {
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
     expect(img?.getAttribute("src")).toBe(
-      "https://cdn.simpleicons.org/github",
+      "https://cdn.activepieces.com/pieces/github.png",
     );
   });
 

@@ -1,13 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent, EmptyState } from "@tangle-network/ui/primitives";
-import { cn } from "@tangle-network/ui/utils";
-import { Check, Search, Settings2 } from "lucide-react";
 import {
-  monogramColor,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  EmptyState,
+} from "@tangle-network/ui/primitives";
+import { cn } from "@tangle-network/ui/utils";
+import { Check, Search, Unplug } from "lucide-react";
+import {
+  ProviderIcon,
   normalizeProviderId,
-  providerLogoCandidates,
 } from "./provider-logo";
 import type {
   IntegrationConnection,
@@ -32,8 +42,10 @@ export interface IntegrationsPanelProps {
     connectorId: string;
   }) => void | Promise<void>;
   /**
-   * Invoked when the user manages (disconnects) a live connection via the
-   * hover-revealed affordance on a connected tile.
+   * Invoked when the user confirms disconnecting a live connection from the
+   * disconnect control on a connected tile. May return a promise; the
+   * confirmation dialog shows a loading state until it settles and surfaces a
+   * thrown error inline.
    */
   onDisconnect: (connectionId: string) => void | Promise<void>;
   /** Empty-state message when the catalog hasn't loaded any providers. */
@@ -89,61 +101,10 @@ function defaultConnectorOf(provider: IntegrationProvider): string {
   return provider.connectors?.[0]?.connectorId ?? provider.providerId;
 }
 
-function ProviderLogo({
-  provider,
-  size = 56,
-}: {
-  provider: IntegrationProvider;
-  size?: number;
-}) {
-  const candidates = React.useMemo(
-    () =>
-      providerLogoCandidates({
-        id: provider.providerId,
-        iconUrl: provider.iconUrl,
-      }),
-    [provider],
-  );
-  const [index, setIndex] = React.useState(0);
-  const label = (provider.displayName ?? provider.providerId).trim();
-  const initial = label.charAt(0).toUpperCase() || "?";
-  const src = candidates[index];
-
-  // Chain (see providerLogoCandidates): explicit iconUrl → full-color vector mark
-  // for brands Simple Icons delisted (Salesforce, Outlook, Slack, Teams, …) →
-  // simpleicons CDN. Only a provider with no resolvable real logo reaches this
-  // branch and gets the deterministic monogram tile — a clean, branded fallback,
-  // never a fabricated asset. TODO: extend PROVIDER_VECTOR_LOGOS as the catalog
-  // grows so fewer providers fall through to the monogram.
-  if (!src) {
-    return (
-      <span
-        className="flex shrink-0 items-center justify-center rounded-2xl font-semibold text-white"
-        style={{
-          width: size,
-          height: size,
-          backgroundColor: monogramColor(provider.providerId),
-          fontSize: Math.round(size * 0.42),
-        }}
-        aria-hidden
-      >
-        {initial}
-      </span>
-    );
-  }
-  return (
-    <img
-      src={src}
-      alt=""
-      width={size}
-      height={size}
-      loading="lazy"
-      className="shrink-0 object-contain"
-      style={{ width: size, height: size }}
-      onError={() => setIndex((i) => i + 1)}
-    />
-  );
-}
+// Single logo edge length shared by connected and unconnected tiles so the grid
+// reads as one uniform set of brand marks (clears the top-corner check badge and
+// disconnect control on connected tiles).
+const LOGO_SIZE = 48;
 
 function buildConnectionIndex(
   connections: IntegrationConnection[],
@@ -205,6 +166,21 @@ export function IntegrationsPanel({
 }: IntegrationsPanelProps) {
   const [query, setQuery] = React.useState("");
   const [sort, setSort] = React.useState<IntegrationSort>(defaultSort);
+  // A connected tile's disconnect control sets this target, which opens the
+  // confirmation dialog. A single controlled dialog serves every tile.
+  const [disconnectTarget, setDisconnectTarget] = React.useState<{
+    connectionId: string;
+    name: string;
+    accountDisplay?: string | null;
+  } | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = React.useState(false);
+  const [disconnectError, setDisconnectError] = React.useState<string | null>(
+    null,
+  );
+  // Identity token for the in-flight disconnect, bumped whenever the dialog is
+  // closed (cancel/escape) so a hung or superseded request can never mutate
+  // state for a dialog the user has already left.
+  const activeDisconnect = React.useRef(0);
 
   const connectionIndex = React.useMemo(
     () => buildConnectionIndex(connections),
@@ -229,6 +205,36 @@ export function IntegrationsPanel({
     });
     return sorted;
   }, [catalog, query, sort, featuredRank]);
+
+  // Close (and reset) the disconnect dialog. Invalidating the token first means
+  // an in-flight request that later settles is ignored — so the user can always
+  // escape, even if onDisconnect hangs.
+  const closeDisconnect = React.useCallback(() => {
+    activeDisconnect.current += 1;
+    setIsDisconnecting(false);
+    setDisconnectTarget(null);
+    setDisconnectError(null);
+  }, []);
+
+  const confirmDisconnect = React.useCallback(async () => {
+    if (!disconnectTarget) return;
+    const reqId = (activeDisconnect.current += 1);
+    setIsDisconnecting(true);
+    setDisconnectError(null);
+    try {
+      await Promise.resolve(onDisconnect(disconnectTarget.connectionId));
+      if (activeDisconnect.current !== reqId) return; // cancelled/superseded
+      // Close only on success; on failure keep the dialog open with the error.
+      setDisconnectTarget(null);
+    } catch (e) {
+      if (activeDisconnect.current !== reqId) return;
+      setDisconnectError(
+        e instanceof Error ? e.message : "Failed to disconnect.",
+      );
+    } finally {
+      if (activeDisconnect.current === reqId) setIsDisconnecting(false);
+    }
+  }, [disconnectTarget, onDisconnect]);
 
   if (error) {
     return (
@@ -269,6 +275,8 @@ export function IntegrationsPanel({
       />
     );
   }
+
+  const disconnectAccountLabel = disconnectTarget?.accountDisplay;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -337,8 +345,13 @@ export function IntegrationsPanel({
                   key={`${provider.providerId}:${connectorId}`}
                   data-testid={`integration-${provider.providerId}`}
                   data-connected="true"
+                  title={
+                    live.accountDisplay
+                      ? `${name} — ${live.accountDisplay}`
+                      : name
+                  }
                   className={cn(
-                    "group relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
+                    "relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
                     "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]",
                   )}
                 >
@@ -347,18 +360,48 @@ export function IntegrationsPanel({
                   </span>
                   <button
                     type="button"
-                    onClick={() => onDisconnect(live.id)}
-                    data-testid={`manage-${provider.providerId}`}
-                    aria-label={`Manage ${name}`}
-                    title="Manage connection"
-                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground group-hover:opacity-100"
+                    onClick={() =>
+                      setDisconnectTarget({
+                        connectionId: live.id,
+                        name,
+                        accountDisplay: live.accountDisplay,
+                      })
+                    }
+                    data-testid={`disconnect-${provider.providerId}`}
+                    aria-label={`Disconnect ${name}`}
+                    title="Disconnect"
+                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-background hover:text-foreground focus-visible:bg-background focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   >
-                    <Settings2 className="h-3.5 w-3.5" />
+                    <Unplug className="h-3.5 w-3.5" />
                   </button>
-                  <ProviderLogo provider={provider} size={48} />
-                  <span className="line-clamp-2 w-full text-xs font-medium text-foreground">
-                    {name}
-                  </span>
+                  <ProviderIcon
+                    id={provider.providerId}
+                    iconUrl={provider.iconUrl}
+                    displayName={provider.displayName}
+                    size={LOGO_SIZE}
+                    className="rounded-2xl"
+                  />
+                  {/* Fixed 2-line block on every tile keeps the grid uniform
+                      (issue #2): with an account, the name takes one line and
+                      the account the second; without, the name may wrap to two. */}
+                  <div className="flex h-8 w-full flex-col justify-center leading-4">
+                    <span
+                      className={cn(
+                        "w-full text-xs font-medium text-foreground",
+                        live.accountDisplay ? "truncate" : "line-clamp-2",
+                      )}
+                    >
+                      {name}
+                    </span>
+                    {live.accountDisplay ? (
+                      <span
+                        className="w-full truncate text-[11px] leading-4 text-muted-foreground"
+                        data-testid={`account-${provider.providerId}`}
+                      >
+                        {live.accountDisplay}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               );
             }
@@ -382,8 +425,14 @@ export function IntegrationsPanel({
                   "hover:border-primary/40 hover:bg-accent/40 hover:shadow-sm focus:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20",
                 )}
               >
-                <ProviderLogo provider={provider} size={56} />
-                <span className="line-clamp-2 w-full text-xs font-medium text-foreground">
+                <ProviderIcon
+                  id={provider.providerId}
+                  iconUrl={provider.iconUrl}
+                  displayName={provider.displayName}
+                  size={LOGO_SIZE}
+                  className="rounded-2xl"
+                />
+                <span className="line-clamp-2 h-8 w-full text-xs font-medium leading-4 text-foreground">
                   {name}
                 </span>
               </button>
@@ -391,6 +440,54 @@ export function IntegrationsPanel({
           })}
         </div>
       )}
+
+      <Dialog
+        open={!!disconnectTarget}
+        onOpenChange={(open) => {
+          if (!open) closeDisconnect();
+        }}
+      >
+        <DialogContent
+          className="max-w-sm"
+          // The trigger tile may re-render as unconnected after a successful
+          // disconnect, so don't try to restore focus to a vanished element.
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              Disconnect {disconnectTarget?.name ?? "integration"}?
+            </DialogTitle>
+            <DialogDescription>
+              This removes Sandbox&apos;s access to your{" "}
+              {disconnectTarget?.name ?? "this"} account
+              {disconnectAccountLabel ? ` (${disconnectAccountLabel})` : ""}. You
+              can reconnect anytime.
+            </DialogDescription>
+          </DialogHeader>
+          {disconnectError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {disconnectError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeDisconnect}
+              data-testid="cancel-disconnect"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              loading={isDisconnecting}
+              onClick={confirmDisconnect}
+              data-testid="confirm-disconnect"
+            >
+              Disconnect
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

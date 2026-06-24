@@ -14,10 +14,11 @@ export interface IntegrationConnection {
   connectorId?: string;
   status: "connected" | "pending" | "revoked" | "expired" | (string & {});
   grantedScopes?: string[];
-  account?: {
-    identity?: string;
-    displayName?: string;
-  } & Record<string, unknown>;
+  // Human-readable identity of the connected account (e.g. "octocat" or
+  // "test@gmail.com") as sent by the hub on each connection; null when the
+  // provider exposes no per-account identity. Mirrors the platform hub
+  // contract's `accountDisplay: string | null` field.
+  accountDisplay?: string | null;
   expiresAt?: string | null;
   createdAt?: string;
   updatedAt?: string;

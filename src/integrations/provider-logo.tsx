@@ -119,6 +119,100 @@ export const PROVIDER_LOGO_SLUGS: Record<string, string> = {
   hootsuite: "hootsuite",
 };
 
+/** Base URL of the ActivePieces piece-logo CDN. The hub's provider ids are
+ *  generated from the ActivePieces library, so most resolve a real brand logo
+ *  from `/<providerId>.png`. */
+const ACTIVEPIECES_CDN = "https://cdn.activepieces.com/pieces";
+
+/**
+ * Per-id brand logo URLs for providers whose logo isn't at the ActivePieces
+ * default `/<id>.png` path: a connector's own catalog logo under a different
+ * filename, a parent connector's logo reused by a sub-connector/variant, or a
+ * public icon source for connectors absent from the catalog CDN.
+ *
+ * Mirrors the Tangle Platform's own integrations UI
+ * (`products/platform/web/src/client/components/IntegrationsCatalog.tsx`) so
+ * both surfaces resolve the same brand mark; the durable fix is for the hub API
+ * to emit `iconUrl` per provider, after which this map can be retired.
+ */
+export const PROVIDER_LOGO_URLS: Record<string, string> = {
+  // Catalog logo whose filename/extension differs from the provider id.
+  "cal-com": `${ACTIVEPIECES_CDN}/cal.com.png`,
+  "customer-io": `${ACTIVEPIECES_CDN}/customerio.png`,
+  anthropic: `${ACTIVEPIECES_CDN}/claude.png`,
+  telegram: `${ACTIVEPIECES_CDN}/telegram_bot.png`,
+  "twilio-sms": `${ACTIVEPIECES_CDN}/twilio.png`,
+  "amazon-sqs": `${ACTIVEPIECES_CDN}/aws-sqs.png`,
+  frame: `${ACTIVEPIECES_CDN}/frameio.png`,
+  "jira-cloud": `${ACTIVEPIECES_CDN}/jira.png`,
+  "jira-data-center": `${ACTIVEPIECES_CDN}/jira.png`,
+  stripe: `${ACTIVEPIECES_CDN}/stripe.png`,
+  "stripe-pack": `${ACTIVEPIECES_CDN}/stripe.png`,
+  gemini: `${ACTIVEPIECES_CDN}/google-gemini.png`,
+  "google-gemini": `${ACTIVEPIECES_CDN}/google-gemini.png`,
+  bluesky: `${ACTIVEPIECES_CDN}/bluesky.png`,
+  emailit: `${ACTIVEPIECES_CDN}/emailit.svg`,
+  cloutly: `${ACTIVEPIECES_CDN}/cloutly.svg`,
+  gistly: `${ACTIVEPIECES_CDN}/gistly.svg`,
+  jotform: `${ACTIVEPIECES_CDN}/jotform.svg`,
+  supadata: `${ACTIVEPIECES_CDN}/supadata.svg`,
+  "hugging-face": `${ACTIVEPIECES_CDN}/huggingface.svg`,
+  huggingface: `${ACTIVEPIECES_CDN}/huggingface.svg`,
+  heygen: `${ACTIVEPIECES_CDN}/heygen.jpg`,
+  instasent: `${ACTIVEPIECES_CDN}/instasent.jpg`,
+  "chainalysis-api": `${ACTIVEPIECES_CDN}/chainalysis-api.jpg`,
+  scrapegraphai: `${ACTIVEPIECES_CDN}/scrapegraphai.jpg`,
+  localai: `${ACTIVEPIECES_CDN}/localai.jpeg`,
+  talkable:
+    "https://www.talkable.com/wp-content/uploads/2021/12/talkable-favicon.svg",
+  // Sub-connector or variant reusing its parent connector's catalog logo.
+  "facebook-leads": `${ACTIVEPIECES_CDN}/facebook.png`,
+  "facebook-pages": `${ACTIVEPIECES_CDN}/facebook.png`,
+  "whatsapp-business": `${ACTIVEPIECES_CDN}/whatsapp.png`,
+  onedrive: `${ACTIVEPIECES_CDN}/oneDrive.png`,
+  "microsoft-onedrive": `${ACTIVEPIECES_CDN}/oneDrive.png`,
+  "outlook-mail": `${ACTIVEPIECES_CDN}/microsoft-outlook.png`,
+  "microsoft-calendar": `${ACTIVEPIECES_CDN}/microsoft-outlook.png`,
+  "microsoft-outlook-calendar": `${ACTIVEPIECES_CDN}/microsoft-outlook.png`,
+  sharepoint: `${ACTIVEPIECES_CDN}/microsoft-sharepoint.png`,
+  "notion-database": `${ACTIVEPIECES_CDN}/notion.png`,
+  "slack-inbound": `${ACTIVEPIECES_CDN}/slack.png`,
+  helpscout: `${ACTIVEPIECES_CDN}/help-scout.png`,
+  figjam: `${ACTIVEPIECES_CDN}/figma.png`,
+  webhook: `${ACTIVEPIECES_CDN}/new-core/webhooks.svg`,
+  // Absent from the catalog CDN — served from a public icon source.
+  make: "https://cdn.simpleicons.org/make",
+  n8n: "https://cdn.simpleicons.org/n8n",
+  zapier: "https://cdn.simpleicons.org/zapier",
+  auth0: "https://cdn.simpleicons.org/auth0",
+  basecamp: "https://cdn.simpleicons.org/basecamp",
+  ebay: "https://cdn.simpleicons.org/ebay",
+  gusto: "https://cdn.simpleicons.org/gusto",
+  miro: "https://cdn.simpleicons.org/miro",
+  sanity: "https://cdn.simpleicons.org/sanity",
+  sentry: "https://cdn.simpleicons.org/sentry",
+  opsgenie: "https://cdn.simpleicons.org/opsgenie",
+  phony:
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://ph0ny.com",
+  docuseal:
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://docuseal.com",
+  braze:
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://braze.com",
+  pipedream:
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://pipedream.com",
+  weaviate:
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://weaviate.io",
+  "adobe-creative-cloud":
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://adobe.com",
+  clio: "https://www.google.com/s2/favicons?sz=64&domain_url=https://clio.com",
+  marketo:
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://marketo.com",
+  rippling:
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://rippling.com",
+  "microsoft-graph":
+    "https://www.google.com/s2/favicons?sz=64&domain_url=https://graph.microsoft.com",
+};
+
 /**
  * Full-color vector brand marks for providers Simple Icons has delisted over
  * trademark policy (Slack, Salesforce, the Microsoft 365 family, Twilio,
@@ -147,10 +241,11 @@ export const PROVIDER_VECTOR_LOGOS: Record<string, string> = {
 /**
  * Ordered candidate logo URLs for a provider slug, most specific first. The
  * renderer walks the chain on each `onError` until one loads, then falls back to
- * the monogram tile. An explicit `iconUrl` (when the caller has one) is tried
- * first, then full-color vector marks for brands Simple Icons dropped, then the
- * derived simpleicons slugs. Providers with no resolvable logo land on the
- * deterministic monogram tile in the renderer.
+ * the monogram tile.
+ *
+ * Order: explicit `iconUrl` → full-color vector mark for brands Simple Icons
+ * delisted (svgl.app) → a pinned override → the ActivePieces CDN by id (covers
+ * most of the hub catalog) → derived simpleicons slugs → monogram.
  */
 export function providerLogoCandidates(opts: {
   id: string;
@@ -161,18 +256,25 @@ export function providerLogoCandidates(opts: {
   const raw = opts.id.toLowerCase();
   const norm = normalizeProviderId(raw);
   const curated = PROVIDER_LOGO_SLUGS[raw] ?? PROVIDER_LOGO_SLUGS[norm];
-  // Vector mark for delisted brands first: simpleicons 404s for these, so trying
-  // it first avoids a wasted failed request before the real logo loads.
+  // Vector mark for delisted brands first (Slack, Salesforce, the Microsoft 365
+  // family, …): simpleicons 404s for these, so the crisp svgl.app SVG goes ahead
+  // of the rest.
   const vectorName =
     PROVIDER_VECTOR_LOGOS[raw] ??
     PROVIDER_VECTOR_LOGOS[norm] ??
     (curated ? PROVIDER_VECTOR_LOGOS[curated] : undefined);
   if (vectorName) out.push(`https://svgl.app/library/${vectorName}.svg`);
+  // The platform's logo source: a pinned override, then the ActivePieces CDN
+  // keyed on the provider id. A 404 on a miss advances the <img> to the next
+  // candidate rather than stranding on a wrong default.
+  const pinned = PROVIDER_LOGO_URLS[raw] ?? PROVIDER_LOGO_URLS[norm];
+  if (pinned) out.push(pinned);
+  if (raw) out.push(`${ACTIVEPIECES_CDN}/${encodeURIComponent(raw)}.png`);
+  // simpleicons fallback for providers absent from the catalog. Derived slug:
+  // brand name with separators stripped, lowercased — covers the long tail
+  // (notion, airtable, linear, asana, …) without an explicit entry.
   const slugs = new Set<string>();
   if (curated) slugs.add(curated);
-  // Derived slug: simpleicons slugs are the brand name with separators stripped,
-  // lowercased. This covers the long tail (notion, airtable, linear, asana,
-  // trello, dropbox, …) without an explicit map entry.
   slugs.add(norm.replace(/-/g, ""));
   slugs.add(raw.replace(/[-_\s]/g, ""));
   for (const slug of slugs) {

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.47.0
+
+### Integrations panel: account identity, disconnect dialog, uniform tiles, platform logos
+
+- **Breaking — `IntegrationConnection.account` removed.** The aspirational
+  nested `account?: { identity?; displayName? }` field is replaced with the real
+  platform-hub wire field `accountDisplay?: string | null`. The old shape was
+  never populated in production. Migration: read `connection.accountDisplay`
+  instead of `connection.account?.displayName`.
+- Connected tiles now show which account is linked (`accountDisplay`) under the
+  provider name.
+- The disconnect control is an always-visible, labelled button that opens a
+  confirmation dialog with a loading state and inline error; it is always
+  dismissable, so a hung `onDisconnect` can no longer trap the user.
+- Uniform tile sizing across breakpoints (fixed two-line label height, unified
+  logo size).
+- Provider logos resolve from the platform's ActivePieces source
+  (`cdn.activepieces.com/pieces/<id>.png` plus pinned overrides), with a
+  simpleicons slug and a monogram as fallbacks. Consumers under a strict CSP
+  should allowlist `cdn.activepieces.com` (and `cdn.simpleicons.org`) under
+  `img-src`; logos otherwise degrade to the monogram.
+
 ## 0.42.0
 
 ### Dashboard labeled rail: collapsible + polished expanded state

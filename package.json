@@ -42,6 +42,10 @@
       "import": "./dist/workspace.js",
       "types": "./dist/workspace.d.ts"
     },
+    "./workbench": {
+      "import": "./dist/workbench.js",
+      "types": "./dist/workbench.d.ts"
+    },
     "./openui": {
       "import": "./dist/openui.js",
       "types": "./dist/openui.d.ts"

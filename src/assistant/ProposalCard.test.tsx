@@ -188,7 +188,9 @@ describe("ProposalCard", () => {
       />,
     );
     expect(
-      document.querySelector('img[src="https://cdn.simpleicons.org/github"]'),
+      document.querySelector(
+        'img[src="https://cdn.activepieces.com/pieces/github.png"]',
+      ),
     ).not.toBeNull();
     // The label + status still render alongside the icon.
     expect(screen.getByText("GitHub App")).toBeTruthy();
@@ -208,11 +210,14 @@ describe("ProposalCard", () => {
         onCancel={noop}
       />,
     );
-    const img = document.querySelector(
-      'img[src="https://cdn.simpleicons.org/github"]',
-    );
+    // Walk the candidate chain (ActivePieces CDN → simpleicons): each failed
+    // load advances to the next URL until the chain is exhausted.
+    let img = document.querySelector("img");
     expect(img).not.toBeNull();
-    fireEvent.error(img as HTMLImageElement);
+    for (let i = 0; img && i < 10; i += 1) {
+      fireEvent.error(img);
+      img = document.querySelector("img");
+    }
     // The chain is exhausted → no image, the monogram tile ("G") renders.
     expect(document.querySelector("img")).toBeNull();
     expect(screen.getByText("G")).toBeTruthy();

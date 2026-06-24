@@ -12,6 +12,7 @@
  */
 
 import { type ReactNode, useState } from "react";
+import { ProviderIcon } from "../integrations/provider-logo";
 import { describeProposal } from "./presentation";
 import { providerLabel } from "./provider-label";
 import type { ConnectionRequirement, PendingProposal } from "./types";
@@ -106,7 +107,7 @@ export function ProposalCard({
             )}
           </div>
           {showGraph && tab === "graph" ? (
-            <div className="mt-1 h-48 overflow-hidden rounded border border-border">
+            <div className="mt-1 h-64 overflow-hidden rounded border border-border">
               {renderGraph?.(view.preview.content)}
             </div>
           ) : (
@@ -214,15 +215,30 @@ function RequirementRow({
 
   return (
     <li className="flex items-center justify-between gap-2 text-xs">
-      <span className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className={`h-2 w-2 rounded-full ${
-            req.connected ? "bg-primary" : "border border-muted-foreground"
-          }`}
+      <span className="flex min-w-0 items-center gap-2">
+        <ProviderIcon
+          id={req.provider}
+          displayName={label}
+          size={16}
+          className="rounded"
         />
-        <span className="text-foreground">{kindLabel}</span>
-        <span className="text-muted-foreground">{statusText}</span>
+        <span className="truncate text-foreground">{kindLabel}</span>
+        <span className="flex shrink-0 items-center gap-1">
+          {/* Filled vs outlined dot is a non-color (shape) cue for the
+              connected state, so it reads for color-blind users too — the
+              status text alone would lean on color. */}
+          <span
+            aria-hidden="true"
+            className={`h-1.5 w-1.5 rounded-full ${
+              req.connected ? "bg-primary" : "border border-muted-foreground"
+            }`}
+          />
+          <span
+            className={req.connected ? "text-primary" : "text-muted-foreground"}
+          >
+            {statusText}
+          </span>
+        </span>
       </span>
       {canConnect && (
         <button

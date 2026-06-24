@@ -8,8 +8,8 @@
  * conversation survives the drawer closing.
  */
 
-import { AgentTimeline, ChatInput } from "@tangle-network/ui/chat";
-import { History, Minus, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { AgentTimeline, ChatInput, ThinkingIndicator } from "@tangle-network/ui/chat";
+import { History, MessageSquarePlus, Minus, Plus, Trash2, X } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { assistantIsThinking, buildAssistantTimeline } from "./build-timeline";
 import { isLowBalance, presentError } from "./presentation";
@@ -80,6 +80,21 @@ export function AssistantPanel({
     : null;
   const low = isLowBalance(effectiveBalance) && !errorView;
   const streaming = state.status === "streaming";
+  // The active conversation's title — the first user message, truncated, mirroring
+  // the server's own thread titling (a thread title IS its truncated first user
+  // message). Derived client-side so it shows immediately on the first send and
+  // on a restored thread, with no extra fetch. Null for a fresh, empty chat.
+  const firstUserText = state.messages
+    .find((m) => m.role === "user")
+    ?.text.trim();
+  // Truncate by code point (Array.from), not UTF-16 code unit, so a 60-char cut
+  // can't split a surrogate pair (emoji / astral script) into a replacement char.
+  const titleChars = firstUserText ? Array.from(firstUserText) : [];
+  const conversationTitle = firstUserText
+    ? titleChars.length > 60
+      ? `${titleChars.slice(0, 60).join("")}…`
+      : firstUserText
+    : null;
 
   const renderProposal = (proposal: (typeof state.pendingProposals)[number]) => (
     <ProposalCard
@@ -133,17 +148,27 @@ export function AssistantPanel({
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between border-border border-b px-4 py-3">
-        <div className="flex items-baseline gap-2">
-          <span className="font-medium text-foreground text-sm">Assistant</span>
-          <span
-            aria-label="Your credit balance"
-            className="text-muted-foreground text-xs"
-          >
-            {formatMoney(effectiveBalance)}
-          </span>
+      <div className="flex items-center justify-between gap-2 border-border border-b px-4 py-3">
+        <div className="flex min-w-0 flex-col">
+          <div className="flex items-baseline gap-2">
+            <span className="font-medium text-foreground text-sm">Assistant</span>
+            <span
+              aria-label="Your credit balance"
+              className="text-muted-foreground text-xs"
+            >
+              {formatMoney(effectiveBalance)}
+            </span>
+          </div>
+          {conversationTitle && (
+            <span
+              className="truncate text-muted-foreground text-xs"
+              title={conversationTitle}
+            >
+              {conversationTitle}
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <div className="flex items-center" role="group" aria-label="Text size">
             <button
               type="button"
@@ -177,9 +202,10 @@ export function AssistantPanel({
             type="button"
             onClick={chat.reset}
             aria-label="New chat"
+            title="New chat"
             className="rounded p-1 text-muted-foreground hover:text-foreground"
           >
-            <RotateCcw className="h-4 w-4" />
+            <MessageSquarePlus className="h-4 w-4" />
           </button>
           <button
             type="button"
@@ -334,6 +360,15 @@ export function AssistantPanel({
 
       {/* Composer */}
       <div className="border-border border-t p-2">
+        {/* Running indicator: while a turn streams, the composer's Send becomes a
+            Stop button — on its own an easy-to-miss signal. This animated row makes
+            "the assistant is working" unmistakable regardless of the transcript
+            renderer in use. */}
+        {streaming && (
+          <div className="px-2 pb-1.5" aria-label="Assistant is working">
+            <ThinkingIndicator />
+          </div>
+        )}
         <ChatInput
           onSend={(message) => chat.send(message)}
           onCancel={chat.stop}

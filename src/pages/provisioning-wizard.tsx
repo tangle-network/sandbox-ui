@@ -151,7 +151,7 @@ export interface ProvisioningConfig {
   name: string;
   gitUrl: string;
   envVars: { key: string; value: string }[];
-  driver: "docker" | "firecracker" | "tangle";
+  driver: "docker" | "firecracker" | "host-agent-docker" | "host-agent-firecracker" | "tangle";
   bare: boolean;
   startupScriptIds?: string[];
 }
@@ -740,7 +740,7 @@ export function ProvisioningWizard({
     ),
   );
   const [driver, setDriver] = React.useState<
-    "docker" | "firecracker" | "tangle"
+    "docker" | "firecracker" | "host-agent-docker" | "host-agent-firecracker" | "tangle"
   >(dc?.driver ?? "docker");
   const [bare, setBare] = React.useState(dc?.bare ?? false);
   const [startupScriptIds, setStartupScriptIds] = React.useState<string[]>(

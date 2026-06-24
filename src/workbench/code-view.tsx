@@ -45,7 +45,7 @@ export function CodeView({
   return (
     <div className={cn("flex h-full min-h-0 w-full", className)}>
       {showTree && (
-        <div className="flex w-60 shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-lowest">
+        <div className="sandbox-tree-surface flex w-60 shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-lowest">
           <RichFileTree
             paths={treePaths}
             selectedPath={path}

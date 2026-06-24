@@ -61,6 +61,30 @@
   --color-surface-container-highest: var(--md3-surface-container-highest);
 }
 
+/* `@pierre/trees` (RichFileTree) is CSS-var driven and ships LIGHT defaults with
+ * no dark switching — `--trees-bg: var(--trees-bg-override, <light>)`. Without the
+ * `*-override` vars it paints a near-white `#f8f8f8` container even inside a dark
+ * subtree (the file-tree-rail-looks-light bug). Map the overrides onto the design
+ * tokens so the tree follows light/vault ↔ dark automatically (the surface +
+ * foreground vars already flip per theme). Apply via `.sandbox-tree-surface`. */
+.sandbox-tree-surface {
+  --trees-bg-override: var(--md3-surface-container-lowest);
+  --trees-bg-muted-override: var(--md3-surface-container-low);
+  --trees-search-bg-override: var(--md3-surface-container);
+  --trees-input-bg-override: var(--md3-surface-container);
+  --trees-hover-bg-override: var(--md3-surface-container-high);
+  --trees-selected-bg-override: hsl(var(--primary) / 0.16);
+  --trees-selected-fg-override: hsl(var(--foreground));
+  --trees-fg-override: hsl(var(--foreground));
+  --trees-fg-muted-override: hsl(var(--muted-foreground));
+  --trees-muted-fg-override: hsl(var(--muted-foreground));
+  --trees-search-fg-override: hsl(var(--foreground));
+  --trees-border-color-override: var(--md3-outline-variant);
+  --trees-indent-guide-bg-override: var(--md3-outline-variant);
+  --trees-accent-override: hsl(var(--primary));
+  --trees-focus-ring-color-override: hsl(var(--primary) / 0.4);
+}
+
 @layer base {
   :root {
     --sandbox: var(--primary);

@@ -57,18 +57,6 @@ export interface IntegrationsPanelProps {
   featuredIds?: string[];
   /** Initial sort mode. Defaults to "featured". */
   defaultSort?: IntegrationSort;
-  /**
-   * Optional logo.dev publishable key. When set, tiles try a higher-quality
-   * logo.dev logo (by guessed domain) before the token-free favicon fallback.
-   */
-  logoToken?: string;
-  /**
-   * Whether to resolve long-tail logos from a guessed domain (DuckDuckGo
-   * favicon, plus logo.dev when `logoToken` is set) before the monogram.
-   * Defaults to true. Set false for internal/private catalogs or strict CSPs
-   * that can't allowlist `icons.duckduckgo.com` / `img.logo.dev`.
-   */
-  domainLogoFallback?: boolean;
   className?: string;
 }
 
@@ -120,23 +108,17 @@ const LOGO_SIZE = 48;
 function ProviderLogo({
   provider,
   size = LOGO_SIZE,
-  domainFallback,
-  logoToken,
 }: {
   provider: IntegrationProvider;
   size?: number;
-  domainFallback?: boolean;
-  logoToken?: string;
 }) {
   const candidates = React.useMemo(
     () =>
       providerLogoCandidates({
         id: provider.providerId,
         iconUrl: provider.iconUrl,
-        domainFallback,
-        logoToken,
       }),
-    [provider, domainFallback, logoToken],
+    [provider],
   );
   const [index, setIndex] = React.useState(0);
   const label = (provider.displayName ?? provider.providerId).trim();
@@ -229,8 +211,6 @@ export function IntegrationsPanel({
   emptyCatalogLabel = "No integrations available yet.",
   featuredIds = DEFAULT_FEATURED_IDS,
   defaultSort = "featured",
-  logoToken,
-  domainLogoFallback = true,
   className,
 }: IntegrationsPanelProps) {
   const [query, setQuery] = React.useState("");
@@ -426,11 +406,7 @@ export function IntegrationsPanel({
                   >
                     <Unplug className="h-3.5 w-3.5" />
                   </button>
-                  <ProviderLogo
-                    provider={provider}
-                    domainFallback={domainLogoFallback}
-                    logoToken={logoToken}
-                  />
+                  <ProviderLogo provider={provider} />
                   {/* Fixed 2-line block on every tile keeps the grid uniform
                       (issue #2): with an account, the name takes one line and
                       the account the second; without, the name may wrap to two. */}
@@ -475,11 +451,7 @@ export function IntegrationsPanel({
                   "hover:border-primary/40 hover:bg-accent/40 hover:shadow-sm focus:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20",
                 )}
               >
-                <ProviderLogo
-                  provider={provider}
-                  domainFallback={domainLogoFallback}
-                  logoToken={logoToken}
-                />
+                <ProviderLogo provider={provider} />
                 <span className="line-clamp-2 h-8 w-full text-xs font-medium leading-4 text-foreground">
                   {name}
                 </span>

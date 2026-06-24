@@ -15,6 +15,8 @@ export interface CodeViewProps {
   paths?: ReadonlyArray<string>
   gitStatus?: ReadonlyArray<RichFileTreeGitEntry>
   onFileSelect?: (path: string) => void
+  /** Show the file-tree rail. Off for single-file embeds where the host owns navigation. */
+  showTree?: boolean
   className?: string
 }
 
@@ -32,6 +34,7 @@ export function CodeView({
   paths,
   gitStatus,
   onFileSelect,
+  showTree = true,
   className,
 }: CodeViewProps) {
   const treePaths = React.useMemo(() => {
@@ -41,16 +44,18 @@ export function CodeView({
 
   return (
     <div className={cn("flex h-full min-h-0 w-full", className)}>
-      <div className="flex w-60 shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-lowest">
-        <RichFileTree
-          paths={treePaths}
-          selectedPath={path}
-          onSelect={(next) => onFileSelect?.(next)}
-          gitStatus={gitStatus}
-          search={treePaths.length > 12}
-          height="100%"
-        />
-      </div>
+      {showTree && (
+        <div className="flex w-60 shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-lowest">
+          <RichFileTree
+            paths={treePaths}
+            selectedPath={path}
+            onSelect={(next) => onFileSelect?.(next)}
+            gitStatus={gitStatus}
+            search={treePaths.length > 12}
+            height="100%"
+          />
+        </div>
+      )}
       <div className="flex min-w-0 flex-1 flex-col bg-surface-container">
         <FileBreadcrumb path={path} />
         <div className="min-h-0 flex-1">

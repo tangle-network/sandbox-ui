@@ -48,6 +48,8 @@ export interface SandboxArtifactPaneProps {
   paths?: ReadonlyArray<string>
   /** Per-path git-status decorations for the file tree. */
   gitStatus?: ReadonlyArray<RichFileTreeGitEntry>
+  /** Show the Code view's file-tree rail. Off for single-file embeds where the host owns navigation/tabs. */
+  showTree?: boolean
   /** Exposed ports; presence enables the Ports tab. */
   ports?: ExposedPort[]
   /** Live preview origin; presence enables the Preview tab. */

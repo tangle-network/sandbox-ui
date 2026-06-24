@@ -37,6 +37,7 @@ export function SandboxArtifactPane({
   artifact,
   paths,
   gitStatus,
+  showTree,
   ports,
   previewUrl,
   terminal,
@@ -133,6 +134,7 @@ export function SandboxArtifactPane({
             language={artifact.language}
             paths={paths}
             gitStatus={gitStatus}
+            showTree={showTree}
             onFileSelect={onFileSelect}
           />
         )}

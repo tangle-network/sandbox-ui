@@ -240,7 +240,7 @@ export function IntegrationsPanel({
   const [disconnectTarget, setDisconnectTarget] = React.useState<{
     connectionId: string;
     name: string;
-    account?: IntegrationConnection["account"];
+    accountDisplay?: string | null;
   } | null>(null);
   const [isDisconnecting, setIsDisconnecting] = React.useState(false);
   const [disconnectError, setDisconnectError] = React.useState<string | null>(
@@ -328,9 +328,7 @@ export function IntegrationsPanel({
     );
   }
 
-  const disconnectAccountLabel =
-    disconnectTarget?.account?.displayName ??
-    disconnectTarget?.account?.identity;
+  const disconnectAccountLabel = disconnectTarget?.accountDisplay;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -399,6 +397,11 @@ export function IntegrationsPanel({
                   key={`${provider.providerId}:${connectorId}`}
                   data-testid={`integration-${provider.providerId}`}
                   data-connected="true"
+                  title={
+                    live.accountDisplay
+                      ? `${name} — ${live.accountDisplay}`
+                      : name
+                  }
                   className={cn(
                     "relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
                     "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]",
@@ -413,7 +416,7 @@ export function IntegrationsPanel({
                       setDisconnectTarget({
                         connectionId: live.id,
                         name,
-                        account: live.account,
+                        accountDisplay: live.accountDisplay,
                       })
                     }
                     data-testid={`disconnect-${provider.providerId}`}
@@ -428,9 +431,27 @@ export function IntegrationsPanel({
                     domainFallback={domainLogoFallback}
                     logoToken={logoToken}
                   />
-                  <span className="line-clamp-2 h-8 w-full text-xs font-medium leading-4 text-foreground">
-                    {name}
-                  </span>
+                  {/* Fixed 2-line block on every tile keeps the grid uniform
+                      (issue #2): with an account, the name takes one line and
+                      the account the second; without, the name may wrap to two. */}
+                  <div className="flex h-8 w-full flex-col justify-center leading-4">
+                    <span
+                      className={cn(
+                        "w-full text-xs font-medium text-foreground",
+                        live.accountDisplay ? "truncate" : "line-clamp-2",
+                      )}
+                    >
+                      {name}
+                    </span>
+                    {live.accountDisplay ? (
+                      <span
+                        className="w-full truncate text-[11px] leading-4 text-muted-foreground"
+                        data-testid={`account-${provider.providerId}`}
+                      >
+                        {live.accountDisplay}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               );
             }

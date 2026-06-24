@@ -93,13 +93,14 @@ export const WithConnections: Story = {
           providerId: "slack",
           connectorId: "slack",
           status: "connected",
-          account: { displayName: "tangle.slack.com" },
+          accountDisplay: "tangle.slack.com",
         },
         {
           id: "conn_github",
           providerId: "github",
           connectorId: "github",
           status: "connected",
+          accountDisplay: "octocat",
         },
       ]}
     />

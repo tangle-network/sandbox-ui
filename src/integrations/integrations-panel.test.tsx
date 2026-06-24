@@ -67,13 +67,17 @@ describe("IntegrationsPanel", () => {
         providerId: "google",
         connectorId: "gmail",
         status: "connected",
-        account: { displayName: "alice@example.com" },
+        accountDisplay: "alice@example.com",
       },
     ];
     renderPanel({ connections: live, onConnect, onDisconnect });
 
     const tile = screen.getByTestId("integration-google");
     expect(tile).toHaveAttribute("data-connected", "true");
+    // The tile shows which account is linked, under the provider name.
+    expect(screen.getByTestId("account-google")).toHaveTextContent(
+      "alice@example.com",
+    );
     // Clicking a connected tile must NOT re-initiate connect.
     fireEvent.click(tile);
     expect(onConnect).not.toHaveBeenCalled();
@@ -99,6 +103,31 @@ describe("IntegrationsPanel", () => {
       providerId: "slack",
       connectorId: "slack",
     });
+  });
+
+  it("renders the connected account when present and nothing extra when absent", () => {
+    renderPanel({
+      connections: [
+        {
+          id: "c1",
+          providerId: "google",
+          connectorId: "gmail",
+          status: "connected",
+          accountDisplay: "alice@example.com",
+        },
+        {
+          id: "c2",
+          providerId: "slack",
+          connectorId: "slack",
+          status: "connected",
+          // no accountDisplay → graceful: no extra line
+        },
+      ],
+    });
+    expect(screen.getByTestId("account-google")).toHaveTextContent(
+      "alice@example.com",
+    );
+    expect(screen.queryByTestId("account-slack")).toBeNull();
   });
 
   it("does not disconnect when the confirmation dialog is cancelled", async () => {

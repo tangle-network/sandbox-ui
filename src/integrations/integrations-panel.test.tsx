@@ -151,6 +151,30 @@ describe("IntegrationsPanel", () => {
     expect(onDisconnect).not.toHaveBeenCalled();
   });
 
+  it("lets the user escape the dialog while a disconnect is in flight", async () => {
+    const user = userEvent.setup();
+    // A request that never settles must not trap the user in the dialog.
+    const onDisconnect = vi.fn().mockReturnValue(new Promise<void>(() => {}));
+    const live: IntegrationConnection[] = [
+      {
+        id: "conn_1",
+        providerId: "google",
+        connectorId: "gmail",
+        status: "connected",
+      },
+    ];
+    renderPanel({ connections: live, onDisconnect });
+
+    await user.click(screen.getByTestId("disconnect-google"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByTestId("confirm-disconnect"));
+    expect(onDisconnect).toHaveBeenCalledWith("conn_1");
+
+    // Cancel stays enabled mid-request and closes the dialog.
+    await user.click(within(dialog).getByTestId("cancel-disconnect"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("keeps the dialog open and surfaces an error when disconnect fails", async () => {
     const user = userEvent.setup();
     const onDisconnect = vi.fn().mockRejectedValue(new Error("network down"));

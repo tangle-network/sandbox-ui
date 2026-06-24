@@ -42,6 +42,46 @@ describe("providerLogoCandidates", () => {
   it("yields no candidates for an empty id (drives the monogram fallback)", () => {
     expect(providerLogoCandidates({ id: "" })).toEqual([]);
   });
+
+  it("does not add domain candidates by default (shared callers stay unchanged)", () => {
+    expect(providerLogoCandidates({ id: "attio" })).toEqual([
+      "https://cdn.simpleicons.org/attio",
+    ]);
+  });
+
+  it("appends a guessed-domain favicon after simpleicons when domainFallback is on", () => {
+    const out = providerLogoCandidates({ id: "attio", domainFallback: true });
+    expect(out[0]).toBe("https://cdn.simpleicons.org/attio");
+    // The token-free favicon is the last candidate before the monogram fallback.
+    expect(out[out.length - 1]).toBe(
+      "https://icons.duckduckgo.com/ip3/attio.com.ico",
+    );
+  });
+
+  it("tries logo.dev before the favicon when a token is provided", () => {
+    const out = providerLogoCandidates({
+      id: "attio",
+      domainFallback: true,
+      logoToken: "pk_test123",
+    });
+    const logoDevIdx = out.findIndex((u) =>
+      u.startsWith("https://img.logo.dev/"),
+    );
+    const ddgIdx = out.indexOf(
+      "https://icons.duckduckgo.com/ip3/attio.com.ico",
+    );
+    expect(out[logoDevIdx]).toBe(
+      "https://img.logo.dev/attio.com?token=pk_test123&format=png&size=128&fallback=404",
+    );
+    expect(logoDevIdx).toBeGreaterThanOrEqual(0);
+    expect(logoDevIdx).toBeLessThan(ddgIdx);
+  });
+
+  it("emits no domain candidates for an empty id even with domainFallback on", () => {
+    expect(providerLogoCandidates({ id: "", domainFallback: true })).toEqual(
+      [],
+    );
+  });
 });
 
 describe("ProviderIcon", () => {

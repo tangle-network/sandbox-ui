@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { IntegrationsPanel } from "./integrations-panel";
 import type { IntegrationConnection, IntegrationProvider } from "./types";
 
@@ -50,7 +57,8 @@ describe("IntegrationsPanel", () => {
     });
   });
 
-  it("renders a connected tile as disabled (not a connect button) with a hover-reveal manage affordance", () => {
+  it("renders a connected tile (not a connect button) and disconnects only after confirming in the dialog", async () => {
+    const user = userEvent.setup();
     const onConnect = vi.fn();
     const onDisconnect = vi.fn();
     const live: IntegrationConnection[] = [
@@ -70,14 +78,20 @@ describe("IntegrationsPanel", () => {
     fireEvent.click(tile);
     expect(onConnect).not.toHaveBeenCalled();
 
-    // The manage affordance (gear) triggers disconnect/manage.
-    fireEvent.click(screen.getByTestId("manage-google"));
-    expect(onDisconnect).toHaveBeenCalledWith("conn_1");
+    // The disconnect control opens a confirmation dialog rather than
+    // disconnecting on a single click.
+    await user.click(screen.getByTestId("disconnect-google"));
+    expect(onDisconnect).not.toHaveBeenCalled();
 
-    // Hover-reveal pattern: gear is opacity-0 until group-hover.
-    expect(screen.getByTestId("manage-google").className).toContain(
-      "group-hover:opacity-100",
-    );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(/Disconnect Google Workspace/),
+    ).toBeInTheDocument();
+    // The connected account identity is surfaced in the confirmation copy.
+    expect(within(dialog).getByText(/alice@example\.com/)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByTestId("confirm-disconnect"));
+    await waitFor(() => expect(onDisconnect).toHaveBeenCalledWith("conn_1"));
 
     // Slack (unconnected) remains clickable to connect.
     fireEvent.click(screen.getByTestId("integration-slack"));
@@ -87,7 +101,54 @@ describe("IntegrationsPanel", () => {
     });
   });
 
-  it("matches a provider-only connection that omits connectorId (platform hub shape)", () => {
+  it("does not disconnect when the confirmation dialog is cancelled", async () => {
+    const user = userEvent.setup();
+    const onDisconnect = vi.fn();
+    const live: IntegrationConnection[] = [
+      {
+        id: "conn_1",
+        providerId: "google",
+        connectorId: "gmail",
+        status: "connected",
+      },
+    ];
+    renderPanel({ connections: live, onDisconnect });
+
+    await user.click(screen.getByTestId("disconnect-google"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByTestId("cancel-disconnect"));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(onDisconnect).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open and surfaces an error when disconnect fails", async () => {
+    const user = userEvent.setup();
+    const onDisconnect = vi.fn().mockRejectedValue(new Error("network down"));
+    const live: IntegrationConnection[] = [
+      {
+        id: "conn_1",
+        providerId: "google",
+        connectorId: "gmail",
+        status: "connected",
+      },
+    ];
+    renderPanel({ connections: live, onDisconnect });
+
+    await user.click(screen.getByTestId("disconnect-google"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByTestId("confirm-disconnect"));
+
+    await waitFor(() =>
+      expect(within(dialog).getByText(/network down/)).toBeInTheDocument(),
+    );
+    // The dialog stays open so the user can retry or cancel.
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(onDisconnect).toHaveBeenCalledWith("conn_1");
+  });
+
+  it("matches a provider-only connection that omits connectorId (platform hub shape)", async () => {
+    const user = userEvent.setup();
     const onConnect = vi.fn();
     const onDisconnect = vi.fn();
     // The platform hub keys connections by provider only: catalog providers
@@ -110,8 +171,11 @@ describe("IntegrationsPanel", () => {
     // Clicking an already-connected provider must not re-initiate OAuth.
     fireEvent.click(tile);
     expect(onConnect).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByTestId("manage-slack"));
-    expect(onDisconnect).toHaveBeenCalledWith("conn_hub");
+
+    await user.click(screen.getByTestId("disconnect-slack"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByTestId("confirm-disconnect"));
+    await waitFor(() => expect(onDisconnect).toHaveBeenCalledWith("conn_hub"));
   });
 
   it("treats revoked connections as not live", () => {

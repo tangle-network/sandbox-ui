@@ -128,6 +128,19 @@ export const PROVIDER_LOGO_SLUGS: Record<string, string> = {
 export function providerLogoCandidates(opts: {
   id: string;
   iconUrl?: string | null;
+  /**
+   * When true, append domain-based logo candidates (resolved from a guessed
+   * `{slug}.com` domain) after the simpleicons slugs and before the monogram
+   * fallback. Off by default so shared callers — e.g. `ProviderIcon` on the
+   * always-loaded assistant surfaces — keep their narrower resolution chain and
+   * smaller external-host (CSP) footprint. The integrations panel opts in.
+   */
+  domainFallback?: boolean;
+  /**
+   * Optional logo.dev publishable key. When provided alongside `domainFallback`,
+   * a higher-quality logo.dev candidate is tried before the token-free favicon.
+   */
+  logoToken?: string | null;
 }): string[] {
   const out: string[] = [];
   if (opts.iconUrl) out.push(opts.iconUrl);
@@ -143,6 +156,24 @@ export function providerLogoCandidates(opts: {
   slugs.add(raw.replace(/[-_\s]/g, ""));
   for (const slug of slugs) {
     if (slug) out.push(`https://cdn.simpleicons.org/${slug}`);
+  }
+  // Long-tail fallback: simpleicons has no icon for most B2B SaaS, so guess a
+  // domain from the slug and resolve a logo for it. Both sources return an HTTP
+  // error (not a generic placeholder) on a miss, so the <img> walker falls
+  // through to the monogram instead of stranding on a wrong default icon.
+  if (opts.domainFallback) {
+    const bare = norm.replace(/-/g, "");
+    if (bare) {
+      const domain = `${bare}.com`;
+      if (opts.logoToken) {
+        out.push(
+          `https://img.logo.dev/${domain}?token=${encodeURIComponent(
+            opts.logoToken,
+          )}&format=png&size=128&fallback=404`,
+        );
+      }
+      out.push(`https://icons.duckduckgo.com/ip3/${domain}.ico`);
+    }
   }
   return out;
 }
@@ -178,6 +209,10 @@ export interface ProviderIconProps {
   /** Square edge length in px. Default 24. */
   size?: number;
   className?: string;
+  /** Append domain-based logo candidates (see `providerLogoCandidates`). Off by default. */
+  domainFallback?: boolean;
+  /** Optional logo.dev publishable key, used only when `domainFallback` is on. */
+  logoToken?: string | null;
 }
 
 /**
@@ -192,19 +227,24 @@ export function ProviderIcon({
   displayName,
   size = 24,
   className,
+  domainFallback,
+  logoToken,
 }: ProviderIconProps) {
   const candidates = React.useMemo(
-    () => providerLogoCandidates({ id, iconUrl }),
-    [id, iconUrl],
+    () => providerLogoCandidates({ id, iconUrl, domainFallback, logoToken }),
+    [id, iconUrl, domainFallback, logoToken],
   );
   const [index, setIndex] = React.useState(0);
   // Reset the candidate cursor when the inputs that build the chain change, so an
   // instance reused for a different provider — or the same id with a new iconUrl —
   // doesn't strand on the prior chain's exhausted cursor (or the monogram).
-  // Keyed on both `id` and `iconUrl` since both feed `providerLogoCandidates`.
-  // React's "adjust state on prop change during render" pattern. The space
-  // separator can't appear in a normalized slug or a URL, so the key is unambiguous.
-  const candidateKey = `${id} ${iconUrl ?? ""}`;
+  // Keyed on every input that feeds `providerLogoCandidates` so the chain rebuilds
+  // when any of them change. React's "adjust state on prop change during render"
+  // pattern. The space separator can't appear in a normalized slug, a URL, or a
+  // logo.dev `pk_…` token, so the key is unambiguous.
+  const candidateKey = `${id} ${iconUrl ?? ""} ${domainFallback ? "1" : "0"} ${
+    logoToken ?? ""
+  }`;
   const [seenKey, setSeenKey] = React.useState(candidateKey);
   if (candidateKey !== seenKey) {
     setSeenKey(candidateKey);

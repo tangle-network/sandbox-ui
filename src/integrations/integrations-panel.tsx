@@ -1,9 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent, EmptyState } from "@tangle-network/ui/primitives";
+import {
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  EmptyState,
+} from "@tangle-network/ui/primitives";
 import { cn } from "@tangle-network/ui/utils";
-import { Check, Search, Settings2 } from "lucide-react";
+import { Check, Search, Unplug } from "lucide-react";
 import {
   monogramColor,
   normalizeProviderId,
@@ -46,6 +57,18 @@ export interface IntegrationsPanelProps {
   featuredIds?: string[];
   /** Initial sort mode. Defaults to "featured". */
   defaultSort?: IntegrationSort;
+  /**
+   * Optional logo.dev publishable key. When set, tiles try a higher-quality
+   * logo.dev logo (by guessed domain) before the token-free favicon fallback.
+   */
+  logoToken?: string;
+  /**
+   * Whether to resolve long-tail logos from a guessed domain (DuckDuckGo
+   * favicon, plus logo.dev when `logoToken` is set) before the monogram.
+   * Defaults to true. Set false for internal/private catalogs or strict CSPs
+   * that can't allowlist `icons.duckduckgo.com` / `img.logo.dev`.
+   */
+  domainLogoFallback?: boolean;
   className?: string;
 }
 
@@ -89,20 +112,31 @@ function defaultConnectorOf(provider: IntegrationProvider): string {
   return provider.connectors?.[0]?.connectorId ?? provider.providerId;
 }
 
+// Single logo edge length shared by connected and unconnected tiles so the grid
+// reads as one uniform set of brand marks (clears the top-corner check badge and
+// disconnect control on connected tiles).
+const LOGO_SIZE = 48;
+
 function ProviderLogo({
   provider,
-  size = 56,
+  size = LOGO_SIZE,
+  domainFallback,
+  logoToken,
 }: {
   provider: IntegrationProvider;
   size?: number;
+  domainFallback?: boolean;
+  logoToken?: string;
 }) {
   const candidates = React.useMemo(
     () =>
       providerLogoCandidates({
         id: provider.providerId,
         iconUrl: provider.iconUrl,
+        domainFallback,
+        logoToken,
       }),
-    [provider],
+    [provider, domainFallback, logoToken],
   );
   const [index, setIndex] = React.useState(0);
   const label = (provider.displayName ?? provider.providerId).trim();
@@ -195,10 +229,23 @@ export function IntegrationsPanel({
   emptyCatalogLabel = "No integrations available yet.",
   featuredIds = DEFAULT_FEATURED_IDS,
   defaultSort = "featured",
+  logoToken,
+  domainLogoFallback = true,
   className,
 }: IntegrationsPanelProps) {
   const [query, setQuery] = React.useState("");
   const [sort, setSort] = React.useState<IntegrationSort>(defaultSort);
+  // A connected tile's disconnect control sets this target, which opens the
+  // confirmation dialog. A single controlled dialog serves every tile.
+  const [disconnectTarget, setDisconnectTarget] = React.useState<{
+    connectionId: string;
+    name: string;
+    account?: IntegrationConnection["account"];
+  } | null>(null);
+  const [isDisconnecting, setIsDisconnecting] = React.useState(false);
+  const [disconnectError, setDisconnectError] = React.useState<string | null>(
+    null,
+  );
 
   const connectionIndex = React.useMemo(
     () => buildConnectionIndex(connections),
@@ -223,6 +270,23 @@ export function IntegrationsPanel({
     });
     return sorted;
   }, [catalog, query, sort, featuredRank]);
+
+  const confirmDisconnect = React.useCallback(async () => {
+    if (!disconnectTarget) return;
+    setIsDisconnecting(true);
+    setDisconnectError(null);
+    try {
+      await Promise.resolve(onDisconnect(disconnectTarget.connectionId));
+      // Close only on success; on failure keep the dialog open with the error.
+      setDisconnectTarget(null);
+    } catch (e) {
+      setDisconnectError(
+        e instanceof Error ? e.message : "Failed to disconnect.",
+      );
+    } finally {
+      setIsDisconnecting(false);
+    }
+  }, [disconnectTarget, onDisconnect]);
 
   if (error) {
     return (
@@ -263,6 +327,10 @@ export function IntegrationsPanel({
       />
     );
   }
+
+  const disconnectAccountLabel =
+    disconnectTarget?.account?.displayName ??
+    disconnectTarget?.account?.identity;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -332,7 +400,7 @@ export function IntegrationsPanel({
                   data-testid={`integration-${provider.providerId}`}
                   data-connected="true"
                   className={cn(
-                    "group relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
+                    "relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
                     "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]",
                   )}
                 >
@@ -341,16 +409,26 @@ export function IntegrationsPanel({
                   </span>
                   <button
                     type="button"
-                    onClick={() => onDisconnect(live.id)}
-                    data-testid={`manage-${provider.providerId}`}
-                    aria-label={`Manage ${name}`}
-                    title="Manage connection"
-                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground group-hover:opacity-100"
+                    onClick={() =>
+                      setDisconnectTarget({
+                        connectionId: live.id,
+                        name,
+                        account: live.account,
+                      })
+                    }
+                    data-testid={`disconnect-${provider.providerId}`}
+                    aria-label={`Disconnect ${name}`}
+                    title="Disconnect"
+                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-background hover:text-foreground focus-visible:bg-background focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   >
-                    <Settings2 className="h-3.5 w-3.5" />
+                    <Unplug className="h-3.5 w-3.5" />
                   </button>
-                  <ProviderLogo provider={provider} size={48} />
-                  <span className="line-clamp-2 w-full text-xs font-medium text-foreground">
+                  <ProviderLogo
+                    provider={provider}
+                    domainFallback={domainLogoFallback}
+                    logoToken={logoToken}
+                  />
+                  <span className="line-clamp-2 h-8 w-full text-xs font-medium leading-4 text-foreground">
                     {name}
                   </span>
                 </div>
@@ -376,8 +454,12 @@ export function IntegrationsPanel({
                   "hover:border-primary/40 hover:bg-accent/40 hover:shadow-sm focus:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20",
                 )}
               >
-                <ProviderLogo provider={provider} size={56} />
-                <span className="line-clamp-2 w-full text-xs font-medium text-foreground">
+                <ProviderLogo
+                  provider={provider}
+                  domainFallback={domainLogoFallback}
+                  logoToken={logoToken}
+                />
+                <span className="line-clamp-2 h-8 w-full text-xs font-medium leading-4 text-foreground">
                   {name}
                 </span>
               </button>
@@ -385,6 +467,62 @@ export function IntegrationsPanel({
           })}
         </div>
       )}
+
+      <Dialog
+        open={!!disconnectTarget}
+        onOpenChange={(open) => {
+          // Block dismissal mid-request; otherwise reset on close.
+          if (!open && !isDisconnecting) {
+            setDisconnectTarget(null);
+            setDisconnectError(null);
+          }
+        }}
+      >
+        <DialogContent
+          className="max-w-sm"
+          // The trigger tile may re-render as unconnected after a successful
+          // disconnect, so don't try to restore focus to a vanished element.
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              Disconnect {disconnectTarget?.name ?? "integration"}?
+            </DialogTitle>
+            <DialogDescription>
+              This removes Sandbox&apos;s access to your{" "}
+              {disconnectTarget?.name ?? "this"} account
+              {disconnectAccountLabel ? ` (${disconnectAccountLabel})` : ""}. You
+              can reconnect anytime.
+            </DialogDescription>
+          </DialogHeader>
+          {disconnectError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {disconnectError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDisconnectTarget(null);
+                setDisconnectError(null);
+              }}
+              disabled={isDisconnecting}
+              data-testid="cancel-disconnect"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              loading={isDisconnecting}
+              onClick={confirmDisconnect}
+              data-testid="confirm-disconnect"
+            >
+              Disconnect
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

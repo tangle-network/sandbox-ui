@@ -171,12 +171,12 @@ export function StandalonePricingPage({
       )}
 
       {/* FAQ */}
-      <div className="mx-auto max-w-2xl space-y-4 border-t border-border pt-12">
+      <div className="mx-auto max-w-2xl space-y-4 border-t border-[var(--md3-outline-variant)] pt-12">
         <h2 className="text-center text-xl font-bold text-foreground mb-6">
           Frequently Asked Questions
         </h2>
         {FAQ.map(({ q, a }) => (
-          <details key={q} className="group rounded-xl border border-border bg-card overflow-hidden">
+          <details key={q} className="group rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
             <summary className="flex cursor-pointer items-center justify-between px-6 py-4 font-medium text-foreground text-sm">
               {q}
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />

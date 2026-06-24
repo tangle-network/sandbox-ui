@@ -69,7 +69,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <div className="flex justify-end gap-2">
             <button
@@ -92,14 +92,14 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
       )}
 
       {loading ? (
-        <div className="rounded-lg border border-border bg-muted/20 p-6 text-center">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
           <Camera className="mx-auto h-6 w-6 text-muted-foreground animate-pulse mb-2" />
           <p className="text-sm text-muted-foreground">Loading snapshots...</p>
         </div>
       ) : snapshots.length > 0 ? (
-        <div className="rounded-lg border border-border overflow-hidden">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-muted/30 border-b border-border">
+            <thead className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
               <tr>
                 <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">ID</th>
                 <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Created</th>
@@ -128,7 +128,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
                     {s.tags?.length ? (
                       <div className="flex items-center gap-1 flex-wrap">
                         {s.tags.map((tag) => (
-                          <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground border border-border">
+                          <span key={tag} className="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-medium text-muted-foreground border border-[var(--md3-outline-variant)]">
                             {tag}
                           </span>
                         ))}
@@ -142,7 +142,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
                       <button
                         type="button"
                         onClick={() => onRestore(s.id)}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors border border-border"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-surface-container-high px-2.5 py-1 text-xs font-medium text-foreground hover:bg-surface-container-highest transition-colors border border-[var(--md3-outline-variant)]"
                         title="Restore to new sandbox"
                       >
                         <RotateCcw className="h-3 w-3" />
@@ -166,7 +166,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
           </table>
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-muted/20 p-6 text-center">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
           <Camera className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground">No snapshots yet</p>
           <p className="text-xs text-muted-foreground mt-1">Create a snapshot to save the current state of your sandbox.</p>

@@ -131,7 +131,7 @@ export function TaskBoard({
                       event.preventDefault();
                       onClickItem(item);
                     }}
-                    className="group w-full rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-accent/50"
+                    className="group w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-high p-3 text-left transition-colors hover:border-accent/50"
                   >
                     <p className="text-sm font-medium text-foreground">
                       {item.title}
@@ -147,7 +147,7 @@ export function TaskBoard({
                           (renderBadge ? (
                             renderBadge(item.priority, "priority")
                           ) : (
-                            <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            <span className="rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                               {item.priority}
                             </span>
                           ))}
@@ -157,7 +157,7 @@ export function TaskBoard({
                           ) : (
                             <span
                               key={tag}
-                              className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground"
+                              className="rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] text-muted-foreground"
                             >
                               {tag}
                             </span>
@@ -188,7 +188,7 @@ export function TaskBoard({
             <div
               key={col.id}
               className={cn(
-                "flex w-72 shrink-0 flex-col rounded-xl border border-border bg-card/50 border-t-2",
+                "flex w-72 shrink-0 flex-col rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container border-t-2",
                 col.accent ?? "border-t-muted-foreground/30",
               )}
             >
@@ -197,7 +197,7 @@ export function TaskBoard({
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     {col.label}
                   </h3>
-                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-border px-1.5 text-[10px] font-medium text-muted-foreground">
+                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-[var(--md3-outline-variant)] px-1.5 text-[10px] font-medium text-muted-foreground">
                     {colItems.length}
                   </span>
                 </div>

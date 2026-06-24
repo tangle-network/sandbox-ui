@@ -107,10 +107,10 @@ export function ReasoningLevelPicker({
           type="button"
           disabled={disabled}
           className={cn(
-            "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5",
+            "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5",
             "text-xs font-medium text-foreground shadow-sm transition-colors",
-            "hover:border-border hover:bg-muted/40 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-            "data-[state=open]:border-border data-[state=open]:bg-muted/40",
+            "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
             "disabled:cursor-not-allowed disabled:opacity-50",
             className,
             triggerClassName,
@@ -127,8 +127,8 @@ export function ReasoningLevelPicker({
           align="start"
           sideOffset={6}
           className={cn(
-            "z-50 w-64 overflow-hidden rounded-[var(--radius-md)] border border-border bg-card p-1",
-            "shadow-[var(--shadow-dropdown)]",
+            "z-50 w-64 overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
+            "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

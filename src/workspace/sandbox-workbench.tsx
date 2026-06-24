@@ -161,7 +161,7 @@ function ArtifactTabs({
   if (artifacts.length === 0) return null;
 
   return (
-    <div className="flex items-center overflow-x-auto border-b border-border bg-muted/20">
+    <div className="flex items-center overflow-x-auto border-b border-[var(--md3-outline-variant)] bg-surface-container-high">
       {artifacts.map((artifact) => {
         const Icon = getArtifactTabIcon(artifact.kind);
         const isActive = artifact.id === activeArtifactId;
@@ -170,10 +170,10 @@ function ArtifactTabs({
           <div
             key={artifact.id}
             className={cn(
-              "group flex shrink-0 items-center border-r border-border bg-background relative",
+              "group flex shrink-0 items-center border-r border-[var(--md3-outline-variant)] bg-surface-container relative",
               isActive
                 ? "text-foreground after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary"
-                : "text-muted-foreground hover:bg-muted/50 cursor-pointer",
+                : "text-muted-foreground hover:bg-surface-container-high cursor-pointer",
             )}
           >
             <button
@@ -384,7 +384,7 @@ export function SandboxWorkbench({
   };
 
   const centerHeader = (
-    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-border bg-muted/50 px-4 py-3.5">
+    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-3.5">
       <div className="min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
           Tangle Sandbox
@@ -408,7 +408,7 @@ export function SandboxWorkbench({
       meta={session.meta}
       headerActions={session.headerActions}
       className="h-full"
-      contentClassName="bg-background"
+      contentClassName="bg-surface-container"
     >
       <div className="flex h-full min-h-0 flex-col">
         <ChatContainer
@@ -417,7 +417,7 @@ export function SandboxWorkbench({
           presentation={session.presentation ?? "timeline"}
         />
         {composerControls && (
-          <div className="shrink-0 border-t border-border bg-muted/30 px-3 py-2">
+          <div className="shrink-0 border-t border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
             {composerControls}
           </div>
         )}
@@ -426,14 +426,14 @@ export function SandboxWorkbench({
   );
 
   const artifactPanel = artifacts.length > 0 ? (
-    <section className="flex h-full min-h-0 flex-col bg-background">
+    <section className="flex h-full min-h-0 flex-col bg-surface-container">
       <ArtifactTabs
         artifacts={artifacts}
         activeArtifactId={resolvedArtifactId}
         onSelect={handleArtifactChange}
         onClose={onArtifactClose}
       />
-      <div className="min-h-0 flex-1 overflow-auto bg-background">
+      <div className="min-h-0 flex-1 overflow-auto bg-surface-container">
         {activeArtifact ? (
           renderArtifact(activeArtifact)
         ) : (

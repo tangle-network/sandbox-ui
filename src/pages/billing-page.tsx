@@ -100,7 +100,7 @@ function BillingPageSkeleton({
         <SkeletonCard />
         <SkeletonCard />
       </div>
-      <div className="space-y-4 rounded-xl border border-border bg-card p-6">
+      <div className="space-y-4 rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container p-6">
         <Skeleton className="h-6 w-48" />
         <div className="h-48">
           <Skeleton className="h-full w-full" />
@@ -302,7 +302,7 @@ export function BillingPage({
               unit="credits"
             />
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-12 text-center">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container p-12 text-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"

@@ -345,7 +345,7 @@ export default function TerminalView({
 
       {/* Connection status overlay */}
       {(!isConnected || error) && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background">
+        <div className="absolute inset-0 flex items-center justify-center bg-surface-container-lowest">
           <div className="text-center">
             {error ? (
               <>

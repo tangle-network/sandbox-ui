@@ -435,9 +435,10 @@ describe("ModelPicker brand identity", () => {
     await user.click(screen.getByRole("button"));
 
     // This model is also recommended (matches a curated seed by dedup key),
-    // so its row — and the routed host→lab line — renders in both the
-    // Recommended section and its provider group.
-    expect((await screen.findAllByText("OpenRouter → Anthropic")).length).toBeGreaterThanOrEqual(1);
+    // so its row renders in both the Recommended section and its provider
+    // group. A router-served model (host ≠ lab) surfaces the host once as a
+    // compact "via <host>" tag instead of a redundant "Host → Lab" subtitle.
+    expect((await screen.findAllByText(/via\s+OpenRouter/i)).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders verified logo assets and no fake monogram text", async () => {

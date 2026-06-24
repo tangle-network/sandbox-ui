@@ -496,12 +496,12 @@ export function ModelPicker({
       aria-label={triggerLabel}
       disabled={disabled}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card",
+        "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container",
         "px-2.5 text-xs font-medium text-foreground shadow-sm",
         "transition-colors duration-[var(--transition-fast)]",
-        "hover:border-border hover:bg-muted/40",
+        "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high",
         "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-        "data-[state=open]:border-border data-[state=open]:bg-muted/40",
+        "data-[state=open]:border-[var(--md3-outline)] data-[state=open]:bg-surface-container-high",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         className,
         triggerClassName,
@@ -522,11 +522,11 @@ export function ModelPicker({
       disabled={disabled}
       className={cn(
         "flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)]",
-        "border border-border bg-card px-3 py-2.5 text-sm text-left",
+        "border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2.5 text-sm text-left",
         "transition-colors duration-[var(--transition-fast)]",
-        "hover:border-border hover:bg-muted/40",
+        "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high",
         "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-        "data-[state=open]:border-border data-[state=open]:bg-muted/40",
+        "data-[state=open]:border-[var(--md3-outline)] data-[state=open]:bg-surface-container-high",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         className,
         triggerClassName,
@@ -558,14 +558,14 @@ export function ModelPicker({
             className={cn(
               "z-50 w-[var(--radix-dropdown-menu-trigger-width)] min-w-[320px] max-w-[460px]",
               "max-h-[440px] overflow-hidden flex flex-col",
-              "rounded-[var(--radius-md)] border border-border bg-card shadow-[var(--shadow-dropdown)]",
+              "rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
               "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
               "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
             )}
           >
             {/* Search bar */}
-            <div className="flex items-center gap-2 border-b border-border bg-background/80 px-3 py-2">
+            <div className="flex items-center gap-2 border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
               <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <input
                 ref={searchInputRef}
@@ -657,7 +657,7 @@ export function ModelPicker({
             </div>
 
             {/* Footer count */}
-            <div className="border-t border-border px-3 py-1.5 text-[10px] text-muted-foreground">
+            <div className="border-t border-[var(--md3-outline-variant)] px-3 py-1.5 text-[10px] text-muted-foreground">
               {filtered.length} of {deduped.length} model{deduped.length === 1 ? "" : "s"}
             </div>
           </Popover.Content>
@@ -733,30 +733,30 @@ function ModelRow({
   const pricing = formatPricing(model.pricing);
   const ctx = formatContext(model.context_length);
   const identity = resolveModelBrandIdentity(model);
+  // The brand stack already renders host + lab logos. When a model is served
+  // through a router (host ≠ lab), surface that once as a compact "via" tag
+  // instead of repeating "Host → Lab" inside the subtitle.
+  const via = !identity.combined ? identity.host.label : null;
 
   return (
     <PickerItem onSelect={() => onSelect(id)} active={active} featured={featured}>
       <ModelBrandStack identity={identity} size="md" />
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-sm font-medium truncate">{model.name ?? model.id}</span>
-          {ctx && <span className="shrink-0 text-[10px] text-muted-foreground">{ctx}</span>}
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="truncate">{id}</span>
-          {!identity.combined && (
-            <>
-              <span className="shrink-0">·</span>
-              <span className="shrink-0">{identity.host.label} → {identity.lab.label}</span>
-            </>
-          )}
-          {pricing && (
-            <>
-              <span className="shrink-0">·</span>
-              <span className="shrink-0 font-mono">{pricing}</span>
-            </>
+        <div className="flex items-center gap-1.5">
+          <span className="min-w-0 truncate text-sm font-medium">{model.name ?? model.id}</span>
+          {via && (
+            <span className="shrink-0 rounded-full border border-[var(--md3-outline-variant)] bg-surface-container px-1.5 py-px text-[9px] font-medium text-muted-foreground">
+              via {via}
+            </span>
           )}
         </div>
+        {(ctx || pricing) && (
+          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {ctx && <span className="shrink-0">{ctx}</span>}
+            {ctx && pricing && <span className="shrink-0 opacity-40">·</span>}
+            {pricing && <span className="shrink-0 font-mono">{pricing}</span>}
+          </div>
+        )}
       </div>
     </PickerItem>
   );

@@ -51,7 +51,7 @@ export function ActivityFeed({
   return (
     <div
       className={cn(
-        "flex flex-col rounded-lg border border-border bg-card p-6",
+        "flex flex-col rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6",
         className,
       )}
     >

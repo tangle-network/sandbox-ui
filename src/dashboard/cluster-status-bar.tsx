@@ -21,35 +21,37 @@ export function ClusterStatusBar({ items, latency, className }: ClusterStatusBar
 
   return (
     <div className={cn("fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[90vw] animate-in slide-in-from-bottom flex justify-center", className)}>
-      <div className="overflow-hidden rounded-full border border-border bg-card px-6 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-8 shadow-sm">
-        
-        <div className="flex items-center gap-6">
-          {items.map((item, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="text-[var(--md3-primary)] [&_svg]:h-[18px] [&_svg]:w-[18px]">
-                {item.icon}
-              </span>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-[var(--md3-on-surface-variant)] uppercase tracking-wider font-bold">
+      <div className="flex items-center gap-4 overflow-x-auto rounded-full border border-[var(--md3-outline-variant)] bg-surface-container px-5 py-2.5 shadow-sm">
+        {items.map((item, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <span aria-hidden className="h-5 w-px shrink-0 bg-border" />}
+            <div className="flex shrink-0 items-center gap-2">
+              {item.icon ? (
+                <span className="flex shrink-0 items-center text-[var(--md3-primary)] [&_svg]:h-[18px] [&_svg]:w-[18px]">
+                  {item.icon}
+                </span>
+              ) : null}
+              <div className="flex flex-col leading-tight">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--md3-on-surface-variant)]">
                   {item.label}
                 </span>
-                <span className={cn("text-xs font-bold text-foreground", item.valueClass)}>
+                <span className={cn("text-sm font-bold tabular-nums text-foreground", item.valueClass)}>
                   {item.value}
                 </span>
               </div>
             </div>
-          ))}
-        </div>
+          </React.Fragment>
+        ))}
 
         {latency && (
           <>
-            <div className="h-6 w-px bg-border" />
-            <div className="flex items-center gap-3">
-              <div className="relative flex h-2.5 w-2.5 items-center justify-center">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
-              </div>
-              <span className="text-xs font-mono text-green-400 font-bold">{latency}</span>
+            <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+              </span>
+              <span className="font-mono text-xs font-bold text-green-400">{latency}</span>
             </div>
           </>
         )}

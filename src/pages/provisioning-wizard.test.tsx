@@ -387,7 +387,7 @@ describe("ProvisioningWizard — SSH key selection (issue #79)", () => {
     // unselected one does not.
     expect(laptopBtn.className).toContain("ring-1")
     expect(laptopBtn.className).toContain("ring-primary/20")
-    expect(desktopBtn.className).toContain("border-border")
+    expect(desktopBtn.className).toContain("border-[var(--md3-outline-variant)]")
     expect(desktopBtn.className).not.toContain("ring-1")
 
     // The check icon is the non-color affordance — it only appears for the

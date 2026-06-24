@@ -365,7 +365,7 @@ function ProfileCard({
 }: ProfileCardProps) {
   return (
     <Card
-      className="cursor-pointer p-4 transition-colors hover:border-border/80"
+      className="cursor-pointer p-4 transition-colors hover:border-[var(--md3-outline)]"
       onClick={onView}
     >
       <div className="flex items-start justify-between">
@@ -431,7 +431,7 @@ function ProfileCard({
 
       {/* Metrics */}
       {profile.metrics && profile.metrics.total_runs > 0 && (
-        <div className="mt-3 flex gap-4 border-border border-t pt-3 text-muted-foreground text-xs">
+        <div className="mt-3 flex gap-4 border-[var(--md3-outline-variant)] border-t pt-3 text-muted-foreground text-xs">
           <span>{profile.metrics.total_runs} runs</span>
           <span>{profile.metrics.success_rate.toFixed(0)}% success</span>
           <span>
@@ -601,7 +601,7 @@ function ProfileFormDialog({
               onChange={(e) =>
                 setFormData((d) => ({ ...d, extends: e.target.value }))
               }
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm"
             >
               <option value="">None (start from scratch)</option>
               {builtinProfiles.map((p) => (
@@ -639,7 +639,7 @@ function ProfileFormDialog({
               }
               placeholder="Custom system prompt for the agent..."
               rows={4}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-sm"
+              className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 font-mono text-sm"
             />
           </div>
 
@@ -673,7 +673,7 @@ function ProfileFormDialog({
               onChange={(e) =>
                 setFormData((d) => ({ ...d, is_public: e.target.checked }))
               }
-              className="rounded border-border"
+              className="rounded border-[var(--md3-outline-variant)]"
             />
             <label htmlFor="is_public" className="text-sm">
               Make this profile public (visible to other users)
@@ -858,7 +858,7 @@ function ProfileDetailDialog({
                 System Prompt
               </label>
               <div className="relative mt-1">
-                <pre className="max-h-48 overflow-auto rounded-lg bg-muted p-3 font-mono text-sm">
+                <pre className="max-h-48 overflow-auto rounded-lg bg-surface-container-low p-3 font-mono text-sm">
                   {profile.system_prompt}
                 </pre>
                 <Button
@@ -895,7 +895,7 @@ function ProfileDetailDialog({
 
           {/* Metrics */}
           {profile.metrics && profile.metrics.total_runs > 0 && (
-            <div className="rounded-lg border border-border p-4">
+            <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-high p-4">
               <label className="font-medium text-muted-foreground text-xs">
                 Performance Metrics
               </label>

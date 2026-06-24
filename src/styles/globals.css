@@ -23,6 +23,68 @@
 @source "../../node_modules/@tangle-network/ui/src/**/*.tsx";
 @source "../../node_modules/@tangle-network/ui/src/**/*.ts";
 
+/* Tailwind v4 utility generation for the design tokens. globals.css imports the
+ * brand CSS variables (tokens.css) but Tailwind v4 only emits `bg-*`/`text-*`/
+ * `border-*` utilities for colors registered in an `@theme` block — without this,
+ * `bg-card`, `bg-surface-container*`, `bg-muted`, etc. produce NO rule and every
+ * surface renders transparent (body color + borders only = the "flat" theme).
+ * Map the semantic + MD3 surface tokens to `--color-*` so the utilities exist and
+ * stay theme-reactive (the underlying vars flip with dark / vault). */
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* MD3 surface elevation ladder — the depth system (hex tokens, theme-reactive). */
+  --color-surface: var(--md3-surface);
+  --color-surface-dim: var(--md3-surface-dim);
+  --color-surface-bright: var(--md3-surface-bright);
+  --color-surface-container-lowest: var(--md3-surface-container-lowest);
+  --color-surface-container-low: var(--md3-surface-container-low);
+  --color-surface-container: var(--md3-surface-container);
+  --color-surface-container-high: var(--md3-surface-container-high);
+  --color-surface-container-highest: var(--md3-surface-container-highest);
+}
+
+/* `@pierre/trees` (RichFileTree) is CSS-var driven and ships LIGHT defaults with
+ * no dark switching — `--trees-bg: var(--trees-bg-override, <light>)`. Without the
+ * `*-override` vars it paints a near-white `#f8f8f8` container even inside a dark
+ * subtree (the file-tree-rail-looks-light bug). Map the overrides onto the design
+ * tokens so the tree follows light/vault ↔ dark automatically (the surface +
+ * foreground vars already flip per theme). Apply via `.sandbox-tree-surface`. */
+.sandbox-tree-surface {
+  --trees-bg-override: var(--md3-surface-container-lowest);
+  --trees-bg-muted-override: var(--md3-surface-container-low);
+  --trees-search-bg-override: var(--md3-surface-container);
+  --trees-input-bg-override: var(--md3-surface-container);
+  --trees-hover-bg-override: var(--md3-surface-container-high);
+  --trees-selected-bg-override: hsl(var(--primary) / 0.16);
+  --trees-selected-fg-override: hsl(var(--foreground));
+  --trees-fg-override: hsl(var(--foreground));
+  --trees-fg-muted-override: hsl(var(--muted-foreground));
+  --trees-muted-fg-override: hsl(var(--muted-foreground));
+  --trees-search-fg-override: hsl(var(--foreground));
+  --trees-border-color-override: var(--md3-outline-variant);
+  --trees-indent-guide-bg-override: var(--md3-outline-variant);
+  --trees-accent-override: hsl(var(--primary));
+  --trees-focus-ring-color-override: hsl(var(--primary) / 0.4);
+}
+
 @layer base {
   :root {
     --sandbox: var(--primary);
@@ -91,38 +153,39 @@
     box-shadow: none;
   }
 
-  /* Solid depth cards */
+  /* Resting card — L2 surface in the MD3 elevation ladder. */
   .glass-card {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
+    background: var(--md3-surface-container);
+    border: 1px solid var(--md3-outline-variant);
     transition: border-color var(--transition-default), box-shadow var(--transition-default);
   }
 
   .glass-card:hover {
-    border-color: hsl(var(--border));
+    border-color: var(--md3-outline-variant);
   }
 
+  /* Emphasized / nested card — one step up the ladder (L3). */
   .glass-card-strong {
-    background: hsl(var(--muted));
-    border: 1px solid hsl(var(--border));
+    background: var(--md3-surface-container-high);
+    border: 1px solid var(--md3-outline-variant);
   }
 
-  /* Flat panels — no backdrop blur, hairline border, flat card shadow. Same
-     visual language in both themes (the vault override below is now a no-op). */
+  /* Flat panels — no backdrop blur, edge-light hairline, flat card shadow.
+     .glass-panel is the resting L2 surface; -heavy lifts one ladder step (L3). */
   .glass-panel {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
+    background: var(--md3-surface-container);
+    border: 1px solid var(--md3-outline-variant);
     box-shadow: var(--shadow-card);
   }
 
   .glass-panel-heavy {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
+    background: var(--md3-surface-container-high);
+    border: 1px solid var(--md3-outline-variant);
     box-shadow: var(--shadow-card);
   }
 
   .glass-panel:hover {
-    border-color: hsl(var(--border));
+    border-color: var(--md3-outline-variant);
   }
 
   /* Glow utilities retained as flat no-ops — Tangle Quiet has no halos. */
@@ -171,10 +234,10 @@
     border-radius: 0 4px 4px 0;
   }
 
-  /* Legacy alias */
+  /* Legacy alias — resting L2 surface. */
   .glass {
-    background-color: var(--depth-2);
-    border: 1px solid var(--border-subtle);
+    background-color: var(--md3-surface-container);
+    border: 1px solid var(--md3-outline-variant);
   }
 
   /* Atmospheric mesh gradient background */
@@ -303,22 +366,22 @@
 
 /* Light theme overrides — solid surfaces, no glassmorphism */
 [data-sandbox-theme="vault"] .glass-panel {
-  background: hsl(var(--card));
+  background: var(--md3-surface-container);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border-color: hsl(var(--border));
+  border-color: var(--md3-outline-variant);
   box-shadow: var(--shadow-card);
 }
 
 [data-sandbox-theme="vault"] .glass-panel:hover {
-  border-color: hsl(var(--foreground) / 0.15);
+  border-color: var(--md3-outline);
 }
 
 [data-sandbox-theme="vault"] .glass-panel-heavy {
-  background: hsl(var(--card));
+  background: var(--md3-surface-container-high);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border-color: hsl(var(--border));
+  border-color: var(--md3-outline-variant);
   box-shadow: var(--shadow-card);
 }
 

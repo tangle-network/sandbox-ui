@@ -109,6 +109,12 @@ function ProviderLogo({
   const initial = label.charAt(0).toUpperCase() || "?";
   const src = candidates[index];
 
+  // Chain (see providerLogoCandidates): explicit iconUrl → full-color vector mark
+  // for brands Simple Icons delisted (Salesforce, Outlook, Slack, Teams, …) →
+  // simpleicons CDN. Only a provider with no resolvable real logo reaches this
+  // branch and gets the deterministic monogram tile — a clean, branded fallback,
+  // never a fabricated asset. TODO: extend PROVIDER_VECTOR_LOGOS as the catalog
+  // grows so fewer providers fall through to the monogram.
   if (!src) {
     return (
       <span

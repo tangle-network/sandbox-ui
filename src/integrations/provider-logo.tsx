@@ -120,10 +120,37 @@ export const PROVIDER_LOGO_SLUGS: Record<string, string> = {
 };
 
 /**
+ * Full-color vector brand marks for providers Simple Icons has delisted over
+ * trademark policy (Slack, Salesforce, the Microsoft 365 family, Twilio,
+ * LinkedIn) — these 404 on the simpleicons CDN, so without a real source they
+ * drop straight to the monogram. Keyed by the curated simpleicons slug AND by
+ * common normalized ids; the value is an svgl.app library name (crisp,
+ * multi-color SVGs that stay sharp in the catalog grid).
+ */
+export const PROVIDER_VECTOR_LOGOS: Record<string, string> = {
+  slack: "slack",
+  salesforce: "salesforce",
+  microsoftoutlook: "microsoft-outlook",
+  outlook: "microsoft-outlook",
+  microsoftteams: "microsoft-teams",
+  teams: "microsoft-teams",
+  microsoftexcel: "microsoft-excel",
+  excel: "microsoft-excel",
+  microsoftonedrive: "microsoft-onedrive",
+  onedrive: "microsoft-onedrive",
+  microsoftsharepoint: "microsoft-sharepoint",
+  sharepoint: "microsoft-sharepoint",
+  twilio: "twilio",
+  linkedin: "linkedin",
+};
+
+/**
  * Ordered candidate logo URLs for a provider slug, most specific first. The
  * renderer walks the chain on each `onError` until one loads, then falls back to
  * the monogram tile. An explicit `iconUrl` (when the caller has one) is tried
- * before the derived simpleicons slugs.
+ * first, then full-color vector marks for brands Simple Icons dropped, then the
+ * derived simpleicons slugs. Providers with no resolvable logo land on the
+ * deterministic monogram tile in the renderer.
  */
 export function providerLogoCandidates(opts: {
   id: string;
@@ -133,8 +160,15 @@ export function providerLogoCandidates(opts: {
   if (opts.iconUrl) out.push(opts.iconUrl);
   const raw = opts.id.toLowerCase();
   const norm = normalizeProviderId(raw);
-  const slugs = new Set<string>();
   const curated = PROVIDER_LOGO_SLUGS[raw] ?? PROVIDER_LOGO_SLUGS[norm];
+  // Vector mark for delisted brands first: simpleicons 404s for these, so trying
+  // it first avoids a wasted failed request before the real logo loads.
+  const vectorName =
+    PROVIDER_VECTOR_LOGOS[raw] ??
+    PROVIDER_VECTOR_LOGOS[norm] ??
+    (curated ? PROVIDER_VECTOR_LOGOS[curated] : undefined);
+  if (vectorName) out.push(`https://svgl.app/library/${vectorName}.svg`);
+  const slugs = new Set<string>();
   if (curated) slugs.add(curated);
   // Derived slug: simpleicons slugs are the brand name with separators stripped,
   // lowercased. This covers the long tail (notion, airtable, linear, asana,

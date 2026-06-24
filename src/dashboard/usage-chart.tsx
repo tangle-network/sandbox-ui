@@ -39,12 +39,15 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const total = data.reduce((sum, d) => sum + d.value, 0);
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+  const isEmpty = data.length === 0 || total === 0;
 
   return (
     <Card className={className}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="font-medium text-base">{title}</CardTitle>
-        <div className="text-right">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
+        <CardTitle className="min-w-0 truncate font-medium text-base">
+          {title}
+        </CardTitle>
+        <div className="shrink-0 whitespace-nowrap text-right">
           <span className={cn("font-bold text-2xl", colors.text)}>
             {formatValue(total)}
           </span>
@@ -52,8 +55,17 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Chart Container */}
-        <div className="relative">
+        {isEmpty ? (
+          <div className="flex h-48 flex-col items-center justify-center gap-1 text-center">
+            <p className="font-medium text-sm">No {unit} recorded yet</p>
+            <p className="text-muted-foreground text-xs">
+              Usage appears here once activity begins.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Chart Container */}
+            <div className="relative">
           {/* Y-axis labels */}
           <div className="absolute top-0 left-0 flex h-48 flex-col justify-between text-muted-foreground text-xs">
             <span>{formatValue(maxValue)}</span>
@@ -142,6 +154,8 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
             </p>
           </div>
         </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

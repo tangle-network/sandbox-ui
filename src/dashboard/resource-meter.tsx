@@ -31,9 +31,11 @@ export function ResourceMeter({ label, value, max = 100, unit, valueLabel, icon,
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <span className="flex shrink-0 items-center gap-1 text-[10px] font-mono text-muted-foreground uppercase tracking-wide">
-        {icon}
-        {label}
+      <span className="flex shrink-0 items-center gap-1.5 text-xs font-mono text-muted-foreground uppercase tracking-wide">
+        {icon ? (
+          <span className="flex shrink-0 items-center [&_svg]:h-3.5 [&_svg]:w-3.5">{icon}</span>
+        ) : null}
+        <span>{label}</span>
       </span>
       <div className="h-1.5 min-w-0 flex-1 bg-muted rounded-full overflow-hidden">
         <div
@@ -41,7 +43,7 @@ export function ResourceMeter({ label, value, max = 100, unit, valueLabel, icon,
           style={{ width: `${percent}%` }}
         />
       </div>
-      <span className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground">
+      <span className="shrink-0 text-xs font-mono tabular-nums text-muted-foreground">
         {readout}
       </span>
     </div>

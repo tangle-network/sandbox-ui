@@ -733,30 +733,30 @@ function ModelRow({
   const pricing = formatPricing(model.pricing);
   const ctx = formatContext(model.context_length);
   const identity = resolveModelBrandIdentity(model);
+  // The brand stack already renders host + lab logos. When a model is served
+  // through a router (host ≠ lab), surface that once as a compact "via" tag
+  // instead of repeating "Host → Lab" inside the subtitle.
+  const via = !identity.combined ? identity.host.label : null;
 
   return (
     <PickerItem onSelect={() => onSelect(id)} active={active} featured={featured}>
       <ModelBrandStack identity={identity} size="md" />
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-sm font-medium truncate">{model.name ?? model.id}</span>
-          {ctx && <span className="shrink-0 text-[10px] text-muted-foreground">{ctx}</span>}
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="truncate">{id}</span>
-          {!identity.combined && (
-            <>
-              <span className="shrink-0">·</span>
-              <span className="shrink-0">{identity.host.label} → {identity.lab.label}</span>
-            </>
-          )}
-          {pricing && (
-            <>
-              <span className="shrink-0">·</span>
-              <span className="shrink-0 font-mono">{pricing}</span>
-            </>
+        <div className="flex items-center gap-1.5">
+          <span className="min-w-0 truncate text-sm font-medium">{model.name ?? model.id}</span>
+          {via && (
+            <span className="shrink-0 rounded-full border border-[var(--md3-outline-variant)] bg-surface-container px-1.5 py-px text-[9px] font-medium text-muted-foreground">
+              via {via}
+            </span>
           )}
         </div>
+        {(ctx || pricing) && (
+          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {ctx && <span className="shrink-0">{ctx}</span>}
+            {ctx && pricing && <span className="shrink-0 opacity-40">·</span>}
+            {pricing && <span className="shrink-0 font-mono">{pricing}</span>}
+          </div>
+        )}
       </div>
     </PickerItem>
   );

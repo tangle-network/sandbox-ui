@@ -127,7 +127,7 @@ export function HarnessPicker({
       type: h.type,
       label: override?.label ?? h.label,
       description: override?.description ?? h.description,
-      icon: <HarnessLogo type={h.type} size={20} />,
+      icon: <HarnessLogo type={h.type} size={16} />,
     };
   });
 

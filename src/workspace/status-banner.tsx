@@ -15,12 +15,15 @@ export interface StatusBannerProps {
   className?: string;
 }
 
-const BANNER_STYLES: Record<BannerType, { bg: string; border: string; icon: typeof Loader2 }> = {
-  provisioning: { bg: "bg-primary/5", border: "border-primary/20", icon: Loader2 },
-  connecting: { bg: "bg-[var(--code-number)]/5", border: "border-[var(--code-number)]/20", icon: Wifi },
-  error: { bg: "bg-[var(--code-error)]/5", border: "border-[var(--code-error)]/20", icon: AlertCircle },
-  success: { bg: "bg-[var(--code-success)]/5", border: "border-[var(--code-success)]/20", icon: CheckCircle },
-  info: { bg: "bg-surface-container-high", border: "border-[var(--md3-outline-variant)]", icon: AlertCircle },
+const BANNER_STYLES: Record<
+  BannerType,
+  { bg: string; border: string; text: string; icon: typeof Loader2 }
+> = {
+  provisioning: { bg: "bg-primary/5", border: "border-primary/20", text: "text-primary", icon: Loader2 },
+  connecting: { bg: "bg-[var(--code-number)]/5", border: "border-[var(--code-number)]/20", text: "text-[var(--code-number)]", icon: Wifi },
+  error: { bg: "bg-[var(--code-error)]/5", border: "border-[var(--code-error)]/20", text: "text-[var(--code-error)]", icon: AlertCircle },
+  success: { bg: "bg-[var(--code-success)]/5", border: "border-[var(--code-success)]/20", text: "text-[var(--code-success)]", icon: CheckCircle },
+  info: { bg: "bg-surface-container-high", border: "border-[var(--md3-outline-variant)]", text: "text-muted-foreground", icon: AlertCircle },
 };
 
 export function StatusBanner({ type, message, detail, onDismiss, className }: StatusBannerProps) {
@@ -29,12 +32,24 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
   const isAnimated = type === "provisioning" || type === "connecting";
 
   return (
-    <div className={cn("flex items-center gap-3 px-4 py-2 border-b text-sm", style.bg, style.border, className)}>
-      <Icon className={cn("h-4 w-4 shrink-0", isAnimated && "animate-spin")} />
-      <span className="text-foreground">{message}</span>
-      {detail && <span className="text-muted-foreground text-xs">{detail}</span>}
+    <div
+      className={cn(
+        "flex items-center gap-2.5 px-4 py-2 border-b font-sans text-sm",
+        style.bg,
+        style.border,
+        className,
+      )}
+    >
+      <Icon className={cn("h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")} />
+      <span className="font-medium text-foreground">{message}</span>
+      {detail && (
+        <span className="font-mono text-xs text-muted-foreground tabular-nums">{detail}</span>
+      )}
       {onDismiss && (
-        <button onClick={onDismiss} className="ml-auto text-muted-foreground hover:text-foreground text-xs">
+        <button
+          onClick={onDismiss}
+          className="ml-auto font-sans text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
           Dismiss
         </button>
       )}

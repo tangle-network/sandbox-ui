@@ -48,7 +48,7 @@ export function CreditBalance({
                 const raw = e.target.value.replace(/[^0-9.]/g, "");
                 setTopUpValue(raw.match(/^(\d*\.?\d{0,2})/)?.[1] ?? "");
               }}
-              className="bg-transparent border-none text-foreground font-mono text-lg w-full focus:ring-0 px-4 outline-none"
+              className="bg-transparent border-none text-foreground font-mono text-lg min-w-0 flex-1 focus:ring-0 px-4 outline-none"
             />
             <button
               type="button"
@@ -57,7 +57,7 @@ export function CreditBalance({
                 if (!Number.isFinite(parsed) || parsed <= 0) return;
                 onTopUp(parsed);
               }}
-              className="bg-[var(--accent-surface-soft)] border border-[var(--md3-outline-variant)] text-[var(--accent-text)] px-6 py-3 rounded-md font-bold text-xs uppercase tracking-widest active:scale-95 transition-transform hover:bg-[var(--accent-surface-strong)]"
+              className="shrink-0 whitespace-nowrap bg-[var(--accent-surface-soft)] border border-[var(--md3-outline-variant)] text-[var(--accent-text)] px-5 py-3 rounded-md font-bold text-xs uppercase tracking-widest active:scale-95 transition-transform hover:bg-[var(--accent-surface-strong)]"
             >
               Top Up
             </button>
@@ -74,9 +74,9 @@ export function CreditBalance({
                     setTopUpValue(qa.toFixed(2));
                     onTopUp(rounded);
                   }}
-                  className="flex-1 py-2 text-[10px] font-mono text-muted-foreground border border-[var(--md3-outline-variant)] rounded-md hover:bg-surface-container-high hover:text-foreground transition-colors uppercase"
+                  className="flex-1 py-2 text-center text-xs font-mono tabular-nums text-muted-foreground border border-[var(--md3-outline-variant)] rounded-md hover:bg-surface-container-high hover:text-foreground transition-colors uppercase"
                 >
-                  +${qa}
+                  +${qa.toLocaleString("en-US")}
                 </button>
               ))}
           </div>

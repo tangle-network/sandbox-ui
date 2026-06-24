@@ -21,7 +21,7 @@ export interface InvoiceTableProps {
 }
 
 const statusStyle: Record<string, string> = {
-  paid: "bg-[var(--accent-surface-soft)] text-primary border border-border",
+  paid: "bg-[var(--accent-surface-soft)] text-primary border border-[var(--md3-outline-variant)]",
   pending: "bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)] border border-[var(--surface-warning-border)]",
   failed: "bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)] border border-[var(--surface-danger-border)]",
 }
@@ -38,10 +38,10 @@ export function InvoiceTable({ invoices, onExportAll, onLoadMore, onViewInvoice,
           </button>
         )}
       </div>
-      <div className="bg-card rounded-xl overflow-hidden border border-border">
+      <div className="bg-surface-container rounded-xl overflow-hidden border border-[var(--md3-outline-variant)]">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-background border-b border-border">
+            <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
               <th className="px-6 py-4 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Invoice ID</th>
               <th className="px-6 py-4 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Date</th>
               <th className="px-6 py-4 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">Amount</th>
@@ -51,7 +51,7 @@ export function InvoiceTable({ invoices, onExportAll, onLoadMore, onViewInvoice,
           </thead>
           <tbody className="divide-y divide-border">
             {invoices.map((inv) => (
-              <tr key={inv.id} className="hover:bg-muted/50 transition-colors">
+              <tr key={inv.id} className="hover:bg-surface-container-high transition-colors">
                 <td className="px-6 py-5 font-mono text-xs text-foreground">{inv.id}</td>
                 <td className="px-6 py-5 text-sm text-foreground">{inv.date}</td>
                 <td className="px-6 py-5 text-sm font-bold text-foreground">${inv.amount.toFixed(2)}</td>
@@ -72,7 +72,7 @@ export function InvoiceTable({ invoices, onExportAll, onLoadMore, onViewInvoice,
       </div>
       {hasMore && onLoadMore && (
         <div className="mt-6 flex justify-center">
-          <button type="button" onClick={onLoadMore} className="px-8 py-2 text-[10px] font-mono text-muted-foreground border border-border rounded-full hover:bg-muted/50 transition-colors uppercase tracking-widest">
+          <button type="button" onClick={onLoadMore} className="px-8 py-2 text-[10px] font-mono text-muted-foreground border border-[var(--md3-outline-variant)] rounded-full hover:bg-surface-container-high transition-colors uppercase tracking-widest">
             Load More History
           </button>
         </div>

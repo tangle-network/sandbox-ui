@@ -46,11 +46,11 @@ export function RuntimePane({
   return (
     <section
       className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground",
+        "flex h-full min-h-0 flex-col overflow-hidden bg-surface-container text-foreground",
         className,
       )}
     >
-      <header className="border-b border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-4 py-3">
+      <header className="border-b border-[var(--md3-outline-variant)] bg-surface-container-high bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-4 py-3">
         <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           Sandbox
         </div>
@@ -64,8 +64,8 @@ export function RuntimePane({
       {content ? (
         <div className="min-h-0 flex-1 overflow-hidden">{content}</div>
       ) : (
-        <div className="grid min-h-0 flex-1 gap-px bg-border lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.9fr)]">
-          <div className="min-h-0 overflow-auto bg-card">
+        <div className="grid min-h-0 flex-1 gap-px bg-[var(--md3-outline-variant)] lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.9fr)]">
+          <div className="min-h-0 overflow-auto bg-surface-container">
             {terminal ? (
               <TerminalPanel
                 {...terminal}
@@ -81,8 +81,8 @@ export function RuntimePane({
             )}
           </div>
 
-          <div className="grid min-h-0 gap-px bg-border">
-            <div className="min-h-0 overflow-auto bg-card">
+          <div className="grid min-h-0 gap-px bg-[var(--md3-outline-variant)]">
+            <div className="min-h-0 overflow-auto bg-surface-container">
               {audit ? (
                 audit
               ) : (
@@ -94,7 +94,7 @@ export function RuntimePane({
                 </div>
               )}
             </div>
-            <div className="min-h-0 overflow-auto bg-card">
+            <div className="min-h-0 overflow-auto bg-surface-container">
               {inspector ? (
                 inspector
               ) : (
@@ -111,7 +111,7 @@ export function RuntimePane({
       )}
 
       {footer && (
-        <footer className="shrink-0 border-t border-border bg-card px-3 py-2">
+        <footer className="shrink-0 border-t border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
           {footer}
         </footer>
       )}

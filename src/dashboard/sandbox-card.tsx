@@ -96,8 +96,8 @@ export function SandboxCard({
 
   return (
     <div className={cn(
-      "group relative flex flex-col justify-between overflow-hidden rounded-lg border bg-card p-5 transition-colors",
-      isRunning ? "border-[var(--status-running)]/30" : "border-border",
+      "group relative flex flex-col justify-between overflow-hidden rounded-lg border bg-surface-container p-5 transition-colors",
+      isRunning ? "border-[var(--status-running)]/30" : "border-[var(--md3-outline-variant)]",
       "hover:border-foreground/15",
       className
     )}>
@@ -138,7 +138,7 @@ export function SandboxCard({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground outline-none"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-container-high hover:text-foreground outline-none"
               aria-label="Sandbox options"
             >
               <MoreVertical className="h-4 w-4" />
@@ -179,8 +179,8 @@ export function SandboxCard({
 
       {/* Environment Info */}
       <div className="my-4">
-        <div className="flex items-center gap-3 rounded-md border border-border bg-muted/30 p-3">
-          <div className={cn("flex h-10 w-10 items-center justify-center rounded-md", isRunning ? "bg-[var(--surface-success-bg)]" : "bg-muted")}>
+        <div className="flex items-center gap-3 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-high p-3">
+          <div className={cn("flex h-10 w-10 items-center justify-center rounded-md", isRunning ? "bg-[var(--surface-success-bg)]" : "bg-surface-container-highest")}>
             {sandbox.imageIcon ? sandbox.imageIcon : (
               sandbox.image?.includes('node') ? <Code2 className={cn("h-5 w-5", isRunning ? "text-[var(--surface-success-text)]" : "text-muted-foreground")} /> : <Terminal className={cn("h-5 w-5", isRunning ? "text-[var(--surface-success-text)]" : "text-muted-foreground")} />
             )}
@@ -209,7 +209,7 @@ export function SandboxCard({
       </div>
 
       {/* Footer Action */}
-      <div className="border-t border-border pt-3">
+      <div className="border-t border-[var(--md3-outline-variant)] pt-3">
         {isRunning ? (
           <button
             type="button"
@@ -227,8 +227,8 @@ export function SandboxCard({
             className={cn(
               "flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors border",
               isTransitioning || !resumeHandler
-                ? "bg-muted text-muted-foreground cursor-not-allowed border-border"
-                : "bg-card text-foreground hover:bg-muted border-border active:scale-[0.97]"
+                ? "bg-muted text-muted-foreground cursor-not-allowed border-[var(--md3-outline-variant)]"
+                : "bg-surface-container-high text-foreground hover:bg-surface-container-highest border-[var(--md3-outline-variant)] active:scale-[0.97]"
             )}
           >
             <Play className="h-4 w-4" />
@@ -251,11 +251,11 @@ export function NewSandboxCard({ onClick, className }: NewSandboxCardProps) {
       type="button"
       onClick={onClick}
       className={cn(
-        "border-2 border-dashed border-border rounded-lg p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:border-foreground/20 hover:bg-muted/30 transition-colors w-full min-h-[160px]",
+        "border-2 border-dashed border-[var(--md3-outline-variant)] rounded-lg p-5 flex flex-col items-center justify-center text-center cursor-pointer hover:border-foreground/20 hover:bg-surface-container-high transition-colors w-full min-h-[160px]",
         className,
       )}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-surface-container-high text-muted-foreground">
         <Plus className="h-6 w-6" />
       </div>
       <span className="mt-4 text-sm font-semibold text-foreground">

@@ -49,9 +49,9 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
   return (
     <div className={cn("space-y-4", className)}>
       {ports.length > 0 ? (
-        <div className="rounded-lg border border-border overflow-hidden">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-muted/30 border-b border-border">
+            <thead className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
               <tr>
                 <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Port</th>
                 <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Public URL</th>
@@ -104,7 +104,7 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
           </table>
         </div>
       ) : (
-        <div className="rounded-lg border border-border bg-muted/20 p-6 text-center">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
           <Globe className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground">No ports exposed yet</p>
         </div>
@@ -119,7 +119,7 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
           value={newPort}
           onChange={(e) => setNewPort(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleExpose()}
-          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex-1 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <button
           type="button"

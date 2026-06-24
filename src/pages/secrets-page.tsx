@@ -253,7 +253,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             <button
               type="button"
               onClick={() => setIsImportOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition-colors active:scale-[0.97]"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-surface-container-high transition-colors active:scale-[0.97]"
             >
               <Upload className="h-4 w-4" />
               Import .env
@@ -276,7 +276,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
           shared credentials here and wondering why teammates can't see
           them. */}
       {teamSecretsHint && (
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-[var(--accent-surface-soft)]/40 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-lg border border-[var(--md3-outline-variant)] bg-[var(--accent-surface-soft)]/40 px-4 py-3">
           <Users className="h-5 w-5 shrink-0 text-[var(--accent-text)]" aria-hidden="true" />
           <div className="flex-1 text-sm">
             <p className="font-semibold text-foreground">
@@ -291,7 +291,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
           <button
             type="button"
             onClick={teamSecretsHint.onNavigate}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-container-high transition-colors"
           >
             {teamSecretsHint.label ?? "Manage team secrets"}
             <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -301,13 +301,13 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
 
       {/* Stats Row */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-[var(--shadow-card)]">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Active Secrets</p>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="font-display text-2xl font-extrabold text-foreground">{secrets.length}</span>
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-[var(--shadow-card)]">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</p>
           <div className="mt-2 flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-[var(--surface-success-text,#047857)]" />
@@ -356,7 +356,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 onChange={(e) => setNewName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"))}
                 placeholder="MY_SECRET_KEY"
                 autoComplete="off"
-                className="w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
             <div>
@@ -370,7 +370,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                   onChange={(e) => setNewValue(e.target.value)}
                   placeholder="Enter secret value..."
                   autoComplete="new-password"
-                  className="w-full rounded-md border border-border bg-card px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
                 <button
                   type="button"
@@ -392,7 +392,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             <button
               type="button"
               onClick={() => { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null) }}
-              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-container-high transition-colors"
             >
               Cancel
             </button>
@@ -433,7 +433,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+                  className="inline-flex items-center gap-2 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2 text-xs font-semibold text-foreground hover:bg-surface-container-high transition-colors"
                 >
                   <Upload className="h-3.5 w-3.5" />
                   Choose .env file
@@ -454,7 +454,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 onChange={(e) => setImportText(e.target.value)}
                 rows={6}
                 spellCheck={false}
-                className="w-full rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <p className="text-[11px] text-muted-foreground">
                 Lines starting with <span className="font-mono">#</span> are comments. Text after <span className="font-mono">#</span> inside a value is preserved.
@@ -501,14 +501,14 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                     const status = rowStatus[index]
                     const message = rowMessages[index]
                     return (
-                      <div key={`${row.lineNumber}-${index}`} className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-2">
+                      <div key={`${row.lineNumber}-${index}`} className="flex items-start gap-2 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-high p-2">
                         <input
                           type="text"
                           aria-label={`Import row ${index + 1} key`}
                           value={row.key}
                           onChange={(e) => updateRowKey(index, e.target.value)}
                           disabled={isImportSaving}
-                          className="w-2/5 rounded border border-border bg-card px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+                          className="w-2/5 rounded border border-[var(--md3-outline-variant)] bg-surface-container-low px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
                         />
                         <input
                           type={showImportValues ? "text" : "password"}
@@ -516,7 +516,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                           value={row.value}
                           onChange={(e) => updateRowValue(index, e.target.value)}
                           disabled={isImportSaving}
-                          className="w-2/5 rounded border border-border bg-card px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+                          className="w-2/5 rounded border border-[var(--md3-outline-variant)] bg-surface-container-low px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
                         />
                         <div className="flex w-1/5 flex-col items-end gap-1">
                           {status === "success" && (
@@ -557,7 +557,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
               type="button"
               onClick={() => { setIsImportOpen(false); resetImportState() }}
               disabled={isImportSaving}
-              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:pointer-events-none"
+              className="rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-container-high transition-colors disabled:opacity-50 disabled:pointer-events-none"
             >
               Cancel
             </button>
@@ -590,7 +590,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             <button
               type="button"
               onClick={() => setDeleteTarget(null)}
-              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-container-high transition-colors"
             >
               Cancel
             </button>
@@ -607,8 +607,8 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
       </Dialog>
 
       {/* Secrets table */}
-      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+      <div className="overflow-hidden rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-card)]">
+        <div className="border-b border-[var(--md3-outline-variant)] px-6 py-4 flex items-center justify-between">
           <div className="flex gap-6">
             <button type="button" className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-foreground pb-1">All Secrets</button>
           </div>
@@ -640,7 +640,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-muted/30 border-b border-border">
+              <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Secret Name</th>
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Encrypted Value</th>
                 <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Created</th>
@@ -649,7 +649,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             </thead>
             <tbody className="divide-y divide-border">
               {secrets.map((secret) => (
-                <tr key={secret.name} className="hover:bg-muted/20 transition-colors">
+                <tr key={secret.name} className="hover:bg-surface-container-high transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Key className="h-4 w-4 text-muted-foreground" />
@@ -657,7 +657,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <code className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+                    <code className="text-xs font-mono text-muted-foreground bg-surface-container-high px-2 py-1 rounded">
                       ••••••••••••••••
                     </code>
                   </td>
@@ -683,7 +683,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
 
       {/* Bottom info section */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
               <Shield className="h-5 w-5" />
@@ -694,7 +694,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             Your secrets are encrypted using AES-256-GCM at rest and TLS 1.3 in transit. Hardware Security Modules manage all root keys.
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
               <Lock className="h-5 w-5" />

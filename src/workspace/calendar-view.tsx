@@ -159,15 +159,15 @@ export function CalendarView({
   return (
     <div className={cn("flex flex-1 min-h-0 overflow-hidden", className)}>
       {/* Calendar grid */}
-      <div className="flex-1 flex flex-col overflow-hidden border-r border-border">
+      <div className="flex-1 flex flex-col overflow-hidden border-r border-[var(--md3-outline-variant)]">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-2.5 shrink-0">
+        <div className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] px-4 py-2.5 shrink-0">
           <div className="flex items-center gap-2">
             {headerLeft}
             <button
               type="button"
               onClick={prevMonth}
-              className="h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground"
+              className="h-7 w-7 rounded-md hover:bg-surface-container-high flex items-center justify-center text-muted-foreground"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
             </button>
@@ -177,7 +177,7 @@ export function CalendarView({
             <button
               type="button"
               onClick={nextMonth}
-              className="h-7 w-7 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground"
+              className="h-7 w-7 rounded-md hover:bg-surface-container-high flex items-center justify-center text-muted-foreground"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
             </button>
@@ -187,7 +187,7 @@ export function CalendarView({
                 setMonth(today.getFullYear(), today.getMonth());
                 selectDay(todayKey);
               }}
-              className="h-7 px-2 rounded-md border border-border text-xs font-medium text-muted-foreground hover:text-foreground"
+              className="h-7 px-2 rounded-md border border-[var(--md3-outline-variant)] text-xs font-medium text-muted-foreground hover:text-foreground"
             >
               Today
             </button>
@@ -196,7 +196,7 @@ export function CalendarView({
         </div>
 
         {/* Day-of-week headers */}
-        <div className="grid grid-cols-7 border-b border-border shrink-0">
+        <div className="grid grid-cols-7 border-b border-[var(--md3-outline-variant)] shrink-0">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
             <div
               key={d}
@@ -220,10 +220,10 @@ export function CalendarView({
                 onClick={() => selectDay(key)}
                 onDoubleClick={() => onDoubleClickDay?.(key)}
                 className={cn(
-                  "flex flex-col items-start p-1.5 border-b border-r border-border text-left transition-colors min-h-[72px]",
+                  "flex flex-col items-start p-1.5 border-b border-r border-[var(--md3-outline-variant)] text-left transition-colors min-h-[72px]",
                   !inMonth && "bg-muted/30",
                   isSelected && "bg-primary/5 ring-1 ring-inset ring-primary/20",
-                  !isSelected && "hover:bg-muted/50",
+                  !isSelected && "hover:bg-surface-container-high",
                 )}
               >
                 <span
@@ -271,7 +271,7 @@ export function CalendarView({
             renderDayDetail(selectedDay ?? todayKey, selectedDayEvents)
           ) : (
             <>
-              <div className="px-4 py-3 border-b border-border shrink-0">
+              <div className="px-4 py-3 border-b border-[var(--md3-outline-variant)] shrink-0">
                 <h3 className="text-sm font-semibold text-foreground">
                   {selectedDay === todayKey
                     ? "Today"
@@ -298,13 +298,13 @@ export function CalendarView({
                 {selectedDayEvents.map((evt) => (
                   <div
                     key={evt.id}
-                    className="rounded-lg border border-border bg-card p-3"
+                    className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-3"
                   >
                     <p className="text-sm font-medium text-foreground">
                       {evt.title}
                     </p>
                     {evt.type && (
-                      <span className="mt-1 inline-block rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                      <span className="mt-1 inline-block rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] text-muted-foreground">
                         {evt.type}
                       </span>
                     )}

@@ -58,7 +58,7 @@ export function TerminalPanel({
   }, [lines, isCollapsed]);
 
   return (
-    <div className={cn("border-t border-border bg-card", className)}>
+    <div className={cn("border-t border-[var(--md3-outline-variant)] bg-surface-container", className)}>
       {/* Header */}
       <button
         onClick={onToggle}
@@ -67,7 +67,7 @@ export function TerminalPanel({
         <TerminalIcon className="h-3.5 w-3.5" />
         <span className="font-medium">{title}</span>
         {lines.length > 0 && (
-          <span className="px-1.5 py-0.5 rounded-full bg-muted text-[10px] tabular-nums">
+          <span className="px-1.5 py-0.5 rounded-full bg-surface-container-high text-[10px] tabular-nums">
             {lines.length}
           </span>
         )}
@@ -82,7 +82,7 @@ export function TerminalPanel({
       {!isCollapsed && (
         <div
           ref={scrollRef}
-          className="overflow-auto px-3 pb-2 font-mono text-xs leading-[1.6]"
+          className="overflow-auto px-3 pb-2 font-mono text-xs leading-[1.6] bg-surface-container-lowest"
           style={{ maxHeight }}
         >
           {lines.map((line) => (

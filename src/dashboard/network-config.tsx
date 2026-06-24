@@ -43,7 +43,7 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
 
   if (loading || !config) {
     return (
-      <div className={cn("rounded-lg border border-border bg-muted/20 p-6 text-center", className)}>
+      <div className={cn("rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center", className)}>
         <Network className="mx-auto h-6 w-6 text-muted-foreground animate-pulse mb-2" />
         <p className="text-sm text-muted-foreground">Loading network configuration...</p>
       </div>
@@ -53,7 +53,7 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
   return (
     <div className={cn("space-y-4", className)}>
       {/* Outbound toggle */}
-      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
+      <div className="flex items-center justify-between rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-3">
         <div className="flex items-center gap-3">
           <ShieldAlert className="h-4 w-4 text-muted-foreground" />
           <div>
@@ -69,7 +69,7 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
           onClick={() => onUpdate({ blockOutbound: !config.blockOutbound })}
           className={cn(
             "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-            config.blockOutbound ? "bg-destructive" : "bg-muted"
+            config.blockOutbound ? "bg-destructive" : "bg-surface-container-high"
           )}
         >
           <span
@@ -87,7 +87,7 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
         {config.allowList.length > 0 ? (
           <div className="space-y-1.5 mb-3">
             {config.allowList.map((cidr) => (
-              <div key={cidr} className="flex items-center justify-between rounded border border-border bg-muted/20 px-3 py-2">
+              <div key={cidr} className="flex items-center justify-between rounded border border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
                 <span className="font-mono text-xs text-foreground">{cidr}</span>
                 <button
                   type="button"
@@ -110,7 +110,7 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
             value={newCidr}
             onChange={(e) => setNewCidr(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddCidr()}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="flex-1 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <button
             type="button"

@@ -35,7 +35,7 @@ export function ResourceMeter({ label, value, max = 100, unit, valueLabel, icon,
         {icon}
         {label}
       </span>
-      <div className="h-1.5 min-w-0 flex-1 bg-card rounded-full overflow-hidden">
+      <div className="h-1.5 min-w-0 flex-1 bg-muted rounded-full overflow-hidden">
         <div
           className={cn("h-full rounded-full transition-all duration-500", barColor)}
           style={{ width: `${percent}%` }}

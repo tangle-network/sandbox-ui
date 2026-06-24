@@ -163,7 +163,7 @@ const VALID_DRIVERS: ReadonlySet<string> = new Set([
 ]);
 
 // Shared design-system idioms (match src/dashboard/* surfaces).
-const SECTION_CARD_CLASS = "rounded-lg border border-border bg-card p-5 shadow-sm";
+const SECTION_CARD_CLASS = "rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-sm";
 const FIELD_LABEL_CLASS =
   "block text-xs font-medium text-muted-foreground uppercase tracking-[0.06em]";
 
@@ -489,7 +489,7 @@ function SshAccessStep({ config }: { config: SshAccessConfig }) {
                   "group p-3 text-left rounded-lg border transition-colors duration-200",
                   selected
                     ? "bg-primary/5 border-primary ring-1 ring-primary/20"
-                    : "bg-card border-border hover:border-primary/30 active:scale-[0.99]",
+                    : "bg-surface-container border-[var(--md3-outline-variant)] hover:border-primary/30 active:scale-[0.99]",
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -507,7 +507,7 @@ function SshAccessStep({ config }: { config: SshAccessConfig }) {
                       "flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border-2 transition-colors duration-200",
                       selected
                         ? "border-primary bg-primary"
-                        : "border-border group-hover:border-primary/40",
+                        : "border-[var(--md3-outline-variant)] group-hover:border-primary/40",
                     )}
                   >
                     {selected && (
@@ -1010,11 +1010,11 @@ export function ProvisioningWizard({
                           "group p-3.5 rounded-lg text-left border transition-colors duration-200",
                           selectedEnv === env.id
                             ? "bg-primary/5 border-primary ring-1 ring-primary/20"
-                            : "bg-card border-border hover:border-primary/30 active:scale-[0.99]",
+                            : "bg-surface-container border-[var(--md3-outline-variant)] hover:border-primary/30 active:scale-[0.99]",
                         )}
                       >
                         <div className="flex justify-between items-start mb-2.5">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-muted/50 border border-border">
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-high border border-[var(--md3-outline-variant)]">
                             {env.icon}
                           </div>
                           <div
@@ -1022,7 +1022,7 @@ export function ProvisioningWizard({
                               "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors duration-200",
                               selectedEnv === env.id
                                 ? "border-primary bg-primary"
-                                : "border-border group-hover:border-primary/40",
+                                : "border-[var(--md3-outline-variant)] group-hover:border-primary/40",
                             )}
                           >
                             {selectedEnv === env.id && (
@@ -1076,7 +1076,7 @@ export function ProvisioningWizard({
                                 ? "bg-primary/5 border-primary ring-1 ring-primary/20"
                                 : p.locked
                                   ? "bg-muted/30 border-border opacity-60 cursor-not-allowed"
-                                  : "bg-card border-border hover:border-primary/30 active:scale-[0.99]",
+                                  : "bg-surface-container border-[var(--md3-outline-variant)] hover:border-primary/30 active:scale-[0.99]",
                             )}
                           >
                             {p.locked && (
@@ -1323,7 +1323,7 @@ export function ProvisioningWizard({
                               </div>
                             ))}
                             {envVars.length === 0 && (
-                              <div className="text-center p-3 border border-dashed border-border rounded-lg text-muted-foreground/60 text-xs italic">
+                              <div className="text-center p-3 border border-dashed border-[var(--md3-outline-variant)] rounded-lg text-muted-foreground/60 text-xs italic">
                                 No environment variables set
                               </div>
                             )}
@@ -1346,7 +1346,7 @@ export function ProvisioningWizard({
                                   return (
                                     <label
                                       key={script.id}
-                                      className="flex items-start gap-3 cursor-pointer group rounded-lg border border-border p-3 transition-colors hover:border-primary/30"
+                                      className="flex items-start gap-3 cursor-pointer group rounded-lg border border-[var(--md3-outline-variant)] p-3 transition-colors hover:border-primary/30"
                                     >
                                       <input
                                         type="checkbox"
@@ -1360,7 +1360,7 @@ export function ProvisioningWizard({
                                               : [...prev, script.id],
                                           )
                                         }
-                                        className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                                        className="mt-0.5 h-4 w-4 rounded border-[var(--md3-outline-variant)] text-primary focus:ring-primary/30"
                                       />
                                       <div className="flex-1 min-w-0">
                                         <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
@@ -1376,7 +1376,7 @@ export function ProvisioningWizard({
                                             {script.injectSecrets.map((s) => (
                                               <span
                                                 key={s}
-                                                className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                                                className="inline-flex items-center gap-0.5 rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] text-muted-foreground"
                                               >
                                                 <svg
                                                   className="h-2.5 w-2.5"
@@ -1408,7 +1408,7 @@ export function ProvisioningWizard({
                           </div>
                         )}
 
-                        <div className="pt-3 border-t border-border flex items-start justify-between gap-3">
+                        <div className="pt-3 border-t border-[var(--md3-outline-variant)] flex items-start justify-between gap-3">
                           <div>
                             <label
                               htmlFor="wizard-bare-mode"
@@ -1430,7 +1430,7 @@ export function ProvisioningWizard({
                         </div>
 
                         {sshAccess && (
-                          <div className="pt-3 border-t border-border">
+                          <div className="pt-3 border-t border-[var(--md3-outline-variant)]">
                             <SshAccessStep config={sshAccess} />
                           </div>
                         )}
@@ -1444,13 +1444,13 @@ export function ProvisioningWizard({
         {/* Right: Cost estimator */}
         <div className="col-span-12 xl:col-span-4 sticky top-4 space-y-4">
           {/* Cost card */}
-          <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+          <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-sm">
             <div className="flex justify-between items-center mb-3">
               <span className={FIELD_LABEL_CLASS}>Run Cost</span>
               <div
                 role="group"
                 aria-label="Pricing view"
-                className="inline-flex items-center rounded-md border border-border bg-muted/50 p-0.5"
+                className="inline-flex items-center rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low p-0.5"
               >
                 <button
                   type="button"
@@ -1459,7 +1459,7 @@ export function ProvisioningWizard({
                   className={cn(
                     "rounded px-2.5 py-0.5 text-[10px] font-medium transition-all",
                     pricingView === "hourly"
-                      ? "bg-card text-foreground shadow-sm"
+                      ? "bg-surface-container-high text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -1472,7 +1472,7 @@ export function ProvisioningWizard({
                   className={cn(
                     "rounded px-2.5 py-0.5 text-[10px] font-medium transition-all",
                     pricingView === "perSecond"
-                      ? "bg-card text-foreground shadow-sm"
+                      ? "bg-surface-container-high text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
@@ -1494,7 +1494,7 @@ export function ProvisioningWizard({
                 {pricingSuffix}
               </span>
             </div>
-            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+            <div className="space-y-2 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-high p-3">
               <div className="flex justify-between text-xs font-mono tracking-wide text-muted-foreground">
                 <span>COMPUTE</span>
                 <span className="text-foreground">
@@ -1517,7 +1517,7 @@ export function ProvisioningWizard({
                 </span>
               </div>
               {hourlyCostBreakdown.floorApplies && (
-                <div className="flex justify-between text-xs font-mono tracking-wide text-primary border-t border-border pt-2">
+                <div className="flex justify-between text-xs font-mono tracking-wide text-primary border-t border-[var(--md3-outline-variant)] pt-2">
                   <span>MIN CHARGE</span>
                   <span>
                     $

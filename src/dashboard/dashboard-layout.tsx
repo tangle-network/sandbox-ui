@@ -268,7 +268,7 @@ function DashboardLayoutInner({
                 type="button"
                 onClick={onLogoClick}
                 aria-label={logoAriaLabel}
-                className="p-1 rounded-md transition-colors hover:bg-muted/50"
+                className="p-1 rounded-md transition-colors hover:bg-surface-container-high"
               >
                 <Logo variant={variant} size="sm" iconOnly />
               </button>
@@ -278,7 +278,7 @@ function DashboardLayoutInner({
                 onClick={toggleRail}
                 aria-label={railCollapsed ? "Expand navigation" : "Collapse navigation"}
                 aria-expanded={!railCollapsed}
-                className="p-1 rounded-md transition-colors hover:bg-muted/50"
+                className="p-1 rounded-md transition-colors hover:bg-surface-container-high"
               >
                 <Logo variant={variant} size="sm" iconOnly />
               </button>
@@ -286,7 +286,7 @@ function DashboardLayoutInner({
               <Link
                 href={logoHref}
                 to={logoHref}
-                className="p-1 rounded-md transition-colors hover:bg-muted/50"
+                className="p-1 rounded-md transition-colors hover:bg-surface-container-high"
               >
                 <Logo variant={variant} size="sm" iconOnly />
               </Link>
@@ -406,10 +406,10 @@ function DashboardLayoutInner({
   const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true, false), [buildSidebarContent])
 
   return (
-    <div className={cn("min-h-screen bg-background text-foreground", className)}>
+    <div className={cn("min-h-screen bg-surface text-foreground", className)}>
       {/* Top nav bar */}
       <nav
-        className="fixed top-0 z-50 bg-card border-b border-border flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width] duration-200 ease-in-out"
+        className="fixed top-0 z-50 bg-surface-container-low border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width] duration-200 ease-in-out"
         style={{
           left: hidden ? 0 : contentMargin,
           width: hidden ? "100%" : `calc(100% - ${contentMargin}px)`,
@@ -419,7 +419,7 @@ function DashboardLayoutInner({
           {/* Mobile-only brand — the desktop sidebar rail carries the logo
               on lg+, but on mobile the rail is hidden behind the drawer and
               the top bar otherwise contained only a bell + hamburger. */}
-          <Link href={logoHref} to={logoHref} className="lg:hidden flex items-center p-1 rounded-md hover:bg-muted/50 transition-colors">
+          <Link href={logoHref} to={logoHref} className="lg:hidden flex items-center p-1 rounded-md hover:bg-surface-container-high transition-colors">
             <Logo variant={variant} size="sm" iconOnly />
           </Link>
           {topNavLinks && topNavLinks.length > 0 && (
@@ -433,7 +433,7 @@ function DashboardLayoutInner({
                     "transition-all duration-300 px-2 py-1 rounded",
                     activeTopNavHref === link.href
                       ? "text-foreground border-b-2 border-primary pb-1"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                      : "text-muted-foreground hover:text-foreground hover:bg-surface-container-high",
                   )}
                 >
                   {link.label}
@@ -456,7 +456,7 @@ function DashboardLayoutInner({
           <div className="relative" ref={notifRef}>
             <button
               type="button"
-              className="relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-muted/50"
+              className="relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-surface-container-high"
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               aria-label="Notifications"
               aria-expanded={notificationsOpen}
@@ -467,8 +467,8 @@ function DashboardLayoutInner({
               )}
             </button>
             {notificationsOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-border bg-card shadow-[var(--shadow-dropdown)] z-50">
-                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14] z-50">
+                <div className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] px-4 py-3">
                   <p className="font-bold text-foreground text-sm">Notifications</p>
                   {(notifData?.unreadCount ?? 0) > 0 && notifData?.onMarkAllRead && (
                     <button
@@ -493,8 +493,8 @@ function DashboardLayoutInner({
                         key={n.id}
                         type="button"
                         className={cn(
-                          "w-full text-left px-4 py-3 border-b border-border last:border-0 transition-colors",
-                          n.read ? "cursor-default" : "bg-primary/5 hover:bg-muted/50"
+                          "w-full text-left px-4 py-3 border-b border-[var(--md3-outline-variant)] last:border-0 transition-colors",
+                          n.read ? "cursor-default" : "bg-primary/5 hover:bg-white/5"
                         )}
                         onClick={() => { if (!n.read) notifData.onMarkRead?.(n.id); }}
                       >
@@ -517,7 +517,7 @@ function DashboardLayoutInner({
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="rounded-md p-2 hover:bg-muted/50 lg:hidden"
+          className="rounded-md p-2 hover:bg-surface-container-high lg:hidden"
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileMenuOpen}
         >
@@ -536,7 +536,7 @@ function DashboardLayoutInner({
           is open we extend by the panel width so both sit side-by-side. */}
       <aside
         className={cn(
-          "fixed top-14 bottom-0 left-0 z-30 flex bg-background transition-transform duration-200 lg:hidden",
+          "fixed top-14 bottom-0 left-0 z-30 flex bg-surface-container-low transition-transform duration-200 lg:hidden",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
         style={{
@@ -557,7 +557,7 @@ function DashboardLayoutInner({
       {/* Single responsive main landmark — SidebarContent only applies the
           desktop sidebar margin at lg+, so this one <main> works for both
           viewports and keeps screen-reader landmarks unambiguous. */}
-      <SidebarContent className={cn("pt-16 px-6 pb-8 lg:px-8 bg-background", contentClassName)}>
+      <SidebarContent className={cn("pt-16 px-6 pb-8 lg:px-8 bg-surface", contentClassName)}>
         {children}
       </SidebarContent>
 

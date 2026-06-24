@@ -73,7 +73,7 @@ const statusConfig: Record<
     icon: Loader2,
     color: "text-primary",
     bg: "bg-[var(--accent-surface-soft)]",
-    border: "border-border",
+    border: "border-[var(--md3-outline-variant)]",
     label: "Running",
     animate: true,
   },
@@ -161,7 +161,7 @@ export function VariantList({
             className={`cursor-pointer rounded-lg border px-3 py-2.5 transition-colors ${
               isSelected
                 ? "border-primary/30 bg-[var(--accent-surface-soft)]"
-                : "border-border bg-card hover:border-primary/20 hover:bg-muted/50"
+                : "border-[var(--md3-outline-variant)] bg-surface-container hover:border-primary/20 hover:bg-surface-container-high"
             }`}
             onClick={() => onSelect?.(variant.id)}
           >

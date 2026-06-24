@@ -43,7 +43,7 @@ export function BackendSelector({
         <Select.Trigger
           className={cn(
             "flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)]",
-            "border border-border bg-card",
+            "border border-[var(--md3-outline-variant)] bg-surface-container",
             "px-3 py-2.5 text-sm text-left",
             "transition-colors duration-[var(--transition-fast)]",
             "hover:border-primary/20 hover:bg-accent/30",
@@ -81,8 +81,8 @@ export function BackendSelector({
             sideOffset={4}
             className={cn(
               "z-50 w-[var(--radix-select-trigger-width)] overflow-hidden",
-              "rounded-[var(--radius-md)] border border-border",
-              "bg-card shadow-[var(--shadow-dropdown)]",
+              "rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)]",
+              "bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
               "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
               "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

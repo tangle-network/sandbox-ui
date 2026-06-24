@@ -154,7 +154,7 @@ export function AddSshKeyDialog({
               placeholder="My laptop"
               autoComplete="off"
               aria-invalid={errors.name ? true : undefined}
-              className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             {errors.name && (
               <p className="text-xs text-destructive">{errors.name}</p>
@@ -177,7 +177,7 @@ export function AddSshKeyDialog({
               autoComplete="off"
               spellCheck={false}
               aria-invalid={errors.publicKey ? true : undefined}
-              className="min-h-24 w-full resize-y rounded-md border border-border bg-card px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="min-h-24 w-full resize-y rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             {errors.publicKey && (
               <p className="text-xs text-destructive">{errors.publicKey}</p>
@@ -202,7 +202,7 @@ export function AddSshKeyDialog({
             type="button"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
-            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            className="rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-container-high transition-colors disabled:opacity-50"
           >
             Cancel
           </button>

@@ -106,7 +106,7 @@ export function OutOfCreditsModal({
     >
       <div
         className={cn(
-          "bg-card border border-border rounded-xl p-6 max-w-md w-full shadow-[var(--shadow-dropdown)]",
+          "bg-surface-container-highest border border-[var(--md3-outline-variant)] rounded-xl p-6 max-w-md w-full shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
           className,
         )}
         onClick={(e) => e.stopPropagation()}

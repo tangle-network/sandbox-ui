@@ -22,12 +22,12 @@ export function TemplateCard({ template, onUseTemplate, className }: TemplateCar
   return (
     <div
       className={cn(
-        "group relative flex flex-col justify-between rounded-xl border border-border bg-card p-6 transition-colors hover:border-[var(--border-accent)]",
+        "group relative flex flex-col justify-between rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container p-6 transition-colors hover:border-[var(--border-accent)]",
         className,
       )}
     >
       <div>
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-muted border border-border">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-surface-container-high border border-[var(--md3-outline-variant)]">
           {template.icon ?? (
             <span className="text-lg font-bold text-primary">
               {template.name.charAt(0).toUpperCase()}
@@ -41,7 +41,7 @@ export function TemplateCard({ template, onUseTemplate, className }: TemplateCar
             {template.tags.map((tag, i) => (
               <span
                 key={`${tag}-${i}`}
-                className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                className="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
               >
                 {tag}
               </span>

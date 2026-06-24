@@ -77,7 +77,7 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
                 >
                   {/* Tooltip */}
                   {isHovered && (
-                    <div className="absolute -top-12 z-10 rounded-lg border border-border bg-popover px-3 py-1.5 text-sm shadow-[var(--shadow-dropdown)]">
+                    <div className="absolute -top-12 z-10 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-highest px-3 py-1.5 text-sm shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]">
                       <p className="font-medium">
                         {formatValue(point.value)} {unit}
                       </p>
@@ -122,7 +122,7 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
         </div>
 
         {/* Summary Stats */}
-        <div className="mt-4 grid grid-cols-3 gap-4 border-border border-t pt-4">
+        <div className="mt-4 grid grid-cols-3 gap-4 border-[var(--md3-outline-variant)] border-t pt-4">
           <div className="text-center">
             <p className="text-muted-foreground text-xs">Average</p>
             <p className="font-medium">

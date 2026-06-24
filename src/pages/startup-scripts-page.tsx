@@ -460,13 +460,13 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-[var(--shadow-card)]">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Scripts</p>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="font-display text-2xl font-extrabold text-foreground">{scripts.length}</span>
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-[var(--shadow-card)]">
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="font-display text-2xl font-extrabold text-foreground">{activeCount}</span>
@@ -514,7 +514,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         key={type}
                         type="button"
                         onClick={() => openBlankScript(type)}
-                        className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:border-primary/30 hover:bg-muted/50 transition-colors"
+                        className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2.5 text-sm font-medium text-foreground hover:border-primary/30 hover:bg-surface-container-high transition-colors"
                       >
                         {meta.label}
                       </button>
@@ -529,21 +529,21 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         key={tmpl.name}
                         type="button"
                         onClick={() => openFromTemplate(tmpl)}
-                        className="w-full text-left rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-muted/30 transition-colors group"
+                        className="w-full text-left rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-4 hover:border-primary/30 hover:bg-surface-container-high transition-colors group"
                       >
                         <div className="flex items-center justify-between">
                           <div>
                             <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{tmpl.name}</h4>
                             <p className="mt-0.5 text-xs text-muted-foreground">{tmpl.description}</p>
                           </div>
-                          <span className="text-[10px] font-mono text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                          <span className="text-[10px] font-mono text-muted-foreground bg-surface-container-high rounded px-1.5 py-0.5">
                             {SCRIPT_TYPE_META[tmpl.scriptType].label}
                           </span>
                         </div>
                         {tmpl.injectSecrets.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {tmpl.injectSecrets.map((s) => (
-                              <span key={s} className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                              <span key={s} className="inline-flex items-center gap-0.5 rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] text-muted-foreground">
                                 <Lock className="h-2.5 w-2.5" />
                                 {s}
                               </span>
@@ -586,7 +586,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                 placeholder="Install Claude Code"
                 maxLength={64}
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
 
@@ -599,7 +599,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 placeholder="Sets up Claude Code with authentication"
                 maxLength={256}
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
 
@@ -624,7 +624,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                       "rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors",
                       formData.scriptType === type
                         ? "bg-primary/10 border-primary/30 text-primary"
-                        : "bg-background border-border text-muted-foreground hover:border-primary/20",
+                        : "bg-surface-container-low border-[var(--md3-outline-variant)] text-muted-foreground hover:border-primary/20",
                     )}
                   >
                     {meta.label}
@@ -641,7 +641,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 onChange={(e) => setFormData((p) => ({ ...p, content: e.target.value }))}
                 rows={12}
                 spellCheck={false}
-                className="mt-1.5 w-full rounded-lg border border-border bg-[var(--depth-1,hsl(var(--muted)))] px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
+                className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 {SCRIPT_TYPE_META[formData.scriptType].label} script. Injected secrets are available as environment variables (e.g. <code className="text-primary">$GITHUB_TOKEN</code>).
@@ -667,7 +667,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                           "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
                           selected
                             ? "bg-primary/10 border-primary/30 text-primary"
-                            : "bg-muted border-border text-muted-foreground hover:border-primary/20",
+                            : "bg-surface-container-low border-[var(--md3-outline-variant)] text-muted-foreground hover:border-primary/20",
                         )}
                       >
                         <Lock className="h-3 w-3" />
@@ -691,7 +691,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
               </button>
 
               {showConditions && (
-                <div className="mt-3 space-y-4 rounded-lg border border-border bg-muted/30 p-4">
+                <div className="mt-3 space-y-4 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-high p-4">
                   {/* Environments */}
                   <div>
                     <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
@@ -716,7 +716,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                                 "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
                                 selected
                                   ? "bg-primary/10 border-primary/30 text-primary"
-                                  : "bg-background border-border text-muted-foreground hover:border-primary/20",
+                                  : "bg-surface-container-low border-[var(--md3-outline-variant)] text-muted-foreground hover:border-primary/20",
                               )}
                             >
                               {env.name || env.id}
@@ -746,7 +746,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         placeholder="Any"
                         min={0.5}
                         step={0.5}
-                        className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       />
                     </div>
                     <div>
@@ -766,7 +766,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         placeholder="Any"
                         min={1}
                         step={1}
-                        className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       />
                     </div>
                   </div>
@@ -784,7 +784,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         onChange={(e) => setFormData((p) => ({ ...p, runOrder: e.target.value ? Math.max(0, Number(e.target.value)) : 0 }))}
                         min={0}
                         max={9999}
-                        className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       />
                       <p className="mt-1 text-xs text-muted-foreground">Lower runs first</p>
                     </div>
@@ -799,7 +799,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         onChange={(e) => setFormData((p) => ({ ...p, timeoutSeconds: e.target.value ? Math.max(5, Number(e.target.value)) : 300 }))}
                         min={5}
                         max={3600}
-                        className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       />
                     </div>
                   </div>
@@ -867,7 +867,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 <button
                   type="button"
                   onClick={() => goToStep("picker")}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-surface-container-high transition-colors"
                 >
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
                   Back
@@ -878,7 +878,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
               <button
                 type="button"
                 onClick={() => setIsDialogOpen(false)}
-                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                className="rounded-lg border border-[var(--md3-outline-variant)] px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-container-high transition-colors"
               >
                 Cancel
               </button>
@@ -910,7 +910,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
             <button
               type="button"
               onClick={() => setDeleteTarget(null)}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              className="rounded-lg border border-[var(--md3-outline-variant)] px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-container-high transition-colors"
             >
               Cancel
             </button>
@@ -927,8 +927,8 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       </Dialog>
 
       {/* Scripts List */}
-      <div className="overflow-hidden rounded-lg border border-border bg-card shadow-[var(--shadow-card)]">
-        <div className="border-b border-border px-6 py-4 flex items-center justify-between">
+      <div className="overflow-hidden rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-card)]">
+        <div className="border-b border-[var(--md3-outline-variant)] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button className="text-xs font-bold uppercase tracking-widest text-foreground">
               All Scripts
@@ -962,12 +962,12 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-[var(--md3-outline-variant)]">
             {scripts.map((script) => (
               <div
                 key={script.id}
                 className={cn(
-                  "group flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted/30",
+                  "group flex items-center gap-4 px-6 py-4 transition-colors hover:bg-surface-container-high",
                   !script.enabled && "opacity-60",
                 )}
               >
@@ -990,11 +990,11 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-bold text-foreground truncate">{script.name}</h4>
-                    <span className="text-[10px] font-mono text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                    <span className="text-[10px] font-mono text-muted-foreground bg-surface-container-high rounded px-1.5 py-0.5">
                       {SCRIPT_TYPE_META[script.scriptType ?? "bash"].label}
                     </span>
                     {script.runOrder !== 100 && (
-                      <span className="text-[10px] font-mono text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                      <span className="text-[10px] font-mono text-muted-foreground bg-surface-container-high rounded px-1.5 py-0.5">
                         #{script.runOrder}
                       </span>
                     )}
@@ -1009,7 +1009,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                       </span>
                     ))}
                     {script.injectSecrets.map((s) => (
-                      <span key={s} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground flex items-center gap-0.5">
+                      <span key={s} className="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-medium text-muted-foreground flex items-center gap-0.5">
                         <Lock className="h-2.5 w-2.5" />
                         {s}
                       </span>
@@ -1038,7 +1038,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                   <button
                     type="button"
                     onClick={() => openEdit(script)}
-                    className="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    className="rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-surface-container-high transition-colors"
                     aria-label={`Edit ${script.name}`}
                   >
                     <Pencil className="h-4 w-4" />
@@ -1060,7 +1060,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
 
       {/* Info Cards */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
               <Play className="h-5 w-5" />
@@ -1071,7 +1071,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
             Scripts execute in order after the container starts but before the AI agent. They run as bash scripts with full access to mounted tools (Nix profile) and workspace. Failed scripts abort sandbox creation unless "continue on failure" is enabled.
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-card p-6 shadow-[var(--shadow-card)]">
+        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 shadow-[var(--shadow-card)]">
           <div className="flex items-center gap-3 mb-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
               <Shield className="h-5 w-5" />

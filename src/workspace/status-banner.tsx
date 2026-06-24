@@ -20,7 +20,7 @@ const BANNER_STYLES: Record<BannerType, { bg: string; border: string; icon: type
   connecting: { bg: "bg-[var(--code-number)]/5", border: "border-[var(--code-number)]/20", icon: Wifi },
   error: { bg: "bg-[var(--code-error)]/5", border: "border-[var(--code-error)]/20", icon: AlertCircle },
   success: { bg: "bg-[var(--code-success)]/5", border: "border-[var(--code-success)]/20", icon: CheckCircle },
-  info: { bg: "bg-muted/50", border: "border-border", icon: AlertCircle },
+  info: { bg: "bg-surface-container-high", border: "border-[var(--md3-outline-variant)]", icon: AlertCircle },
 };
 
 export function StatusBanner({ type, message, detail, onDismiss, className }: StatusBannerProps) {

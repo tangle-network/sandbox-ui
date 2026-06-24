@@ -23,7 +23,7 @@ export function CreditBalance({
   return (
     <div
       className={cn(
-        "bg-card p-5 rounded-xl flex flex-col justify-between border border-border",
+        "bg-surface-container p-5 rounded-xl flex flex-col justify-between border border-[var(--md3-outline-variant)]",
         className,
       )}
     >
@@ -40,7 +40,7 @@ export function CreditBalance({
       </div>
       {onTopUp && (
         <div className="space-y-2.5 mt-5">
-          <div className="bg-card border border-border p-1 rounded-lg flex items-center">
+          <div className="bg-surface-container-low border border-[var(--md3-outline-variant)] p-1 rounded-lg flex items-center">
             <input
               type="text"
               value={`$${topUpValue}`}
@@ -57,7 +57,7 @@ export function CreditBalance({
                 if (!Number.isFinite(parsed) || parsed <= 0) return;
                 onTopUp(parsed);
               }}
-              className="bg-[var(--accent-surface-soft)] border border-border text-[var(--accent-text)] px-6 py-3 rounded-md font-bold text-xs uppercase tracking-widest active:scale-95 transition-transform hover:bg-[var(--accent-surface-strong)]"
+              className="bg-[var(--accent-surface-soft)] border border-[var(--md3-outline-variant)] text-[var(--accent-text)] px-6 py-3 rounded-md font-bold text-xs uppercase tracking-widest active:scale-95 transition-transform hover:bg-[var(--accent-surface-strong)]"
             >
               Top Up
             </button>
@@ -74,7 +74,7 @@ export function CreditBalance({
                     setTopUpValue(qa.toFixed(2));
                     onTopUp(rounded);
                   }}
-                  className="flex-1 py-2 text-[10px] font-mono text-muted-foreground border border-border rounded-md hover:bg-muted/50 hover:text-foreground transition-colors uppercase"
+                  className="flex-1 py-2 text-[10px] font-mono text-muted-foreground border border-[var(--md3-outline-variant)] rounded-md hover:bg-surface-container-high hover:text-foreground transition-colors uppercase"
                 >
                   +${qa}
                 </button>

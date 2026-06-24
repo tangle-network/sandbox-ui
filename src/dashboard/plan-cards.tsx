@@ -36,12 +36,12 @@ export function PlanCards({ plans, className }: PlanCardsProps) {
             className={cn(
               "p-5 rounded-xl transition-all relative overflow-hidden border",
               plan.popular
-                ? "bg-muted/50 border-border"
-                : "bg-card border-border hover:bg-muted/50 hover:border-primary/20",
+                ? "bg-surface-container-high border-[var(--md3-outline-variant)]"
+                : "bg-surface-container border-[var(--md3-outline-variant)] hover:bg-surface-container-high hover:border-primary/20",
             )}
           >
             {plan.popular && (
-              <div className="absolute top-0 right-0 bg-[var(--accent-surface-soft)] border-l border-b border-border px-4 py-1 text-[10px] font-bold text-[var(--accent-text)] uppercase tracking-widest rounded-bl-lg">
+              <div className="absolute top-0 right-0 bg-[var(--accent-surface-soft)] border-l border-b border-[var(--md3-outline-variant)] px-4 py-1 text-[10px] font-bold text-[var(--accent-text)] uppercase tracking-widest rounded-bl-lg">
                 Popular
               </div>
             )}
@@ -68,10 +68,10 @@ export function PlanCards({ plans, className }: PlanCardsProps) {
               className={cn(
                 "w-full py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-all border",
                 plan.current
-                  ? "border-border text-muted-foreground hover:border-primary/20 hover:text-foreground"
+                  ? "border-[var(--md3-outline-variant)] text-muted-foreground hover:border-primary/20 hover:text-foreground"
                   : plan.popular
-                    ? "bg-[var(--accent-surface-soft)] border-border text-[var(--accent-text)] hover:bg-[var(--accent-surface-strong)] active:scale-95 transition-transform"
-                    : "border-border text-foreground hover:border-primary/20 hover:text-primary",
+                    ? "bg-[var(--accent-surface-soft)] border-[var(--md3-outline-variant)] text-[var(--accent-text)] hover:bg-[var(--accent-surface-strong)] active:scale-95 transition-transform"
+                    : "border-[var(--md3-outline-variant)] text-foreground hover:border-primary/20 hover:text-primary",
               )}
             >
               {plan.ctaLabel ?? (plan.current ? "Current Plan" : "Upgrade Now")}

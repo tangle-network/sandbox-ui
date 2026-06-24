@@ -21,7 +21,7 @@ export function ClusterStatusBar({ items, latency, className }: ClusterStatusBar
 
   return (
     <div className={cn("fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-max max-w-[90vw] animate-in slide-in-from-bottom flex justify-center", className)}>
-      <div className="overflow-hidden rounded-full border border-border bg-card px-6 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-8 shadow-sm">
+      <div className="overflow-hidden rounded-full border border-[var(--md3-outline-variant)] bg-surface-container px-6 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-8 shadow-sm">
         
         <div className="flex items-center gap-6">
           {items.map((item, i) => (

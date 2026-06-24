@@ -124,13 +124,13 @@ export function ApprovalQueue({
               : stats.map((s) => (
                   <div
                     key={s.type}
-                    className="flex-1 min-w-[120px] rounded-lg border border-border bg-card p-3"
+                    className="flex-1 min-w-[120px] rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-3"
                   >
                     <div className="flex items-center gap-2 mb-1">
                       {renderTypeBadge ? (
                         renderTypeBadge(s.type)
                       ) : (
-                        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        <span className="rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                           {s.type}
                         </span>
                       )}
@@ -158,7 +158,7 @@ export function ApprovalQueue({
               {pending.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-lg border border-primary/20 bg-card p-4"
+                  className="rounded-lg border border-primary/20 bg-surface-container p-4"
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
@@ -169,7 +169,7 @@ export function ApprovalQueue({
                         {renderTypeBadge ? (
                           renderTypeBadge(item.type)
                         ) : (
-                          <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                          <span className="rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] text-muted-foreground">
                             {item.type}
                           </span>
                         )}
@@ -186,7 +186,7 @@ export function ApprovalQueue({
                         <button
                           type="button"
                           onClick={() => onApprove?.(item)}
-                          className="h-8 px-3 rounded-md border border-border text-xs font-medium text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-colors"
+                          className="h-8 px-3 rounded-md border border-[var(--md3-outline-variant)] text-xs font-medium text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-colors"
                         >
                           Approve
                         </button>
@@ -198,7 +198,7 @@ export function ApprovalQueue({
                             );
                             setRejectReason("");
                           }}
-                          className="h-8 px-3 rounded-md border border-border text-xs font-medium text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
+                          className="h-8 px-3 rounded-md border border-[var(--md3-outline-variant)] text-xs font-medium text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
                         >
                           Reject
                         </button>
@@ -206,12 +206,12 @@ export function ApprovalQueue({
                     )}
                   </div>
                   {rejectingId === item.id && (
-                    <div className="mt-3 border-t border-border pt-3">
+                    <div className="mt-3 border-t border-[var(--md3-outline-variant)] pt-3">
                       <textarea
                         placeholder="Why are you rejecting this?"
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 mb-2"
+                        className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 mb-2"
                         rows={2}
                       />
                       <div className="flex gap-2 justify-end">
@@ -274,7 +274,7 @@ export function ApprovalQueue({
                 {resolved.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-lg border border-border bg-card p-4 opacity-60"
+                    className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-4 opacity-60"
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="text-sm font-medium text-foreground">

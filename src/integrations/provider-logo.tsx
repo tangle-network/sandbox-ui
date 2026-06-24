@@ -214,13 +214,38 @@ export const PROVIDER_LOGO_URLS: Record<string, string> = {
 };
 
 /**
+ * Full-color vector brand marks for providers Simple Icons has delisted over
+ * trademark policy (Slack, Salesforce, the Microsoft 365 family, Twilio,
+ * LinkedIn) — these 404 on the simpleicons CDN, so without a real source they
+ * drop straight to the monogram. Keyed by the curated simpleicons slug AND by
+ * common normalized ids; the value is an svgl.app library name (crisp,
+ * multi-color SVGs that stay sharp in the catalog grid).
+ */
+export const PROVIDER_VECTOR_LOGOS: Record<string, string> = {
+  slack: "slack",
+  salesforce: "salesforce",
+  microsoftoutlook: "microsoft-outlook",
+  outlook: "microsoft-outlook",
+  microsoftteams: "microsoft-teams",
+  teams: "microsoft-teams",
+  microsoftexcel: "microsoft-excel",
+  excel: "microsoft-excel",
+  microsoftonedrive: "microsoft-onedrive",
+  onedrive: "microsoft-onedrive",
+  microsoftsharepoint: "microsoft-sharepoint",
+  sharepoint: "microsoft-sharepoint",
+  twilio: "twilio",
+  linkedin: "linkedin",
+};
+
+/**
  * Ordered candidate logo URLs for a provider slug, most specific first. The
  * renderer walks the chain on each `onError` until one loads, then falls back to
  * the monogram tile.
  *
- * Order: an explicit `iconUrl` (when the caller has one) → a pinned override →
- * the ActivePieces CDN by id (covers most of the hub catalog) → derived
- * simpleicons slugs (resilience for ids ActivePieces doesn't carry) → monogram.
+ * Order: explicit `iconUrl` → full-color vector mark for brands Simple Icons
+ * delisted (svgl.app) → a pinned override → the ActivePieces CDN by id (covers
+ * most of the hub catalog) → derived simpleicons slugs → monogram.
  */
 export function providerLogoCandidates(opts: {
   id: string;
@@ -230,17 +255,25 @@ export function providerLogoCandidates(opts: {
   if (opts.iconUrl) out.push(opts.iconUrl);
   const raw = opts.id.toLowerCase();
   const norm = normalizeProviderId(raw);
-  // The platform's logo source: pinned override, then the ActivePieces CDN
+  const curated = PROVIDER_LOGO_SLUGS[raw] ?? PROVIDER_LOGO_SLUGS[norm];
+  // Vector mark for delisted brands first (Slack, Salesforce, the Microsoft 365
+  // family, …): simpleicons 404s for these, so the crisp svgl.app SVG goes ahead
+  // of the rest.
+  const vectorName =
+    PROVIDER_VECTOR_LOGOS[raw] ??
+    PROVIDER_VECTOR_LOGOS[norm] ??
+    (curated ? PROVIDER_VECTOR_LOGOS[curated] : undefined);
+  if (vectorName) out.push(`https://svgl.app/library/${vectorName}.svg`);
+  // The platform's logo source: a pinned override, then the ActivePieces CDN
   // keyed on the provider id. A 404 on a miss advances the <img> to the next
   // candidate rather than stranding on a wrong default.
   const pinned = PROVIDER_LOGO_URLS[raw] ?? PROVIDER_LOGO_URLS[norm];
   if (pinned) out.push(pinned);
   if (raw) out.push(`${ACTIVEPIECES_CDN}/${encodeURIComponent(raw)}.png`);
-  // simpleicons fallback for providers absent from the ActivePieces catalog.
-  // Derived slug: brand name with separators stripped, lowercased — covers the
-  // long tail (notion, airtable, linear, asana, …) without an explicit entry.
+  // simpleicons fallback for providers absent from the catalog. Derived slug:
+  // brand name with separators stripped, lowercased — covers the long tail
+  // (notion, airtable, linear, asana, …) without an explicit entry.
   const slugs = new Set<string>();
-  const curated = PROVIDER_LOGO_SLUGS[raw] ?? PROVIDER_LOGO_SLUGS[norm];
   if (curated) slugs.add(curated);
   slugs.add(norm.replace(/-/g, ""));
   slugs.add(raw.replace(/[-_\s]/g, ""));

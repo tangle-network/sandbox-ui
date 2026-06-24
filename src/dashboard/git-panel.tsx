@@ -35,11 +35,11 @@ export function GitPanel({ status, log, loading = false, onRefresh, className }:
     // panel reserves its height and doesn't jump when the data arrives.
     return (
       <div
-        className={cn("rounded-lg border border-border bg-card overflow-hidden", className)}
+        className={cn("rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden", className)}
         aria-busy="true"
       >
         <span className="sr-only">Loading git info…</span>
-        <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-4 py-3">
           <div className="flex items-center gap-2">
             <GitBranch className="h-4 w-4 text-muted-foreground" />
             <div className="h-3.5 w-24 animate-pulse rounded bg-muted" />
@@ -62,7 +62,7 @@ export function GitPanel({ status, log, loading = false, onRefresh, className }:
 
   if (!status) {
     return (
-      <div className={cn("rounded-lg border border-border bg-card p-5", className)}>
+      <div className={cn("rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5", className)}>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <GitBranch className="h-4 w-4" />
           No git repository detected
@@ -74,8 +74,8 @@ export function GitPanel({ status, log, loading = false, onRefresh, className }:
   const changedCount = status.staged.length + status.modified.length + status.untracked.length
 
   return (
-    <div className={cn("rounded-lg border border-border bg-card overflow-hidden", className)}>
-      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-3">
+    <div className={cn("rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden", className)}>
+      <div className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-4 py-3">
         <div className="flex items-center gap-2">
           <GitBranch className="h-4 w-4 text-primary" />
           <span className="text-sm font-bold text-foreground">{status.branch}</span>
@@ -94,7 +94,7 @@ export function GitPanel({ status, log, loading = false, onRefresh, className }:
 
       {/* Changed files */}
       {changedCount > 0 && (
-        <div className="border-b border-border px-4 py-3">
+        <div className="border-b border-[var(--md3-outline-variant)] px-4 py-3">
           <div className="space-y-1.5">
             {status.staged.map((f) => (
               <div key={`s-${f}`} className="flex items-center gap-2 text-xs">
@@ -139,7 +139,7 @@ export function GitPanel({ status, log, loading = false, onRefresh, className }:
 
       {/* Upstream tracking */}
       {(status.ahead > 0 || status.behind > 0) && (
-        <div className="border-t border-border px-4 py-2 flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="border-t border-[var(--md3-outline-variant)] px-4 py-2 flex items-center gap-3 text-xs text-muted-foreground">
           {status.ahead > 0 && <span>↑ {status.ahead} ahead</span>}
           {status.behind > 0 && <span>↓ {status.behind} behind</span>}
         </div>

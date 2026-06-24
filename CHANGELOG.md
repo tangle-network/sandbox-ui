@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.45.0
+## 0.47.0
 
 ### Integrations panel: account identity, disconnect dialog, uniform tiles, platform logos
 

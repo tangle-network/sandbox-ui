@@ -120,7 +120,7 @@ export function MetricAreaChart({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-card p-4 shadow-sm",
+        "rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-4 shadow-sm",
         className,
       )}
       data-testid={`metric-chart-${label.toLowerCase().replace(/\s+/g, "-")}`}

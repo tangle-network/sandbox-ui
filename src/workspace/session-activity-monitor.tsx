@@ -53,7 +53,7 @@ export function SessionActivityMonitor({
   if (projectActivity.length === 0) {
     if (compact) return null;
     return (
-      <div className={cn("rounded-[var(--radius-lg)] border border-border bg-muted px-3 py-2.5 text-xs text-muted-foreground", className)}>
+      <div className={cn("rounded-[var(--radius-lg)] border border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2.5 text-xs text-muted-foreground", className)}>
         {emptyMessage}
       </div>
     );
@@ -82,7 +82,7 @@ export function SessionActivityMonitor({
           return (
             <div
               key={String(project.projectId)}
-              className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card"
+              className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--md3-outline-variant)] bg-surface-container"
             >
               <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
                 <div className="min-w-0">
@@ -99,7 +99,7 @@ export function SessionActivityMonitor({
               </div>
 
               {!compact && project.runningSessionIds.length > 0 && (
-                <div className="border-t border-border bg-muted px-1 py-0.5">
+                <div className="border-t border-[var(--md3-outline-variant)] bg-surface-container-high px-1 py-0.5">
                   {project.runningSessionIds.map((sessionId) => {
                     const session = sessionLookup[sessionId];
                     if (!session) return null;

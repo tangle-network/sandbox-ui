@@ -192,7 +192,7 @@ function SidebarLayoutInner({
   const showLabels = railLabels && !railCollapsed
 
   return (
-    <div className={cn("min-h-screen bg-background text-foreground", className)}>
+    <div className={cn("min-h-screen bg-surface text-foreground", className)}>
       {/* Wrap the fixed sidebar so the responsive-hide class lands on an
           element with no competing `display` utility. The rail itself carries
           `flex`; once the consumer's Tailwind redefines `.flex` (its stylesheet
@@ -209,7 +209,7 @@ function SidebarLayoutInner({
                   <Link
                     href={logoHref}
                     to={logoHref}
-                    className="flex items-center justify-center rounded-lg p-1 transition-colors hover:bg-muted/50"
+                    className="flex items-center justify-center rounded-lg p-1 transition-colors hover:bg-surface-container-high"
                   >
                     {logo}
                   </Link>
@@ -279,7 +279,7 @@ function SidebarLayoutInner({
             </SidebarRailNav>
 
             {(railLabels || railFooter !== undefined || hasProfile) && (
-              <SidebarRailFooter className={cn("border-t border-border pt-2", showLabels && "items-stretch px-2")}>
+              <SidebarRailFooter className={cn("border-t border-[var(--md3-outline-variant)] pt-2", showLabels && "items-stretch px-2")}>
                 {railLabels && (
                   <RailCollapseToggle collapsed={railCollapsed} showLabel={showLabels} onToggle={toggleRail} />
                 )}

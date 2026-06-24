@@ -93,7 +93,7 @@ function MiniMeter({ label, percent, className }: { label: string; percent: numb
         <span className="font-bold">{label}</span>
         <span className="text-primary">{percent}%</span>
       </div>
-      <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
         <div className="h-full bg-primary rounded-full" style={{ width: `${percent}%` }} />
       </div>
     </div>
@@ -145,11 +145,11 @@ export function SandboxTable({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="w-full bg-card rounded-2xl overflow-hidden border border-border">
+      <div className="w-full bg-surface-container rounded-2xl overflow-hidden border border-[var(--md3-outline-variant)]">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-background border-b border-border">
+              <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sandbox Name</th>
                 {hasTeamSandboxes && <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scope</th>}
@@ -189,7 +189,7 @@ export function SandboxTable({
                     key={sb.id}
                     className={cn(
                       "group relative transition-colors",
-                      onRowClick ? "cursor-pointer hover:bg-muted/50" : "hover:bg-muted/30",
+                      onRowClick ? "cursor-pointer hover:bg-surface-container-high" : "hover:bg-surface-container-high",
                     )}
                     onClick={onRowClick}
                   >
@@ -222,7 +222,7 @@ export function SandboxTable({
                           </div>
                         ) : (
                           <div
-                            className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-high px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
                             title="Personal sandbox"
                           >
                             <User className="h-3 w-3" aria-hidden="true" />
@@ -234,7 +234,7 @@ export function SandboxTable({
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         {sb.imageIcon && (
-                          <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center">
                             {sb.imageIcon}
                           </div>
                         )}
@@ -263,13 +263,13 @@ export function SandboxTable({
                       <div className="flex items-center justify-end gap-1">
                         {isActive && (
                           <>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenIDE?.(sb.id) }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Open IDE">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenIDE?.(sb.id) }} className="p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Open IDE">
                               <Code2 className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenTerminal?.(sb.id) }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Terminal">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenTerminal?.(sb.id) }} className="p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Terminal">
                               <Terminal className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onSSH?.(sb.id) }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90" title="SSH">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onSSH?.(sb.id) }} className="p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90" title="SSH">
                               <Key className="h-4 w-4" />
                             </button>
                           </>
@@ -278,7 +278,7 @@ export function SandboxTable({
                           <button
                             type="button"
                             onClick={(e) => { stopRowClick(e); resumeHandler(sb.id) }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--md3-outline-variant)] text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all"
                             title={resumeLabel}
                           >
                             <Play className="h-3 w-3" />
@@ -345,7 +345,7 @@ export function SandboxTable({
                                 <button
                                   type="button"
                                   onClick={stopRowClick}
-                                  className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-all active:scale-90 outline-none"
+                                  className="p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90 outline-none"
                                   aria-label="More actions"
                                   title="More actions"
                                 >
@@ -383,7 +383,7 @@ export function SandboxTable({
         <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-muted-foreground text-xs font-medium gap-4">
           <p>Showing {sandboxes.length} of {totalCount} active sandboxes</p>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => onPageChange?.(page - 1)} disabled={page <= 1} className="p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors disabled:opacity-30">
+            <button type="button" onClick={() => onPageChange?.(page - 1)} disabled={page <= 1} className="p-2 rounded-lg border border-[var(--md3-outline-variant)] hover:bg-surface-container-high transition-colors disabled:opacity-30">
               <ChevronLeft className="h-4 w-4" />
             </button>
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
@@ -393,13 +393,13 @@ export function SandboxTable({
                 onClick={() => onPageChange?.(p)}
                 className={cn(
                   "px-3 py-1 rounded-lg transition-colors",
-                  p === page ? "bg-[var(--accent-surface-soft)] text-primary border border-border" : "hover:bg-muted/50",
+                  p === page ? "bg-[var(--accent-surface-soft)] text-primary border border-[var(--md3-outline)]" : "hover:bg-surface-container-high",
                 )}
               >
                 {p}
               </button>
             ))}
-            <button type="button" onClick={() => onPageChange?.(page + 1)} disabled={page >= totalPages} className="p-2 rounded-lg border border-border hover:bg-muted/50 transition-colors disabled:opacity-30">
+            <button type="button" onClick={() => onPageChange?.(page + 1)} disabled={page >= totalPages} className="p-2 rounded-lg border border-[var(--md3-outline-variant)] hover:bg-surface-container-high transition-colors disabled:opacity-30">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>

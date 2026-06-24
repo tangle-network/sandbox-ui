@@ -58,14 +58,14 @@ export function PricingPage({
     <div className={cn("w-full space-y-10", className)}>
       {/* Billing Period Toggle */}
       <div className="flex justify-center">
-        <div className="inline-flex items-center rounded-full border border-border bg-muted/50 p-1">
+        <div className="inline-flex items-center rounded-full border border-[var(--md3-outline-variant)] bg-surface-container-low p-1">
           <button
             type="button"
             onClick={() => onBillingPeriodChange("monthly")}
             className={cn(
               "rounded-full px-5 py-2 text-sm font-medium transition-all",
               billingPeriod === "monthly"
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-surface-container-high text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -77,7 +77,7 @@ export function PricingPage({
             className={cn(
               "rounded-full px-5 py-2 text-sm font-medium transition-all",
               billingPeriod === "yearly"
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-surface-container-high text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -106,10 +106,10 @@ export function PricingPage({
             <div
               key={tier.id}
               className={cn(
-                "relative flex flex-col rounded-2xl border transition-all",
+                "relative flex flex-col rounded-2xl border bg-surface-container transition-all",
                 isRecommended
                   ? "border-primary shadow-[var(--shadow-glow)] scale-[1.02] z-10"
-                  : "border-border hover:border-primary/30",
+                  : "border-[var(--md3-outline-variant)] hover:border-primary/30",
               )}
             >
               {/* Recommended banner */}
@@ -125,7 +125,7 @@ export function PricingPage({
               {/* Current plan indicator */}
               {isCurrentTier && !isRecommended && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center rounded-full bg-muted border border-border px-4 py-1.5 text-xs font-bold text-foreground">
+                  <span className="inline-flex items-center rounded-full bg-surface-container-high border border-[var(--md3-outline-variant)] px-4 py-1.5 text-xs font-bold text-foreground">
                     Current Plan
                   </span>
                 </div>
@@ -165,15 +165,15 @@ export function PricingPage({
                     isRecommended
                       ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
                       : isCurrentTier
-                        ? "bg-muted text-muted-foreground border border-border cursor-default"
-                        : "bg-card text-foreground border border-border hover:border-primary/50 hover:bg-muted",
+                        ? "bg-muted text-muted-foreground border border-[var(--md3-outline-variant)] cursor-default"
+                        : "bg-surface-container-high text-foreground border border-[var(--md3-outline-variant)] hover:border-primary/50 hover:bg-surface-container-highest",
                   )}
                 >
                   {isCurrentTier ? "Current Plan" : isFree ? "Get Started" : "Subscribe"}
                 </button>
 
                 {/* Divider */}
-                <div className="my-8 border-t border-border" />
+                <div className="my-8 border-t border-[var(--md3-outline-variant)]" />
 
                 {/* Features */}
                 <ul className="space-y-3.5 flex-1">
@@ -181,7 +181,7 @@ export function PricingPage({
                     <li key={feature} className="flex items-start gap-3">
                       <div className={cn(
                         "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                        isRecommended ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        isRecommended ? "bg-primary/10 text-primary" : "bg-surface-container-high text-muted-foreground"
                       )}>
                         <Check className="h-3 w-3" />
                       </div>

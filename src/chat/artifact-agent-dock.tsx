@@ -280,12 +280,12 @@ export function ArtifactAgentDock({
   return (
     <aside
       className={cn(
-        "flex h-full w-[420px] min-w-[360px] max-w-[480px] flex-col border-l border-border bg-card/95 shadow-[var(--shadow-dropdown)]",
+        "flex h-full w-[420px] min-w-[360px] max-w-[480px] flex-col border-l border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-dropdown)]",
         className,
       )}
       aria-label={`Agent chat about ${heading}`}
     >
-      <header className="flex items-center justify-between border-b border-border bg-background/60 px-4 py-3">
+      <header className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
@@ -297,7 +297,7 @@ export function ArtifactAgentDock({
           type="button"
           onClick={() => onOpenChange(false)}
           aria-label="Close artifact chat"
-          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-container-high hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
@@ -323,7 +323,7 @@ export function ArtifactAgentDock({
       </div>
 
       <form
-        className="border-t border-border bg-background/60 p-3"
+        className="border-t border-[var(--md3-outline-variant)] bg-surface-container-low p-3"
         onSubmit={(e) => {
           e.preventDefault();
           void send();
@@ -342,14 +342,14 @@ export function ArtifactAgentDock({
             placeholder={`Ask about ${heading}…`}
             rows={2}
             disabled={!threadId}
-            className="min-h-[44px] flex-1 resize-none rounded-[20px] border border-border bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:outline-none focus:border-[var(--border-accent)] disabled:opacity-50"
+            className="min-h-[44px] flex-1 resize-none rounded-[20px] border border-[var(--md3-outline-variant)] bg-surface-dim px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:outline-none focus:border-[var(--border-accent)] disabled:opacity-50"
           />
           {sending ? (
             <button
               type="button"
               onClick={cancel}
               aria-label="Cancel"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-container-high hover:text-foreground"
             >
               <Square className="h-4 w-4" />
             </button>

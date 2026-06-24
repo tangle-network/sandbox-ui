@@ -224,7 +224,7 @@ export function ProfileComparison({
   );
 
   return (
-    <div className={`rounded-lg border border-border p-4 ${className ?? ""}`}>
+    <div className={`rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-4 ${className ?? ""}`}>
       <h4 className="mb-3 font-medium text-sm">Profile Performance</h4>
       <div className="space-y-3">
         {profilesWithMetrics.map((profile) => {

@@ -38,7 +38,7 @@ export function AuditResults({ forms, crossFormChecks = [], overallScore, classN
   return (
     <div className={cn("space-y-3 p-3", className)}>
       {/* Summary */}
-      <div className="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] bg-background border border-border">
+      <div className="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] bg-surface-container-high border border-[var(--md3-outline-variant)]">
         <Shield className={cn("h-5 w-5", totalChecks === totalPassed ? "text-[var(--code-success)]" : "text-[var(--code-number)]")} />
         <div>
           <div className="text-sm font-semibold text-foreground">
@@ -75,7 +75,7 @@ function FormAuditCard({ form }: { form: FormAudit }) {
   const allPassed = form.failed === 0 && form.found;
 
   return (
-    <div className="rounded-[var(--radius-md)] border border-border overflow-hidden">
+    <div className="rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-high overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-accent transition-colors"
@@ -97,7 +97,7 @@ function FormAuditCard({ form }: { form: FormAudit }) {
       </button>
 
       {expanded && (
-        <div className="border-t border-border px-3 py-1.5 space-y-0.5">
+        <div className="border-t border-[var(--md3-outline-variant)] px-3 py-1.5 space-y-0.5">
           {form.checks.map((check, i) => (
             <CheckRow key={i} check={check} />
           ))}

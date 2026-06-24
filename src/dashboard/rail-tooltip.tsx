@@ -34,8 +34,8 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
         aria-hidden="true"
         className={cn(
           "pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 translate-x-1 whitespace-nowrap",
-          "rounded-md border border-border bg-popover px-2 py-1 text-xs font-medium text-popover-foreground",
-          "opacity-0 shadow-[var(--shadow-dropdown)] transition-[opacity,transform] duration-150 ease-out",
+          "rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest px-2 py-1 text-xs font-medium text-popover-foreground",
+          "opacity-0 shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14] transition-[opacity,transform] duration-150 ease-out",
           "group-hover/tip:translate-x-0 group-hover/tip:opacity-100 group-hover/tip:delay-300",
           "group-focus-within/tip:translate-x-0 group-focus-within/tip:opacity-100",
         )}

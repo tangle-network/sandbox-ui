@@ -206,7 +206,7 @@ export function Sidebar({ children, className, style }: SidebarProps) {
     <div
       data-sidebar="true"
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex bg-card border-r border-border transition-[transform,width] duration-200 ease-in-out",
+        "fixed inset-y-0 left-0 z-40 flex bg-surface-container-low border-r border-[var(--md3-outline-variant)] transition-[transform,width] duration-200 ease-in-out",
         hidden && "-translate-x-full",
         className,
       )}
@@ -259,7 +259,7 @@ export interface SidebarRailHeaderProps {
 
 export function SidebarRailHeader({ children, className }: SidebarRailHeaderProps) {
   return (
-    <div className={cn("flex h-14 shrink-0 items-center justify-center border-b border-border", className)}>
+    <div className={cn("flex h-14 shrink-0 items-center justify-center border-b border-[var(--md3-outline-variant)]", className)}>
       {children}
     </div>
   )
@@ -490,7 +490,7 @@ export function RailFlyout({
             if (el.closest("a,button")) setOpen(false)
           }}
           className={cn(
-            "absolute top-0 z-50 min-w-[12rem] rounded-md border border-border bg-popover p-1.5 shadow-[var(--shadow-dropdown)]",
+            "absolute top-0 z-50 min-w-[12rem] rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
             showLabel ? "left-full ml-2" : "left-full ml-2",
           )}
         >
@@ -557,7 +557,7 @@ export function SidebarPanel({ children, className }: SidebarPanelProps) {
   return (
     <div
       className={cn(
-        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-border bg-card",
+        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-[var(--md3-outline-variant)] bg-surface-container-low",
         panelOpen ? "w-[268px] opacity-100" : "w-0 opacity-0 pointer-events-none",
         className,
       )}
@@ -581,7 +581,7 @@ export interface SidebarPanelHeaderProps {
 
 export function SidebarPanelHeader({ children, title, className }: SidebarPanelHeaderProps) {
   return (
-    <div className={cn("flex h-14 items-center px-4 border-b border-border shrink-0", className)}>
+    <div className={cn("flex h-14 items-center px-4 border-b border-[var(--md3-outline-variant)] shrink-0", className)}>
       {children ?? (
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       )}

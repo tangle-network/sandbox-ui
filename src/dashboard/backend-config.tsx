@@ -60,7 +60,7 @@ export function BackendConfig({
 
   if (loading || !status) {
     return (
-      <div className={cn("rounded-lg border border-border bg-muted/20 p-6 text-center", className)}>
+      <div className={cn("rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center", className)}>
         <Bot className="mx-auto h-6 w-6 text-muted-foreground animate-pulse mb-2" />
         <p className="text-sm text-muted-foreground">Loading backend status...</p>
       </div>
@@ -70,13 +70,13 @@ export function BackendConfig({
   return (
     <div className={cn("space-y-4", className)}>
       {/* Agent Status */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
+      <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
+        <div className="px-4 py-3 border-b border-[var(--md3-outline-variant)] bg-surface-container-high flex items-center justify-between">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Agent Status</h4>
           <button
             type="button"
             onClick={onRestart}
-            className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors border border-border"
+            className="inline-flex items-center gap-1.5 rounded-md bg-surface-container-high px-2.5 py-1 text-xs font-medium text-foreground hover:bg-surface-container-highest transition-colors border border-[var(--md3-outline-variant)]"
           >
             <RefreshCw className="h-3 w-3" />
             Restart
@@ -108,8 +108,8 @@ export function BackendConfig({
       </div>
 
       {/* MCP Servers */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
+      <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
+        <div className="px-4 py-3 border-b border-[var(--md3-outline-variant)] bg-surface-container-high flex items-center justify-between">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
             <Wrench className="h-3.5 w-3.5" />
             MCP Servers
@@ -141,7 +141,7 @@ export function BackendConfig({
                       "inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase",
                       s.status === "running" ? "bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]" :
                       s.status === "error" ? "bg-destructive/10 text-destructive" :
-                      "bg-muted text-muted-foreground"
+                      "bg-surface-container-high text-muted-foreground"
                     )}>
                       {s.status}
                     </span>
@@ -164,27 +164,27 @@ export function BackendConfig({
         )}
 
         {showAddMcp && (
-          <div className="p-4 border-t border-border bg-muted/10 space-y-2">
+          <div className="p-4 border-t border-[var(--md3-outline-variant)] bg-surface-container-high space-y-2">
             <input
               type="text"
               placeholder="Server name"
               value={mcpName}
               onChange={(e) => setMcpName(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <input
               type="text"
               placeholder="Command (e.g. npx @server/mcp)"
               value={mcpCommand}
               onChange={(e) => setMcpCommand(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <input
               type="text"
               placeholder="Arguments (space-separated, optional)"
               value={mcpArgs}
               onChange={(e) => setMcpArgs(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             <div className="flex justify-end gap-2 pt-1">
               <button

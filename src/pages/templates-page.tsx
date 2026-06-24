@@ -30,7 +30,7 @@ export function TemplatesPage({ templates, loading = false, onUseTemplate, class
           ))}
         </div>
       ) : templates.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-16 text-center">
+        <div className="rounded-2xl border border-[var(--md3-outline-variant)] bg-surface-container p-16 text-center">
           <Layers className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
           <p className="text-sm font-medium text-foreground mb-1">No templates available</p>
           <p className="text-sm text-muted-foreground">Check back later for pre-configured environments.</p>

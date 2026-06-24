@@ -178,7 +178,7 @@ function ResizeHandle({ label, onDragStart, onStep, className }: ResizeHandlePro
         className,
       )}
     >
-      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors" />
+      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[var(--md3-outline-variant)] transition-colors" />
       <span className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-transparent hover:bg-primary/30 focus-visible:bg-primary/40" />
     </button>
   );
@@ -224,7 +224,7 @@ function HorizontalResizeHandle({ label, onDragStart, onStep, className }: Horiz
         className,
       )}
     >
-      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border transition-colors" />
+      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--md3-outline-variant)] transition-colors" />
       <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-transparent hover:bg-primary/30 focus-visible:bg-primary/40" />
     </button>
   );
@@ -249,11 +249,11 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
       />
       <aside
         className={cn(
-          "relative flex h-full w-[min(88vw,24rem)] flex-col border-border bg-background shadow-[var(--shadow-dropdown)]",
+          "relative flex h-full w-[min(88vw,24rem)] flex-col border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
           side === "left" ? "border-r" : "ml-auto border-l",
         )}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--md3-outline-variant)] px-3 py-2">
           <div className="min-w-0 flex-1">{header ?? <span className="text-[13px] font-medium text-foreground">{title}</span>}</div>
           <button
             type="button"
@@ -427,10 +427,10 @@ export function WorkspaceLayout({
             <aside
               aria-label={leftLabel}
               style={leftStyle}
-              className="hidden shrink-0 border-r border-border bg-background lg:flex lg:flex-col"
+              className="hidden shrink-0 border-r border-[var(--md3-outline-variant)] bg-surface-container-low lg:flex lg:flex-col"
             >
               {leftHeader && (
-                <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5 bg-muted/20">
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--md3-outline-variant)] px-3 py-1.5 bg-surface-container-high">
                   <div className="min-w-0 flex-1">{leftHeader}</div>
                   <button
                     type="button"
@@ -456,7 +456,7 @@ export function WorkspaceLayout({
 
         <main className="flex min-w-0 flex-1 flex-col">
           {(centerHeader || left || right || bottom) && (
-            <div className="flex items-center gap-2 border-b border-border bg-muted/20 px-3 py-1.5">
+            <div className="flex items-center gap-2 border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-1.5">
               {left && !leftOpen && (
                 <button
                   type="button"
@@ -504,11 +504,11 @@ export function WorkspaceLayout({
               )}
               <section
                 aria-label={bottomLabel}
-                className="border-t border-border bg-card shrink-0"
+                className="border-t border-[var(--md3-outline-variant)] bg-surface-container shrink-0"
                 style={{ height: `${bottomHeight}px` }}
               >
                 <div className="flex h-full flex-col">
-                  <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5 bg-muted/20 shrink-0">
+                  <div className="flex items-center justify-between gap-2 border-b border-[var(--md3-outline-variant)] px-3 py-1.5 bg-surface-container-high shrink-0">
                     <div className="min-w-0 flex-1">
                       {bottomHeader ?? (
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -532,7 +532,7 @@ export function WorkspaceLayout({
           )}
 
           {centerFooter && (
-            <div className="shrink-0 border-t border-border bg-background">
+            <div className="shrink-0 border-t border-[var(--md3-outline-variant)] bg-surface-container-low">
               {centerFooter}
             </div>
           )}
@@ -550,9 +550,9 @@ export function WorkspaceLayout({
             <aside
               aria-label={rightLabel}
               style={rightStyle}
-              className="hidden shrink-0 border-l border-border bg-background lg:flex lg:flex-col"
+              className="hidden shrink-0 border-l border-[var(--md3-outline-variant)] bg-surface-container-low lg:flex lg:flex-col"
             >
-              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-1.5 bg-muted/20">
+              <div className="flex items-center justify-between gap-2 border-b border-[var(--md3-outline-variant)] px-3 py-1.5 bg-surface-container-high">
                 <div className="min-w-0 flex-1">
                   {rightHeader ?? <span className="text-[13px] font-medium text-foreground">Artifacts</span>}
                 </div>

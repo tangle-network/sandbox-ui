@@ -25,12 +25,12 @@ import {
   useState,
 } from "react";
 import {
-  buildWorkflowGraph,
   type WfNodeData,
   type WfNodeState,
   type WfNodeStatus,
   type WfNodeTone,
 } from "./model";
+import { buildFlowGraph } from "./flow-graph";
 import { fmtCost, fmtDuration } from "./format";
 import { providerLabel } from "../assistant/provider-label";
 import { ProviderIcon } from "../integrations/provider-logo";
@@ -114,7 +114,7 @@ function MetaChip({ children }: { children: ReactNode }) {
   );
 }
 
-function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
+export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const d = data;
   const state = d.state;
   // The model the card shows: what the run ACTUALLY used wins over the requested
@@ -259,31 +259,10 @@ export function WorkflowGraph({
   onNodeClick,
 }: WorkflowGraphProps) {
   const colorMode = useColorMode();
-  const { nodes, edges, error } = useMemo(() => {
-    const graph = buildWorkflowGraph(yaml);
-    return {
-      error: graph.error,
-      nodes: graph.nodes.map(
-        (n): Node<WfNodeData> => ({
-          id: n.id,
-          type: "wfNode",
-          position: n.position,
-          // Merge live run state (if any) onto the static node data so the node
-          // component renders status/cost/output without a separate channel.
-          data: nodeState?.[n.id]
-            ? { ...n.data, state: nodeState[n.id] }
-            : n.data,
-        }),
-      ),
-      edges: graph.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        sourceHandle: e.sourceHandle,
-        type: "smoothstep",
-      })),
-    };
-  }, [yaml, nodeState]);
+  const { nodes, edges, error } = useMemo(
+    () => buildFlowGraph(yaml, nodeState),
+    [yaml, nodeState],
+  );
 
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {

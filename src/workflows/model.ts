@@ -46,9 +46,12 @@ export interface WfNodeState {
 export interface WfNodeData extends Record<string, unknown> {
   /** Headline for the node, e.g. "Run agent". */
   title: string;
-  /** The action/trigger kind verbatim, e.g. "agent.run", "schedule". Always set
-   *  so a card can label what it is regardless of which subtitle it shows. */
-  kind: string;
+  /** The action/trigger kind verbatim, e.g. "agent.run", "schedule". Set on every
+   *  node `buildWorkflowGraph` produces so a card can label what it is regardless
+   *  of which subtitle it shows; optional on the type so external consumers
+   *  constructing `WfNodeData` directly aren't forced to supply it (the render
+   *  guards its usage). */
+  kind?: string;
   /** Secondary detail, e.g. an integration path or a cron expression. */
   subtitle?: string;
   /** Requested model (agent.run), shown as a chip even before a run. */

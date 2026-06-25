@@ -53,6 +53,28 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("boom: provider 500")).toBeTruthy();
   });
 
+  it("renders a succeeded node's output preview (output is not running-only)", () => {
+    renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: "final answer" },
+    });
+    expect(screen.getByText("Done")).toBeTruthy();
+    expect(screen.getByText("final answer")).toBeTruthy();
+  });
+
+  it("renders no error element for a failed node with no error, and suppresses its output", () => {
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "failed", outputPreview: "suppressed while failed" },
+    });
+    expect(screen.getByText("Failed")).toBeTruthy();
+    // The red error <p> is only rendered when a failed node carries an error
+    // (the failed status badge is a <span>, so scope the query to <p>).
+    expect(container.querySelector("p.text-red-400")).toBeNull();
+    // outputPreview is suppressed for a failed node (error channel only).
+    expect(screen.queryByText("suppressed while failed")).toBeNull();
+  });
+
   it("shows the static badge and no run status when there is no state", () => {
     renderNode({ ...BASE, badge: "×3", state: undefined });
     expect(screen.getByText("×3")).toBeTruthy();

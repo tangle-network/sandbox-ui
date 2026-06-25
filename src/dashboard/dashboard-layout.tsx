@@ -76,6 +76,9 @@ export interface DashboardLayoutProps {
   contentClassName?: string
   topNavLinks?: TopNavLink[]
   activeTopNavHref?: string
+  /** Arbitrary content rendered at the leading (left) edge of the top bar —
+   * e.g. a workspace/team switcher — so consumers don't need a second bar. */
+  topBarLeading?: React.ReactNode
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
   /**
@@ -205,6 +208,7 @@ function DashboardLayoutInner({
   contentClassName,
   topNavLinks,
   activeTopNavHref,
+  topBarLeading,
   LinkComponent = DefaultLink,
   logoHref = "/",
   onLogoClick,
@@ -468,6 +472,7 @@ function DashboardLayoutInner({
           <Link href={logoHref} to={logoHref} className="lg:hidden flex items-center p-1 rounded-md hover:bg-surface-container-high transition-colors">
             <Logo variant={variant} size="sm" iconOnly />
           </Link>
+          {topBarLeading}
           {topNavLinks && topNavLinks.length > 0 && (
             <div className="hidden md:flex gap-6">
               {topNavLinks.map((link) => (

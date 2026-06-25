@@ -21,7 +21,10 @@ const DIFF_OPTIONS = {
   expandUnchanged: false,
   theme: { dark: "github-dark", light: "github-light" },
   themeType: "dark",
-  stickyHeader: true,
+  // The artifact pane's PanelHeader already shows the filename, git status, and
+  // +/- stats above the tabs, so PatchDiff's own file header is a redundant
+  // second "selected file" bar. Suppress it — one header, not two.
+  disableFileHeader: true,
 } as const
 
 export interface DiffViewProps {

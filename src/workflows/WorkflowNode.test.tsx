@@ -62,6 +62,14 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("final answer")).toBeTruthy();
   });
 
+  it("clamps an over-long output preview before it reaches the DOM", () => {
+    const long = "y".repeat(500);
+    renderNode({ ...BASE, state: { status: "succeeded", outputPreview: long } });
+    // The full payload is never rendered; only the bounded preview is.
+    expect(screen.queryByText(long)).toBeNull();
+    expect(screen.getByText(`${"y".repeat(200)}…`)).toBeTruthy();
+  });
+
   it("renders no error element for a failed node with no error, and suppresses its output", () => {
     const { container } = renderNode({
       ...BASE,

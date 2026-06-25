@@ -31,7 +31,7 @@ import {
   type WfNodeTone,
 } from "./model";
 import { buildFlowGraph } from "./flow-graph";
-import { fmtCost, fmtDuration, fmtTokens } from "./format";
+import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 import { providerLabel } from "../assistant/provider-label";
 import { ProviderIcon } from "../integrations/provider-logo";
 
@@ -123,6 +123,12 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const duration = fmtDuration(state?.durationMs);
   const cost = fmtCost(state?.costUsd);
   const tokens = fmtTokens(state?.inputTokens, state?.outputTokens);
+  // Bound the host-supplied preview/error strings before they hit the DOM — the
+  // card shows a short preview, and `line-clamp-2` only hides overflow visually.
+  const errorText = state?.error ? clampPreview(state.error) : undefined;
+  const outputText = state?.outputPreview
+    ? clampPreview(state.outputPreview)
+    : undefined;
   return (
     <div
       className={`relative w-[240px] rounded-lg border px-3 py-2 shadow-sm transition-colors ${
@@ -176,20 +182,20 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
         </div>
       )}
       {/* One-line output/error preview once the node has run. Error is red. */}
-      {state?.status === "failed" && state.error && (
+      {state?.status === "failed" && errorText && (
         <p
           className="mt-1.5 line-clamp-2 text-[10px] text-red-400"
-          title={state.error}
+          title={errorText}
         >
-          {state.error}
+          {errorText}
         </p>
       )}
-      {state?.outputPreview && state.status !== "failed" && (
+      {outputText && state?.status !== "failed" && (
         <p
           className="mt-1.5 line-clamp-2 text-[10px] text-text-muted"
-          title={state.outputPreview}
+          title={outputText}
         >
-          {state.outputPreview}
+          {outputText}
         </p>
       )}
       {d.provider && (

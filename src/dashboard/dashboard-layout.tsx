@@ -272,10 +272,12 @@ function DashboardLayoutInner({
               >
                 <Logo variant={variant} size="sm" iconOnly />
               </button>
-            ) : labeledRail ? (
-              // The logo IS the collapse/expand control. Expanded: full
-              // logotype with a collapse chevron that fades in on hover.
-              // Collapsed: the mark, with an expand chevron overlay on hover.
+            ) : allowCollapse ? (
+              // The logo IS the collapse/expand control on the desktop rail
+              // (allowCollapse). The mobile drawer never collapses, so it falls
+              // through to the plain logo link. Expanded: full logotype with a
+              // collapse chevron that fades in on hover. Collapsed: the mark,
+              // with an expand chevron overlay on hover.
               <button
                 type="button"
                 onClick={toggleRail}

@@ -87,8 +87,8 @@ describe("DashboardLayout — rail collapse control", () => {
     )
     // Expanded by default, so the control offers to collapse. Only the desktop
     // rail renders it — the mobile drawer is always labeled and never collapses.
-    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Collapse navigation" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Expand navigation" })).toBeNull()
   })
 
   it("starts collapsed when defaultRailCollapsed is set", () => {
@@ -97,8 +97,8 @@ describe("DashboardLayout — rail collapse control", () => {
         <div>content</div>
       </DashboardLayout>,
     )
-    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Expand navigation" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Collapse navigation" })).toBeNull()
   })
 
   it("renders no collapse toggle when labeledRail is omitted", () => {
@@ -108,7 +108,7 @@ describe("DashboardLayout — rail collapse control", () => {
       </DashboardLayout>,
     )
     expect(
-      screen.queryByRole("button", { name: /Collapse sidebar|Expand sidebar/ }),
+      screen.queryByRole("button", { name: /Collapse navigation|Expand navigation/ }),
     ).toBeNull()
   })
 
@@ -119,8 +119,8 @@ describe("DashboardLayout — rail collapse control", () => {
         <div>content</div>
       </DashboardLayout>,
     )
-    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
-    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Collapse navigation" }))
+    expect(screen.getByRole("button", { name: "Expand navigation" })).toBeInTheDocument()
   })
 })
 

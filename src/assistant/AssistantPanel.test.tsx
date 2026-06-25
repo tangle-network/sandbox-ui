@@ -403,3 +403,54 @@ describe("AssistantPanel history overlay dismissal", () => {
     );
   });
 });
+
+describe("AssistantPanel orphaned model reconciliation", () => {
+  // A client whose model catalog is controlled; everything else is the real
+  // same-origin client (its background fetches fail harmlessly).
+  function modelsClient(data: AssistantModels): AssistantClient {
+    return {
+      ...createAssistantClient({ baseUrl: "/api/v1/assistant" }),
+      fetchModels: async () => ({ ok: true, data }),
+    };
+  }
+
+  const catalog: AssistantModels = {
+    default: "openai/gpt-5.4",
+    models: [{ slug: "openai/gpt-5.4", label: "GPT-5.4" }],
+  };
+
+  function renderWithModels(chat: AssistantChat, data: AssistantModels) {
+    return render(
+      <AssistantClientProvider client={modelsClient(data)}>
+        <AssistantPanel
+          chat={chat}
+          userId="u1"
+          onClose={() => {}}
+          renderTranscript={() => <div data-testid="host-transcript" />}
+        />
+      </AssistantClientProvider>,
+    );
+  }
+
+  it("resets a selection the catalog no longer lists to the default", async () => {
+    const chat = makeChat();
+    chat.selectedModel = "retired/model";
+    renderWithModels(chat, catalog);
+    // Once the catalog loads, the orphaned slug is reconciled to the default so
+    // the displayed model and the slug sent on the next turn agree.
+    await waitFor(() =>
+      expect(chat.setModel).toHaveBeenCalledWith("openai/gpt-5.4"),
+    );
+    expect(chat.setModel).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a still-valid selection untouched", async () => {
+    const chat = makeChat();
+    chat.selectedModel = "openai/gpt-5.4";
+    renderWithModels(chat, catalog);
+    // Wait until the catalog has loaded (the picker trigger appears), then
+    // assert the valid selection was never rewritten.
+    await screen.findByRole("button", { name: /Model:/ });
+    expect(chat.setModel).not.toHaveBeenCalled();
+  });
+});

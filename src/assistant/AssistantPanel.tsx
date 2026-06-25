@@ -105,6 +105,21 @@ export function AssistantPanel({
       ? chat.selectedModel
       : (models.default ?? "");
 
+  // Reconcile an orphaned selection in the chat state itself — not just the
+  // displayed value. If the active slug drops out of the catalog (retired
+  // between refetches), reset it to the default so the model shown can never
+  // diverge from the slug actually sent on the next turn. Guarded on a loaded
+  // catalog so the initial empty list never clears a still-valid selection.
+  useEffect(() => {
+    if (
+      chat.selectedModel &&
+      pickerModels.length > 0 &&
+      !pickerModels.some((m) => m.id === chat.selectedModel)
+    ) {
+      chat.setModel(models.default ?? null);
+    }
+  }, [chat.selectedModel, chat.setModel, pickerModels, models.default]);
+
   const { state } = chat;
   // Always-current chat handle, so an async delete can re-check the LIVE thread
   // + status after awaiting (the closure's `chat`/`state` are render-time stale).

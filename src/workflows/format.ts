@@ -10,7 +10,10 @@ export function fmtDuration(ms: number | undefined): string | undefined {
   if (ms < 1000) return `${Math.round(ms)}ms`;
   const s = ms / 1000;
   if (s < 60) return `${s.toFixed(1)}s`;
-  return `${Math.floor(s / 60)}m${Math.round(s % 60)}s`;
+  // Round to whole seconds BEFORE splitting into minutes + seconds so a value
+  // like 119_999ms can't render `1m60s` — the carry rolls into the minute.
+  const totalSeconds = Math.round(s);
+  return `${Math.floor(totalSeconds / 60)}m${totalSeconds % 60}s`;
 }
 
 /** Human-readable USD cost: `$0`, `$0.0032` (sub-cent, 4dp), `$1.20`. Undefined

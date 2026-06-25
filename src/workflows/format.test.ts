@@ -26,6 +26,12 @@ describe("fmtDuration", () => {
     expect(fmtDuration(90_000)).toBe("1m30s");
     expect(fmtDuration(605_000)).toBe("10m5s");
   });
+
+  it("carries a rounded second into the minute instead of rendering 60s", () => {
+    // Just below two minutes: seconds round to 60 and must roll over.
+    expect(fmtDuration(119_999)).toBe("2m0s");
+    expect(fmtDuration(119_600)).toBe("2m0s");
+  });
 });
 
 describe("fmtCost", () => {

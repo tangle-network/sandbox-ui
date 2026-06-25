@@ -10,7 +10,8 @@
 
 import { AgentTimeline, ChatInput, ThinkingIndicator } from "@tangle-network/ui/chat";
 import { History, MessageSquarePlus, Minus, Plus, Trash2, X } from "lucide-react";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ModelInfo, ModelPicker } from "../dashboard/model-picker";
 import { assistantIsThinking, buildAssistantTimeline } from "./build-timeline";
 import { isLowBalance, presentError } from "./presentation";
 import { ProposalCard } from "./ProposalCard";
@@ -66,12 +67,47 @@ export function AssistantPanel({
   const threads = useAssistantThreads(userId);
   const font = useFontScale();
   const [historyOpen, setHistoryOpen] = useState(false);
+  const historyRef = useRef<HTMLDivElement | null>(null);
+  const historyButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // Map the assistant's catalog (slug + label, optional context window) onto the
+  // shared ModelPicker's wire shape. The slug is already a canonical, provider-
+  // prefixed id, so it doubles as the picker's value. Pricing is intentionally
+  // omitted: the catalog carries only a prompt price, and the picker's
+  // "prompt / completion" line would misreport the missing completion as free.
+  const pickerModels = useMemo<ModelInfo[]>(
+    () =>
+      models.models.map((m) => ({
+        id: m.slug,
+        name: m.label,
+        context_length: m.contextTokens,
+      })),
+    [models.models],
+  );
 
   const { state } = chat;
   // Always-current chat handle, so an async delete can re-check the LIVE thread
   // + status after awaiting (the closure's `chat`/`state` are render-time stale).
   const chatRef = useRef(chat);
   chatRef.current = chat;
+
+  // Close the history overlay on an outside pointer press (the toggle button and
+  // the overlay itself are excluded so they keep their own click handling). The
+  // overlay floats above the conversation, so without this it could only be
+  // dismissed via the toggle — the press-anywhere-to-close behavior users expect
+  // of a dropdown.
+  useEffect(() => {
+    if (!historyOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (historyRef.current?.contains(target)) return;
+      if (historyButtonRef.current?.contains(target)) return;
+      setHistoryOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [historyOpen]);
+
   // Prefer the just-settled turn's balance (from the usage event, immediate)
   // over the injected fetched balance, which may lag a turn behind.
   const effectiveBalance = state.usage?.balanceUsd ?? balanceUsd;
@@ -146,150 +182,179 @@ export function AssistantPanel({
   };
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 border-border border-b px-4 py-3">
-        <div className="flex min-w-0 flex-col">
-          <div className="flex items-baseline gap-2">
-            <span className="font-medium text-foreground text-sm">Assistant</span>
-            <span
-              aria-label="Your credit balance"
-              className="text-muted-foreground text-xs"
-            >
-              {formatMoney(effectiveBalance)}
-            </span>
+    <div className="relative flex h-full flex-col bg-background">
+      {/* Header + toolbar. Positioned (relative + z-10) so the history overlay
+          drops directly under it via `top-full` and floats above the
+          conversation rather than pushing it down. */}
+      <div className="relative z-10 border-border border-b">
+        {/* Title bar: identity + active-conversation title, and the
+            conversation-level actions (history, new, close). */}
+        <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-1.5">
+          <div className="flex min-w-0 flex-col">
+            <div className="flex items-baseline gap-2">
+              <span className="font-medium text-foreground text-sm">
+                Assistant
+              </span>
+              <span
+                aria-label="Your credit balance"
+                className="text-muted-foreground text-xs"
+              >
+                {formatMoney(effectiveBalance)}
+              </span>
+            </div>
+            {conversationTitle && (
+              <span
+                className="truncate text-muted-foreground text-xs"
+                title={conversationTitle}
+              >
+                {conversationTitle}
+              </span>
+            )}
           </div>
-          {conversationTitle && (
-            <span
-              className="truncate text-muted-foreground text-xs"
-              title={conversationTitle}
+          <div className="flex shrink-0 items-center gap-0.5">
+            <button
+              ref={historyButtonRef}
+              type="button"
+              onClick={openHistory}
+              aria-label="Chat history"
+              aria-pressed={historyOpen}
+              className={`rounded-md p-1.5 transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                historyOpen
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground"
+              }`}
             >
-              {conversationTitle}
+              <History className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={chat.reset}
+              aria-label="New chat"
+              title="New chat"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close assistant"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Toolbar: the model picker (searchable, brand-aware) and the
+            text-size control that zooms the transcript. */}
+        <div className="flex items-center justify-between gap-2 px-3 pb-2">
+          {pickerModels.length > 0 ? (
+            <ModelPicker
+              variant="pill"
+              label="Model"
+              value={chat.selectedModel ?? models.default ?? ""}
+              onChange={(id) => chat.setModel(id || null)}
+              models={pickerModels}
+            />
+          ) : (
+            <span className="px-1 text-muted-foreground text-xs">
+              Default model
             </span>
           )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <div className="flex items-center" role="group" aria-label="Text size">
+          <div
+            className="flex items-center overflow-hidden rounded-md border border-border"
+            role="group"
+            aria-label="Text size"
+          >
             <button
               type="button"
               onClick={font.decrease}
               disabled={!font.canDecrease}
               aria-label="Decrease text size"
-              className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+              className="px-1.5 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-3.5 w-3.5" />
             </button>
             <button
               type="button"
               onClick={font.increase}
               disabled={!font.canIncrease}
               aria-label="Increase text size"
-              className="rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+              className="border-border border-l px-1.5 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
-          <button
-            type="button"
-            onClick={openHistory}
-            aria-label="Chat history"
-            aria-pressed={historyOpen}
-            className="rounded p-1 text-muted-foreground hover:text-foreground"
-          >
-            <History className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={chat.reset}
-            aria-label="New chat"
-            title="New chat"
-            className="rounded p-1 text-muted-foreground hover:text-foreground"
-          >
-            <MessageSquarePlus className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close assistant"
-            className="rounded p-1 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
-      </div>
 
-      {/* Model picker */}
-      {models.models.length > 0 && (
-        <div className="flex items-center gap-2 border-border border-b px-4 py-2">
-          <label
-            htmlFor="assistant-model"
-            className="text-muted-foreground text-xs"
+        {/* History overlay: an elevated dropdown anchored under the header,
+            dismissed by an outside press (see the effect above). */}
+        {historyOpen && (
+          <div
+            ref={historyRef}
+            className="absolute inset-x-2 top-full z-30 mt-1 overflow-hidden rounded-lg border border-border bg-surface-container-highest shadow-xl ring-1 ring-black/5"
           >
-            Model
-          </label>
-          <select
-            id="assistant-model"
-            value={chat.selectedModel ?? ""}
-            onChange={(e) => chat.setModel(e.target.value || null)}
-            className="rounded border border-border bg-card px-2 py-1 text-foreground text-xs"
-          >
-            <option value="">{models.default ?? "Default"}</option>
-            {models.models.map((m) => (
-              <option key={m.slug} value={m.slug}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* History switcher */}
-      {historyOpen && (
-        <div className="max-h-48 overflow-y-auto border-border border-b">
-          {threads.threads.length === 0 ? (
-            <p className="px-4 py-3 text-muted-foreground text-xs">
-              {threads.loaded ? "No past conversations." : "Loading…"}
-            </p>
-          ) : (
-            <ul>
-              {threads.threads.map((t) => {
-                const busyActive =
-                  state.threadId === t.id && state.status !== "idle";
-                return (
-                  <li key={t.id} className="group flex items-center hover:bg-muted/50">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        chat.switchThread(t.id);
-                        setHistoryOpen(false);
-                      }}
-                      className="min-w-0 flex-1 truncate px-4 py-2 text-left text-foreground text-xs"
-                    >
-                      {t.title ?? "Untitled conversation"}
-                    </button>
-                    {threads.canRemove && (
-                      <button
-                        type="button"
-                        onClick={() => void deleteThread(t.id)}
-                        disabled={busyActive}
-                        aria-label="Delete conversation"
-                        title={
-                          busyActive
-                            ? "Can't delete while this conversation is active"
-                            : "Delete conversation"
-                        }
-                        className="shrink-0 p-2 text-muted-foreground opacity-0 transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+            <div className="border-border border-b bg-surface-container-high px-3 py-2 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+              Recent conversations
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {threads.threads.length === 0 ? (
+                <p className="px-3 py-3 text-muted-foreground text-xs">
+                  {threads.loaded ? "No past conversations." : "Loading…"}
+                </p>
+              ) : (
+                <ul className="py-1">
+                  {threads.threads.map((t) => {
+                    const busyActive =
+                      state.threadId === t.id && state.status !== "idle";
+                    const active = state.threadId === t.id;
+                    return (
+                      <li
+                        key={t.id}
+                        className={`group flex items-center transition-colors hover:bg-muted/60 ${
+                          active ? "bg-primary/10" : ""
+                        }`}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            chat.switchThread(t.id);
+                            setHistoryOpen(false);
+                          }}
+                          className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-xs ${
+                            active
+                              ? "font-medium text-foreground"
+                              : "text-foreground"
+                          }`}
+                        >
+                          {t.title ?? "Untitled conversation"}
+                        </button>
+                        {threads.canRemove && (
+                          <button
+                            type="button"
+                            onClick={() => void deleteThread(t.id)}
+                            disabled={busyActive}
+                            aria-label="Delete conversation"
+                            title={
+                              busyActive
+                                ? "Can't delete while this conversation is active"
+                                : "Delete conversation"
+                            }
+                            className="shrink-0 p-2 text-muted-foreground opacity-0 transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Conversation — host-swappable renderer, else the built-in timeline. */}
       <div
@@ -297,7 +362,13 @@ export function AssistantPanel({
         aria-label="Conversation"
         aria-live="polite"
         className="min-h-0 flex-1 overflow-y-auto px-2 py-3"
-        style={{ fontSize: `${font.scale}rem` }}
+        // The text-size control zooms the whole transcript. `zoom` scales every
+        // descendant uniformly regardless of which renderer (the built-in
+        // timeline or a host's) draws it and what font-size utilities it uses —
+        // an inline `font-size` here would not, since the transcript's text
+        // utilities set their own absolute rem sizes and ignore the inherited
+        // value.
+        style={{ zoom: font.scale }}
       >
         {renderTranscript ? (
           renderTranscript({

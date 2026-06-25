@@ -15,7 +15,8 @@ export const DEFAULT_PANEL_WIDTH = 448;
 const MAX_PANEL_WIDTH_FRACTION = 0.95;
 
 /** Font-size scale bounds and step for the A−/A+ control. 1 = the design
- *  default; the panel's text utilities multiply by this via a CSS variable. */
+ *  default; the panel applies this as a CSS `zoom` on the transcript so the
+ *  whole conversation scales uniformly. */
 export const MIN_FONT_SCALE = 0.875;
 export const MAX_FONT_SCALE = 1.5;
 export const DEFAULT_FONT_SCALE = 1;

@@ -13,6 +13,7 @@ import { History, MessageSquarePlus, Minus, Plus, Trash2, X } from "lucide-react
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { type ModelInfo, ModelPicker } from "../dashboard/model-picker";
 import { assistantIsThinking, buildAssistantTimeline } from "./build-timeline";
+import type { AssistantModels } from "./client";
 import { isLowBalance, presentError } from "./presentation";
 import { ProposalCard } from "./ProposalCard";
 import type { AssistantTranscriptView } from "./types";
@@ -53,6 +54,28 @@ function defaultFormatMoney(usd: number | null): string {
   }).format(usd);
 }
 
+/**
+ * Map the assistant catalog onto the shared ModelPicker's wire shape. The slug
+ * is already a canonical, provider-prefixed id, so it doubles as the picker's
+ * value. The server `default` is always represented so the user can return to it
+ * after choosing a specific model — if the catalog already lists it the picker's
+ * own dedup collapses the duplicate (the labelled catalog row wins). An absent
+ * context window is omitted rather than passed as `undefined`; pricing is omitted
+ * entirely because the catalog carries only a prompt price, which the picker's
+ * "prompt / completion" line would misreport as a free completion.
+ */
+export function toPickerModels(models: AssistantModels): ModelInfo[] {
+  const mapped: ModelInfo[] = models.models.map((m) => ({
+    id: m.slug,
+    name: m.label,
+    ...(m.contextTokens != null ? { context_length: m.contextTokens } : {}),
+  }));
+  if (models.default && !mapped.some((m) => m.id === models.default)) {
+    mapped.push({ id: models.default, name: models.default });
+  }
+  return mapped;
+}
+
 export function AssistantPanel({
   chat,
   userId,
@@ -70,20 +93,17 @@ export function AssistantPanel({
   const historyRef = useRef<HTMLDivElement | null>(null);
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  // Map the assistant's catalog (slug + label, optional context window) onto the
-  // shared ModelPicker's wire shape. The slug is already a canonical, provider-
-  // prefixed id, so it doubles as the picker's value. Pricing is intentionally
-  // omitted: the catalog carries only a prompt price, and the picker's
-  // "prompt / completion" line would misreport the missing completion as free.
   const pickerModels = useMemo<ModelInfo[]>(
-    () =>
-      models.models.map((m) => ({
-        id: m.slug,
-        name: m.label,
-        context_length: m.contextTokens,
-      })),
-    [models.models],
+    () => toPickerModels(models),
+    [models],
   );
+  // Guard against a selected slug the catalog no longer lists (e.g. a model
+  // deprecated between refetches): fall back to the default so the picker's
+  // trigger shows a real row instead of going blank on an orphaned value.
+  const pickerValue =
+    chat.selectedModel && pickerModels.some((m) => m.id === chat.selectedModel)
+      ? chat.selectedModel
+      : (models.default ?? "");
 
   const { state } = chat;
   // Always-current chat handle, so an async delete can re-check the LIVE thread
@@ -253,7 +273,7 @@ export function AssistantPanel({
             <ModelPicker
               variant="pill"
               label="Model"
-              value={chat.selectedModel ?? models.default ?? ""}
+              value={pickerValue}
               onChange={(id) => chat.setModel(id || null)}
               models={pickerModels}
             />
@@ -363,11 +383,14 @@ export function AssistantPanel({
         aria-live="polite"
         className="min-h-0 flex-1 overflow-y-auto px-2 py-3"
         // The text-size control zooms the whole transcript. `zoom` scales every
-        // descendant uniformly regardless of which renderer (the built-in
-        // timeline or a host's) draws it and what font-size utilities it uses —
-        // an inline `font-size` here would not, since the transcript's text
-        // utilities set their own absolute rem sizes and ignore the inherited
-        // value.
+        // descendant uniformly regardless of which renderer draws the
+        // conversation and what font-size utilities it uses; an inline
+        // `font-size` would not, since the transcript's text utilities set
+        // absolute rem sizes and ignore the inherited value. `transform: scale`
+        // is unsuitable — it keeps the original layout box and would break this
+        // scroll container. Baseline-supported in evergreen browsers (Firefox
+        // 126+); nothing inside the transcript virtualizes or reads
+        // getBoundingClientRect, so zoom's coordinate scaling is safe here.
         style={{ zoom: font.scale }}
       >
         {renderTranscript ? (

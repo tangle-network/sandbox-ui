@@ -122,9 +122,6 @@ function urlHost(url: string): string {
   }
 }
 
-/** Describe the single `do` leaf or top-level action as node data. The action
- *  object is a single-key map (`{ "integration.invoke": {...} }`), mirroring the
- *  YAML schema. */
 /** Collect a small, stringified map of notable config for the expand drawer.
  *  Bounded to the named keys and short values so the drawer stays readable and
  *  the node data never carries an arbitrarily large payload. */
@@ -149,6 +146,9 @@ function pickDetail(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+/** Describe the single `do` leaf or top-level action as node data. The action
+ *  object is a single-key map (`{ "integration.invoke": {...} }`), mirroring the
+ *  YAML schema. */
 function describeAction(action: unknown): WfNodeData {
   const rec = asRecord(action);
   const [kind] = Object.keys(rec);

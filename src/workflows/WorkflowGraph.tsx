@@ -31,6 +31,7 @@ import {
   type WfNodeStatus,
   type WfNodeTone,
 } from "./model";
+import { fmtCost, fmtDuration } from "./format";
 import { providerLabel } from "../assistant/provider-label";
 import { ProviderIcon } from "../integrations/provider-logo";
 
@@ -102,20 +103,6 @@ function statusBorder(status: WfNodeStatus): string {
     default:
       return "opacity-70";
   }
-}
-
-function fmtDuration(ms: number | undefined): string | undefined {
-  if (ms === undefined || !Number.isFinite(ms)) return undefined;
-  if (ms < 1000) return `${Math.round(ms)}ms`;
-  const s = ms / 1000;
-  if (s < 60) return `${s.toFixed(1)}s`;
-  return `${Math.floor(s / 60)}m${Math.round(s % 60)}s`;
-}
-
-function fmtCost(usd: number | undefined): string | undefined {
-  if (usd === undefined || !Number.isFinite(usd)) return undefined;
-  if (usd === 0) return "$0";
-  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
 
 /** A compact key/value chip for the node's meta row. */
@@ -252,6 +239,11 @@ export interface WorkflowGraphProps {
    * Absent ⇒ the static definition view (the proposal-card preview passes
    * nothing). When present, each node shows its status/cost/duration/output and
    * the running node pulses.
+   *
+   * Immutability contract: the node memo keys on this object's reference, so the
+   * host MUST pass a NEW top-level `nodeState` object whenever any node's state
+   * changes (mutating a nested entry in place will not re-render). Building a
+   * fresh record each update — e.g. from a poll/SSE tick — satisfies this.
    */
   nodeState?: Record<string, WfNodeState>;
   /** Click handler for a node (e.g. open a detail drawer). Absent ⇒ nodes are

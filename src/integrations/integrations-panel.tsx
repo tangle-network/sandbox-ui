@@ -11,10 +11,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   EmptyState,
 } from "@tangle-network/ui/primitives";
 import { cn } from "@tangle-network/ui/utils";
-import { Check, Search, Unplug } from "lucide-react";
+import { Check, ExternalLink, MoreVertical, Search, Unplug } from "lucide-react";
 import {
   ProviderIcon,
   normalizeProviderId,
@@ -48,6 +53,24 @@ export interface IntegrationsPanelProps {
    * thrown error inline.
    */
   onDisconnect: (connectionId: string) => void | Promise<void>;
+  /**
+   * Resolver for a connected app's management page URL. When it returns a URL,
+   * the connected tile's body and the overflow menu's "Manage" item become a
+   * real link opened in a new tab (so cmd/middle-click and "open in new tab"
+   * work). Return undefined to omit Manage for a given connection. Preferred
+   * over `onManage` — only fall back to the callback when the URL must be minted
+   * imperatively on click (e.g. a one-time token).
+   */
+  getManageHref?: (connection: IntegrationConnection) => string | undefined;
+  /**
+   * Imperative fallback for opening a connected app's management page, used only
+   * when `getManageHref` is not supplied (or returns undefined). The consumer is
+   * responsible for opening the page (e.g. `window.open(...)`).
+   */
+  onManage?: (input: {
+    connectionId: string;
+    providerId: string;
+  }) => void | Promise<void>;
   /** Empty-state message when the catalog hasn't loaded any providers. */
   emptyCatalogLabel?: string;
   /**
@@ -159,6 +182,8 @@ export function IntegrationsPanel({
   error,
   onConnect,
   onDisconnect,
+  getManageHref,
+  onManage,
   emptyCatalogLabel = "No integrations available yet.",
   featuredIds = DEFAULT_FEATURED_IDS,
   defaultSort = "featured",
@@ -340,6 +365,8 @@ export function IntegrationsPanel({
             const connected = Boolean(live);
 
             if (connected && live) {
+              const manageHref = getManageHref?.(live);
+              const canManage = Boolean(manageHref) || Boolean(onManage);
               return (
                 <div
                   key={`${provider.providerId}:${connectorId}`}
@@ -351,57 +378,125 @@ export function IntegrationsPanel({
                       : name
                   }
                   className={cn(
-                    "relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
+                    "group relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
                     "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]",
                   )}
                 >
-                  <span className="absolute left-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--surface-success-text)] text-white">
+                  {/* Full-tile Manage link (when a manage URL is available): a
+                      real anchor so cmd/middle-click and "open in new tab" work
+                      and the navigation is honest to assistive tech. Layered
+                      above the decorative content (z-10) but below the overflow
+                      menu (z-20), so a body click manages while the kebab stays
+                      clickable — siblings, never nested interactive elements. */}
+                  {manageHref ? (
+                    <a
+                      href={manageHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Manage ${name} (opens in new window)`}
+                      data-testid={`manage-${provider.providerId}`}
+                      className="absolute inset-0 z-10 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    />
+                  ) : null}
+                  <span className="pointer-events-none absolute left-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--surface-success-text)] text-white">
                     <Check className="h-3 w-3" strokeWidth={3} />
                   </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setDisconnectTarget({
-                        connectionId: live.id,
-                        name,
-                        accountDisplay: live.accountDisplay,
-                      })
-                    }
-                    data-testid={`disconnect-${provider.providerId}`}
-                    aria-label={`Disconnect ${name}`}
-                    title="Disconnect"
-                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-background hover:text-foreground focus-visible:bg-background focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                  >
-                    <Unplug className="h-3.5 w-3.5" />
-                  </button>
-                  <ProviderIcon
-                    id={provider.providerId}
-                    iconUrl={provider.iconUrl}
-                    displayName={provider.displayName}
-                    size={LOGO_SIZE}
-                    className="rounded-2xl"
-                  />
-                  {/* Fixed 2-line block on every tile keeps the grid uniform
-                      (issue #2): with an account, the name takes one line and
-                      the account the second; without, the name may wrap to two. */}
-                  <div className="flex h-8 w-full flex-col justify-center leading-4">
-                    <span
-                      className={cn(
-                        "w-full text-xs font-medium text-foreground",
-                        live.accountDisplay ? "truncate" : "line-clamp-2",
-                      )}
-                    >
-                      {name}
-                    </span>
-                    {live.accountDisplay ? (
+                  {/* Decorative content — pointer-events-none so a click
+                      anywhere on the body falls through to the Manage link. */}
+                  <div className="pointer-events-none flex flex-col items-center gap-2">
+                    <ProviderIcon
+                      id={provider.providerId}
+                      iconUrl={provider.iconUrl}
+                      displayName={provider.displayName}
+                      size={LOGO_SIZE}
+                      className="rounded-2xl"
+                    />
+                    {/* Fixed 2-line block on every tile keeps the grid uniform
+                        (issue #2): with an account, the name takes one line and
+                        the account the second; without, the name may wrap to two. */}
+                    <div className="flex h-8 w-full flex-col justify-center leading-4">
                       <span
-                        className="w-full truncate text-[11px] leading-4 text-muted-foreground"
-                        data-testid={`account-${provider.providerId}`}
+                        className={cn(
+                          "w-full text-xs font-medium text-foreground",
+                          live.accountDisplay ? "truncate" : "line-clamp-2",
+                        )}
                       >
-                        {live.accountDisplay}
+                        {name}
                       </span>
-                    ) : null}
+                      {live.accountDisplay ? (
+                        <span
+                          className="w-full truncate text-[11px] leading-4 text-muted-foreground"
+                          data-testid={`account-${provider.providerId}`}
+                        >
+                          {live.accountDisplay}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
+                  {/* Hover/focus hint that the tile opens an external page. */}
+                  {manageHref ? (
+                    <ExternalLink
+                      aria-hidden
+                      className="pointer-events-none absolute bottom-1.5 right-1.5 h-3.5 w-3.5 text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                    />
+                  ) : null}
+                  {/* Overflow menu (above the Manage link) listing the explicit
+                      actions. Always rendered so touch users — who have no hover —
+                      can reach Manage/Disconnect, and so the destructive action
+                      stays tucked behind a menu rather than a one-click target. */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        data-testid={`menu-${provider.providerId}`}
+                        aria-label={`More actions for ${name}`}
+                        title="More actions"
+                        className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-background hover:text-foreground focus-visible:bg-background focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[160px]">
+                      {manageHref ? (
+                        <DropdownMenuItem asChild>
+                          <a
+                            href={manageHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            data-testid={`manage-item-${provider.providerId}`}
+                          >
+                            <ExternalLink className="mr-2 h-4 w-4" /> Manage
+                          </a>
+                        </DropdownMenuItem>
+                      ) : onManage ? (
+                        <DropdownMenuItem
+                          data-testid={`manage-item-${provider.providerId}`}
+                          onClick={() =>
+                            onManage({
+                              connectionId: live.id,
+                              providerId: provider.providerId,
+                            })
+                          }
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" /> Manage
+                        </DropdownMenuItem>
+                      ) : null}
+                      {canManage ? <DropdownMenuSeparator /> : null}
+                      <DropdownMenuItem
+                        data-testid={`disconnect-${provider.providerId}`}
+                        className="text-destructive focus:text-destructive"
+                        onClick={() =>
+                          setDisconnectTarget({
+                            connectionId: live.id,
+                            name,
+                            accountDisplay: live.accountDisplay,
+                          })
+                        }
+                      >
+                        <Unplug className="mr-2 h-4 w-4" /> Disconnect
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               );
             }

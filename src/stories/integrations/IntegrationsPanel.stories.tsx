@@ -78,6 +78,12 @@ function Interactive(props: { connected?: IntegrationConnection[] }) {
       onDisconnect={(id) =>
         setConnections((c) => c.filter((conn) => conn.id !== id))
       }
+      // Connected tiles become click-to-Manage links + an overflow menu. In a
+      // real app this points at the provider's management page inside the
+      // platform; the panel opens it in a new tab.
+      getManageHref={(conn) =>
+        `https://app.tangle.tools/integrations/${conn.providerId}/manage`
+      }
     />
   );
 }

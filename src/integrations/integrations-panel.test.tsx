@@ -58,7 +58,7 @@ describe("IntegrationsPanel", () => {
   });
 
   it("renders a connected tile (not a connect button) and disconnects only after confirming in the dialog", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const onConnect = vi.fn();
     const onDisconnect = vi.fn();
     const live: IntegrationConnection[] = [
@@ -82,8 +82,9 @@ describe("IntegrationsPanel", () => {
     fireEvent.click(tile);
     expect(onConnect).not.toHaveBeenCalled();
 
-    // The disconnect control opens a confirmation dialog rather than
-    // disconnecting on a single click.
+    // Disconnect lives in the overflow menu now; opening it then choosing
+    // Disconnect opens a confirmation dialog rather than disconnecting outright.
+    await user.click(screen.getByTestId("menu-google"));
     await user.click(screen.getByTestId("disconnect-google"));
     expect(onDisconnect).not.toHaveBeenCalled();
 
@@ -131,7 +132,7 @@ describe("IntegrationsPanel", () => {
   });
 
   it("does not disconnect when the confirmation dialog is cancelled", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const onDisconnect = vi.fn();
     const live: IntegrationConnection[] = [
       {
@@ -143,6 +144,7 @@ describe("IntegrationsPanel", () => {
     ];
     renderPanel({ connections: live, onDisconnect });
 
+    await user.click(screen.getByTestId("menu-google"));
     await user.click(screen.getByTestId("disconnect-google"));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByTestId("cancel-disconnect"));
@@ -152,7 +154,7 @@ describe("IntegrationsPanel", () => {
   });
 
   it("lets the user escape the dialog while a disconnect is in flight", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     // A request that never settles must not trap the user in the dialog.
     const onDisconnect = vi.fn().mockReturnValue(new Promise<void>(() => {}));
     const live: IntegrationConnection[] = [
@@ -165,6 +167,7 @@ describe("IntegrationsPanel", () => {
     ];
     renderPanel({ connections: live, onDisconnect });
 
+    await user.click(screen.getByTestId("menu-google"));
     await user.click(screen.getByTestId("disconnect-google"));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByTestId("confirm-disconnect"));
@@ -176,7 +179,7 @@ describe("IntegrationsPanel", () => {
   });
 
   it("keeps the dialog open and surfaces an error when disconnect fails", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const onDisconnect = vi.fn().mockRejectedValue(new Error("network down"));
     const live: IntegrationConnection[] = [
       {
@@ -188,6 +191,7 @@ describe("IntegrationsPanel", () => {
     ];
     renderPanel({ connections: live, onDisconnect });
 
+    await user.click(screen.getByTestId("menu-google"));
     await user.click(screen.getByTestId("disconnect-google"));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByTestId("confirm-disconnect"));
@@ -201,7 +205,7 @@ describe("IntegrationsPanel", () => {
   });
 
   it("matches a provider-only connection that omits connectorId (platform hub shape)", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const onConnect = vi.fn();
     const onDisconnect = vi.fn();
     // The platform hub keys connections by provider only: catalog providers
@@ -225,10 +229,82 @@ describe("IntegrationsPanel", () => {
     fireEvent.click(tile);
     expect(onConnect).not.toHaveBeenCalled();
 
+    await user.click(screen.getByTestId("menu-slack"));
     await user.click(screen.getByTestId("disconnect-slack"));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByTestId("confirm-disconnect"));
     await waitFor(() => expect(onDisconnect).toHaveBeenCalledWith("conn_hub"));
+  });
+
+  it("makes the connected tile a Manage link (and a menu item) when getManageHref returns a URL", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const live: IntegrationConnection[] = [
+      {
+        id: "conn_1",
+        providerId: "google",
+        connectorId: "gmail",
+        status: "connected",
+      },
+    ];
+    renderPanel({
+      connections: live,
+      getManageHref: (c) => `/integrations/${c.providerId}/manage`,
+    });
+
+    // The whole-tile Manage affordance is a real new-tab link.
+    const tileLink = screen.getByTestId("manage-google");
+    expect(tileLink.tagName).toBe("A");
+    expect(tileLink).toHaveAttribute("href", "/integrations/google/manage");
+    expect(tileLink).toHaveAttribute("target", "_blank");
+    expect(tileLink).toHaveAttribute("rel", "noopener noreferrer");
+
+    // The overflow menu also lists Manage explicitly (as a link).
+    await user.click(screen.getByTestId("menu-google"));
+    const menuItem = await screen.findByTestId("manage-item-google");
+    expect(menuItem).toHaveAttribute("href", "/integrations/google/manage");
+    expect(menuItem).toHaveAttribute("target", "_blank");
+  });
+
+  it("calls onManage from the menu when no manage href is provided", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const onManage = vi.fn();
+    const live: IntegrationConnection[] = [
+      {
+        id: "conn_1",
+        providerId: "google",
+        connectorId: "gmail",
+        status: "connected",
+      },
+    ];
+    renderPanel({ connections: live, onManage });
+
+    // No full-tile link without a resolvable URL — Manage is menu-only here.
+    expect(screen.queryByTestId("manage-google")).toBeNull();
+
+    await user.click(screen.getByTestId("menu-google"));
+    await user.click(await screen.findByTestId("manage-item-google"));
+    expect(onManage).toHaveBeenCalledWith({
+      connectionId: "conn_1",
+      providerId: "google",
+    });
+  });
+
+  it("offers only Disconnect in the menu when neither manage prop is provided", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const live: IntegrationConnection[] = [
+      {
+        id: "conn_1",
+        providerId: "google",
+        connectorId: "gmail",
+        status: "connected",
+      },
+    ];
+    renderPanel({ connections: live });
+
+    expect(screen.queryByTestId("manage-google")).toBeNull();
+    await user.click(screen.getByTestId("menu-google"));
+    expect(await screen.findByTestId("disconnect-google")).toBeInTheDocument();
+    expect(screen.queryByTestId("manage-item-google")).toBeNull();
   });
 
   it("treats revoked connections as not live", () => {

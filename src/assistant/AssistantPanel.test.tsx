@@ -9,9 +9,10 @@ import {
   it,
   vi,
 } from "vitest";
-import { AssistantPanel } from "./AssistantPanel";
+import { AssistantPanel, toPickerModels } from "./AssistantPanel";
 import {
   type AssistantClient,
+  type AssistantModels,
   type AssistantThreadSummary,
   createAssistantClient,
 } from "./client";
@@ -303,5 +304,102 @@ describe("AssistantPanel thread deletion", () => {
       resolveDelete({ ok: true });
     });
     expect(chat.reset).not.toHaveBeenCalled();
+  });
+});
+
+function models(over: Partial<AssistantModels> = {}): AssistantModels {
+  return { default: null, models: [], ...over };
+}
+
+describe("toPickerModels", () => {
+  it("maps slug/label/context and omits an absent context window", () => {
+    const out = toPickerModels(
+      models({
+        models: [
+          { slug: "openai/gpt-5.4", label: "GPT-5.4", contextTokens: 400_000 },
+          { slug: "x/y", label: "Y" },
+        ],
+      }),
+    );
+    expect(out[0]).toEqual({
+      id: "openai/gpt-5.4",
+      name: "GPT-5.4",
+      context_length: 400_000,
+    });
+    // No context window → the field is omitted, not passed as undefined.
+    expect(out[1]).toEqual({ id: "x/y", name: "Y" });
+    expect("context_length" in out[1]).toBe(false);
+  });
+
+  it("always includes the server default so it stays selectable", () => {
+    const out = toPickerModels(
+      models({
+        default: "anthropic/claude-sonnet-4-6",
+        models: [{ slug: "openai/gpt-5.4", label: "GPT-5.4" }],
+      }),
+    );
+    expect(out.some((m) => m.id === "anthropic/claude-sonnet-4-6")).toBe(true);
+  });
+
+  it("does not duplicate the default when the catalog already lists it", () => {
+    const out = toPickerModels(
+      models({
+        default: "openai/gpt-5.4",
+        models: [{ slug: "openai/gpt-5.4", label: "GPT-5.4" }],
+      }),
+    );
+    expect(out.filter((m) => m.id === "openai/gpt-5.4")).toHaveLength(1);
+    // The labelled catalog row is kept (not replaced by a slug-only stub).
+    expect(out[0].name).toBe("GPT-5.4");
+  });
+});
+
+describe("AssistantPanel text-size control", () => {
+  function conversation(container: HTMLElement): HTMLElement {
+    return container.querySelector(
+      '[aria-label="Conversation"]',
+    ) as HTMLElement;
+  }
+
+  it("applies the font scale as a transcript zoom and respects the bounds", () => {
+    const { container } = renderPanel(makeChat(), () => (
+      <div data-testid="host-transcript" />
+    ));
+    // Default scale 1 → no visual change.
+    expect(conversation(container).style.zoom).toBe("1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Increase text size" }));
+    expect(conversation(container).style.zoom).toBe("1.125");
+
+    // Walk down to the minimum (0.875) and confirm the control disables there.
+    fireEvent.click(screen.getByRole("button", { name: "Decrease text size" }));
+    fireEvent.click(screen.getByRole("button", { name: "Decrease text size" }));
+    expect(conversation(container).style.zoom).toBe("0.875");
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Decrease text size",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+});
+
+describe("AssistantPanel history overlay dismissal", () => {
+  it("closes on an outside pointer press but stays open for an inside press", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    await openHistory("t1");
+    expect(screen.getByText("Recent conversations")).toBeTruthy();
+
+    // A press inside the overlay must not dismiss it.
+    fireEvent.pointerDown(screen.getByText("Recent conversations"));
+    expect(screen.queryByText("Recent conversations")).not.toBeNull();
+
+    // A press anywhere outside the overlay and toggle closes it.
+    fireEvent.pointerDown(document.body);
+    await waitFor(() =>
+      expect(screen.queryByText("Recent conversations")).toBeNull(),
+    );
   });
 });

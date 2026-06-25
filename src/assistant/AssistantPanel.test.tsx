@@ -9,9 +9,14 @@ import {
   it,
   vi,
 } from "vitest";
-import { AssistantPanel } from "./AssistantPanel";
+import {
+  AssistantPanel,
+  nextModelSelection,
+  toPickerModels,
+} from "./AssistantPanel";
 import {
   type AssistantClient,
+  type AssistantModels,
   type AssistantThreadSummary,
   createAssistantClient,
 } from "./client";
@@ -303,5 +308,208 @@ describe("AssistantPanel thread deletion", () => {
       resolveDelete({ ok: true });
     });
     expect(chat.reset).not.toHaveBeenCalled();
+  });
+});
+
+function models(over: Partial<AssistantModels> = {}): AssistantModels {
+  return { default: null, models: [], ...over };
+}
+
+describe("toPickerModels", () => {
+  it("maps slug/label/context and omits an absent context window", () => {
+    const out = toPickerModels(
+      models({
+        models: [
+          { slug: "openai/gpt-5.4", label: "GPT-5.4", contextTokens: 400_000 },
+          { slug: "x/y", label: "Y" },
+        ],
+      }),
+      null,
+    );
+    expect(out[0]).toEqual({
+      id: "openai/gpt-5.4",
+      name: "GPT-5.4",
+      context_length: 400_000,
+    });
+    // No context window → the field is omitted, not passed as undefined.
+    expect(out[1]).toEqual({ id: "x/y", name: "Y" });
+    expect("context_length" in out[1]).toBe(false);
+  });
+
+  it("always includes the server default so it stays selectable", () => {
+    const out = toPickerModels(
+      models({
+        default: "anthropic/claude-sonnet-4-6",
+        models: [{ slug: "openai/gpt-5.4", label: "GPT-5.4" }],
+      }),
+      null,
+    );
+    expect(out.some((m) => m.id === "anthropic/claude-sonnet-4-6")).toBe(true);
+  });
+
+  it("keeps the active selection visible when the catalog omits it", () => {
+    // A just-retired slug stays selectable (no blank trigger, no silent rewrite)
+    // until the user changes it or the server rejects it.
+    const out = toPickerModels(
+      models({
+        default: "openai/gpt-5.4",
+        models: [{ slug: "openai/gpt-5.4", label: "GPT-5.4" }],
+      }),
+      "retired/model",
+    );
+    expect(out.some((m) => m.id === "retired/model")).toBe(true);
+  });
+
+  it("does not duplicate the default or selection already in the catalog", () => {
+    const out = toPickerModels(
+      models({
+        default: "openai/gpt-5.4",
+        models: [{ slug: "openai/gpt-5.4", label: "GPT-5.4" }],
+      }),
+      "openai/gpt-5.4",
+    );
+    expect(out.filter((m) => m.id === "openai/gpt-5.4")).toHaveLength(1);
+    // The labelled catalog row is kept (not replaced by a slug-only stub).
+    expect(out[0].name).toBe("GPT-5.4");
+  });
+});
+
+describe("nextModelSelection", () => {
+  it("clears to null when the server default is chosen", () => {
+    // Choosing the default means "follow the server default" — store null, not
+    // the slug, so a later server-default change isn't frozen out.
+    expect(nextModelSelection("openai/gpt-5.4", "openai/gpt-5.4")).toBeNull();
+  });
+
+  it("stores a non-default id as-is", () => {
+    expect(nextModelSelection("anthropic/claude", "openai/gpt-5.4")).toBe(
+      "anthropic/claude",
+    );
+  });
+
+  it("treats an empty id as a clear", () => {
+    expect(nextModelSelection("", "openai/gpt-5.4")).toBeNull();
+  });
+
+  it("stores a concrete id when there is no server default", () => {
+    expect(nextModelSelection("anthropic/claude", null)).toBe(
+      "anthropic/claude",
+    );
+  });
+});
+
+describe("AssistantPanel text-size control", () => {
+  function conversation(container: HTMLElement): HTMLElement {
+    return container.querySelector(
+      '[aria-label="Conversation"]',
+    ) as HTMLElement;
+  }
+
+  it("applies the font scale as a transcript zoom and respects the bounds", () => {
+    const { container } = renderPanel(makeChat(), () => (
+      <div data-testid="host-transcript" />
+    ));
+    // Default scale 1 → no visual change.
+    expect(conversation(container).style.zoom).toBe("1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Increase text size" }));
+    expect(conversation(container).style.zoom).toBe("1.125");
+
+    // Walk down to the minimum (0.875) and confirm the control disables there.
+    fireEvent.click(screen.getByRole("button", { name: "Decrease text size" }));
+    fireEvent.click(screen.getByRole("button", { name: "Decrease text size" }));
+    expect(conversation(container).style.zoom).toBe("0.875");
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Decrease text size",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+});
+
+describe("AssistantPanel history overlay dismissal", () => {
+  it("closes on an outside pointer press but stays open for an inside press", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    await openHistory("t1");
+    expect(screen.getByText("Recent conversations")).toBeTruthy();
+
+    // A press inside the overlay must not dismiss it.
+    fireEvent.pointerDown(screen.getByText("Recent conversations"));
+    expect(screen.queryByText("Recent conversations")).not.toBeNull();
+
+    // A press anywhere outside the overlay and toggle closes it.
+    fireEvent.pointerDown(document.body);
+    await waitFor(() =>
+      expect(screen.queryByText("Recent conversations")).toBeNull(),
+    );
+  });
+
+  it("closes on Escape and returns focus to the toggle", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    await openHistory("t1");
+    const overlay = screen.getByRole("dialog", {
+      name: "Recent conversations",
+    });
+    // Focus moves into the overlay on open; Escape from within it closes it.
+    expect(document.activeElement).toBe(overlay);
+
+    fireEvent.keyDown(overlay, { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByText("Recent conversations")).toBeNull(),
+    );
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Chat history" }),
+    );
+  });
+});
+
+describe("AssistantPanel model selection display", () => {
+  // A client whose model catalog is controlled; everything else is the real
+  // same-origin client (its background fetches fail harmlessly).
+  function modelsClient(data: AssistantModels): AssistantClient {
+    return {
+      ...createAssistantClient({ baseUrl: "/api/v1/assistant" }),
+      fetchModels: async () => ({ ok: true, data }),
+    };
+  }
+
+  const catalog: AssistantModels = {
+    default: "openai/gpt-5.4",
+    models: [{ slug: "openai/gpt-5.4", label: "GPT-5.4" }],
+  };
+
+  function renderWithModels(chat: AssistantChat, data: AssistantModels) {
+    return render(
+      <AssistantClientProvider client={modelsClient(data)}>
+        <AssistantPanel
+          chat={chat}
+          userId="u1"
+          onClose={() => {}}
+          renderTranscript={() => <div data-testid="host-transcript" />}
+        />
+      </AssistantClientProvider>,
+    );
+  }
+
+  it("keeps a selection the catalog omits visible without rewriting chat state", async () => {
+    const chat = makeChat();
+    chat.selectedModel = "retired/model";
+    renderWithModels(chat, catalog);
+    // The active slug stays shown on the trigger (so the displayed model is the
+    // one the next turn sends) and the panel never mutates the user's choice.
+    await screen.findByRole("button", { name: "Model: retired/model" });
+    expect(chat.setModel).not.toHaveBeenCalled();
+  });
+
+  it("shows the catalog label for a selection the catalog lists", async () => {
+    const chat = makeChat();
+    chat.selectedModel = "openai/gpt-5.4";
+    renderWithModels(chat, catalog);
+    await screen.findByRole("button", { name: "Model: GPT-5.4" });
+    expect(chat.setModel).not.toHaveBeenCalled();
   });
 });

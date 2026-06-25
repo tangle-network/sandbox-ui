@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.51.0
+
+### Assistant panel: searchable model picker, working text-size control, floating history
+
+- The assistant's model selector is now the searchable, brand-aware `ModelPicker`
+  (the same component used on the dashboard) instead of a native `<select>`. The
+  assistant catalog (`slug` + `label`, optional context window) is mapped onto the
+  picker's wire shape; the slug doubles as the canonical value. Searching,
+  grouping by lab, recommended models, and provider logos come for free.
+- The A−/A+ text-size control now actually scales the transcript. It applies a CSS
+  `zoom` on the conversation container, which scales every descendant uniformly
+  regardless of the renderer or its font-size utilities — the previous inline
+  `font-size` had no effect because the transcript's text utilities set their own
+  absolute `rem` sizes and ignored the inherited value.
+- Chat history is now an elevated dropdown that floats over the conversation
+  (rounded, shadowed, on `surface-container-highest`) and is dismissed by an
+  outside press, instead of an inline block that pushed the conversation down with
+  little contrast.
+- Header/toolbar polish: a dedicated toolbar row groups the model picker and a
+  segmented text-size control; the title bar keeps the conversation-level actions
+  (history, new chat, close) with consistent hover affordances.
+
 ## 0.47.0
 
 ### Integrations panel: account identity, disconnect dialog, uniform tiles, platform logos

@@ -9,7 +9,11 @@ import {
   it,
   vi,
 } from "vitest";
-import { AssistantPanel, toPickerModels } from "./AssistantPanel";
+import {
+  AssistantPanel,
+  nextModelSelection,
+  toPickerModels,
+} from "./AssistantPanel";
 import {
   type AssistantClient,
   type AssistantModels,
@@ -370,6 +374,30 @@ describe("toPickerModels", () => {
   });
 });
 
+describe("nextModelSelection", () => {
+  it("clears to null when the server default is chosen", () => {
+    // Choosing the default means "follow the server default" — store null, not
+    // the slug, so a later server-default change isn't frozen out.
+    expect(nextModelSelection("openai/gpt-5.4", "openai/gpt-5.4")).toBeNull();
+  });
+
+  it("stores a non-default id as-is", () => {
+    expect(nextModelSelection("anthropic/claude", "openai/gpt-5.4")).toBe(
+      "anthropic/claude",
+    );
+  });
+
+  it("treats an empty id as a clear", () => {
+    expect(nextModelSelection("", "openai/gpt-5.4")).toBeNull();
+  });
+
+  it("stores a concrete id when there is no server default", () => {
+    expect(nextModelSelection("anthropic/claude", null)).toBe(
+      "anthropic/claude",
+    );
+  });
+});
+
 describe("AssistantPanel text-size control", () => {
   function conversation(container: HTMLElement): HTMLElement {
     return container.querySelector(
@@ -423,9 +451,13 @@ describe("AssistantPanel history overlay dismissal", () => {
     const chat = makeChat({ threadId: "t1", status: "idle" });
     renderWith(chat, deleteClient([thread("t1")]));
     await openHistory("t1");
-    expect(screen.getByText("Recent conversations")).toBeTruthy();
+    const overlay = screen.getByRole("dialog", {
+      name: "Recent conversations",
+    });
+    // Focus moves into the overlay on open; Escape from within it closes it.
+    expect(document.activeElement).toBe(overlay);
 
-    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.keyDown(overlay, { key: "Escape" });
     await waitFor(() =>
       expect(screen.queryByText("Recent conversations")).toBeNull(),
     );

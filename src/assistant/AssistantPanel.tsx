@@ -89,6 +89,21 @@ export function toPickerModels(
   return mapped;
 }
 
+/**
+ * The chat-state value to store for a model id chosen in the picker. Picking the
+ * server default clears the preference to `null` — preserving the native-select
+ * contract where "default" means "omit the model and follow whatever the server
+ * default is", rather than pinning the default's slug (which would freeze the
+ * user to it even after the server default changes). Any other id is stored as-is.
+ */
+export function nextModelSelection(
+  id: string,
+  defaultSlug: string | null,
+): string | null {
+  if (defaultSlug != null && id === defaultSlug) return null;
+  return id || null;
+}
+
 export function AssistantPanel({
   chat,
   userId,
@@ -142,6 +157,11 @@ export function AssistantPanel({
     };
     const onKeyDownCapture = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // Only intercept Escape that originates inside the overlay (focus is moved
+      // there on open). This keeps the dismissal scoped — a stray Escape while
+      // focus is elsewhere is left for whatever else listens for it, rather than
+      // swallowing every Escape document-wide while the overlay is open.
+      if (!historyRef.current?.contains(e.target as Node)) return;
       e.stopImmediatePropagation();
       setHistoryOpen(false);
       historyButtonRef.current?.focus();
@@ -307,7 +327,9 @@ export function AssistantPanel({
               variant="pill"
               label="Model"
               value={pickerValue}
-              onChange={(id) => chat.setModel(id || null)}
+              onChange={(id) =>
+                chat.setModel(nextModelSelection(id, models.default))
+              }
               models={pickerModels}
             />
           ) : (

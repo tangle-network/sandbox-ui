@@ -26,6 +26,13 @@ export function fmtCost(usd: number | undefined): string | undefined {
   return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
 
+/** Bound host-supplied preview/error text to a fixed length (with an ellipsis)
+ *  before it reaches the DOM, so an oversized payload can't bloat the node tree —
+ *  the card only ever shows a short preview, and CSS clamping is visual only. */
+export function clampPreview(text: string, max = 200): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
 /** Human-readable token usage: `1200/340 tok`. Undefined when neither side is a
  *  finite, non-negative count, so the caller renders no chip; an invalid side
  *  (negative / NaN / absent) shows as 0 rather than leaking `-5/NaN tok`. */

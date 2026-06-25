@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtCost, fmtDuration, fmtTokens } from "./format";
+import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 
 describe("fmtDuration", () => {
   it("returns undefined for absent, non-finite, or negative input", () => {
@@ -82,5 +82,24 @@ describe("fmtTokens", () => {
   it("drops an invalid side to 0 instead of leaking -5/NaN", () => {
     expect(fmtTokens(-5, 340)).toBe("0/340 tok");
     expect(fmtTokens(1200, Number.NaN)).toBe("1200/0 tok");
+  });
+});
+
+describe("clampPreview", () => {
+  it("passes short text through unchanged", () => {
+    expect(clampPreview("hello")).toBe("hello");
+    expect(clampPreview("")).toBe("");
+  });
+
+  it("truncates over-long text and appends an ellipsis", () => {
+    const long = "x".repeat(500);
+    const out = clampPreview(long);
+    expect(out).toBe(`${"x".repeat(200)}…`);
+    expect(out.length).toBe(201);
+  });
+
+  it("honors a custom max", () => {
+    expect(clampPreview("abcdef", 3)).toBe("abc…");
+    expect(clampPreview("abc", 3)).toBe("abc");
   });
 });

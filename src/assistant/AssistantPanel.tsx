@@ -58,11 +58,12 @@ function defaultFormatMoney(usd: number | null): string {
  * Map the assistant catalog onto the shared ModelPicker's wire shape. The slug
  * is already a canonical, provider-prefixed id, so it doubles as the picker's
  * value. The server `default` is always represented so the user can return to it
- * after choosing a specific model — if the catalog already lists it the picker's
- * own dedup collapses the duplicate (the labelled catalog row wins). An absent
- * context window is omitted rather than passed as `undefined`; pricing is omitted
- * entirely because the catalog carries only a prompt price, which the picker's
- * "prompt / completion" line would misreport as a free completion.
+ * after choosing a specific model — it is appended only when the catalog does not
+ * already list it (the `some` check below), so the labelled catalog row is kept
+ * and no duplicate is produced. An absent context window is omitted rather than
+ * passed as `undefined`; pricing is omitted entirely because the catalog carries
+ * only a prompt price, which the picker's "prompt / completion" line would
+ * misreport as a free completion.
  */
 export function toPickerModels(models: AssistantModels): ModelInfo[] {
   const mapped: ModelInfo[] = models.models.map((m) => ({
@@ -105,20 +106,23 @@ export function AssistantPanel({
       ? chat.selectedModel
       : (models.default ?? "");
 
+  // True only once the catalog has loaded AND the active slug is absent from it.
+  // Gating the effect on this boolean (not on `chat.setModel`'s identity) means
+  // the effect re-runs only when orphaned-ness actually flips — it cannot spin
+  // even if a future change made `setModel` unstable. It converges in one step
+  // regardless: `setModel(default)` lands on a slug `toPickerModels` always
+  // includes, so the next render is no longer orphaned.
+  const selectionIsOrphaned =
+    chat.selectedModel != null &&
+    pickerModels.length > 0 &&
+    !pickerModels.some((m) => m.id === chat.selectedModel);
+
   // Reconcile an orphaned selection in the chat state itself — not just the
-  // displayed value. If the active slug drops out of the catalog (retired
-  // between refetches), reset it to the default so the model shown can never
-  // diverge from the slug actually sent on the next turn. Guarded on a loaded
-  // catalog so the initial empty list never clears a still-valid selection.
+  // displayed value — so the model shown can never diverge from the slug
+  // actually sent on the next turn.
   useEffect(() => {
-    if (
-      chat.selectedModel &&
-      pickerModels.length > 0 &&
-      !pickerModels.some((m) => m.id === chat.selectedModel)
-    ) {
-      chat.setModel(models.default ?? null);
-    }
-  }, [chat.selectedModel, chat.setModel, pickerModels, models.default]);
+    if (selectionIsOrphaned) chat.setModel(models.default ?? null);
+  }, [selectionIsOrphaned, chat.setModel, models.default]);
 
   const { state } = chat;
   // Always-current chat handle, so an async delete can re-check the LIVE thread
@@ -126,11 +130,14 @@ export function AssistantPanel({
   const chatRef = useRef(chat);
   chatRef.current = chat;
 
-  // Close the history overlay on an outside pointer press (the toggle button and
-  // the overlay itself are excluded so they keep their own click handling). The
-  // overlay floats above the conversation, so without this it could only be
-  // dismissed via the toggle — the press-anywhere-to-close behavior users expect
-  // of a dropdown.
+  // Close the history overlay on an outside pointer press — the press-anywhere-
+  // to-close behavior expected of a floating dropdown (the overlay sits above the
+  // conversation, so otherwise only the toggle could dismiss it). The toggle
+  // button and the overlay are explicitly excluded, which keeps the toggle's own
+  // `onClick` authoritative: pressing the open toggle fires `pointerdown` here
+  // first (ignored, it's the button) and then `click` (which closes), so the two
+  // handlers never fight. `pointerdown` is deliberate over `mousedown` so the
+  // dismissal also fires for touch/pen, not just mouse.
   useEffect(() => {
     if (!historyOpen) return;
     const onPointerDown = (e: PointerEvent) => {

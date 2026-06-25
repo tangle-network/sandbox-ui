@@ -16,6 +16,8 @@ export {
   type WfGraph,
   type WfNode,
   type WfNodeData,
+  type WfNodeState,
+  type WfNodeStatus,
   type WfNodeTone,
 } from "./model";
 // Only the LAZY wrapper is exported as a value: it defers the `@xyflow/react`

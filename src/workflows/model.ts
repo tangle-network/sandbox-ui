@@ -15,14 +15,51 @@ import { providerLabel } from "../assistant/provider-label";
 
 export type WfNodeTone = "trigger" | "structural" | "action";
 
+export type WfNodeStatus = "queued" | "running" | "succeeded" | "failed";
+
+/**
+ * Live RUN state for one node, supplied by the host (keyed by node id) and
+ * merged onto {@link WfNodeData.state} at render time. Absent ⇒ the graph shows
+ * the static definition only (the assistant-proposal preview path). Driven from
+ * a workflow run's per-action results so the graph animates as the run executes.
+ */
+export interface WfNodeState {
+  status: WfNodeStatus;
+  /** Amount booked for this action, USD. */
+  costUsd?: number;
+  /** Wall-clock the action took, ms. */
+  durationMs?: number;
+  /** Model the action actually used (may differ from the requested model). */
+  model?: string;
+  /** Failure message, when the node failed. */
+  error?: string;
+  /** Short preview of the action's output (or a failure's partial text). */
+  outputPreview?: string;
+  /** Input/output token usage, when known. */
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
 // Extends Record<string, unknown> so it satisfies React Flow's node-data
 // constraint — letting the graph use the typed `Node<WfNodeData>` /
 // `NodeProps<Node<WfNodeData>>` generics instead of unsafe `as unknown as` casts.
 export interface WfNodeData extends Record<string, unknown> {
   /** Headline for the node, e.g. "Run agent". */
   title: string;
+  /** The action/trigger kind verbatim, e.g. "agent.run", "schedule". Set on every
+   *  node `buildWorkflowGraph` produces so a card can label what it is regardless
+   *  of which subtitle it shows; optional on the type so external consumers
+   *  constructing `WfNodeData` directly aren't forced to supply it (the render
+   *  guards its usage). */
+  kind?: string;
   /** Secondary detail, e.g. an integration path or a cron expression. */
   subtitle?: string;
+  /** Requested model (agent.run), shown as a chip even before a run. */
+  model?: string;
+  /** `integration.invoke` provider.method path. */
+  path?: string;
+  /** Notable config fields for the expand drawer (kept small + stringified). */
+  detail?: Record<string, string>;
   /** Connector slug (e.g. `github`) for the provider chip, when one applies. */
   provider?: string;
   /** Small corner tag, e.g. "×3" for a parallel fan-out. */
@@ -32,6 +69,8 @@ export interface WfNodeData extends Record<string, unknown> {
   /** Whether this node is the spine root (no incoming/target handle). */
   isRoot: boolean;
   tone: WfNodeTone;
+  /** Live run state, merged in by the host at render time (never from YAML). */
+  state?: WfNodeState;
 }
 
 export interface WfNode {
@@ -83,6 +122,30 @@ function urlHost(url: string): string {
   }
 }
 
+/** Collect a small, stringified map of notable config for the expand drawer.
+ *  Bounded to the named keys and short values so the drawer stays readable and
+ *  the node data never carries an arbitrarily large payload. */
+function pickDetail(
+  cfg: Record<string, unknown>,
+  keys: string[],
+): Record<string, string> | undefined {
+  const out: Record<string, string> = {};
+  for (const key of keys) {
+    const v = cfg[key];
+    if (v === undefined || v === null) continue;
+    const text =
+      typeof v === "string"
+        ? v
+        : typeof v === "number" || typeof v === "boolean"
+          ? String(v)
+          : Array.isArray(v)
+            ? `${v.length} item${v.length === 1 ? "" : "s"}`
+            : "…";
+    out[key] = text.length > 200 ? `${text.slice(0, 200)}…` : text;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 /** Describe the single `do` leaf or top-level action as node data. The action
  *  object is a single-key map (`{ "integration.invoke": {...} }`), mirroring the
  *  YAML schema. */
@@ -94,7 +157,9 @@ function describeAction(action: unknown): WfNodeData {
     case "sandbox.spawn":
       return {
         title: "Spawn sandbox",
+        kind,
         subtitle: str(cfg.template),
+        detail: pickDetail(cfg, ["template", "size", "region"]),
         hasBranches: false,
         isRoot: false,
         tone: "action",
@@ -103,8 +168,11 @@ function describeAction(action: unknown): WfNodeData {
       const path = str(cfg.path);
       return {
         title: "Integration",
+        kind,
         subtitle: path,
+        path,
         provider: path?.split(".")[0],
+        detail: pickDetail(cfg, ["path"]),
         hasBranches: false,
         isRoot: false,
         tone: "action",
@@ -114,7 +182,9 @@ function describeAction(action: unknown): WfNodeData {
       const url = str(cfg.url);
       return {
         title: "Notify",
+        kind,
         subtitle: url ? urlHost(url) : undefined,
+        detail: pickDetail(cfg, ["url"]),
         hasBranches: false,
         isRoot: false,
         tone: "action",
@@ -123,7 +193,16 @@ function describeAction(action: unknown): WfNodeData {
     case "agent.run":
       return {
         title: "Run agent",
+        kind,
         subtitle: str(cfg.model) ?? str(cfg.profile) ?? str(cfg.prompt),
+        model: str(cfg.model),
+        detail: pickDetail(cfg, [
+          "profile",
+          "model",
+          "maxRounds",
+          "size",
+          "prompt",
+        ]),
         hasBranches: false,
         isRoot: false,
         tone: "action",
@@ -132,6 +211,7 @@ function describeAction(action: unknown): WfNodeData {
       const branches = Array.isArray(cfg.branches) ? cfg.branches : [];
       return {
         title: "Parallel",
+        kind,
         subtitle: `${branches.length} branch${branches.length === 1 ? "" : "es"}`,
         badge: branches.length > 0 ? `×${branches.length}` : undefined,
         hasBranches: branches.length > 0,
@@ -142,7 +222,9 @@ function describeAction(action: unknown): WfNodeData {
     case "foreach":
       return {
         title: "For each",
+        kind,
         subtitle: typeof cfg.items === "string" ? cfg.items : "list",
+        detail: pickDetail(cfg, ["items"]),
         // Only fans out when a `do` template is actually present.
         hasBranches: Boolean(cfg.do),
         isRoot: false,
@@ -151,6 +233,7 @@ function describeAction(action: unknown): WfNodeData {
     default:
       return {
         title: kind ? kind : "Action",
+        kind: kind ?? "action",
         hasBranches: false,
         isRoot: false,
         tone: "action",
@@ -175,6 +258,7 @@ function describeTrigger(on: unknown): WfNodeData {
     if (repo) subtitle += ` on ${repo}`;
     return {
       title: "Trigger",
+      kind: "provider_event",
       subtitle,
       provider: connection,
       hasBranches: false,
@@ -188,6 +272,7 @@ function describeTrigger(on: unknown): WfNodeData {
     const tz = str(sch.timezone);
     return {
       title: "Schedule",
+      kind: "schedule",
       subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
       hasBranches: false,
       isRoot: true,
@@ -196,6 +281,7 @@ function describeTrigger(on: unknown): WfNodeData {
   }
   return {
     title: "Trigger",
+    kind: "trigger",
     hasBranches: false,
     isRoot: true,
     tone: "trigger",

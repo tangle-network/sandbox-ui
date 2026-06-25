@@ -1,0 +1,49 @@
+/**
+ * Display formatters for the workflow graph's live run-state chips. Pure and
+ * dependency-free so they can be unit-tested without rendering the graph.
+ */
+
+/** Human-readable duration: `850ms`, `4.2s`, `1m30s`. Undefined for an absent,
+ *  non-finite, or negative input (e.g. clock skew) so the caller renders no
+ *  chip rather than a confusing `-5ms`. */
+export function fmtDuration(ms: number | undefined): string | undefined {
+  if (ms === undefined || !Number.isFinite(ms) || ms < 0) return undefined;
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(1)}s`;
+  // Round to whole seconds BEFORE splitting into minutes + seconds so a value
+  // like 119_999ms can't render `1m60s` — the carry rolls into the minute.
+  const totalSeconds = Math.round(s);
+  return `${Math.floor(totalSeconds / 60)}m${totalSeconds % 60}s`;
+}
+
+/** Human-readable USD cost: `$0`, `$0.0032` (sub-cent, 4dp), `$1.20`. Undefined
+ *  for an absent, non-finite, or negative input — a cost is a billing amount, so
+ *  a negative value is bad data, not a refund to render. */
+export function fmtCost(usd: number | undefined): string | undefined {
+  if (usd === undefined || !Number.isFinite(usd) || usd < 0) return undefined;
+  if (usd === 0) return "$0";
+  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
+}
+
+/** Bound host-supplied preview/error text to a fixed length (with an ellipsis)
+ *  before it reaches the DOM, so an oversized payload can't bloat the node tree —
+ *  the card only ever shows a short preview, and CSS clamping is visual only. */
+export function clampPreview(text: string, max = 200): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}
+
+/** Human-readable token usage: `1200/340 tok`. Undefined when neither side is a
+ *  finite, non-negative count, so the caller renders no chip; an invalid side
+ *  (negative / NaN / absent) shows as 0 rather than leaking `-5/NaN tok`. */
+export function fmtTokens(
+  input: number | undefined,
+  output: number | undefined,
+): string | undefined {
+  const valid = (n: number | undefined): number | undefined =>
+    n !== undefined && Number.isFinite(n) && n >= 0 ? n : undefined;
+  const i = valid(input);
+  const o = valid(output);
+  if (i === undefined && o === undefined) return undefined;
+  return `${i ?? 0}/${o ?? 0} tok`;
+}

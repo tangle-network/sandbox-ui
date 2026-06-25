@@ -57,22 +57,34 @@ function defaultFormatMoney(usd: number | null): string {
 /**
  * Map the assistant catalog onto the shared ModelPicker's wire shape. The slug
  * is already a canonical, provider-prefixed id, so it doubles as the picker's
- * value. The server `default` is always represented so the user can return to it
- * after choosing a specific model — it is appended only when the catalog does not
- * already list it (the `some` check below), so the labelled catalog row is kept
- * and no duplicate is produced. An absent context window is omitted rather than
- * passed as `undefined`; pricing is omitted entirely because the catalog carries
- * only a prompt price, which the picker's "prompt / completion" line would
- * misreport as a free completion.
+ * value.
+ *
+ * Both the server `default` and the currently-`selected` slug are guaranteed a
+ * row even when the catalog omits them (each appended only when not already
+ * listed, so no duplicate is produced). Keeping the active selection visible is
+ * what lets the picker show exactly what the next turn will send without the
+ * panel ever rewriting the user's choice to avoid an orphaned value — a stale
+ * slug (e.g. a model retired between refetches, or one missing from a filtered
+ * catalog) stays selectable until the user changes it or the server rejects it,
+ * which is when `useAssistantChat` clears it.
+ *
+ * An absent context window is omitted rather than passed as `undefined`; pricing
+ * is omitted entirely because the catalog carries only a prompt price, which the
+ * picker's "prompt / completion" line would misreport as a free completion.
  */
-export function toPickerModels(models: AssistantModels): ModelInfo[] {
+export function toPickerModels(
+  models: AssistantModels,
+  selected: string | null,
+): ModelInfo[] {
   const mapped: ModelInfo[] = models.models.map((m) => ({
     id: m.slug,
     name: m.label,
     ...(m.contextTokens != null ? { context_length: m.contextTokens } : {}),
   }));
-  if (models.default && !mapped.some((m) => m.id === models.default)) {
-    mapped.push({ id: models.default, name: models.default });
+  for (const slug of [models.default, selected]) {
+    if (slug && !mapped.some((m) => m.id === slug)) {
+      mapped.push({ id: slug, name: slug });
+    }
   }
   return mapped;
 }
@@ -95,34 +107,14 @@ export function AssistantPanel({
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const pickerModels = useMemo<ModelInfo[]>(
-    () => toPickerModels(models),
-    [models],
+    () => toPickerModels(models, chat.selectedModel),
+    [models, chat.selectedModel],
   );
-  // Guard against a selected slug the catalog no longer lists (e.g. a model
-  // deprecated between refetches): fall back to the default so the picker's
-  // trigger shows a real row instead of going blank on an orphaned value.
-  const pickerValue =
-    chat.selectedModel && pickerModels.some((m) => m.id === chat.selectedModel)
-      ? chat.selectedModel
-      : (models.default ?? "");
-
-  // True only once the catalog has loaded AND the active slug is absent from it.
-  // Gating the effect on this boolean (not on `chat.setModel`'s identity) means
-  // the effect re-runs only when orphaned-ness actually flips — it cannot spin
-  // even if a future change made `setModel` unstable. It converges in one step
-  // regardless: `setModel(default)` lands on a slug `toPickerModels` always
-  // includes, so the next render is no longer orphaned.
-  const selectionIsOrphaned =
-    chat.selectedModel != null &&
-    pickerModels.length > 0 &&
-    !pickerModels.some((m) => m.id === chat.selectedModel);
-
-  // Reconcile an orphaned selection in the chat state itself — not just the
-  // displayed value — so the model shown can never diverge from the slug
-  // actually sent on the next turn.
-  useEffect(() => {
-    if (selectionIsOrphaned) chat.setModel(models.default ?? null);
-  }, [selectionIsOrphaned, chat.setModel, models.default]);
+  // `toPickerModels` guarantees both the selected slug and the default a row, so
+  // this value always resolves to a real option — the displayed model is exactly
+  // the slug the next turn will send, with no panel-side rewrite of the user's
+  // choice. Falls through to the default, then empty, only when nothing is set.
+  const pickerValue = chat.selectedModel ?? models.default ?? "";
 
   const { state } = chat;
   // Always-current chat handle, so an async delete can re-check the LIVE thread
@@ -130,14 +122,16 @@ export function AssistantPanel({
   const chatRef = useRef(chat);
   chatRef.current = chat;
 
-  // Close the history overlay on an outside pointer press — the press-anywhere-
-  // to-close behavior expected of a floating dropdown (the overlay sits above the
-  // conversation, so otherwise only the toggle could dismiss it). The toggle
-  // button and the overlay are explicitly excluded, which keeps the toggle's own
-  // `onClick` authoritative: pressing the open toggle fires `pointerdown` here
-  // first (ignored, it's the button) and then `click` (which closes), so the two
-  // handlers never fight. `pointerdown` is deliberate over `mousedown` so the
-  // dismissal also fires for touch/pen, not just mouse.
+  // Dismiss the history overlay on an outside pointer press or Escape — the
+  // press-anywhere / Escape-to-close behavior expected of a floating dropdown
+  // (the overlay sits above the conversation, so otherwise only the toggle could
+  // dismiss it). The toggle button and the overlay are excluded from the pointer
+  // check, which keeps the toggle's own `onClick` authoritative: pressing the
+  // open toggle fires `pointerdown` here first (ignored, it's the button) and
+  // then `click` (which closes), so the two never fight. `pointerdown` is
+  // deliberate over `mousedown` so dismissal also fires for touch/pen. Escape is
+  // handled in the capture phase and stops immediate propagation so it closes
+  // only the overlay — not the whole assistant, whose dock also listens for it.
   useEffect(() => {
     if (!historyOpen) return;
     const onPointerDown = (e: PointerEvent) => {
@@ -146,8 +140,25 @@ export function AssistantPanel({
       if (historyButtonRef.current?.contains(target)) return;
       setHistoryOpen(false);
     };
+    const onKeyDownCapture = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setHistoryOpen(false);
+      historyButtonRef.current?.focus();
+    };
     document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDownCapture, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDownCapture, true);
+    };
+  }, [historyOpen]);
+
+  // Move focus into the overlay when it opens so keyboard and screen-reader users
+  // land on it (and Escape / arrow navigation target it), rather than having it
+  // appear silently with focus left on the toggle.
+  useEffect(() => {
+    if (historyOpen) historyRef.current?.focus();
   }, [historyOpen]);
 
   // Prefer the just-settled turn's balance (from the usage event, immediate)
@@ -335,12 +346,17 @@ export function AssistantPanel({
         {historyOpen && (
           <div
             ref={historyRef}
-            className="absolute inset-x-2 top-full z-30 mt-1 overflow-hidden rounded-lg border border-border bg-surface-container-highest shadow-xl ring-1 ring-black/5"
+            role="dialog"
+            aria-label="Recent conversations"
+            tabIndex={-1}
+            className="absolute inset-x-2 top-full z-30 mt-1 overflow-hidden rounded-lg border border-border bg-surface-container-highest shadow-xl ring-1 ring-black/5 focus:outline-none"
           >
             <div className="border-border border-b bg-surface-container-high px-3 py-2 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
               Recent conversations
             </div>
-            <div className="max-h-72 overflow-y-auto">
+            {/* Bounded to half the viewport so a long list can't run past the
+                panel's bottom edge (over the composer) on short viewports. */}
+            <div className="max-h-[min(18rem,50vh)] overflow-y-auto">
               {threads.threads.length === 0 ? (
                 <p className="px-3 py-3 text-muted-foreground text-xs">
                   {threads.loaded ? "No past conversations." : "Loading…"}

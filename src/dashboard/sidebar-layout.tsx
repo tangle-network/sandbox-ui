@@ -87,6 +87,13 @@ export interface SidebarLayoutProps {
   showThemeToggle?: boolean
   /** Extra content in the rail footer, above the profile avatar. */
   railFooter?: React.ReactNode
+  /**
+   * Where the rail collapse/expand control sits. Defaults to `"footer"` (the
+   * historical placement, above the profile avatar). Set `"header"` to move it
+   * to the top of the rail instead, alongside the logo/`railHeaderContent`.
+   * Only takes effect when `railLabels` is set (the rail is collapsible).
+   */
+  railCollapseToggle?: "header" | "footer"
   // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
   LinkComponent?: React.ComponentType<any>
   /**
@@ -174,6 +181,7 @@ function SidebarLayoutInner({
   profileMenuItems,
   showThemeToggle = false,
   railFooter,
+  railCollapseToggle = "footer",
   LinkComponent,
   hideBelow,
   railLabels = false,
@@ -201,11 +209,11 @@ function SidebarLayoutInner({
       <div className={cn(hideBelow && HIDE_BELOW_CLASS[hideBelow])}>
         <Sidebar className={sidebarClassName}>
           <SidebarRail>
-            {(railHeaderContent !== undefined || logo !== undefined) && (
+            {(railHeaderContent !== undefined || logo !== undefined || (railLabels && railCollapseToggle === "header")) && (
               <SidebarRailHeader className={cn(showLabels && (railHeaderContent !== undefined ? "px-2" : "justify-start px-4"))}>
                 {railHeaderContent !== undefined ? (
                   railHeaderContent
-                ) : (
+                ) : logo !== undefined ? (
                   <Link
                     href={logoHref}
                     to={logoHref}
@@ -213,6 +221,11 @@ function SidebarLayoutInner({
                   >
                     {logo}
                   </Link>
+                ) : null}
+                {railLabels && railCollapseToggle === "header" && (
+                  // Icon-only in the header row (the labeled, full-width variant is
+                  // for the vertical footer stack); sits beside the logo/content.
+                  <RailCollapseToggle collapsed={railCollapsed} showLabel={false} onToggle={toggleRail} className="shrink-0" />
                 )}
               </SidebarRailHeader>
             )}
@@ -280,7 +293,7 @@ function SidebarLayoutInner({
 
             {(railLabels || railFooter !== undefined || hasProfile) && (
               <SidebarRailFooter className={cn("border-t border-[var(--md3-outline-variant)] pt-2", showLabels && "items-stretch px-2")}>
-                {railLabels && (
+                {railLabels && railCollapseToggle === "footer" && (
                   <RailCollapseToggle collapsed={railCollapsed} showLabel={showLabels} onToggle={toggleRail} />
                 )}
                 {railFooter}

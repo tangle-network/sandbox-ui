@@ -31,7 +31,7 @@ import {
   type WfNodeTone,
 } from "./model";
 import { buildFlowGraph } from "./flow-graph";
-import { fmtCost, fmtDuration } from "./format";
+import { fmtCost, fmtDuration, fmtTokens } from "./format";
 import { providerLabel } from "../assistant/provider-label";
 import { ProviderIcon } from "../integrations/provider-logo";
 
@@ -122,10 +122,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const model = state?.model ?? d.model;
   const duration = fmtDuration(state?.durationMs);
   const cost = fmtCost(state?.costUsd);
-  const tokens =
-    state?.outputTokens !== undefined || state?.inputTokens !== undefined
-      ? `${state?.inputTokens ?? 0}/${state?.outputTokens ?? 0} tok`
-      : undefined;
+  const tokens = fmtTokens(state?.inputTokens, state?.outputTokens);
   return (
     <div
       className={`relative w-[240px] rounded-lg border px-3 py-2 shadow-sm transition-colors ${

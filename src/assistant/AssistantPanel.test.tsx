@@ -399,9 +399,12 @@ describe("nextModelSelection", () => {
 });
 
 describe("AssistantPanel text-size control", () => {
-  function conversation(container: HTMLElement): HTMLElement {
+  // The zoom lives on the transcript wrapper (the conversation container's
+  // child), not the container itself, so it scales the transcript without
+  // scaling the history view's search box and buttons.
+  function zoomLayer(container: HTMLElement): HTMLElement {
     return container.querySelector(
-      '[aria-label="Conversation"]',
+      '[aria-label="Conversation"] > div',
     ) as HTMLElement;
   }
 
@@ -410,15 +413,15 @@ describe("AssistantPanel text-size control", () => {
       <div data-testid="host-transcript" />
     ));
     // Default scale 1 → no visual change.
-    expect(conversation(container).style.zoom).toBe("1");
+    expect(zoomLayer(container).style.zoom).toBe("1");
 
     fireEvent.click(screen.getByRole("button", { name: "Increase text size" }));
-    expect(conversation(container).style.zoom).toBe("1.125");
+    expect(zoomLayer(container).style.zoom).toBe("1.125");
 
     // Walk down to the minimum (0.875) and confirm the control disables there.
     fireEvent.click(screen.getByRole("button", { name: "Decrease text size" }));
     fireEvent.click(screen.getByRole("button", { name: "Decrease text size" }));
-    expect(conversation(container).style.zoom).toBe("0.875");
+    expect(zoomLayer(container).style.zoom).toBe("0.875");
     expect(
       (
         screen.getByRole("button", {
@@ -426,6 +429,19 @@ describe("AssistantPanel text-size control", () => {
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
+  });
+
+  it("does not apply the zoom to the history view", () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    const { container } = renderWith(chat, deleteClient([thread("t1")]));
+    fireEvent.click(screen.getByRole("button", { name: "Increase text size" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    // The conversation container itself carries no zoom, and the history branch
+    // has no zoom wrapper — so the search box and list render at 1x.
+    const log = container.querySelector(
+      '[aria-label="Conversation"]',
+    ) as HTMLElement;
+    expect(log.style.zoom).toBe("");
   });
 });
 
@@ -522,6 +538,32 @@ describe("AssistantPanel history view", () => {
     await screen.findByText("t1");
     expect(
       container.querySelector('[aria-label="Conversation"]')?.getAttribute("role"),
+    ).toBeNull();
+  });
+
+  it("returns to the chat view when a message is sent from history", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
+    const input = screen.getByRole("textbox", { name: "Message input" });
+    fireEvent.change(input, { target: { value: "hello" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(chat.send).toHaveBeenCalledWith("hello");
+    expect(
+      screen.queryByRole("searchbox", { name: "Search conversations" }),
+    ).toBeNull();
+  });
+
+  it("returns to the chat view when starting a new chat from history", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
+    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    expect(chat.reset).toHaveBeenCalled();
+    expect(
+      screen.queryByRole("searchbox", { name: "Search conversations" }),
     ).toBeNull();
   });
 });

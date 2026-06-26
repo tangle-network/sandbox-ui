@@ -356,16 +356,6 @@ export function AssistantPanel({
         role={view === "chat" ? "log" : undefined}
         aria-live={view === "chat" ? "polite" : undefined}
         className="min-h-0 flex-1 overflow-y-auto focus:outline-none"
-        // The text-size control zooms the whole transcript. `zoom` scales every
-        // descendant uniformly regardless of which renderer draws the
-        // conversation and what font-size utilities it uses; an inline
-        // `font-size` would not, since the transcript's text utilities set
-        // absolute rem sizes and ignore the inherited value. `transform: scale`
-        // is unsuitable — it keeps the original layout box and would break this
-        // scroll container. Baseline-supported in evergreen browsers (Firefox
-        // 126+); nothing inside the transcript virtualizes or reads
-        // getBoundingClientRect, so zoom's coordinate scaling is safe here.
-        style={{ zoom: font.scale }}
       >
         {view === "history" ? (
           <AssistantHistory
@@ -381,7 +371,13 @@ export function AssistantPanel({
             onDelete={(id) => void deleteThread(id)}
           />
         ) : (
-          <div className="px-2 py-3">
+          // The text-size control zooms the transcript only — not the history
+          // view's search box and buttons. `zoom` scales every descendant
+          // uniformly regardless of which renderer draws the conversation; an
+          // inline `font-size` would not (the transcript's text utilities set
+          // absolute rem sizes), and `transform: scale` would break the scroll
+          // container by keeping the original layout box.
+          <div className="px-2 py-3" style={{ zoom: font.scale }}>
             {renderTranscript ? (
               renderTranscript({
                 messages: state.messages,

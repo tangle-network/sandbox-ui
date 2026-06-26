@@ -433,13 +433,6 @@ export function IntegrationsPanel({
                       ) : null}
                     </div>
                   </div>
-                  {/* Hover/focus hint that the tile opens an external page. */}
-                  {manageHref ? (
-                    <ExternalLink
-                      aria-hidden
-                      className="pointer-events-none absolute bottom-1.5 right-1.5 h-3.5 w-3.5 text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-                    />
-                  ) : null}
                   {/* Overflow menu (above the Manage link) listing the explicit
                       actions. Always rendered so touch users — who have no hover —
                       can reach Manage/Disconnect, and so the destructive action
@@ -456,7 +449,14 @@ export function IntegrationsPanel({
                         <MoreVertical className="h-3.5 w-3.5" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[160px]">
+                    {/* Open beside the tile (top-aligned) rather than below it,
+                        so the menu never covers the logo/name; flips to the left
+                        on collision. rounded-md keeps it from over-rounding. */}
+                    <DropdownMenuContent
+                      side="right"
+                      align="start"
+                      className="min-w-[160px] rounded-md"
+                    >
                       {manageHref ? (
                         <DropdownMenuItem asChild>
                           <a

@@ -1,17 +1,20 @@
 /**
  * The converged assistant chat panel, built on sandbox-ui's chat primitives.
  * The reducer state is mapped to an AgentTimeline (transcript, tool chips,
- * reasoning preview, cost, proposal cards) and the composer is a ChatInput. App-
- * shell concerns — the signed-in user, navigation, the credit balance, money
+ * reasoning preview, cost, proposal cards) and the composer is a ChatInput with
+ * the model picker sitting directly above it. The header's history toggle swaps
+ * the conversation area for a full-panel, searchable history view. App-shell
+ * concerns — the signed-in user, navigation, the credit balance, money
  * formatting, and the workflow-graph renderer — are injected so the panel is
  * portable across hosts. Chat state is owned by the dock and passed in, so the
  * conversation survives the drawer closing.
  */
 
 import { AgentTimeline, ChatInput, ThinkingIndicator } from "@tangle-network/ui/chat";
-import { History, MessageSquarePlus, Minus, Plus, Trash2, X } from "lucide-react";
+import { History, MessageSquarePlus, Minus, Plus, X } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { type ModelInfo, ModelPicker } from "../dashboard/model-picker";
+import { AssistantHistory } from "./AssistantHistory";
 import { assistantIsThinking, buildAssistantTimeline } from "./build-timeline";
 import type { AssistantModels } from "./client";
 import { isLowBalance, presentError } from "./presentation";
@@ -117,8 +120,9 @@ export function AssistantPanel({
   const models = useAssistantModels();
   const threads = useAssistantThreads(userId);
   const font = useFontScale();
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const historyRef = useRef<HTMLDivElement | null>(null);
+  // Which surface the conversation area shows: the live chat, or the full-panel
+  // history list. The header's history button toggles between them.
+  const [view, setView] = useState<"chat" | "history">("chat");
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const pickerModels = useMemo<ModelInfo[]>(
@@ -137,49 +141,22 @@ export function AssistantPanel({
   const chatRef = useRef(chat);
   chatRef.current = chat;
 
-  // Dismiss the history overlay on an outside pointer press or Escape — the
-  // press-anywhere / Escape-to-close behavior expected of a floating dropdown
-  // (the overlay sits above the conversation, so otherwise only the toggle could
-  // dismiss it). The toggle button and the overlay are excluded from the pointer
-  // check, which keeps the toggle's own `onClick` authoritative: pressing the
-  // open toggle fires `pointerdown` here first (ignored, it's the button) and
-  // then `click` (which closes), so the two never fight. `pointerdown` is
-  // deliberate over `mousedown` so dismissal also fires for touch/pen. Escape is
-  // handled in the capture phase and stops immediate propagation so it closes
-  // only the overlay — not the whole assistant, whose dock also listens for it.
+  // In the history view, Escape returns to the conversation (and refocuses the
+  // toggle) rather than closing the whole assistant — the dock also listens for
+  // Escape, so this capture-phase handler stops it from reaching the dock while
+  // history is shown. In the chat view no handler is installed, so Escape falls
+  // through to the dock's close as usual.
   useEffect(() => {
-    if (!historyOpen) return;
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node;
-      if (historyRef.current?.contains(target)) return;
-      if (historyButtonRef.current?.contains(target)) return;
-      setHistoryOpen(false);
-    };
+    if (view !== "history") return;
     const onKeyDownCapture = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      // Only intercept Escape that originates inside the overlay (focus is moved
-      // there on open). This keeps the dismissal scoped — a stray Escape while
-      // focus is elsewhere is left for whatever else listens for it, rather than
-      // swallowing every Escape document-wide while the overlay is open.
-      if (!historyRef.current?.contains(e.target as Node)) return;
       e.stopImmediatePropagation();
-      setHistoryOpen(false);
+      setView("chat");
       historyButtonRef.current?.focus();
     };
-    document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDownCapture, true);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDownCapture, true);
-    };
-  }, [historyOpen]);
-
-  // Move focus into the overlay when it opens so keyboard and screen-reader users
-  // land on it (and Escape / arrow navigation target it), rather than having it
-  // appear silently with focus left on the toggle.
-  useEffect(() => {
-    if (historyOpen) historyRef.current?.focus();
-  }, [historyOpen]);
+    return () => document.removeEventListener("keydown", onKeyDownCapture, true);
+  }, [view]);
 
   // Prefer the just-settled turn's balance (from the usage event, immediate)
   // over the injected fetched balance, which may lag a turn behind.
@@ -220,12 +197,15 @@ export function AssistantPanel({
 
   const isThinking = assistantIsThinking(state);
 
-  const openHistory = () => {
-    setHistoryOpen((v) => {
-      const next = !v;
-      if (next) threads.refresh();
-      return next;
-    });
+  // Entering history loads (or reloads) the thread list — the hook never fetches
+  // on mount, so this is what populates it.
+  const showHistory = () => {
+    threads.refresh();
+    setView("history");
+  };
+  const toggleHistory = () => {
+    if (view === "history") setView("chat");
+    else showHistory();
   };
 
   // Delete a past conversation. Deleting the *active* thread is refused while it
@@ -256,13 +236,10 @@ export function AssistantPanel({
 
   return (
     <div className="relative flex h-full flex-col bg-background">
-      {/* Header + toolbar. Positioned (relative + z-10) so the history overlay
-          drops directly under it via `top-full` and floats above the
-          conversation rather than pushing it down. */}
-      <div className="relative z-10 border-border border-b">
-        {/* Title bar: identity + active-conversation title, and the
-            conversation-level actions (history, new, close). */}
-        <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-1.5">
+      {/* Header: identity + active-conversation title, and the conversation-level
+          actions (text size, history, new, close). */}
+      <div className="border-border border-b">
+        <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2.5">
           <div className="flex min-w-0 flex-col">
             <div className="flex items-baseline gap-2">
               <span className="font-medium text-foreground text-sm">
@@ -284,15 +261,41 @@ export function AssistantPanel({
               </span>
             )}
           </div>
-          <div className="flex shrink-0 items-center gap-0.5">
+          <div className="flex shrink-0 items-center gap-1">
+            {/* Text size — zooms the transcript. A panel-level control, so it
+                lives in the header action row rather than over the composer. */}
+            <div
+              className="flex items-center overflow-hidden rounded-md border border-border"
+              role="group"
+              aria-label="Text size"
+            >
+              <button
+                type="button"
+                onClick={font.decrease}
+                disabled={!font.canDecrease}
+                aria-label="Decrease text size"
+                className="px-1.5 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={font.increase}
+                disabled={!font.canIncrease}
+                aria-label="Increase text size"
+                className="border-border border-l px-1.5 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
             <button
               ref={historyButtonRef}
               type="button"
-              onClick={openHistory}
+              onClick={toggleHistory}
               aria-label="Chat history"
-              aria-pressed={historyOpen}
+              aria-pressed={view === "history"}
               className={`rounded-md p-1.5 transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                historyOpen
+                view === "history"
                   ? "bg-muted text-foreground"
                   : "text-muted-foreground"
               }`}
@@ -301,7 +304,10 @@ export function AssistantPanel({
             </button>
             <button
               type="button"
-              onClick={chat.reset}
+              onClick={() => {
+                chat.reset();
+                setView("chat");
+              }}
               aria-label="New chat"
               title="New chat"
               className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -318,130 +324,15 @@ export function AssistantPanel({
             </button>
           </div>
         </div>
-
-        {/* Toolbar: the model picker (searchable, brand-aware) and the
-            text-size control that zooms the transcript. */}
-        <div className="flex items-center justify-between gap-2 px-3 pb-2">
-          {pickerModels.length > 0 ? (
-            <ModelPicker
-              variant="pill"
-              label="Model"
-              value={pickerValue}
-              onChange={(id) =>
-                chat.setModel(nextModelSelection(id, models.default))
-              }
-              models={pickerModels}
-            />
-          ) : (
-            <span className="px-1 text-muted-foreground text-xs">
-              Default model
-            </span>
-          )}
-          <div
-            className="flex items-center overflow-hidden rounded-md border border-border"
-            role="group"
-            aria-label="Text size"
-          >
-            <button
-              type="button"
-              onClick={font.decrease}
-              disabled={!font.canDecrease}
-              aria-label="Decrease text size"
-              className="px-1.5 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={font.increase}
-              disabled={!font.canIncrease}
-              aria-label="Increase text size"
-              className="border-border border-l px-1.5 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40 disabled:hover:bg-transparent"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* History overlay: an elevated dropdown anchored under the header,
-            dismissed by an outside press (see the effect above). */}
-        {historyOpen && (
-          <div
-            ref={historyRef}
-            role="dialog"
-            aria-label="Recent conversations"
-            tabIndex={-1}
-            className="absolute inset-x-2 top-full z-30 mt-1 overflow-hidden rounded-lg border border-border bg-surface-container-highest shadow-xl ring-1 ring-black/5 focus:outline-none"
-          >
-            <div className="border-border border-b bg-surface-container-high px-3 py-2 font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
-              Recent conversations
-            </div>
-            {/* Bounded to half the viewport so a long list can't run past the
-                panel's bottom edge (over the composer) on short viewports. */}
-            <div className="max-h-[min(18rem,50vh)] overflow-y-auto">
-              {threads.threads.length === 0 ? (
-                <p className="px-3 py-3 text-muted-foreground text-xs">
-                  {threads.loaded ? "No past conversations." : "Loading…"}
-                </p>
-              ) : (
-                <ul className="py-1">
-                  {threads.threads.map((t) => {
-                    const busyActive =
-                      state.threadId === t.id && state.status !== "idle";
-                    const active = state.threadId === t.id;
-                    return (
-                      <li
-                        key={t.id}
-                        className={`group flex items-center transition-colors hover:bg-muted/60 ${
-                          active ? "bg-primary/10" : ""
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            chat.switchThread(t.id);
-                            setHistoryOpen(false);
-                          }}
-                          className={`min-w-0 flex-1 truncate px-3 py-2 text-left text-xs ${
-                            active
-                              ? "font-medium text-foreground"
-                              : "text-foreground"
-                          }`}
-                        >
-                          {t.title ?? "Untitled conversation"}
-                        </button>
-                        {threads.canRemove && (
-                          <button
-                            type="button"
-                            onClick={() => void deleteThread(t.id)}
-                            disabled={busyActive}
-                            aria-label="Delete conversation"
-                            title={
-                              busyActive
-                                ? "Can't delete while this conversation is active"
-                                : "Delete conversation"
-                            }
-                            className="shrink-0 p-2 text-muted-foreground opacity-0 transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Conversation — host-swappable renderer, else the built-in timeline. */}
+      {/* Conversation — the full-panel history view, the host-swappable
+          renderer, or the built-in timeline. */}
       <div
         role="log"
         aria-label="Conversation"
         aria-live="polite"
-        className="min-h-0 flex-1 overflow-y-auto px-2 py-3"
+        className="min-h-0 flex-1 overflow-y-auto"
         // The text-size control zooms the whole transcript. `zoom` scales every
         // descendant uniformly regardless of which renderer draws the
         // conversation and what font-size utilities it uses; an inline
@@ -453,28 +344,45 @@ export function AssistantPanel({
         // getBoundingClientRect, so zoom's coordinate scaling is safe here.
         style={{ zoom: font.scale }}
       >
-        {renderTranscript ? (
-          renderTranscript({
-            messages: state.messages,
-            reasoning: state.reasoning,
-            streamingId: state.streamingId,
-            model: state.model,
-            isStreaming: streaming,
-            isThinking,
-            pendingProposals: state.pendingProposals,
-            usage: state.usage,
-            renderProposal,
-          })
-        ) : (
-          <AgentTimeline
-            items={buildAssistantTimeline(state, renderProposal)}
-            isThinking={isThinking}
-            emptyState={
-              <p className="px-4 py-8 text-center text-muted-foreground text-sm">
-                {EMPTY_STATE}
-              </p>
-            }
+        {view === "history" ? (
+          <AssistantHistory
+            threads={threads.threads}
+            loaded={threads.loaded}
+            activeThreadId={state.threadId}
+            activeBusy={state.status !== "idle"}
+            canRemove={threads.canRemove}
+            onSelect={(id) => {
+              chat.switchThread(id);
+              setView("chat");
+            }}
+            onDelete={(id) => void deleteThread(id)}
           />
+        ) : (
+          <div className="px-2 py-3">
+            {renderTranscript ? (
+              renderTranscript({
+                messages: state.messages,
+                reasoning: state.reasoning,
+                streamingId: state.streamingId,
+                model: state.model,
+                isStreaming: streaming,
+                isThinking,
+                pendingProposals: state.pendingProposals,
+                usage: state.usage,
+                renderProposal,
+              })
+            ) : (
+              <AgentTimeline
+                items={buildAssistantTimeline(state, renderProposal)}
+                isThinking={isThinking}
+                emptyState={
+                  <p className="px-4 py-8 text-center text-muted-foreground text-sm">
+                    {EMPTY_STATE}
+                  </p>
+                }
+              />
+            )}
+          </div>
         )}
       </div>
 
@@ -512,7 +420,8 @@ export function AssistantPanel({
         </div>
       )}
 
-      {/* Composer */}
+      {/* Composer: the model picker sits directly above the input, so the model
+          the next turn will use reads as part of the composer. */}
       <div className="border-border border-t p-2">
         {/* Running indicator: while a turn streams, the composer's Send becomes a
             Stop button — on its own an easy-to-miss signal. This animated row makes
@@ -523,8 +432,28 @@ export function AssistantPanel({
             <ThinkingIndicator />
           </div>
         )}
+        <div className="mb-1.5 flex items-center px-1">
+          {pickerModels.length > 0 ? (
+            <ModelPicker
+              variant="pill"
+              label="Model"
+              value={pickerValue}
+              onChange={(id) =>
+                chat.setModel(nextModelSelection(id, models.default))
+              }
+              models={pickerModels}
+            />
+          ) : (
+            <span className="px-1 text-muted-foreground text-xs">
+              Default model
+            </span>
+          )}
+        </div>
         <ChatInput
-          onSend={(message) => chat.send(message)}
+          onSend={(message) => {
+            setView("chat");
+            chat.send(message);
+          }}
           onCancel={chat.stop}
           isStreaming={streaming}
           disabled={chat.restoring || state.status === "awaiting_confirm"}

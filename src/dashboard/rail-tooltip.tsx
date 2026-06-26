@@ -4,6 +4,14 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { cn } from "../lib/utils"
 
+/**
+ * Shared surface treatment for rail popovers (this tooltip and the rail
+ * flyouts): a rounded, bordered, shadowed card on the highest container
+ * surface. Centralized so the floating-UI styles can't drift apart.
+ */
+export const RAIL_FLOATING_SURFACE =
+  "rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]"
+
 export interface RailTooltipProps {
   /** Tooltip text shown to the right of the trigger. */
   label: string
@@ -64,9 +72,8 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
             aria-hidden="true"
             style={{ position: "fixed", top: coords.top, left: coords.left, transform: "translateY(-50%)" }}
             className={cn(
-              "pointer-events-none z-[70] whitespace-nowrap rounded-md border border-[var(--md3-outline-variant)]",
-              "bg-surface-container-highest px-2 py-1 text-xs font-medium text-popover-foreground",
-              "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+              "pointer-events-none z-[70] whitespace-nowrap px-2 py-1 text-xs font-medium text-popover-foreground",
+              RAIL_FLOATING_SURFACE,
             )}
           >
             {label}

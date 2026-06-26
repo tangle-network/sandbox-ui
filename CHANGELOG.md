@@ -37,6 +37,9 @@ A ground-up rework of the dashboard rail, shared by both `SidebarLayout` and
 - New exports from `./dashboard`: `RailHeader`, `RailExpandable`,
   `RailExpandableSubItem`, `RailHeaderProps`, `RailExpandableProps`, `ThemeMode`,
   `AppearanceController`.
+- **Deprecations** (still exported, no longer used by the layouts): `RailThemeToggle`
+  (superseded by the account-menu `appearance` control) and `SidebarRailHeader`
+  (superseded by `RailHeader`).
 - **Active item = primary.** The nav item whose route matches the current page
   now renders with the emphasized "primary" look (accent fill + accent ring), so
   the current destination clearly stands out; items are otherwise the default

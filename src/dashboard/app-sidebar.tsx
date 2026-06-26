@@ -22,7 +22,7 @@ import {
   SIDEBAR_PANEL_WIDTH,
   useSidebar,
 } from "./sidebar-context"
-import { RailTooltip } from "./rail-tooltip"
+import { RailTooltip, RAIL_FLOATING_SURFACE } from "./rail-tooltip"
 
 // ============================================================================
 // Types
@@ -121,11 +121,14 @@ function MoonIcon({ className }: { className?: string }) {
   )
 }
 
-// Compact light/dark switch for the rail footer, driven by the shared
-// `useTheme` hook so every app gets one consistent toggle instead of
-// hand-rolling its own. The `mounted` guard keeps the server and first client
-// render identical (no theme-dependent icon during SSR) to avoid a hydration
-// mismatch, then resolves to the persisted theme after mount.
+/**
+ * Compact light/dark switch driven by the shared `useTheme` hook.
+ *
+ * @deprecated The redesigned rail no longer renders a standalone theme toggle —
+ * theme lives in the account menu as a Light/Dark/System control via the
+ * `appearance` controller on {@link ProfileAvatar} (and both layouts). Kept for
+ * backward compatibility; not used by `SidebarLayout`/`DashboardLayout`.
+ */
 export function RailThemeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
@@ -392,6 +395,11 @@ export interface SidebarRailHeaderProps {
   className?: string
 }
 
+/**
+ * @deprecated Superseded by {@link RailHeader}, the three-slot header
+ * (brand · middle · panel toggle) used by both shells. Kept for backward
+ * compatibility; no longer rendered by `SidebarLayout`/`DashboardLayout`.
+ */
 export function SidebarRailHeader({ children, className }: SidebarRailHeaderProps) {
   return (
     <div className={cn("flex h-14 shrink-0 items-center justify-center border-b border-[var(--md3-outline-variant)]", className)}>
@@ -640,8 +648,8 @@ export function RailFlyout({
             if (el.closest("a,button")) setOpen(false)
           }}
           className={cn(
-            "absolute top-0 z-50 min-w-[12rem] rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
-            showLabel ? "left-full ml-2" : "left-full ml-2",
+            "absolute left-full top-0 z-50 ml-2 min-w-[12rem] p-1.5",
+            RAIL_FLOATING_SURFACE,
           )}
         >
           <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
@@ -876,7 +884,7 @@ export function RailExpandable({
               onMouseEnter={cancelClose}
               onMouseLeave={scheduleClose}
               onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
-              className="z-[70] flex w-60 flex-col overflow-hidden rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]"
+              className={cn("z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
             >
               <p className="shrink-0 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
                 {label}

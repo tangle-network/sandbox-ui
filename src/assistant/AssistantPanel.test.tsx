@@ -233,7 +233,7 @@ describe("AssistantPanel thread deletion", () => {
     await openHistory("t2");
     // [0] is t1 (active), [1] is t2 (inactive).
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Delete conversation" })[1],
+      screen.getAllByRole("button", { name: /Delete conversation/ })[1],
     );
     await waitFor(() => expect(del).toHaveBeenCalledWith("t2"));
     expect(chat.reset).not.toHaveBeenCalled();
@@ -245,7 +245,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], del));
     await openHistory("t1");
     fireEvent.click(
-      screen.getByRole("button", { name: "Delete conversation" }),
+      screen.getByRole("button", { name: /Delete conversation/ }),
     );
     await waitFor(() => expect(chat.reset).toHaveBeenCalled());
     expect(del).toHaveBeenCalledWith("t1");
@@ -257,7 +257,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], del));
     await openHistory("t1");
     fireEvent.click(
-      screen.getByRole("button", { name: "Delete conversation" }),
+      screen.getByRole("button", { name: /Delete conversation/ }),
     );
     await waitFor(() => expect(del).toHaveBeenCalledWith("t1"));
     expect(chat.reset).not.toHaveBeenCalled();
@@ -273,7 +273,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], vi.fn()));
     await openHistory("t1");
     const btn = screen.getByRole("button", {
-      name: "Delete conversation",
+      name: /Delete conversation/,
     }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
@@ -283,7 +283,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], undefined));
     await openHistory("t1");
     expect(
-      screen.queryByRole("button", { name: "Delete conversation" }),
+      screen.queryByRole("button", { name: /Delete conversation/ }),
     ).toBeNull();
   });
 
@@ -299,7 +299,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], del));
     await openHistory("t1");
     fireEvent.click(
-      screen.getByRole("button", { name: "Delete conversation" }),
+      screen.getByRole("button", { name: /Delete conversation/ }),
     );
     await waitFor(() => expect(del).toHaveBeenCalled());
     // The user starts a turn on the active thread while the delete is in flight.
@@ -399,10 +399,13 @@ describe("nextModelSelection", () => {
 });
 
 describe("AssistantPanel text-size control", () => {
-  function conversation(container: HTMLElement): HTMLElement {
-    return container.querySelector(
-      '[aria-label="Conversation"]',
-    ) as HTMLElement;
+  // The zoom lives on the transcript wrapper (the conversation container's
+  // child), not the container itself, so it scales the transcript without
+  // scaling the history view's search box and buttons.
+  function zoomLayer(container: HTMLElement): HTMLElement {
+    const el = container.querySelector('[aria-label="Conversation"] > div');
+    if (!el) throw new Error("zoom layer not found");
+    return el as HTMLElement;
   }
 
   it("applies the font scale as a transcript zoom and respects the bounds", () => {
@@ -410,15 +413,15 @@ describe("AssistantPanel text-size control", () => {
       <div data-testid="host-transcript" />
     ));
     // Default scale 1 → no visual change.
-    expect(conversation(container).style.zoom).toBe("1");
+    expect(zoomLayer(container).style.zoom).toBe("1");
 
     fireEvent.click(screen.getByRole("button", { name: "Increase text size" }));
-    expect(conversation(container).style.zoom).toBe("1.125");
+    expect(zoomLayer(container).style.zoom).toBe("1.125");
 
     // Walk down to the minimum (0.875) and confirm the control disables there.
     fireEvent.click(screen.getByRole("button", { name: "Decrease text size" }));
     fireEvent.click(screen.getByRole("button", { name: "Decrease text size" }));
-    expect(conversation(container).style.zoom).toBe("0.875");
+    expect(zoomLayer(container).style.zoom).toBe("0.875");
     expect(
       (
         screen.getByRole("button", {
@@ -427,43 +430,141 @@ describe("AssistantPanel text-size control", () => {
       ).disabled,
     ).toBe(true);
   });
+
+  it("does not apply the zoom to the history view", () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    const { container } = renderWith(chat, deleteClient([thread("t1")]));
+    fireEvent.click(screen.getByRole("button", { name: "Increase text size" }));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    // The conversation container itself carries no zoom, and the history branch
+    // has no zoom wrapper — so the search box and list render at 1x.
+    const log = container.querySelector(
+      '[aria-label="Conversation"]',
+    ) as HTMLElement;
+    expect(log.style.zoom).toBe("");
+  });
 });
 
-describe("AssistantPanel history overlay dismissal", () => {
-  it("closes on an outside pointer press but stays open for an inside press", async () => {
+describe("AssistantPanel history view", () => {
+  it("toggles the conversation area between the chat and the history list", async () => {
     const chat = makeChat({ threadId: "t1", status: "idle" });
     renderWith(chat, deleteClient([thread("t1")]));
-    await openHistory("t1");
-    expect(screen.getByText("Recent conversations")).toBeTruthy();
 
-    // A press inside the overlay must not dismiss it.
-    fireEvent.pointerDown(screen.getByText("Recent conversations"));
-    expect(screen.queryByText("Recent conversations")).not.toBeNull();
+    // The toggle swaps the conversation for the full-panel history view.
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    expect(
+      screen.getByRole("searchbox", { name: "Search conversations" }),
+    ).toBeTruthy();
+    await screen.findByText("t1");
+    expect(
+      screen
+        .getByRole("button", { name: "Chat history" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
 
-    // A press anywhere outside the overlay and toggle closes it.
-    fireEvent.pointerDown(document.body);
-    await waitFor(() =>
-      expect(screen.queryByText("Recent conversations")).toBeNull(),
-    );
+    // Toggling again returns to the conversation.
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    expect(
+      screen.queryByRole("searchbox", { name: "Search conversations" }),
+    ).toBeNull();
   });
 
-  it("closes on Escape and returns focus to the toggle", async () => {
+  it("filters the list by the search query", async () => {
+    const chat = makeChat({ status: "idle" });
+    renderWith(chat, deleteClient([thread("alpha"), thread("beta")]));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("alpha");
+
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Search conversations" }),
+      { target: { value: "bet" } },
+    );
+    expect(screen.queryByText("alpha")).toBeNull();
+    expect(screen.getByText("beta")).toBeTruthy();
+  });
+
+  it("switches to the chosen thread and returns to the conversation", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1"), thread("t2")]));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    fireEvent.click(await screen.findByText("t2"));
+    expect(chat.switchThread).toHaveBeenCalledWith("t2");
+    expect(
+      screen.queryByRole("searchbox", { name: "Search conversations" }),
+    ).toBeNull();
+  });
+
+  it("returns to the conversation on Escape and refocuses the toggle", async () => {
     const chat = makeChat({ threadId: "t1", status: "idle" });
     renderWith(chat, deleteClient([thread("t1")]));
-    await openHistory("t1");
-    const overlay = screen.getByRole("dialog", {
-      name: "Recent conversations",
-    });
-    // Focus moves into the overlay on open; Escape from within it closes it.
-    expect(document.activeElement).toBe(overlay);
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
 
-    fireEvent.keyDown(overlay, { key: "Escape" });
+    // Escape from inside the history view returns to the conversation.
+    fireEvent.keyDown(
+      screen.getByRole("searchbox", { name: "Search conversations" }),
+      { key: "Escape" },
+    );
     await waitFor(() =>
-      expect(screen.queryByText("Recent conversations")).toBeNull(),
+      expect(
+        screen.queryByRole("searchbox", { name: "Search conversations" }),
+      ).toBeNull(),
     );
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Chat history" }),
     );
+  });
+
+  it("ignores an Escape that originates outside the history view", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
+    // An Escape from elsewhere (e.g. an open composer popover) must not yank the
+    // user out of the history view.
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(
+      screen.getByRole("searchbox", { name: "Search conversations" }),
+    ).toBeTruthy();
+  });
+
+  it("marks the conversation as a live log only in the chat view", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    const { container } = renderWith(chat, deleteClient([thread("t1")]));
+    expect(
+      container.querySelector('[aria-label="Conversation"]')?.getAttribute("role"),
+    ).toBe("log");
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
+    expect(
+      container.querySelector('[aria-label="Conversation"]')?.getAttribute("role"),
+    ).toBeNull();
+  });
+
+  it("returns to the chat view when a message is sent from history", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
+    const input = screen.getByRole("textbox", { name: "Message input" });
+    fireEvent.change(input, { target: { value: "hello" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(chat.send).toHaveBeenCalledWith("hello");
+    expect(
+      screen.queryByRole("searchbox", { name: "Search conversations" }),
+    ).toBeNull();
+  });
+
+  it("returns to the chat view when starting a new chat from history", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
+    fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+    expect(chat.reset).toHaveBeenCalled();
+    expect(
+      screen.queryByRole("searchbox", { name: "Search conversations" }),
+    ).toBeNull();
   });
 });
 

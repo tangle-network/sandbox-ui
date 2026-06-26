@@ -207,7 +207,7 @@ function pickDetail(
 /** Build the card-facing node data for a single `do` leaf or top-level action:
  *  title, subtitle, and the compact `detail` map. The action object is a
  *  single-key map (`{ "integration.invoke": {...} }`), mirroring the YAML
- *  schema. The raw config is attached by {@link describeAction}. */
+ *  schema. Returns the base data WITHOUT the raw `config`. */
 function describeActionBase(action: unknown): WfNodeData {
   const rec = asRecord(action);
   const [kind] = Object.keys(rec);

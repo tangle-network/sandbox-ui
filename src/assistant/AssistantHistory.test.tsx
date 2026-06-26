@@ -81,7 +81,7 @@ describe("AssistantHistory", () => {
     renderHistory({ threads: [t({ id: "t1", title: "One" })], onSelect, onDelete });
     fireEvent.click(screen.getByText("One"));
     expect(onSelect).toHaveBeenCalledWith("t1");
-    fireEvent.click(screen.getByRole("button", { name: "Delete conversation" }));
+    fireEvent.click(screen.getByRole("button", { name: /Delete conversation/ }));
     expect(onDelete).toHaveBeenCalledWith("t1");
   });
 
@@ -94,7 +94,7 @@ describe("AssistantHistory", () => {
     expect(
       (
         screen.getByRole("button", {
-          name: "Delete conversation",
+          name: /Delete conversation/,
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
@@ -103,7 +103,25 @@ describe("AssistantHistory", () => {
   it("hides delete entirely when the client can't remove", () => {
     renderHistory({ threads: [t({ id: "t1", title: "One" })], canRemove: false });
     expect(
-      screen.queryByRole("button", { name: "Delete conversation" }),
+      screen.queryByRole("button", { name: /Delete conversation/ }),
     ).toBeNull();
+  });
+
+  it("matches the displayed fallback when searching untitled conversations", () => {
+    renderHistory({
+      threads: [t({ id: "x", title: null }), t({ id: "y", title: "Alpha" })],
+    });
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "untitled" },
+    });
+    expect(screen.getByText("Untitled conversation")).toBeTruthy();
+    expect(screen.queryByText("Alpha")).toBeNull();
+  });
+
+  it("names each delete button by its conversation for assistive tech", () => {
+    renderHistory({ threads: [t({ id: "t1", title: "Quarterly report" })] });
+    expect(
+      screen.getByRole("button", { name: "Delete conversation: Quarterly report" }),
+    ).toBeTruthy();
   });
 });

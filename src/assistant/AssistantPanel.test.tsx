@@ -233,7 +233,7 @@ describe("AssistantPanel thread deletion", () => {
     await openHistory("t2");
     // [0] is t1 (active), [1] is t2 (inactive).
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Delete conversation" })[1],
+      screen.getAllByRole("button", { name: /Delete conversation/ })[1],
     );
     await waitFor(() => expect(del).toHaveBeenCalledWith("t2"));
     expect(chat.reset).not.toHaveBeenCalled();
@@ -245,7 +245,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], del));
     await openHistory("t1");
     fireEvent.click(
-      screen.getByRole("button", { name: "Delete conversation" }),
+      screen.getByRole("button", { name: /Delete conversation/ }),
     );
     await waitFor(() => expect(chat.reset).toHaveBeenCalled());
     expect(del).toHaveBeenCalledWith("t1");
@@ -257,7 +257,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], del));
     await openHistory("t1");
     fireEvent.click(
-      screen.getByRole("button", { name: "Delete conversation" }),
+      screen.getByRole("button", { name: /Delete conversation/ }),
     );
     await waitFor(() => expect(del).toHaveBeenCalledWith("t1"));
     expect(chat.reset).not.toHaveBeenCalled();
@@ -273,7 +273,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], vi.fn()));
     await openHistory("t1");
     const btn = screen.getByRole("button", {
-      name: "Delete conversation",
+      name: /Delete conversation/,
     }) as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
@@ -283,7 +283,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], undefined));
     await openHistory("t1");
     expect(
-      screen.queryByRole("button", { name: "Delete conversation" }),
+      screen.queryByRole("button", { name: /Delete conversation/ }),
     ).toBeNull();
   });
 
@@ -299,7 +299,7 @@ describe("AssistantPanel thread deletion", () => {
     renderWith(chat, deleteClient([thread("t1")], del));
     await openHistory("t1");
     fireEvent.click(
-      screen.getByRole("button", { name: "Delete conversation" }),
+      screen.getByRole("button", { name: /Delete conversation/ }),
     );
     await waitFor(() => expect(del).toHaveBeenCalled());
     // The user starts a turn on the active thread while the delete is in flight.

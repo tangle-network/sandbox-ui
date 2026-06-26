@@ -66,7 +66,13 @@ export function AssistantHistory({
   const visible = useMemo(
     () =>
       trimmed
-        ? sorted.filter((t) => (t.title ?? "").toLowerCase().includes(trimmed))
+        ? // Match the title as displayed, so searching "untitled" finds the
+          // rows that render as "Untitled conversation".
+          sorted.filter((t) =>
+            (t.title ?? "Untitled conversation")
+              .toLowerCase()
+              .includes(trimmed),
+          )
         : sorted,
     [sorted, trimmed],
   );
@@ -102,6 +108,7 @@ export function AssistantHistory({
               const active = t.id === activeThreadId;
               const ms = parsedTime(t.updatedAt);
               const busyActive = active && activeBusy;
+              const title = t.title ?? "Untitled conversation";
               return (
                 <li
                   key={t.id}
@@ -119,7 +126,7 @@ export function AssistantHistory({
                         active ? "font-medium text-foreground" : "text-foreground"
                       }`}
                     >
-                      {t.title ?? "Untitled conversation"}
+                      {title}
                     </span>
                     {ms != null && (
                       <span className="text-[11px] text-muted-foreground">
@@ -132,13 +139,14 @@ export function AssistantHistory({
                       type="button"
                       onClick={() => onDelete(t.id)}
                       disabled={busyActive}
-                      aria-label="Delete conversation"
+                      aria-label={`Delete conversation: ${title}`}
                       title={
                         busyActive
                           ? "Can't delete while this conversation is active"
                           : "Delete conversation"
                       }
-                      className="shrink-0 p-2 text-muted-foreground opacity-0 transition hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
+                      // Always visible on touch devices (no hover to reveal it).
+                      className="shrink-0 p-2 text-muted-foreground opacity-0 transition [@media(hover:none)]:opacity-100 hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>

@@ -787,7 +787,7 @@ export function RailExpandable({
         onClick={onNavigate}
         {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
         className={cn(
-          "flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] transition-colors",
+          "flex h-8 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
           active
             ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
             : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",

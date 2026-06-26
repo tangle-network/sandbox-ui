@@ -66,6 +66,13 @@ export interface WfNodeData extends Record<string, unknown> {
   path?: string;
   /** Notable config fields for the expand drawer (kept small + stringified). */
   detail?: Record<string, string>;
+  /** The raw, UNTRUNCATED config for this node — the action/trigger config
+   *  verbatim from the definition. The compact card reads {@link detail}; a
+   *  full-detail view (e.g. a node drawer) reads this to render every field —
+   *  the complete prompt, all profile/source/input keys — without the
+   *  card-sized clamp. It is the same definition the graph already parses, so it
+   *  adds no new payload. Omitted when the node has no config. */
+  config?: Record<string, unknown>;
   /** Connector slug (e.g. `github`) for the provider chip, when one applies. */
   provider?: string;
   /** Small corner tag, e.g. "×3" for a parallel fan-out. */
@@ -197,10 +204,11 @@ function pickDetail(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-/** Describe the single `do` leaf or top-level action as node data. The action
- *  object is a single-key map (`{ "integration.invoke": {...} }`), mirroring the
- *  YAML schema. */
-function describeAction(action: unknown): WfNodeData {
+/** Build the card-facing node data for a single `do` leaf or top-level action:
+ *  title, subtitle, and the compact `detail` map. The action object is a
+ *  single-key map (`{ "integration.invoke": {...} }`), mirroring the YAML
+ *  schema. The raw config is attached by {@link describeAction}. */
+function describeActionBase(action: unknown): WfNodeData {
   const rec = asRecord(action);
   const [kind] = Object.keys(rec);
   const cfg = asRecord(rec[kind]);
@@ -292,6 +300,17 @@ function describeAction(action: unknown): WfNodeData {
   }
 }
 
+/** Describe one action as node data, attaching the raw, untruncated `config` for
+ *  a full-detail view on top of the card-facing summary from
+ *  {@link describeActionBase}. Config is omitted when the action carries none. */
+function describeAction(action: unknown): WfNodeData {
+  const rec = asRecord(action);
+  const [kind] = Object.keys(rec);
+  const cfg = asRecord(rec[kind]);
+  const data = describeActionBase(action);
+  return Object.keys(cfg).length > 0 ? { ...data, config: cfg } : data;
+}
+
 /** Describe the `on:` trigger as the spine's root node. */
 function describeTrigger(on: unknown): WfNodeData {
   const rec = asRecord(on);
@@ -312,6 +331,7 @@ function describeTrigger(on: unknown): WfNodeData {
       kind: "provider_event",
       subtitle,
       provider: connection,
+      config: ev,
       hasBranches: false,
       isRoot: true,
       tone: "trigger",
@@ -325,6 +345,7 @@ function describeTrigger(on: unknown): WfNodeData {
       title: "Schedule",
       kind: "schedule",
       subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
+      config: sch,
       hasBranches: false,
       isRoot: true,
       tone: "trigger",

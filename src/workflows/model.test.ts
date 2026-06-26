@@ -175,6 +175,84 @@ do:
     expect(y.a1).toBeGreaterThan(y["a0-b2"]);
   });
 
+  it("attaches the raw, untruncated config to action and trigger nodes", () => {
+    // A prompt far longer than the compact `detail` clamp (200 chars) — the
+    // full-detail `config` must carry it verbatim, never truncated.
+    const longPrompt = `Review this PR carefully. ${"x".repeat(500)}`;
+    const yaml = `
+name: pr-review
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    actions: [opened, synchronize]
+    repo: tangle-network/agent-dev-container
+do:
+  - agent.run:
+      profile: code-reviewer
+      maxRounds: 3
+      source:
+        repo: "\${trigger.repository.full_name}"
+        pr: "\${trigger.pull_request.number}"
+      prompt: ${JSON.stringify(longPrompt)}
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+
+    // Trigger node carries the full provider_event config.
+    const trigger = nodes.find((n) => n.id === "trigger");
+    expect(trigger?.data.config).toMatchObject({
+      connection: "github",
+      event: "pull_request",
+      actions: ["opened", "synchronize"],
+      repo: "tangle-network/agent-dev-container",
+    });
+
+    // agent.run node carries every config field, prompt UNtruncated, and nested
+    // objects (source) preserved as objects (not the compact "…" placeholder).
+    const agent = nodes.find((n) => n.id === "a0");
+    expect(agent?.data.config?.profile).toBe("code-reviewer");
+    expect(agent?.data.config?.maxRounds).toBe(3);
+    expect(agent?.data.config?.prompt).toBe(longPrompt);
+    expect(agent?.data.config?.source).toEqual({
+      repo: "${trigger.repository.full_name}",
+      pr: "${trigger.pull_request.number}",
+    });
+    // The compact `detail` still clamps the prompt (so the card stays small),
+    // proving `config` is the distinct full-fidelity surface.
+    expect((agent?.data.detail?.prompt?.length ?? 0)).toBeLessThan(
+      longPrompt.length,
+    );
+  });
+
+  it("omits config for an action that declares none", () => {
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - parallel:
+      branches:
+        - notify:
+            url: https://example.com/a
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    // The parallel's branch leaf is a notify WITH config; assert a configless
+    // shape via a bare/unknown action instead.
+    const unknownYaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - sandbox.spawn: {}
+`;
+    const spawn = buildWorkflowGraph(unknownYaml).nodes.find(
+      (n) => n.id === "a0",
+    );
+    expect(spawn?.data.config).toBeUndefined();
+    // Sanity: the parallel graph still builds.
+    expect(nodes.some((n) => n.id === "a0")).toBe(true);
+  });
+
   it("returns an error (never throws) for invalid YAML", () => {
     const { nodes, error } = buildWorkflowGraph("name: [unterminated");
     expect(nodes).toEqual([]);

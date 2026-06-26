@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Plus, Bell } from "lucide-react"
 import { cn } from "../lib/utils"
+import { useBrandThemeSync } from "./use-brand-theme-sync"
 import { Logo } from "../primitives"
 import {
   Sidebar,
@@ -212,6 +213,9 @@ function DashboardLayoutInner({
   appearance,
   notifications: notifData,
 }: DashboardLayoutProps) {
+  // Keep light/dark tokens switching correctly under brand 0.6 regardless of which
+  // control toggled the theme (see useBrandThemeSync).
+  useBrandThemeSync()
   const Link = LinkComponent
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   const [notificationsOpen, setNotificationsOpen] = React.useState(false)

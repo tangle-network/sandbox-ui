@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "../lib/utils"
+import { useBrandThemeSync } from "./use-brand-theme-sync"
 import {
   Sidebar,
   SidebarRail,
@@ -217,6 +218,9 @@ function SidebarLayoutInner({
   sidebarClassName,
   contentClassName,
 }: SidebarLayoutProps) {
+  // Keep light/dark tokens switching correctly under brand 0.6 regardless of which
+  // control toggled the theme (see useBrandThemeSync).
+  useBrandThemeSync()
   const Link = LinkComponent ?? DefaultLink
   const { panelOpen, togglePanel, setPanelOpen, railCollapsed, toggleRail } = useSidebar()
   const handleNavClick = closePanelOnNavigate && panelOpen ? () => setPanelOpen(false) : undefined

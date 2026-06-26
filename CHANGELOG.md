@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.55.0
+
+### Assistant panel: composer model picker + full-panel conversation history
+
+- **Model picker in the composer** — the assistant's `ModelPicker` now sits
+  directly above the `ChatInput`, so the model the next turn will use reads as
+  part of the composer instead of in a separate header toolbar. The text-size
+  control moves to the header action row.
+- **Full-panel conversation history** — a new `AssistantHistory` view replaces the
+  header dropdown with a searchable, recency-sorted list showing each
+  conversation's title and relative last-active time, with inline delete. The
+  header's history button toggles the view; selecting a thread, sending a message,
+  or pressing Escape returns to the conversation. Transcript zoom and live-log
+  semantics apply to the chat view only.
+
 ## 0.53.0
 
 ### Sidebar redesign: unified rail header, expandable/primary nav items, account-menu appearance

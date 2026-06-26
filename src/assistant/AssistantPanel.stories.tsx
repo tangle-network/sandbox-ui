@@ -11,8 +11,8 @@ import { type AssistantState, initialAssistantState } from "./reducer";
 import type { AssistantChat } from "./useAssistantChat";
 
 /**
- * Visual harness for the assistant panel chrome (header, searchable model
- * picker, text-size control, history overlay, composer). The transport is faked
+ * Visual harness for the assistant panel chrome (header, text-size control,
+ * history view, composer with its searchable model picker). The transport is faked
  * so the model catalog and thread history populate without a backend; the chat
  * state is a static slice (the panel never streams here).
  */

@@ -59,20 +59,18 @@ export function buildFlowGraph(
   };
 }
 
-/** Shallow-equal two run states, so an unchanged node can be skipped on a tick. */
+/** Shallow-equal two run states, so an unchanged node can be skipped on a tick.
+ *  Compares over the union of keys rather than a hand-listed field set, so a new
+ *  WfNodeState field can't be silently ignored here (which would leave a node
+ *  stale when only that field changed). WfNodeState is a flat record of
+ *  primitives, so a shallow compare is exact. */
 export function sameRunState(a?: WfNodeState, b?: WfNodeState): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  return (
-    a.status === b.status &&
-    a.costUsd === b.costUsd &&
-    a.durationMs === b.durationMs &&
-    a.model === b.model &&
-    a.error === b.error &&
-    a.outputPreview === b.outputPreview &&
-    a.inputTokens === b.inputTokens &&
-    a.outputTokens === b.outputTokens
-  );
+  const aKeys = Object.keys(a) as (keyof WfNodeState)[];
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((k) => a[k] === b[k]);
 }
 
 /**

@@ -122,4 +122,18 @@ describe("sameRunState", () => {
       ),
     ).toBe(false);
   });
+
+  it("compares over the union of keys, so an extra field is not equal", () => {
+    // Guards the generic shallow-equal: one side carrying a field the other lacks
+    // must read as changed (a hand-listed comparator that forgot the field wouldn't).
+    expect(
+      sameRunState({ status: "running" }, { status: "running", costUsd: 1 }),
+    ).toBe(false);
+    expect(
+      sameRunState(
+        { status: "succeeded", inputTokens: 10, outputTokens: 5 },
+        { status: "succeeded", inputTokens: 10, outputTokens: 5 },
+      ),
+    ).toBe(true);
+  });
 });

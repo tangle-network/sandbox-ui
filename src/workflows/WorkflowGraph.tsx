@@ -335,6 +335,13 @@ export function WorkflowGraph({
         // a dense graph is explorable.
         nodesDraggable={!isPreview}
         nodesConnectable={false}
+        // The graph is a read-only run VISUALIZATION: dragging (full variant) and
+        // pan/zoom aid exploration, but a node/edge must never be deletable or
+        // reconnectable. With onNodesChange/onEdgesChange wired (needed so React
+        // Flow can persist measured sizes), the Delete/Backspace key would
+        // otherwise remove a selected node from the view until the next re-seed.
+        deleteKeyCode={null}
+        edgesReconnectable={false}
         elementsSelectable={!isPreview}
         edgesFocusable={false}
         // Wheel-scroll passes through to the page (it doesn't hijack the page to

@@ -415,8 +415,11 @@ export function buildWorkflowGraph(
           data: childData,
         });
         addEdge(id, cid, true);
-        // Branch leaves don't receive run state, so they're spaced statically.
-        const childHeight = estimateNodeHeight(childData, false);
+        // Reserve run-state height for branch leaves too when the run view is
+        // active: the host keys live state, and a leaf that receives some would
+        // grow past a compact estimate and overlap — don't assume only spine
+        // nodes are ever given state.
+        const childHeight = estimateNodeHeight(childData, reserveRunState);
         by += childHeight + BRANCH_GAP;
         branchStackHeight += childHeight + BRANCH_GAP;
       });

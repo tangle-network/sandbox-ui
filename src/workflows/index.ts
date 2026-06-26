@@ -11,6 +11,7 @@
  */
 
 export {
+  type BuildWorkflowGraphOptions,
   buildWorkflowGraph,
   type WfEdge,
   type WfGraph,

@@ -94,13 +94,58 @@ export interface WfGraph {
   error: string | null;
 }
 
-// Layout constants (px). The spine runs down x=0; branches sit to the right.
-const ROW_GAP = 112;
+// Layout geometry (px). The spine runs down x=0; branches sit to the right.
+// Spine spacing is HEIGHT-AWARE: a card's height varies with its content (and
+// grows further once live run state adds a meta-chip row and an output/error
+// preview), so a fixed row gap let a tall running node overlap the one below it.
+// The constants below mirror WorkflowNode's render closely enough to BOUND a
+// card's height — they don't need to be pixel-exact, only an upper estimate.
 const BRANCH_X = 300;
-const BRANCH_ROW_GAP = 84;
-// Extra clearance below a branch stack so the next spine node (and its own
-// branches) can't overlap a tall structural node's dangling leaves.
-const BRANCH_STACK_PADDING = 40;
+/** Vertical clearance left between two stacked cards (spine or branch). */
+const NODE_GAP = 44;
+/** Clearance between two stacked branch leaves. */
+const BRANCH_GAP = 24;
+/** A card's fixed chrome: vertical padding (py-2) + top/bottom border. */
+const CARD_CHROME = 20;
+/** The always-present title row. */
+const TITLE_ROW = 22;
+/** A single-line text row (subtitle, provider chip). */
+const TEXT_ROW = 20;
+/** The meta-chip row, allowing a two-line wrap (kind/model/cost/token chips). */
+const META_ROW = 44;
+/** A two-line, line-clamped output/error preview. */
+const PREVIEW_ROW = 34;
+
+/**
+ * Estimate a card's rendered height so the spine can be spaced without overlap.
+ * `withRunState` reserves the rows live run state adds (the meta-chip row and the
+ * output/error preview) so the layout — computed ONCE, before any run state is
+ * merged in — already leaves room for a node that later runs, and the merge never
+ * has to reflow positions. Reserved only for spine action/structural nodes: a
+ * trigger and branch leaves never receive run state in the run view, so they stay
+ * compact (and the static/preview layout reserves nothing at all).
+ */
+function estimateNodeHeight(data: WfNodeData, withRunState: boolean): number {
+  let h = CARD_CHROME + TITLE_ROW;
+  if (data.subtitle) h += TEXT_ROW;
+  // The meta row renders for a node with a model chip (pre-run) and for any node
+  // once a run populates cost/tokens — reserve it whenever either can apply.
+  if (withRunState || data.model) h += META_ROW;
+  if (withRunState) h += PREVIEW_ROW;
+  if (data.provider) h += TEXT_ROW;
+  return h;
+}
+
+/** Options for {@link buildWorkflowGraph}. */
+export interface BuildWorkflowGraphOptions {
+  /**
+   * Reserve vertical space for the rows live run state adds to a spine node (the
+   * meta-chip row + the output/error preview), so the RUN view's spine never
+   * overlaps once a node starts or terminates. The static/preview layout (no run
+   * overlay) leaves this off to stay compact. Defaults to `false`.
+   */
+  reserveRunState?: boolean;
+}
 
 function asRecord(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" && !Array.isArray(v)
@@ -290,8 +335,14 @@ function describeTrigger(on: unknown): WfNodeData {
 
 /** Build a positioned graph from a workflow YAML string. Never throws —
  *  malformed YAML or an empty definition returns an `error` the UI can fall
- *  back on (e.g. show the raw YAML while authoring). */
-export function buildWorkflowGraph(yaml: string): WfGraph {
+ *  back on (e.g. show the raw YAML while authoring). Pass
+ *  `{ reserveRunState: true }` for the run view so the spine leaves room for the
+ *  rows live run state adds (see {@link estimateNodeHeight}). */
+export function buildWorkflowGraph(
+  yaml: string,
+  options?: BuildWorkflowGraphOptions,
+): WfGraph {
+  const reserveRunState = options?.reserveRunState ?? false;
   if (!yaml || yaml.trim() === "") {
     return { nodes: [], edges: [], error: "No definition" };
   }
@@ -322,13 +373,11 @@ export function buildWorkflowGraph(yaml: string): WfGraph {
   };
 
   if (def.on) {
-    nodes.push({
-      id: "trigger",
-      position: { x: 0, y },
-      data: describeTrigger(def.on),
-    });
+    const data = describeTrigger(def.on);
+    nodes.push({ id: "trigger", position: { x: 0, y }, data });
     prevId = "trigger";
-    y += ROW_GAP;
+    // The trigger never carries run state, so it's spaced by its static height.
+    y += estimateNodeHeight(data, false) + NODE_GAP;
   }
 
   actions.forEach((action, i) => {
@@ -337,6 +386,9 @@ export function buildWorkflowGraph(yaml: string): WfGraph {
     nodes.push({ id, position: { x: 0, y }, data });
     if (prevId) addEdge(prevId, id, false);
     prevId = id;
+
+    // A spine action/structural node can run, so it reserves run-state rows.
+    const spineHeight = estimateNodeHeight(data, reserveRunState);
 
     // Fan-out leaves dangle to the right; the spine continues from the
     // structural node, not from the leaves.
@@ -353,23 +405,26 @@ export function buildWorkflowGraph(yaml: string): WfGraph {
 
     if (children.length > 0) {
       let by = y;
+      let branchStackHeight = 0;
       children.forEach((child, j) => {
         const cid = `${id}-b${j}`;
+        const childData = describeAction(child);
         nodes.push({
           id: cid,
           position: { x: BRANCH_X, y: by },
-          data: describeAction(child),
+          data: childData,
         });
         addEdge(id, cid, true);
-        by += BRANCH_ROW_GAP;
+        // Branch leaves don't receive run state, so they're spaced statically.
+        const childHeight = estimateNodeHeight(childData, false);
+        by += childHeight + BRANCH_GAP;
+        branchStackHeight += childHeight + BRANCH_GAP;
       });
-      // Advance past the branch stack so the next spine node clears it.
-      y += Math.max(
-        ROW_GAP,
-        children.length * BRANCH_ROW_GAP + BRANCH_STACK_PADDING,
-      );
+      // Advance past whichever is taller — the spine node or its dangling branch
+      // stack — so the next spine node clears both.
+      y += Math.max(spineHeight, branchStackHeight) + NODE_GAP;
     } else {
-      y += ROW_GAP;
+      y += spineHeight + NODE_GAP;
     }
   });
 

@@ -116,6 +116,65 @@ do:
     expect(nodes.some((n) => n.id === "a0-b0")).toBe(false);
   });
 
+  it("reserves spine spacing for a tall running node so live nodes never overlap", () => {
+    const yaml = `
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+do:
+  - agent.run:
+      profile: code-reviewer
+      model: glm-5
+      prompt: Review the PR
+  - integration.invoke:
+      path: github.pulls.reviews.create
+`;
+    const yOf = (g: ReturnType<typeof buildWorkflowGraph>) =>
+      Object.fromEntries(g.nodes.map((n) => [n.id, n.position.y]));
+    const reserved = yOf(buildWorkflowGraph(yaml, { reserveRunState: true }));
+    const compact = yOf(buildWorkflowGraph(yaml));
+
+    // The run view leaves room for a fully-populated running card (status badge +
+    // meta chips + a two-line output preview, ~160px) so a live node can't grow
+    // into the one below it — the spine gap clears that height.
+    expect(reserved.a1 - reserved.a0).toBeGreaterThanOrEqual(150);
+    // …and that's strictly more room than the compact static/preview layout, which
+    // reserves nothing (a proposal card never shows run state).
+    expect(reserved.a1 - reserved.a0).toBeGreaterThan(compact.a1 - compact.a0);
+    // Spine is strictly top-to-bottom in both modes (monotonically increasing y).
+    expect(reserved.trigger).toBeLessThan(reserved.a0);
+    expect(reserved.a0).toBeLessThan(reserved.a1);
+    expect(compact.trigger).toBeLessThan(compact.a0);
+    expect(compact.a0).toBeLessThan(compact.a1);
+  });
+
+  it("clears a tall structural node's branch stack before the next spine node", () => {
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+    timezone: UTC
+do:
+  - parallel:
+      branches:
+        - notify:
+            url: https://example.com/a
+        - notify:
+            url: https://example.com/b
+        - notify:
+            url: https://example.com/c
+  - agent.run:
+      profile: code-reviewer
+      prompt: summarize
+`;
+    const { nodes } = buildWorkflowGraph(yaml, { reserveRunState: true });
+    const y = Object.fromEntries(nodes.map((n) => [n.id, n.position.y]));
+    // The next spine node sits below the LAST dangling branch leaf, never beside
+    // or above it — the spine advance accounts for the whole branch stack.
+    expect(y.a1).toBeGreaterThan(y["a0-b2"]);
+  });
+
   it("returns an error (never throws) for invalid YAML", () => {
     const { nodes, error } = buildWorkflowGraph("name: [unterminated");
     expect(nodes).toEqual([]);

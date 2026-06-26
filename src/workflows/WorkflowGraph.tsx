@@ -14,6 +14,8 @@ import {
   type NodeProps,
   Position,
   ReactFlow,
+  useEdgesState,
+  useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
@@ -30,7 +32,7 @@ import {
   type WfNodeStatus,
   type WfNodeTone,
 } from "./model";
-import { buildFlowGraph } from "./flow-graph";
+import { buildFlowGraph, mergeRunState } from "./flow-graph";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 import { providerLabel } from "../assistant/provider-label";
 import { ProviderIcon } from "../integrations/provider-logo";
@@ -262,10 +264,40 @@ export function WorkflowGraph({
   onNodeClick,
 }: WorkflowGraphProps) {
   const colorMode = useColorMode();
-  const { nodes, edges, error } = useMemo(
-    () => buildFlowGraph(yaml, nodeState),
-    [yaml, nodeState],
+
+  // Structural graph from the YAML alone — STABLE across nodeState ticks. Built
+  // with run-state spacing reserved whenever a run overlay is in play (nodeState
+  // supplied), so live state can be merged onto a node WITHOUT reflowing
+  // positions. Recomputed only when the definition (or run-mode) changes — never
+  // on a token/poll tick — so React Flow keeps each node's identity and measured
+  // size instead of tearing the canvas down and re-measuring (which blanked the
+  // graph on every update).
+  const hasRunOverlay = nodeState !== undefined;
+  const structural = useMemo(
+    () => buildFlowGraph(yaml, hasRunOverlay ? {} : undefined),
+    [yaml, hasRunOverlay],
   );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(structural.edges);
+
+  // Re-seed React Flow with the new structure when the definition (or run-mode)
+  // changes. The merge effect below re-applies the current run state in its own
+  // pass, so this only needs the static base nodes.
+  useEffect(() => {
+    setNodes(structural.nodes);
+    setEdges(structural.edges);
+  }, [structural, setNodes, setEdges]);
+
+  // Merge live run state onto the EXISTING nodes — replacing only each node's
+  // `data` and preserving its identity, position, and measured size — so a
+  // poll/SSE tick repaints status/cost/output in place. Reading the base data
+  // from `structural` (not from the previous node) keeps `state` from
+  // accumulating; an unchanged node is returned as-is so it never re-renders.
+  useEffect(() => {
+    const baseById = new Map(structural.nodes.map((n) => [n.id, n.data]));
+    setNodes((prev) => mergeRunState(prev, baseById, nodeState));
+  }, [nodeState, structural, setNodes]);
 
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {
@@ -274,12 +306,12 @@ export function WorkflowGraph({
     [onNodeClick],
   );
 
-  if (error || nodes.length === 0) {
+  if (structural.error || structural.nodes.length === 0) {
     return (
       <div
         className={`flex items-center justify-center rounded-lg border border-border border-dashed p-4 text-center text-text-muted text-xs ${className ?? ""}`}
       >
-        {error ?? "Nothing to show"}
+        {structural.error ?? "Nothing to show"}
       </div>
     );
   }
@@ -290,6 +322,8 @@ export function WorkflowGraph({
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         nodeTypes={NODE_TYPES}
         colorMode={colorMode}
         onNodeClick={onNodeClick ? handleNodeClick : undefined}

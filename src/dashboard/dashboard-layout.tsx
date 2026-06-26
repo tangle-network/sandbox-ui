@@ -1,13 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Bell, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { Plus, Bell } from "lucide-react"
 import { cn } from "../lib/utils"
 import { Logo } from "../primitives"
 import {
   Sidebar,
   SidebarRail,
-  SidebarRailHeader,
   SidebarRailNav,
   SidebarRailFooter,
   SidebarPanel,
@@ -17,10 +16,10 @@ import {
   RailButton,
   RailModeButton,
   RailSeparator,
-  RailCollapseToggle,
+  RailHeader,
   ProfileAvatar,
 } from "./app-sidebar"
-import type { SidebarUser } from "./app-sidebar"
+import type { SidebarUser, AppearanceController } from "./app-sidebar"
 import { SidebarProvider, useSidebar, SIDEBAR_MOBILE_WIDTH, SIDEBAR_PANEL_WIDTH } from "./sidebar-context"
 
 // ============================================================================
@@ -88,14 +87,13 @@ export interface DashboardLayoutProps {
    */
   logoHref?: string
   /**
-   * If provided, the rail logo becomes a button calling this instead of
-   * navigating — e.g. to toggle the sidebar. Takes precedence over logoHref.
+   * @deprecated No longer wired. The redesigned {@link RailHeader} renders the
+   * brand mark plus a dedicated panel-toggle button; the logo is no longer the
+   * collapse control. Kept for back-compat; has no effect.
    */
   onLogoClick?: () => void
   /**
-   * Accessible label for the logo button when onLogoClick is set. Defaults to
-   * "Toggle navigation"; set it to match what onLogoClick actually does (e.g.
-   * "Open command palette") so screen readers don't announce a stale action.
+   * @deprecated No longer wired (see {@link onLogoClick}). Has no effect.
    */
   logoAriaLabel?: string
   /**
@@ -116,6 +114,12 @@ export interface DashboardLayoutProps {
   railFooter?: React.ReactNode
   /** Extra dropdown items in the profile menu */
   profileMenuItems?: React.ReactNode
+  /**
+   * When provided, the profile menu shows an Appearance section
+   * (Light/Dark/System) driven by this host-supplied controller. Replaces the
+   * old standalone rail theme toggle.
+   */
+  appearance?: AppearanceController
   /** Notification data for the bell dropdown */
   notifications?: {
     items: { id: string; title: string; message: string; read: boolean; createdAt: string }[]
@@ -129,16 +133,6 @@ export interface DashboardLayoutProps {
 // Icons
 // ============================================================================
 
-
-function SettingsIconSmall({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Settings</title>
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
-}
 
 function MenuIcon({ className }: { className?: string }) {
   return (
@@ -211,12 +205,11 @@ function DashboardLayoutInner({
   topBarLeading,
   LinkComponent = DefaultLink,
   logoHref = "/",
-  onLogoClick,
-  logoAriaLabel = "Toggle navigation",
   labeledRail = false,
   footer,
   railFooter,
   profileMenuItems,
+  appearance,
   notifications: notifData,
 }: DashboardLayoutProps) {
   const Link = LinkComponent
@@ -266,53 +259,23 @@ function DashboardLayoutInner({
     (showLabels: boolean, allowCollapse: boolean) => (
       <>
         <SidebarRail wide={showLabels}>
-          <SidebarRailHeader className={cn(showLabels && "justify-start px-3")}>
-            {onLogoClick ? (
-              <button
-                type="button"
-                onClick={onLogoClick}
-                aria-label={logoAriaLabel}
-                className="p-1 rounded-md transition-colors hover:bg-surface-container-high"
-              >
-                <Logo variant={variant} size="sm" iconOnly />
-              </button>
-            ) : allowCollapse ? (
-              // The logo IS the collapse/expand control on the desktop rail
-              // (allowCollapse). The mobile drawer never collapses, so it falls
-              // through to the plain logo link. Expanded: full logotype with a
-              // collapse chevron that fades in on hover. Collapsed: the mark,
-              // with an expand chevron overlay on hover.
-              <button
-                type="button"
-                onClick={toggleRail}
-                aria-label={railCollapsed ? "Expand navigation" : "Collapse navigation"}
-                aria-expanded={!railCollapsed}
-                className={cn(
-                  "group/logo relative flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-surface-container-high",
-                  showLabels && "w-full",
-                )}
-              >
-                <Logo variant={variant} size="sm" iconOnly={!showLabels} />
-                {showLabels ? (
-                  <ChevronsLeft className="ml-auto h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/logo:opacity-100" />
-                ) : (
-                  <span className="absolute inset-0 flex items-center justify-center rounded-md bg-surface-container-high opacity-0 transition-opacity group-hover/logo:opacity-100">
-                    <ChevronsRight className="h-4 w-4 text-foreground" />
-                  </span>
-                )}
-              </button>
-            ) : (
-              <Link
-                href={logoHref}
-                to={logoHref}
-                className="p-1 rounded-md transition-colors hover:bg-surface-container-high"
-              >
-                <Logo variant={variant} size="sm" iconOnly />
-              </Link>
-            )}
-          </SidebarRailHeader>
+          <RailHeader
+            brand={<Logo variant={variant} size="sm" iconOnly />}
+            brandHref={logoHref}
+            collapsed={!showLabels}
+            onToggle={toggleRail}
+            collapsible={allowCollapse}
+            LinkComponent={Link}
+          />
 
-          <SidebarRailNav className={showLabels ? "px-2" : undefined}>
+          <SidebarRailNav
+            className={cn(showLabels ? "px-2" : undefined, !showLabels && allowCollapse && "cursor-pointer")}
+            onClick={
+              !showLabels && allowCollapse
+                ? (e) => { if (e.target === e.currentTarget) toggleRail() }
+                : undefined
+            }
+          >
             {navItems.map((item, i) => {
               const isMode = modeSet.has(item.id)
               const prevIsMode = i > 0 && modeSet.has(navItems[i - 1].id)
@@ -350,17 +313,9 @@ function DashboardLayoutInner({
           </SidebarRailNav>
 
           <SidebarRailFooter className={cn(showLabels && "items-stretch px-2")}>
-            {/* Collapse is driven by the logo header now (no separate button). */}
-            {onSettingsClick ? (
-              <RailButton icon={SettingsIconSmall} label="Settings" onClick={onSettingsClick} showLabel={showLabels} />
-            ) : (
-              <RailButton icon={SettingsIconSmall} label="Settings" showLabel={showLabels} asChild>
-                <Link href={settingsHref} to={settingsHref} />
-              </RailButton>
-            )}
-            <RailSeparator className={showLabels ? "w-full" : undefined} />
-            {/* Theme toggle sits with the avatar: a row beside it when expanded,
-                stacked above it when collapsed — never orphaned at the bottom. */}
+            {/* No nav items live in the footer anymore — Settings moved into the
+                account menu, collapse moved into the header. The footer is just
+                the account avatar (plus any host-provided railFooter content). */}
             {railFooter !== undefined ? (
               showLabels ? (
                 <div className="flex w-full items-center gap-1">
@@ -372,6 +327,7 @@ function DashboardLayoutInner({
                       onSettingsClick={onSettingsClick}
                       settingsHref={settingsHref}
                       showDetails={showLabels}
+                      appearance={appearance}
                       LinkComponent={LinkComponent}
                     >
                       {profileMenuItems}
@@ -389,6 +345,7 @@ function DashboardLayoutInner({
                     onSettingsClick={onSettingsClick}
                     settingsHref={settingsHref}
                     showDetails={showLabels}
+                    appearance={appearance}
                     LinkComponent={LinkComponent}
                   >
                     {profileMenuItems}
@@ -403,6 +360,7 @@ function DashboardLayoutInner({
                 onSettingsClick={onSettingsClick}
                 settingsHref={settingsHref}
                 showDetails={showLabels}
+                appearance={appearance}
                 LinkComponent={LinkComponent}
               >
                 {profileMenuItems}
@@ -423,8 +381,6 @@ function DashboardLayoutInner({
     [
       Link,
       variant,
-      onLogoClick,
-      logoAriaLabel,
       logoHref,
       labeledRail,
       toggleRail,
@@ -440,6 +396,7 @@ function DashboardLayoutInner({
       onLogout,
       LinkComponent,
       profileMenuItems,
+      appearance,
       panels,
       activePanel,
       mode,

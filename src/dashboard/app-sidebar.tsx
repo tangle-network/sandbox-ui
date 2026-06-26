@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { cn } from "../lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@tangle-network/ui/primitives"
 import {
@@ -9,10 +10,14 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@tangle-network/ui/primitives"
 import { Logo } from "../primitives"
 import { Skeleton, useTheme } from "@tangle-network/ui/primitives"
+import { Check, Monitor, PanelLeft } from "lucide-react"
 import {
   SIDEBAR_PANEL_WIDTH,
   useSidebar,
@@ -28,6 +33,22 @@ export interface SidebarUser {
   name?: string
   tier?: string
   avatarUrl?: string
+}
+
+/** Theme modes offered by the account menu's Appearance section. */
+export type ThemeMode = "light" | "dark" | "system"
+
+/**
+ * Host-supplied controller for the account-menu Appearance section. The rail is
+ * theme-engine-agnostic: each app wires this to its own theme hook (gtm-agent
+ * uses the shared `useTheme`; the sandbox app uses its `vault`-aware
+ * `useThemeMode`). Provide it to {@link ProfileAvatar} to render Light/Dark/System.
+ */
+export interface AppearanceController {
+  value: ThemeMode
+  onChange: (mode: ThemeMode) => void
+  /** Which modes to offer, in order. Defaults to all three. */
+  modes?: ThemeMode[]
 }
 
 // ============================================================================
@@ -190,6 +211,120 @@ export function RailCollapseToggle({ collapsed, showLabel, onToggle, className }
 }
 
 // ============================================================================
+// RailHeader — three-slot rail header (brand · middle · panel toggle)
+// ============================================================================
+
+export interface RailHeaderProps {
+  /** Brand mark shown on the left, e.g. `<Logo iconOnly />`. */
+  brand?: React.ReactNode
+  /** Destination for the brand link. When set with `LinkComponent`, the brand is a link. */
+  brandHref?: string
+  /** Optional middle content (e.g. a project/workspace switcher). Hidden when collapsed. */
+  children?: React.ReactNode
+  /** Whether the rail is collapsed (icon-only). */
+  collapsed: boolean
+  /** Collapse/expand the rail. */
+  onToggle: () => void
+  /**
+   * Whether the rail can collapse/expand. When `false`, no panel toggle is
+   * rendered and the collapsed header shows the brand without the hover-morph.
+   * Defaults to `true`.
+   */
+  collapsible?: boolean
+  // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
+  LinkComponent?: React.ComponentType<any>
+  className?: string
+}
+
+// Panel-icon toggle for the expanded header's right slot. Uses the panel
+// glyph (not chevrons) so the affordance reads as "show/hide the sidebar".
+function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: boolean; onToggle: () => void; className?: string }) {
+  const label = collapsed ? "Expand sidebar" : "Collapse sidebar"
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={label}
+      aria-pressed={collapsed}
+      title={label}
+      className={cn(
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+        "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        className,
+      )}
+    >
+      {/* Same panel glyph for collapse and expand (the affordance is "toggle the sidebar"). */}
+      <PanelLeft className="h-[18px] w-[18px] shrink-0" />
+    </button>
+  )
+}
+
+/**
+ * The redesigned rail header. Expanded: brand (left) · optional middle · panel
+ * toggle (right). Collapsed: only the brand mark, which morphs into the
+ * expand button on hover (brand fades out, panel glyph fades in over the same
+ * box) so the collapse affordance is discoverable without spending rail width.
+ * Renders its own `h-14` bordered bar — drop it in at the top of {@link SidebarRail}.
+ */
+export function RailHeader({ brand, brandHref, children, collapsed, onToggle, collapsible = true, LinkComponent, className }: RailHeaderProps) {
+  const Link = LinkComponent ?? DefaultLink
+
+  const brandNode =
+    brandHref !== undefined ? (
+      <Link
+        href={brandHref}
+        to={brandHref}
+        aria-label="Home"
+        className="flex items-center justify-center rounded-md p-1 transition-colors hover:bg-[var(--accent-surface-soft)]"
+      >
+        {brand}
+      </Link>
+    ) : (
+      <span className="flex items-center justify-center p-1">{brand}</span>
+    )
+
+  return (
+    <div
+      className={cn(
+        "flex h-14 shrink-0 items-center border-b border-[var(--md3-outline-variant)]",
+        collapsed ? "justify-center px-2" : "gap-2 px-3",
+        className,
+      )}
+    >
+      {collapsed ? (
+        collapsible ? (
+          <RailTooltip label="Expand sidebar">
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label="Expand sidebar"
+              aria-pressed={true}
+              className="group/brand relative flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <span className="flex items-center justify-center transition-opacity duration-150 group-hover/brand:opacity-0">
+                {brand}
+              </span>
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-foreground opacity-0 transition-opacity duration-150 group-hover/brand:opacity-100">
+                <PanelLeft className="h-[18px] w-[18px]" />
+              </span>
+            </button>
+          </RailTooltip>
+        ) : (
+          brandNode
+        )
+      ) : (
+        <>
+          {brand !== undefined && brandNode}
+          <div className="min-w-0 flex-1">{children}</div>
+          {collapsible && <PanelToggleButton collapsed={collapsed} onToggle={onToggle} />}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
 // Sidebar — root container (Rail + Panel)
 // ============================================================================
 
@@ -272,11 +407,17 @@ export function SidebarRailHeader({ children, className }: SidebarRailHeaderProp
 export interface SidebarRailNavProps {
   children: React.ReactNode
   className?: string
+  /**
+   * Click handler on the `<nav>` itself. Layouts use it (with a
+   * `target === currentTarget` guard) so clicking the empty body of a collapsed
+   * rail expands it, without intercepting clicks on the nav items.
+   */
+  onClick?: React.MouseEventHandler<HTMLElement>
 }
 
-export function SidebarRailNav({ children, className }: SidebarRailNavProps) {
+export function SidebarRailNav({ children, className, onClick }: SidebarRailNavProps) {
   return (
-    <nav className={cn("flex flex-col items-center gap-1 py-3 flex-1 min-h-0 overflow-y-auto", className)}>
+    <nav onClick={onClick} className={cn("flex flex-col items-center gap-1 py-3 flex-1 min-h-0 overflow-y-auto", className)}>
       {children}
     </nav>
   )
@@ -333,16 +474,25 @@ export interface RailButtonProps {
    */
   asChild?: boolean
   children?: React.ReactNode
+  /**
+   * `"primary"` gives the item a distinct emphasized pill (accent fill + accent
+   * border) so it stands out from the rest of the nav, e.g. a "New" action.
+   * Defaults to `"normal"`.
+   */
+  variant?: "normal" | "primary"
 }
 
-export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children }: RailButtonProps) {
+export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children, variant = "normal" }: RailButtonProps) {
   const classes = cn(
     "relative flex shrink-0 items-center justify-center rounded-md transition-colors duration-150",
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
     // Quiet press feedback via color only — no scale on the full-width row.
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-    isActive
-      ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]"
+    // The active item (route matches) and any explicit primary share one
+    // emphasized look — a filled accent pill with an accent ring — so the
+    // current destination clearly stands out from the default rows.
+    variant === "primary" || isActive
+      ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
       : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
     className,
   )
@@ -514,6 +664,301 @@ function ChevronRightIcon({ className }: { className?: string }) {
 }
 
 // ============================================================================
+// RailExpandable — nav item with sub-items (inline accordion / collapsed flyout)
+// ============================================================================
+
+/** A sub-destination revealed by a {@link RailExpandable} item. */
+export interface RailExpandableSubItem {
+  id: string
+  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  href: string
+  prefetch?: "none" | "intent" | "render" | "viewport"
+}
+
+export interface RailExpandableProps {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  /** Destination for the row itself. Clicking the label navigates here. */
+  href?: string
+  /** Highlight the row (e.g. its own route or a child route is active). */
+  isActive?: boolean
+  /** Labeled (expanded) rail vs. icon-only (collapsed) rail. */
+  showLabel?: boolean
+  /** Fixed sub-items. Mutually exclusive with `loadSubItems`. */
+  subItems?: RailExpandableSubItem[]
+  /** Lazy sub-items — called once on first open; the result is cached. */
+  loadSubItems?: () => Promise<RailExpandableSubItem[]>
+  /** Ids of sub-items whose route is active (drives sub-item highlight). */
+  activeSubIds?: string[]
+  /** Shown when the resolved sub-item list is empty. */
+  emptyLabel?: string
+  /** Called when the row or a sub-item navigates (e.g. to close a mobile drawer). */
+  onNavigate?: () => void
+  // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
+  LinkComponent?: React.ComponentType<any>
+  className?: string
+}
+
+// Shared lazy-load: fixed `subItems` resolve immediately; `loadSubItems` fires
+// once on first open and caches. A failed load resets so the next open retries.
+function useExpandableItems(
+  subItems?: RailExpandableSubItem[],
+  loadSubItems?: () => Promise<RailExpandableSubItem[]>,
+) {
+  const [items, setItems] = React.useState<RailExpandableSubItem[] | null>(subItems ?? null)
+  const [loading, setLoading] = React.useState(false)
+  const loadedRef = React.useRef(subItems !== undefined)
+
+  // Keep fixed items in sync if the prop identity changes.
+  React.useEffect(() => {
+    if (subItems !== undefined) {
+      setItems(subItems)
+      loadedRef.current = true
+    }
+  }, [subItems])
+
+  const ensureLoaded = React.useCallback(() => {
+    if (loadedRef.current || !loadSubItems) return
+    loadedRef.current = true
+    setLoading(true)
+    Promise.resolve(loadSubItems()).then(
+      (resolved) => { setItems(resolved); setLoading(false) },
+      () => { setItems([]); setLoading(false); loadedRef.current = false },
+    )
+  }, [loadSubItems])
+
+  return { items, loading, ensureLoaded }
+}
+
+function SubItemsSkeleton() {
+  const widths = ["w-[88%]", "w-[76%]", "w-[82%]", "w-[64%]"]
+  return (
+    <div className="flex flex-col gap-1.5 px-2 py-1.5">
+      {widths.map((w, i) => (
+        <Skeleton key={i} className={cn("h-4", w)} />
+      ))}
+    </div>
+  )
+}
+
+/**
+ * A nav item that reveals sub-items. On the labeled rail it expands inline as an
+ * accordion: the leading icon morphs into a chevron on hover, clicking the
+ * chevron toggles the list, and clicking the label navigates (`href`). On the
+ * icon-only rail it shows the sub-items in a right-anchored flyout on hover.
+ * Sub-items can be fixed (`subItems`) or lazy (`loadSubItems`, with a loading
+ * skeleton). Used for e.g. a "History" entry fronting recent sessions.
+ */
+export function RailExpandable({
+  icon: Icon,
+  label,
+  href,
+  isActive,
+  showLabel,
+  subItems,
+  loadSubItems,
+  activeSubIds,
+  emptyLabel = "Nothing here yet",
+  onNavigate,
+  LinkComponent,
+  className,
+}: RailExpandableProps) {
+  const Link = LinkComponent ?? DefaultLink
+  const [open, setOpen] = React.useState(false)
+  const { items, loading, ensureLoaded } = useExpandableItems(subItems, loadSubItems)
+  const activeSet = React.useMemo(() => new Set(activeSubIds ?? []), [activeSubIds])
+  // Collapsed-rail flyout is portaled to <body> (it must escape the rail's
+  // scroll-overflow clipping), so it's positioned from the trigger's rect and
+  // kept open across the trigger→flyout gap by a small close delay.
+  const triggerRef = React.useRef<HTMLDivElement>(null)
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [coords, setCoords] = React.useState<{ left: number; top?: number; bottom?: number; maxHeight: number } | null>(null)
+  React.useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current) }, [])
+
+  const subLink = (item: RailExpandableSubItem) => {
+    const FIcon = item.icon
+    const active = activeSet.has(item.id)
+    return (
+      <Link
+        key={item.id}
+        href={item.href}
+        to={item.href}
+        onClick={onNavigate}
+        {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
+        className={cn(
+          "flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] transition-colors",
+          active
+            ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
+            : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
+        )}
+      >
+        {FIcon ? <FIcon className="h-4 w-4 shrink-0" /> : null}
+        <span className="truncate">{item.label}</span>
+      </Link>
+    )
+  }
+
+  const list = loading
+    ? <SubItemsSkeleton />
+    : items && items.length > 0
+      ? items.map(subLink)
+      : <p className="px-2.5 py-1.5 text-xs text-muted-foreground">{emptyLabel}</p>
+
+  // ---- Collapsed (icon-only) rail: hover-triggered right flyout (portaled) ----
+  if (!showLabel) {
+    const triggerClasses = cn(
+      "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors duration-150",
+      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      isActive || open
+        ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
+        : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
+    )
+    const openFlyout = () => {
+      if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
+      ensureLoaded()
+      const el = triggerRef.current
+      if (el) {
+        const r = el.getBoundingClientRect()
+        const m = 8
+        const left = r.right + m
+        const spaceBelow = window.innerHeight - r.top - m
+        const spaceAbove = r.bottom - m
+        // Anchor downward from the trigger top when there's room; otherwise (e.g.
+        // a History item near the bottom) anchor the flyout's bottom to the
+        // trigger and let it grow upward. Either way it's capped to the available
+        // space and scrolls internally so it never runs off the screen.
+        setCoords(
+          spaceBelow >= spaceAbove
+            ? { left, top: r.top, maxHeight: spaceBelow }
+            : { left, bottom: window.innerHeight - r.bottom, maxHeight: spaceAbove },
+        )
+      }
+      setOpen(true)
+    }
+    const scheduleClose = () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current)
+      closeTimer.current = setTimeout(() => setOpen(false), 140)
+    }
+    const cancelClose = () => {
+      if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
+    }
+    return (
+      <div
+        ref={triggerRef}
+        className={cn("relative", className)}
+        onMouseEnter={openFlyout}
+        onMouseLeave={scheduleClose}
+        onFocusCapture={openFlyout}
+        onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) scheduleClose() }}
+      >
+        {href ? (
+          <Link href={href} to={href} onClick={onNavigate} aria-label={label} className={triggerClasses}>
+            <Icon className="h-[17px] w-[17px] shrink-0" />
+          </Link>
+        ) : (
+          <button type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open} className={triggerClasses}>
+            <Icon className="h-[17px] w-[17px] shrink-0" />
+          </button>
+        )}
+
+        {open && coords !== null && typeof document !== "undefined" &&
+          createPortal(
+            <div
+              role="menu"
+              style={{
+                position: "fixed",
+                left: coords.left,
+                top: coords.top,
+                bottom: coords.bottom,
+                maxHeight: coords.maxHeight,
+              }}
+              onMouseEnter={cancelClose}
+              onMouseLeave={scheduleClose}
+              onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
+              className="z-[70] flex w-60 flex-col overflow-hidden rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]"
+            >
+              <p className="shrink-0 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+                {label}
+              </p>
+              <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">{list}</div>
+            </div>,
+            document.body,
+          )}
+      </div>
+    )
+  }
+
+  // ---- Labeled (expanded) rail: inline accordion ----
+  const toggle = () => {
+    setOpen((v) => {
+      const next = !v
+      if (next) ensureLoaded()
+      return next
+    })
+  }
+
+  return (
+    <div className={cn("w-full", className)}>
+      <div
+        className={cn(
+          "group/exp relative flex h-9 w-full items-center rounded-md transition-colors duration-150",
+          isActive
+            ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
+            : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
+        )}
+      >
+        {/* Leading slot: default icon at rest, chevron on hover/open. Toggles the list. */}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
+          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <Icon
+            className={cn(
+              "h-[17px] w-[17px] shrink-0 transition-opacity duration-150",
+              open ? "opacity-0" : "opacity-100 group-hover/exp:opacity-0",
+            )}
+          />
+          <ChevronRightIcon
+            className={cn(
+              "absolute h-4 w-4 transition-all duration-150",
+              open ? "rotate-90 opacity-100" : "opacity-0 group-hover/exp:opacity-100",
+            )}
+          />
+        </button>
+
+        {/* Label: navigates when `href` is set, otherwise toggles the list. */}
+        {href ? (
+          <Link
+            href={href}
+            to={href}
+            onClick={onNavigate}
+            className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-[13.5px] font-medium"
+          >
+            <span className="truncate">{label}</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={toggle}
+            className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-left text-[13.5px] font-medium"
+          >
+            <span className="truncate">{label}</span>
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <div className="mt-0.5 flex flex-col gap-0.5 pl-3">{list}</div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
 // RailModeButton — RailButton wired to sidebar mode switching
 // ============================================================================
 
@@ -649,8 +1094,86 @@ export interface ProfileAvatarProps {
   className?: string
   /** Show name/email beside the avatar (for a labeled rail) instead of an icon-only avatar button. */
   showDetails?: boolean
+  /**
+   * When provided, the menu renders an Appearance section (Light/Dark/System)
+   * driven by this host-supplied controller. Omit to hide it.
+   */
+  appearance?: AppearanceController
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
+}
+
+// Appearance (theme) picker rendered inside the profile dropdown. A single
+// "Appearance" row shows the current theme; hovering it opens a submenu with
+// Light / Dark / System (à la Claude / ChatGPT). `onSelect` preventDefault keeps
+// the menu open so the active check updates live; the `onClick` fallback still
+// applies the change if the wrapper doesn't forward `onSelect`.
+const APPEARANCE_META: Record<ThemeMode, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
+  light: { label: "Light", Icon: SunIcon },
+  dark: { label: "Dark", Icon: MoonIcon },
+  system: { label: "System", Icon: Monitor },
+}
+
+function prefersDark(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  )
+}
+
+function AppearanceMenuSection({ appearance, divider = true }: { appearance: AppearanceController; divider?: boolean }) {
+  const modes = appearance.modes ?? ["light", "dark", "system"]
+  // Resolve the trigger's icon + caption from the current choice. "System" shows
+  // what it currently resolves to, e.g. "System (Light)".
+  const resolved = appearance.value === "system" ? (prefersDark() ? "dark" : "light") : appearance.value
+  const TriggerIcon = resolved === "dark" ? MoonIcon : SunIcon
+  const caption =
+    appearance.value === "system"
+      ? `System (${resolved === "dark" ? "Dark" : "Light"})`
+      : APPEARANCE_META[appearance.value].label
+
+  return (
+    <>
+      {divider && <DropdownMenuSeparator />}
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          {/* Icons are decorative — the text labels carry the meaning, so they're
+              hidden from the a11y tree (also keeps menu-item names clean). */}
+          <span aria-hidden="true" className="mr-2 inline-flex shrink-0">
+            <TriggerIcon className="h-4 w-4" />
+          </span>
+          <div className="flex min-w-0 flex-col leading-tight">
+            <span>Appearance</span>
+            <span className="text-xs text-muted-foreground">{caption}</span>
+          </div>
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent sideOffset={6} className="min-w-[12rem]">
+          {modes.map((m) => {
+            const { label, Icon } = APPEARANCE_META[m]
+            const active = appearance.value === m
+            return (
+              <DropdownMenuItem
+                key={m}
+                onSelect={() => appearance.onChange(m)}
+                className="gap-3 py-2 text-[14px]"
+              >
+                <span aria-hidden="true" className="inline-flex shrink-0">
+                  <Icon className="h-[18px] w-[18px]" />
+                </span>
+                <span className="flex-1">{label}</span>
+                {active && (
+                  <span aria-hidden="true" className="inline-flex shrink-0 text-[var(--accent-text)]">
+                    <Check className="h-[18px] w-[18px]" />
+                  </span>
+                )}
+              </DropdownMenuItem>
+            )
+          })}
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+    </>
+  )
 }
 
 export function ProfileAvatar({
@@ -662,6 +1185,7 @@ export function ProfileAvatar({
   children,
   className,
   showDetails = false,
+  appearance,
   LinkComponent,
 }: ProfileAvatarProps) {
   const Link = LinkComponent ?? DefaultLink
@@ -702,7 +1226,7 @@ export function ProfileAvatar({
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="end" sideOffset={8} className="w-72">
+      <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-72">
         <DropdownMenuLabel className="p-0 font-normal">
           <div className="flex items-center gap-3 px-2 py-3">
             <Avatar className="h-12 w-12 shrink-0">
@@ -733,6 +1257,7 @@ export function ProfileAvatar({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {children}
+        {appearance && <AppearanceMenuSection appearance={appearance} divider={Boolean(children)} />}
         {onSettingsClick ? (
           <DropdownMenuItem onClick={onSettingsClick}>
             <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />

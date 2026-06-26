@@ -5,18 +5,17 @@ import { cn } from "../lib/utils"
 import {
   Sidebar,
   SidebarRail,
-  SidebarRailHeader,
   SidebarRailNav,
   SidebarRailFooter,
   SidebarPanel,
   SidebarContent,
   RailButton,
   RailFlyout,
-  RailCollapseToggle,
+  RailExpandable,
+  RailHeader,
   ProfileAvatar,
-  RailThemeToggle,
 } from "./app-sidebar"
-import type { SidebarUser } from "./app-sidebar"
+import type { SidebarUser, AppearanceController, RailExpandableSubItem } from "./app-sidebar"
 import { SidebarProvider, useSidebar } from "./sidebar-context"
 
 // ============================================================================
@@ -48,6 +47,26 @@ export interface SidebarLayoutNavItem {
   flyoutItems?: SidebarLayoutFlyoutItem[]
   /** Ids of `flyoutItems` whose route is currently active (drives the door highlight). */
   flyoutActiveIds?: string[]
+  /**
+   * Give the item an emphasized "primary" pill so it stands out (e.g. a "New"
+   * action). Ignored for `togglesPanel`/`flyoutItems`/`expandable` items.
+   */
+  variant?: "normal" | "primary"
+  /**
+   * Render as an expandable item: an inline accordion on the labeled rail, a
+   * hover flyout on the icon-only rail. `href` (if set) navigates; the
+   * disclosure reveals `subItems` (fixed) or `loadSubItems()` (lazy). Takes
+   * precedence over `href`/`togglesPanel`/`flyoutItems`.
+   */
+  expandable?: boolean
+  /** Fixed sub-items for an `expandable` item (icon optional). */
+  subItems?: RailExpandableSubItem[]
+  /** Lazy sub-items for an `expandable` item — loaded once on first open. */
+  loadSubItems?: () => Promise<RailExpandableSubItem[]>
+  /** Ids of an `expandable` item's sub-items whose route is active. */
+  subActiveIds?: string[]
+  /** Empty-state text for an `expandable` item that resolves to no sub-items. */
+  emptyLabel?: string
   badge?: number
   /**
    * React Router prefetch behavior for this link, forwarded to the underlying
@@ -83,17 +102,14 @@ export interface SidebarLayoutProps {
   settingsHref?: string
   /** Extra items rendered before settings/logout in the profile menu. */
   profileMenuItems?: React.ReactNode
-  /** Render a light/dark theme switch in the profile menu (uses the shared `useTheme`). */
-  showThemeToggle?: boolean
+  /**
+   * When provided, the profile menu shows an Appearance section
+   * (Light/Dark/System) driven by this host-supplied controller. The host wires
+   * it to its own theme engine. Replaces the old standalone rail theme toggle.
+   */
+  appearance?: AppearanceController
   /** Extra content in the rail footer, above the profile avatar. */
   railFooter?: React.ReactNode
-  /**
-   * Where the rail collapse/expand control sits. Defaults to `"footer"` (the
-   * historical placement, above the profile avatar). Set `"header"` to move it
-   * to the top of the rail instead, alongside the logo/`railHeaderContent`.
-   * Only takes effect when `railLabels` is set (the rail is collapsible).
-   */
-  railCollapseToggle?: "header" | "footer"
   // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
   LinkComponent?: React.ComponentType<any>
   /**
@@ -179,9 +195,8 @@ function SidebarLayoutInner({
   onSettingsClick,
   settingsHref,
   profileMenuItems,
-  showThemeToggle = false,
+  appearance,
   railFooter,
-  railCollapseToggle = "footer",
   LinkComponent,
   hideBelow,
   railLabels = false,
@@ -193,6 +208,13 @@ function SidebarLayoutInner({
   const Link = LinkComponent ?? DefaultLink
   const { panelOpen, togglePanel, setPanelOpen, railCollapsed, toggleRail } = useSidebar()
   const handleNavClick = closePanelOnNavigate && panelOpen ? () => setPanelOpen(false) : undefined
+  // On a collapsed labeled rail, clicking the empty body (not an item) expands
+  // it — a large, discoverable hit target. The `currentTarget` guard keeps item
+  // clicks (which bubble) from triggering it.
+  const expandOnEmptyClick =
+    railLabels && railCollapsed
+      ? (e: React.MouseEvent<HTMLElement>) => { if (e.target === e.currentTarget) toggleRail() }
+      : undefined
   const hasProfile = user !== undefined || onLogout !== undefined || onSettingsClick !== undefined
   // The rail shows labels only when it is label-capable AND the user has not
   // collapsed it. Collapsing a labeled rail returns the icon-only look (with
@@ -209,29 +231,39 @@ function SidebarLayoutInner({
       <div className={cn(hideBelow && HIDE_BELOW_CLASS[hideBelow])}>
         <Sidebar className={sidebarClassName}>
           <SidebarRail>
-            {(railHeaderContent !== undefined || logo !== undefined || (railLabels && railCollapseToggle === "header")) && (
-              <SidebarRailHeader className={cn(showLabels && (railHeaderContent !== undefined ? "px-2" : "justify-start px-4"))}>
-                {railHeaderContent !== undefined ? (
-                  railHeaderContent
-                ) : logo !== undefined ? (
-                  <Link
-                    href={logoHref}
-                    to={logoHref}
-                    className="flex items-center justify-center rounded-lg p-1 transition-colors hover:bg-surface-container-high"
-                  >
-                    {logo}
-                  </Link>
-                ) : null}
-                {railLabels && railCollapseToggle === "header" && (
-                  // Icon-only in the header row (the labeled, full-width variant is
-                  // for the vertical footer stack); sits beside the logo/content.
-                  <RailCollapseToggle collapsed={railCollapsed} showLabel={false} onToggle={toggleRail} className="shrink-0" />
-                )}
-              </SidebarRailHeader>
+            {(logo !== undefined || railHeaderContent !== undefined || railLabels) && (
+              <RailHeader
+                brand={logo}
+                brandHref={logoHref}
+                collapsed={!showLabels}
+                onToggle={toggleRail}
+                collapsible={railLabels}
+                LinkComponent={LinkComponent}
+              >
+                {railHeaderContent}
+              </RailHeader>
             )}
 
-            <SidebarRailNav className={showLabels ? "px-2" : undefined}>
+            <SidebarRailNav className={cn(showLabels ? "px-2" : undefined, expandOnEmptyClick && "cursor-pointer")} onClick={expandOnEmptyClick}>
               {navItems.map((item) => {
+                if (item.expandable) {
+                  return (
+                    <RailExpandable
+                      key={item.id}
+                      icon={item.icon}
+                      label={item.label}
+                      href={item.href}
+                      isActive={activeId === item.id}
+                      showLabel={showLabels}
+                      subItems={item.subItems}
+                      loadSubItems={item.loadSubItems}
+                      activeSubIds={item.subActiveIds}
+                      emptyLabel={item.emptyLabel}
+                      onNavigate={handleNavClick}
+                      LinkComponent={LinkComponent}
+                    />
+                  )
+                }
                 if (item.flyoutItems && item.flyoutItems.length > 0) {
                   const activeSet = new Set(item.flyoutActiveIds ?? [])
                   return (
@@ -279,7 +311,7 @@ function SidebarLayoutInner({
                     showLabel={showLabels}
                   />
                 ) : (
-                  <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={showLabels} asChild>
+                  <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild>
                     <Link
                       href={item.href}
                       to={item.href}
@@ -291,41 +323,23 @@ function SidebarLayoutInner({
               })}
             </SidebarRailNav>
 
-            {(railLabels || railFooter !== undefined || hasProfile) && (
+            {(railFooter !== undefined || hasProfile) && (
               <SidebarRailFooter className={cn("border-t border-[var(--md3-outline-variant)] pt-2", showLabels && "items-stretch px-2")}>
-                {railLabels && railCollapseToggle === "footer" && (
-                  <RailCollapseToggle collapsed={railCollapsed} showLabel={showLabels} onToggle={toggleRail} />
-                )}
                 {railFooter}
-                {hasProfile && (() => {
-                  const profile = (
-                    <ProfileAvatar
-                      user={user ?? undefined}
-                      isLoading={isLoading}
-                      onLogout={onLogout}
-                      onSettingsClick={onSettingsClick}
-                      settingsHref={settingsHref}
-                      showDetails={showLabels}
-                      LinkComponent={Link}
-                    >
-                      {profileMenuItems}
-                    </ProfileAvatar>
-                  )
-                  if (!showThemeToggle) return profile
-                  // Visible compact theme switch beside the profile (a row on the
-                  // labeled rail, stacked above the avatar on the icon-only rail).
-                  return showLabels ? (
-                    <div className="flex w-full items-center gap-1">
-                      <div className="min-w-0 flex-1">{profile}</div>
-                      <RailThemeToggle />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1">
-                      <RailThemeToggle />
-                      {profile}
-                    </div>
-                  )
-                })()}
+                {hasProfile && (
+                  <ProfileAvatar
+                    user={user ?? undefined}
+                    isLoading={isLoading}
+                    onLogout={onLogout}
+                    onSettingsClick={onSettingsClick}
+                    settingsHref={settingsHref}
+                    showDetails={showLabels}
+                    appearance={appearance}
+                    LinkComponent={Link}
+                  >
+                    {profileMenuItems}
+                  </ProfileAvatar>
+                )}
               </SidebarRailFooter>
             )}
           </SidebarRail>

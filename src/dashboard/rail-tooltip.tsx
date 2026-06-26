@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { cn } from "../lib/utils"
 
 export interface RailTooltipProps {
@@ -14,34 +15,64 @@ export interface RailTooltipProps {
 }
 
 /**
- * Quiet, instant-ish styled tooltip for the icon-only rail. CSS-only (no
- * portal, no extra deps): the trigger wraps in a `group` and the label is an
- * absolutely-positioned sibling to the RIGHT, revealed on `group-hover` /
- * `group-focus-within` after a short delay. Matches the `--popover` / border
- * tokens so it reads as Tangle Quiet chrome rather than a native `title`.
- *
- * Replaces reliance on the native `title` attribute for the collapsed rail
- * (no ~1.5s delay, themeable, keyboard-focus reachable). Hidden via
- * `aria-hidden` since the trigger already carries an accessible name.
+ * Quiet styled tooltip for the icon-only rail, rendered in a portal anchored to
+ * the RIGHT of the trigger. The portal is essential: the rail's nav is a
+ * vertical scroll container (`overflow-y-auto`), which the CSS spec forces to
+ * also clip horizontally — an in-flow tooltip would be cut off at the rail's
+ * edge. Positioned via `getBoundingClientRect` on hover/focus, shown after a
+ * short delay, and `pointer-events-none` so it never interferes with the
+ * trigger. Hidden from the a11y tree (`aria-hidden`) since the trigger already
+ * carries an accessible name.
  */
 export function RailTooltip({ label, children, disabled, className }: RailTooltipProps) {
+  const ref = React.useRef<HTMLSpanElement>(null)
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [coords, setCoords] = React.useState<{ top: number; left: number } | null>(null)
+
+  React.useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
+
   if (disabled) return <>{children}</>
+
+  const open = () => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      const el = ref.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setCoords({ top: r.top + r.height / 2, left: r.right + 8 })
+    }, 250)
+  }
+  const close = () => {
+    if (timer.current) clearTimeout(timer.current)
+    setCoords(null)
+  }
+
   return (
-    <span className={cn("group/tip relative flex", className)}>
+    <span
+      ref={ref}
+      className={cn("relative flex", className)}
+      onMouseEnter={open}
+      onMouseLeave={close}
+      onFocusCapture={open}
+      onBlurCapture={close}
+    >
       {children}
-      <span
-        role="tooltip"
-        aria-hidden="true"
-        className={cn(
-          "pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 translate-x-1 whitespace-nowrap",
-          "rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest px-2 py-1 text-xs font-medium text-popover-foreground",
-          "opacity-0 shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14] transition-[opacity,transform] duration-150 ease-out",
-          "group-hover/tip:translate-x-0 group-hover/tip:opacity-100 group-hover/tip:delay-300",
-          "group-focus-within/tip:translate-x-0 group-focus-within/tip:opacity-100",
+      {coords !== null && typeof document !== "undefined" &&
+        createPortal(
+          <span
+            role="tooltip"
+            aria-hidden="true"
+            style={{ position: "fixed", top: coords.top, left: coords.left, transform: "translateY(-50%)" }}
+            className={cn(
+              "pointer-events-none z-[70] whitespace-nowrap rounded-md border border-[var(--md3-outline-variant)]",
+              "bg-surface-container-highest px-2 py-1 text-xs font-medium text-popover-foreground",
+              "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+            )}
+          >
+            {label}
+          </span>,
+          document.body,
         )}
-      >
-        {label}
-      </span>
     </span>
   )
 }

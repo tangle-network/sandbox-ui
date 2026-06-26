@@ -312,7 +312,7 @@ function DashboardLayoutInner({
             })}
           </SidebarRailNav>
 
-          <SidebarRailFooter className={cn(showLabels && "items-stretch px-2")}>
+          <SidebarRailFooter className={cn("border-t border-[var(--md3-outline-variant)] pt-2", showLabels && "items-stretch px-2")}>
             {/* No nav items live in the footer anymore — Settings moved into the
                 account menu, collapse moved into the header. The footer is just
                 the account avatar (plus any host-provided railFooter content). */}

@@ -224,33 +224,18 @@ do:
     );
   });
 
-  it("omits config for an action that declares none", () => {
+  it("omits config for an action and a trigger that declare none", () => {
+    // An empty action config AND an empty trigger config are omitted entirely
+    // (never `config: {}`), so both honor the "omitted when no config" contract.
     const yaml = `
 on:
-  schedule:
-    cron: "0 9 * * *"
-do:
-  - parallel:
-      branches:
-        - notify:
-            url: https://example.com/a
-`;
-    const { nodes } = buildWorkflowGraph(yaml);
-    // The parallel's branch leaf is a notify WITH config; assert a configless
-    // shape via a bare/unknown action instead.
-    const unknownYaml = `
-on:
-  schedule:
-    cron: "0 9 * * *"
+  provider_event: {}
 do:
   - sandbox.spawn: {}
 `;
-    const spawn = buildWorkflowGraph(unknownYaml).nodes.find(
-      (n) => n.id === "a0",
-    );
-    expect(spawn?.data.config).toBeUndefined();
-    // Sanity: the parallel graph still builds.
-    expect(nodes.some((n) => n.id === "a0")).toBe(true);
+    const { nodes } = buildWorkflowGraph(yaml);
+    expect(nodes.find((n) => n.id === "trigger")?.data.config).toBeUndefined();
+    expect(nodes.find((n) => n.id === "a0")?.data.config).toBeUndefined();
   });
 
   it("returns an error (never throws) for invalid YAML", () => {

@@ -300,15 +300,20 @@ function describeActionBase(action: unknown): WfNodeData {
   }
 }
 
+/** Attach the raw, untruncated `config` to node data for the full-detail view,
+ *  but only when non-empty — an empty config is omitted (never `config: {}`), so
+ *  action and trigger nodes honor the same "omitted when no config" contract. */
+function withConfig(base: WfNodeData, cfg: Record<string, unknown>): WfNodeData {
+  return Object.keys(cfg).length > 0 ? { ...base, config: cfg } : base;
+}
+
 /** Describe one action as node data, attaching the raw, untruncated `config` for
  *  a full-detail view on top of the card-facing summary from
  *  {@link describeActionBase}. Config is omitted when the action carries none. */
 function describeAction(action: unknown): WfNodeData {
   const rec = asRecord(action);
   const [kind] = Object.keys(rec);
-  const cfg = asRecord(rec[kind]);
-  const data = describeActionBase(action);
-  return Object.keys(cfg).length > 0 ? { ...data, config: cfg } : data;
+  return withConfig(describeActionBase(action), asRecord(rec[kind]));
 }
 
 /** Describe the `on:` trigger as the spine's root node. */
@@ -326,30 +331,34 @@ function describeTrigger(on: unknown): WfNodeData {
     if (event) subtitle += ` · ${event}`;
     if (actions.length > 0) subtitle += ` (${actions.join("/")})`;
     if (repo) subtitle += ` on ${repo}`;
-    return {
-      title: "Trigger",
-      kind: "provider_event",
-      subtitle,
-      provider: connection,
-      config: ev,
-      hasBranches: false,
-      isRoot: true,
-      tone: "trigger",
-    };
+    return withConfig(
+      {
+        title: "Trigger",
+        kind: "provider_event",
+        subtitle,
+        provider: connection,
+        hasBranches: false,
+        isRoot: true,
+        tone: "trigger",
+      },
+      ev,
+    );
   }
   if (rec.schedule) {
     const sch = asRecord(rec.schedule);
     const cron = str(sch.cron);
     const tz = str(sch.timezone);
-    return {
-      title: "Schedule",
-      kind: "schedule",
-      subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
-      config: sch,
-      hasBranches: false,
-      isRoot: true,
-      tone: "trigger",
-    };
+    return withConfig(
+      {
+        title: "Schedule",
+        kind: "schedule",
+        subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
+        hasBranches: false,
+        isRoot: true,
+        tone: "trigger",
+      },
+      sch,
+    );
   }
   return {
     title: "Trigger",

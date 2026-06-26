@@ -69,9 +69,9 @@ describe("AssistantHistory", () => {
   });
 
   it("shows a loading message before the first settle and an empty one after", () => {
-    const { props } = renderHistory({ threads: [], loaded: false });
+    const { props, rerender } = renderHistory({ threads: [], loaded: false });
     expect(screen.getByText("Loading…")).toBeTruthy();
-    render(<AssistantHistory {...props} loaded={true} />);
+    rerender(<AssistantHistory {...props} loaded={true} />);
     expect(screen.getByText(/No past conversations/i)).toBeTruthy();
   });
 

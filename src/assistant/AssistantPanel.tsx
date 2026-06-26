@@ -124,6 +124,9 @@ export function AssistantPanel({
   // history list. The header's history button toggles between them.
   const [view, setView] = useState<"chat" | "history">("chat");
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
+  // The conversation/history scroll container, used to scope the history-view
+  // Escape handler and to move focus into the history view when it opens.
+  const logRef = useRef<HTMLDivElement | null>(null);
 
   const pickerModels = useMemo<ModelInfo[]>(
     () => toPickerModels(models, chat.selectedModel),
@@ -141,15 +144,30 @@ export function AssistantPanel({
   const chatRef = useRef(chat);
   chatRef.current = chat;
 
+  // Move focus into the history view when it opens, so keyboard users land in it
+  // and the scoped Escape handler below receives the key event.
+  useEffect(() => {
+    if (view === "history") logRef.current?.focus();
+  }, [view]);
+
   // In the history view, Escape returns to the conversation (and refocuses the
-  // toggle) rather than closing the whole assistant — the dock also listens for
-  // Escape, so this capture-phase handler stops it from reaching the dock while
-  // history is shown. In the chat view no handler is installed, so Escape falls
+  // toggle) rather than closing the whole assistant. Scoped to Escapes that
+  // originate inside the history view or from the toggle, so it never swallows
+  // an Escape meant for an open composer popover/menu; handled in the capture
+  // phase with stopImmediatePropagation so it preempts the dock's own
+  // Escape-to-close. In the chat view no handler is installed, so Escape falls
   // through to the dock's close as usual.
   useEffect(() => {
     if (view !== "history") return;
     const onKeyDownCapture = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      const target = e.target as Node;
+      if (
+        !logRef.current?.contains(target) &&
+        !historyButtonRef.current?.contains(target)
+      ) {
+        return;
+      }
       e.stopImmediatePropagation();
       setView("chat");
       historyButtonRef.current?.focus();
@@ -329,10 +347,15 @@ export function AssistantPanel({
       {/* Conversation — the full-panel history view, the host-swappable
           renderer, or the built-in timeline. */}
       <div
-        role="log"
+        ref={logRef}
+        tabIndex={-1}
         aria-label="Conversation"
-        aria-live="polite"
-        className="min-h-0 flex-1 overflow-y-auto"
+        // role="log" + aria-live announce streaming transcript updates; applied
+        // only in the chat view so the history view's search box and buttons are
+        // not announced as live conversation activity.
+        role={view === "chat" ? "log" : undefined}
+        aria-live={view === "chat" ? "polite" : undefined}
+        className="min-h-0 flex-1 overflow-y-auto focus:outline-none"
         // The text-size control zooms the whole transcript. `zoom` scales every
         // descendant uniformly regardless of which renderer draws the
         // conversation and what font-size utilities it uses; an inline

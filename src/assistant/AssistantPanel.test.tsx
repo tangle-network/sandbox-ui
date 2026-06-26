@@ -484,7 +484,11 @@ describe("AssistantPanel history view", () => {
     fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
     await screen.findByText("t1");
 
-    fireEvent.keyDown(document, { key: "Escape" });
+    // Escape from inside the history view returns to the conversation.
+    fireEvent.keyDown(
+      screen.getByRole("searchbox", { name: "Search conversations" }),
+      { key: "Escape" },
+    );
     await waitFor(() =>
       expect(
         screen.queryByRole("searchbox", { name: "Search conversations" }),
@@ -493,6 +497,32 @@ describe("AssistantPanel history view", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Chat history" }),
     );
+  });
+
+  it("ignores an Escape that originates outside the history view", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    renderWith(chat, deleteClient([thread("t1")]));
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
+    // An Escape from elsewhere (e.g. an open composer popover) must not yank the
+    // user out of the history view.
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(
+      screen.getByRole("searchbox", { name: "Search conversations" }),
+    ).toBeTruthy();
+  });
+
+  it("marks the conversation as a live log only in the chat view", async () => {
+    const chat = makeChat({ threadId: "t1", status: "idle" });
+    const { container } = renderWith(chat, deleteClient([thread("t1")]));
+    expect(
+      container.querySelector('[aria-label="Conversation"]')?.getAttribute("role"),
+    ).toBe("log");
+    fireEvent.click(screen.getByRole("button", { name: "Chat history" }));
+    await screen.findByText("t1");
+    expect(
+      container.querySelector('[aria-label="Conversation"]')?.getAttribute("role"),
+    ).toBeNull();
   });
 });
 

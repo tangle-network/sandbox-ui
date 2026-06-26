@@ -108,6 +108,18 @@ export interface SidebarLayoutProps {
    * it to its own theme engine. Replaces the old standalone rail theme toggle.
    */
   appearance?: AppearanceController
+  /**
+   * @deprecated No-op. The standalone rail theme toggle was replaced by the
+   * account-menu `appearance` control. Accepted (and ignored) for backward
+   * compatibility; will be removed in a future major.
+   */
+  showThemeToggle?: boolean
+  /**
+   * @deprecated No-op. The collapse/expand control now always lives in the
+   * header (`RailHeader`). Accepted (and ignored) for backward compatibility;
+   * will be removed in a future major.
+   */
+  railCollapseToggle?: "header" | "footer"
   /** Extra content in the rail footer, above the profile avatar. */
   railFooter?: React.ReactNode
   // biome-ignore lint/suspicious/noExplicitAny: support various router Link components

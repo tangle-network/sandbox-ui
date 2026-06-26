@@ -1113,28 +1113,31 @@ export interface ProfileAvatarProps {
 
 // Appearance (theme) picker rendered inside the profile dropdown. A single
 // "Appearance" row shows the current theme; hovering it opens a submenu with
-// Light / Dark / System (à la Claude / ChatGPT). `onSelect` preventDefault keeps
-// the menu open so the active check updates live; the `onClick` fallback still
-// applies the change if the wrapper doesn't forward `onSelect`.
+// Light / Dark / System (à la Claude / ChatGPT). Selecting a mode calls
+// `onSelect` with `preventDefault()` so the menu stays open and the active
+// check updates live.
 const APPEARANCE_META: Record<ThemeMode, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
   light: { label: "Light", Icon: SunIcon },
   dark: { label: "Dark", Icon: MoonIcon },
   system: { label: "System", Icon: Monitor },
 }
 
-function prefersDark(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  )
-}
-
 function AppearanceMenuSection({ appearance, divider = true }: { appearance: AppearanceController; divider?: boolean }) {
   const modes = appearance.modes ?? ["light", "dark", "system"]
-  // Resolve the trigger's icon + caption from the current choice. "System" shows
-  // what it currently resolves to, e.g. "System (Light)".
-  const resolved = appearance.value === "system" ? (prefersDark() ? "dark" : "light") : appearance.value
+  // Resolve "system" → light/dark from the OS, but only after mount and via
+  // state (not a bare `matchMedia()` call in render): the server/first-client
+  // render is deterministic (`systemDark` starts false → no hydration mismatch
+  // for the caption), then it updates after mount and tracks live OS changes.
+  const [systemDark, setSystemDark] = React.useState(false)
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return
+    const mq = window.matchMedia("(prefers-color-scheme: dark)")
+    setSystemDark(mq.matches)
+    const onChange = () => setSystemDark(mq.matches)
+    mq.addEventListener("change", onChange)
+    return () => mq.removeEventListener("change", onChange)
+  }, [])
+  const resolved = appearance.value === "system" ? (systemDark ? "dark" : "light") : appearance.value
   const TriggerIcon = resolved === "dark" ? MoonIcon : SunIcon
   const caption =
     appearance.value === "system"
@@ -1163,7 +1166,7 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
             return (
               <DropdownMenuItem
                 key={m}
-                onSelect={() => appearance.onChange(m)}
+                onSelect={(e) => { e.preventDefault(); appearance.onChange(m) }}
                 className="gap-3 py-2 text-[14px]"
               >
                 <span aria-hidden="true" className="inline-flex shrink-0">

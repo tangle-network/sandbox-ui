@@ -296,6 +296,23 @@ describe("SidebarLayout — collapsed rail interactions", () => {
   })
 })
 
+describe("SidebarLayout — backward compatibility", () => {
+  it("accepts the deprecated showThemeToggle/railCollapseToggle props as no-ops", () => {
+    render(
+      <SidebarLayout
+        railLabels
+        showThemeToggle
+        railCollapseToggle="footer"
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    // Renders without error; the collapse control still lives in the header.
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument()
+  })
+})
+
 describe("SidebarLayout — appearance menu", () => {
   it("reveals Light/Dark/System in the Appearance submenu and fires onChange", async () => {
     const onChange = vi.fn()

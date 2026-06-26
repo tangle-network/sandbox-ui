@@ -50,12 +50,13 @@ describe("DashboardLayout — labeled rail nav alignment", () => {
     const inactive = document.querySelector('nav a[href="/templates"]') as HTMLElement
     expect(active).toBeTruthy()
     expect(inactive).toBeTruthy()
-    // Strip the active/inactive color tokens; the remaining geometry classes
-    // (width, height, padding, layout) must match so the rows align exactly.
+    // Strip the active/inactive emphasis (color tokens + the active item's ring
+    // and font-weight, none of which change box size); the remaining geometry
+    // classes (width, height, padding, layout) must match so rows align exactly.
     const geometry = (cls: string) =>
       cls
         .split(/\s+/)
-        .filter((c) => !/(accent-surface|accent-text|muted-foreground|hover:|foreground)/.test(c))
+        .filter((c) => !/(accent-surface|accent-text|muted-foreground|hover:|foreground|^ring|font-medium|border-accent)/.test(c))
         .sort()
         .join(" ")
     expect(geometry(active.className)).toBe(geometry(inactive.className))
@@ -85,10 +86,10 @@ describe("DashboardLayout — rail collapse control", () => {
         <div>content</div>
       </DashboardLayout>,
     )
-    // Expanded by default, so the control offers to collapse. Only the desktop
-    // rail renders it — the mobile drawer is always labeled and never collapses.
-    expect(screen.getByRole("button", { name: "Collapse navigation" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Expand navigation" })).toBeNull()
+    // Expanded by default, so the header's panel toggle offers to collapse.
+    // Only the desktop rail is collapsible — the mobile drawer never collapses.
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull()
   })
 
   it("starts collapsed when defaultRailCollapsed is set", () => {
@@ -97,8 +98,8 @@ describe("DashboardLayout — rail collapse control", () => {
         <div>content</div>
       </DashboardLayout>,
     )
-    expect(screen.getByRole("button", { name: "Expand navigation" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Collapse navigation" })).toBeNull()
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Collapse sidebar" })).toBeNull()
   })
 
   it("renders no collapse toggle when labeledRail is omitted", () => {
@@ -108,7 +109,7 @@ describe("DashboardLayout — rail collapse control", () => {
       </DashboardLayout>,
     )
     expect(
-      screen.queryByRole("button", { name: /Collapse navigation|Expand navigation/ }),
+      screen.queryByRole("button", { name: /Collapse sidebar|Expand sidebar/ }),
     ).toBeNull()
   })
 
@@ -119,8 +120,8 @@ describe("DashboardLayout — rail collapse control", () => {
         <div>content</div>
       </DashboardLayout>,
     )
-    await user.click(screen.getByRole("button", { name: "Collapse navigation" }))
-    expect(screen.getByRole("button", { name: "Expand navigation" })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
   })
 })
 

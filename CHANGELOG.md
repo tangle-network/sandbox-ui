@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.53.0
+
+### Sidebar redesign: unified rail header, expandable/primary nav items, account-menu appearance
+
+A ground-up rework of the dashboard rail, shared by both `SidebarLayout` and
+`DashboardLayout` so the two app shells render the same redesigned sidebar.
+
+- **New `RailHeader`** — a three-slot header: brand mark (left), optional middle
+  content (e.g. a project switcher), and a dedicated panel-toggle button (right).
+  When the rail is collapsed it shows only the brand mark, which morphs into the
+  expand button on hover, so the collapse affordance is discoverable without
+  spending rail width. Replaces the old "logo doubles as the collapse control"
+  interaction in `DashboardLayout` and the footer/​header `RailCollapseToggle` in
+  `SidebarLayout`.
+- **Primary nav items** — `RailButton` gains `variant="primary"` (and
+  `SidebarLayoutNavItem.variant`) for an emphasized pill that stands out from the
+  rest of the nav, e.g. a "New" action.
+- **New `RailExpandable`** — a nav item that reveals sub-items: an inline
+  accordion on the labeled rail (the leading icon morphs into a chevron on hover;
+  the row label still navigates via `href`) and a hover flyout on the icon-only
+  rail. Sub-items can be fixed (`subItems`) or lazy-loaded (`loadSubItems`, with a
+  loading skeleton). `SidebarLayoutNavItem` gains `expandable`, `subItems`,
+  `loadSubItems`, `subActiveIds`, and `emptyLabel`.
+- **Appearance in the account menu** — `ProfileAvatar` (and both layouts) accept an
+  `appearance` controller (`{ value, onChange, modes? }`). It renders a single
+  "Appearance" row showing the current theme (e.g. "System (Light)"); hovering it
+  opens a submenu with Light / Dark / System and a check on the active mode (à la
+  Claude / ChatGPT). The control is theme-engine-agnostic — each host wires it to
+  its own theme hook. The standalone rail theme toggle is no longer rendered.
+- **`SidebarLayout`** — removed the `showThemeToggle` and `railCollapseToggle`
+  props (superseded by `appearance` and the always-in-header toggle). Added
+  `appearance`.
+- **`DashboardLayout`** — `onLogoClick`/`logoAriaLabel` are deprecated and inert
+  (the header now has a dedicated toggle). Added `appearance`.
+- New exports from `./dashboard`: `RailHeader`, `RailExpandable`,
+  `RailExpandableSubItem`, `RailHeaderProps`, `RailExpandableProps`, `ThemeMode`,
+  `AppearanceController`.
+- **Deprecations** (still exported, no longer used by the layouts): `RailThemeToggle`
+  (superseded by the account-menu `appearance` control) and `SidebarRailHeader`
+  (superseded by `RailHeader`).
+- **Active item = primary.** The nav item whose route matches the current page
+  now renders with the emphasized "primary" look (accent fill + accent ring), so
+  the current destination clearly stands out; items are otherwise the default
+  style. `RailButton variant="primary"` still forces the look for non-route items.
+- **Collapsed-rail tooltips and expandable flyouts are portaled** to `<body>`, so
+  they're no longer clipped by the rail's scroll-overflow. The collapsed flyout
+  opens on hover with a small close-delay across the trigger→flyout gap, is capped
+  to the available viewport space (anchoring upward when the item is near the
+  bottom, e.g. a History entry), and scrolls internally so a long list never runs
+  off-screen.
+- **Click-to-expand:** clicking the empty body of a collapsed rail expands it
+  (`SidebarRailNav` gained an `onClick` passthrough; layouts guard on
+  `target === currentTarget`).
+- The header panel toggle uses the **same panel glyph** in both states.
+- `DashboardLayout` no longer renders a Settings nav item in the rail footer —
+  Settings lives in the account menu; the footer is just the account avatar.
+
 ## 0.51.0
 
 ### Assistant panel: searchable model picker, working text-size control, floating history

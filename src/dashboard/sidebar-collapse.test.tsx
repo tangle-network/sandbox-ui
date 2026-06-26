@@ -176,12 +176,12 @@ describe("SidebarLayout — collapse control + icon rail", () => {
       </SidebarLayout>,
     )
     fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }))
-    // Icon-only rail: no inline visible label; the affordance is now a styled
-    // tooltip (role="tooltip", hidden until hover) plus the button's aria-label.
-    expect(screen.getByText("Home", { selector: '[role="tooltip"]' })).toBeInTheDocument()
+    // Icon-only rail: the inline label is gone. The label is exposed via the
+    // button's accessible name; the visual tooltip is now a hover-only portal,
+    // so it is not in the DOM at rest.
+    expect(screen.queryByText("Home", { selector: "span" })).not.toBeInTheDocument()
     const expand = screen.getByRole("button", { name: "Expand sidebar" })
     expect(expand).toBeInTheDocument()
-    // Icon-only nav buttons expose their label via the tooltip + accessible name.
     const homeLink = document.querySelector('a[href="/home"]')
     expect(homeLink).toHaveAttribute("aria-label", "Home")
   })
@@ -194,9 +194,10 @@ describe("SidebarLayout — collapse control + icon rail", () => {
     )
     expect(screen.queryByRole("button", { name: "Collapse sidebar" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).not.toBeInTheDocument()
-    // Icon-only rail: no inline visible label; label lives in the hover tooltip.
-    expect(screen.queryByText("Home", { selector: 'span:not([role="tooltip"])' })).not.toBeInTheDocument()
-    expect(screen.getByText("Home", { selector: '[role="tooltip"]' })).toBeInTheDocument()
+    // Icon-only rail: no inline visible label; the label is exposed via the
+    // link's accessible name (the tooltip is a hover-only portal, not at rest).
+    expect(screen.queryByText("Home", { selector: "span" })).not.toBeInTheDocument()
+    expect(document.querySelector('a[href="/home"]')).toHaveAttribute("aria-label", "Home")
   })
 
   it("respects controlled railCollapsed + reports changes", () => {

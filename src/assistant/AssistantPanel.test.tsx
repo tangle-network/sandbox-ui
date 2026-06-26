@@ -403,9 +403,9 @@ describe("AssistantPanel text-size control", () => {
   // child), not the container itself, so it scales the transcript without
   // scaling the history view's search box and buttons.
   function zoomLayer(container: HTMLElement): HTMLElement {
-    return container.querySelector(
-      '[aria-label="Conversation"] > div',
-    ) as HTMLElement;
+    const el = container.querySelector('[aria-label="Conversation"] > div');
+    if (!el) throw new Error("zoom layer not found");
+    return el as HTMLElement;
   }
 
   it("applies the font scale as a transcript zoom and respects the bounds", () => {

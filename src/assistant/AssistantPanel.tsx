@@ -144,10 +144,17 @@ export function AssistantPanel({
   const chatRef = useRef(chat);
   chatRef.current = chat;
 
-  // Move focus into the history view when it opens, so keyboard users land in it
-  // and the scoped Escape handler below receives the key event.
+  // When the history view opens, move focus into its search box, so keyboard
+  // users land ready to type and the scoped Escape handler below receives the
+  // key event. Focusing the input is more reliable than focusing the
+  // tabIndex=-1 container, which some browsers handle inconsistently; the
+  // container is a fallback only if the input isn't present.
   useEffect(() => {
-    if (view === "history") logRef.current?.focus();
+    if (view !== "history") return;
+    const search = logRef.current?.querySelector<HTMLInputElement>(
+      'input[type="search"]',
+    );
+    (search ?? logRef.current)?.focus();
   }, [view]);
 
   // In the history view, Escape returns to the conversation (and refocuses the

@@ -54,11 +54,16 @@ export function AssistantHistory({
   // server's order among equal times.
   const sorted = useMemo(
     () =>
-      [...threads].sort(
-        (a, b) =>
-          (parsedTime(b.updatedAt) ?? Number.NEGATIVE_INFINITY) -
-          (parsedTime(a.updatedAt) ?? Number.NEGATIVE_INFINITY),
-      ),
+      [...threads].sort((a, b) => {
+        const ta = parsedTime(a.updatedAt);
+        const tb = parsedTime(b.updatedAt);
+        // Most-recently-updated first; rows without a parseable time sort last,
+        // and two such rows keep their existing order.
+        if (ta === null && tb === null) return 0;
+        if (ta === null) return 1;
+        if (tb === null) return -1;
+        return tb - ta;
+      }),
     [threads],
   );
 

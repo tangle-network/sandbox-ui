@@ -22,6 +22,12 @@ export type WfNodeStatus = "queued" | "running" | "succeeded" | "failed";
  * merged onto {@link WfNodeData.state} at render time. Absent ⇒ the graph shows
  * the static definition only (the assistant-proposal preview path). Driven from
  * a workflow run's per-action results so the graph animates as the run executes.
+ *
+ * Keep every field PRIMITIVE: `sameRunState` (flow-graph.ts) shallow-compares
+ * with `===` to decide whether a render tick changed a node. A nested object/
+ * array field would compare by reference (a structurally-equal value reads as
+ * changed → a harmless extra render, never a stale node) — if one is ever needed,
+ * teach `sameRunState` to compare it.
  */
 export interface WfNodeState {
   status: WfNodeStatus;

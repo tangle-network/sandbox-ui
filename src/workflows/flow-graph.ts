@@ -91,7 +91,10 @@ export function mergeRunState(
     const base = baseDataById.get(n.id) ?? n.data;
     const s = nodeState?.[n.id];
     const nextData = s ? { ...base, state: s } : base;
-    return n.data === nextData || sameRunState(n.data.state, nextData.state)
+    // Skip (return the same node) when the state is unchanged. `sameRunState`
+    // covers both paths: a fresh `nextData` whose state equals the prior one, and
+    // a node already at base whose state is `undefined` either side.
+    return sameRunState(n.data.state, nextData.state)
       ? n
       : { ...n, data: nextData };
   });

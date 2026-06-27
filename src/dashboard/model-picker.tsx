@@ -186,6 +186,15 @@ export interface ModelPickerProps {
    */
   triggerClassName?: string;
   disabled?: boolean;
+  /** Side the menu opens toward. Defaults to Radix's "bottom". */
+  side?: Popover.DropdownMenuContentProps["side"];
+  /**
+   * Let Radix flip the menu to the opposite side when it would overflow the
+   * viewport. Defaults to `true` (Radix default). Pass `false` to pin the menu
+   * to `side` — e.g. a composer floating in open space that should always open
+   * downward rather than flipping up over the heading.
+   */
+  avoidCollisions?: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -377,6 +386,8 @@ export function ModelPicker({
   className,
   triggerClassName,
   disabled,
+  side,
+  avoidCollisions,
 }: ModelPickerProps) {
   const [query, setQuery] = React.useState("");
   const [open, setOpen] = React.useState(false);
@@ -553,11 +564,16 @@ export function ModelPicker({
         <Popover.Trigger asChild>{trigger}</Popover.Trigger>
         <Popover.Portal>
           <Popover.Content
+            side={side}
             sideOffset={4}
             align={variant === "pill" ? "start" : "start"}
+            avoidCollisions={avoidCollisions}
+            collisionPadding={24}
             className={cn(
               "z-50 w-[var(--radix-dropdown-menu-trigger-width)] min-w-[320px] max-w-[460px]",
-              "max-h-[440px] overflow-hidden flex flex-col",
+              // Cap to the smaller of the fixed height and the viewport space on
+              // the open side, so a list pinned downward never runs off-screen.
+              "max-h-[min(440px,var(--radix-dropdown-menu-content-available-height))] overflow-hidden flex flex-col",
               "rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
               "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",

@@ -97,6 +97,15 @@ export interface AgentSessionControlsProps {
    * on the left of the gear menu.
    */
   layout?: "inline" | "gear";
+  /**
+   * Where the inline pickers open. `"auto"` (default) keeps Radix's
+   * collision-aware behavior: the menus open downward but flip up when the
+   * composer is docked at the bottom of the viewport. `"down"` pins them open
+   * downward — for a composer floating in open space (e.g. a centered new-chat
+   * surface) where flipping up would cover the heading. Only affects the
+   * `"inline"` layout; the gear menu is unchanged.
+   */
+  menuPlacement?: "auto" | "down";
 }
 
 interface HarnessDropdownProps extends AgentSessionHarnessControl {
@@ -104,6 +113,8 @@ interface HarnessDropdownProps extends AgentSessionHarnessControl {
   side?: DropdownMenu.DropdownMenuContentProps["side"];
   /** Cross-axis alignment of the menu. Defaults to start. */
   align?: DropdownMenu.DropdownMenuContentProps["align"];
+  /** Let Radix flip the menu when it would overflow. Defaults to true. */
+  avoidCollisions?: boolean;
 }
 
 function HarnessDropdown({
@@ -115,6 +126,7 @@ function HarnessDropdown({
   lockReason,
   side = "bottom",
   align = "start",
+  avoidCollisions,
 }: HarnessDropdownProps) {
   const allowed = new Set<HarnessType>(
     available ?? HARNESS_OPTIONS.map((h) => h.type),
@@ -153,9 +165,14 @@ function HarnessDropdown({
         <DropdownMenu.Content
           side={side}
           align={align}
+          avoidCollisions={avoidCollisions}
+          collisionPadding={24}
           sideOffset={6}
           className={cn(
-            "z-50 w-72 overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
+            // Cap to the viewport space on the open side and scroll, so a tall
+            // backend list pinned downward (floating composer) never runs off
+            // the bottom edge.
+            "z-50 w-72 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
             "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -215,6 +232,7 @@ export function AgentSessionControls({
   className,
   context = "chat",
   layout = "inline",
+  menuPlacement = "auto",
 }: AgentSessionControlsProps) {
   if (!harness && !model && !reasoning && !trailing) return null;
 
@@ -255,6 +273,11 @@ export function AgentSessionControls({
   // and bottom-start inline.
   const menuSide = layout === "gear" ? "left" : "bottom";
   const menuAlign = layout === "gear" ? "end" : "start";
+  // A floating (non-docked) inline composer pins its menus open downward so a
+  // tall menu can't flip up over the heading. Only the inline strip honors this;
+  // the gear menu keeps its own placement.
+  const inlineForceDown = menuPlacement === "down" && layout !== "gear";
+  const avoidCollisions = inlineForceDown ? false : undefined;
 
   const harnessNode = harness && (
     <HarnessDropdown
@@ -263,6 +286,7 @@ export function AgentSessionControls({
       onChange={handleHarnessChange}
       side={menuSide}
       align={menuAlign}
+      avoidCollisions={avoidCollisions}
     />
   );
   const modelNode = model && (
@@ -276,6 +300,8 @@ export function AgentSessionControls({
       popular={model.popular}
       recents={model.recents}
       disabled={model.disabled || (visibleModels ?? []).length === 0}
+      side={layout === "gear" ? undefined : "bottom"}
+      avoidCollisions={avoidCollisions}
     />
   );
   // The selected model's reasoning capability (from the catalog) refines the harness clamp: a model
@@ -303,6 +329,8 @@ export function AgentSessionControls({
           ? reasoningEffortsFor(harness.value, modelReasoning)
           : reasoning.available
       }
+      side={layout === "gear" ? undefined : "bottom"}
+      avoidCollisions={avoidCollisions}
     />
   );
 

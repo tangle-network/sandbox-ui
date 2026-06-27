@@ -405,13 +405,20 @@ function describeTrigger(on: unknown): WfNodeData {
       sch,
     );
   }
-  return {
-    title: "Trigger",
-    kind: "trigger",
-    hasBranches: false,
-    isRoot: true,
-    tone: "trigger",
-  };
+  // Unknown/custom trigger kind: still surface its raw config so the full-detail
+  // view stays consistent with provider_event/schedule (and with actions, which
+  // expose config for every kind).
+  const [kind] = Object.keys(rec);
+  return withConfig(
+    {
+      title: "Trigger",
+      kind: "trigger",
+      hasBranches: false,
+      isRoot: true,
+      tone: "trigger",
+    },
+    asRecord(kind ? rec[kind] : undefined),
+  );
 }
 
 /** Build a positioned graph from a workflow YAML string. Never throws —

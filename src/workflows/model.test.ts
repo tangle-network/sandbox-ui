@@ -285,6 +285,45 @@ do:
     expect(() => JSON.stringify(nodes)).not.toThrow();
   });
 
+  it("keeps non-cyclic shared (DAG) config refs intact, not collapsed to [Circular]", () => {
+    // `headers` and `defaults` alias the SAME map — a diamond, not a cycle. Both
+    // must materialize fully; only true ancestor cycles collapse.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify:
+      headers: &h
+        a: "1"
+      defaults: *h
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    const cfg = nodes.find((n) => n.id === "a0")?.data.config;
+    expect((cfg?.headers as Record<string, unknown>)?.a).toBe("1");
+    expect((cfg?.defaults as Record<string, unknown>)?.a).toBe("1");
+  });
+
+  it("exposes raw config for an unknown/custom trigger kind too", () => {
+    // The full-detail contract applies to every trigger kind, not just
+    // provider_event/schedule — the fallback branch must carry config as well.
+    const yaml = `
+on:
+  custom_event:
+    channel: "#alerts"
+    filter: { level: high }
+do:
+  - sandbox.spawn: {}
+`;
+    const trigger = buildWorkflowGraph(yaml).nodes.find(
+      (n) => n.id === "trigger",
+    );
+    expect(trigger?.data.config).toMatchObject({
+      channel: "#alerts",
+      filter: { level: "high" },
+    });
+  });
+
   it("returns an error (never throws) for invalid YAML", () => {
     const { nodes, error } = buildWorkflowGraph("name: [unterminated");
     expect(nodes).toEqual([]);

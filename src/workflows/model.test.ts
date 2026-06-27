@@ -326,6 +326,26 @@ do:
     expect(JSON.stringify(cfg)).toContain("[Max depth exceeded]");
   });
 
+  it("normalizes non-finite numbers (.nan/.inf) to null so config stays JSON-valued", () => {
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify:
+      a: .nan
+      b: .inf
+      c: -.inf
+      d: 42
+`;
+    const cfg = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0")?.data
+      .config;
+    expect(cfg?.a).toBeNull();
+    expect(cfg?.b).toBeNull();
+    expect(cfg?.c).toBeNull();
+    expect(cfg?.d).toBe(42);
+  });
+
   it("exposes raw config for an unknown/custom trigger kind too", () => {
     // The full-detail contract applies to every trigger kind, not just
     // provider_event/schedule — the fallback branch must carry config as well.

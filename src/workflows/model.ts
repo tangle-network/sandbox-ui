@@ -323,13 +323,10 @@ function toJsonSafe(
   depth = 0,
 ): unknown {
   if (value === null) return null;
-  if (
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return value;
-  }
+  // Non-finite numbers (YAML `.nan`/`.inf`) are not JSON values — normalize to
+  // null, matching JSON.stringify, so the tree stays genuinely JSON-safe.
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string" || typeof value === "boolean") return value;
   if (typeof value !== "object") return undefined; // function, symbol, bigint
   if (value instanceof Date) return value.toISOString();
   if (seen.has(value)) return "[Circular]";

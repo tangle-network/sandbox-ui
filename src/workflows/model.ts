@@ -66,6 +66,14 @@ export interface WfNodeData extends Record<string, unknown> {
   path?: string;
   /** Notable config fields for the expand drawer (kept small + stringified). */
   detail?: Record<string, string>;
+  /** The raw, UNTRUNCATED config for this node — the action/trigger config from
+   *  the definition. The compact card reads {@link detail}; a full-detail view
+   *  (e.g. a node drawer) reads this to render every field — the complete prompt,
+   *  all profile/source/input keys — without the card-sized clamp. It is a
+   *  JSON-safe deep copy of the config (cycles and non-JSON values normalized),
+   *  so a consumer can serialize or render it freely. Omitted when the node has
+   *  no config. */
+  config?: Record<string, unknown>;
   /** Connector slug (e.g. `github`) for the provider chip, when one applies. */
   provider?: string;
   /** Small corner tag, e.g. "×3" for a parallel fan-out. */
@@ -197,10 +205,11 @@ function pickDetail(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-/** Describe the single `do` leaf or top-level action as node data. The action
- *  object is a single-key map (`{ "integration.invoke": {...} }`), mirroring the
- *  YAML schema. */
-function describeAction(action: unknown): WfNodeData {
+/** Build the card-facing node data for a single `do` leaf or top-level action:
+ *  title, subtitle, and the compact `detail` map. The action object is a
+ *  single-key map (`{ "integration.invoke": {...} }`), mirroring the YAML
+ *  schema. Returns the base data WITHOUT the raw `config`. */
+function describeActionBase(action: unknown): WfNodeData {
   const rec = asRecord(action);
   const [kind] = Object.keys(rec);
   const cfg = asRecord(rec[kind]);
@@ -292,6 +301,77 @@ function describeAction(action: unknown): WfNodeData {
   }
 }
 
+/** Max nesting depth {@link toJsonSafe} descends before returning a marker. A
+ *  real workflow config is a handful of levels deep; this bounds the recursion
+ *  far below the JS stack limit so a pathologically deep config yields a marker
+ *  instead of a `RangeError`, keeping {@link buildWorkflowGraph}'s no-throw
+ *  contract intact (node-building runs outside the parse try/catch). */
+const MAX_CONFIG_DEPTH = 100;
+
+/** Deep-copy a parsed-config value into a JSON-safe tree for the public `config`
+ *  surface. The result is owned by the caller (no references back into the parsed
+ *  definition) and is always serializable: cycles — reachable via recursive YAML
+ *  anchors — collapse to `"[Circular]"`, nesting beyond {@link MAX_CONFIG_DEPTH}
+ *  collapses to `"[Max depth exceeded]"`, and non-JSON values (undefined,
+ *  functions, symbols, bigints) are dropped, so a consumer can `JSON.stringify`,
+ *  diff, or recursively render the config without throwing. Total by
+ *  construction — it never throws, preserving {@link buildWorkflowGraph}'s
+ *  no-throw contract. */
+function toJsonSafe(
+  value: unknown,
+  seen: WeakSet<object> = new WeakSet(),
+  depth = 0,
+): unknown {
+  if (value === null) return null;
+  // Non-finite numbers (YAML `.nan`/`.inf`) are not JSON values — normalize to
+  // null, matching JSON.stringify, so the tree stays genuinely JSON-safe.
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value !== "object") return undefined; // function, symbol, bigint
+  if (value instanceof Date) return value.toISOString();
+  if (seen.has(value)) return "[Circular]";
+  if (depth >= MAX_CONFIG_DEPTH) return "[Max depth exceeded]";
+  seen.add(value);
+  let out: unknown;
+  if (Array.isArray(value)) {
+    // A non-JSON array element becomes null (matching JSON.stringify), since an
+    // array slot cannot be omitted.
+    out = value.map((v) => {
+      const s = toJsonSafe(v, seen, depth + 1);
+      return s === undefined ? null : s;
+    });
+  } else {
+    const obj: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      const s = toJsonSafe(v, seen, depth + 1);
+      if (s !== undefined) obj[k] = s; // drop non-JSON object values
+    }
+    out = obj;
+  }
+  seen.delete(value);
+  return out;
+}
+
+/** Attach the raw, untruncated `config` to node data for the full-detail view,
+ *  but only when non-empty — an empty config is omitted (never `config: {}`), so
+ *  action and trigger nodes honor the same "omitted when no config" contract.
+ *  The config is normalized to a JSON-safe deep copy ({@link toJsonSafe}) so the
+ *  node owns it outright and a consumer can always serialize/render it. */
+function withConfig(base: WfNodeData, cfg: Record<string, unknown>): WfNodeData {
+  return Object.keys(cfg).length > 0
+    ? { ...base, config: toJsonSafe(cfg) as Record<string, unknown> }
+    : base;
+}
+
+/** Describe one action as node data, attaching the raw, untruncated `config` for
+ *  a full-detail view on top of the card-facing summary from
+ *  {@link describeActionBase}. Config is omitted when the action carries none. */
+function describeAction(action: unknown): WfNodeData {
+  const rec = asRecord(action);
+  const [kind] = Object.keys(rec);
+  return withConfig(describeActionBase(action), asRecord(rec[kind]));
+}
+
 /** Describe the `on:` trigger as the spine's root node. */
 function describeTrigger(on: unknown): WfNodeData {
   const rec = asRecord(on);
@@ -307,36 +387,49 @@ function describeTrigger(on: unknown): WfNodeData {
     if (event) subtitle += ` · ${event}`;
     if (actions.length > 0) subtitle += ` (${actions.join("/")})`;
     if (repo) subtitle += ` on ${repo}`;
-    return {
-      title: "Trigger",
-      kind: "provider_event",
-      subtitle,
-      provider: connection,
-      hasBranches: false,
-      isRoot: true,
-      tone: "trigger",
-    };
+    return withConfig(
+      {
+        title: "Trigger",
+        kind: "provider_event",
+        subtitle,
+        provider: connection,
+        hasBranches: false,
+        isRoot: true,
+        tone: "trigger",
+      },
+      ev,
+    );
   }
   if (rec.schedule) {
     const sch = asRecord(rec.schedule);
     const cron = str(sch.cron);
     const tz = str(sch.timezone);
-    return {
-      title: "Schedule",
-      kind: "schedule",
-      subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
+    return withConfig(
+      {
+        title: "Schedule",
+        kind: "schedule",
+        subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
+        hasBranches: false,
+        isRoot: true,
+        tone: "trigger",
+      },
+      sch,
+    );
+  }
+  // Unknown/custom trigger kind: still surface its raw config so the full-detail
+  // view stays consistent with provider_event/schedule (and with actions, which
+  // expose config for every kind).
+  const [kind] = Object.keys(rec);
+  return withConfig(
+    {
+      title: "Trigger",
+      kind: "trigger",
       hasBranches: false,
       isRoot: true,
       tone: "trigger",
-    };
-  }
-  return {
-    title: "Trigger",
-    kind: "trigger",
-    hasBranches: false,
-    isRoot: true,
-    tone: "trigger",
-  };
+    },
+    asRecord(kind ? rec[kind] : undefined),
+  );
 }
 
 /** Build a positioned graph from a workflow YAML string. Never throws —

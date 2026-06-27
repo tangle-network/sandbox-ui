@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.56.0
+
+### Workflows: raw node config for the full-detail view
+
+- **`WfNodeData.config`** — workflow graph nodes (actions and triggers) now carry
+  the raw, untruncated config alongside the compact `detail` map, so a full-detail
+  drawer can render every field without the card-sized clamp `detail` applies. It
+  is a JSON-safe deep copy of the config (cycles and non-JSON values normalized,
+  so it is always serializable) and is omitted when a node has no config.
+
 ## 0.55.0
 
 ### Assistant panel: composer model picker + full-panel conversation history

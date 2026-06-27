@@ -175,6 +175,197 @@ do:
     expect(y.a1).toBeGreaterThan(y["a0-b2"]);
   });
 
+  it("attaches the raw, untruncated config to action and trigger nodes", () => {
+    // A prompt far longer than the compact `detail` clamp (200 chars) — the
+    // full-detail `config` must carry it verbatim, never truncated.
+    const longPrompt = `Review this PR carefully. ${"x".repeat(500)}`;
+    const yaml = `
+name: pr-review
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    actions: [opened, synchronize]
+    repo: tangle-network/agent-dev-container
+do:
+  - agent.run:
+      profile: code-reviewer
+      maxRounds: 3
+      source:
+        repo: "\${trigger.repository.full_name}"
+        pr: "\${trigger.pull_request.number}"
+      prompt: ${JSON.stringify(longPrompt)}
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+
+    // Trigger node carries the full provider_event config.
+    const trigger = nodes.find((n) => n.id === "trigger");
+    expect(trigger?.data.config).toMatchObject({
+      connection: "github",
+      event: "pull_request",
+      actions: ["opened", "synchronize"],
+      repo: "tangle-network/agent-dev-container",
+    });
+
+    // agent.run node carries every config field, prompt UNtruncated, and nested
+    // objects (source) preserved as objects (not the compact "…" placeholder).
+    const agent = nodes.find((n) => n.id === "a0");
+    expect(agent?.data.config?.profile).toBe("code-reviewer");
+    expect(agent?.data.config?.maxRounds).toBe(3);
+    expect(agent?.data.config?.prompt).toBe(longPrompt);
+    expect(agent?.data.config?.source).toEqual({
+      repo: "${trigger.repository.full_name}",
+      pr: "${trigger.pull_request.number}",
+    });
+    // The compact `detail` still clamps the prompt (so the card stays small),
+    // proving `config` is the distinct full-fidelity surface.
+    expect((agent?.data.detail?.prompt?.length ?? 0)).toBeLessThan(
+      longPrompt.length,
+    );
+  });
+
+  it("omits config for an action and a trigger that declare none", () => {
+    // An empty action config AND an empty trigger config are omitted entirely
+    // (never `config: {}`), so both honor the "omitted when no config" contract.
+    const yaml = `
+on:
+  provider_event: {}
+do:
+  - sandbox.spawn: {}
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    expect(nodes.find((n) => n.id === "trigger")?.data.config).toBeUndefined();
+    expect(nodes.find((n) => n.id === "a0")?.data.config).toBeUndefined();
+  });
+
+  it("deep-copies config so a consumer cannot mutate the parsed definition", () => {
+    // Two actions built from the SAME YAML anchor must each own an independent
+    // config — mutating one (even a nested field) never leaks into the other or
+    // back into internal parse state.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify: &shared
+      url: https://example.com
+      headers:
+        x: "1"
+  - notify: *shared
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    const a0 = nodes.find((n) => n.id === "a0")?.data.config as
+      | Record<string, unknown>
+      | undefined;
+    const a1 = nodes.find((n) => n.id === "a1")?.data.config;
+    expect(a0).toEqual(a1);
+    (a0?.headers as Record<string, unknown>).x = "MUTATED";
+    expect((a1?.headers as Record<string, unknown> | undefined)?.x).toBe("1");
+  });
+
+  it("collapses recursive YAML anchors so config stays JSON-serializable", () => {
+    // A recursive anchor makes the parsed config self-referential; the public
+    // config must break the cycle so consumers can JSON.stringify / render it.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify: &c
+      url: https://example.com
+      self: *c
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    const cfg = nodes.find((n) => n.id === "a0")?.data.config as
+      | Record<string, unknown>
+      | undefined;
+    expect(cfg?.url).toBe("https://example.com");
+    expect(cfg?.self).toBe("[Circular]");
+    // The whole graph must serialize without throwing on the cycle.
+    expect(() => JSON.stringify(nodes)).not.toThrow();
+  });
+
+  it("keeps non-cyclic shared (DAG) config refs intact, not collapsed to [Circular]", () => {
+    // `headers` and `defaults` alias the SAME map — a diamond, not a cycle. Both
+    // must materialize fully; only true ancestor cycles collapse.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify:
+      headers: &h
+        a: "1"
+      defaults: *h
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    const cfg = nodes.find((n) => n.id === "a0")?.data.config;
+    expect((cfg?.headers as Record<string, unknown>)?.a).toBe("1");
+    expect((cfg?.defaults as Record<string, unknown>)?.a).toBe("1");
+  });
+
+  it("bounds deeply nested config instead of overflowing the stack", () => {
+    // buildWorkflowGraph never throws; a pathologically deep config must collapse
+    // past the depth budget to a marker, not blow the call stack.
+    const deep = `${"{a: ".repeat(150)}1${"}".repeat(150)}`;
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify:
+      nested: ${deep}
+`;
+    let result: ReturnType<typeof buildWorkflowGraph> | undefined;
+    expect(() => {
+      result = buildWorkflowGraph(yaml);
+    }).not.toThrow();
+    const cfg = result?.nodes.find((n) => n.id === "a0")?.data.config;
+    expect(cfg).toBeDefined();
+    expect(() => JSON.stringify(result?.nodes)).not.toThrow();
+    expect(JSON.stringify(cfg)).toContain("[Max depth exceeded]");
+  });
+
+  it("normalizes non-finite numbers (.nan/.inf) to null so config stays JSON-valued", () => {
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify:
+      a: .nan
+      b: .inf
+      c: -.inf
+      d: 42
+`;
+    const cfg = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0")?.data
+      .config;
+    expect(cfg?.a).toBeNull();
+    expect(cfg?.b).toBeNull();
+    expect(cfg?.c).toBeNull();
+    expect(cfg?.d).toBe(42);
+  });
+
+  it("exposes raw config for an unknown/custom trigger kind too", () => {
+    // The full-detail contract applies to every trigger kind, not just
+    // provider_event/schedule — the fallback branch must carry config as well.
+    const yaml = `
+on:
+  custom_event:
+    channel: "#alerts"
+    filter: { level: high }
+do:
+  - sandbox.spawn: {}
+`;
+    const trigger = buildWorkflowGraph(yaml).nodes.find(
+      (n) => n.id === "trigger",
+    );
+    expect(trigger?.data.config).toMatchObject({
+      channel: "#alerts",
+      filter: { level: "high" },
+    });
+  });
+
   it("returns an error (never throws) for invalid YAML", () => {
     const { nodes, error } = buildWorkflowGraph("name: [unterminated");
     expect(nodes).toEqual([]);

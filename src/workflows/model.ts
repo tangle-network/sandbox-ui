@@ -300,15 +300,55 @@ function describeActionBase(action: unknown): WfNodeData {
   }
 }
 
+/** Deep-copy a parsed-config value into a JSON-safe tree for the public `config`
+ *  surface. The result is owned by the caller (no references back into the parsed
+ *  definition) and is always serializable: cycles — reachable via recursive YAML
+ *  anchors — collapse to `"[Circular]"`, and non-JSON values (undefined,
+ *  functions, symbols, bigints) are dropped, so a consumer can `JSON.stringify`,
+ *  diff, or recursively render the config without throwing. Total by
+ *  construction — it never throws, preserving {@link buildWorkflowGraph}'s
+ *  no-throw contract. */
+function toJsonSafe(value: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
+  if (value === null) return null;
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  if (typeof value !== "object") return undefined; // function, symbol, bigint
+  if (value instanceof Date) return value.toISOString();
+  if (seen.has(value)) return "[Circular]";
+  seen.add(value);
+  let out: unknown;
+  if (Array.isArray(value)) {
+    // A non-JSON array element becomes null (matching JSON.stringify), since an
+    // array slot cannot be omitted.
+    out = value.map((v) => {
+      const s = toJsonSafe(v, seen);
+      return s === undefined ? null : s;
+    });
+  } else {
+    const obj: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      const s = toJsonSafe(v, seen);
+      if (s !== undefined) obj[k] = s; // drop non-JSON object values
+    }
+    out = obj;
+  }
+  seen.delete(value);
+  return out;
+}
+
 /** Attach the raw, untruncated `config` to node data for the full-detail view,
  *  but only when non-empty — an empty config is omitted (never `config: {}`), so
  *  action and trigger nodes honor the same "omitted when no config" contract.
- *  The config is deep-cloned so the node owns it outright: a consumer mutating
- *  `node.data.config` can never reach back into the parsed definition or another
- *  node that shares the same YAML anchor. */
+ *  The config is normalized to a JSON-safe deep copy ({@link toJsonSafe}) so the
+ *  node owns it outright and a consumer can always serialize/render it. */
 function withConfig(base: WfNodeData, cfg: Record<string, unknown>): WfNodeData {
   return Object.keys(cfg).length > 0
-    ? { ...base, config: structuredClone(cfg) }
+    ? { ...base, config: toJsonSafe(cfg) as Record<string, unknown> }
     : base;
 }
 

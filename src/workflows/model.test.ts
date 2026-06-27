@@ -263,6 +263,28 @@ do:
     expect((a1?.headers as Record<string, unknown> | undefined)?.x).toBe("1");
   });
 
+  it("collapses recursive YAML anchors so config stays JSON-serializable", () => {
+    // A recursive anchor makes the parsed config self-referential; the public
+    // config must break the cycle so consumers can JSON.stringify / render it.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify: &c
+      url: https://example.com
+      self: *c
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    const cfg = nodes.find((n) => n.id === "a0")?.data.config as
+      | Record<string, unknown>
+      | undefined;
+    expect(cfg?.url).toBe("https://example.com");
+    expect(cfg?.self).toBe("[Circular]");
+    // The whole graph must serialize without throwing on the cycle.
+    expect(() => JSON.stringify(nodes)).not.toThrow();
+  });
+
   it("returns an error (never throws) for invalid YAML", () => {
     const { nodes, error } = buildWorkflowGraph("name: [unterminated");
     expect(nodes).toEqual([]);

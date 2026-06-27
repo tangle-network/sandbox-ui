@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### `AgentSessionControls`: control inline menu placement
+
+- **`AgentSessionControls` gains `menuPlacement?: "auto" | "down"`** (default
+  `"auto"`). `"auto"` keeps Radix's collision-aware behavior — the inline
+  pickers open downward but flip up when the composer is docked at the bottom of
+  the viewport. `"down"` pins them open downward, for a composer floating in open
+  space (e.g. a centered new-chat surface) where flipping up would cover the
+  heading. Only affects the `"inline"` layout; the gear menu is unchanged.
+- **`ModelPicker` and `ReasoningLevelPicker` gain `side` + `avoidCollisions`**
+  props, forwarded to their Radix content, so callers can pin menu direction.
+  `HarnessDropdown` (internal) likewise honors `avoidCollisions`.
+- **Picker menus now cap to the available viewport height and scroll** (via
+  Radix's `--radix-dropdown-menu-content-available-height`), so a tall list
+  pinned downward from a floating composer never runs off the bottom edge.
+- Backward compatible: omitting the new props reproduces the prior behavior
+  exactly.
+
 ## 0.56.0
 
 ### Workflows: raw node config for the full-detail view

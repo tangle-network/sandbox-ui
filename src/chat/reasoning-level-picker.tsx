@@ -71,6 +71,15 @@ export interface ReasoningLevelPickerProps {
    * Omit to show every option.
    */
   available?: ReadonlyArray<ReasoningEffort>;
+  /** Side the menu opens toward. Defaults to Radix's "bottom". */
+  side?: DropdownMenu.DropdownMenuContentProps["side"];
+  /**
+   * Let Radix flip the menu to the opposite side when it would overflow the
+   * viewport. Defaults to `true` (Radix default). Pass `false` to pin the menu
+   * to `side` — e.g. a composer floating in open space that should always open
+   * downward rather than flipping up over the heading.
+   */
+  avoidCollisions?: boolean;
 }
 
 export const DEFAULT_REASONING_LEVEL_OPTIONS: ReadonlyArray<ReasoningLevelOption> = [
@@ -92,6 +101,8 @@ export function ReasoningLevelPicker({
   triggerClassName,
   options = DEFAULT_REASONING_LEVEL_OPTIONS,
   available,
+  side,
+  avoidCollisions,
 }: ReasoningLevelPickerProps) {
   // Capability filter: keep `auto` always; otherwise only the efforts the harness/model supports.
   const shown = available
@@ -124,10 +135,15 @@ export function ReasoningLevelPicker({
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
+          side={side}
           align="start"
+          avoidCollisions={avoidCollisions}
+          collisionPadding={24}
           sideOffset={6}
           className={cn(
-            "z-50 w-64 overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
+            // Cap to the viewport space on the open side and scroll, so the menu
+            // pinned downward (floating composer) never runs off the bottom edge.
+            "z-50 w-64 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
             "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",

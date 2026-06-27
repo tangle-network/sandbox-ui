@@ -304,6 +304,28 @@ do:
     expect((cfg?.defaults as Record<string, unknown>)?.a).toBe("1");
   });
 
+  it("bounds deeply nested config instead of overflowing the stack", () => {
+    // buildWorkflowGraph never throws; a pathologically deep config must collapse
+    // past the depth budget to a marker, not blow the call stack.
+    const deep = `${"{a: ".repeat(150)}1${"}".repeat(150)}`;
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify:
+      nested: ${deep}
+`;
+    let result: ReturnType<typeof buildWorkflowGraph> | undefined;
+    expect(() => {
+      result = buildWorkflowGraph(yaml);
+    }).not.toThrow();
+    const cfg = result?.nodes.find((n) => n.id === "a0")?.data.config;
+    expect(cfg).toBeDefined();
+    expect(() => JSON.stringify(result?.nodes)).not.toThrow();
+    expect(JSON.stringify(cfg)).toContain("[Max depth exceeded]");
+  });
+
   it("exposes raw config for an unknown/custom trigger kind too", () => {
     // The full-detail contract applies to every trigger kind, not just
     // provider_event/schedule — the fallback branch must carry config as well.

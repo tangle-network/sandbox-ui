@@ -66,12 +66,13 @@ export interface WfNodeData extends Record<string, unknown> {
   path?: string;
   /** Notable config fields for the expand drawer (kept small + stringified). */
   detail?: Record<string, string>;
-  /** The raw, UNTRUNCATED config for this node — the action/trigger config
-   *  verbatim from the definition. The compact card reads {@link detail}; a
-   *  full-detail view (e.g. a node drawer) reads this to render every field —
-   *  the complete prompt, all profile/source/input keys — without the
-   *  card-sized clamp. It is the same definition the graph already parses, so it
-   *  adds no new payload. Omitted when the node has no config. */
+  /** The raw, UNTRUNCATED config for this node — the action/trigger config from
+   *  the definition. The compact card reads {@link detail}; a full-detail view
+   *  (e.g. a node drawer) reads this to render every field — the complete prompt,
+   *  all profile/source/input keys — without the card-sized clamp. It is a
+   *  JSON-safe deep copy of the config (cycles and non-JSON values normalized),
+   *  so a consumer can serialize or render it freely. Omitted when the node has
+   *  no config. */
   config?: Record<string, unknown>;
   /** Connector slug (e.g. `github`) for the provider chip, when one applies. */
   provider?: string;
@@ -300,15 +301,27 @@ function describeActionBase(action: unknown): WfNodeData {
   }
 }
 
+/** Max nesting depth {@link toJsonSafe} descends before returning a marker. A
+ *  real workflow config is a handful of levels deep; this bounds the recursion
+ *  far below the JS stack limit so a pathologically deep config yields a marker
+ *  instead of a `RangeError`, keeping {@link buildWorkflowGraph}'s no-throw
+ *  contract intact (node-building runs outside the parse try/catch). */
+const MAX_CONFIG_DEPTH = 100;
+
 /** Deep-copy a parsed-config value into a JSON-safe tree for the public `config`
  *  surface. The result is owned by the caller (no references back into the parsed
  *  definition) and is always serializable: cycles — reachable via recursive YAML
- *  anchors — collapse to `"[Circular]"`, and non-JSON values (undefined,
+ *  anchors — collapse to `"[Circular]"`, nesting beyond {@link MAX_CONFIG_DEPTH}
+ *  collapses to `"[Max depth exceeded]"`, and non-JSON values (undefined,
  *  functions, symbols, bigints) are dropped, so a consumer can `JSON.stringify`,
  *  diff, or recursively render the config without throwing. Total by
  *  construction — it never throws, preserving {@link buildWorkflowGraph}'s
  *  no-throw contract. */
-function toJsonSafe(value: unknown, seen: WeakSet<object> = new WeakSet()): unknown {
+function toJsonSafe(
+  value: unknown,
+  seen: WeakSet<object> = new WeakSet(),
+  depth = 0,
+): unknown {
   if (value === null) return null;
   if (
     typeof value === "string" ||
@@ -320,19 +333,20 @@ function toJsonSafe(value: unknown, seen: WeakSet<object> = new WeakSet()): unkn
   if (typeof value !== "object") return undefined; // function, symbol, bigint
   if (value instanceof Date) return value.toISOString();
   if (seen.has(value)) return "[Circular]";
+  if (depth >= MAX_CONFIG_DEPTH) return "[Max depth exceeded]";
   seen.add(value);
   let out: unknown;
   if (Array.isArray(value)) {
     // A non-JSON array element becomes null (matching JSON.stringify), since an
     // array slot cannot be omitted.
     out = value.map((v) => {
-      const s = toJsonSafe(v, seen);
+      const s = toJsonSafe(v, seen, depth + 1);
       return s === undefined ? null : s;
     });
   } else {
     const obj: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
-      const s = toJsonSafe(v, seen);
+      const s = toJsonSafe(v, seen, depth + 1);
       if (s !== undefined) obj[k] = s; // drop non-JSON object values
     }
     out = obj;

@@ -238,6 +238,31 @@ do:
     expect(nodes.find((n) => n.id === "a0")?.data.config).toBeUndefined();
   });
 
+  it("deep-copies config so a consumer cannot mutate the parsed definition", () => {
+    // Two actions built from the SAME YAML anchor must each own an independent
+    // config — mutating one (even a nested field) never leaks into the other or
+    // back into internal parse state.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify: &shared
+      url: https://example.com
+      headers:
+        x: "1"
+  - notify: *shared
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    const a0 = nodes.find((n) => n.id === "a0")?.data.config as
+      | Record<string, unknown>
+      | undefined;
+    const a1 = nodes.find((n) => n.id === "a1")?.data.config;
+    expect(a0).toEqual(a1);
+    (a0?.headers as Record<string, unknown>).x = "MUTATED";
+    expect((a1?.headers as Record<string, unknown> | undefined)?.x).toBe("1");
+  });
+
   it("returns an error (never throws) for invalid YAML", () => {
     const { nodes, error } = buildWorkflowGraph("name: [unterminated");
     expect(nodes).toEqual([]);

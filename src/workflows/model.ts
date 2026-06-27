@@ -302,9 +302,14 @@ function describeActionBase(action: unknown): WfNodeData {
 
 /** Attach the raw, untruncated `config` to node data for the full-detail view,
  *  but only when non-empty — an empty config is omitted (never `config: {}`), so
- *  action and trigger nodes honor the same "omitted when no config" contract. */
+ *  action and trigger nodes honor the same "omitted when no config" contract.
+ *  The config is deep-cloned so the node owns it outright: a consumer mutating
+ *  `node.data.config` can never reach back into the parsed definition or another
+ *  node that shares the same YAML anchor. */
 function withConfig(base: WfNodeData, cfg: Record<string, unknown>): WfNodeData {
-  return Object.keys(cfg).length > 0 ? { ...base, config: cfg } : base;
+  return Object.keys(cfg).length > 0
+    ? { ...base, config: structuredClone(cfg) }
+    : base;
 }
 
 /** Describe one action as node data, attaching the raw, untruncated `config` for

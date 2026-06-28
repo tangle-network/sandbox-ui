@@ -264,7 +264,7 @@ function DashboardLayoutInner({
       <>
         <SidebarRail wide={showLabels}>
           <RailHeader
-            brand={<Logo variant={variant} size="sm" iconOnly />}
+            brand={<Logo variant={variant} size="sm" iconOnly={!showLabels} />}
             brandHref={logoHref}
             collapsed={!showLabels}
             onToggle={toggleRail}

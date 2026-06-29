@@ -38,8 +38,22 @@ export {
   type AgentSessionControlsProps,
   type AgentSessionHarnessControl,
   type AgentSessionModelControl,
+  type AgentSessionProfileControl,
   type AgentSessionReasoningControl,
 } from "./agent-session-controls";
+
+export {
+  AgentComposer,
+  type AgentComposerProps,
+} from "./agent-composer";
+
+export {
+  AgentProfilePicker,
+  type AgentProfileCapability,
+  type AgentProfileDraft,
+  type AgentProfileOption,
+  type AgentProfilePickerProps,
+} from "./agent-profile-picker";
 
 export {
   isModelCompatibleWithHarness,

@@ -26,6 +26,12 @@ import {
   type ReasoningLevel,
   type ReasoningLevelOption,
 } from "./reasoning-level-picker";
+import {
+  AgentProfilePicker,
+  type AgentProfileCapability,
+  type AgentProfileDraft,
+  type AgentProfileOption,
+} from "./agent-profile-picker";
 
 export interface AgentSessionHarnessControl {
   value: HarnessType;
@@ -68,12 +74,34 @@ export interface AgentSessionReasoningControl {
   available?: ReadonlyArray<ReasoningEffort>;
 }
 
+/**
+ * Agent-profile (mode / toolset / persona) selection. Backend-agnostic — it
+ * sits beside the model in both router-backed and sandbox-backed modes, so the
+ * same session can switch the agent's identity without touching the harness.
+ */
+export interface AgentSessionProfileControl {
+  value: string;
+  onChange: (id: string) => void;
+  profiles: ReadonlyArray<AgentProfileOption>;
+  /** Tool catalog for inline authoring; pair with a write callback to enable it. */
+  capabilities?: ReadonlyArray<AgentProfileCapability>;
+  onCreate?: (draft: AgentProfileDraft) => void | Promise<void>;
+  onUpdate?: (id: string, draft: AgentProfileDraft) => void | Promise<void>;
+  onDelete?: (id: string) => void | Promise<void>;
+  disabled?: boolean;
+}
+
 export interface AgentSessionControlsProps {
   /**
    * Harness (agent backend) selection. Switching harness usually means
    * re-creating the agent session — the consumer owns that lifecycle.
    */
   harness?: AgentSessionHarnessControl;
+  /**
+   * Agent profile (mode / toolset / persona). Universal — present in both
+   * router-backed and sandbox-backed composers, independent of the harness.
+   */
+  profile?: AgentSessionProfileControl;
   /** Per-turn model override, fed by the router's model catalog. */
   model?: AgentSessionModelControl;
   /** Thinking-effort level applied to subsequent turns. */
@@ -226,6 +254,7 @@ function HarnessDropdown({
  */
 export function AgentSessionControls({
   harness,
+  profile,
   model,
   reasoning,
   trailing,
@@ -234,7 +263,7 @@ export function AgentSessionControls({
   layout = "inline",
   menuPlacement = "auto",
 }: AgentSessionControlsProps) {
-  if (!harness && !model && !reasoning && !trailing) return null;
+  if (!harness && !profile && !model && !reasoning && !trailing) return null;
 
   const handleHarnessChange = (next: HarnessType) => {
     harness?.onChange(next);
@@ -289,6 +318,22 @@ export function AgentSessionControls({
       avoidCollisions={avoidCollisions}
     />
   );
+  // The profile popover is not a Radix menu (its inline author form needs its
+  // own focus), so it can't collision-flip — open upward by default for a
+  // bottom-docked composer, downward only when the strip is pinned down.
+  const profileNode = profile && (
+    <AgentProfilePicker
+      value={profile.value}
+      onChange={profile.onChange}
+      profiles={profile.profiles}
+      capabilities={profile.capabilities}
+      onCreate={profile.onCreate}
+      onUpdate={profile.onUpdate}
+      onDelete={profile.onDelete}
+      disabled={profile.disabled}
+      side={inlineForceDown || layout === "gear" ? "bottom" : "top"}
+    />
+  );
   const modelNode = model && (
     <ModelPicker
       variant="pill"
@@ -338,6 +383,7 @@ export function AgentSessionControls({
     return (
       <GearControls
         className={className}
+        profileNode={profileNode}
         harnessNode={harnessNode}
         modelNode={modelNode}
         reasoningNode={reasoningNode}
@@ -351,6 +397,7 @@ export function AgentSessionControls({
       className={cn("flex flex-wrap items-center gap-2", className)}
       data-testid="agent-session-controls"
     >
+      {profileNode}
       {harnessNode}
       {modelNode}
       {reasoningNode}
@@ -371,12 +418,14 @@ export function AgentSessionControls({
  */
 function GearControls({
   className,
+  profileNode,
   harnessNode,
   modelNode,
   reasoningNode,
   trailing,
 }: {
   className?: string;
+  profileNode: React.ReactNode;
   harnessNode: React.ReactNode;
   modelNode: React.ReactNode;
   reasoningNode: React.ReactNode;
@@ -433,6 +482,9 @@ function GearControls({
               "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
             )}
           >
+            {profileNode && (
+              <GearSection label="Agent">{profileNode}</GearSection>
+            )}
             {harnessNode && (
               <GearSection label="Harness">{harnessNode}</GearSection>
             )}

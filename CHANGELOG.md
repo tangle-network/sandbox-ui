@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.58.0
+
+### Harness↔model policy sourced from `@tangle-network/agent-interface`
+
+- The chat pickers' harness↔model compatibility and snapping now delegate to
+  `@tangle-network/agent-interface` — the single source of truth shared with the
+  cli-bridge backends — instead of a local copy. Requires
+  `@tangle-network/agent-interface >=0.15.0`.
+- `isModelCompatibleWithHarness`, `modelProvider`, `snapHarnessToModel`, and
+  `snapModelToHarness` are unchanged in name and signature. The internal
+  `HARNESS_MODEL_POLICIES` table is no longer exported (it had no consumers).
+- `nanoclaw` is now treated as router-backed (runs any model), matching the
+  canonical policy.
+
+### Fixes
+
+- Dashboard: show the full wordmark in the expanded rail (#141).
+
 ## 0.57.0
 
 ### `AgentSessionControls`: control inline menu placement

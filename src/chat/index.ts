@@ -42,7 +42,6 @@ export {
 } from "./agent-session-controls";
 
 export {
-  HARNESS_MODEL_POLICIES,
   isModelCompatibleWithHarness,
   modelProvider,
   snapHarnessToModel,

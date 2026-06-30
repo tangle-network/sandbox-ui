@@ -5,6 +5,7 @@ import {
   type AgentProfileCapability,
   type AgentProfileDraft,
   type AgentProfileOption,
+  type ComposerFile,
   DEFAULT_REASONING_LEVEL_OPTIONS,
   type ReasoningLevel,
 } from "../../chat";
@@ -154,6 +155,48 @@ export const RouterBacked: Story = {
         onSubmit={() => setValue("")}
         placeholder="Ask anything…"
         profile={{ value: profile, onChange: setProfile, profiles: PROFILES }}
+        model={{ value: model, onChange: setModel, models: MODELS }}
+        reasoning={{
+          value: reasoning,
+          onChange: setReasoning,
+          options: DEFAULT_REASONING_LEVEL_OPTIONS,
+        }}
+      />
+    );
+  },
+};
+
+/** Attachments + streaming: drag-drop / attach buttons, file chips, Stop button. */
+export const WithAttachmentsAndStreaming: Story = {
+  name: "Attachments + streaming (Stop)",
+  render: () => {
+    const [value, setValue] = useState("Summarize the attached spec.");
+    const [model, setModel] = useState("anthropic/claude-opus-4-8");
+    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
+    const [busy, setBusy] = useState(true);
+    const [files, setFiles] = useState<ComposerFile[]>([
+      { id: "1", name: "design-spec.pdf", kind: "file", status: "ready" },
+      { id: "2", name: "src", kind: "folder", fileCount: 42, status: "ready" },
+      { id: "3", name: "upload.csv", kind: "file", status: "uploading" },
+    ]);
+    return (
+      <AgentComposer
+        value={value}
+        onChange={setValue}
+        onSubmit={() => setValue("")}
+        busy={busy}
+        onCancel={() => setBusy(false)}
+        focusShortcut
+        placeholder="Ask, or drop files…"
+        onAttach={() =>
+          setFiles((f) => [
+            ...f,
+            { id: String(f.length + 1), name: "new.txt", kind: "file", status: "pending" },
+          ])
+        }
+        onAttachFolder={() => {}}
+        attachments={files}
+        onRemoveFile={(id) => setFiles((f) => f.filter((x) => x.id !== id))}
         model={{ value: model, onChange: setModel, models: MODELS }}
         reasoning={{
           value: reasoning,

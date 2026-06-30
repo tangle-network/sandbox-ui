@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.61.0
+
+### Dashboard
+
+- `RailExpandableSubItem` gains an optional `isLoading` flag that renders a live
+  "responding" indicator on the row — a gradient-shimmer label plus a trailing
+  three-dot ellipsis, both respecting `prefers-reduced-motion` (#146).
+
 ## 0.58.0
 
 ### Harness↔model policy sourced from `@tangle-network/agent-interface`

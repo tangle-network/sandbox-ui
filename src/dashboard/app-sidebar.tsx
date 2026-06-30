@@ -684,6 +684,9 @@ export interface RailExpandableSubItem {
   prefetch?: "none" | "intent" | "render" | "viewport"
   /** Show a live working indicator on the row while the item is busy. */
   isLoading?: boolean
+  /** Render the row emphasized (bold + accent) so it stands out — e.g. a
+   *  trailing "view all" action below a capped list. */
+  emphasis?: boolean
 }
 
 export interface RailExpandableProps {
@@ -797,10 +800,12 @@ export function RailExpandable({
         onClick={onNavigate}
         {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
         className={cn(
-          "flex h-8 min-w-0 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
+          "flex h-7 min-w-0 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
           active
             ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
-            : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
+            : item.emphasis
+              ? "font-semibold text-[var(--accent-text)] hover:bg-[var(--accent-surface-soft)]"
+              : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         )}
       >
         {FIcon ? <FIcon className="h-4 w-4 shrink-0" /> : null}
@@ -930,7 +935,8 @@ export function RailExpandable({
             : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         )}
       >
-        {/* Leading slot: default icon at rest, chevron on hover/open. Toggles the list. */}
+        {/* Leading slot: the item's own icon at rest (whether open or closed);
+            the chevron reveals only on hover (rotated down when open). Toggles the list. */}
         <button
           type="button"
           onClick={toggle}
@@ -939,15 +945,12 @@ export function RailExpandable({
           className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <Icon
-            className={cn(
-              "h-[17px] w-[17px] shrink-0 transition-opacity duration-150",
-              open ? "opacity-0" : "opacity-100 group-hover/exp:opacity-0",
-            )}
+            className="h-[17px] w-[17px] shrink-0 opacity-100 transition-opacity duration-150 group-hover/exp:opacity-0"
           />
           <ChevronRightIcon
             className={cn(
-              "absolute h-4 w-4 transition-all duration-150",
-              open ? "rotate-90 opacity-100" : "opacity-0 group-hover/exp:opacity-100",
+              "absolute h-4 w-4 opacity-0 transition-all duration-150 group-hover/exp:opacity-100",
+              open && "rotate-90",
             )}
           />
         </button>

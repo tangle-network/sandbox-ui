@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  harnessHonorsEffort,
+  harnessHonorsModel,
   type ModelReasoningCapability,
   type ReasoningEffort,
   reasoningEffortsFor,
@@ -160,6 +162,20 @@ interface HarnessDropdownProps extends AgentSessionHarnessControl {
   avoidCollisions?: boolean;
 }
 
+/**
+ * A short note for a harness that drops one or both per-turn selectors, so the picker can warn
+ * before it's chosen (rather than silently ignoring the user's model/effort pick). `null` when the
+ * harness honors both. Driven by agent-interface's `harnessHonorsModel`/`harnessHonorsEffort`.
+ */
+function selectorIgnoreNote(harness: HarnessType): string | null {
+  const ignoresModel = !harnessHonorsModel(harness);
+  const ignoresEffort = !harnessHonorsEffort(harness);
+  if (ignoresModel && ignoresEffort) return "Ignores model & effort";
+  if (ignoresModel) return "Ignores model selection";
+  if (ignoresEffort) return "Ignores reasoning effort";
+  return null;
+}
+
 function HarnessDropdown({
   value,
   onChange,
@@ -244,6 +260,11 @@ function HarnessDropdown({
                     {option.description}
                   </span>
                 )}
+                {selectorIgnoreNote(option.type) && (
+                  <span className="mt-0.5 inline-flex w-fit items-center rounded border border-[var(--md3-outline-variant)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {selectorIgnoreNote(option.type)}
+                  </span>
+                )}
               </span>
             </DropdownMenu.Item>
           ))}
@@ -312,6 +333,12 @@ export function AgentSessionControls({
   const restrictModelsToHarness = Boolean(
     harness && (harness.locked || filterModelsToHarness),
   );
+
+  // Whether the SELECTED harness honors each per-turn selector. A harness that
+  // drops one (amp ignores both; openclaw/nanoclaw the model; etc.) gets its
+  // now-inert picker disabled — never present a live-looking dead control.
+  const selectorHonorsModel = !harness || harnessHonorsModel(harness.value);
+  const selectorHonorsEffort = !harness || harnessHonorsEffort(harness.value);
 
   // Re-clamp the reasoning effort into the set the (harness, model) pair supports
   // whenever that pair changes, so the picker's label can never disagree with the
@@ -419,7 +446,11 @@ export function AgentSessionControls({
       loading={model.loading}
       popular={model.popular}
       recents={model.recents}
-      disabled={model.disabled || (visibleModels ?? []).length === 0}
+      disabled={
+        model.disabled ||
+        (visibleModels ?? []).length === 0 ||
+        !selectorHonorsModel
+      }
       side={layout === "gear" ? undefined : "bottom"}
       avoidCollisions={avoidCollisions}
     />
@@ -432,7 +463,7 @@ export function AgentSessionControls({
       value={reasoning.value}
       onChange={reasoning.onChange}
       options={reasoning.options}
-      disabled={reasoning.disabled}
+      disabled={reasoning.disabled || !selectorHonorsEffort}
       // Smart switch: show only the reasoning levels the selected (harness, model) pair supports —
       // the harness clamp (codex caps high, cli-base only `none`, claude full) intersected with the
       // model's own capability. Driven entirely by agent-interface's `reasoningEffortsFor`.

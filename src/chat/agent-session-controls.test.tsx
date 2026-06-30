@@ -328,3 +328,66 @@ describe("AgentSessionControls — reasoning effort re-clamp", () => {
     expect(onEffortChange).not.toHaveBeenCalled();
   });
 });
+
+describe("AgentSessionControls — harnesses that ignore selectors", () => {
+  const MODELS = [{ id: "openai/gpt-5", name: "GPT-5", _provider: "openai" }];
+
+  it("marks ignore-both harnesses in the dropdown (amp, nanoclaw)", async () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "opencode", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    // amp + nanoclaw drop both selectors → flagged, not silently offered.
+    expect(await screen.findByText("AMP")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/ignores model & effort/i).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("marks effort-only ignore harnesses (factory-droids / hermes honor model, drop effort)", async () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "opencode", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    expect(
+      screen.getAllByText(/ignores reasoning effort/i).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("disables the model + effort pickers when the selected harness ignores them", () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "amp", onChange: () => {} }}
+        model={{ value: "openai/gpt-5", onChange: () => {}, models: MODELS }}
+        reasoning={{ value: "high", onChange: () => {} }}
+      />,
+    );
+    // amp drops both — neither picker pretends to be live.
+    expect(screen.getByRole("button", { name: /reasoning level/i })).toBeDisabled();
+    // The model pill renders the model name; its trigger is disabled.
+    expect(screen.getByText("GPT-5").closest("button")).toBeDisabled();
+  });
+
+  it("keeps the effort picker live but disables the model picker for an ignore-model harness", () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "openclaw", onChange: () => {} }}
+        model={{ value: "openai/gpt-5", onChange: () => {}, models: MODELS }}
+        reasoning={{ value: "high", onChange: () => {} }}
+      />,
+    );
+    // openclaw drops the model but honors effort.
+    expect(screen.getByText("GPT-5").closest("button")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /reasoning level/i }),
+    ).not.toBeDisabled();
+  });
+});

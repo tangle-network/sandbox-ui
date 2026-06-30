@@ -1,6 +1,14 @@
 "use client";
 
-import { ArrowUp, Loader2 } from "lucide-react";
+import {
+  ArrowUp,
+  Folder,
+  Loader2,
+  Paperclip,
+  Square,
+  Upload,
+  X,
+} from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
 import {
@@ -11,6 +19,17 @@ import {
   type AgentSessionReasoningControl,
 } from "./agent-session-controls";
 
+/** A staged attachment shown as a chip above the input. */
+export interface ComposerFile {
+  id: string;
+  name: string;
+  size?: number;
+  kind: "file" | "folder";
+  /** File count for a folder chip. */
+  fileCount?: number;
+  status: "pending" | "uploading" | "ready" | "error";
+}
+
 export interface AgentComposerProps {
   /** Composer text (controlled). */
   value: string;
@@ -18,10 +37,15 @@ export interface AgentComposerProps {
   /** Fired on Enter (without Shift) or the send button. */
   onSubmit: () => void;
   placeholder?: string;
-  /** Disables typing and sending — e.g. while a turn is streaming. */
+  /** Disables typing and sending — e.g. while restoring. */
   disabled?: boolean;
-  /** Spins the send button and blocks submit, without disabling the textarea. */
+  /**
+   * A turn is in flight. Spins the send button; paired with `onCancel` it
+   * becomes a Stop button instead, so the user can interrupt the stream.
+   */
   busy?: boolean;
+  /** Stop the in-flight turn. With `busy`, replaces send with a Stop button. */
+  onCancel?: () => void;
   /**
    * Agent backend. Present → sandbox-backed (the harness pill shows and snaps
    * with the model); omitted → router-backed (no harness, just model/effort).
@@ -33,8 +57,31 @@ export interface AgentComposerProps {
   reasoning?: AgentSessionReasoningControl;
   /** Forwarded to the control strip (chat hides shell-only harnesses). */
   context?: "chat" | "all";
+  /**
+   * Override the built-in control strip with custom controls. When set, the
+   * `harness`/`profile`/`model`/`reasoning` props are ignored and this node is
+   * rendered in the control row instead — for apps that compose their own
+   * pickers. Omit to use the canonical strip.
+   */
+  controls?: React.ReactNode;
   /** Extra content left of the send button (token meter, cost, status). */
   trailing?: React.ReactNode;
+
+  /**
+   * Attachments are opt-in: pass `onAttach` to show the attach button, accept
+   * drag-and-drop onto the composer, and render `attachments` as chips.
+   */
+  onAttach?: (files: FileList) => void;
+  /** Show a folder-attach button; falls back to `onAttach` if unset. */
+  onAttachFolder?: (files: FileList) => void;
+  attachments?: ReadonlyArray<ComposerFile>;
+  onRemoveFile?: (id: string) => void;
+  accept?: string;
+  dropTitle?: string;
+  dropDescription?: string;
+
+  /** Cmd/Ctrl+L focuses the input and shows a hint. Default false. */
+  focusShortcut?: boolean;
   /** Minimum textarea rows before it grows. Default 2. */
   minRows?: number;
   /** Max pixel height before the textarea scrolls. Default 200. */
@@ -51,6 +98,11 @@ export interface AgentComposerProps {
  * snap the harness↔model pair automatically; which controls appear is driven
  * purely by which control objects are passed, so the same component is the
  * router-backed composer (no harness) and the sandbox-backed one (with harness).
+ *
+ * Opt-in extras make it the superset of every app's hand-rolled composer:
+ * file/folder attachments with drag-and-drop + chips, a streaming Stop button
+ * (`busy` + `onCancel`), a `controls` override slot for bespoke picker rows, and
+ * a Cmd/Ctrl+L focus shortcut.
  */
 export function AgentComposer({
   value,
@@ -59,12 +111,22 @@ export function AgentComposer({
   placeholder = "Send a message…",
   disabled,
   busy,
+  onCancel,
   harness,
   profile,
   model,
   reasoning,
   context = "chat",
+  controls,
   trailing,
+  onAttach,
+  onAttachFolder,
+  attachments = [],
+  onRemoveFile,
+  accept,
+  dropTitle = "Drop files to add context",
+  dropDescription = "They attach to your next message.",
+  focusShortcut = false,
   minRows = 2,
   maxHeight = 200,
   className,
@@ -72,6 +134,10 @@ export function AgentComposer({
   autoFocus,
 }: AgentComposerProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const folderInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [dragOver, setDragOver] = React.useState(false);
+  const dragDepth = React.useRef(0);
 
   const resize = React.useCallback(
     (el: HTMLTextAreaElement) => {
@@ -87,6 +153,19 @@ export function AgentComposer({
     if (textareaRef.current) resize(textareaRef.current);
   }, [value, resize]);
 
+  // Cmd/Ctrl+L focuses the composer from anywhere, matching the advertised hint.
+  React.useEffect(() => {
+    if (!focusShortcut || disabled) return;
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        textareaRef.current?.focus();
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [focusShortcut, disabled]);
+
   const canSend = !disabled && !busy && value.trim().length > 0;
 
   const submit = () => {
@@ -94,70 +173,262 @@ export function AgentComposer({
     onSubmit();
   };
 
+  const dropEnabled = Boolean(onAttach);
+
+  const handleDragEnter = (event: React.DragEvent) => {
+    if (!dropEnabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepth.current++;
+    if (event.dataTransfer?.types.includes("Files")) setDragOver(true);
+  };
+  const handleDragLeave = (event: React.DragEvent) => {
+    if (!dropEnabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepth.current--;
+    if (dragDepth.current <= 0) {
+      dragDepth.current = 0;
+      setDragOver(false);
+    }
+  };
+  const handleDragOver = (event: React.DragEvent) => {
+    if (!dropEnabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  };
+  const handleDrop = (event: React.DragEvent) => {
+    if (!dropEnabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepth.current = 0;
+    setDragOver(false);
+    const files = event.dataTransfer?.files;
+    if (files?.length) onAttach?.(files);
+  };
+
+  const folderChips = attachments.filter((file) => file.kind === "folder");
+  const fileChips = attachments.filter((file) => file.kind !== "folder");
+
+  const attachButtonClass = cn(
+    "flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors",
+    "hover:bg-surface-container-highest hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+    "disabled:cursor-not-allowed disabled:opacity-50",
+  );
+
   return (
-    <div
-      data-testid="agent-composer"
-      className={cn(
-        "flex flex-col gap-2 rounded-2xl border border-[var(--md3-outline-variant)] bg-surface-container-high p-2.5 shadow-sm transition-colors",
-        "focus-within:border-primary/60",
-        disabled && "opacity-60",
-        className,
+    <div className={cn("relative", className)}>
+      {dragOver && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-primary/50 bg-surface-container-high/95">
+          <div className="text-center">
+            <span className="mx-auto mb-2 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Upload className="size-5" />
+            </span>
+            <p className="font-semibold text-foreground text-sm">{dropTitle}</p>
+            <p className="mt-0.5 text-muted-foreground text-xs">
+              {dropDescription}
+            </p>
+          </div>
+        </div>
       )}
-    >
-      <textarea
-        ref={textareaRef}
-        rows={minRows}
-        value={value}
-        disabled={disabled}
-        autoFocus={autoFocus}
-        onChange={(event) => onChange(event.target.value)}
-        onInput={(event) => resize(event.currentTarget)}
-        onKeyDown={(event) => {
-          if (
-            event.key === "Enter" &&
-            !event.shiftKey &&
-            !event.nativeEvent.isComposing &&
-            event.keyCode !== 229
-          ) {
-            event.preventDefault();
-            submit();
-          }
-        }}
-        placeholder={placeholder}
+
+      <div
+        data-testid="agent-composer"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
         className={cn(
-          "w-full resize-none bg-transparent px-2 py-1 text-sm leading-relaxed text-foreground outline-none",
-          "placeholder:text-muted-foreground",
+          "flex flex-col gap-2 rounded-2xl border border-[var(--md3-outline-variant)] bg-surface-container-high p-2.5 shadow-sm transition-colors",
+          "focus-within:border-primary/60",
+          disabled && "opacity-60",
         )}
-      />
-      <div className="flex items-end gap-2">
-        <AgentSessionControls
-          className="min-w-0 flex-1"
-          context={context}
-          harness={harness}
-          profile={profile}
-          model={model}
-          reasoning={reasoning}
-        />
-        {trailing && (
-          <div className="flex shrink-0 items-center gap-2">{trailing}</div>
+      >
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {[...folderChips, ...fileChips].map((file) => (
+              <span
+                key={file.id}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs",
+                  file.status === "error"
+                    ? "border-[var(--status-error,#ff4d6d)]/40 text-[var(--status-error,#ff4d6d)]"
+                    : "border-[var(--md3-outline-variant)] bg-surface-container text-foreground",
+                )}
+              >
+                {file.kind === "folder" ? (
+                  <Folder className="size-3 shrink-0" />
+                ) : (
+                  <Paperclip className="size-3 shrink-0" />
+                )}
+                <span className="max-w-[150px] truncate">{file.name}</span>
+                {file.fileCount !== undefined && (
+                  <span className="text-muted-foreground">
+                    ({file.fileCount})
+                  </span>
+                )}
+                {file.status === "uploading" && (
+                  <Loader2 className="size-3 animate-spin" />
+                )}
+                {onRemoveFile && (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${file.name}`}
+                    onClick={() => onRemoveFile(file.id)}
+                    className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
         )}
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!canSend}
-          aria-label={sendLabel}
+
+        <textarea
+          ref={textareaRef}
+          rows={minRows}
+          value={value}
+          disabled={disabled}
+          autoFocus={autoFocus}
+          onChange={(event) => onChange(event.target.value)}
+          onInput={(event) => resize(event.currentTarget)}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing &&
+              event.keyCode !== 229
+            ) {
+              event.preventDefault();
+              submit();
+            }
+          }}
+          placeholder={placeholder}
+          aria-label="Message input"
           className={cn(
-            "ml-auto flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground",
-            "transition-opacity hover:opacity-90 disabled:opacity-40",
+            "w-full resize-none bg-transparent px-2 py-1 text-sm leading-relaxed text-foreground outline-none",
+            "placeholder:text-muted-foreground",
           )}
-        >
-          {busy ? (
-            <Loader2 className="size-4 animate-spin" />
+        />
+
+        <div className="flex items-end gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {controls ?? (
+              <AgentSessionControls
+                context={context}
+                harness={harness}
+                profile={profile}
+                model={model}
+                reasoning={reasoning}
+              />
+            )}
+          </div>
+
+          {onAttach && (
+            <>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled}
+                aria-label="Attach files"
+                title="Attach files"
+                className={attachButtonClass}
+              >
+                <Paperclip className="size-4" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                accept={accept}
+                onChange={(event) => {
+                  if (event.target.files?.length) onAttach(event.target.files);
+                  event.target.value = "";
+                }}
+              />
+            </>
+          )}
+          {onAttachFolder && (
+            <>
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                disabled={disabled}
+                aria-label="Attach folder"
+                title="Attach folder"
+                className={attachButtonClass}
+              >
+                <Folder className="size-4" />
+              </button>
+              <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(event) => {
+                  if (event.target.files?.length)
+                    (onAttachFolder ?? onAttach)?.(event.target.files);
+                  event.target.value = "";
+                }}
+                {...({ webkitdirectory: "" } as Record<string, string>)}
+              />
+            </>
+          )}
+
+          {trailing && (
+            <div className="flex shrink-0 items-center gap-2">{trailing}</div>
+          )}
+
+          {busy && onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              aria-label="Stop response"
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-full",
+                "bg-[var(--status-error,#ff4d6d)]/15 text-[var(--status-error,#ff4d6d)] transition-colors",
+                "hover:bg-[var(--status-error,#ff4d6d)]/25",
+              )}
+            >
+              <Square className="size-3.5 fill-current" />
+            </button>
           ) : (
-            <ArrowUp className="size-4" />
+            <button
+              type="button"
+              onClick={submit}
+              disabled={!canSend}
+              aria-label={sendLabel}
+              className={cn(
+                "flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground",
+                "transition-opacity hover:opacity-90 disabled:opacity-40",
+              )}
+            >
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ArrowUp className="size-4" />
+              )}
+            </button>
           )}
-        </button>
+        </div>
       </div>
+
+      {focusShortcut && (
+        <div className="mt-1.5 flex justify-end px-1">
+          <span className="text-muted-foreground text-xs">
+            <kbd className="rounded border border-[var(--md3-outline-variant)] bg-surface-container px-1 py-0.5 text-[10px]">
+              Cmd
+            </kbd>
+            <kbd className="ml-0.5 rounded border border-[var(--md3-outline-variant)] bg-surface-container px-1 py-0.5 text-[10px]">
+              L
+            </kbd>
+            <span className="ml-1">to focus</span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }

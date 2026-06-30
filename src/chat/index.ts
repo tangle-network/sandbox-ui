@@ -45,6 +45,7 @@ export {
 export {
   AgentComposer,
   type AgentComposerProps,
+  type ComposerFile,
 } from "./agent-composer";
 
 export {

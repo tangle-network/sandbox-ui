@@ -253,4 +253,78 @@ describe("AgentSessionControls — harness/model coupling", () => {
     await userEvent.click(screen.getByText("Claude Opus 4.8"));
     expect(screen.queryByText("GPT-5.5")).not.toBeInTheDocument();
   });
+
+  it("filterModelsToHarness restricts the catalog WITHOUT locking the harness dropdown", async () => {
+    render(
+      <AgentSessionControls
+        filterModelsToHarness
+        harness={{ value: "claude-code", onChange: () => {} }}
+        model={{
+          value: "anthropic/claude-opus-4-8",
+          onChange: () => {},
+          models: COUPLING_MODELS,
+        }}
+      />,
+    );
+    // Unlike `locked`, the harness trigger stays interactive.
+    expect(
+      screen.getByRole("button", { name: /agent harness/i }),
+    ).not.toBeDisabled();
+    // But the catalog is filtered to the harness: the OpenAI entry is hidden.
+    await userEvent.click(screen.getByText("Claude Opus 4.8"));
+    expect(screen.queryByText("GPT-5.5")).not.toBeInTheDocument();
+  });
+});
+
+describe("AgentSessionControls — reasoning effort re-clamp", () => {
+  const COUPLING_MODELS = [
+    { id: "openai/gpt-5.5", name: "GPT-5.5", _provider: "openai" },
+    {
+      id: "anthropic/claude-opus-4-8",
+      name: "Claude Opus 4.8",
+      _provider: "anthropic",
+    },
+  ];
+
+  it("snaps a too-high effort down when switching to a lower-ceiling harness", async () => {
+    const onEffortChange = vi.fn();
+    render(
+      <AgentSessionControls
+        harness={{ value: "claude-code", onChange: () => {} }}
+        model={{
+          value: "anthropic/claude-opus-4-8",
+          onChange: () => {},
+          models: COUPLING_MODELS,
+        }}
+        reasoning={{ value: "ultracode", onChange: onEffortChange }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    // codex caps at `high` — `ultracode` is snapped down, never left dangling.
+    await userEvent.click(await screen.findByText("Codex"));
+    expect(onEffortChange).toHaveBeenCalledWith("high");
+  });
+
+  it("leaves the effort untouched when the new harness still supports it", async () => {
+    const onEffortChange = vi.fn();
+    render(
+      <AgentSessionControls
+        harness={{ value: "codex", onChange: () => {} }}
+        model={{
+          value: "openai/gpt-5.5",
+          onChange: () => {},
+          models: COUPLING_MODELS,
+        }}
+        reasoning={{ value: "low", onChange: onEffortChange }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    // opencode supports `low` → no re-clamp fires.
+    await userEvent.click(await screen.findByText("OpenCode"));
+    expect(onEffortChange).not.toHaveBeenCalled();
+  });
 });

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.64.0
+
+### Dashboard
+
+- `RailExpandableSubItem` gains an optional `actions` array that renders a
+  hover-revealed kebab menu on labeled-rail rows (e.g. rename/delete); the
+  collapsed-rail flyout keeps plain links and is unaffected (#156).
+- The `emphasis` "view all" sub-item is now a quiet padded accent link
+  (underline on hover) instead of a filled pill, sitting inline with the other
+  rows (#156).
+- The `isLoading` indicator drops the trailing three-dot ellipsis; the
+  gradient-shimmer label is strengthened and is now the sole "responding" cue,
+  still respecting `prefers-reduced-motion` (#156).
+
 ## 0.63.0
 
 ### Dashboard

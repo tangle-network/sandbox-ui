@@ -682,6 +682,8 @@ export interface RailExpandableSubItem {
   icon?: React.ComponentType<{ className?: string }>
   href: string
   prefetch?: "none" | "intent" | "render" | "viewport"
+  /** Show a live working indicator on the row while the item is busy. */
+  isLoading?: boolean
 }
 
 export interface RailExpandableProps {
@@ -795,14 +797,26 @@ export function RailExpandable({
         onClick={onNavigate}
         {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
         className={cn(
-          "flex h-8 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
+          "flex h-8 min-w-0 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
           active
             ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
             : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         )}
       >
         {FIcon ? <FIcon className="h-4 w-4 shrink-0" /> : null}
-        <span className="truncate">{item.label}</span>
+        <span
+          className={cn("min-w-0 flex-1 truncate", item.isLoading && "shimmer-text")}
+          {...(item.isLoading ? { role: "status", "aria-label": "Agent responding" } : {})}
+        >
+          {item.label}
+        </span>
+        {item.isLoading ? (
+          <span className="responding-ellipsis" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        ) : null}
       </Link>
     )
   }

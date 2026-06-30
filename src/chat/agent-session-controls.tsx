@@ -8,7 +8,7 @@ import {
   reasoningEffortsFor,
 } from "@tangle-network/agent-interface";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, Lock, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, Lock, Plus, SlidersHorizontal } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
 import {
@@ -53,8 +53,21 @@ export interface AgentSessionHarnessControl {
    * switch harness.
    */
   locked?: boolean;
-  /** Tooltip shown on the locked trigger. */
+  /** Tooltip shown on the locked trigger when no `onNewChat` is provided. */
   lockReason?: string;
+  /**
+   * Fork action for a locked harness. When provided, the locked trigger turns
+   * into an informative chip: hover or tap opens a small popover explaining the
+   * lock and offering a button that calls this to start a fresh session. When
+   * omitted, the locked trigger stays a plain inert button with `lockReason`.
+   */
+  onNewChat?: () => void;
+  /** Popover heading. Defaults to `Agent fixed to {harness} for this conversation.` */
+  lockTitle?: React.ReactNode;
+  /** Popover sub-line. Defaults to "Conversations stay on one agent." */
+  lockBody?: React.ReactNode;
+  /** Fork button label. Defaults to "New chat to switch agent". */
+  newChatLabel?: string;
 }
 
 export interface AgentSessionModelControl {
@@ -176,6 +189,124 @@ function selectorIgnoreNote(harness: HarnessType): string | null {
   return null;
 }
 
+function useClickOutside<T extends HTMLElement>(onOutside: () => void) {
+  const ref = React.useRef<T | null>(null);
+  React.useEffect(() => {
+    function handler(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        onOutside();
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onOutside]);
+  return ref;
+}
+
+/**
+ * Locked-harness trigger that explains the lock and offers a fork. The harness
+ * is bound to its chat session once a conversation has started, so rather than a
+ * silent dead control the chip stays visibly locked but reveals — on hover or
+ * tap — why it's fixed and a button to start a fresh session on another harness.
+ */
+function InformativeLock({
+  label,
+  lockTitle,
+  lockBody,
+  newChatLabel,
+  onNewChat,
+}: {
+  label: string;
+  lockTitle?: React.ReactNode;
+  lockBody?: React.ReactNode;
+  newChatLabel?: string;
+  onNewChat: () => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
+
+  const cancelClose = React.useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, []);
+  const scheduleClose = React.useCallback(() => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 150);
+  }, [cancelClose]);
+  React.useEffect(() => cancelClose, [cancelClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="relative inline-flex"
+      onMouseEnter={() => {
+        cancelClose();
+        setOpen(true);
+      }}
+      onMouseLeave={scheduleClose}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        data-state={open ? "open" : "closed"}
+        aria-label="Agent harness (locked)"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5",
+          "text-xs font-medium text-foreground shadow-sm transition-colors",
+          "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
+        )}
+      >
+        <Lock className="h-3 w-3 text-muted-foreground" />
+        <span>{label}</span>
+      </button>
+
+      {open && (
+        <div
+          role="dialog"
+          className={cn(
+            "absolute bottom-full left-0 z-50 mb-2 w-72 rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-3",
+            "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+          )}
+        >
+          <p className="flex items-start gap-2 text-sm font-medium text-foreground">
+            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span>
+              {lockTitle ?? `Agent fixed to ${label} for this conversation.`}
+            </span>
+          </p>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {lockBody ?? "Conversations stay on one agent."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onNewChat();
+            }}
+            className={cn(
+              "mt-3 flex w-full items-center justify-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium text-foreground",
+              "bg-primary/10 ring-1 ring-inset ring-primary/25 transition-colors",
+              "hover:bg-primary/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            )}
+          >
+            <Plus className="h-4 w-4" />
+            {newChatLabel ?? "New chat to switch agent"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HarnessDropdown({
   value,
   onChange,
@@ -183,6 +314,10 @@ function HarnessDropdown({
   disabled,
   locked,
   lockReason,
+  onNewChat,
+  lockTitle,
+  lockBody,
+  newChatLabel,
   side = "bottom",
   align = "start",
   avoidCollisions,
@@ -192,6 +327,20 @@ function HarnessDropdown({
   );
   const options = HARNESS_OPTIONS.filter((h) => allowed.has(h.type));
   const selected = options.find((option) => option.type === value);
+
+  // A locked harness with a fork action becomes the informative-lock chip;
+  // without one it falls back to the bare inert trigger below.
+  if (locked && onNewChat) {
+    return (
+      <InformativeLock
+        label={selected?.label ?? value}
+        lockTitle={lockTitle}
+        lockBody={lockBody}
+        newChatLabel={newChatLabel}
+        onNewChat={onNewChat}
+      />
+    );
+  }
 
   return (
     <DropdownMenu.Root>

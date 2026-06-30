@@ -254,6 +254,34 @@ describe("AgentSessionControls — harness/model coupling", () => {
     expect(screen.queryByText("GPT-5.5")).not.toBeInTheDocument();
   });
 
+  it("locked harness with onNewChat shows an informative popover and fires the fork action", async () => {
+    const onNewChat = vi.fn();
+    render(
+      <AgentSessionControls
+        harness={{
+          value: "claude-code",
+          onChange: () => {},
+          locked: true,
+          lockReason: "Harness is locked to this session",
+          onNewChat,
+        }}
+      />,
+    );
+    // The informative variant is interactive (not a dead disabled control).
+    const trigger = screen.getByRole("button", { name: /agent harness/i });
+    expect(trigger).not.toBeDisabled();
+
+    await userEvent.click(trigger);
+    expect(
+      await screen.findByText(/fixed to Claude Code for this conversation/i),
+    ).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /new chat to switch agent/i }),
+    );
+    expect(onNewChat).toHaveBeenCalledTimes(1);
+  });
+
   it("filterModelsToHarness restricts the catalog WITHOUT locking the harness dropdown", async () => {
     render(
       <AgentSessionControls

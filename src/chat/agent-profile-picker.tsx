@@ -3,6 +3,7 @@
 import { Bot, Check, ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
+import { useClickOutside } from "../lib/use-click-outside";
 
 /**
  * An agent profile: a named bundle of toolset + persona layered over the same
@@ -58,20 +59,6 @@ export interface AgentProfilePickerProps {
   className?: string;
   /** Side the menu opens toward. Defaults to up (composer-anchored). */
   side?: "top" | "bottom";
-}
-
-function useClickOutside<T extends HTMLElement>(onOutside: () => void) {
-  const ref = React.useRef<T | null>(null);
-  React.useEffect(() => {
-    function handler(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        onOutside();
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onOutside]);
-  return ref;
 }
 
 function profileSubtitle(profile: AgentProfileOption): string {

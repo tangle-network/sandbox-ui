@@ -1,6 +1,12 @@
 "use client";
 
-import { type ReasoningEffort, reasoningEffortsFor } from "@tangle-network/agent-interface";
+import {
+  harnessHonorsEffort,
+  harnessHonorsModel,
+  type ModelReasoningCapability,
+  type ReasoningEffort,
+  reasoningEffortsFor,
+} from "@tangle-network/agent-interface";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown, Lock, SlidersHorizontal } from "lucide-react";
 import * as React from "react";
@@ -22,6 +28,7 @@ import {
   snapModelToHarness,
 } from "./harness-model-compat";
 import {
+  clampReasoningLevel,
   ReasoningLevelPicker,
   type ReasoningLevel,
   type ReasoningLevelOption,
@@ -106,6 +113,16 @@ export interface AgentSessionControlsProps {
   model?: AgentSessionModelControl;
   /** Thinking-effort level applied to subsequent turns. */
   reasoning?: AgentSessionReasoningControl;
+  /**
+   * Restrict the model catalog to what the selected harness can actually run,
+   * the same way `harness.locked` does — but WITHOUT locking the harness
+   * dropdown. Off by default: the strip shows every model and picking an
+   * incompatible one snaps the harness to the model's native backend. Turn it
+   * ON for a harness-first surface (e.g. a workspace-wide, sandbox-bound
+   * harness) where that silent backend swap is undesirable — an incompatible
+   * model is then simply not offered.
+   */
+  filterModelsToHarness?: boolean;
   /** Right-aligned extra content (token meter, cost, status). */
   trailing?: React.ReactNode;
   className?: string;
@@ -143,6 +160,20 @@ interface HarnessDropdownProps extends AgentSessionHarnessControl {
   align?: DropdownMenu.DropdownMenuContentProps["align"];
   /** Let Radix flip the menu when it would overflow. Defaults to true. */
   avoidCollisions?: boolean;
+}
+
+/**
+ * A short note for a harness that drops one or both per-turn selectors, so the picker can warn
+ * before it's chosen (rather than silently ignoring the user's model/effort pick). `null` when the
+ * harness honors both. Driven by agent-interface's `harnessHonorsModel`/`harnessHonorsEffort`.
+ */
+function selectorIgnoreNote(harness: HarnessType): string | null {
+  const ignoresModel = !harnessHonorsModel(harness);
+  const ignoresEffort = !harnessHonorsEffort(harness);
+  if (ignoresModel && ignoresEffort) return "Ignores model & effort";
+  if (ignoresModel) return "Ignores model selection";
+  if (ignoresEffort) return "Ignores reasoning effort";
+  return null;
 }
 
 function HarnessDropdown({
@@ -229,6 +260,11 @@ function HarnessDropdown({
                     {option.description}
                   </span>
                 )}
+                {selectorIgnoreNote(option.type) && (
+                  <span className="mt-0.5 inline-flex w-fit items-center rounded border border-[var(--md3-outline-variant)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {selectorIgnoreNote(option.type)}
+                  </span>
+                )}
               </span>
             </DropdownMenu.Item>
           ))}
@@ -236,6 +272,25 @@ function HarnessDropdown({
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
   );
+}
+
+/**
+ * What the catalog knows about a model's own reasoning capability, shaped for
+ * `reasoningEffortsFor`. Returns null for an unknown / unselected model (no
+ * refinement — the harness clamp alone applies).
+ */
+function modelReasoningCapability(
+  models: ReadonlyArray<ModelInfo> | undefined,
+  canonicalId: string | undefined,
+): ModelReasoningCapability | null {
+  if (!models || !canonicalId) return null;
+  const entry = models.find((m) => canonicalModelId(m) === canonicalId);
+  return entry
+    ? {
+        supportsReasoning: entry.supportsReasoning,
+        maxEffort: entry.maxReasoningEffort,
+      }
+    : null;
 }
 
 /**
@@ -247,8 +302,13 @@ function HarnessDropdown({
  * coherent automatically (see harness-model-compat): picking a harness
  * snaps an incompatible model to that harness's best catalog option;
  * picking a model the current harness can't run switches to the model's
- * native harness — unless the harness is `locked`, in which case the
- * catalog itself is filtered to compatible models.
+ * native harness — unless the catalog is restricted to the harness (when
+ * `locked`, or the consumer sets `filterModelsToHarness`), in which case the
+ * incompatible model is never offered and no swap happens.
+ *
+ * When a reasoning control is also present, the effort is re-clamped into the
+ * set the new (harness, model) pair supports on every harness/model change, so
+ * the effort picker's label never disagrees with the value actually in effect.
  *
  * Designed to slot into `SandboxWorkbench`'s `session.composerControls`.
  */
@@ -257,6 +317,7 @@ export function AgentSessionControls({
   profile,
   model,
   reasoning,
+  filterModelsToHarness,
   trailing,
   className,
   context = "chat",
@@ -265,24 +326,65 @@ export function AgentSessionControls({
 }: AgentSessionControlsProps) {
   if (!harness && !profile && !model && !reasoning && !trailing) return null;
 
+  // Filter the catalog to the harness when locked (harness bound to a started
+  // session) or when the consumer opts in via `filterModelsToHarness`. In that
+  // mode an incompatible model is never offered, so picking one can't silently
+  // swap the harness.
+  const restrictModelsToHarness = Boolean(
+    harness && (harness.locked || filterModelsToHarness),
+  );
+
+  // Whether the SELECTED harness honors each per-turn selector. A harness that
+  // drops one (amp ignores both; openclaw/nanoclaw the model; etc.) gets its
+  // now-inert picker disabled — never present a live-looking dead control.
+  const selectorHonorsModel = !harness || harnessHonorsModel(harness.value);
+  const selectorHonorsEffort = !harness || harnessHonorsEffort(harness.value);
+
+  // Re-clamp the reasoning effort into the set the (harness, model) pair supports
+  // whenever that pair changes, so the picker's label can never disagree with the
+  // value actually in effect (e.g. a stale `ultracode` after switching to codex).
+  // Only the sandbox (harness) path is clamped; router-mode effort is its own concern.
+  const clampEffort = (
+    harnessValue: HarnessType,
+    modelId: string | undefined,
+  ) => {
+    if (!reasoning) return;
+    const available = reasoningEffortsFor(
+      harnessValue,
+      modelReasoningCapability(model?.models, modelId),
+    );
+    const clamped = clampReasoningLevel(reasoning.value, available);
+    if (clamped !== reasoning.value) reasoning.onChange(clamped);
+  };
+
   const handleHarnessChange = (next: HarnessType) => {
     harness?.onChange(next);
+    let nextModelId = model?.value;
     if (model) {
       const snapped = snapModelToHarness(next, model.value, model.models);
-      if (snapped !== model.value) model.onChange(snapped);
+      if (snapped !== model.value) {
+        model.onChange(snapped);
+        nextModelId = snapped;
+      }
     }
+    clampEffort(next, nextModelId);
   };
 
   const handleModelChange = (nextModelId: string) => {
     model?.onChange(nextModelId);
-    if (harness && !harness.locked) {
+    let nextHarness = harness?.value;
+    if (harness && !restrictModelsToHarness) {
       const snapped = snapHarnessToModel(harness.value, nextModelId);
-      if (snapped !== harness.value) harness.onChange(snapped);
+      if (snapped !== harness.value) {
+        harness.onChange(snapped);
+        nextHarness = snapped;
+      }
     }
+    if (nextHarness) clampEffort(nextHarness, nextModelId);
   };
 
   const visibleModels =
-    model && harness?.locked
+    model && restrictModelsToHarness && harness
       ? model.models.filter((entry) =>
           isModelCompatibleWithHarness(
             harness.value,
@@ -344,28 +446,24 @@ export function AgentSessionControls({
       loading={model.loading}
       popular={model.popular}
       recents={model.recents}
-      disabled={model.disabled || (visibleModels ?? []).length === 0}
+      disabled={
+        model.disabled ||
+        (visibleModels ?? []).length === 0 ||
+        !selectorHonorsModel
+      }
       side={layout === "gear" ? undefined : "bottom"}
       avoidCollisions={avoidCollisions}
     />
   );
   // The selected model's reasoning capability (from the catalog) refines the harness clamp: a model
   // that doesn't reason collapses to `none`; a lower model ceiling caps the list there.
-  const selectedModel = model?.models.find(
-    (entry) => canonicalModelId(entry) === model.value,
-  );
-  const modelReasoning = selectedModel
-    ? {
-        supportsReasoning: selectedModel.supportsReasoning,
-        maxEffort: selectedModel.maxReasoningEffort,
-      }
-    : null;
+  const modelReasoning = modelReasoningCapability(model?.models, model?.value);
   const reasoningNode = reasoning && (
     <ReasoningLevelPicker
       value={reasoning.value}
       onChange={reasoning.onChange}
       options={reasoning.options}
-      disabled={reasoning.disabled}
+      disabled={reasoning.disabled || !selectorHonorsEffort}
       // Smart switch: show only the reasoning levels the selected (harness, model) pair supports —
       // the harness clamp (codex caps high, cli-base only `none`, claude full) intersected with the
       // model's own capability. Driven entirely by agent-interface's `reasoningEffortsFor`.

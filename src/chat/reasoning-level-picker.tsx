@@ -20,6 +20,27 @@ export type ReasoningLevel = "auto" | ReasoningEffort;
 export const REASONING_LADDER: ReadonlyArray<ReasoningEffort> = reasoningLadder;
 
 /**
+ * Snap a reasoning selection into the set a (harness, model) pair supports. The `auto` sentinel and
+ * any value already in `available` pass through unchanged; a value above the ceiling (a stale
+ * `ultracode` after switching to codex, say) snaps down to the highest still-available effort, so
+ * the picker's label can never disagree with the value actually in effect. With no capability set
+ * known (`available` omitted) the value is left untouched.
+ */
+export function clampReasoningLevel(
+  value: ReasoningLevel,
+  available: ReadonlyArray<ReasoningEffort> | undefined,
+): ReasoningLevel {
+  if (
+    value === "auto" ||
+    !available ||
+    available.includes(value as ReasoningEffort)
+  ) {
+    return value;
+  }
+  return available.length ? available[available.length - 1] : "auto";
+}
+
+/**
  * Proportional intensity meter. Auto shows a Sparkles glyph (no fixed depth);
  * every other level fills a fixed-width bar meter to its rank in the ladder, so
  * the rows read as an ascending scale regardless of how many levels exist.

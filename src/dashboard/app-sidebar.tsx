@@ -702,6 +702,8 @@ export interface RailExpandableProps {
   subItems?: RailExpandableSubItem[]
   /** Lazy sub-items — called once on first open; the result is cached. */
   loadSubItems?: () => Promise<RailExpandableSubItem[]>
+  /** Start expanded on mount (labeled rail). Defaults to collapsed. */
+  defaultOpen?: boolean
   /** Ids of sub-items whose route is active (drives sub-item highlight). */
   activeSubIds?: string[]
   /** Shown when the resolved sub-item list is empty. */
@@ -773,13 +775,16 @@ export function RailExpandable({
   loadSubItems,
   activeSubIds,
   emptyLabel = "Nothing here yet",
+  defaultOpen,
   onNavigate,
   LinkComponent,
   className,
 }: RailExpandableProps) {
   const Link = LinkComponent ?? DefaultLink
-  const [open, setOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(defaultOpen ?? false)
   const { items, loading, ensureLoaded } = useExpandableItems(subItems, loadSubItems)
+  // Start-open consumers still need lazy sub-items loaded without a manual toggle.
+  React.useEffect(() => { if (defaultOpen) ensureLoaded() }, [defaultOpen, ensureLoaded])
   const activeSet = React.useMemo(() => new Set(activeSubIds ?? []), [activeSubIds])
   // Collapsed-rail flyout is portaled to <body> (it must escape the rail's
   // scroll-overflow clipping), so it's positioned from the trigger's rect and

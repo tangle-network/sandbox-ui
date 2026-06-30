@@ -68,6 +68,8 @@ export interface SidebarLayoutNavItem {
   subActiveIds?: string[]
   /** Empty-state text for an `expandable` item that resolves to no sub-items. */
   emptyLabel?: string
+  /** Start an `expandable` item expanded on mount (labeled rail). */
+  defaultOpen?: boolean
   badge?: number
   /**
    * React Router prefetch behavior for this link, forwarded to the underlying
@@ -275,6 +277,7 @@ function SidebarLayoutInner({
                       loadSubItems={item.loadSubItems}
                       activeSubIds={item.subActiveIds}
                       emptyLabel={item.emptyLabel}
+                      defaultOpen={item.defaultOpen}
                       onNavigate={handleNavClick}
                       LinkComponent={LinkComponent}
                     />

@@ -26,10 +26,6 @@
       "import": "./dist/chat.js",
       "types": "./dist/chat.d.ts"
     },
-    "./assistant": {
-      "import": "./dist/assistant.js",
-      "types": "./dist/assistant.d.ts"
-    },
     "./workflows": {
       "import": "./dist/workflows.js",
       "types": "./dist/workflows.d.ts"

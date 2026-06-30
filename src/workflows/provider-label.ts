@@ -1,8 +1,7 @@
 /**
- * Display label for a connector slug ("github" → "GitHub"). Kept in its own
- * module — separate from the graph model — so consumers in the always-loaded app
- * shell (e.g. ProposalIntegrations) can import the label without pulling the
- * `yaml` parser (a `model.ts` dependency) into the main bundle.
+ * Display label for a connector slug ("github" → "GitHub"). Separate from
+ * `model.ts` so consumers that only need the label avoid pulling the `yaml`
+ * parser (a `model.ts` dependency) into their bundle.
  */
 
 const PROVIDER_LABELS: Record<string, string> = {

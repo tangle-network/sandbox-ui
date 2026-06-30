@@ -1,9 +1,9 @@
 /**
  * Lazy + error-isolated boundary for {@link WorkflowGraph}. React Flow (~50KB)
  * is only needed on the workflow detail page and on workflow proposal cards, so
- * it's code-split out of the always-loaded app shell (the assistant dock lives
- * in `Layout`). The Suspense fallback keeps the caller's height so layout
- * doesn't jump; the error boundary degrades to the raw YAML if the chunk fails
+ * it's code-split out of the always-loaded app shell. The Suspense fallback
+ * keeps the caller's height so layout doesn't jump; the error boundary degrades
+ * to the raw YAML if the chunk fails
  * to load (offline) or React Flow throws, instead of crashing the panel tree.
  *
  * The chunk import auto-retries a transient failure (a flaky network or an

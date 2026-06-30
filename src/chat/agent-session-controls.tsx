@@ -11,6 +11,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown, Lock, Plus, SlidersHorizontal } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
+import { useClickOutside } from "../lib/use-click-outside";
 import {
   canonicalModelId,
   ModelPicker,
@@ -187,20 +188,6 @@ function selectorIgnoreNote(harness: HarnessType): string | null {
   if (ignoresModel) return "Ignores model selection";
   if (ignoresEffort) return "Ignores reasoning effort";
   return null;
-}
-
-function useClickOutside<T extends HTMLElement>(onOutside: () => void) {
-  const ref = React.useRef<T | null>(null);
-  React.useEffect(() => {
-    function handler(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        onOutside();
-      }
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onOutside]);
-  return ref;
 }
 
 /**

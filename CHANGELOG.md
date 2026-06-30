@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.63.0
+
+### Dashboard
+
+- Expandable rail rows keep their own icon at rest (open or collapsed); the
+  chevron now reveals only on hover, rotated down when open (#152).
+- `RailExpandableSubItem` gains an optional `emphasis` flag (bold + accent) for a
+  stand-out trailing action (e.g. a "view all" row), and sub-item rows are
+  tighter — height `h-8` → `h-7` (#152).
+- `RailExpandable` and `SidebarLayoutNavItem` gain an opt-in `defaultOpen` to
+  start an expandable item expanded on mount (#154).
+
+### Chat
+
+- A locked harness now shows an informative popover explaining the lock, with a
+  fork-to-switch action (#153).
+
 ## 0.61.0
 
 ### Dashboard

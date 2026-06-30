@@ -10,7 +10,6 @@ The single most important architectural fact: **this package is a thin bridge ov
 
 - `src/workspace` — `SandboxWorkbench`, `WorkspaceLayout`, directory/runtime/terminal panes, status bar, task board, approval queue
 - `src/dashboard` — `DashboardLayout`, sidebar rail, billing, usage charts, harness/model pickers, git/info panels
-- `src/assistant` — the portable in-app assistant/copilot (transport, panel, hooks, proposal card, workflow graph)
 - `src/integrations` — provider connection tiles + hooks
 - `src/workflows` — `WorkflowGraph` (xyflow-based, lazy-loaded)
 - `src/pages` — pre-built billing/pricing/profiles/secrets/provisioning pages
@@ -42,7 +41,7 @@ pnpm storybook       # storybook dev -p 6006
 Run a single test file or pattern:
 
 ```bash
-pnpm vitest run src/assistant/reducer.test.ts
+pnpm vitest run src/workflows/model.test.ts
 pnpm vitest run -t "forwards to @tangle-network/ui"
 ```
 
@@ -68,7 +67,6 @@ Forgetting any one yields a build that "works" locally but fails to resolve for 
 ## Key runtime models
 
 - **Session model**: `useSdkSession` (in `@tangle-network/ui`, bridged via `/sdk-hooks` and `/hooks`) turns raw SDK / session-gateway events into the `{ messages, partMap }` shape that `ChatContainer` and `SandboxWorkbench` consume. This is the canonical adapter — see README usage example.
-- **Assistant transport is injected, not hardcoded** (`src/assistant/client.ts`): a host supplies `AssistantClientConfig` (`baseUrl`, `credentials`, `headers()`) to `createAssistantClient` / `AssistantClientProvider` so the same panel runs same-origin (cookie auth) or cross-origin (bearer token). When touching assistant networking, keep request shapes and defensive wire parsing host-independent; only base URL + auth headers should vary. `headers()` is called per-request so rotating tokens are read fresh.
 
 ## Testing conventions
 

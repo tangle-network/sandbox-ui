@@ -11,7 +11,7 @@
  */
 
 import { parse as parseYaml } from "yaml";
-import { providerLabel } from "../assistant/provider-label";
+import { providerLabel } from "./provider-label";
 
 export type WfNodeTone = "trigger" | "structural" | "action";
 

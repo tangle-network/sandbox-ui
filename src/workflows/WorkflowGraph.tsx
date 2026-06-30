@@ -34,7 +34,7 @@ import {
 } from "./model";
 import { buildFlowGraph, mergeRunState } from "./flow-graph";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
-import { providerLabel } from "../assistant/provider-label";
+import { providerLabel } from "./provider-label";
 import { ProviderIcon } from "../integrations/provider-logo";
 
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,

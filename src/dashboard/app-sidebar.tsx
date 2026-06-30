@@ -17,7 +17,7 @@ import {
 } from "@tangle-network/ui/primitives"
 import { Logo } from "../primitives"
 import { Skeleton, useTheme } from "@tangle-network/ui/primitives"
-import { Check, Monitor, PanelLeft } from "lucide-react"
+import { Check, Monitor, MoreHorizontal, PanelLeft } from "lucide-react"
 import {
   SIDEBAR_PANEL_WIDTH,
   useSidebar,
@@ -675,6 +675,16 @@ function ChevronRightIcon({ className }: { className?: string }) {
 // RailExpandable — nav item with sub-items (inline accordion / collapsed flyout)
 // ============================================================================
 
+/** A single entry in a sub-item's hover actions menu (kebab). */
+export interface RailSubItemAction {
+  id: string
+  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  /** Style the item as a destructive action (e.g. delete). */
+  destructive?: boolean
+  onSelect: () => void
+}
+
 /** A sub-destination revealed by a {@link RailExpandable} item. */
 export interface RailExpandableSubItem {
   id: string
@@ -687,6 +697,9 @@ export interface RailExpandableSubItem {
   /** Render the row emphasized (bold + accent) so it stands out — e.g. a
    *  trailing "view all" action below a capped list. */
   emphasis?: boolean
+  /** Hover-revealed kebab actions (e.g. rename/delete). Rendered on the
+   *  labeled rail only; ignored in the collapsed-rail flyout. */
+  actions?: RailSubItemAction[]
 }
 
 export interface RailExpandableProps {
@@ -797,7 +810,7 @@ export function RailExpandable({
   const subLink = (item: RailExpandableSubItem) => {
     const FIcon = item.icon
     const active = activeSet.has(item.id)
-    return (
+    const link = (
       <Link
         key={item.id}
         href={item.href}
@@ -805,12 +818,12 @@ export function RailExpandable({
         onClick={onNavigate}
         {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
         className={cn(
-          "flex h-7 min-w-0 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
+          "flex min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
           active
-            ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
+            ? "h-7 bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
             : item.emphasis
-              ? "font-semibold text-[var(--accent-text)] hover:bg-[var(--accent-surface-soft)]"
-              : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
+              ? "py-2 font-medium text-[var(--accent-text)] hover:underline"
+              : "h-7 text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         )}
       >
         {FIcon ? <FIcon className="h-4 w-4 shrink-0" /> : null}
@@ -820,14 +833,44 @@ export function RailExpandable({
         >
           {item.label}
         </span>
-        {item.isLoading ? (
-          <span className="responding-ellipsis" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-        ) : null}
       </Link>
+    )
+
+    // Kebab actions are an expanded-rail affordance only — the collapsed-rail
+    // hover flyout stays plain links (a portaled dropdown inside the
+    // mouse-leave-closed flyout would fight its own dismissal).
+    if (!showLabel || !item.actions?.length) return link
+
+    return (
+      <div key={item.id} className="group/sub relative flex items-center">
+        {link}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Chat actions"
+              className="absolute right-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--accent-surface-soft)] text-muted-foreground opacity-0 transition hover:text-foreground focus-visible:opacity-100 group-hover/sub:opacity-100 data-[state=open]:bg-[var(--accent-surface-strong)] data-[state=open]:opacity-100"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            {item.actions.map((action) => (
+              <DropdownMenuItem
+                key={action.id}
+                onSelect={action.onSelect}
+                className={cn(
+                  "gap-2",
+                  action.destructive && "text-destructive focus:text-destructive",
+                )}
+              >
+                {action.icon ? <action.icon className="h-3.5 w-3.5" /> : null}
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     )
   }
 

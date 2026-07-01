@@ -46,7 +46,7 @@ describe("validateBuiltCss", () => {
       ".py-\\[var\\(--chat-message-py\\)\\]{}",
       ".h-\\[var\\(--indicator-dot-size\\)\\]{}",
       ".bg-\\[var\\(--brand-glow\\)\\]{}",
-      ".bg-\\[var\\(--code-error\\)\\]\\/14{}",
+      ".bg-\\[var\\(--brand-cool\\)\\]{}",
     ].join("\n")
     expect(() => validateBuiltCss(css, { requireForwardedUiUtilities: true })).not.toThrow()
   })

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.66.0
+
+### Dashboard
+
+- `RailExpandableSubItem` gains an optional `unread` flag: an unread row renders
+  a leading dot and a bolded, un-muted label. Suppressed while `isLoading` (the
+  shimmer stays the sole "responding" cue) and on the active row you're already
+  viewing. Covers both the labeled accordion and the collapsed-rail flyout via
+  the shared sub-item row (#160).
+
 ## 0.64.0
 
 ### Dashboard

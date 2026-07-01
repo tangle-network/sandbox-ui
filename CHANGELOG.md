@@ -10,6 +10,19 @@
   viewing. Covers both the labeled accordion and the collapsed-rail flyout via
   the shared sub-item row (#160).
 
+## 0.65.0
+
+### Chat
+
+- Reasoning-effort options are now reconciled per harness. A new
+  `HARNESS_REASONING_OPTIONS` export overrides the generic depth ladder for
+  harnesses whose real control isn't a gradient — `kimi-code`'s binary thinking
+  toggle reads Auto / No thinking / Thinking instead of a misleading five-step
+  scale. The picker still intersects options with the harness/model `available`
+  set, so only supported values render (#158).
+- The default `xhigh`/`ultracode` descriptions drop their tool-specific
+  parentheticals (#158).
+
 ## 0.64.0
 
 ### Dashboard

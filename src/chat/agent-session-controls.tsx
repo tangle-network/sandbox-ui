@@ -199,12 +199,14 @@ function selectorIgnoreNote(harness: HarnessType): string | null {
  * tap — why it's fixed and a button to start a fresh session on another harness.
  */
 function InformativeLock({
+  type,
   label,
   lockTitle,
   lockBody,
   newChatLabel,
   onNewChat,
 }: {
+  type: HarnessType;
   label: string;
   lockTitle?: React.ReactNode;
   lockBody?: React.ReactNode;
@@ -248,13 +250,16 @@ function InformativeLock({
         aria-haspopup="dialog"
         aria-expanded={open}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5",
+          // Dimmed to read as locked (the harness is bound to this session),
+          // matching the disabled model picker — the logo stays so the chip is
+          // still recognizably this harness; the popover explains the lock.
+          "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5 opacity-60",
           "text-xs font-medium text-foreground shadow-sm transition-colors",
           "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
         )}
       >
-        <Lock className="h-3 w-3 text-muted-foreground" />
+        <HarnessLogo type={type} size={16} />
         <span>{label}</span>
       </button>
 
@@ -322,6 +327,7 @@ function HarnessDropdown({
   if (locked && onNewChat) {
     return (
       <InformativeLock
+        type={value}
         label={selected?.label ?? value}
         lockTitle={lockTitle}
         lockBody={lockBody}
@@ -347,11 +353,7 @@ function HarnessDropdown({
           )}
           aria-label="Agent harness"
         >
-          {locked ? (
-            <Lock className="h-3 w-3 text-muted-foreground" />
-          ) : (
-            <HarnessLogo type={value} size={16} />
-          )}
+          <HarnessLogo type={value} size={16} />
           <span>{selected?.label ?? value}</span>
           {!locked && (
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />

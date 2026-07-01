@@ -1,6 +1,10 @@
 "use client";
 
-import { type ReasoningEffort, reasoningLadder } from "@tangle-network/agent-interface";
+import {
+  type HarnessType,
+  type ReasoningEffort,
+  reasoningLadder,
+} from "@tangle-network/agent-interface";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Brain, ChevronDown, Sparkles } from "lucide-react";
 import * as React from "react";
@@ -110,9 +114,29 @@ export const DEFAULT_REASONING_LEVEL_OPTIONS: ReadonlyArray<ReasoningLevelOption
   { value: "low", label: "Low", description: "Fast, direct answers." },
   { value: "medium", label: "Medium", description: "Inspect context before acting." },
   { value: "high", label: "High", description: "Deeper planning and edge-case checks." },
-  { value: "xhigh", label: "Extra High", description: "Extended reasoning for hard problems (Codex/OpenAI)." },
-  { value: "ultracode", label: "Ultracode", description: "Maximum extended thinking (Claude Code's ultracode)." },
+  { value: "xhigh", label: "Extra High", description: "Extended reasoning for the hardest problems." },
+  { value: "ultracode", label: "Ultracode", description: "Maximum extended thinking." },
 ];
+
+/**
+ * Per-harness option overrides for harnesses whose real control isn't a depth scale, so the generic
+ * ladder's labels would mislead. A harness with no entry uses {@link DEFAULT_REASONING_LEVEL_OPTIONS};
+ * either way the picker still intersects the chosen options with the harness/model `available` set, so
+ * only supported values render.
+ *
+ * `kimi-code` is a BINARY thinking toggle, not a gradient: its `--thinking` flag is simply off or on.
+ * `minimal` is the only value that emits `--no-thinking` (off) and `high` maps to thinking-on, so the
+ * menu reads Auto / No thinking / Thinking rather than a misleading five-step scale.
+ */
+export const HARNESS_REASONING_OPTIONS: Partial<
+  Record<HarnessType, ReadonlyArray<ReasoningLevelOption>>
+> = {
+  "kimi-code": [
+    { value: "auto", label: "Auto", description: "Use Kimi's default." },
+    { value: "minimal", label: "No thinking", description: "Kimi answers directly — thinking off." },
+    { value: "high", label: "Thinking", description: "Kimi reasons before answering." },
+  ],
+};
 
 export function ReasoningLevelPicker({
   value,

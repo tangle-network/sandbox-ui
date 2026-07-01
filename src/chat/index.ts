@@ -27,6 +27,7 @@ export {
 
 export {
   DEFAULT_REASONING_LEVEL_OPTIONS,
+  HARNESS_REASONING_OPTIONS,
   ReasoningLevelPicker,
   type ReasoningLevel,
   type ReasoningLevelOption,

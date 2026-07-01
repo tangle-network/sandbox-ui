@@ -357,6 +357,54 @@ describe("AgentSessionControls — reasoning effort re-clamp", () => {
   });
 });
 
+describe("AgentSessionControls — per-harness reasoning options", () => {
+  const openReasoning = () =>
+    userEvent.click(screen.getByRole("button", { name: /reasoning level/i }));
+
+  it("kimi harness offers the binary Auto / No thinking / Thinking toggle", async () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "kimi-code", onChange: () => {} }}
+        reasoning={{ value: "auto", onChange: () => {} }}
+      />,
+    );
+    await openReasoning();
+    expect(await screen.findByText("No thinking")).toBeInTheDocument();
+    expect(screen.getByText("Thinking")).toBeInTheDocument();
+    // A binary toggle, not a gradient — the ladder's mid-steps never appear.
+    expect(screen.queryByText("Medium")).not.toBeInTheDocument();
+  });
+
+  it("codex harness drops `none` and the xhigh/ultracode tail", async () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "codex", onChange: () => {} }}
+        reasoning={{ value: "auto", onChange: () => {} }}
+      />,
+    );
+    await openReasoning();
+    expect(await screen.findByText("Minimal")).toBeInTheDocument();
+    expect(screen.getByText("High")).toBeInTheDocument();
+    expect(screen.queryByText("None")).not.toBeInTheDocument();
+    expect(screen.queryByText("Extra High")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ultracode")).not.toBeInTheDocument();
+  });
+
+  it("claude-code harness drops `none`/`minimal` and reaches ultracode", async () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "claude-code", onChange: () => {} }}
+        reasoning={{ value: "auto", onChange: () => {} }}
+      />,
+    );
+    await openReasoning();
+    expect(await screen.findByText("Ultracode")).toBeInTheDocument();
+    expect(screen.getByText("Low")).toBeInTheDocument();
+    expect(screen.queryByText("None")).not.toBeInTheDocument();
+    expect(screen.queryByText("Minimal")).not.toBeInTheDocument();
+  });
+});
+
 describe("AgentSessionControls — harnesses that ignore selectors", () => {
   const MODELS = [{ id: "openai/gpt-5", name: "GPT-5", _provider: "openai" }];
 

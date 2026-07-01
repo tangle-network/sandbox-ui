@@ -64,8 +64,8 @@ importers:
         specifier: ^4.2.2
         version: 4.2.2(vite@8.0.7(esbuild@0.27.4)(jiti@2.6.1)(yaml@2.9.0))
       '@tangle-network/agent-interface':
-        specifier: '>=0.16.0 <1.0.0'
-        version: 0.16.0
+        specifier: '>=0.17.0 <1.0.0'
+        version: 0.17.0
       '@tangle-network/brand':
         specifier: ^0.6.0
         version: 0.6.0(react@19.2.4)
@@ -1744,8 +1744,8 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tangle-network/agent-interface@0.16.0':
-    resolution: {integrity: sha512-QlHy5J+j23ij9rDsgtyB83fW34Tg7PMFFIxxlJ05iUdW6XoceuwnY08PcIaw/kC21EAa39+a9CkUMhPJwImlWQ==}
+  '@tangle-network/agent-interface@0.17.0':
+    resolution: {integrity: sha512-OrzJU3dH2slfnkNm9WYE33PiENgBD5qn+hOMTGjtbfdlePvY0zgMiHEZa7Kk5ryWSXisNUUGC5MpmE7+cuW8WQ==}
 
   '@tangle-network/brand@0.6.0':
     resolution: {integrity: sha512-QYBAuDRK/6ffQQNfm87AGw2KcK1+23GLJxwozQBP70RViC+fJPR/rvSDyISK/Y+h3isJ+dExPLH3swN1C+6GYw==}
@@ -5434,7 +5434,7 @@ snapshots:
       tailwindcss: 4.2.2
       vite: 8.0.7(esbuild@0.27.4)(jiti@2.6.1)(yaml@2.9.0)
 
-  '@tangle-network/agent-interface@0.16.0':
+  '@tangle-network/agent-interface@0.17.0':
     dependencies:
       zod: 4.4.3
 

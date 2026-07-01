@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  canonicalizeHarness,
   harnessHonorsEffort,
   harnessHonorsModel,
   type ModelReasoningCapability,
@@ -30,6 +31,7 @@ import {
 } from "./harness-model-compat";
 import {
   clampReasoningLevel,
+  HARNESS_REASONING_OPTIONS,
   ReasoningLevelPicker,
   type ReasoningLevel,
   type ReasoningLevelOption,
@@ -594,11 +596,17 @@ export function AgentSessionControls({
   // The selected model's reasoning capability (from the catalog) refines the harness clamp: a model
   // that doesn't reason collapses to `none`; a lower model ceiling caps the list there.
   const modelReasoning = modelReasoningCapability(model?.models, model?.value);
+  // A harness whose real control isn't a depth scale (kimi's binary toggle) supplies its own option
+  // labels; every other harness uses the caller's options (or the picker's default ladder). The
+  // `available` capability filter still applies on top, so only supported values render either way.
+  const reasoningOptions =
+    (harness && HARNESS_REASONING_OPTIONS[canonicalizeHarness(harness.value)]) ??
+    reasoning?.options;
   const reasoningNode = reasoning && (
     <ReasoningLevelPicker
       value={reasoning.value}
       onChange={reasoning.onChange}
-      options={reasoning.options}
+      options={reasoningOptions}
       disabled={reasoning.disabled || !selectorHonorsEffort}
       // Smart switch: show only the reasoning levels the selected (harness, model) pair supports —
       // the harness clamp (codex caps high, cli-base only `none`, claude full) intersected with the

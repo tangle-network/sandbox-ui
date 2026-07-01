@@ -697,6 +697,9 @@ export interface RailExpandableSubItem {
   /** Render the row emphasized (bold + accent) so it stands out — e.g. a
    *  trailing "view all" action below a capped list. */
   emphasis?: boolean
+  /** Mark the row as unread — bold label + a leading dot. Suppressed while
+   *  `isLoading` so a responding row shows only the working indicator. */
+  unread?: boolean
   /** Hover-revealed kebab actions (e.g. rename/delete). Rendered on the
    *  labeled rail only; ignored in the collapsed-rail flyout. */
   actions?: RailSubItemAction[]
@@ -826,9 +829,16 @@ export function RailExpandable({
               : "h-7 text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         )}
       >
+        {item.unread && !item.isLoading && !active && (
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+        )}
         {FIcon ? <FIcon className="h-4 w-4 shrink-0" /> : null}
         <span
-          className={cn("min-w-0 flex-1 truncate", item.isLoading && "shimmer-text")}
+          className={cn(
+            "min-w-0 flex-1 truncate",
+            item.isLoading && "shimmer-text",
+            item.unread && !active && "font-medium text-foreground",
+          )}
           {...(item.isLoading ? { role: "status", "aria-label": "Agent responding" } : {})}
         >
           {item.label}

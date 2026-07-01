@@ -1,6 +1,6 @@
 {
   "name": "@tangle-network/sandbox-ui",
-  "version": "0.66.0",
+  "version": "0.67.0",
   "description": "Unified UI component library for Tangle Sandbox — primitives, chat, dashboard, terminal, editor, and workspace components",
   "repository": {
     "type": "git",
@@ -123,8 +123,8 @@
   },
   "peerDependencies": {
     "@tangle-network/agent-interface": ">=0.17.0 <1.0.0",
-    "@tangle-network/brand": "^0.6.0",
-    "@tangle-network/ui": "^5.1.0",
+    "@tangle-network/brand": "^0.6.0 || ^0.7.0",
+    "@tangle-network/ui": "^5.1.0 || ^6.0.0",
     "@xyflow/react": "^12.0.0",
     "react": "^18 || ^19",
     "react-dom": "^18 || ^19"
@@ -178,8 +178,8 @@
     "@tailwindcss/postcss": "^4.2.2",
     "@tailwindcss/vite": "^4.2.2",
     "@tangle-network/agent-interface": ">=0.17.0 <1.0.0",
-    "@tangle-network/brand": "^0.6.0",
-    "@tangle-network/ui": "^5.1.0",
+    "@tangle-network/brand": "^0.7.0",
+    "@tangle-network/ui": "^6.0.0",
     "@tanstack/react-query": "^5.91.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

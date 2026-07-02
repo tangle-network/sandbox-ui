@@ -70,8 +70,8 @@ importers:
         specifier: ^0.8.0
         version: 0.8.0(react@19.2.4)
       '@tangle-network/ui':
-        specifier: ^8.1.0
-        version: 8.1.0(dfc9a5a1e3344dbd6607e73e54ed6061)
+        specifier: ^9.0.0
+        version: 9.0.0(dfc9a5a1e3344dbd6607e73e54ed6061)
       '@tanstack/react-query':
         specifier: ^5.91.0
         version: 5.91.3(react@19.2.4)
@@ -1755,8 +1755,8 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/ui@8.1.0':
-    resolution: {integrity: sha512-wd+H4WVWW9kjJ5ob2/AvLCbEt2cwlChqRbWEXjgzHOFvbAWvfTsZ7Vy0a6VsLqwAkcKJVfutwEg99evBrTM50g==}
+  '@tangle-network/ui@9.0.0':
+    resolution: {integrity: sha512-jM7IY4CluNeIkTV6/CaTBv3dfUip2ufjLjFNqqD34ZOBCQ2C1MKPaK+jwp6RhvGTe2/QImlHgLM/Fii7X+1cVw==}
     peerDependencies:
       '@hocuspocus/provider': '*'
       '@nanostores/react': '*'
@@ -5442,7 +5442,7 @@ snapshots:
     optionalDependencies:
       react: 19.2.4
 
-  '@tangle-network/ui@8.1.0(dfc9a5a1e3344dbd6607e73e54ed6061)':
+  '@tangle-network/ui@9.0.0(dfc9a5a1e3344dbd6607e73e54ed6061)':
     dependencies:
       '@pierre/trees': 1.0.0-beta.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-avatar': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

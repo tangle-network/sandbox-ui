@@ -6,7 +6,7 @@ const REQUIRED_FORWARDED_UI_UTILITY_MARKERS = [
   "py-\\[var\\(--chat-message-py\\)\\]",
   "h-\\[var\\(--indicator-dot-size\\)\\]",
   "bg-\\[var\\(--brand-glow\\)\\]",
-  "bg-\\[var\\(--code-error\\)\\]\\/14",
+  "bg-\\[var\\(--brand-cool\\)\\]",
 ]
 
 /**

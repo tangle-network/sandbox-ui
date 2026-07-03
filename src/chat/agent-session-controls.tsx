@@ -799,72 +799,26 @@ function GearControls({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div
-      className={cn("flex items-center gap-2", className)}
-      data-testid="agent-session-controls"
-    >
-      {trailing && (
-        <div className="flex items-center gap-2">{trailing}</div>
+    <CollapsibleControls
+      className={className}
+      trigger={<SlidersHorizontal className="h-4 w-4 text-muted-foreground" />}
+      triggerClassName={cn(
+        "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container",
+        "text-foreground shadow-sm transition-colors",
+        "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
       )}
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild>
-          <button
-            type="button"
-            aria-label="Session controls"
-            className={cn(
-              "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container",
-              "text-foreground shadow-sm transition-colors",
-              "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
-            )}
-          >
-            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            side="top"
-            align="end"
-            sideOffset={8}
-            onInteractOutside={(event) => {
-              // The nested model / harness / effort pickers portal their menus
-              // to <body>, i.e. outside this Content's DOM subtree. Without
-              // this guard, interacting with a nested menu reads as an outside
-              // click and collapses the gear menu. Keep the gear open while
-              // the pointer lands inside any Radix popper/portal.
-              const target = event.target as HTMLElement | null;
-              if (
-                target?.closest(
-                  "[data-radix-popper-content-wrapper],[data-radix-menu-content],[role=menu],[role=listbox]",
-                )
-              ) {
-                event.preventDefault();
-              }
-            }}
-            className={cn(
-              "z-50 flex w-56 flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-2",
-              "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
-              "data-[state=open]:animate-in data-[state=closed]:animate-out",
-              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-              "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            )}
-          >
-            {profileNode && (
-              <GearSection label="Agent">{profileNode}</GearSection>
-            )}
-            {harnessNode && (
-              <GearSection label="Harness">{harnessNode}</GearSection>
-            )}
-            {modelNode && (
-              <GearSection label="Model">{modelNode}</GearSection>
-            )}
-            {reasoningNode && (
-              <GearSection label="Effort">{reasoningNode}</GearSection>
-            )}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
-    </div>
+      contentSide="top"
+      contentClassName={cn(
+        "w-56 gap-2 border-[var(--md3-outline-variant)] bg-surface-container-highest p-2",
+        "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+      )}
+      profileNode={profileNode}
+      harnessNode={harnessNode}
+      modelNode={modelNode}
+      reasoningNode={reasoningNode}
+      trailing={trailing}
+    />
   );
 }
 
@@ -913,6 +867,61 @@ function SummaryControls({
   trailing?: React.ReactNode;
 }) {
   return (
+    <CollapsibleControls
+      className={className}
+      trigger={
+        <>
+          {summary}
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        </>
+      }
+      triggerTitle={title}
+      triggerClassName={cn(
+        // Container-less trigger (Codex-style): bare label + chevron docked in
+        // the composer footer, no border/card/shadow. Only a subtle rounded
+        // hover/open tint marks it as interactive.
+        "inline-flex h-8 items-center gap-1.5 rounded-md px-1.5",
+        "whitespace-nowrap text-xs font-medium text-foreground transition-colors",
+        "hover:bg-muted/50 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        "data-[state=open]:bg-muted/50",
+      )}
+      contentSide={contentSide}
+      contentClassName="w-64 gap-2.5 border-border bg-popover p-2.5 text-popover-foreground shadow-lg"
+      profileNode={profileNode}
+      harnessNode={harnessNode}
+      modelNode={modelNode}
+      reasoningNode={reasoningNode}
+      trailing={trailing}
+    />
+  );
+}
+
+function CollapsibleControls({
+  className,
+  trigger,
+  triggerTitle,
+  triggerClassName,
+  contentSide,
+  contentClassName,
+  profileNode,
+  harnessNode,
+  modelNode,
+  reasoningNode,
+  trailing,
+}: {
+  className?: string;
+  trigger: React.ReactNode;
+  triggerTitle?: string;
+  triggerClassName: string;
+  contentSide: DropdownMenu.DropdownMenuContentProps["side"];
+  contentClassName: string;
+  profileNode: React.ReactNode;
+  harnessNode: React.ReactNode;
+  modelNode: React.ReactNode;
+  reasoningNode: React.ReactNode;
+  trailing?: React.ReactNode;
+}) {
+  return (
     <div
       className={cn("flex items-center gap-2", className)}
       data-testid="agent-session-controls"
@@ -923,19 +932,10 @@ function SummaryControls({
           <button
             type="button"
             aria-label="Session controls"
-            title={title}
-            className={cn(
-              // Container-less trigger (Codex-style): bare label + chevron docked in
-              // the composer footer, no border/card/shadow. Only a subtle rounded
-              // hover/open tint marks it as interactive.
-              "inline-flex h-8 items-center gap-1.5 rounded-md px-1.5",
-              "whitespace-nowrap text-xs font-medium text-foreground transition-colors",
-              "hover:bg-muted/50 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              "data-[state=open]:bg-muted/50",
-            )}
+            title={triggerTitle}
+            className={triggerClassName}
           >
-            {summary}
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            {trigger}
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
@@ -945,10 +945,10 @@ function SummaryControls({
             sideOffset={8}
             onInteractOutside={(event) => {
               // The nested model / harness / effort pickers portal their menus
-              // to <body>, i.e. outside this Content's DOM subtree. Without this
-              // guard, interacting with a nested menu reads as an outside click
-              // and collapses this panel. Keep it open while the pointer lands
-              // inside any Radix popper/portal.
+              // to <body>, i.e. outside this Content's DOM subtree. Without
+              // this guard, interacting with a nested menu reads as an outside
+              // click and collapses the panel. Keep it open while the pointer
+              // lands inside any Radix popper/portal.
               const target = event.target as HTMLElement | null;
               if (
                 target?.closest(
@@ -959,10 +959,11 @@ function SummaryControls({
               }
             }}
             className={cn(
-              "z-50 flex w-64 flex-col gap-2.5 rounded-[var(--radius-md)] border border-border bg-popover p-2.5 text-popover-foreground shadow-lg",
+              "z-50 flex flex-col rounded-[var(--radius-md)] border",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
               "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
               "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+              contentClassName,
             )}
           >
             {profileNode && <GearSection label="Agent">{profileNode}</GearSection>}

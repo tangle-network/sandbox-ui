@@ -49,7 +49,7 @@ export function clampReasoningLevel(
  * every other level fills a fixed-width bar meter to its rank in the ladder, so
  * the rows read as an ascending scale regardless of how many levels exist.
  */
-function ReasoningGlyph({ level }: { level: ReasoningLevel }) {
+export function ReasoningGlyph({ level }: { level: ReasoningLevel }) {
   if (level === "auto") {
     return <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />;
   }
@@ -173,9 +173,9 @@ export function ReasoningLevelPicker({
           )}
           aria-label="Reasoning level"
         >
-          <Brain className="h-3.5 w-3.5 text-muted-foreground" />
+          <Brain className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <span>{label}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>

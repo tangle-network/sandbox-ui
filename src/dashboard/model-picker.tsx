@@ -350,7 +350,7 @@ function compareModelsByDisplayName(a: ModelInfo, b: ModelInfo): number {
  * prefix ("Gemini 2.5 Pro", "Claude Opus 4.8") are returned unchanged, so the
  * router's inconsistent naming can't produce a wrong result.
  */
-function stripBrandPrefix(
+export function stripBrandPrefix(
   name: string,
   identity: ModelBrandIdentity | null,
 ): string {
@@ -524,7 +524,7 @@ export function ModelPicker({
         <Sparkles className="h-3 w-3 text-muted-foreground" />
       )}
       <span className="truncate max-w-[160px]">{currentLabel || placeholder}</span>
-      <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+      <ChevronDown className="ml-auto h-3 w-3 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
     </button>
   ) : (
     <button
@@ -778,7 +778,7 @@ function ModelRow({
   );
 }
 
-function ModelBrandStack({ identity, size }: { identity: ModelBrandIdentity; size: "sm" | "md" }) {
+export function ModelBrandStack({ identity, size }: { identity: ModelBrandIdentity; size: "sm" | "md" }) {
   if (identity.combined) return <BrandLogo brand={identity.lab} size={size} />;
   const hasHostLogo = hasRealLogo(identity.host);
   const hasLabLogo = hasRealLogo(identity.lab);

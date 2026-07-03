@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.71.0
+
+### Chat
+
+- `AgentSessionControls` gains a third `layout` variant, `"combined"`: a single
+  labeled trigger that collapses the harness / model / effort pickers behind one
+  container-less control (Codex-style), summarizing the current selection as
+  icon-prefixed `harness · model · effort`. Each segment carries its picker's own
+  glyph — harness logo, model brand stack, and the reasoning glyph (Sparkles for
+  Auto, bar-meter for a level). The nested Harness / Model / Effort sections reuse
+  the same picker nodes as the other layouts, so the harness→model snap and
+  effort re-clamp coherence is inherited. Exports `ReasoningGlyph`,
+  `ModelBrandStack`, and `stripBrandPrefix` for building the summary (#166).
+
+## 0.70.0
+
+### Dependencies
+
+- Bump `@tangle-network/ui` to `^9.0.0`: `RunGroup` renders as separated spine
+  rows with collapse (no single box) and `AgentTimeline` reverts to its flat
+  separated rendering (#165).
+
+## 0.69.0
+
+### Dependencies
+
+- Bump `@tangle-network/ui` to `^8.1.0`: `AgentTimeline` now folds consecutive
+  tool activity into the shared `AssistantRunShell` collapsible run shell that
+  `RunGroup` uses (additive, default on) (#164).
+
+## 0.68.0
+
+### Dependencies
+
+- **Breaking:** adopt `@tangle-network/ui@8` + `@tangle-network/brand@0.8`. ui@8
+  removes `ChatInput`/`ChatInputProps`/`PendingFile` (`ChatContainer` is
+  transcript-only; `AgentComposer` is the one composer), so `src/chat` stops
+  re-exporting them (#163).
+
+## 0.67.0
+
+### Dependencies
+
+- Bump `@tangle-network/ui` to `^6.0.0` and `@tangle-network/brand` to `^0.7.0`;
+  widen `peerDependencies` to accept them (ui `^5.1.0 || ^6.0.0`, brand
+  `^0.6.0 || ^0.7.0`) so consumers can move to the ui@6 set without a lockstep
+  upgrade. Dependency-only major, no API changes (#162).
+
 ## 0.66.0
 
 ### Dashboard

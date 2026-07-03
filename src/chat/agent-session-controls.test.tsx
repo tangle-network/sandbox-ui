@@ -467,3 +467,127 @@ describe("AgentSessionControls — harnesses that ignore selectors", () => {
     ).not.toBeDisabled();
   });
 });
+
+describe("AgentSessionControls — combined layout", () => {
+  const COMBINED_MODELS = [
+    { id: "openai/gpt-5.5", name: "GPT-5.5", _provider: "openai" },
+    {
+      id: "anthropic/claude-opus-4-8",
+      name: "Anthropic: Claude Opus 4.8",
+      _provider: "anthropic",
+    },
+  ];
+
+  it("collapses the pickers behind one labeled trigger summarizing the selection", () => {
+    render(
+      <AgentSessionControls
+        layout="combined"
+        harness={{ value: "opencode", onChange: () => {} }}
+        model={{
+          value: "openai/gpt-5.5",
+          onChange: () => {},
+          models: COMBINED_MODELS,
+        }}
+        reasoning={{ value: "high", onChange: () => {} }}
+      />,
+    );
+    // One trigger, summarizing harness + model + effort — the inline pickers are
+    // not present until it's opened. (Segments render as separate icon+label
+    // spans, so assert each rather than a joined string.)
+    const trigger = screen.getByRole("button", { name: /session controls/i });
+    expect(trigger).toHaveTextContent("OpenCode");
+    expect(trigger).toHaveTextContent("GPT-5.5");
+    expect(trigger).toHaveTextContent("High");
+    expect(
+      screen.queryByRole("button", { name: /agent harness/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("strips the brand prefix from the model name in the summary label", () => {
+    render(
+      <AgentSessionControls
+        layout="combined"
+        harness={{ value: "claude-code", onChange: () => {} }}
+        model={{
+          value: "anthropic/claude-opus-4-8",
+          onChange: () => {},
+          models: COMBINED_MODELS,
+        }}
+        reasoning={{ value: "high", onChange: () => {} }}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /session controls/i });
+    // "Anthropic: Claude Opus 4.8" → "Claude Opus 4.8", matching the model pill.
+    expect(trigger).toHaveTextContent("Claude Opus 4.8");
+    expect(trigger).not.toHaveTextContent("Anthropic:");
+    expect(trigger).toHaveTextContent("Claude Code");
+  });
+
+  it("drops the segment for a selector the harness ignores", () => {
+    render(
+      <AgentSessionControls
+        layout="combined"
+        harness={{ value: "amp", onChange: () => {} }}
+        model={{
+          value: "openai/gpt-5.5",
+          onChange: () => {},
+          models: COMBINED_MODELS,
+        }}
+        reasoning={{ value: "high", onChange: () => {} }}
+      />,
+    );
+    // amp ignores both model and effort → only the harness word survives.
+    const trigger = screen.getByRole("button", { name: /session controls/i });
+    expect(trigger).toHaveTextContent("AMP");
+    expect(trigger).not.toHaveTextContent("·");
+  });
+
+  it("reveals the harness / model / effort pickers when opened", async () => {
+    render(
+      <AgentSessionControls
+        layout="combined"
+        harness={{ value: "opencode", onChange: () => {} }}
+        model={{
+          value: "openai/gpt-5.5",
+          onChange: () => {},
+          models: COMBINED_MODELS,
+        }}
+        reasoning={{ value: "high", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /session controls/i }),
+    );
+    expect(
+      await screen.findByRole("button", { name: /agent harness/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /reasoning level/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps harness→model coherence: picking a new harness snaps an incompatible model", async () => {
+    const onModelChange = vi.fn();
+    render(
+      <AgentSessionControls
+        layout="combined"
+        harness={{ value: "opencode", onChange: () => {} }}
+        model={{
+          value: "anthropic/claude-opus-4-8",
+          onChange: onModelChange,
+          models: COMBINED_MODELS,
+        }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /session controls/i }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: /agent harness/i }),
+    );
+    await userEvent.click(await screen.findByText("Codex"));
+    // Same coherence wiring as the inline strip — codex can't run the Anthropic
+    // model, so it snaps to the frontier GPT.
+    expect(onModelChange).toHaveBeenCalledWith("openai/gpt-5.5");
+  });
+});

@@ -15,7 +15,10 @@ import { cn } from "../lib/utils";
 import { useClickOutside } from "../lib/use-click-outside";
 import {
   canonicalModelId,
+  ModelBrandStack,
   ModelPicker,
+  resolveModelBrandIdentity,
+  stripBrandPrefix,
   type ModelInfo,
 } from "../dashboard/model-picker";
 import {
@@ -31,7 +34,9 @@ import {
 } from "./harness-model-compat";
 import {
   clampReasoningLevel,
+  DEFAULT_REASONING_LEVEL_OPTIONS,
   HARNESS_REASONING_OPTIONS,
+  ReasoningGlyph,
   ReasoningLevelPicker,
   type ReasoningLevel,
   type ReasoningLevelOption,
@@ -155,16 +160,21 @@ export interface AgentSessionControlsProps {
    * existing behavior. `"gear"` collapses them behind a single compact gear
    * button whose menu opens up-and-left, for right-anchored copilots where
    * the composer is tight. Nested model/harness/effort menus render adjacent
-   * on the left of the gear menu.
+   * on the left of the gear menu. `"combined"` is the gear layout with a
+   * labeled trigger instead of the anonymous icon: the button summarizes the
+   * current selection as text (`harness · model · effort`) so the choice stays
+   * visible without opening the menu — for a composer that wants one compact
+   * agent control it can read at a glance.
    */
-  layout?: "inline" | "gear";
+  layout?: "inline" | "gear" | "combined";
   /**
-   * Where the inline pickers open. `"auto"` (default) keeps Radix's
-   * collision-aware behavior: the menus open downward but flip up when the
-   * composer is docked at the bottom of the viewport. `"down"` pins them open
-   * downward — for a composer floating in open space (e.g. a centered new-chat
-   * surface) where flipping up would cover the heading. Only affects the
-   * `"inline"` layout; the gear menu is unchanged.
+   * Where the pickers open. `"auto"` (default) keeps Radix's collision-aware
+   * behavior: the menus open downward but flip up when the composer is docked
+   * at the bottom of the viewport. `"down"` pins them open downward — for a
+   * composer floating in open space (e.g. a centered new-chat surface) where
+   * flipping up would cover the heading. Honored by the `"inline"` strip (its
+   * nested pickers) and by the `"combined"` panel (which opens downward instead
+   * of upward); the `"gear"` menu keeps its own placement.
    */
   menuPlacement?: "auto" | "down";
 }
@@ -176,6 +186,8 @@ interface HarnessDropdownProps extends AgentSessionHarnessControl {
   align?: DropdownMenu.DropdownMenuContentProps["align"];
   /** Let Radix flip the menu when it would overflow. Defaults to true. */
   avoidCollisions?: boolean;
+  /** Extra classes for the trigger pill — e.g. `w-full` in the collapsed panel. */
+  triggerClassName?: string;
 }
 
 /**
@@ -315,6 +327,7 @@ function HarnessDropdown({
   side = "bottom",
   align = "start",
   avoidCollisions,
+  triggerClassName,
 }: HarnessDropdownProps) {
   const allowed = new Set<HarnessType>(
     available ?? HARNESS_OPTIONS.map((h) => h.type),
@@ -350,13 +363,14 @@ function HarnessDropdown({
             "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
             "disabled:cursor-not-allowed disabled:opacity-60",
+            triggerClassName,
           )}
           aria-label="Agent harness"
         >
-          <HarnessLogo type={value} size={16} />
-          <span>{selected?.label ?? value}</span>
+          <HarnessLogo type={value} size={16} className="shrink-0" />
+          <span className="truncate">{selected?.label ?? value}</span>
           {!locked && (
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           )}
         </button>
       </DropdownMenu.Trigger>
@@ -540,14 +554,25 @@ export function AgentSessionControls({
     harness?.available ??
     (context === "chat" ? chatCapableHarnesses : undefined);
 
-  // The menu opens up-and-left in the gear layout (right-anchored copilot),
-  // and bottom-start inline.
-  const menuSide = layout === "gear" ? "left" : "bottom";
-  const menuAlign = layout === "gear" ? "end" : "start";
+  // The nested pickers open up-and-left in the collapsed layouts (gear /
+  // combined, both right-anchored), and bottom-start in the inline strip.
+  const collapsed = layout === "gear" || layout === "combined";
+  const menuSide = collapsed ? "left" : "bottom";
+  const menuAlign = collapsed ? "end" : "start";
+  // In the collapsed panels the pickers span the full width so their rows line
+  // up. The `combined` layout additionally drops the MD3 `surface-container`
+  // fill for the app-standard transparent/muted treatment so the pills sit in
+  // the composer's own palette instead of a mismatched grey.
+  const collapsedTriggerClass =
+    layout === "combined"
+      ? "w-full bg-transparent shadow-none hover:bg-muted/60 data-[state=open]:bg-muted/60"
+      : collapsed
+        ? "w-full"
+        : undefined;
   // A floating (non-docked) inline composer pins its menus open downward so a
-  // tall menu can't flip up over the heading. Only the inline strip honors this;
-  // the gear menu keeps its own placement.
-  const inlineForceDown = menuPlacement === "down" && layout !== "gear";
+  // tall menu can't flip up over the heading. Only the inline strip's own nested
+  // pickers honor this; the collapsed layouts keep their nested menus adjacent.
+  const inlineForceDown = menuPlacement === "down" && layout === "inline";
   const avoidCollisions = inlineForceDown ? false : undefined;
 
   const harnessNode = harness && (
@@ -558,6 +583,7 @@ export function AgentSessionControls({
       side={menuSide}
       align={menuAlign}
       avoidCollisions={avoidCollisions}
+      triggerClassName={collapsedTriggerClass}
     />
   );
   // The profile popover is not a Radix menu (its inline author form needs its
@@ -573,7 +599,7 @@ export function AgentSessionControls({
       onUpdate={profile.onUpdate}
       onDelete={profile.onDelete}
       disabled={profile.disabled}
-      side={inlineForceDown || layout === "gear" ? "bottom" : "top"}
+      side={inlineForceDown || collapsed ? "bottom" : "top"}
     />
   );
   const modelNode = model && (
@@ -591,8 +617,9 @@ export function AgentSessionControls({
         (visibleModels ?? []).length === 0 ||
         !selectorHonorsModel
       }
-      side={layout === "gear" ? undefined : "bottom"}
+      side={collapsed ? undefined : "bottom"}
       avoidCollisions={avoidCollisions}
+      triggerClassName={collapsedTriggerClass}
     />
   );
   // The selected model's reasoning capability (from the catalog) refines the harness clamp: a model
@@ -618,8 +645,9 @@ export function AgentSessionControls({
           ? reasoningEffortsFor(harness.value, modelReasoning)
           : reasoning.available
       }
-      side={layout === "gear" ? undefined : "bottom"}
+      side={collapsed ? undefined : "bottom"}
       avoidCollisions={avoidCollisions}
+      triggerClassName={collapsedTriggerClass}
     />
   );
 
@@ -627,6 +655,101 @@ export function AgentSessionControls({
     return (
       <GearControls
         className={className}
+        profileNode={profileNode}
+        harnessNode={harnessNode}
+        modelNode={modelNode}
+        reasoningNode={reasoningNode}
+        trailing={trailing}
+      />
+    );
+  }
+
+  if (layout === "combined") {
+    // Summarize the current selection as icon-prefixed `harness · model · effort`
+    // segments, dropping any whose control is absent or ignored by the selected
+    // harness (a harness that ignores the model / effort drops that segment
+    // rather than showing a value it won't honor). Each segment carries the same
+    // glyph its picker uses, so the trigger reads like the pickers it opens.
+    const segments: { key: string; label: string; node: React.ReactNode }[] = [];
+    if (harness) {
+      const harnessLabel =
+        HARNESS_OPTIONS.find((option) => option.type === harness.value)?.label ??
+        harness.value;
+      segments.push({
+        key: "harness",
+        label: harnessLabel,
+        node: (
+          <span className="flex items-center gap-1.5">
+            <HarnessLogo type={harness.value} size={16} className="shrink-0" />
+            {harnessLabel}
+          </span>
+        ),
+      });
+    }
+    if (model && selectorHonorsModel) {
+      const current = (model.models ?? []).find(
+        (entry) => canonicalModelId(entry) === model.value,
+      );
+      const identity = current ? resolveModelBrandIdentity(current) : null;
+      const modelLabel = stripBrandPrefix(
+        current?.name ?? current?.id ?? model.value,
+        identity,
+      );
+      segments.push({
+        key: "model",
+        label: modelLabel,
+        node: (
+          <span className="flex items-center gap-1.5">
+            {identity && <ModelBrandStack identity={identity} size="sm" />}
+            {modelLabel}
+          </span>
+        ),
+      });
+    }
+    if (reasoning && selectorHonorsEffort) {
+      const effortLabel =
+        (reasoningOptions ?? DEFAULT_REASONING_LEVEL_OPTIONS).find(
+          (option) => option.value === reasoning.value,
+        )?.label ?? "Auto";
+      segments.push({
+        key: "effort",
+        label: effortLabel,
+        node: (
+          <span className="flex items-center gap-1.5">
+            <span className="flex w-3.5 shrink-0 justify-center">
+              <ReasoningGlyph level={reasoning.value} />
+            </span>
+            {effortLabel}
+          </span>
+        ),
+      });
+    }
+    const summary = (
+      <span className="flex items-center gap-1.5">
+        {segments.map((segment, index) => (
+          <React.Fragment key={segment.key}>
+            {index > 0 && (
+              <span
+                className="text-base leading-none text-muted-foreground/60"
+                aria-hidden
+              >
+                ·
+              </span>
+            )}
+            {segment.node}
+          </React.Fragment>
+        ))}
+      </span>
+    );
+    return (
+      <SummaryControls
+        className={className}
+        summary={summary}
+        title={segments.map((segment) => segment.label).join(" · ")}
+        // Match the inline strip's placement contract: a floating composer pins
+        // the panel downward so it can't cover the heading; otherwise it opens
+        // upward for a bottom-docked composer.
+        contentSide={menuPlacement === "down" ? "bottom" : "top"}
         profileNode={profileNode}
         harnessNode={harnessNode}
         modelNode={modelNode}
@@ -758,6 +881,101 @@ function GearSection({
         {label}
       </span>
       {children}
+    </div>
+  );
+}
+
+/**
+ * The gear layout with a labeled trigger: one pill that summarizes the current
+ * selection as text (`harness · model · effort`) and opens the same vertical
+ * stack of harness / model / effort pickers. Lets a composer read its agent
+ * choice at a glance while keeping the strip to a single control.
+ */
+function SummaryControls({
+  className,
+  summary,
+  title,
+  contentSide,
+  profileNode,
+  harnessNode,
+  modelNode,
+  reasoningNode,
+  trailing,
+}: {
+  className?: string;
+  summary: React.ReactNode;
+  title: string;
+  contentSide: "top" | "bottom";
+  profileNode: React.ReactNode;
+  harnessNode: React.ReactNode;
+  modelNode: React.ReactNode;
+  reasoningNode: React.ReactNode;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn("flex items-center gap-2", className)}
+      data-testid="agent-session-controls"
+    >
+      {trailing && <div className="flex items-center gap-2">{trailing}</div>}
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            aria-label="Session controls"
+            title={title}
+            className={cn(
+              // Container-less trigger (Codex-style): bare label + chevron docked in
+              // the composer footer, no border/card/shadow. Only a subtle rounded
+              // hover/open tint marks it as interactive.
+              "inline-flex h-8 items-center gap-1.5 rounded-md px-1.5",
+              "whitespace-nowrap text-xs font-medium text-foreground transition-colors",
+              "hover:bg-muted/50 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "data-[state=open]:bg-muted/50",
+            )}
+          >
+            {summary}
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            side={contentSide}
+            align="end"
+            sideOffset={8}
+            onInteractOutside={(event) => {
+              // The nested model / harness / effort pickers portal their menus
+              // to <body>, i.e. outside this Content's DOM subtree. Without this
+              // guard, interacting with a nested menu reads as an outside click
+              // and collapses this panel. Keep it open while the pointer lands
+              // inside any Radix popper/portal.
+              const target = event.target as HTMLElement | null;
+              if (
+                target?.closest(
+                  "[data-radix-popper-content-wrapper],[data-radix-menu-content],[role=menu],[role=listbox]",
+                )
+              ) {
+                event.preventDefault();
+              }
+            }}
+            className={cn(
+              "z-50 flex w-64 flex-col gap-2.5 rounded-[var(--radius-md)] border border-border bg-popover p-2.5 text-popover-foreground shadow-lg",
+              "data-[state=open]:animate-in data-[state=closed]:animate-out",
+              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+              "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            )}
+          >
+            {profileNode && <GearSection label="Agent">{profileNode}</GearSection>}
+            {harnessNode && (
+              <GearSection label="Harness">{harnessNode}</GearSection>
+            )}
+            {modelNode && <GearSection label="Model">{modelNode}</GearSection>}
+            {reasoningNode && (
+              <GearSection label="Effort">{reasoningNode}</GearSection>
+            )}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
     </div>
   );
 }

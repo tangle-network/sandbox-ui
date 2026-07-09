@@ -115,7 +115,6 @@ do:
     const { nodes, edges } = buildWorkflowGraph(yaml);
     const structural = nodes.find((n) => n.id === "a0");
     expect(structural?.data.tone).toBe("structural");
-    expect(structural?.data.hasBranches).toBe(true);
     expect(structural?.data.badge).toBe("×2");
 
     // Two branch leaves, each connected from the fan-out node by a fork edge.
@@ -169,8 +168,7 @@ do:
     const { nodes } = buildWorkflowGraph(yaml);
     const structural = nodes.find((n) => n.id === "a0");
     expect(structural?.data.title).toBe("For each");
-    // No `do` → no branch leaf, no dangling branch handle.
-    expect(structural?.data.hasBranches).toBe(false);
+    // No `do` → no branch leaf emitted.
     expect(nodes.some((n) => n.id === "a0-b0")).toBe(false);
   });
 

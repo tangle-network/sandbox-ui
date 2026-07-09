@@ -355,9 +355,9 @@ export const Preview: Story = {
   name: "Preview variant (proposal card)",
   render: () => (
     <div className="grid grid-cols-2 gap-4">
-      {[LINEAR, PARALLEL_SYNTHESIS].map((yaml, i) => (
+      {[LINEAR, PARALLEL_SYNTHESIS].map((yaml) => (
         <div
-          key={i}
+          key={yaml}
           className="h-[220px] w-[360px] overflow-hidden rounded-lg border border-border bg-card"
         >
           <WorkflowGraphLazy yaml={yaml} variant="preview" className="h-full w-full" />

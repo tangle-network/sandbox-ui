@@ -81,8 +81,6 @@ export interface WfNodeData extends Record<string, unknown> {
   provider?: string;
   /** Small corner tag, e.g. "×3" for a parallel fan-out. */
   badge?: string;
-  /** Whether this node fans out to branch leaves (renders a right handle). */
-  hasBranches: boolean;
   /** Whether this node is the spine root (no incoming/target handle). */
   isRoot: boolean;
   tone: WfNodeTone;
@@ -257,7 +255,6 @@ function describeActionBase(action: unknown): WfNodeData {
         kind,
         subtitle: str(cfg.template),
         detail: pickDetail(cfg, ["template", "size", "region"]),
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -270,7 +267,6 @@ function describeActionBase(action: unknown): WfNodeData {
         path,
         provider: path?.split(".")[0],
         detail: pickDetail(cfg, ["path"]),
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -282,7 +278,6 @@ function describeActionBase(action: unknown): WfNodeData {
         kind,
         subtitle: url ? urlHost(url) : undefined,
         detail: pickDetail(cfg, ["url"]),
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -302,7 +297,6 @@ function describeActionBase(action: unknown): WfNodeData {
           "size",
           "prompt",
         ]),
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -313,7 +307,6 @@ function describeActionBase(action: unknown): WfNodeData {
         kind,
         subtitle: `${branches.length} branch${branches.length === 1 ? "" : "es"}`,
         badge: branches.length > 0 ? `×${branches.length}` : undefined,
-        hasBranches: branches.length > 0,
         isRoot: false,
         tone: "structural",
       };
@@ -325,7 +318,6 @@ function describeActionBase(action: unknown): WfNodeData {
         subtitle: typeof cfg.items === "string" ? cfg.items : "list",
         detail: pickDetail(cfg, ["items"]),
         // Only fans out when a `do` template is actually present.
-        hasBranches: Boolean(cfg.do),
         isRoot: false,
         tone: "structural",
       };
@@ -333,7 +325,6 @@ function describeActionBase(action: unknown): WfNodeData {
       return {
         title: kind ? kind : "Action",
         kind: kind ?? "action",
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -432,7 +423,6 @@ function describeTrigger(on: unknown): WfNodeData {
         kind: "provider_event",
         subtitle,
         provider: connection,
-        hasBranches: false,
         isRoot: true,
         tone: "trigger",
       },
@@ -448,7 +438,6 @@ function describeTrigger(on: unknown): WfNodeData {
         title: "Schedule",
         kind: "schedule",
         subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
-        hasBranches: false,
         isRoot: true,
         tone: "trigger",
       },
@@ -463,7 +452,6 @@ function describeTrigger(on: unknown): WfNodeData {
     {
       title: "Trigger",
       kind: "trigger",
-      hasBranches: false,
       isRoot: true,
       tone: "trigger",
     },

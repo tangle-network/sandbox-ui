@@ -11,7 +11,6 @@ afterEach(cleanup);
 const BASE: WfNodeData = {
   title: "Run agent",
   kind: "agent.run",
-  hasBranches: false,
   isRoot: false,
   tone: "action",
 };
@@ -175,7 +174,6 @@ describe("WorkflowNode", () => {
       kind: "schedule",
       tone: "trigger",
       isRoot: true,
-      hasBranches: false,
       subtitle: "0 9 * * *",
       state: { status: "succeeded", durationMs: 3200 },
     });

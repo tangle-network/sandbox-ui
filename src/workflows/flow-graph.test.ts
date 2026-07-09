@@ -78,6 +78,13 @@ describe("buildFlowGraph", () => {
     const tallestExpanded = Math.max(...expanded.nodes.map((n) => n.height ?? 0));
     expect(compactHeight).toBeLessThan(tallestExpanded);
   });
+
+  it("honors a caller-supplied measure for node sizing", () => {
+    const { nodes } = buildFlowGraph(YAML, {
+      measure: () => ({ width: 111, height: 55 }),
+    });
+    expect(nodes.every((n) => n.width === 111 && n.height === 55)).toBe(true);
+  });
 });
 
 describe("mergeRunState", () => {
@@ -88,13 +95,13 @@ describe("mergeRunState", () => {
       id: "a0",
       type: "wfNode",
       position: { x: 0, y: 0 },
-      data: { title: "Run agent", kind: "agent.run", hasBranches: false, isRoot: false, tone: "action" },
+      data: { title: "Run agent", kind: "agent.run", isRoot: false, tone: "action" },
     },
     {
       id: "a1",
       type: "wfNode",
       position: { x: 0, y: 200 },
-      data: { title: "Integration", kind: "integration.invoke", hasBranches: false, isRoot: false, tone: "action" },
+      data: { title: "Integration", kind: "integration.invoke", isRoot: false, tone: "action" },
     },
   ];
   const baseById = new Map(baseNodes.map((n) => [n.id, n.data]));

@@ -7,6 +7,7 @@
 
 import { Position, type Edge, type Node } from "@xyflow/react";
 import {
+  type BuildWorkflowGraphOptions,
   buildWorkflowGraph,
   COMPACT_NODE_SIZE,
   type WfDirection,
@@ -36,6 +37,9 @@ export interface BuildFlowGraphOptions {
   /** Collapse nodes to the fixed compact size (icon + title + one-line summary).
    *  Defaults to `false` (the full, expanded node). */
   compact?: boolean;
+  /** Override node dimensions (see {@link buildWorkflowGraph}'s `measure`).
+   *  Ignored when `compact` is set (compact pins its own fixed size). */
+  measure?: BuildWorkflowGraphOptions["measure"];
 }
 
 /**
@@ -57,8 +61,9 @@ export function buildFlowGraph(
   const graph = buildWorkflowGraph(yaml, {
     reserveRunState: nodeState !== undefined,
     direction,
-    // Compact nodes are a fixed size; expanded nodes size to their content.
-    measure: compact ? () => COMPACT_NODE_SIZE : undefined,
+    // Compact nodes are a fixed size; otherwise honor the caller's `measure` (or
+    // fall back to the default content sizing).
+    measure: compact ? () => COMPACT_NODE_SIZE : options?.measure,
   });
   const isLR = direction === "LR";
   const sourcePosition = isLR ? Position.Right : Position.Bottom;

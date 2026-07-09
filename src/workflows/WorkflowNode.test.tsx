@@ -44,6 +44,28 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("partial answer")).toBeTruthy();
   });
 
+  it("surfaces the agent round count on the progress strip", () => {
+    renderNode({
+      ...BASE,
+      subtitle: "Review the PR diff",
+      state: { status: "running", model: "glm-5", rounds: 3, durationMs: 8200 },
+    });
+    // Rounds are an agent progress signal; the prompt subtitle is shown too.
+    expect(screen.getByText("3 rounds")).toBeTruthy();
+    expect(screen.getByText("Review the PR diff")).toBeTruthy();
+  });
+
+  it("does not show a token chip for a non-agent node", () => {
+    renderNode({
+      ...BASE,
+      title: "Notify",
+      kind: "notify",
+      state: { status: "succeeded", inputTokens: 100, outputTokens: 20, durationMs: 300 },
+    });
+    // Tokens are an agent.run concern only.
+    expect(screen.queryByText("100/20 tok")).toBeNull();
+  });
+
   it("renders a failed run's error preview", () => {
     renderNode({
       ...BASE,

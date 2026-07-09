@@ -5,9 +5,11 @@
  * and unit-testable without rendering React Flow.
  */
 
-import type { Edge, Node } from "@xyflow/react";
+import { Position, type Edge, type Node } from "@xyflow/react";
 import {
   buildWorkflowGraph,
+  COMPACT_NODE_SIZE,
+  type WfDirection,
   type WfNodeData,
   type WfNodeState,
 } from "./model";
@@ -19,24 +21,48 @@ export interface FlowGraph {
   error: string | null;
 }
 
+/** Options for {@link buildFlowGraph}. */
+export interface BuildFlowGraphOptions {
+  /**
+   * Live per-node run state (keyed by node id) merged onto the matching node's
+   * data. Its mere presence — even an empty map, as the detail page passes before
+   * the first run — also reserves run-state spacing so a node that later runs
+   * never has to reflow. The static proposal preview passes nothing and stays
+   * compact.
+   */
+  nodeState?: Record<string, WfNodeState>;
+  /** Flow direction. Defaults to "LR". */
+  direction?: WfDirection;
+  /** Collapse nodes to the fixed compact size (icon + title + one-line summary).
+   *  Defaults to `false` (the full, expanded node). */
+  compact?: boolean;
+}
+
 /**
  * Build the React Flow nodes/edges from workflow YAML, merging any live
  * `nodeState` (keyed by node id) onto the matching node's data so the node
  * component renders status/cost/output without a separate channel. A node with
  * no entry in `nodeState` keeps its static data object unchanged (same
- * reference), so the static-definition preview path is untouched.
+ * reference), so the static-definition preview path is untouched. Each node
+ * carries its authoritative size and orientation-driven handle sides so the
+ * card renders at exactly the laid-out box and edges enter/leave the right edge.
  */
 export function buildFlowGraph(
   yaml: string,
-  nodeState?: Record<string, WfNodeState>,
+  options?: BuildFlowGraphOptions,
 ): FlowGraph {
-  // A run overlay is in play whenever `nodeState` is supplied (even an empty map,
-  // as the detail page passes before the first run) — reserve the spine spacing a
-  // running node needs. The static proposal preview passes nothing and stays
-  // compact.
+  const nodeState = options?.nodeState;
+  const direction = options?.direction ?? "LR";
+  const compact = options?.compact ?? false;
   const graph = buildWorkflowGraph(yaml, {
     reserveRunState: nodeState !== undefined,
+    direction,
+    // Compact nodes are a fixed size; expanded nodes size to their content.
+    measure: compact ? () => COMPACT_NODE_SIZE : undefined,
   });
+  const isLR = direction === "LR";
+  const sourcePosition = isLR ? Position.Right : Position.Bottom;
+  const targetPosition = isLR ? Position.Left : Position.Top;
   return {
     error: graph.error,
     nodes: graph.nodes.map(
@@ -44,6 +70,13 @@ export function buildFlowGraph(
         id: n.id,
         type: "wfNode",
         position: n.position,
+        width: n.width,
+        height: n.height,
+        // Fix the DOM box to the laid-out size so the card can't grow past its
+        // reserved space and overlap a neighbour (see model.ts nodeHeight).
+        style: { width: n.width, height: n.height },
+        sourcePosition,
+        targetPosition,
         data: nodeState?.[n.id]
           ? { ...n.data, state: nodeState[n.id] }
           : n.data,
@@ -53,8 +86,8 @@ export function buildFlowGraph(
       id: e.id,
       source: e.source,
       target: e.target,
-      sourceHandle: e.sourceHandle,
       type: "smoothstep",
+      data: { kind: e.kind },
     })),
   };
 }

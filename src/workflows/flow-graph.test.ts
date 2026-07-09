@@ -36,7 +36,7 @@ describe("buildFlowGraph", () => {
       model: "gpt-4o",
       outputPreview: "partial answer",
     };
-    const { nodes } = buildFlowGraph(YAML, { a0: state });
+    const { nodes } = buildFlowGraph(YAML, { nodeState: { a0: state } });
     const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
     // The matching node carries the live state — this is both the render source
     // and the payload handed to onNodeClick(node.id, node.data).

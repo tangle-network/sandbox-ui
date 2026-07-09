@@ -414,3 +414,74 @@
 [data-sandbox-theme="vault"] .glow-primary:hover {
   box-shadow: none;
 }
+
+/* Markdown prose — applied via `tangle-prose` on the Markdown renderer. This
+ * library ships no @tailwindcss/typography, so headings, lists, tables, and
+ * block spacing carry no styling on their own. Self-contained and token-driven
+ * so it re-skins with light / vault / dark. Mirrors @tangle-network/brand's
+ * globals.css so consumers get prose styling from a single sandbox-ui import. */
+.tangle-prose {
+  color: var(--text-primary);
+  line-height: 1.7;
+}
+.tangle-prose > * + * { margin-top: 0.85em; }
+.tangle-prose h1, .tangle-prose h2, .tangle-prose h3, .tangle-prose h4 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  color: var(--text-primary);
+}
+.tangle-prose h1 { font-size: 1.4em; }
+.tangle-prose h2 { font-size: 1.25em; }
+.tangle-prose h3 { font-size: 1.1em; }
+.tangle-prose p, .tangle-prose ul, .tangle-prose ol { margin: 0; }
+.tangle-prose ul, .tangle-prose ol { padding-left: 1.4em; }
+.tangle-prose li { margin: 0.25em 0; }
+.tangle-prose li > ul, .tangle-prose li > ol { margin-top: 0.25em; }
+.tangle-prose a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.tangle-prose blockquote {
+  border-left: 2px solid var(--border-default);
+  padding-left: 0.9em;
+  color: var(--text-muted);
+}
+.tangle-prose hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 1.2em 0; }
+.tangle-prose :not(pre) > code {
+  background: var(--md3-surface-container-high);
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: var(--font-mono);
+}
+.tangle-prose pre { margin: 0.85em 0; }
+
+/* Tables — border-collapse with hairline dividers + real cell padding, so
+ * columns read as a grid instead of colliding. */
+.tangle-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.85em 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+}
+.tangle-prose thead { border-bottom: 1px solid var(--border-default); }
+.tangle-prose th {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.5em 0.85em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.tangle-prose td {
+  padding: 0.5em 0.85em;
+  border-top: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+.tangle-prose th:not(:first-child), .tangle-prose td:not(:first-child) {
+  border-left: 1px solid var(--border-subtle);
+}

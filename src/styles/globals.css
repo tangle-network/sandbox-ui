@@ -415,15 +415,21 @@
   box-shadow: none;
 }
 
-/* Markdown prose — applied via `tangle-prose` on the Markdown renderer. This
- * library ships no @tailwindcss/typography, so headings, lists, tables, and
- * block spacing carry no styling on their own. Self-contained and token-driven
- * so it re-skins with light / vault / dark. Mirrors @tangle-network/brand's
- * globals.css so consumers get prose styling from a single sandbox-ui import. */
+/* Markdown prose — styles the `tangle-prose` surface that @tangle-network/ui's
+ * Markdown renderer emits (re-exported from this library's /markdown, /chat and
+ * /run entries). ui ships no @tailwindcss/typography, so without these rules
+ * headings, lists, tables, and block spacing carry no styling in consumers that
+ * source prose CSS solely from @tangle-network/sandbox-ui/styles. Self-contained
+ * and token-driven so it re-skins with light / vault / dark; mirrors
+ * @tangle-network/brand's globals.css so it ships from a single sandbox-ui import. */
 .tangle-prose {
   color: var(--text-primary);
   line-height: 1.7;
 }
+/* Zero the browser's default block margins at zero specificity (:where) so the
+ * owl selector below owns all vertical rhythm — a plain `.tangle-prose p` reset
+ * (0,1,1) would outrank the owl (0,1,0) and collapse the gap between blocks. */
+.tangle-prose :where(p, ul, ol) { margin: 0; }
 .tangle-prose > * + * { margin-top: 0.85em; }
 .tangle-prose h1, .tangle-prose h2, .tangle-prose h3, .tangle-prose h4 {
   font-weight: 600;
@@ -435,7 +441,6 @@
 .tangle-prose h1 { font-size: 1.4em; }
 .tangle-prose h2 { font-size: 1.25em; }
 .tangle-prose h3 { font-size: 1.1em; }
-.tangle-prose p, .tangle-prose ul, .tangle-prose ol { margin: 0; }
 .tangle-prose ul, .tangle-prose ol { padding-left: 1.4em; }
 .tangle-prose li { margin: 0.25em 0; }
 .tangle-prose li > ul, .tangle-prose li > ol { margin-top: 0.25em; }

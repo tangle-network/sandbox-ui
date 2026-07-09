@@ -6,11 +6,11 @@
 
 - `globals.css` gains a self-contained, token-driven `.tangle-prose` ruleset
   (headings, lists, links, blockquote, `hr`, inline code, `pre`, and
-  hairline-divider tables that scroll horizontally on narrow viewports). The
-  `Markdown` renderer emits a `tangle-prose`
-  surface but this library ships no `@tailwindcss/typography`, so structured
-  markdown was unstyled in consumers that source prose CSS solely from
-  `@tangle-network/sandbox-ui/styles`. Mirrors `@tangle-network/brand`'s
+  hairline-divider tables that scroll horizontally on narrow viewports).
+  `@tangle-network/ui`'s `Markdown` renderer (re-exported from this library's
+  `/markdown`, `/chat`, and `/run` entries) emits a `tangle-prose` surface, but
+  ui ships no `@tailwindcss/typography`, so structured markdown was unstyled in
+  consumers that source prose CSS solely from `@tangle-network/sandbox-ui/styles`. Mirrors `@tangle-network/brand`'s
   `globals.css` so prose styling ships from a single sandbox-ui import; brand's
   `@layer base`/`utilities` are intentionally not imported wholesale (they carry
   glow chrome this library flattens for Tangle Quiet) (#169).

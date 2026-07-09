@@ -149,9 +149,12 @@ const PROGRESS_ROW = 26;
 export const COMPACT_NODE_SIZE = { width: 240, height: 64 };
 
 /**
- * The card's rendered height. AUTHORITATIVE — WorkflowNode renders the card at
- * exactly this height (`h-full` inside a node sized to it), and variable content
- * is clamped to the reserved line counts, so the number can't drift from the DOM.
+ * The card's box height. The React Flow node is PINNED to this height (the card
+ * fills it via `h-full` inside a node sized to it) and clips overflow, so cards
+ * can never overlap regardless of the consumer's fonts — this height IS the
+ * layout, not an estimate of the DOM. The row constants are tuned for the
+ * library's default token/font config; a consumer whose fonts render a row
+ * taller just sees that content clamped within the fixed box, never a reflow.
  * `withRunState` reserves the rows live run state adds (the meta-chip row, the
  * output/error preview, and the progress strip) so the layout — computed ONCE,
  * before any run state is merged in — already leaves room for a node that later

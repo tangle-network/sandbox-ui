@@ -1,4 +1,4 @@
-import type { Node } from "@xyflow/react";
+import { Position, type Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 import { buildFlowGraph, mergeRunState, sameRunState } from "./flow-graph";
 import type { WfNodeData, WfNodeState } from "./model";
@@ -50,6 +50,33 @@ describe("buildFlowGraph", () => {
     const { nodes, error } = buildFlowGraph("");
     expect(error).toBeTruthy();
     expect(nodes).toHaveLength(0);
+  });
+
+  it("orients handles and advances along the y axis for the TB direction", () => {
+    const { nodes } = buildFlowGraph(YAML, { direction: "TB" });
+    // Handles enter the top and leave the bottom (the mirror of LR's left/right),
+    // so React Flow routes edges vertically.
+    expect(nodes.every((n) => n.sourcePosition === Position.Bottom)).toBe(true);
+    expect(nodes.every((n) => n.targetPosition === Position.Top)).toBe(true);
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    // The spine advances DOWN (main axis = y), the transpose of the LR default.
+    expect(byId.a0.position.y).toBeGreaterThan(byId.trigger.position.y);
+    expect(byId.a1.position.y).toBeGreaterThan(byId.a0.position.y);
+    // Cross axis is x: a linear spine shares one vertical centerline.
+    const centerX = (n: Node<WfNodeData>) => n.position.x + (n.width ?? 0) / 2;
+    expect(centerX(byId.a0)).toBeCloseTo(centerX(byId.a1), 1);
+  });
+
+  it("collapses to a single fixed node size for compact density", () => {
+    const expanded = buildFlowGraph(YAML, { nodeState: {} }); // run overlay reserved
+    const compact = buildFlowGraph(YAML, { compact: true });
+    // Every compact node is the same fixed size (uniform icon tiles)...
+    expect(new Set(compact.nodes.map((n) => n.height)).size).toBe(1);
+    expect(new Set(compact.nodes.map((n) => n.width)).size).toBe(1);
+    // ...and shorter than the tallest expanded (run-reserved) node.
+    const compactHeight = compact.nodes[0].height ?? 0;
+    const tallestExpanded = Math.max(...expanded.nodes.map((n) => n.height ?? 0));
+    expect(compactHeight).toBeLessThan(tallestExpanded);
   });
 });
 

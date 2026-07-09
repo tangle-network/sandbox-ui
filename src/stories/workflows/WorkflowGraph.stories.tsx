@@ -297,7 +297,7 @@ export const LinearSucceeded: Story = {
         variant="full"
         className="h-full w-full"
         nodeState={LINEAR_DONE}
-        onNodeClick={(id) => console.log("node click", id)}
+        onNodeClick={() => {}}
       />
     </GraphPanel>
   ),
@@ -312,7 +312,7 @@ export const ParallelRunning: Story = {
         variant="full"
         className="h-full w-full"
         nodeState={PARALLEL_RUNNING}
-        onNodeClick={(id) => console.log("node click", id)}
+        onNodeClick={() => {}}
       />
     </GraphPanel>
   ),
@@ -327,7 +327,7 @@ export const MixedFailed: Story = {
         variant="full"
         className="h-full w-full"
         nodeState={MIXED_FAILED}
-        onNodeClick={(id) => console.log("node click", id)}
+        onNodeClick={() => {}}
       />
     </GraphPanel>
   ),
@@ -343,7 +343,7 @@ export const CompactRun: Story = {
         defaultCompact
         className="h-full w-full"
         nodeState={PARALLEL_RUNNING}
-        onNodeClick={(id) => console.log("node click", id)}
+        onNodeClick={() => {}}
       />
     </GraphPanel>
   ),

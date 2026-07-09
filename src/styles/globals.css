@@ -459,11 +459,13 @@
 }
 .tangle-prose pre { margin: 0.85em 0; }
 
-/* Tables — border-collapse with hairline dividers + real cell padding, so
- * columns read as a grid instead of colliding. */
+/* Tables — hairline dividers + real cell padding, so columns read as a grid
+ * instead of colliding. `display: block` + `overflow-x` lets wide tables scroll
+ * on narrow viewports; that also makes `border-collapse` inert (it only applies
+ * to `display: table`), so dividers come from the per-cell `border-top` /
+ * `border-left` and the `thead` underline below — not from border collapsing. */
 .tangle-prose table {
   width: 100%;
-  border-collapse: collapse;
   margin: 0.85em 0;
   font-size: 0.95em;
   display: block;

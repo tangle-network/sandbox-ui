@@ -5,8 +5,9 @@
 ### Styles
 
 - `globals.css` gains a self-contained, token-driven `.tangle-prose` ruleset
-  (headings, lists, links, blockquote, `hr`, inline code, `pre`, and a
-  `border-collapse` table grid). The `Markdown` renderer emits a `tangle-prose`
+  (headings, lists, links, blockquote, `hr`, inline code, `pre`, and
+  hairline-divider tables that scroll horizontally on narrow viewports). The
+  `Markdown` renderer emits a `tangle-prose`
   surface but this library ships no `@tailwindcss/typography`, so structured
   markdown was unstyled in consumers that source prose CSS solely from
   `@tangle-network/sandbox-ui/styles`. Mirrors `@tangle-network/brand`'s

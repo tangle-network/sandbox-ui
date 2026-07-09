@@ -9,6 +9,7 @@
 - New **compact/expanded density** with a toggle on the full graph: the `defaultCompact` prop starts collapsed, and the preview variant is always compact. Compact nodes are uniform icon tiles for scanning large graphs.
 - New API: `WfNodeState.rounds`, a `direction` prop (`"LR"` default / `"TB"`) with orientation-driven handles, and `buildWorkflowGraph`/`buildFlowGraph` gain `direction`, `compact`, and `measure` (caller-supplied node sizing) options plus an exported `COMPACT_NODE_SIZE`.
 - The workflow node/edge components now use the library's own canonical tokens (`foreground`, `muted-foreground`, `surface-container-high`, …) instead of utility names only the platform app registered, so they render correctly in any consumer (and in Storybook), not just under the platform's Tailwind config.
+- **Breaking (minor):** `WfEdge` replaces `sourceHandle: "out" | "branch"` with `kind: "spine" | "fork" | "join"`. `WfNode` gains authoritative `width`/`height`. A consumer that read `edge.sourceHandle` from `buildWorkflowGraph` should switch to `edge.kind`; the rendered graph is unaffected.
 
 ## 0.73.0
 

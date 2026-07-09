@@ -39,6 +39,21 @@ do:
     ]);
   });
 
+  it("marks the first action as root when there is no trigger", () => {
+    // Without an `on:` trigger the first action is the spine root, so it shows no
+    // inbound handle (nothing points at it).
+    const yaml = `
+do:
+  - agent.run:
+      prompt: Do the thing.
+  - notify:
+      url: https://example.com
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    expect(nodes.find((n) => n.id === "a0")?.data.isRoot).toBe(true);
+    expect(nodes.find((n) => n.id === "a1")?.data.isRoot).toBe(false);
+  });
+
   it("uses the prompt (not the model) as an agent.run subtitle, with the model on its own field", () => {
     // The model is shown as a dedicated chip, so the subtitle carries the more
     // useful prompt — no duplication of the model string.

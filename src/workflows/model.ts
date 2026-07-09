@@ -152,10 +152,12 @@ export const COMPACT_NODE_SIZE = { width: 240, height: 64 };
  * The card's rendered height. AUTHORITATIVE — WorkflowNode renders the card at
  * exactly this height (`h-full` inside a node sized to it), and variable content
  * is clamped to the reserved line counts, so the number can't drift from the DOM.
- * `withRunState` reserves the rows live run state adds (the meta-chip row + the
- * output/error preview) so the layout — computed ONCE, before any run state is
- * merged in — already leaves room for a node that later runs, and the merge never
- * reflows. A trigger never receives run state, so it stays compact.
+ * `withRunState` reserves the rows live run state adds (the meta-chip row, the
+ * output/error preview, and the progress strip) so the layout — computed ONCE,
+ * before any run state is merged in — already leaves room for a node that later
+ * runs, and the merge never reflows. A trigger only ever shows a status (no
+ * metrics/output/progress), so it's spaced by its static height (`withRunState`
+ * false) and the node component skips its progress strip to match.
  */
 function nodeHeight(data: WfNodeData, withRunState: boolean): number {
   let h = CARD_CHROME + HEADER_ROW;
@@ -590,7 +592,8 @@ export function buildWorkflowGraph(
   let prevExits: string[] = [];
 
   if (def.on) {
-    // The trigger never carries run state, so it's spaced by its static height.
+    // A trigger only shows a status (no metrics/output/progress), so it's spaced
+    // by its static height — the node component skips its progress strip to match.
     addNode("trigger", describeTrigger(def.on), rank, false);
     prevExits = ["trigger"];
     rank += 1;
@@ -599,6 +602,9 @@ export function buildWorkflowGraph(
   actions.forEach((action, i) => {
     const id = `a${i}`;
     const data = describeAction(action);
+    // With no `on:` trigger, the first action IS the spine root, so it shows no
+    // inbound handle (nothing points at it).
+    if (i === 0 && !def.on) data.isRoot = true;
     addNode(id, data, rank, reserveRunState);
     for (const from of prevExits) {
       // An edge arriving from a branch leaf is a join (reconvergence); from a

@@ -105,6 +105,23 @@ describe("WorkflowNode", () => {
     expect(screen.queryByText("suppressed while failed")).toBeNull();
   });
 
+  it("shows a trigger's status but no progress strip (a trigger only fires)", () => {
+    // The trigger reserves no run-state rows, so it must NOT render the progress
+    // strip — doing so would clip. Its status shows in the header pill instead.
+    renderNode({
+      title: "Schedule",
+      kind: "schedule",
+      tone: "trigger",
+      isRoot: true,
+      hasBranches: false,
+      subtitle: "0 9 * * *",
+      state: { status: "succeeded", durationMs: 3200 },
+    });
+    expect(screen.getByText("Done")).toBeTruthy();
+    // Elapsed only ever appears in the progress strip; absent for a trigger.
+    expect(screen.queryByText("3.2s")).toBeNull();
+  });
+
   it("shows the static badge and no run status when there is no state", () => {
     renderNode({ ...BASE, badge: "×3", state: undefined });
     expect(screen.getByText("×3")).toBeTruthy();

@@ -17,6 +17,7 @@ import {
   Panel,
   Position,
   ReactFlow,
+  type ReactFlowInstance,
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
@@ -43,6 +44,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -240,10 +242,15 @@ function statusBorder(status: WfNodeStatus): string {
   }
 }
 
-/** A compact key/value chip for the node's meta row. */
-function MetaChip({ children }: { children: ReactNode }) {
+/** A compact key/value chip for the node's meta row. Truncates (with a title
+ *  tooltip) so a long value — e.g. a provider-prefixed model id — can't overflow
+ *  the fixed card width or wrap past the reserved meta rows. */
+function MetaChip({ children, title }: { children: ReactNode; title?: string }) {
   return (
-    <span className="rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
+    <span
+      title={title}
+      className="inline-block max-w-[150px] truncate rounded bg-surface-container-high px-1.5 py-0.5 align-middle text-[10px] text-muted-foreground"
+    >
       {children}
     </span>
   );
@@ -382,7 +389,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           run; tokens are agent-only). Duration lives in the progress footer. */}
       {(model || cost || tokens) && (
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {model && <MetaChip>{model}</MetaChip>}
+          {model && <MetaChip title={model}>{model}</MetaChip>}
           {cost && <MetaChip>{cost}</MetaChip>}
           {tokens && <MetaChip>{tokens}</MetaChip>}
         </div>
@@ -404,7 +411,10 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           {outputText}
         </p>
       )}
-      {state && (
+      {/* Progress is an action/branch concern. A trigger only fires (it has no
+          rounds, output, or metrics), so it shows just its status in the header
+          and reserves no run rows — rendering a strip here would clip. */}
+      {state && d.tone !== "trigger" && (
         <ProgressStrip
           status={state.status}
           rounds={isAgent ? state.rounds : undefined}
@@ -514,6 +524,7 @@ export function WorkflowGraph({
   // variant defaults per prop and lets the user toggle density.
   const [userCompact, setUserCompact] = useState(defaultCompact);
   const compact = isPreview || userCompact;
+  const rfRef = useRef<ReactFlowInstance<Node<WfNodeData>> | null>(null);
 
   // Structural graph from the YAML alone — STABLE across nodeState ticks. Built
   // with run-state spacing reserved whenever a run overlay is in play (nodeState
@@ -568,6 +579,19 @@ export function WorkflowGraph({
     setNodes((prev) => mergeRunState(prev, baseById, nodeState));
   }, [nodeState, structural, setNodes]);
 
+  // Reframe the viewport when the layout STRUCTURE changes (a definition edit,
+  // orientation, or the density toggle) — node ids/count are unchanged across a
+  // density flip, so React Flow won't auto-fit and the graph would otherwise be
+  // left mis-zoomed. Deferred a frame so it runs after the re-seeded nodes (with
+  // their new sizes) commit. Not triggered by a run-state tick (structural is
+  // stable then), so a live run is never yanked around.
+  useEffect(() => {
+    const inst = rfRef.current;
+    if (!inst || typeof requestAnimationFrame === "undefined") return;
+    const raf = requestAnimationFrame(() => inst.fitView({ padding: 0.18 }));
+    return () => cancelAnimationFrame(raf);
+  }, [structural]);
+
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {
       onNodeClick?.(node.id, node.data);
@@ -596,6 +620,9 @@ export function WorkflowGraph({
         onEdgesChange={onEdgesChange}
         nodeTypes={NODE_TYPES}
         colorMode={colorMode}
+        onInit={(inst) => {
+          rfRef.current = inst;
+        }}
         onNodeClick={onNodeClick ? handleNodeClick : undefined}
         fitView
         fitViewOptions={{ padding: 0.18 }}

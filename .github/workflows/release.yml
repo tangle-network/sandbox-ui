@@ -49,7 +49,10 @@ jobs:
         if: steps.version.outputs.changed == 'true'
         run: |
           # OIDC trusted publishing needs npm >= 11.5.1; Node 22 ships npm 10.x.
-          npm install -g npm@latest
+          # Pinned (not @latest): npm 12.0.0 (2026-07-08) broke `--provenance` with
+          # "MODULE_NOT_FOUND: Cannot find module 'sigstore'". 11.18.0 is the last
+          # known-good release. Revisit once a fixed npm 12.x ships.
+          npm install -g npm@11.18.0
           pnpm install --frozen-lockfile
           pnpm run build
           # No NODE_AUTH_TOKEN: with id-token:write + a configured trusted

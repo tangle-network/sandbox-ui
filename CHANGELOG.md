@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.73.0
+
+### Styles
+
+- `globals.css` gains a self-contained, token-driven `.tangle-prose` ruleset
+  (headings, lists, links, blockquote, `hr`, inline code, `pre`, and
+  hairline-divider tables that scroll horizontally on narrow viewports).
+  `@tangle-network/ui`'s `Markdown` renderer (re-exported from this library's
+  `/markdown`, `/chat`, and `/run` entries) emits a `tangle-prose` surface, but
+  ui ships no `@tailwindcss/typography`, so structured markdown was unstyled in
+  consumers that source prose CSS solely from `@tangle-network/sandbox-ui/styles`. Mirrors `@tangle-network/brand`'s
+  `globals.css` so prose styling ships from a single sandbox-ui import; brand's
+  `@layer base`/`utilities` are intentionally not imported wholesale (they carry
+  glow chrome this library flattens for Tangle Quiet) (#169).
+
+### CI
+
+- Pin npm to `11.18.0` in `release.yml`. npm `12.0.0` broke
+  `npm publish --provenance` with `Cannot find module 'sigstore'`; `11.18.0` is
+  the last known-good (>= 11.5.1 for OIDC) (#169).
+
+## 0.72.0
+
+### Dependencies
+
+- Bump `@tangle-network/ui` to `^11.0.0` and `@tangle-network/brand` to `^1.0.0`:
+  transcript spacing, markdown tables, remaining WCAG AA (#168).
+
 ## 0.71.0
 
 ### Chat

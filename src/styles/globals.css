@@ -414,3 +414,81 @@
 [data-sandbox-theme="vault"] .glow-primary:hover {
   box-shadow: none;
 }
+
+/* Markdown prose — styles the `tangle-prose` surface that @tangle-network/ui's
+ * Markdown renderer emits (re-exported from this library's /markdown, /chat and
+ * /run entries). ui ships no @tailwindcss/typography, so without these rules
+ * headings, lists, tables, and block spacing carry no styling in consumers that
+ * source prose CSS solely from @tangle-network/sandbox-ui/styles. Self-contained
+ * and token-driven so it re-skins with light / vault / dark; mirrors
+ * @tangle-network/brand's globals.css so it ships from a single sandbox-ui import. */
+.tangle-prose {
+  color: var(--text-primary);
+  line-height: 1.7;
+}
+/* Zero the browser's default block margins at zero specificity (:where) so the
+ * owl selector below owns all vertical rhythm — a plain `.tangle-prose p` reset
+ * (0,1,1) would outrank the owl (0,1,0) and collapse the gap between blocks. */
+.tangle-prose :where(p, ul, ol) { margin: 0; }
+.tangle-prose > * + * { margin-top: 0.85em; }
+.tangle-prose h1, .tangle-prose h2, .tangle-prose h3, .tangle-prose h4 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.4em;
+  margin-bottom: 0.5em;
+  color: var(--text-primary);
+}
+.tangle-prose h1 { font-size: 1.4em; }
+.tangle-prose h2 { font-size: 1.25em; }
+.tangle-prose h3 { font-size: 1.1em; }
+.tangle-prose ul, .tangle-prose ol { padding-left: 1.4em; }
+.tangle-prose li { margin: 0.25em 0; }
+.tangle-prose li > ul, .tangle-prose li > ol { margin-top: 0.25em; }
+.tangle-prose a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.tangle-prose blockquote {
+  border-left: 2px solid var(--border-default);
+  padding-left: 0.9em;
+  color: var(--text-muted);
+}
+.tangle-prose hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 1.2em 0; }
+.tangle-prose :not(pre) > code {
+  background: var(--md3-surface-container-high);
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: var(--font-mono);
+}
+.tangle-prose pre { margin: 0.85em 0; }
+
+/* Tables — hairline dividers + real cell padding, so columns read as a grid
+ * instead of colliding. `display: block` + `overflow-x` lets wide tables scroll
+ * on narrow viewports; that also makes `border-collapse` inert (it only applies
+ * to `display: table`), so dividers come from the per-cell `border-top` /
+ * `border-left` and the `thead` underline below — not from border collapsing. */
+.tangle-prose table {
+  width: 100%;
+  margin: 0.85em 0;
+  font-size: 0.95em;
+  display: block;
+  overflow-x: auto;
+}
+.tangle-prose thead { border-bottom: 1px solid var(--border-default); }
+.tangle-prose th {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.5em 0.85em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.tangle-prose td {
+  padding: 0.5em 0.85em;
+  border-top: 1px solid var(--border-subtle);
+  vertical-align: top;
+}
+.tangle-prose th:not(:first-child), .tangle-prose td:not(:first-child) {
+  border-left: 1px solid var(--border-subtle);
+}

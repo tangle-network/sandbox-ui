@@ -96,9 +96,13 @@ const TONE_ACCENT: Record<WfNodeTone, string> = {
 };
 
 // Status colors, shared by the node (dot/progress) and the edges so a node and
-// the hop pointing at it read as one. Registered/raw brand vars resolve in both
-// themes; green/red match the node status borders (green-500 / red-500).
-const EDGE_MUTED = "var(--color-muted-foreground)";
+// the hop pointing at it read as one. These are INLINE styles, so they must use
+// the RAW brand tokens (`hsl(var(--muted-foreground))`, `hsl(var(--primary))`) —
+// NOT the `--color-*` @theme aliases, which exist in this library's Storybook but
+// are undefined in a consumer that only imports `tokens.css` (e.g. platform-web),
+// where a `var(--color-*)` stroke silently resolves to `none` (invisible edge).
+// green/red match the node status borders (green-500 / red-500).
+const EDGE_MUTED = "hsl(var(--muted-foreground))";
 const EDGE_DONE = "#22c55e";
 const EDGE_FAIL = "#ef4444";
 const EDGE_RUNNING = "hsl(var(--primary))";
@@ -185,7 +189,7 @@ function ProgressStrip({
       <div
         className="h-1 w-full overflow-hidden rounded-full"
         style={{
-          background: "color-mix(in srgb, var(--color-muted-foreground) 22%, transparent)",
+          background: "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)",
         }}
       >
         <div
@@ -341,7 +345,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
         {state?.status === "running" && (
           <div
             className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full"
-            style={{ background: "color-mix(in srgb, var(--color-muted-foreground) 22%, transparent)" }}
+            style={{ background: "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)" }}
           >
             <div
               className="h-full w-1/2 animate-pulse rounded-full"
@@ -456,7 +460,7 @@ function edgeColor(status: WfNodeStatus | undefined): string {
   }
 }
 
-function buildStyledEdges(
+export function buildStyledEdges(
   base: Edge[],
   nodeState: Record<string, WfNodeState> | undefined,
 ): Edge[] {

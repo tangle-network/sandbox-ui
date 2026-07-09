@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { type Node, type NodeProps, ReactFlowProvider } from "@xyflow/react";
+import type { Edge, Node, NodeProps } from "@xyflow/react";
+import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { WfNodeData } from "./model";
-import { WorkflowNode } from "./WorkflowGraph";
+import { buildStyledEdges, WorkflowNode } from "./WorkflowGraph";
 
 afterEach(cleanup);
 
@@ -24,6 +25,56 @@ function renderNode(data: WfNodeData) {
     </ReactFlowProvider>,
   );
 }
+
+describe("buildStyledEdges", () => {
+  const edge = (source: string, target: string): Edge => ({
+    id: `${source}->${target}`,
+    source,
+    target,
+    type: "smoothstep",
+  });
+
+  it("colors an edge by its target's status and animates only the running hop", () => {
+    const [done, running, unreached] = buildStyledEdges(
+      [edge("a", "b"), edge("b", "c"), edge("c", "d")],
+      { b: { status: "succeeded" }, c: { status: "running" } },
+    );
+    expect(done.style?.stroke).toBe("#22c55e");
+    expect(running.style?.stroke).toBe("hsl(var(--primary))");
+    expect(running.animated).toBe(true);
+    // An unreached (no-state) target is the muted neutral, animated off.
+    expect(unreached.style?.stroke).toBe("hsl(var(--muted-foreground))");
+    expect(unreached.animated).toBe(false);
+  });
+
+  it("styles edges with RAW brand tokens, never a --color-* @theme alias", () => {
+    // An inline `var(--color-*)` stroke resolves in this library's Storybook (its
+    // @theme registers those aliases) but is UNDEFINED in a consumer that only
+    // ships `tokens.css` (e.g. platform-web), where it silently computes to
+    // `stroke: none` — the invisible unreached edges bug. Every edge/marker color
+    // must therefore use a raw token or literal.
+    const edges = buildStyledEdges(
+      [edge("a", "b")],
+      // exercise every status branch
+      { a: { status: "queued" }, b: { status: "failed" } },
+    );
+    for (const s of [
+      "queued",
+      "running",
+      "succeeded",
+      "failed",
+      undefined,
+    ] as const) {
+      const [e] = buildStyledEdges([edge("a", "b")], s ? { b: { status: s } } : {});
+      const stroke = String(e.style?.stroke ?? "");
+      const marker =
+        typeof e.markerEnd === "object" ? String(e.markerEnd.color ?? "") : "";
+      expect(stroke).not.toContain("var(--color-");
+      expect(marker).not.toContain("var(--color-");
+    }
+    expect(edges[0].markerEnd).toBeTruthy();
+  });
+});
 
 describe("WorkflowNode", () => {
   it("renders the live status, model, cost, duration, and output once a run state is present", () => {

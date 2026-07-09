@@ -2,11 +2,13 @@
 import type { Edge, Node, NodeProps } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { WfNodeData } from "./model";
 import {
   buildStyledEdges,
   DensityContext,
+  DirectionContext,
+  WorkflowGraph,
   WorkflowNode,
 } from "./WorkflowGraph";
 
@@ -147,6 +149,39 @@ describe("WorkflowNode", () => {
     );
     expect(screen.queryByText("Running")).toBeNull();
     expect(screen.getByText("m")).toBeTruthy();
+  });
+
+  it("consumes DirectionContext: places handles top/bottom under TB", () => {
+    const { container } = render(
+      <ReactFlowProvider>
+        <DirectionContext.Provider value="TB">
+          <WorkflowNode {...({ data: BASE } as NodeProps<Node<WfNodeData>>)} />
+        </DirectionContext.Provider>
+      </ReactFlowProvider>,
+    );
+    // TB routes edges vertically: target handle on top, source on bottom.
+    expect(container.querySelector(".react-flow__handle-top")).toBeTruthy();
+    expect(container.querySelector(".react-flow__handle-bottom")).toBeTruthy();
+    expect(container.querySelector(".react-flow__handle-left")).toBeNull();
+  });
+});
+
+describe("WorkflowGraph density toggle", () => {
+  const YAML = `on:
+  schedule:
+    cron: "0 0 * * *"
+do:
+  - notify:
+      url: https://example.com
+`;
+
+  it("flips the density label when the toggle button is clicked", () => {
+    render(<WorkflowGraph yaml={YAML} variant="full" />);
+    // Expanded by default → the toggle offers "Compact".
+    const toggle = screen.getByRole("button", { name: /compact/i });
+    fireEvent.click(toggle);
+    // After collapsing, the toggle offers "Expand".
+    expect(screen.getByRole("button", { name: /expand/i })).toBeTruthy();
   });
 
   it("does not show a token chip for a non-agent node", () => {

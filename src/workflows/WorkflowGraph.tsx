@@ -587,14 +587,23 @@ export function WorkflowGraph({
   }, [nodeState, structural, setNodes]);
 
   // Reframe the viewport when the layout STRUCTURE changes (a definition edit,
-  // orientation, or the density toggle) — node ids/count are unchanged across a
-  // density flip, so React Flow won't auto-fit and the graph would otherwise be
-  // left mis-zoomed. Deferred a frame so it runs after the re-seeded nodes (with
-  // their new sizes) commit. Not triggered by a run-state tick (structural is
-  // stable then), so a live run is never yanked around.
+  // orientation, the density toggle, or a run-overlay transition) — node ids/count
+  // are unchanged across a density flip, so React Flow won't auto-fit and the
+  // graph would otherwise be left mis-zoomed. Deferred a frame so it runs after
+  // the re-seeded nodes (with their new sizes) commit. A run-state tick doesn't
+  // change `structural`, so a live run is never yanked around.
+  const didInitialFitRef = useRef(false);
   useEffect(() => {
+    // ReactFlow's `fitView` prop already frames the initial render — skip this
+    // effect's first run so we don't double-fit on mount.
+    if (!didInitialFitRef.current) {
+      didInitialFitRef.current = true;
+      return;
+    }
     const inst = rfRef.current;
     if (!inst || typeof requestAnimationFrame === "undefined") return;
+    // cancelAnimationFrame is universally paired with requestAnimationFrame, so
+    // the single guard above covers the cleanup too.
     const raf = requestAnimationFrame(() => inst.fitView({ padding: 0.18 }));
     return () => cancelAnimationFrame(raf);
   }, [structural]);

@@ -141,6 +141,18 @@ describe("mergeRunState", () => {
     expect(again[1]).toBe(withState[1]);
   });
 
+  it("re-renders a node when only its round count changes", () => {
+    const withR2 = mergeRunState(baseNodes, baseById, {
+      a0: { status: "running", rounds: 2 },
+    });
+    const withR3 = mergeRunState(withR2, baseById, {
+      a0: { status: "running", rounds: 3 },
+    });
+    // The round bump produces a fresh node object carrying the new count.
+    expect(withR3[0]).not.toBe(withR2[0]);
+    expect(withR3[0].data.state?.rounds).toBe(3);
+  });
+
   it("does not let state accumulate: clearing nodeState strips the node back to base", () => {
     const withState = mergeRunState(baseNodes, baseById, {
       a0: { status: "succeeded", outputPreview: "done" },
@@ -177,6 +189,26 @@ describe("sameRunState", () => {
       sameRunState(
         { status: "succeeded", inputTokens: 10, outputTokens: 5 },
         { status: "succeeded", inputTokens: 10, outputTokens: 5 },
+      ),
+    ).toBe(true);
+  });
+
+  it("treats a rounds-only change as different (the generic compare covers rounds)", () => {
+    // A live tick that only advances the agent's round count must re-render — the
+    // comparison is over every key, so `rounds` is not silently ignored.
+    expect(
+      sameRunState(
+        { status: "running", rounds: 2 },
+        { status: "running", rounds: 3 },
+      ),
+    ).toBe(false);
+    expect(
+      sameRunState({ status: "running" }, { status: "running", rounds: 1 }),
+    ).toBe(false);
+    expect(
+      sameRunState(
+        { status: "running", rounds: 2 },
+        { status: "running", rounds: 2 },
       ),
     ).toBe(true);
   });

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.74.0
+
+### Workflows
+
+- `WorkflowGraph` is redesigned as a left-to-right layered flow. The trigger→action spine advances horizontally and `parallel`/`foreach` branches now fan out and **reconverge** onto the next step via fork/join edges (previously they dangled and dead-ended). Node positions are computed from authoritative fixed dimensions, so cards can never overlap — the old height-estimate collision is gone.
+- Run state is far more legible: edges are colored by the status of the node they point at and the active hop animates, the running node gets a soft glow, and each node carries a redesigned card — a type icon (schedule/agent/integration/notify/parallel/foreach…), type-aware metric chips (an agent shows model · cost · tokens; a trigger shows only what applies), an output/error preview, and a **progress strip** surfacing agent **rounds** and elapsed time.
+- New **compact/expanded density** with a toggle on the full graph: the `defaultCompact` prop starts collapsed, and the preview variant is always compact. Compact nodes are uniform icon tiles for scanning large graphs.
+- New API: `WfNodeState.rounds`, a `direction` prop (`"LR"` default / `"TB"`) with orientation-driven handles, and `buildWorkflowGraph`/`buildFlowGraph` gain `direction`, `compact`, and `measure` (caller-supplied node sizing) options plus an exported `COMPACT_NODE_SIZE`.
+- The workflow node/edge components now use the library's own canonical tokens (`foreground`, `muted-foreground`, `surface-container-high`, …) instead of utility names only the platform app registered, so they render correctly in any consumer (and in Storybook), not just under the platform's Tailwind config.
+
 ## 0.73.0
 
 ### Styles

@@ -83,7 +83,7 @@ function useColorMode(): ColorMode {
 /** Flow direction for the current graph, so the node component can place its
  *  edge handles on the correct sides (edges enter the leading edge and leave the
  *  trailing edge) without threading a prop through React Flow's node renderer. */
-const DirectionContext = createContext<WfDirection>("LR");
+export const DirectionContext = createContext<WfDirection>("LR");
 
 // Tone accent color (theme-reactive CSS, resolving against the raw brand vars so
 // it needs no registered utility): trigger = primary indigo; structural
@@ -116,7 +116,7 @@ const STATUS_COLOR: Record<WfNodeStatus, string> = {
 /** Compact (collapsed) density for the current graph — read by the node so it
  *  renders the icon-tile summary instead of the full card. Set by the density
  *  toggle (and forced on for the proposal-card preview). */
-const DensityContext = createContext<boolean>(false);
+export const DensityContext = createContext<boolean>(false);
 
 // One lucide glyph per action/trigger kind so a node's type reads at a glance.
 const KIND_ICON: Record<string, LucideIcon> = {
@@ -181,9 +181,12 @@ function ProgressStrip({
       : status === "running"
         ? "58%"
         : "6%";
-  const roundsLabel = rounds
-    ? `${rounds} round${rounds === 1 ? "" : "s"}`
-    : undefined;
+  // `!== undefined` (not truthiness) so an explicit `rounds: 0` — a just-started
+  // agent — still renders "0 rounds" rather than being hidden.
+  const roundsLabel =
+    rounds !== undefined
+      ? `${rounds} round${rounds === 1 ? "" : "s"}`
+      : undefined;
   return (
     <div className="mt-1.5">
       <div

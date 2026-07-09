@@ -42,6 +42,26 @@ export interface BuildFlowGraphOptions {
   measure?: BuildWorkflowGraphOptions["measure"];
 }
 
+/** Accept either an options object or a bare `nodeState` map as the second arg:
+ *  an object carrying no known option key is treated as a legacy node-state map
+ *  (`buildFlowGraph(yaml, { a0: state })`), so an older positional caller keeps
+ *  working instead of silently losing run state. Node ids (`trigger`, `a0`,
+ *  `a0-b1`) never collide with an option key, so the discrimination is safe. */
+function normalizeFlowGraphOptions(
+  arg: BuildFlowGraphOptions | Record<string, WfNodeState> | undefined,
+): BuildFlowGraphOptions {
+  if (!arg) return {};
+  if (
+    "nodeState" in arg ||
+    "direction" in arg ||
+    "compact" in arg ||
+    "measure" in arg
+  ) {
+    return arg as BuildFlowGraphOptions;
+  }
+  return { nodeState: arg as Record<string, WfNodeState> };
+}
+
 /**
  * Build the React Flow nodes/edges from workflow YAML, merging any live
  * `nodeState` (keyed by node id) onto the matching node's data so the node
@@ -53,11 +73,12 @@ export interface BuildFlowGraphOptions {
  */
 export function buildFlowGraph(
   yaml: string,
-  options?: BuildFlowGraphOptions,
+  optionsOrNodeState?: BuildFlowGraphOptions | Record<string, WfNodeState>,
 ): FlowGraph {
-  const nodeState = options?.nodeState;
-  const direction = options?.direction ?? "LR";
-  const compact = options?.compact ?? false;
+  const options = normalizeFlowGraphOptions(optionsOrNodeState);
+  const nodeState = options.nodeState;
+  const direction = options.direction ?? "LR";
+  const compact = options.compact ?? false;
   const graph = buildWorkflowGraph(yaml, {
     reserveRunState: nodeState !== undefined,
     direction,

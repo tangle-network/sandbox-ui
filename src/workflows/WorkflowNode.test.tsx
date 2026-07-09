@@ -4,7 +4,11 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { WfNodeData } from "./model";
-import { buildStyledEdges, WorkflowNode } from "./WorkflowGraph";
+import {
+  buildStyledEdges,
+  DensityContext,
+  WorkflowNode,
+} from "./WorkflowGraph";
 
 afterEach(cleanup);
 
@@ -114,6 +118,35 @@ describe("WorkflowNode", () => {
     // Rounds are an agent progress signal; the prompt subtitle is shown too.
     expect(screen.getByText("3 rounds")).toBeTruthy();
     expect(screen.getByText("Review the PR diff")).toBeTruthy();
+  });
+
+  it("renders the singular '1 round'", () => {
+    renderNode({ ...BASE, state: { status: "running", rounds: 1 } });
+    expect(screen.getByText("1 round")).toBeTruthy();
+  });
+
+  it("renders an explicit 'rounds: 0' rather than hiding it", () => {
+    // A just-started agent reports 0 completed rounds — show it, don't drop it.
+    renderNode({ ...BASE, state: { status: "running", rounds: 0 } });
+    expect(screen.getByText("0 rounds")).toBeTruthy();
+  });
+
+  it("consumes DensityContext: renders the compact tile (a status dot, not the pill)", () => {
+    // The compact layout shows a status DOT, not the "Running" text pill the
+    // expanded card renders — a direct check that the node reads DensityContext.
+    render(
+      <ReactFlowProvider>
+        <DensityContext.Provider value={true}>
+          <WorkflowNode
+            {...({
+              data: { ...BASE, state: { status: "running", model: "m" } },
+            } as NodeProps<Node<WfNodeData>>)}
+          />
+        </DensityContext.Provider>
+      </ReactFlowProvider>,
+    );
+    expect(screen.queryByText("Running")).toBeNull();
+    expect(screen.getByText("m")).toBeTruthy();
   });
 
   it("does not show a token chip for a non-agent node", () => {

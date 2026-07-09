@@ -581,6 +581,9 @@ export function buildWorkflowGraph(
   // once it fans out — each of its branch leaves, so a fan-out visibly rejoins
   // the spine instead of dead-ending.
   let prevExits: string[] = [];
+  // Branch leaf ids, tracked explicitly so a reconvergence edge is classified as
+  // a join by membership — not by string-matching the id format.
+  const branchLeafIds = new Set<string>();
 
   if (def.on) {
     // A trigger only shows a status (no metrics/output/progress), so it's spaced
@@ -600,7 +603,7 @@ export function buildWorkflowGraph(
     for (const from of prevExits) {
       // An edge arriving from a branch leaf is a join (reconvergence); from a
       // spine node or the trigger it's the spine itself.
-      addEdge(from, id, from.includes("-b") ? "join" : "spine");
+      addEdge(from, id, branchLeafIds.has(from) ? "join" : "spine");
     }
 
     const rec = asRecord(action);
@@ -622,6 +625,7 @@ export function buildWorkflowGraph(
         addNode(cid, describeAction(child), branchRank, reserveRunState);
         addEdge(id, cid, "fork");
         branchIds.push(cid);
+        branchLeafIds.add(cid);
       });
       // Downstream reconverges from the leaves; the fan-out node itself no longer
       // links straight to the next spine node.

@@ -52,6 +52,16 @@ describe("buildFlowGraph", () => {
     expect(nodes).toHaveLength(0);
   });
 
+  it("accepts a legacy positional nodeState map as the second argument", () => {
+    // `buildFlowGraph(yaml, { a0: state })` (no option keys) is normalized to a
+    // nodeState map, so an older positional caller keeps its run state.
+    const state: WfNodeState = { status: "running", model: "glm-5" };
+    const { nodes } = buildFlowGraph(YAML, { a0: state });
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    expect(byId.a0.data.state).toEqual(state);
+    expect(byId.trigger.data.state).toBeUndefined();
+  });
+
   it("orients handles and advances along the y axis for the TB direction", () => {
     const { nodes } = buildFlowGraph(YAML, { direction: "TB" });
     // Handles enter the top and leave the bottom (the mirror of LR's left/right),

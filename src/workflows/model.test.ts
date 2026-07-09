@@ -262,6 +262,63 @@ do:
     );
   });
 
+  it("centers an asymmetric branch stack on the spine and keeps positions non-negative", () => {
+    // Branches of unequal height (an agent with a long prompt vs a bare notify).
+    const yaml = `
+on:
+  schedule:
+    cron: "0 0 * * *"
+do:
+  - parallel:
+      branches:
+        - agent.run:
+            model: glm-5
+            prompt: A fairly long prompt that makes this card taller than a notify.
+        - notify:
+            url: https://example.com
+  - notify:
+      url: https://example.com/done
+`;
+    const { nodes } = buildWorkflowGraph(yaml, { reserveRunState: true });
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    const centerY = (n: (typeof byId)[string]) => n.position.y + n.height / 2;
+    // The spine stays level: the fan-out node and the reconverging node share a
+    // centerline even though the two branches have different heights.
+    expect(centerY(byId.a0)).toBeCloseTo(centerY(byId.a1), 0);
+    // The (asymmetric) branch stack is centered on that spine line.
+    const leaves = [byId["a0-b0"], byId["a0-b1"]];
+    const meanLeafCenter =
+      leaves.reduce((s, n) => s + centerY(n), 0) / leaves.length;
+    expect(meanLeafCenter).toBeCloseTo(centerY(byId.a0), 0);
+    // The positive-quadrant shift leaves every node at a non-negative position.
+    expect(nodes.every((n) => n.position.x >= 0 && n.position.y >= 0)).toBe(true);
+  });
+
+  it("emits a fork and a join edge even for a single-branch fan-out", () => {
+    const yaml = `
+on:
+  schedule:
+    cron: "0 0 * * *"
+do:
+  - parallel:
+      branches:
+        - notify:
+            url: https://example.com
+  - notify:
+      url: https://example.com/done
+`;
+    const { edges } = buildWorkflowGraph(yaml);
+    // The lone branch still forks out and joins back — not a straight spine edge.
+    expect(edges.filter((e) => e.kind === "fork")).toEqual([
+      { id: "a0->a0-b0", source: "a0", target: "a0-b0", kind: "fork" },
+    ]);
+    expect(edges.filter((e) => e.kind === "join")).toEqual([
+      { id: "a0-b0->a1", source: "a0-b0", target: "a1", kind: "join" },
+    ]);
+    // The fan-out node itself does not link straight to the next spine node.
+    expect(edges.some((e) => e.source === "a0" && e.target === "a1")).toBe(false);
+  });
+
   it("attaches the raw, untruncated config to action and trigger nodes", () => {
     // A prompt far longer than the compact `detail` clamp (200 chars) — the
     // full-detail `config` must carry it verbatim, never truncated.

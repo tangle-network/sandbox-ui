@@ -47,6 +47,17 @@ describe("buildStyledEdges", () => {
     expect(unreached.animated).toBe(false);
   });
 
+  it("renders every edge muted and non-animated in the static/preview path (no nodeState)", () => {
+    // The definition/proposal-card preview passes no run state — all edges must
+    // be the neutral muted token and static, never colored or animated.
+    const edges = buildStyledEdges([edge("a", "b"), edge("b", "c")], undefined);
+    expect(edges).toHaveLength(2);
+    for (const e of edges) {
+      expect(e.style?.stroke).toBe("hsl(var(--muted-foreground))");
+      expect(e.animated).toBe(false);
+    }
+  });
+
   it("styles edges with RAW brand tokens, never a --color-* @theme alias", () => {
     // An inline `var(--color-*)` stroke resolves in this library's Storybook (its
     // @theme registers those aliases) but is UNDEFINED in a consumer that only

@@ -87,7 +87,6 @@ export function buildFlowGraph(
       source: e.source,
       target: e.target,
       type: "smoothstep",
-      data: { kind: e.kind },
     })),
   };
 }

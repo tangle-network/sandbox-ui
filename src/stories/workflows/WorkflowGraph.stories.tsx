@@ -79,7 +79,7 @@ do:
   - integration.invoke:
       path: github.pulls.reviews.create
   - notify:
-      url: https://hooks.slack.com/services/T000/B000/xxx
+      url: https://example.com/webhook
 `;
 
 const PARALLEL_SYNTHESIS = `on:

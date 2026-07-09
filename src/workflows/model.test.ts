@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWorkflowGraph } from "./model";
+import { buildWorkflowGraph, COMPACT_NODE_SIZE } from "./model";
 
 describe("buildWorkflowGraph", () => {
   it("builds a trigger → action spine for a linear workflow", () => {
@@ -32,16 +32,69 @@ do:
     expect(nodes[2].data.title).toBe("Integration");
     expect(nodes[2].data.provider).toBe("slack");
 
-    // Spine edges connect sequential nodes via the bottom ("out") handle.
+    // Spine edges connect sequential nodes (trigger → action → action).
     expect(edges).toEqual([
-      {
-        id: "trigger->a0",
-        source: "trigger",
-        target: "a0",
-        sourceHandle: "out",
-      },
-      { id: "a0->a1", source: "a0", target: "a1", sourceHandle: "out" },
+      { id: "trigger->a0", source: "trigger", target: "a0", kind: "spine" },
+      { id: "a0->a1", source: "a0", target: "a1", kind: "spine" },
     ]);
+  });
+
+  it("marks the first action as root when there is no trigger", () => {
+    // Without an `on:` trigger the first action is the spine root, so it shows no
+    // inbound handle (nothing points at it).
+    const yaml = `
+do:
+  - agent.run:
+      prompt: Do the thing.
+  - notify:
+      url: https://example.com
+`;
+    const { nodes } = buildWorkflowGraph(yaml);
+    expect(nodes.find((n) => n.id === "a0")?.data.isRoot).toBe(true);
+    expect(nodes.find((n) => n.id === "a1")?.data.isRoot).toBe(false);
+  });
+
+  it("uses the prompt (not the model) as an agent.run subtitle, with the model on its own field", () => {
+    // The model is shown as a dedicated chip, so the subtitle carries the more
+    // useful prompt — no duplication of the model string.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - agent.run:
+      model: glm-5
+      prompt: Summarize the overnight alerts.
+`;
+    const agent = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(agent?.data.model).toBe("glm-5");
+    expect(agent?.data.subtitle).toBe("Summarize the overnight alerts.");
+  });
+
+  it("collapses nodes to the fixed compact size when measured for compact density", () => {
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - agent.run:
+      model: glm-5
+      prompt: A long prompt that would make an expanded card tall.
+  - notify:
+      url: https://example.com
+`;
+    const expanded = buildWorkflowGraph(yaml, { reserveRunState: true });
+    const compact = buildWorkflowGraph(yaml, {
+      reserveRunState: true,
+      measure: () => COMPACT_NODE_SIZE,
+    });
+    // Expanded nodes vary by content; compact nodes are all the fixed size.
+    expect(new Set(compact.nodes.map((n) => n.height)).size).toBe(1);
+    expect(compact.nodes.every((n) => n.height === COMPACT_NODE_SIZE.height)).toBe(true);
+    expect(compact.nodes.every((n) => n.width === COMPACT_NODE_SIZE.width)).toBe(true);
+    // The compact card is shorter than the tall expanded agent card.
+    const expandedAgent = expanded.nodes.find((n) => n.id === "a0");
+    expect(expandedAgent?.height).toBeGreaterThan(COMPACT_NODE_SIZE.height);
   });
 
   it("fans out parallel branches as dangling leaves on the spine node", () => {
@@ -62,15 +115,17 @@ do:
     const { nodes, edges } = buildWorkflowGraph(yaml);
     const structural = nodes.find((n) => n.id === "a0");
     expect(structural?.data.tone).toBe("structural");
-    expect(structural?.data.hasBranches).toBe(true);
     expect(structural?.data.badge).toBe("×2");
 
-    // Two branch leaves, each connected via the "branch" (right) handle.
+    // Two branch leaves, each connected from the fan-out node by a fork edge.
     expect(nodes.map((n) => n.id)).toContain("a0-b0");
     expect(nodes.map((n) => n.id)).toContain("a0-b1");
-    const branchEdges = edges.filter((e) => e.sourceHandle === "branch");
-    expect(branchEdges).toHaveLength(2);
-    expect(branchEdges.every((e) => e.source === "a0")).toBe(true);
+    const forkEdges = edges.filter((e) => e.kind === "fork");
+    expect(forkEdges).toHaveLength(2);
+    expect(forkEdges.every((e) => e.source === "a0")).toBe(true);
+    expect(forkEdges.map((e) => e.target).sort()).toEqual(["a0-b0", "a0-b1"]);
+    // No spine node follows the fan-out here, so nothing reconverges.
+    expect(edges.some((e) => e.kind === "join")).toBe(false);
   });
 
   it("renders a foreach as a structural node with its template leaf", () => {
@@ -93,7 +148,9 @@ do:
     expect(structural?.data.tone).toBe("structural");
     expect(nodes.some((n) => n.id === "a0-b0")).toBe(true);
     expect(
-      edges.some((e) => e.source === "a0" && e.sourceHandle === "branch"),
+      edges.some(
+        (e) => e.source === "a0" && e.target === "a0-b0" && e.kind === "fork",
+      ),
     ).toBe(true);
   });
 
@@ -111,12 +168,11 @@ do:
     const { nodes } = buildWorkflowGraph(yaml);
     const structural = nodes.find((n) => n.id === "a0");
     expect(structural?.data.title).toBe("For each");
-    // No `do` → no branch leaf, no dangling branch handle.
-    expect(structural?.data.hasBranches).toBe(false);
+    // No `do` → no branch leaf emitted.
     expect(nodes.some((n) => n.id === "a0-b0")).toBe(false);
   });
 
-  it("reserves spine spacing for a tall running node so live nodes never overlap", () => {
+  it("reserves taller nodes for the run view and lays the spine out left-to-right", () => {
     const yaml = `
 on:
   provider_event:
@@ -130,26 +186,29 @@ do:
   - integration.invoke:
       path: github.pulls.reviews.create
 `;
-    const yOf = (g: ReturnType<typeof buildWorkflowGraph>) =>
-      Object.fromEntries(g.nodes.map((n) => [n.id, n.position.y]));
-    const reserved = yOf(buildWorkflowGraph(yaml, { reserveRunState: true }));
-    const compact = yOf(buildWorkflowGraph(yaml));
+    const byId = (g: ReturnType<typeof buildWorkflowGraph>) =>
+      Object.fromEntries(g.nodes.map((n) => [n.id, n]));
+    const R = byId(buildWorkflowGraph(yaml, { reserveRunState: true }));
+    const C = byId(buildWorkflowGraph(yaml));
 
-    // The run view leaves room for a fully-populated running card (status badge +
-    // meta chips + a two-line output preview, ~160px) so a live node can't grow
-    // into the one below it — the spine gap clears that height.
-    expect(reserved.a1 - reserved.a0).toBeGreaterThanOrEqual(150);
-    // …and that's strictly more room than the compact static/preview layout, which
-    // reserves nothing (a proposal card never shows run state).
-    expect(reserved.a1 - reserved.a0).toBeGreaterThan(compact.a1 - compact.a0);
-    // Spine is strictly top-to-bottom in both modes (monotonically increasing y).
-    expect(reserved.trigger).toBeLessThan(reserved.a0);
-    expect(reserved.a0).toBeLessThan(reserved.a1);
-    expect(compact.trigger).toBeLessThan(compact.a0);
-    expect(compact.a0).toBeLessThan(compact.a1);
+    // The run view reserves the rows live state adds (meta chips + a two-line
+    // output preview), so an action node is TALLER than in the compact layout —
+    // the reservation is baked into the node's dimensions, not a positional gap.
+    expect(R.a0.height).toBeGreaterThan(C.a0.height);
+    // Default LR: the spine advances along x, and each node clears the previous
+    // one's box — width is authoritative, so nodes can never overlap.
+    expect(R.trigger.position.x).toBeLessThan(R.a0.position.x);
+    expect(R.a0.position.x).toBeLessThan(R.a1.position.x);
+    expect(R.a1.position.x).toBeGreaterThanOrEqual(
+      R.a0.position.x + R.a0.width,
+    );
+    // Spine nodes share one straight centerline (equal vertical centers).
+    const centerY = (n: (typeof R)[string]) => n.position.y + n.height / 2;
+    expect(centerY(R.a0)).toBeCloseTo(centerY(R.a1), 1);
+    expect(centerY(R.trigger)).toBeCloseTo(centerY(R.a0), 1);
   });
 
-  it("clears a tall structural node's branch stack before the next spine node", () => {
+  it("routes a fan-out through fork+join edges and reconverges on the next layer", () => {
     const yaml = `
 on:
   schedule:
@@ -168,11 +227,96 @@ do:
       profile: code-reviewer
       prompt: summarize
 `;
+    const { nodes, edges } = buildWorkflowGraph(yaml, { reserveRunState: true });
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+
+    // Fork: the parallel node feeds each of its three leaves.
+    const forks = edges.filter((e) => e.kind === "fork");
+    expect(forks.every((e) => e.source === "a0")).toBe(true);
+    expect(forks.map((e) => e.target).sort()).toEqual([
+      "a0-b0",
+      "a0-b1",
+      "a0-b2",
+    ]);
+    // Join: every leaf reconverges onto the next spine node — the fan-out no
+    // longer dead-ends, and the parallel node does NOT link straight to a1.
+    const joins = edges.filter((e) => e.kind === "join");
+    expect(joins.map((e) => e.source).sort()).toEqual([
+      "a0-b0",
+      "a0-b1",
+      "a0-b2",
+    ]);
+    expect(joins.every((e) => e.target === "a1")).toBe(true);
+    expect(edges.some((e) => e.source === "a0" && e.target === "a1")).toBe(
+      false,
+    );
+
+    // Layers advance along x: parallel < its branches < the synthesis node.
+    expect(byId.a0.position.x).toBeLessThan(byId["a0-b0"].position.x);
+    expect(byId["a0-b0"].position.x).toBeLessThan(byId.a1.position.x);
+    // The three leaves share one layer (equal x) and stack without overlapping.
+    expect(byId["a0-b1"].position.x).toBe(byId["a0-b0"].position.x);
+    expect(byId["a0-b2"].position.x).toBe(byId["a0-b0"].position.x);
+    expect(byId["a0-b1"].position.y).toBeGreaterThanOrEqual(
+      byId["a0-b0"].position.y + byId["a0-b0"].height,
+    );
+  });
+
+  it("centers an asymmetric branch stack on the spine and keeps positions non-negative", () => {
+    // Branches of unequal height (an agent with a long prompt vs a bare notify).
+    const yaml = `
+on:
+  schedule:
+    cron: "0 0 * * *"
+do:
+  - parallel:
+      branches:
+        - agent.run:
+            model: glm-5
+            prompt: A fairly long prompt that makes this card taller than a notify.
+        - notify:
+            url: https://example.com
+  - notify:
+      url: https://example.com/done
+`;
     const { nodes } = buildWorkflowGraph(yaml, { reserveRunState: true });
-    const y = Object.fromEntries(nodes.map((n) => [n.id, n.position.y]));
-    // The next spine node sits below the LAST dangling branch leaf, never beside
-    // or above it — the spine advance accounts for the whole branch stack.
-    expect(y.a1).toBeGreaterThan(y["a0-b2"]);
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    const centerY = (n: (typeof byId)[string]) => n.position.y + n.height / 2;
+    // The spine stays level: the fan-out node and the reconverging node share a
+    // centerline even though the two branches have different heights.
+    expect(centerY(byId.a0)).toBeCloseTo(centerY(byId.a1), 0);
+    // The (asymmetric) branch stack is centered on that spine line.
+    const leaves = [byId["a0-b0"], byId["a0-b1"]];
+    const meanLeafCenter =
+      leaves.reduce((s, n) => s + centerY(n), 0) / leaves.length;
+    expect(meanLeafCenter).toBeCloseTo(centerY(byId.a0), 0);
+    // The positive-quadrant shift leaves every node at a non-negative position.
+    expect(nodes.every((n) => n.position.x >= 0 && n.position.y >= 0)).toBe(true);
+  });
+
+  it("emits a fork and a join edge even for a single-branch fan-out", () => {
+    const yaml = `
+on:
+  schedule:
+    cron: "0 0 * * *"
+do:
+  - parallel:
+      branches:
+        - notify:
+            url: https://example.com
+  - notify:
+      url: https://example.com/done
+`;
+    const { edges } = buildWorkflowGraph(yaml);
+    // The lone branch still forks out and joins back — not a straight spine edge.
+    expect(edges.filter((e) => e.kind === "fork")).toEqual([
+      { id: "a0->a0-b0", source: "a0", target: "a0-b0", kind: "fork" },
+    ]);
+    expect(edges.filter((e) => e.kind === "join")).toEqual([
+      { id: "a0-b0->a1", source: "a0-b0", target: "a1", kind: "join" },
+    ]);
+    // The fan-out node itself does not link straight to the next spine node.
+    expect(edges.some((e) => e.source === "a0" && e.target === "a1")).toBe(false);
   });
 
   it("attaches the raw, untruncated config to action and trigger nodes", () => {

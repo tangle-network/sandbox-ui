@@ -44,6 +44,9 @@ export interface WfNodeState {
   /** Input/output token usage, when known. */
   inputTokens?: number;
   outputTokens?: number;
+  /** Agent iteration count (agent.run only) — the number of reasoning/tool
+   *  rounds the agent has taken, surfaced on the node's progress strip. */
+  rounds?: number;
 }
 
 // Extends Record<string, unknown> so it satisfies React Flow's node-data
@@ -78,8 +81,6 @@ export interface WfNodeData extends Record<string, unknown> {
   provider?: string;
   /** Small corner tag, e.g. "×3" for a parallel fan-out. */
   badge?: string;
-  /** Whether this node fans out to branch leaves (renders a right handle). */
-  hasBranches: boolean;
   /** Whether this node is the spine root (no incoming/target handle). */
   isRoot: boolean;
   tone: WfNodeTone;
@@ -90,15 +91,23 @@ export interface WfNodeData extends Record<string, unknown> {
 export interface WfNode {
   id: string;
   position: { x: number; y: number };
+  /** Authoritative rendered size (px). The card renders at exactly this box
+   *  (`h-full`/`w-full`) so the layout — which spaces nodes by these dims — is
+   *  collision-free by construction, with no measure-then-reflow pass. */
+  width: number;
+  height: number;
   data: WfNodeData;
 }
+
+export type WfEdgeKind = "spine" | "fork" | "join";
 
 export interface WfEdge {
   id: string;
   source: string;
   target: string;
-  /** "out" for spine edges (bottom handle), "branch" for fan-out (right). */
-  sourceHandle: "out" | "branch";
+  /** Spine = trigger→action→action; fork = fan-out into a branch leaf; join =
+   *  a branch leaf reconverging onto the next spine node. Drives edge styling. */
+  kind: WfEdgeKind;
 }
 
 export interface WfGraph {
@@ -108,57 +117,83 @@ export interface WfGraph {
   error: string | null;
 }
 
-// Layout geometry (px). The spine runs down x=0; branches sit to the right.
-// Spine spacing is HEIGHT-AWARE: a card's height varies with its content (and
-// grows further once live run state adds a meta-chip row and an output/error
-// preview), so a fixed row gap let a tall running node overlap the one below it.
-// The constants below mirror WorkflowNode's render closely enough to BOUND a
-// card's height — they don't need to be pixel-exact, only an upper estimate.
-const BRANCH_X = 300;
-/** Vertical clearance left between two stacked cards (spine or branch). */
-const NODE_GAP = 44;
-/** Clearance between two stacked branch leaves. */
-const BRANCH_GAP = 24;
+// Layout geometry (px). A layered flow: the trigger→action spine advances along
+// the MAIN axis (x for "LR", y for "TB"); a fan-out node's branch leaves occupy
+// the next layer and stack along the CROSS axis, centered on the spine. Node
+// dimensions here are AUTHORITATIVE — the card renders at exactly this box, so
+// spacing is collision-free with no measure/reflow pass (see WfNode.height).
+/** Fixed card width — uniform so every layer is evenly pitched and the cards read
+ *  as one system. */
+const NODE_W = 244;
+/** Gap between successive layers along the main axis. */
+const RANK_SEP = 76;
+/** Gap between two nodes stacked in the same layer (branch leaves) along the
+ *  cross axis. */
+const CROSS_SEP = 22;
 /** A card's fixed chrome: vertical padding (py-2) + top/bottom border. */
-const CARD_CHROME = 20;
-/** The always-present title row. */
-const TITLE_ROW = 22;
+const CARD_CHROME = 22;
+/** The always-present header row (type-icon box + title). */
+const HEADER_ROW = 30;
 /** A single-line text row (subtitle, provider chip). */
 const TEXT_ROW = 20;
-/** The meta-chip row, allowing a two-line wrap (kind/model/cost/token chips). */
-const META_ROW = 44;
+/** The meta-chip row, clamped to two lines (model/cost/token chips). */
+const META_ROW = 46;
 /** A two-line, line-clamped output/error preview. */
-const PREVIEW_ROW = 34;
+const PREVIEW_ROW = 36;
+/** The run progress strip: a bar + a rounds/elapsed footer. */
+const PROGRESS_ROW = 26;
+/** Fixed dimensions of a compact (collapsed) node — icon + title + one-line
+ *  summary, uniform so the collapsed graph reads as an even grid. */
+export const COMPACT_NODE_SIZE = { width: 240, height: 64 };
 
 /**
- * Estimate a card's rendered height so the spine can be spaced without overlap.
- * `withRunState` reserves the rows live run state adds (the meta-chip row and the
- * output/error preview) so the layout — computed ONCE, before any run state is
- * merged in — already leaves room for a node that later runs, and the merge never
- * has to reflow positions. Reserved only for spine action/structural nodes: a
- * trigger and branch leaves never receive run state in the run view, so they stay
- * compact (and the static/preview layout reserves nothing at all).
+ * The card's box height. The React Flow node is PINNED to this height (the card
+ * fills it via `h-full` inside a node sized to it) and clips overflow, so cards
+ * can never overlap regardless of the consumer's fonts — this height IS the
+ * layout, not an estimate of the DOM. The row constants are tuned for the
+ * library's default token/font config; a consumer whose fonts render a row
+ * taller just sees that content clamped within the fixed box, never a reflow.
+ * `withRunState` reserves the rows live run state adds (the meta-chip row, the
+ * output/error preview, and the progress strip) so the layout — computed ONCE,
+ * before any run state is merged in — already leaves room for a node that later
+ * runs, and the merge never reflows. A trigger only ever shows a status (no
+ * metrics/output/progress), so it's spaced by its static height (`withRunState`
+ * false) and the node component skips its progress strip to match.
  */
-function estimateNodeHeight(data: WfNodeData, withRunState: boolean): number {
-  let h = CARD_CHROME + TITLE_ROW;
+function nodeHeight(data: WfNodeData, withRunState: boolean): number {
+  let h = CARD_CHROME + HEADER_ROW;
   if (data.subtitle) h += TEXT_ROW;
   // The meta row renders for a node with a model chip (pre-run) and for any node
   // once a run populates cost/tokens — reserve it whenever either can apply.
   if (withRunState || data.model) h += META_ROW;
-  if (withRunState) h += PREVIEW_ROW;
+  // A run overlay adds the output/error preview and the progress strip.
+  if (withRunState) h += PREVIEW_ROW + PROGRESS_ROW;
   if (data.provider) h += TEXT_ROW;
   return h;
 }
 
+/** Main-axis flow direction: "LR" (left-to-right, default) suits the wide/short
+ *  run-detail panel; "TB" (top-to-bottom) suits a narrow column. */
+export type WfDirection = "LR" | "TB";
+
 /** Options for {@link buildWorkflowGraph}. */
 export interface BuildWorkflowGraphOptions {
   /**
-   * Reserve vertical space for the rows live run state adds to a spine node (the
-   * meta-chip row + the output/error preview), so the RUN view's spine never
-   * overlaps once a node starts or terminates. The static/preview layout (no run
-   * overlay) leaves this off to stay compact. Defaults to `false`.
+   * Reserve space for the rows live run state adds to a node (the meta-chip row +
+   * the output/error preview), so the RUN view never overlaps once a node starts
+   * or terminates. The static/preview layout (no run overlay) leaves this off to
+   * stay compact. Defaults to `false`.
    */
   reserveRunState?: boolean;
+  /** Flow direction. Defaults to "LR". */
+  direction?: WfDirection;
+  /** Override the node dimensions the layout spaces by (and the card renders at).
+   *  Defaults to a fixed width + {@link nodeHeight}. A caller with a different node
+   *  design supplies its own sizing so the layout stays collision-free. */
+  measure?: (
+    data: WfNodeData,
+    withRunState: boolean,
+  ) => { width: number; height: number };
 }
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -220,7 +255,6 @@ function describeActionBase(action: unknown): WfNodeData {
         kind,
         subtitle: str(cfg.template),
         detail: pickDetail(cfg, ["template", "size", "region"]),
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -233,7 +267,6 @@ function describeActionBase(action: unknown): WfNodeData {
         path,
         provider: path?.split(".")[0],
         detail: pickDetail(cfg, ["path"]),
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -245,7 +278,6 @@ function describeActionBase(action: unknown): WfNodeData {
         kind,
         subtitle: url ? urlHost(url) : undefined,
         detail: pickDetail(cfg, ["url"]),
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -254,7 +286,9 @@ function describeActionBase(action: unknown): WfNodeData {
       return {
         title: "Run agent",
         kind,
-        subtitle: str(cfg.model) ?? str(cfg.profile) ?? str(cfg.prompt),
+        // The prompt says what the agent does; the model is shown as its own
+        // chip, so it's not duplicated here.
+        subtitle: str(cfg.prompt) ?? str(cfg.profile),
         model: str(cfg.model),
         detail: pickDetail(cfg, [
           "profile",
@@ -263,7 +297,6 @@ function describeActionBase(action: unknown): WfNodeData {
           "size",
           "prompt",
         ]),
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -274,7 +307,6 @@ function describeActionBase(action: unknown): WfNodeData {
         kind,
         subtitle: `${branches.length} branch${branches.length === 1 ? "" : "es"}`,
         badge: branches.length > 0 ? `×${branches.length}` : undefined,
-        hasBranches: branches.length > 0,
         isRoot: false,
         tone: "structural",
       };
@@ -286,7 +318,6 @@ function describeActionBase(action: unknown): WfNodeData {
         subtitle: typeof cfg.items === "string" ? cfg.items : "list",
         detail: pickDetail(cfg, ["items"]),
         // Only fans out when a `do` template is actually present.
-        hasBranches: Boolean(cfg.do),
         isRoot: false,
         tone: "structural",
       };
@@ -294,7 +325,6 @@ function describeActionBase(action: unknown): WfNodeData {
       return {
         title: kind ? kind : "Action",
         kind: kind ?? "action",
-        hasBranches: false,
         isRoot: false,
         tone: "action",
       };
@@ -393,7 +423,6 @@ function describeTrigger(on: unknown): WfNodeData {
         kind: "provider_event",
         subtitle,
         provider: connection,
-        hasBranches: false,
         isRoot: true,
         tone: "trigger",
       },
@@ -409,7 +438,6 @@ function describeTrigger(on: unknown): WfNodeData {
         title: "Schedule",
         kind: "schedule",
         subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
-        hasBranches: false,
         isRoot: true,
         tone: "trigger",
       },
@@ -424,7 +452,6 @@ function describeTrigger(on: unknown): WfNodeData {
     {
       title: "Trigger",
       kind: "trigger",
-      hasBranches: false,
       isRoot: true,
       tone: "trigger",
     },
@@ -432,16 +459,90 @@ function describeTrigger(on: unknown): WfNodeData {
   );
 }
 
+/** A logical node before positioning: its layer (rank) and authoritative dims.
+ *  Each spine node is its own layer; a fan-out node's branch leaves share the
+ *  layer immediately after it. */
+interface LayoutNode {
+  id: string;
+  data: WfNodeData;
+  width: number;
+  height: number;
+  rank: number;
+}
+
+/**
+ * Position the logical nodes as a layered flow: advance layers along the MAIN
+ * axis (x for "LR", y for "TB") and stack each layer's nodes along the CROSS
+ * axis, centered on the spine (cross = 0) so a fan-out fans symmetrically and
+ * reconverges cleanly. Because dims are authoritative and each layer is pitched
+ * by its widest/tallest node plus a separator, layers can never overlap.
+ */
+function layoutLayers(nodes: LayoutNode[], direction: WfDirection): WfNode[] {
+  const isLR = direction === "LR";
+  const mainSize = (n: LayoutNode) => (isLR ? n.width : n.height);
+  const crossSize = (n: LayoutNode) => (isLR ? n.height : n.width);
+
+  const byRank = new Map<number, LayoutNode[]>();
+  for (const n of nodes) {
+    const arr = byRank.get(n.rank);
+    if (arr) arr.push(n);
+    else byRank.set(n.rank, [n]);
+  }
+  const ranks = [...byRank.keys()].sort((a, b) => a - b);
+
+  // Main-axis start of each layer: cumulative widest/tallest node + separator.
+  const mainStart = new Map<number, number>();
+  let cursor = 0;
+  for (const r of ranks) {
+    mainStart.set(r, cursor);
+    cursor += Math.max(...byRank.get(r)!.map(mainSize)) + RANK_SEP;
+  }
+
+  const out: WfNode[] = [];
+  for (const r of ranks) {
+    const layer = byRank.get(r)!;
+    const extent = Math.max(...layer.map(mainSize));
+    const span =
+      layer.reduce((s, n) => s + crossSize(n), 0) +
+      CROSS_SEP * (layer.length - 1);
+    let cross = -span / 2;
+    for (const n of layer) {
+      // Center each node within its layer's main extent — a no-op for LR's
+      // uniform widths, but it keeps a TB layer of unequal heights aligned.
+      const main = mainStart.get(r)! + (extent - mainSize(n)) / 2;
+      out.push({
+        id: n.id,
+        position: isLR ? { x: main, y: cross } : { x: cross, y: main },
+        width: n.width,
+        height: n.height,
+        data: n.data,
+      });
+      cross += crossSize(n) + CROSS_SEP;
+    }
+  }
+
+  // Shift into the positive quadrant for a tidy origin (fitView re-centers, but
+  // a positive box is friendlier to size measurement and screenshots).
+  const minX = Math.min(...out.map((n) => n.position.x));
+  const minY = Math.min(...out.map((n) => n.position.y));
+  for (const n of out) {
+    n.position = { x: n.position.x - minX, y: n.position.y - minY };
+  }
+  return out;
+}
+
 /** Build a positioned graph from a workflow YAML string. Never throws —
  *  malformed YAML or an empty definition returns an `error` the UI can fall
- *  back on (e.g. show the raw YAML while authoring). Pass
- *  `{ reserveRunState: true }` for the run view so the spine leaves room for the
- *  rows live run state adds (see {@link estimateNodeHeight}). */
+ *  back on (e.g. show the raw YAML while authoring). `reserveRunState` leaves
+ *  room for the rows live run state adds (see {@link nodeHeight}); `direction`
+ *  picks the flow axis (default "LR"). */
 export function buildWorkflowGraph(
   yaml: string,
   options?: BuildWorkflowGraphOptions,
 ): WfGraph {
   const reserveRunState = options?.reserveRunState ?? false;
+  const direction = options?.direction ?? "LR";
+  const measure = options?.measure;
   if (!yaml || yaml.trim() === "") {
     return { nodes: [], edges: [], error: "No definition" };
   }
@@ -457,40 +558,54 @@ export function buildWorkflowGraph(
     return { nodes: [], edges: [], error: "Empty workflow" };
   }
 
-  const nodes: WfNode[] = [];
+  const logical: LayoutNode[] = [];
   const edges: WfEdge[] = [];
-  let y = 0;
-  let prevId: string | null = null;
 
-  const addEdge = (source: string, target: string, branch: boolean) => {
-    edges.push({
-      id: `${source}->${target}`,
-      source,
-      target,
-      sourceHandle: branch ? "branch" : "out",
-    });
+  const addNode = (
+    id: string,
+    data: WfNodeData,
+    rank: number,
+    withRunState: boolean,
+  ) => {
+    const dims = measure
+      ? measure(data, withRunState)
+      : { width: NODE_W, height: nodeHeight(data, withRunState) };
+    logical.push({ id, data, width: dims.width, height: dims.height, rank });
+  };
+  const addEdge = (source: string, target: string, kind: WfEdgeKind) => {
+    edges.push({ id: `${source}->${target}`, source, target, kind });
   };
 
+  let rank = 0;
+  // The node ids the NEXT spine node reconverges from: the current action, or —
+  // once it fans out — each of its branch leaves, so a fan-out visibly rejoins
+  // the spine instead of dead-ending.
+  let prevExits: string[] = [];
+  // Branch leaf ids, tracked explicitly so a reconvergence edge is classified as
+  // a join by membership — not by string-matching the id format.
+  const branchLeafIds = new Set<string>();
+
   if (def.on) {
-    const data = describeTrigger(def.on);
-    nodes.push({ id: "trigger", position: { x: 0, y }, data });
-    prevId = "trigger";
-    // The trigger never carries run state, so it's spaced by its static height.
-    y += estimateNodeHeight(data, false) + NODE_GAP;
+    // A trigger only shows a status (no metrics/output/progress), so it's spaced
+    // by its static height — the node component skips its progress strip to match.
+    addNode("trigger", describeTrigger(def.on), rank, false);
+    prevExits = ["trigger"];
+    rank += 1;
   }
 
   actions.forEach((action, i) => {
     const id = `a${i}`;
     const data = describeAction(action);
-    nodes.push({ id, position: { x: 0, y }, data });
-    if (prevId) addEdge(prevId, id, false);
-    prevId = id;
+    // With no `on:` trigger, the first action IS the spine root, so it shows no
+    // inbound handle (nothing points at it).
+    if (i === 0 && !def.on) data.isRoot = true;
+    addNode(id, data, rank, reserveRunState);
+    for (const from of prevExits) {
+      // An edge arriving from a branch leaf is a join (reconvergence); from a
+      // spine node or the trigger it's the spine itself.
+      addEdge(from, id, branchLeafIds.has(from) ? "join" : "spine");
+    }
 
-    // A spine action/structural node can run, so it reserves run-state rows.
-    const spineHeight = estimateNodeHeight(data, reserveRunState);
-
-    // Fan-out leaves dangle to the right; the spine continues from the
-    // structural node, not from the leaves.
     const rec = asRecord(action);
     const children: unknown[] =
       "parallel" in rec
@@ -503,32 +618,24 @@ export function buildWorkflowGraph(
           : [];
 
     if (children.length > 0) {
-      let by = y;
-      let branchStackHeight = 0;
+      const branchRank = rank + 1;
+      const branchIds: string[] = [];
       children.forEach((child, j) => {
         const cid = `${id}-b${j}`;
-        const childData = describeAction(child);
-        nodes.push({
-          id: cid,
-          position: { x: BRANCH_X, y: by },
-          data: childData,
-        });
-        addEdge(id, cid, true);
-        // Reserve run-state height for branch leaves too when the run view is
-        // active: the host keys live state, and a leaf that receives some would
-        // grow past a compact estimate and overlap — don't assume only spine
-        // nodes are ever given state.
-        const childHeight = estimateNodeHeight(childData, reserveRunState);
-        by += childHeight + BRANCH_GAP;
-        branchStackHeight += childHeight + BRANCH_GAP;
+        addNode(cid, describeAction(child), branchRank, reserveRunState);
+        addEdge(id, cid, "fork");
+        branchIds.push(cid);
+        branchLeafIds.add(cid);
       });
-      // Advance past whichever is taller — the spine node or its dangling branch
-      // stack — so the next spine node clears both.
-      y += Math.max(spineHeight, branchStackHeight) + NODE_GAP;
+      // Downstream reconverges from the leaves; the fan-out node itself no longer
+      // links straight to the next spine node.
+      prevExits = branchIds;
+      rank = branchRank + 1;
     } else {
-      y += spineHeight + NODE_GAP;
+      prevExits = [id];
+      rank += 1;
     }
   });
 
-  return { nodes, edges, error: null };
+  return { nodes: layoutLayers(logical, direction), edges, error: null };
 }

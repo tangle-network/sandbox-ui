@@ -1,4 +1,4 @@
-import type { Node } from "@xyflow/react";
+import { Position, type Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 import { buildFlowGraph, mergeRunState, sameRunState } from "./flow-graph";
 import type { WfNodeData, WfNodeState } from "./model";
@@ -36,7 +36,7 @@ describe("buildFlowGraph", () => {
       model: "gpt-4o",
       outputPreview: "partial answer",
     };
-    const { nodes } = buildFlowGraph(YAML, { a0: state });
+    const { nodes } = buildFlowGraph(YAML, { nodeState: { a0: state } });
     const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
     // The matching node carries the live state — this is both the render source
     // and the payload handed to onNodeClick(node.id, node.data).
@@ -51,6 +51,50 @@ describe("buildFlowGraph", () => {
     expect(error).toBeTruthy();
     expect(nodes).toHaveLength(0);
   });
+
+  it("accepts a legacy positional nodeState map as the second argument", () => {
+    // `buildFlowGraph(yaml, { a0: state })` (no option keys) is normalized to a
+    // nodeState map, so an older positional caller keeps its run state.
+    const state: WfNodeState = { status: "running", model: "glm-5" };
+    const { nodes } = buildFlowGraph(YAML, { a0: state });
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    expect(byId.a0.data.state).toEqual(state);
+    expect(byId.trigger.data.state).toBeUndefined();
+  });
+
+  it("orients handles and advances along the y axis for the TB direction", () => {
+    const { nodes } = buildFlowGraph(YAML, { direction: "TB" });
+    // Handles enter the top and leave the bottom (the mirror of LR's left/right),
+    // so React Flow routes edges vertically.
+    expect(nodes.every((n) => n.sourcePosition === Position.Bottom)).toBe(true);
+    expect(nodes.every((n) => n.targetPosition === Position.Top)).toBe(true);
+    const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+    // The spine advances DOWN (main axis = y), the transpose of the LR default.
+    expect(byId.a0.position.y).toBeGreaterThan(byId.trigger.position.y);
+    expect(byId.a1.position.y).toBeGreaterThan(byId.a0.position.y);
+    // Cross axis is x: a linear spine shares one vertical centerline.
+    const centerX = (n: Node<WfNodeData>) => n.position.x + (n.width ?? 0) / 2;
+    expect(centerX(byId.a0)).toBeCloseTo(centerX(byId.a1), 1);
+  });
+
+  it("collapses to a single fixed node size for compact density", () => {
+    const expanded = buildFlowGraph(YAML, { nodeState: {} }); // run overlay reserved
+    const compact = buildFlowGraph(YAML, { compact: true });
+    // Every compact node is the same fixed size (uniform icon tiles)...
+    expect(new Set(compact.nodes.map((n) => n.height)).size).toBe(1);
+    expect(new Set(compact.nodes.map((n) => n.width)).size).toBe(1);
+    // ...and shorter than the tallest expanded (run-reserved) node.
+    const compactHeight = compact.nodes[0].height ?? 0;
+    const tallestExpanded = Math.max(...expanded.nodes.map((n) => n.height ?? 0));
+    expect(compactHeight).toBeLessThan(tallestExpanded);
+  });
+
+  it("honors a caller-supplied measure for node sizing", () => {
+    const { nodes } = buildFlowGraph(YAML, {
+      measure: () => ({ width: 111, height: 55 }),
+    });
+    expect(nodes.every((n) => n.width === 111 && n.height === 55)).toBe(true);
+  });
 });
 
 describe("mergeRunState", () => {
@@ -61,13 +105,13 @@ describe("mergeRunState", () => {
       id: "a0",
       type: "wfNode",
       position: { x: 0, y: 0 },
-      data: { title: "Run agent", kind: "agent.run", hasBranches: false, isRoot: false, tone: "action" },
+      data: { title: "Run agent", kind: "agent.run", isRoot: false, tone: "action" },
     },
     {
       id: "a1",
       type: "wfNode",
       position: { x: 0, y: 200 },
-      data: { title: "Integration", kind: "integration.invoke", hasBranches: false, isRoot: false, tone: "action" },
+      data: { title: "Integration", kind: "integration.invoke", isRoot: false, tone: "action" },
     },
   ];
   const baseById = new Map(baseNodes.map((n) => [n.id, n.data]));
@@ -95,6 +139,18 @@ describe("mergeRunState", () => {
     });
     expect(again[0]).toBe(withState[0]);
     expect(again[1]).toBe(withState[1]);
+  });
+
+  it("re-renders a node when only its round count changes", () => {
+    const withR2 = mergeRunState(baseNodes, baseById, {
+      a0: { status: "running", rounds: 2 },
+    });
+    const withR3 = mergeRunState(withR2, baseById, {
+      a0: { status: "running", rounds: 3 },
+    });
+    // The round bump produces a fresh node object carrying the new count.
+    expect(withR3[0]).not.toBe(withR2[0]);
+    expect(withR3[0].data.state?.rounds).toBe(3);
   });
 
   it("does not let state accumulate: clearing nodeState strips the node back to base", () => {
@@ -133,6 +189,26 @@ describe("sameRunState", () => {
       sameRunState(
         { status: "succeeded", inputTokens: 10, outputTokens: 5 },
         { status: "succeeded", inputTokens: 10, outputTokens: 5 },
+      ),
+    ).toBe(true);
+  });
+
+  it("treats a rounds-only change as different (the generic compare covers rounds)", () => {
+    // A live tick that only advances the agent's round count must re-render — the
+    // comparison is over every key, so `rounds` is not silently ignored.
+    expect(
+      sameRunState(
+        { status: "running", rounds: 2 },
+        { status: "running", rounds: 3 },
+      ),
+    ).toBe(false);
+    expect(
+      sameRunState({ status: "running" }, { status: "running", rounds: 1 }),
+    ).toBe(false);
+    expect(
+      sameRunState(
+        { status: "running", rounds: 2 },
+        { status: "running", rounds: 2 },
       ),
     ).toBe(true);
   });

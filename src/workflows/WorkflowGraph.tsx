@@ -9,24 +9,46 @@ import {
   Background,
   type ColorMode,
   Controls,
+  type Edge,
   Handle,
+  MarkerType,
   type Node,
   type NodeProps,
+  Panel,
   Position,
   ReactFlow,
+  type ReactFlowInstance,
   useEdgesState,
   useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
+  Bell,
+  Box,
+  Cable,
+  Circle,
+  Clock,
+  type LucideIcon,
+  Maximize2,
+  Minimize2,
+  Repeat,
+  Sparkles,
+  Split,
+  Webhook,
+} from "lucide-react";
+import {
+  createContext,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
+  type WfDirection,
   type WfNodeData,
   type WfNodeState,
   type WfNodeStatus,
@@ -58,17 +80,135 @@ function useColorMode(): ColorMode {
   return mode;
 }
 
-const TONE_CARD: Record<WfNodeTone, string> = {
-  trigger: "border-primary/60 bg-primary/5",
-  structural: "border-accent-yellow/50 bg-accent-yellow/5",
-  action: "border-border bg-card",
+/** Flow direction for the current graph, so the node component can place its
+ *  edge handles on the correct sides (edges enter the leading edge and leave the
+ *  trailing edge) without threading a prop through React Flow's node renderer. */
+export const DirectionContext = createContext<WfDirection>("LR");
+
+// Tone accent color (theme-reactive CSS, resolving against the raw brand vars so
+// it needs no registered utility): trigger = primary indigo; structural
+// (parallel/foreach control flow) = warning amber; action = muted neutral. Drives
+// the node's dot and a subtle border/background tint via inline style.
+const TONE_ACCENT: Record<WfNodeTone, string> = {
+  trigger: "hsl(var(--primary))",
+  structural: "var(--surface-warning-text)",
+  action: "hsl(var(--muted-foreground))",
 };
 
-const TONE_DOT: Record<WfNodeTone, string> = {
-  trigger: "bg-primary",
-  structural: "bg-accent-yellow",
-  action: "bg-text-muted",
+// Status colors, shared by the node (dot/progress) and the edges so a node and
+// the hop pointing at it read as one. These are INLINE styles, so they must use
+// the RAW brand tokens (`hsl(var(--muted-foreground))`, `hsl(var(--primary))`) —
+// NOT the `--color-*` @theme aliases, which exist in this library's Storybook but
+// are undefined in a consumer that only imports `tokens.css` (e.g. platform-web),
+// where a `var(--color-*)` stroke silently resolves to `none` (invisible edge).
+// green/red match the node status borders (green-500 / red-500).
+const EDGE_MUTED = "hsl(var(--muted-foreground))";
+const EDGE_DONE = "#22c55e";
+const EDGE_FAIL = "#ef4444";
+const EDGE_RUNNING = "hsl(var(--primary))";
+const STATUS_COLOR: Record<WfNodeStatus, string> = {
+  queued: EDGE_MUTED,
+  running: EDGE_RUNNING,
+  succeeded: EDGE_DONE,
+  failed: EDGE_FAIL,
 };
+
+/** Compact (collapsed) density for the current graph — read by the node so it
+ *  renders the icon-tile summary instead of the full card. Set by the density
+ *  toggle (and forced on for the proposal-card preview). */
+export const DensityContext = createContext<boolean>(false);
+
+// One lucide glyph per action/trigger kind so a node's type reads at a glance.
+const KIND_ICON: Record<string, LucideIcon> = {
+  schedule: Clock,
+  provider_event: Webhook,
+  trigger: Webhook,
+  "agent.run": Sparkles,
+  "integration.invoke": Cable,
+  notify: Bell,
+  parallel: Split,
+  foreach: Repeat,
+  "sandbox.spawn": Box,
+};
+
+/** The type icon in a tinted square, colored by tone. */
+function NodeIcon({
+  kind,
+  accent,
+  box,
+  glyph,
+}: {
+  kind?: string;
+  accent: string;
+  box: number;
+  glyph: number;
+}) {
+  const Icon = (kind && KIND_ICON[kind]) || Circle;
+  return (
+    <span
+      aria-hidden="true"
+      className="flex shrink-0 items-center justify-center rounded-md"
+      style={{
+        width: box,
+        height: box,
+        background: `color-mix(in srgb, ${accent} 16%, transparent)`,
+        color: accent,
+      }}
+    >
+      <Icon size={glyph} strokeWidth={2} />
+    </span>
+  );
+}
+
+/** Run progress strip: queued = near-empty, running = pulsing partial, terminal
+ *  = full (green/red). The footer surfaces agent rounds (left) and elapsed
+ *  (right) — the "progress monitor" element, present on any node that has run.
+ *  Status itself is carried by the bar color + the header pill, so it is NOT
+ *  restated here. */
+function ProgressStrip({
+  status,
+  rounds,
+  elapsed,
+}: {
+  status: WfNodeStatus;
+  rounds?: number;
+  elapsed?: string;
+}) {
+  const color = STATUS_COLOR[status];
+  const fill =
+    status === "succeeded" || status === "failed"
+      ? "100%"
+      : status === "running"
+        ? "58%"
+        : "6%";
+  // `!== undefined` (not truthiness) so an explicit `rounds: 0` — a just-started
+  // agent — still renders "0 rounds" rather than being hidden.
+  const roundsLabel =
+    rounds !== undefined
+      ? `${rounds} round${rounds === 1 ? "" : "s"}`
+      : undefined;
+  return (
+    <div className="mt-1.5">
+      <div
+        className="h-1 w-full overflow-hidden rounded-full"
+        style={{
+          background: "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)",
+        }}
+      >
+        <div
+          className={`h-full rounded-full ${status === "running" ? "animate-pulse" : ""}`}
+          style={{ width: fill, background: color }}
+        />
+      </div>
+      {(roundsLabel || elapsed) && (
+        <div className="mt-1 flex items-center justify-between text-[9px] text-muted-foreground">
+          <span className="truncate">{roundsLabel ?? ""}</span>
+          {elapsed && <span className="shrink-0">{elapsed}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Handles are positioned anchors for edges; we hide the dots so edges appear to
 // connect to the node body for a clean diagram look.
@@ -85,7 +225,7 @@ const STATUS_LABEL: Record<WfNodeStatus, string> = {
 // pulses); succeeded/failed use the green/red palette already in the design
 // system (see TONE + run-history coloring).
 const STATUS_BADGE: Record<WfNodeStatus, string> = {
-  queued: "bg-background-tertiary text-text-muted",
+  queued: "bg-surface-container-high text-muted-foreground",
   running: "bg-primary/15 text-primary",
   succeeded: "bg-green-600/10 text-green-600",
   failed: "bg-red-500/10 text-red-400",
@@ -97,7 +237,9 @@ const STATUS_BADGE: Record<WfNodeStatus, string> = {
 function statusBorder(status: WfNodeStatus): string {
   switch (status) {
     case "running":
-      return "border-primary ring-2 ring-primary/40 animate-pulse";
+      // The soft glow (inline, see WorkflowNode) + the animated inbound edge carry
+      // the "live" signal — no whole-card pulse, which would fade the text too.
+      return "border-primary ring-1 ring-primary/40";
     case "succeeded":
       return "border-green-500";
     case "failed":
@@ -107,10 +249,15 @@ function statusBorder(status: WfNodeStatus): string {
   }
 }
 
-/** A compact key/value chip for the node's meta row. */
-function MetaChip({ children }: { children: ReactNode }) {
+/** A compact key/value chip for the node's meta row. Truncates (with a title
+ *  tooltip) so a long value — e.g. a provider-prefixed model id — can't overflow
+ *  the fixed card width or wrap past the reserved meta rows. */
+function MetaChip({ children, title }: { children: ReactNode; title?: string }) {
   return (
-    <span className="rounded bg-background-tertiary px-1.5 py-0.5 text-[10px] text-text-muted">
+    <span
+      title={title}
+      className="inline-block max-w-[150px] truncate rounded bg-surface-container-high px-1.5 py-0.5 align-middle text-[10px] text-muted-foreground"
+    >
       {children}
     </span>
   );
@@ -119,46 +266,119 @@ function MetaChip({ children }: { children: ReactNode }) {
 export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const d = data;
   const state = d.state;
+  const direction = useContext(DirectionContext);
+  const compact = useContext(DensityContext);
+  const isLR = direction === "LR";
+  const targetPos = isLR ? Position.Left : Position.Top;
+  const sourcePos = isLR ? Position.Right : Position.Bottom;
+  const accent = TONE_ACCENT[d.tone];
+  const isAgent = d.kind === "agent.run";
   // The model the card shows: what the run ACTUALLY used wins over the requested
   // one, so a fan-out branch / fallback is visible once a run is live.
   const model = state?.model ?? d.model;
   const duration = fmtDuration(state?.durationMs);
   const cost = fmtCost(state?.costUsd);
-  const tokens = fmtTokens(state?.inputTokens, state?.outputTokens);
+  // Tokens are an agent.run concern; other kinds never show a token chip.
+  const tokens = isAgent
+    ? fmtTokens(state?.inputTokens, state?.outputTokens)
+    : undefined;
   // Bound the host-supplied preview/error strings before they hit the DOM — the
   // card shows a short preview, and `line-clamp-2` only hides overflow visually.
   const errorText = state?.error ? clampPreview(state.error) : undefined;
   const outputText = state?.outputPreview
     ? clampPreview(state.outputPreview)
     : undefined;
-  return (
-    <div
-      className={`relative w-[240px] rounded-lg border px-3 py-2 shadow-sm transition-colors ${
-        TONE_CARD[d.tone]
-      } ${state ? statusBorder(state.status) : ""}`}
-    >
+
+  // Border/glow + static tone tint are shared by both densities. Once a run is
+  // live, the status-border className takes over; a running node also gets a soft
+  // primary glow so the active step reads at a glance.
+  const wrapperClass = `relative flex h-full w-full flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition-colors ${
+    state ? statusBorder(state.status) : ""
+  }`;
+  const wrapperStyle = state
+    ? state.status === "running"
+      ? { boxShadow: "0 0 22px -6px hsl(var(--primary))" }
+      : undefined
+    : {
+        borderColor: `color-mix(in srgb, ${accent} 42%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${accent} 6%, hsl(var(--card)))`,
+      };
+  const handles = (
+    <>
       {!d.isRoot && (
-        <Handle
-          type="target"
-          position={Position.Top}
-          className={HANDLE_CLASS}
-        />
+        <Handle type="target" position={targetPos} className={HANDLE_CLASS} />
       )}
+      <Handle type="source" position={sourcePos} className={HANDLE_CLASS} />
+    </>
+  );
+
+  // COMPACT: icon + title + a one-line summary + tiny cost/time, with a thin
+  // progress line while running. The density a toggle collapses to.
+  if (compact) {
+    return (
+      <div className={`${wrapperClass} justify-center px-2.5`} style={wrapperStyle}>
+        {handles}
+        <div className="flex items-center gap-2.5">
+          <NodeIcon kind={d.kind} accent={accent} box={32} glyph={16} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate font-medium text-[12px] text-foreground">
+                {d.title}
+              </span>
+              {state ? (
+                <span
+                  className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: STATUS_COLOR[state.status] }}
+                />
+              ) : (
+                d.badge && (
+                  <span className="ml-auto shrink-0 rounded bg-surface-container-high px-1 py-0.5 text-[9px] text-muted-foreground">
+                    {d.badge}
+                  </span>
+                )
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="truncate">{model ?? d.subtitle ?? d.kind}</span>
+              {cost && <span className="ml-auto shrink-0">{cost}</span>}
+              {duration && <span className="shrink-0">· {duration}</span>}
+            </div>
+          </div>
+        </div>
+        {state?.status === "running" && (
+          <div
+            className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full"
+            style={{ background: "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)" }}
+          >
+            <div
+              className="h-full w-1/2 animate-pulse rounded-full"
+              style={{ background: EDGE_RUNNING }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // EXPANDED: the full card — icon header, type-aware metric chips, output/error
+  // preview, run progress strip (with agent rounds), and the provider chip.
+  return (
+    <div className={`${wrapperClass} px-3 py-2`} style={wrapperStyle}>
+      {handles}
       <div className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className={`h-2 w-2 shrink-0 rounded-full ${TONE_DOT[d.tone]}`}
-        />
-        <span className="font-medium text-[12px] text-text">{d.title}</span>
+        <NodeIcon kind={d.kind} accent={accent} box={24} glyph={14} />
+        <span className="truncate font-medium text-[12px] text-foreground">
+          {d.title}
+        </span>
         {state ? (
           <span
-            className={`ml-auto rounded px-1.5 py-0.5 text-[10px] ${STATUS_BADGE[state.status]}`}
+            className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${STATUS_BADGE[state.status]}`}
           >
             {STATUS_LABEL[state.status]}
           </span>
         ) : (
           d.badge && (
-            <span className="ml-auto rounded bg-background-tertiary px-1.5 py-0.5 text-[10px] text-text-muted">
+            <span className="ml-auto shrink-0 rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
               {d.badge}
             </span>
           )
@@ -166,20 +386,18 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
       </div>
       {d.subtitle && (
         <p
-          className="mt-1 truncate text-[11px] text-text-muted"
+          className="mt-1 truncate text-[11px] text-muted-foreground"
           title={d.subtitle}
         >
           {d.subtitle}
         </p>
       )}
-      {/* Meta row: the action kind + (model/cost/duration/tokens once a run is
-          live). Kept to short chips; the full detail is in the expand drawer. */}
-      {(model || cost || duration || tokens || state) && (
+      {/* Type-aware metric chips: only what applies (model/cost are shown by any
+          run; tokens are agent-only). Duration lives in the progress footer. */}
+      {(model || cost || tokens) && (
         <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {d.kind && d.tone === "action" && <MetaChip>{d.kind}</MetaChip>}
-          {model && <MetaChip>{model}</MetaChip>}
+          {model && <MetaChip title={model}>{model}</MetaChip>}
           {cost && <MetaChip>{cost}</MetaChip>}
-          {duration && <MetaChip>{duration}</MetaChip>}
           {tokens && <MetaChip>{tokens}</MetaChip>}
         </div>
       )}
@@ -194,14 +412,24 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
       )}
       {outputText && state?.status !== "failed" && (
         <p
-          className="mt-1.5 line-clamp-2 text-[10px] text-text-muted"
+          className="mt-1.5 line-clamp-2 text-[10px] text-muted-foreground"
           title={outputText}
         >
           {outputText}
         </p>
       )}
+      {/* Progress is an action/branch concern. A trigger only fires (it has no
+          rounds, output, or metrics), so it shows just its status in the header
+          and reserves no run rows — rendering a strip here would clip. */}
+      {state && d.tone !== "trigger" && (
+        <ProgressStrip
+          status={state.status}
+          rounds={isAgent ? state.rounds : undefined}
+          elapsed={duration}
+        />
+      )}
       {d.provider && (
-        <span className="mt-1.5 inline-flex items-center gap-1 rounded bg-background-tertiary px-1.5 py-0.5 text-[10px] text-text-muted">
+        <span className="mt-1.5 inline-flex w-fit items-center gap-1 rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
           <ProviderIcon
             id={d.provider}
             displayName={providerLabel(d.provider)}
@@ -211,20 +439,6 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           {providerLabel(d.provider)}
         </span>
       )}
-      <Handle
-        type="source"
-        id="out"
-        position={Position.Bottom}
-        className={HANDLE_CLASS}
-      />
-      {d.hasBranches && (
-        <Handle
-          type="source"
-          id="branch"
-          position={Position.Right}
-          className={HANDLE_CLASS}
-        />
-      )}
     </div>
   );
 }
@@ -232,11 +446,57 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
 // Stable identity so React Flow doesn't warn about a new nodeTypes object.
 const NODE_TYPES = { wfNode: WorkflowNode };
 
+/** An edge is colored by the status of the node it points AT, so the run's
+ *  "front" lights up: the hop into the running node animates in the primary
+ *  accent, completed hops read green, a failed target reads red, and not-yet-
+ *  reached (queued) or the static definition view stay neutral. */
+function edgeColor(status: WfNodeStatus | undefined): string {
+  switch (status) {
+    case "running":
+      return EDGE_RUNNING;
+    case "succeeded":
+      return EDGE_DONE;
+    case "failed":
+      return EDGE_FAIL;
+    default:
+      return EDGE_MUTED;
+  }
+}
+
+export function buildStyledEdges(
+  base: Edge[],
+  nodeState: Record<string, WfNodeState> | undefined,
+): Edge[] {
+  return base.map((e) => {
+    const status = nodeState?.[e.target]?.status;
+    const color = edgeColor(nodeState ? status : undefined);
+    return {
+      ...e,
+      // The active hop flows; everything else is static.
+      animated: status === "running",
+      style: { strokeWidth: 1.75, stroke: color },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 15,
+        height: 15,
+        color,
+      },
+    };
+  });
+}
+
 export interface WorkflowGraphProps {
   /** Workflow YAML to render. */
   yaml: string;
   /** "full" = interactive (pan/zoom/drag + controls); "preview" = static fit. */
   variant?: "full" | "preview";
+  /** Flow direction: "LR" (default) reads left-to-right — best for the wide/short
+   *  run-detail panel; "TB" is a vertical column. */
+  direction?: WfDirection;
+  /** Start collapsed (compact icon tiles) rather than expanded. The full variant
+   *  exposes a toggle to switch densities; the preview variant is always compact.
+   *  Defaults to `false` (expanded). */
+  defaultCompact?: boolean;
   /** Sizing for the wrapper; the caller controls height. */
   className?: string;
   /**
@@ -259,11 +519,19 @@ export interface WorkflowGraphProps {
 export function WorkflowGraph({
   yaml,
   variant = "full",
+  direction = "LR",
+  defaultCompact = false,
   className,
   nodeState,
   onNodeClick,
 }: WorkflowGraphProps) {
   const colorMode = useColorMode();
+  const isPreview = variant === "preview";
+  // The proposal-card preview is always compact (a small thumbnail); the full
+  // variant defaults per prop and lets the user toggle density.
+  const [userCompact, setUserCompact] = useState(defaultCompact);
+  const compact = isPreview || userCompact;
+  const rfRef = useRef<ReactFlowInstance<Node<WfNodeData>> | null>(null);
 
   // Structural graph from the YAML alone — STABLE across nodeState ticks. Built
   // with run-state spacing reserved whenever a run overlay is in play (nodeState
@@ -274,20 +542,39 @@ export function WorkflowGraph({
   // graph on every update).
   const hasRunOverlay = nodeState !== undefined;
   const structural = useMemo(
-    () => buildFlowGraph(yaml, hasRunOverlay ? {} : undefined),
-    [yaml, hasRunOverlay],
+    () =>
+      buildFlowGraph(yaml, {
+        nodeState: hasRunOverlay ? {} : undefined,
+        direction,
+        compact,
+      }),
+    [yaml, hasRunOverlay, direction, compact],
+  );
+
+  // Edges restyled from the current run state (colored by each edge's target
+  // status; the active hop animates). Derived from the STABLE structural edges +
+  // nodeState, so a poll/SSE tick repaints edge color/flow without touching node
+  // layout. Neutral throughout the static definition/preview view (no nodeState).
+  const styledEdges = useMemo(
+    () => buildStyledEdges(structural.edges, nodeState),
+    [structural.edges, nodeState],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(structural.edges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(styledEdges);
 
-  // Re-seed React Flow with the new structure when the definition (or run-mode)
-  // changes. The merge effect below re-applies the current run state in its own
-  // pass, so this only needs the static base nodes.
+  // Re-seed React Flow's nodes when the definition (or run-mode) changes. The
+  // merge effect below re-applies the current run state in its own pass, so this
+  // only needs the static base nodes.
   useEffect(() => {
     setNodes(structural.nodes);
-    setEdges(structural.edges);
-  }, [structural, setNodes, setEdges]);
+  }, [structural, setNodes]);
+
+  // Repaint edges whenever the styling (structure or run state) changes. Edge ids
+  // are stable, so React Flow updates color/animation in place.
+  useEffect(() => {
+    setEdges(styledEdges);
+  }, [styledEdges, setEdges]);
 
   // Merge live run state onto the EXISTING nodes — replacing only each node's
   // `data` and preserving its identity, position, and measured size — so a
@@ -299,6 +586,28 @@ export function WorkflowGraph({
     setNodes((prev) => mergeRunState(prev, baseById, nodeState));
   }, [nodeState, structural, setNodes]);
 
+  // Reframe the viewport when the layout STRUCTURE changes (a definition edit,
+  // orientation, the density toggle, or a run-overlay transition) — node ids/count
+  // are unchanged across a density flip, so React Flow won't auto-fit and the
+  // graph would otherwise be left mis-zoomed. Deferred a frame so it runs after
+  // the re-seeded nodes (with their new sizes) commit. A run-state tick doesn't
+  // change `structural`, so a live run is never yanked around.
+  const didInitialFitRef = useRef(false);
+  useEffect(() => {
+    // ReactFlow's `fitView` prop already frames the initial render — skip this
+    // effect's first run so we don't double-fit on mount.
+    if (!didInitialFitRef.current) {
+      didInitialFitRef.current = true;
+      return;
+    }
+    const inst = rfRef.current;
+    if (!inst || typeof requestAnimationFrame === "undefined") return;
+    // cancelAnimationFrame is universally paired with requestAnimationFrame, so
+    // the single guard above covers the cleanup too.
+    const raf = requestAnimationFrame(() => inst.fitView({ padding: 0.18 }));
+    return () => cancelAnimationFrame(raf);
+  }, [structural]);
+
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {
       onNodeClick?.(node.id, node.data);
@@ -309,16 +618,17 @@ export function WorkflowGraph({
   if (structural.error || structural.nodes.length === 0) {
     return (
       <div
-        className={`flex items-center justify-center rounded-lg border border-border border-dashed p-4 text-center text-text-muted text-xs ${className ?? ""}`}
+        className={`flex items-center justify-center rounded-lg border border-border border-dashed p-4 text-center text-muted-foreground text-xs ${className ?? ""}`}
       >
         {structural.error ?? "Nothing to show"}
       </div>
     );
   }
 
-  const isPreview = variant === "preview";
   return (
-    <div className={`wf-graph ${className ?? ""}`}>
+    <DirectionContext.Provider value={direction}>
+      <DensityContext.Provider value={compact}>
+      <div className={`wf-graph ${className ?? ""}`}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -326,9 +636,12 @@ export function WorkflowGraph({
         onEdgesChange={onEdgesChange}
         nodeTypes={NODE_TYPES}
         colorMode={colorMode}
+        onInit={(inst) => {
+          rfRef.current = inst;
+        }}
         onNodeClick={onNodeClick ? handleNodeClick : undefined}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.18 }}
         proOptions={{ hideAttribution: true }}
         // Node dragging is reserved for the full editor; a preview stays
         // read-only so its layout can't be disturbed. Both variants pan + zoom so
@@ -354,9 +667,30 @@ export function WorkflowGraph({
         minZoom={0.2}
         maxZoom={1.5}
       >
-        <Background gap={16} />
-        <Controls showInteractive={false} position="bottom-right" />
+        <Background gap={18} />
+        {/* The compact proposal-card preview is a glanceable thumbnail — the
+            zoom/fit controls and density toggle only clutter it (it still pans +
+            pinch-zooms and is always compact). */}
+        {!isPreview && (
+          <>
+            <Controls showInteractive={false} position="bottom-right" />
+            <Panel position="top-left">
+              <button
+                type="button"
+                onClick={() => setUserCompact((c) => !c)}
+                aria-pressed={userCompact}
+                title={userCompact ? "Expand nodes" : "Collapse nodes"}
+                className="flex items-center gap-1 rounded-md border border-border bg-card/80 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur transition hover:text-foreground"
+              >
+                {userCompact ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
+                {userCompact ? "Expand" : "Compact"}
+              </button>
+            </Panel>
+          </>
+        )}
       </ReactFlow>
-    </div>
+      </div>
+      </DensityContext.Provider>
+    </DirectionContext.Provider>
   );
 }

@@ -79,18 +79,18 @@ function GraphFallback({
       className={`overflow-auto rounded-lg border border-border bg-background p-2 ${className ?? ""}`}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
-        <p className="text-text-muted text-xs">
+        <p className="text-muted-foreground text-xs">
           Couldn't render the graph — showing the definition.
         </p>
         <button
           type="button"
           onClick={onRetry}
-          className="shrink-0 rounded border border-border px-1.5 py-0.5 text-text-muted text-xs transition hover:text-text"
+          className="shrink-0 rounded border border-border px-1.5 py-0.5 text-muted-foreground text-xs transition hover:text-foreground"
         >
           Retry
         </button>
       </div>
-      <pre className="text-text text-xs">
+      <pre className="text-foreground text-xs">
         <code>{yaml}</code>
       </pre>
     </div>

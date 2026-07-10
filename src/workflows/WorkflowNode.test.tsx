@@ -306,4 +306,33 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     // "Failed" appears exactly once (the header pill), not again in the footer.
     expect(screen.getAllByText("Failed")).toHaveLength(1);
   });
+
+  it("keeps a wide JSON output within the 2-line budget (entries + marker <= 2)", () => {
+    // A 5-field object at the card's 2-line output budget must render at most one
+    // key row plus the truncation marker — never two rows AND a marker (3 lines),
+    // which would clip or push into the footer of the fixed-height card.
+    const { container } = renderNode({
+      ...BASE,
+      state: {
+        status: "succeeded",
+        outputPreview: '{"a":1,"b":2,"c":3,"d":4,"e":5}',
+      },
+    });
+    expect(container.querySelectorAll("dt")).toHaveLength(1);
+    expect(screen.getByText("…")).toBeTruthy();
+  });
+
+  it("constrains a long JSON key so it can't overflow the fixed-width card", () => {
+    const key = "aVeryLongUnbrokenKeyThatWouldOverflowTheCard";
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: `{"${key}":"v"}` },
+    });
+    const dt = container.querySelector("dt");
+    expect(dt).toBeTruthy();
+    expect(dt?.className).toContain("truncate");
+    expect(dt?.className).toContain("max-w-[45%]");
+    // The full key stays available on hover even when the column truncates it.
+    expect(dt?.getAttribute("title")).toBe(key);
+  });
 });

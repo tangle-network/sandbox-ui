@@ -74,4 +74,21 @@ describe("classifyOutput", () => {
   it("treats an empty object as code rather than an empty key/value block", () => {
     expect(classifyOutput("{}")).toEqual({ kind: "code", text: "{}" });
   });
+
+  it("strips a trailing lone high surrogate left by an upstream slice", () => {
+    // "😀" is U+1F600 = surrogate pair 😀; an upstream slice that keeps
+    // only the high half leaves a lone surrogate that renders as the replacement
+    // character. classifyOutput must drop it.
+    const shape = classifyOutput("done \uD83D");
+    expect(shape).toEqual({ kind: "text", text: "done" });
+  });
+
+  it("returns empty when the input is nothing but a lone high surrogate", () => {
+    expect(classifyOutput("\uD83D")).toEqual({ kind: "empty" });
+  });
+
+  it("keeps a complete surrogate pair intact", () => {
+    const shape = classifyOutput("done 😀");
+    expect(shape).toEqual({ kind: "text", text: "done 😀" });
+  });
 });

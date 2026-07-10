@@ -55,7 +55,13 @@ function scalar(value: unknown): string {
  * its monospace/data affordance.
  */
 export function classifyOutput(preview: string | undefined): OutputShape {
-  const trimmed = preview?.trim() ?? "";
+  let trimmed = preview?.trim() ?? "";
+  // An upstream slice (the host's preview cap or `clampPreview`) can cut through a
+  // surrogate pair, leaving a lone high surrogate that renders as the replacement
+  // character. Drop a trailing lone high surrogate here — the common choke point
+  // every shape is rendered through — so no downstream `<pre>`/text shows mojibake.
+  // Re-trim afterwards in case dropping it exposed trailing whitespace.
+  if (/[\uD800-\uDBFF]$/.test(trimmed)) trimmed = trimmed.slice(0, -1).trimEnd();
   if (trimmed === "") return { kind: "empty" };
 
   const structured = trimmed.startsWith("{") || trimmed.startsWith("[");
@@ -103,11 +109,24 @@ export function NodeOutputBody({
   if (shape.kind === "empty") return null;
 
   if (shape.kind === "json") {
+    // Keep entries + the truncation marker within the `rows` line budget the
+    // fixed-height card reserves: when a marker is shown it takes the last line,
+    // so at most `rows - 1` entries render. (More entries exist than fit, or
+    // `classifyOutput` already capped a wide object — either way, overflow.)
+    const overflow = shape.truncated || shape.entries.length > rows;
+    const visible = shape.entries.slice(0, overflow ? Math.max(0, rows - 1) : rows);
     return (
       <dl className="space-y-0.5 font-mono text-[10px] leading-tight">
-        {shape.entries.slice(0, rows).map(([key, value]) => (
+        {visible.map(([key, value]) => (
           <div key={key} className="flex gap-1.5">
-            <dt className="shrink-0 text-muted-foreground">{key}</dt>
+            {/* Bound the key column so a long host-supplied key can't push the
+                value out of a fixed-width card; the value keeps the flex remainder. */}
+            <dt
+              className="max-w-[45%] shrink-0 truncate text-muted-foreground"
+              title={key}
+            >
+              {key}
+            </dt>
             <dd
               className="min-w-0 flex-1 truncate text-foreground"
               title={value}
@@ -116,9 +135,7 @@ export function NodeOutputBody({
             </dd>
           </div>
         ))}
-        {(shape.truncated || shape.entries.length > rows) && (
-          <div className="text-[9px] text-muted-foreground">…</div>
-        )}
+        {overflow && <div className="text-[9px] text-muted-foreground">…</div>}
       </dl>
     );
   }

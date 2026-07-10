@@ -4,6 +4,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { WfNodeData } from "./model";
+import { classifyOutput, NodeOutputBody } from "./node-output";
 import {
   buildStyledEdges,
   DensityContext,
@@ -334,5 +335,37 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(dt?.className).toContain("max-w-[45%]");
     // The full key stays available on hover even when the column truncates it.
     expect(dt?.getAttribute("title")).toBe(key);
+  });
+
+  it("suppresses the output block for whitespace-only host output (no bare label)", () => {
+    // A whitespace-only preview classifies to `empty`; the card must not render an
+    // "Output" label over nothing.
+    renderNode({ ...BASE, state: { status: "succeeded", outputPreview: "   \n  " } });
+    expect(screen.queryByText("Output")).toBeNull();
+  });
+});
+
+describe("NodeOutputBody — line-clamp on code/text shapes", () => {
+  it("clamps a code (<pre>) shape to two lines at the default row budget", () => {
+    const { container } = render(
+      <NodeOutputBody shape={classifyOutput('["a","b","c"]')} rows={2} />,
+    );
+    expect(container.querySelector("pre")?.className).toContain("line-clamp-2");
+  });
+
+  it("clamps a text (<p>) shape to two lines at the default row budget", () => {
+    const { container } = render(
+      <NodeOutputBody shape={classifyOutput("a fairly long prose output line")} rows={2} />,
+    );
+    expect(container.querySelector("p")?.className).toContain("line-clamp-2");
+  });
+
+  it("uses single-line truncate when the budget is one row", () => {
+    const { container } = render(
+      <NodeOutputBody shape={classifyOutput('["a","b"]')} rows={1} />,
+    );
+    const pre = container.querySelector("pre");
+    expect(pre?.className).toContain("truncate");
+    expect(pre?.className).not.toContain("line-clamp-2");
   });
 });

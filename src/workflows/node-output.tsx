@@ -56,13 +56,17 @@ function scalar(value: unknown): string {
  */
 export function classifyOutput(preview: string | undefined): OutputShape {
   let trimmed = preview?.trim() ?? "";
-  // An upstream slice (the host's preview cap or `clampPreview`) can cut through a
-  // surrogate pair, leaving a lone high surrogate that renders as the replacement
-  // character. Drop them here — the common choke point every shape is rendered
-  // through — whether they sit at the very end OR immediately before a truncation
-  // ellipsis (`clampPreview` appends `…`). `+` handles multiple consecutive lone
-  // surrogates (from concatenated slices). Re-trim in case it exposed whitespace.
-  trimmed = trimmed.replace(/[\uD800-\uDBFF]+(…?)$/, "$1").trimEnd();
+  // Strip every lone surrogate — a high surrogate not followed by a low, or a low
+  // not preceded by a high — anywhere in the string, since it renders as the
+  // replacement character. An upstream slice (the host's preview cap or
+  // `clampPreview`) can leave one at the end or right before a truncation ellipsis,
+  // and concatenated streamed token fragments can split a pair mid-string. Valid
+  // pairs are preserved. This is the common choke point every shape renders
+  // through; re-trim in case stripping exposed trailing whitespace.
+  trimmed = trimmed
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")
+    .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "")
+    .trimEnd();
   if (trimmed === "") return { kind: "empty" };
 
   const structured = trimmed.startsWith("{") || trimmed.startsWith("[");
@@ -126,27 +130,29 @@ export function NodeOutputBody({
     // `classifyOutput` already capped a wide object — either way, overflow.)
     const overflow = shape.truncated || shape.entries.length > rows;
     const visible = shape.entries.slice(0, overflow ? Math.max(0, rows - 1) : rows);
+    // A JSON-shaped error must still read as red, like the code/text branches —
+    // otherwise a failure with a structured message is indistinguishable from
+    // normal output but for the label.
+    const isError = tone === "error";
+    const keyClass = isError ? "text-red-400/80" : "text-muted-foreground";
+    const valueClass = isError ? "text-red-400" : "text-foreground";
     return (
       <dl className="space-y-0.5 font-mono text-[10px] leading-tight">
         {visible.map(([key, value]) => (
           <div key={key} className="flex gap-1.5">
             {/* Bound the key column so a long host-supplied key can't push the
                 value out of a fixed-width card; the value keeps the flex remainder. */}
-            <dt
-              className="max-w-[45%] shrink-0 truncate text-muted-foreground"
-              title={key}
-            >
+            <dt className={`max-w-[45%] shrink-0 truncate ${keyClass}`} title={key}>
               {key}
             </dt>
-            <dd
-              className="min-w-0 flex-1 truncate text-foreground"
-              title={value}
-            >
+            <dd className={`min-w-0 flex-1 truncate ${valueClass}`} title={value}>
               {value}
             </dd>
           </div>
         ))}
-        {overflow && <div className="text-[9px] text-muted-foreground">…</div>}
+        {overflow && (
+          <div className={`text-[9px] ${keyClass}`}>…</div>
+        )}
       </dl>
     );
   }

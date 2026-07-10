@@ -344,6 +344,19 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(dt?.getAttribute("title")).toBe(key);
   });
 
+  it("renders a JSON-shaped error in the red error tone, not neutral", () => {
+    // A failure whose message is a JSON object must still read as red, like a
+    // prose error — not neutral key/value that looks like normal output.
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "failed", error: '{"message":"timeout","code":504}' },
+    });
+    expect(screen.getByText("Error")).toBeTruthy();
+    expect(container.querySelector("dd")?.className).toContain("text-red-400");
+    expect(container.querySelector("dt")?.className).toContain("text-red-400/80");
+    expect(screen.getByText("timeout")).toBeTruthy();
+  });
+
   it("suppresses the output block for whitespace-only host output, short and long", () => {
     // A whitespace-only preview must never render a bare "Output" label — including
     // when it is longer than the clamp limit, where clampPreview would otherwise

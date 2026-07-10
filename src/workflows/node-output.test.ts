@@ -102,4 +102,12 @@ describe("classifyOutput", () => {
     expect(classifyOutput("hello\uD800\uD801")).toEqual({ kind: "text", text: "hello" });
     expect(classifyOutput("hi\uD800\uD801…")).toEqual({ kind: "text", text: "hi…" });
   });
+
+  it("strips lone surrogates mid-string (from concatenated fragments), keeping pairs", () => {
+    // A high surrogate not followed by a low, and a low not preceded by a high,
+    // are both lone — drop them wherever they appear; a valid pair survives.
+    expect(classifyOutput("a\uD83Db")).toEqual({ kind: "text", text: "ab" });
+    expect(classifyOutput("a\uDE00b")).toEqual({ kind: "text", text: "ab" });
+    expect(classifyOutput("x 😀 y")).toEqual({ kind: "text", text: "x 😀 y" });
+  });
 });

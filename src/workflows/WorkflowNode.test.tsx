@@ -388,13 +388,15 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
     expect(container.querySelector("p")?.className).toContain("line-clamp-2");
   });
 
-  it("uses single-line truncate when the budget is one row", () => {
+  it("uses single-line truncate at a one-row budget, without a conflicting wrap class", () => {
     const { container } = render(
       <NodeOutputBody shape={classifyOutput('["a","b"]')} rows={1} />,
     );
     const pre = container.querySelector("pre");
     expect(pre?.className).toContain("truncate");
     expect(pre?.className).not.toContain("line-clamp-2");
+    // `whitespace-pre-wrap` would override truncate's `nowrap` and re-wrap the line.
+    expect(pre?.className).not.toContain("whitespace-pre-wrap");
   });
 
   it("honors a three-row budget on code and text shapes (not just JSON)", () => {

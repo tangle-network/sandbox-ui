@@ -12,7 +12,7 @@
  * wraps it in its own frame.
  */
 
-import type { ReactNode } from "react";
+import type { ReactElement } from "react";
 
 /** The recovered shape of an output preview. */
 export type OutputShape =
@@ -118,8 +118,11 @@ export function NodeOutputBody({
   shape: OutputShape;
   rows?: number;
   tone?: "default" | "error";
-}): ReactNode {
+}): ReactElement | null {
   const clampClass = CLAMP_BY_ROWS[rows] ?? "line-clamp-2";
+  // Wrapping is only for a multi-line code budget; at `rows === 1` it would fight
+  // `truncate`'s `white-space: nowrap` and could re-wrap the single line.
+  const codeWrap = rows === 1 ? "" : "whitespace-pre-wrap break-all";
 
   if (shape.kind === "empty") return null;
 
@@ -160,7 +163,7 @@ export function NodeOutputBody({
   if (shape.kind === "code") {
     return (
       <pre
-        className={`${clampClass} whitespace-pre-wrap break-all font-mono text-[10px] leading-tight ${
+        className={`${clampClass} ${codeWrap} font-mono text-[10px] leading-tight ${
           tone === "error" ? "text-red-400" : "text-foreground/80"
         }`}
         title={shape.text}

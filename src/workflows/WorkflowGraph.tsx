@@ -175,7 +175,14 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           ? { text: state.outputPreview, tone: "default" as const, label: "Output" }
           : null;
     if (!source) return null;
-    const shape = classifyOutput(clampPreview(source.text));
+    // Reject blank/whitespace-only host text up front: otherwise `clampPreview`
+    // can turn long whitespace into a bare "…" that classifies as text and
+    // resurrects the block the empty check is meant to suppress. The empty check
+    // below still guards the case where classification itself yields nothing (e.g.
+    // a lone-surrogate-only preview stripped to "").
+    const trimmed = source.text.trim();
+    if (!trimmed) return null;
+    const shape = classifyOutput(clampPreview(trimmed));
     return shape.kind === "empty"
       ? null
       : { shape, tone: source.tone, label: source.label };

@@ -337,11 +337,19 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(dt?.getAttribute("title")).toBe(key);
   });
 
-  it("suppresses the output block for whitespace-only host output (no bare label)", () => {
-    // A whitespace-only preview classifies to `empty`; the card must not render an
-    // "Output" label over nothing.
-    renderNode({ ...BASE, state: { status: "succeeded", outputPreview: "   \n  " } });
-    expect(screen.queryByText("Output")).toBeNull();
+  it("suppresses the output block for whitespace-only host output, short and long", () => {
+    // A whitespace-only preview must never render a bare "Output" label — including
+    // when it is longer than the clamp limit, where clampPreview would otherwise
+    // turn it into a lone "…".
+    for (const ws of ["   \n  ", " ".repeat(300)]) {
+      const { unmount } = renderNode({
+        ...BASE,
+        state: { status: "succeeded", outputPreview: ws },
+      });
+      expect(screen.queryByText("Output")).toBeNull();
+      expect(screen.queryByText("…")).toBeNull();
+      unmount();
+    }
   });
 });
 

@@ -28,9 +28,16 @@ export function fmtCost(usd: number | undefined): string | undefined {
 
 /** Bound host-supplied preview/error text to a fixed length (with an ellipsis)
  *  before it reaches the DOM, so an oversized payload can't bloat the node tree —
- *  the card only ever shows a short preview, and CSS clamping is visual only. */
+ *  the card only ever shows a short preview, and CSS clamping is visual only.
+ *  Truncation is code-point aware: it never slices through a surrogate pair (which
+ *  would leave a lone surrogate that renders as the replacement character). */
 export function clampPreview(text: string, max = 200): string {
-  return text.length > max ? `${text.slice(0, max)}…` : text;
+  if (text.length <= max) return text;
+  // If the cut lands between a surrogate pair's two halves, drop the dangling
+  // high surrogate so the appended ellipsis isn't preceded by a broken glyph.
+  const lastCode = text.charCodeAt(max - 1);
+  const end = lastCode >= 0xd800 && lastCode <= 0xdbff ? max - 1 : max;
+  return `${text.slice(0, end)}…`;
 }
 
 /** Human-readable token usage: `1200/340 tok`. Undefined when neither side is a

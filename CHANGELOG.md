@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.75.0
+
+### Workflows
+
+- The workflow node's run **progress bar is now a bottom-pinned status footer** instead of an inline strip. Previously the strip was laid out in the middle of the card's flex column, so its vertical position drifted with however much content sat above it and it landed at a different height on every node. The footer (`mt-auto`, a top border + the progress bar over a rounds/elapsed caption) always sits flush at the card's base, so the bar reads as one consistent line across the whole graph.
+- Node output is now **content-aware**. A node's `outputPreview` was rendered as a single plain paragraph even when it was JSON (`{"status":200}`). Output is now classified and rendered under an `OUTPUT`/`ERROR` micro-label: a shallow JSON object renders as `key value` rows, a JSON array or a host-clamped fragment renders in monospace, and prose renders as prose.
+- No public API change: `WfNodeState`/`WfNodeData` are unchanged and the graph is a drop-in. The status footer + output renderer share new internal `node-ui`/`node-output` modules (not part of the package's export surface).
+
 ## 0.74.0
 
 ### Workflows

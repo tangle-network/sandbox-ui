@@ -4,6 +4,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { WfNodeData } from "./model";
+import { classifyOutput, NodeOutputBody } from "./node-output";
 import {
   buildStyledEdges,
   DensityContext,
@@ -255,5 +256,157 @@ do:
     expect(screen.getByText("×3")).toBeTruthy();
     expect(screen.queryByText("Running")).toBeNull();
     expect(screen.queryByText("Done")).toBeNull();
+  });
+});
+
+describe("WorkflowNode — status footer + content-aware output", () => {
+  it("renders a JSON output as key/value rows under an OUTPUT label, not one raw blob", () => {
+    renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: '{"status":200,"id":4821}' },
+    });
+    // The block is labelled…
+    expect(screen.getByText("Output")).toBeTruthy();
+    // …and the JSON is split into keys and values, not dumped verbatim.
+    expect(screen.getByText("status")).toBeTruthy();
+    expect(screen.getByText("200")).toBeTruthy();
+    expect(screen.getByText("id")).toBeTruthy();
+    expect(screen.getByText("4821")).toBeTruthy();
+    expect(screen.queryByText('{"status":200,"id":4821}')).toBeNull();
+  });
+
+  it("labels a failure's error block ERROR and renders the message", () => {
+    renderNode({
+      ...BASE,
+      state: { status: "failed", error: "provider 500: timed out" },
+    });
+    expect(screen.getByText("Error")).toBeTruthy();
+    expect(screen.getByText("provider 500: timed out")).toBeTruthy();
+  });
+
+  it("pins the status footer to the bottom of a flex-column card", () => {
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "running", rounds: 2, durationMs: 4200 },
+    });
+    // The bottom-pin only works if the card itself is a column flex container —
+    // assert the wrapper's layout, not just that some .mt-auto element exists.
+    const wrapper = container.querySelector(".overflow-hidden.rounded-lg");
+    expect(wrapper).toBeTruthy();
+    const wrapperClasses = (wrapper?.className ?? "").split(/\s+/);
+    expect(wrapperClasses).toContain("flex");
+    expect(wrapperClasses).toContain("flex-col");
+    // The footer is a DIRECT child pinned via mt-auto, carrying rounds + elapsed.
+    expect(wrapper?.querySelector(":scope > .mt-auto")).toBeTruthy();
+    expect(screen.getByText("2 rounds")).toBeTruthy();
+    expect(screen.getByText("4.2s")).toBeTruthy();
+  });
+
+  it("does not restate the status in the footer caption (the header pill owns it)", () => {
+    // A non-agent failure has no rounds; the footer must not fall back to the
+    // status word, which would duplicate the header pill.
+    renderNode({
+      ...BASE,
+      title: "Notify",
+      kind: "notify",
+      state: { status: "failed", error: "boom", durationMs: 1400 },
+    });
+    // "Failed" appears exactly once (the header pill), not again in the footer.
+    expect(screen.getAllByText("Failed")).toHaveLength(1);
+  });
+
+  it("keeps a wide JSON output within the 2-line budget (entries + marker <= 2)", () => {
+    // A 5-field object at the card's 2-line output budget must render at most one
+    // key row plus the truncation marker — never two rows AND a marker (3 lines),
+    // which would clip or push into the footer of the fixed-height card.
+    const { container } = renderNode({
+      ...BASE,
+      state: {
+        status: "succeeded",
+        outputPreview: '{"a":1,"b":2,"c":3,"d":4,"e":5}',
+      },
+    });
+    expect(container.querySelectorAll("dt")).toHaveLength(1);
+    expect(screen.getByText("…")).toBeTruthy();
+  });
+
+  it("constrains a long JSON key so it can't overflow the fixed-width card", () => {
+    const key = "aVeryLongUnbrokenKeyThatWouldOverflowTheCard";
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: `{"${key}":"v"}` },
+    });
+    const dt = container.querySelector("dt");
+    expect(dt).toBeTruthy();
+    expect(dt?.className).toContain("truncate");
+    expect(dt?.className).toContain("max-w-[45%]");
+    // The full key stays available on hover even when the column truncates it.
+    expect(dt?.getAttribute("title")).toBe(key);
+  });
+
+  it("renders a JSON-shaped error in the red error tone, not neutral", () => {
+    // A failure whose message is a JSON object must still read as red, like a
+    // prose error — not neutral key/value that looks like normal output.
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "failed", error: '{"message":"timeout","code":504}' },
+    });
+    expect(screen.getByText("Error")).toBeTruthy();
+    expect(container.querySelector("dd")?.className).toContain("text-red-400");
+    expect(container.querySelector("dt")?.className).toContain("text-red-400/80");
+    expect(screen.getByText("timeout")).toBeTruthy();
+  });
+
+  it("suppresses the output block for whitespace-only host output, short and long", () => {
+    // A whitespace-only preview must never render a bare "Output" label — including
+    // when it is longer than the clamp limit, where clampPreview would otherwise
+    // turn it into a lone "…".
+    for (const ws of ["   \n  ", " ".repeat(300)]) {
+      const { unmount } = renderNode({
+        ...BASE,
+        state: { status: "succeeded", outputPreview: ws },
+      });
+      expect(screen.queryByText("Output")).toBeNull();
+      expect(screen.queryByText("…")).toBeNull();
+      unmount();
+    }
+  });
+});
+
+describe("NodeOutputBody — line-clamp on code/text shapes", () => {
+  it("clamps a code (<pre>) shape to two lines at the default row budget", () => {
+    const { container } = render(
+      <NodeOutputBody shape={classifyOutput('["a","b","c"]')} rows={2} />,
+    );
+    expect(container.querySelector("pre")?.className).toContain("line-clamp-2");
+  });
+
+  it("clamps a text (<p>) shape to two lines at the default row budget", () => {
+    const { container } = render(
+      <NodeOutputBody shape={classifyOutput("a fairly long prose output line")} rows={2} />,
+    );
+    expect(container.querySelector("p")?.className).toContain("line-clamp-2");
+  });
+
+  it("uses single-line truncate at a one-row budget, without a conflicting wrap class", () => {
+    const { container } = render(
+      <NodeOutputBody shape={classifyOutput('["a","b"]')} rows={1} />,
+    );
+    const pre = container.querySelector("pre");
+    expect(pre?.className).toContain("truncate");
+    expect(pre?.className).not.toContain("line-clamp-2");
+    // `whitespace-pre-wrap` would override truncate's `nowrap` and re-wrap the line.
+    expect(pre?.className).not.toContain("whitespace-pre-wrap");
+  });
+
+  it("honors a three-row budget on code and text shapes (not just JSON)", () => {
+    const { container: codeC } = render(
+      <NodeOutputBody shape={classifyOutput('["a","b","c","d"]')} rows={3} />,
+    );
+    expect(codeC.querySelector("pre")?.className).toContain("line-clamp-3");
+    const { container: textC } = render(
+      <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={3} />,
+    );
+    expect(textC.querySelector("p")?.className).toContain("line-clamp-3");
   });
 });

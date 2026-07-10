@@ -58,10 +58,10 @@ export function classifyOutput(preview: string | undefined): OutputShape {
   let trimmed = preview?.trim() ?? "";
   // An upstream slice (the host's preview cap or `clampPreview`) can cut through a
   // surrogate pair, leaving a lone high surrogate that renders as the replacement
-  // character. Drop a trailing lone high surrogate here — the common choke point
-  // every shape is rendered through — so no downstream `<pre>`/text shows mojibake.
-  // Re-trim afterwards in case dropping it exposed trailing whitespace.
-  if (/[\uD800-\uDBFF]$/.test(trimmed)) trimmed = trimmed.slice(0, -1).trimEnd();
+  // character. Drop one here — the common choke point every shape is rendered
+  // through — whether it sits at the very end OR immediately before a truncation
+  // ellipsis (`clampPreview` appends `…`). Re-trim in case it exposed whitespace.
+  trimmed = trimmed.replace(/[\uD800-\uDBFF](…?)$/, "$1").trimEnd();
   if (trimmed === "") return { kind: "empty" };
 
   const structured = trimmed.startsWith("{") || trimmed.startsWith("[");

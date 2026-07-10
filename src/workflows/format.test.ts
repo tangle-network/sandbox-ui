@@ -102,4 +102,12 @@ describe("clampPreview", () => {
     expect(clampPreview("abcdef", 3)).toBe("abc…");
     expect(clampPreview("abc", 3)).toBe("abc");
   });
+
+  it("never slices through a surrogate pair (no lone surrogate before the ellipsis)", () => {
+    // "ab😀cd" with max 3 would cut between 😀's two halves; drop the dangling
+    // high surrogate so the result is "ab…", not "ab<lone-surrogate>…".
+    expect(clampPreview("ab😀cd", 3)).toBe("ab…");
+    // A cut just after a whole pair keeps the emoji intact.
+    expect(clampPreview("a😀bc", 3)).toBe("a😀…");
+  });
 });

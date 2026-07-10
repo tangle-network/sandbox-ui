@@ -160,21 +160,26 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   // partial output preview. Bound the host-supplied string before it hits the DOM
   // (the card shows a short preview; CSS clamping is visual only), then classify
   // it so JSON renders as key/value and prose as prose. Null while there's nothing
-  // to show yet (queued, or a running node before its first token).
-  const runOutput =
-    state?.status === "failed" && state.error
-      ? {
-          shape: classifyOutput(clampPreview(state.error)),
-          tone: "error" as const,
-          label: "Error",
-        }
-      : state && state.status !== "failed" && state.outputPreview
-        ? {
-            shape: classifyOutput(clampPreview(state.outputPreview)),
-            tone: "default" as const,
-            label: "Output",
-          }
-        : null;
+  // to show yet (queued, or a running node before its first token) — and also when
+  // the preview classifies to `empty` (e.g. whitespace-only host data), so the card
+  // never shows a bare "Output"/"Error" label over an empty body.
+  const runOutput = ((): {
+    shape: ReturnType<typeof classifyOutput>;
+    tone: "default" | "error";
+    label: string;
+  } | null => {
+    const source =
+      state?.status === "failed" && state.error
+        ? { text: state.error, tone: "error" as const, label: "Error" }
+        : state && state.status !== "failed" && state.outputPreview
+          ? { text: state.outputPreview, tone: "default" as const, label: "Output" }
+          : null;
+    if (!source) return null;
+    const shape = classifyOutput(clampPreview(source.text));
+    return shape.kind === "empty"
+      ? null
+      : { shape, tone: source.tone, label: source.label };
+  })();
 
   // Border/glow + static tone tint are shared by both densities. Once a run is
   // live, the status-border className takes over; a running node also gets a soft

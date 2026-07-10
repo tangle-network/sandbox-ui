@@ -91,4 +91,10 @@ describe("classifyOutput", () => {
     const shape = classifyOutput("done 😀");
     expect(shape).toEqual({ kind: "text", text: "done 😀" });
   });
+
+  it("strips a lone high surrogate sitting just before a truncation ellipsis", () => {
+    // clampPreview appends "…" after truncating; a pair cut at the boundary leaves
+    // "<high>…". The surrogate must be dropped while the ellipsis is kept.
+    expect(classifyOutput("abc\uD83D…")).toEqual({ kind: "text", text: "abc…" });
+  });
 });

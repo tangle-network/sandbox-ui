@@ -208,6 +208,27 @@ do:
     expect(centerY(R.trigger)).toBeCloseTo(centerY(R.a0), 1);
   });
 
+  it("reserves the run rows by the documented arithmetic: footer for an action, none for a trigger", () => {
+    // Guards the fixed-layout invariant — the node box must equal the sum of its
+    // reserved rows, so a rendered card can never exceed (and clip within) it.
+    const yaml = `on:
+  schedule:
+    cron: "0 0 * * *"
+do:
+  - agent.run:
+      model: gpt-4o
+      prompt: summarize
+`;
+    const byId = (g: ReturnType<typeof buildWorkflowGraph>) =>
+      Object.fromEntries(g.nodes.map((n) => [n.id, n]));
+    const R = byId(buildWorkflowGraph(yaml, { reserveRunState: true }));
+    // Trigger only fires: chrome(18) + header(28) + subtitle(20); no meta/output/footer.
+    expect(R.trigger.height).toBe(18 + 28 + 20);
+    // A run-state agent adds the meta row(46), the output block(44), and the
+    // bottom status footer(26) on top of chrome + header + subtitle.
+    expect(R.a0.height).toBe(18 + 28 + 20 + 46 + 44 + 26);
+  });
+
   it("routes a fan-out through fork+join edges and reconverges on the next layer", () => {
     const yaml = `
 on:

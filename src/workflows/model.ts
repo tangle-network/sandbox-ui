@@ -141,9 +141,11 @@ const META_ROW = 46;
 /** The output block: an "OUTPUT"/"ERROR" micro-label over a two-line, clamped
  *  content-aware body (JSON key/value, prose, or a monospace fragment). */
 const OUTPUT_ROW = 44;
-/** The run status FOOTER pinned to the card's bottom: a top border, the progress
- *  bar, and a rounds/status + elapsed row. */
-const FOOTER_ROW = 24;
+/** The run status FOOTER pinned to the card's bottom: a top border (1px), the
+ *  progress bar (`h-1`, 4px), and a `py-1` + `text-[9px]` caption row. Measures
+ *  ~24.5px with the library's default fonts; reserved at 26 so the reservation
+ *  stays ≥ the rendered footer (with headroom for a consumer's font metrics). */
+const FOOTER_ROW = 26;
 /** Fixed dimensions of a compact (collapsed) node — icon + title + one-line
  *  summary, uniform so the collapsed graph reads as an even grid. */
 export const COMPACT_NODE_SIZE = { width: 240, height: 64 };

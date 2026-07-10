@@ -97,4 +97,9 @@ describe("classifyOutput", () => {
     // "<high>…". The surrogate must be dropped while the ellipsis is kept.
     expect(classifyOutput("abc\uD83D…")).toEqual({ kind: "text", text: "abc…" });
   });
+
+  it("strips multiple consecutive trailing lone high surrogates", () => {
+    expect(classifyOutput("hello\uD800\uD801")).toEqual({ kind: "text", text: "hello" });
+    expect(classifyOutput("hi\uD800\uD801…")).toEqual({ kind: "text", text: "hi…" });
+  });
 });

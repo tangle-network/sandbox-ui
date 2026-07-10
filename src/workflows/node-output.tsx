@@ -58,10 +58,11 @@ export function classifyOutput(preview: string | undefined): OutputShape {
   let trimmed = preview?.trim() ?? "";
   // An upstream slice (the host's preview cap or `clampPreview`) can cut through a
   // surrogate pair, leaving a lone high surrogate that renders as the replacement
-  // character. Drop one here — the common choke point every shape is rendered
-  // through — whether it sits at the very end OR immediately before a truncation
-  // ellipsis (`clampPreview` appends `…`). Re-trim in case it exposed whitespace.
-  trimmed = trimmed.replace(/[\uD800-\uDBFF](…?)$/, "$1").trimEnd();
+  // character. Drop them here — the common choke point every shape is rendered
+  // through — whether they sit at the very end OR immediately before a truncation
+  // ellipsis (`clampPreview` appends `…`). `+` handles multiple consecutive lone
+  // surrogates (from concatenated slices). Re-trim in case it exposed whitespace.
+  trimmed = trimmed.replace(/[\uD800-\uDBFF]+(…?)$/, "$1").trimEnd();
   if (trimmed === "") return { kind: "empty" };
 
   const structured = trimmed.startsWith("{") || trimmed.startsWith("[");

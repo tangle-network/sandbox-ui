@@ -89,6 +89,16 @@ export function classifyOutput(preview: string | undefined): OutputShape {
   return { kind: "text", text: trimmed };
 }
 
+/** Line-clamp utility per row budget, so `code`/`text` shapes honor `rows` the
+ *  same way the JSON branch does (rather than always clamping to two). Capped at
+ *  a realistic card budget; an unsupported count falls back to the two-line clamp.
+ *  Class names are literal so the Tailwind scanner emits each utility. */
+const CLAMP_BY_ROWS: Record<number, string> = {
+  1: "truncate",
+  2: "line-clamp-2",
+  3: "line-clamp-3",
+};
+
 /**
  * Render a classified output preview's CONTENT (no surrounding frame — each node
  * design supplies its own container/label). `rows` caps the visible lines so the
@@ -104,7 +114,7 @@ export function NodeOutputBody({
   rows?: number;
   tone?: "default" | "error";
 }): ReactNode {
-  const clampClass = rows === 1 ? "truncate" : "line-clamp-2";
+  const clampClass = CLAMP_BY_ROWS[rows] ?? "line-clamp-2";
 
   if (shape.kind === "empty") return null;
 

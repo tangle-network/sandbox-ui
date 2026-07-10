@@ -284,13 +284,20 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(screen.getByText("provider 500: timed out")).toBeTruthy();
   });
 
-  it("pins the status footer to the card bottom and carries rounds + elapsed there", () => {
+  it("pins the status footer to the bottom of a flex-column card", () => {
     const { container } = renderNode({
       ...BASE,
       state: { status: "running", rounds: 2, durationMs: 4200 },
     });
-    // The footer band is bottom-pinned (mt-auto) — the fix for the drifting bar.
-    expect(container.querySelector(".mt-auto")).toBeTruthy();
+    // The bottom-pin only works if the card itself is a column flex container —
+    // assert the wrapper's layout, not just that some .mt-auto element exists.
+    const wrapper = container.querySelector(".overflow-hidden.rounded-lg");
+    expect(wrapper).toBeTruthy();
+    const wrapperClasses = (wrapper?.className ?? "").split(/\s+/);
+    expect(wrapperClasses).toContain("flex");
+    expect(wrapperClasses).toContain("flex-col");
+    // The footer is a DIRECT child pinned via mt-auto, carrying rounds + elapsed.
+    expect(wrapper?.querySelector(":scope > .mt-auto")).toBeTruthy();
     expect(screen.getByText("2 rounds")).toBeTruthy();
     expect(screen.getByText("4.2s")).toBeTruthy();
   });
@@ -375,5 +382,16 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
     const pre = container.querySelector("pre");
     expect(pre?.className).toContain("truncate");
     expect(pre?.className).not.toContain("line-clamp-2");
+  });
+
+  it("honors a three-row budget on code and text shapes (not just JSON)", () => {
+    const { container: codeC } = render(
+      <NodeOutputBody shape={classifyOutput('["a","b","c","d"]')} rows={3} />,
+    );
+    expect(codeC.querySelector("pre")?.className).toContain("line-clamp-3");
+    const { container: textC } = render(
+      <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={3} />,
+    );
+    expect(textC.querySelector("p")?.className).toContain("line-clamp-3");
   });
 });

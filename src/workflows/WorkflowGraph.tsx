@@ -22,24 +22,10 @@ import {
   useNodesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import {
-  Bell,
-  Box,
-  Cable,
-  Circle,
-  Clock,
-  type LucideIcon,
-  Maximize2,
-  Minimize2,
-  Repeat,
-  Sparkles,
-  Split,
-  Webhook,
-} from "lucide-react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import {
   createContext,
   type MouseEvent as ReactMouseEvent,
-  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -52,12 +38,28 @@ import {
   type WfNodeData,
   type WfNodeState,
   type WfNodeStatus,
-  type WfNodeTone,
 } from "./model";
 import { buildFlowGraph, mergeRunState } from "./flow-graph";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
+import { classifyOutput, NodeOutputBody } from "./node-output";
+import {
+  edgeColor,
+  EDGE_RUNNING,
+  MetaChip,
+  NodeIcon,
+  progressFill,
+  STATUS_BADGE,
+  STATUS_COLOR,
+  STATUS_LABEL,
+  statusBorder,
+  TONE_ACCENT,
+} from "./node-ui";
 import { providerLabel } from "./provider-label";
 import { ProviderIcon } from "../integrations/provider-logo";
+
+/** Track color behind a progress bar — a faint wash of the muted token. */
+const MUTED_TRACK =
+  "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)";
 
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
  *  background) themes with the rest of the app. */
@@ -85,87 +87,22 @@ function useColorMode(): ColorMode {
  *  trailing edge) without threading a prop through React Flow's node renderer. */
 export const DirectionContext = createContext<WfDirection>("LR");
 
-// Tone accent color (theme-reactive CSS, resolving against the raw brand vars so
-// it needs no registered utility): trigger = primary indigo; structural
-// (parallel/foreach control flow) = warning amber; action = muted neutral. Drives
-// the node's dot and a subtle border/background tint via inline style.
-const TONE_ACCENT: Record<WfNodeTone, string> = {
-  trigger: "hsl(var(--primary))",
-  structural: "var(--surface-warning-text)",
-  action: "hsl(var(--muted-foreground))",
-};
-
-// Status colors, shared by the node (dot/progress) and the edges so a node and
-// the hop pointing at it read as one. These are INLINE styles, so they must use
-// the RAW brand tokens (`hsl(var(--muted-foreground))`, `hsl(var(--primary))`) —
-// NOT the `--color-*` @theme aliases, which exist in this library's Storybook but
-// are undefined in a consumer that only imports `tokens.css` (e.g. platform-web),
-// where a `var(--color-*)` stroke silently resolves to `none` (invisible edge).
-// green/red match the node status borders (green-500 / red-500).
-const EDGE_MUTED = "hsl(var(--muted-foreground))";
-const EDGE_DONE = "#22c55e";
-const EDGE_FAIL = "#ef4444";
-const EDGE_RUNNING = "hsl(var(--primary))";
-const STATUS_COLOR: Record<WfNodeStatus, string> = {
-  queued: EDGE_MUTED,
-  running: EDGE_RUNNING,
-  succeeded: EDGE_DONE,
-  failed: EDGE_FAIL,
-};
-
 /** Compact (collapsed) density for the current graph — read by the node so it
  *  renders the icon-tile summary instead of the full card. Set by the density
  *  toggle (and forced on for the proposal-card preview). */
 export const DensityContext = createContext<boolean>(false);
 
-// One lucide glyph per action/trigger kind so a node's type reads at a glance.
-const KIND_ICON: Record<string, LucideIcon> = {
-  schedule: Clock,
-  provider_event: Webhook,
-  trigger: Webhook,
-  "agent.run": Sparkles,
-  "integration.invoke": Cable,
-  notify: Bell,
-  parallel: Split,
-  foreach: Repeat,
-  "sandbox.spawn": Box,
-};
-
-/** The type icon in a tinted square, colored by tone. */
-function NodeIcon({
-  kind,
-  accent,
-  box,
-  glyph,
-}: {
-  kind?: string;
-  accent: string;
-  box: number;
-  glyph: number;
-}) {
-  const Icon = (kind && KIND_ICON[kind]) || Circle;
-  return (
-    <span
-      aria-hidden="true"
-      className="flex shrink-0 items-center justify-center rounded-md"
-      style={{
-        width: box,
-        height: box,
-        background: `color-mix(in srgb, ${accent} 16%, transparent)`,
-        color: accent,
-      }}
-    >
-      <Icon size={glyph} strokeWidth={2} />
-    </span>
-  );
-}
-
-/** Run progress strip: queued = near-empty, running = pulsing partial, terminal
- *  = full (green/red). The footer surfaces agent rounds (left) and elapsed
- *  (right) — the "progress monitor" element, present on any node that has run.
- *  Status itself is carried by the bar color + the header pill, so it is NOT
- *  restated here. */
-function ProgressStrip({
+/**
+ * The run status FOOTER: a progress bar (queued = near-empty, running = pulsing
+ * partial, terminal = full green/red) over a caption row. Pinned to the card's
+ * BOTTOM via `mt-auto` so it lands at the same place on every node regardless of
+ * how much content sits above it — unlike an inline strip, whose height drifts.
+ * The caption reads agent rounds on the left and elapsed on the right; status
+ * itself is carried by the bar color + the header pill, so it is NOT restated
+ * here. The caption row always renders (even when empty) so the footer band keeps
+ * a constant height across nodes.
+ */
+function StatusFooter({
   status,
   rounds,
   elapsed,
@@ -174,13 +111,6 @@ function ProgressStrip({
   rounds?: number;
   elapsed?: string;
 }) {
-  const color = STATUS_COLOR[status];
-  const fill =
-    status === "succeeded" || status === "failed"
-      ? "100%"
-      : status === "running"
-        ? "58%"
-        : "6%";
   // `!== undefined` (not truthiness) so an explicit `rounds: 0` — a just-started
   // agent — still renders "0 rounds" rather than being hidden.
   const roundsLabel =
@@ -188,24 +118,17 @@ function ProgressStrip({
       ? `${rounds} round${rounds === 1 ? "" : "s"}`
       : undefined;
   return (
-    <div className="mt-1.5">
-      <div
-        className="h-1 w-full overflow-hidden rounded-full"
-        style={{
-          background: "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)",
-        }}
-      >
+    <div className="mt-auto border-border/60 border-t">
+      <div className="h-1 w-full overflow-hidden" style={{ background: MUTED_TRACK }}>
         <div
-          className={`h-full rounded-full ${status === "running" ? "animate-pulse" : ""}`}
-          style={{ width: fill, background: color }}
+          className={`h-full ${status === "running" ? "animate-pulse" : ""}`}
+          style={{ width: progressFill(status), background: STATUS_COLOR[status] }}
         />
       </div>
-      {(roundsLabel || elapsed) && (
-        <div className="mt-1 flex items-center justify-between text-[9px] text-muted-foreground">
-          <span className="truncate">{roundsLabel ?? ""}</span>
-          {elapsed && <span className="shrink-0">{elapsed}</span>}
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-2 px-3 py-1 text-[9px] text-muted-foreground">
+        <span className="truncate">{roundsLabel ?? ""}</span>
+        {elapsed && <span className="shrink-0">{elapsed}</span>}
+      </div>
     </div>
   );
 }
@@ -213,55 +136,6 @@ function ProgressStrip({
 // Handles are positioned anchors for edges; we hide the dots so edges appear to
 // connect to the node body for a clean diagram look.
 const HANDLE_CLASS = "!h-2 !w-2 !min-w-0 !border-0 !bg-transparent opacity-0";
-
-const STATUS_LABEL: Record<WfNodeStatus, string> = {
-  queued: "Queued",
-  running: "Running",
-  succeeded: "Done",
-  failed: "Failed",
-};
-
-// Status badge colour. `running` reuses the primary accent (the card also
-// pulses); succeeded/failed use the green/red palette already in the design
-// system (see TONE + run-history coloring).
-const STATUS_BADGE: Record<WfNodeStatus, string> = {
-  queued: "bg-surface-container-high text-muted-foreground",
-  running: "bg-primary/15 text-primary",
-  succeeded: "bg-green-600/10 text-green-600",
-  failed: "bg-red-500/10 text-red-400",
-};
-
-// Border/ring override applied ON TOP of the tone card when a node has live run
-// state — so the currently-running node pulses and terminal nodes read green/red
-// at a glance.
-function statusBorder(status: WfNodeStatus): string {
-  switch (status) {
-    case "running":
-      // The soft glow (inline, see WorkflowNode) + the animated inbound edge carry
-      // the "live" signal — no whole-card pulse, which would fade the text too.
-      return "border-primary ring-1 ring-primary/40";
-    case "succeeded":
-      return "border-green-500";
-    case "failed":
-      return "border-red-500";
-    default:
-      return "opacity-70";
-  }
-}
-
-/** A compact key/value chip for the node's meta row. Truncates (with a title
- *  tooltip) so a long value — e.g. a provider-prefixed model id — can't overflow
- *  the fixed card width or wrap past the reserved meta rows. */
-function MetaChip({ children, title }: { children: ReactNode; title?: string }) {
-  return (
-    <span
-      title={title}
-      className="inline-block max-w-[150px] truncate rounded bg-surface-container-high px-1.5 py-0.5 align-middle text-[10px] text-muted-foreground"
-    >
-      {children}
-    </span>
-  );
-}
 
 export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const d = data;
@@ -282,12 +156,25 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const tokens = isAgent
     ? fmtTokens(state?.inputTokens, state?.outputTokens)
     : undefined;
-  // Bound the host-supplied preview/error strings before they hit the DOM — the
-  // card shows a short preview, and `line-clamp-2` only hides overflow visually.
-  const errorText = state?.error ? clampPreview(state.error) : undefined;
-  const outputText = state?.outputPreview
-    ? clampPreview(state.outputPreview)
-    : undefined;
+  // The output block once a node has run: a failure's error (red) or a success/
+  // partial output preview. Bound the host-supplied string before it hits the DOM
+  // (the card shows a short preview; CSS clamping is visual only), then classify
+  // it so JSON renders as key/value and prose as prose. Null while there's nothing
+  // to show yet (queued, or a running node before its first token).
+  const runOutput =
+    state?.status === "failed" && state.error
+      ? {
+          shape: classifyOutput(clampPreview(state.error)),
+          tone: "error" as const,
+          label: "Error",
+        }
+      : state && state.status !== "failed" && state.outputPreview
+        ? {
+            shape: classifyOutput(clampPreview(state.outputPreview)),
+            tone: "default" as const,
+            label: "Output",
+          }
+        : null;
 
   // Border/glow + static tone tint are shared by both densities. Once a run is
   // live, the status-border className takes over; a running node also gets a soft
@@ -348,7 +235,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
         {state?.status === "running" && (
           <div
             className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full"
-            style={{ background: "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)" }}
+            style={{ background: MUTED_TRACK }}
           >
             <div
               className="h-full w-1/2 animate-pulse rounded-full"
@@ -360,84 +247,81 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
     );
   }
 
-  // EXPANDED: the full card — icon header, type-aware metric chips, output/error
-  // preview, run progress strip (with agent rounds), and the provider chip.
+  // EXPANDED: an identity/detail region over a bottom-pinned status footer. The
+  // region (`flex-1`) top-aligns the icon header, subtitle, provider chip, metric
+  // chips, and the content-aware output block; the footer (`mt-auto`) carries the
+  // progress bar + rounds/elapsed and always sits flush at the card's base.
   return (
-    <div className={`${wrapperClass} px-3 py-2`} style={wrapperStyle}>
+    <div className={wrapperClass} style={wrapperStyle}>
       {handles}
-      <div className="flex items-center gap-2">
-        <NodeIcon kind={d.kind} accent={accent} box={24} glyph={14} />
-        <span className="truncate font-medium text-[12px] text-foreground">
-          {d.title}
-        </span>
-        {state ? (
-          <span
-            className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${STATUS_BADGE[state.status]}`}
-          >
-            {STATUS_LABEL[state.status]}
+      <div className="flex min-h-0 flex-1 flex-col px-3 pt-2 pb-2">
+        <div className="flex items-center gap-2">
+          <NodeIcon kind={d.kind} accent={accent} box={24} glyph={14} />
+          <span className="truncate font-medium text-[12px] text-foreground">
+            {d.title}
           </span>
-        ) : (
-          d.badge && (
-            <span className="ml-auto shrink-0 rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
-              {d.badge}
+          {state ? (
+            <span
+              className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${STATUS_BADGE[state.status]}`}
+            >
+              {STATUS_LABEL[state.status]}
             </span>
-          )
+          ) : (
+            d.badge && (
+              <span className="ml-auto shrink-0 rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                {d.badge}
+              </span>
+            )
+          )}
+        </div>
+        {d.subtitle && (
+          <p
+            className="mt-1 truncate text-[11px] text-muted-foreground"
+            title={d.subtitle}
+          >
+            {d.subtitle}
+          </p>
+        )}
+        {d.provider && (
+          <span className="mt-1.5 inline-flex w-fit items-center gap-1 rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
+            <ProviderIcon
+              id={d.provider}
+              displayName={providerLabel(d.provider)}
+              size={12}
+              className="rounded-[2px]"
+            />
+            {providerLabel(d.provider)}
+          </span>
+        )}
+        {/* Type-aware metric chips: only what applies (model/cost are shown by any
+            run; tokens are agent-only). Rounds + elapsed live in the footer. */}
+        {(model || cost || tokens) && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            {model && <MetaChip title={model}>{model}</MetaChip>}
+            {cost && <MetaChip>{cost}</MetaChip>}
+            {tokens && <MetaChip>{tokens}</MetaChip>}
+          </div>
+        )}
+        {/* Content-aware output/error block with a micro-label — JSON renders as
+            key/value, prose as prose. Suppressed for a failure with no error. */}
+        {runOutput && (
+          <div className="mt-1.5 min-h-0">
+            <div className="mb-0.5 font-medium text-[8px] text-muted-foreground/70 uppercase tracking-[0.08em]">
+              {runOutput.label}
+            </div>
+            <NodeOutputBody shape={runOutput.shape} tone={runOutput.tone} rows={2} />
+          </div>
         )}
       </div>
-      {d.subtitle && (
-        <p
-          className="mt-1 truncate text-[11px] text-muted-foreground"
-          title={d.subtitle}
-        >
-          {d.subtitle}
-        </p>
-      )}
-      {/* Type-aware metric chips: only what applies (model/cost are shown by any
-          run; tokens are agent-only). Duration lives in the progress footer. */}
-      {(model || cost || tokens) && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1">
-          {model && <MetaChip title={model}>{model}</MetaChip>}
-          {cost && <MetaChip>{cost}</MetaChip>}
-          {tokens && <MetaChip>{tokens}</MetaChip>}
-        </div>
-      )}
-      {/* One-line output/error preview once the node has run. Error is red. */}
-      {state?.status === "failed" && errorText && (
-        <p
-          className="mt-1.5 line-clamp-2 text-[10px] text-red-400"
-          title={errorText}
-        >
-          {errorText}
-        </p>
-      )}
-      {outputText && state?.status !== "failed" && (
-        <p
-          className="mt-1.5 line-clamp-2 text-[10px] text-muted-foreground"
-          title={outputText}
-        >
-          {outputText}
-        </p>
-      )}
-      {/* Progress is an action/branch concern. A trigger only fires (it has no
-          rounds, output, or metrics), so it shows just its status in the header
-          and reserves no run rows — rendering a strip here would clip. */}
+      {/* The status footer is an action/branch concern. A trigger only fires (no
+          rounds/output/progress), so it reserves no footer rows and skips it —
+          rendering one would clip its shorter box. */}
       {state && d.tone !== "trigger" && (
-        <ProgressStrip
+        <StatusFooter
           status={state.status}
           rounds={isAgent ? state.rounds : undefined}
           elapsed={duration}
         />
-      )}
-      {d.provider && (
-        <span className="mt-1.5 inline-flex w-fit items-center gap-1 rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
-          <ProviderIcon
-            id={d.provider}
-            displayName={providerLabel(d.provider)}
-            size={12}
-            className="rounded-[2px]"
-          />
-          {providerLabel(d.provider)}
-        </span>
       )}
     </div>
   );
@@ -445,23 +329,6 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
 
 // Stable identity so React Flow doesn't warn about a new nodeTypes object.
 const NODE_TYPES = { wfNode: WorkflowNode };
-
-/** An edge is colored by the status of the node it points AT, so the run's
- *  "front" lights up: the hop into the running node animates in the primary
- *  accent, completed hops read green, a failed target reads red, and not-yet-
- *  reached (queued) or the static definition view stay neutral. */
-function edgeColor(status: WfNodeStatus | undefined): string {
-  switch (status) {
-    case "running":
-      return EDGE_RUNNING;
-    case "succeeded":
-      return EDGE_DONE;
-    case "failed":
-      return EDGE_FAIL;
-    default:
-      return EDGE_MUTED;
-  }
-}
 
 export function buildStyledEdges(
   base: Edge[],

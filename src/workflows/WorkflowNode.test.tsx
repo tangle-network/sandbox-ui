@@ -257,3 +257,53 @@ do:
     expect(screen.queryByText("Done")).toBeNull();
   });
 });
+
+describe("WorkflowNode — status footer + content-aware output", () => {
+  it("renders a JSON output as key/value rows under an OUTPUT label, not one raw blob", () => {
+    renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: '{"status":200,"id":4821}' },
+    });
+    // The block is labelled…
+    expect(screen.getByText("Output")).toBeTruthy();
+    // …and the JSON is split into keys and values, not dumped verbatim.
+    expect(screen.getByText("status")).toBeTruthy();
+    expect(screen.getByText("200")).toBeTruthy();
+    expect(screen.getByText("id")).toBeTruthy();
+    expect(screen.getByText("4821")).toBeTruthy();
+    expect(screen.queryByText('{"status":200,"id":4821}')).toBeNull();
+  });
+
+  it("labels a failure's error block ERROR and renders the message", () => {
+    renderNode({
+      ...BASE,
+      state: { status: "failed", error: "provider 500: timed out" },
+    });
+    expect(screen.getByText("Error")).toBeTruthy();
+    expect(screen.getByText("provider 500: timed out")).toBeTruthy();
+  });
+
+  it("pins the status footer to the card bottom and carries rounds + elapsed there", () => {
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "running", rounds: 2, durationMs: 4200 },
+    });
+    // The footer band is bottom-pinned (mt-auto) — the fix for the drifting bar.
+    expect(container.querySelector(".mt-auto")).toBeTruthy();
+    expect(screen.getByText("2 rounds")).toBeTruthy();
+    expect(screen.getByText("4.2s")).toBeTruthy();
+  });
+
+  it("does not restate the status in the footer caption (the header pill owns it)", () => {
+    // A non-agent failure has no rounds; the footer must not fall back to the
+    // status word, which would duplicate the header pill.
+    renderNode({
+      ...BASE,
+      title: "Notify",
+      kind: "notify",
+      state: { status: "failed", error: "boom", durationMs: 1400 },
+    });
+    // "Failed" appears exactly once (the header pill), not again in the footer.
+    expect(screen.getAllByText("Failed")).toHaveLength(1);
+  });
+});

@@ -130,18 +130,20 @@ const RANK_SEP = 76;
 /** Gap between two nodes stacked in the same layer (branch leaves) along the
  *  cross axis. */
 const CROSS_SEP = 22;
-/** A card's fixed chrome: vertical padding (py-2) + top/bottom border. */
-const CARD_CHROME = 22;
-/** The always-present header row (type-icon box + title). */
-const HEADER_ROW = 30;
+/** A card's fixed chrome: content padding (pt-2 + pb-2) + top/bottom border. */
+const CARD_CHROME = 18;
+/** The always-present header row (type-icon box + title + status pill). */
+const HEADER_ROW = 28;
 /** A single-line text row (subtitle, provider chip). */
 const TEXT_ROW = 20;
-/** The meta-chip row, clamped to two lines (model/cost/token chips). */
+/** The meta-chip row, which can wrap to two lines (model/cost/token chips). */
 const META_ROW = 46;
-/** A two-line, line-clamped output/error preview. */
-const PREVIEW_ROW = 36;
-/** The run progress strip: a bar + a rounds/elapsed footer. */
-const PROGRESS_ROW = 26;
+/** The output block: an "OUTPUT"/"ERROR" micro-label over a two-line, clamped
+ *  content-aware body (JSON key/value, prose, or a monospace fragment). */
+const OUTPUT_ROW = 44;
+/** The run status FOOTER pinned to the card's bottom: a top border, the progress
+ *  bar, and a rounds/status + elapsed row. */
+const FOOTER_ROW = 24;
 /** Fixed dimensions of a compact (collapsed) node — icon + title + one-line
  *  summary, uniform so the collapsed graph reads as an even grid. */
 export const COMPACT_NODE_SIZE = { width: 240, height: 64 };
@@ -154,21 +156,21 @@ export const COMPACT_NODE_SIZE = { width: 240, height: 64 };
  * library's default token/font config; a consumer whose fonts render a row
  * taller just sees that content clamped within the fixed box, never a reflow.
  * `withRunState` reserves the rows live run state adds (the meta-chip row, the
- * output/error preview, and the progress strip) so the layout — computed ONCE,
+ * output block, and the bottom status footer) so the layout — computed ONCE,
  * before any run state is merged in — already leaves room for a node that later
  * runs, and the merge never reflows. A trigger only ever shows a status (no
  * metrics/output/progress), so it's spaced by its static height (`withRunState`
- * false) and the node component skips its progress strip to match.
+ * false) and the node component skips its footer to match.
  */
 function nodeHeight(data: WfNodeData, withRunState: boolean): number {
   let h = CARD_CHROME + HEADER_ROW;
   if (data.subtitle) h += TEXT_ROW;
+  if (data.provider) h += TEXT_ROW;
   // The meta row renders for a node with a model chip (pre-run) and for any node
   // once a run populates cost/tokens — reserve it whenever either can apply.
   if (withRunState || data.model) h += META_ROW;
-  // A run overlay adds the output/error preview and the progress strip.
-  if (withRunState) h += PREVIEW_ROW + PROGRESS_ROW;
-  if (data.provider) h += TEXT_ROW;
+  // A run overlay adds the output block and the pinned status footer.
+  if (withRunState) h += OUTPUT_ROW + FOOTER_ROW;
   return h;
 }
 

@@ -72,6 +72,25 @@ describe("condenseText", () => {
     expect(condenseText("undefined at *ngFor")).toBe("undefined at *ngFor");
   });
 
+  it("never lets one glob's ** pair with the next one's", () => {
+    // The delimiters have to be the ones a person typed as emphasis: an opener
+    // follows a space or the line start, a closer is followed by a space, some
+    // punctuation, or the end. A path's `**` is neither, so two globs in one
+    // sentence stay two globs instead of being eaten as one bold run.
+    expect(condenseText("check src/**/*.ts and docs/**/*.md")).toBe(
+      "check src/**/*.ts and docs/**/*.md",
+    );
+    expect(condenseText("globs a/**/b and c/**/d and e/**/f")).toBe(
+      "globs a/**/b and c/**/d and e/**/f",
+    );
+    // …while real emphasis still unwraps, including up against punctuation.
+    expect(condenseText("**Blocking**: none")).toBe("Blocking: none");
+    expect(condenseText("the **retry** loop, capped")).toBe(
+      "the retry loop, capped",
+    );
+    expect(condenseText("~~struck~~ and `code`")).toBe("struck and code");
+  });
+
   it("never rewrites a dunder — a traceback is not markdown", () => {
     // The node's ERROR preview runs through here too, and real failure text is
     // full of `__init__` / `__main__`. Treating `__…__` as bold silently rewrote

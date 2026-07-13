@@ -93,14 +93,23 @@ export function condenseText(text: string): string {
       i > 0 && item ? `· ${line}` : line,
     )
     .join(" ")
-    // Inline emphasis/code/strikethrough markers, unwrapped in place.
+    // Inline emphasis/strikethrough, unwrapped in place — but ONLY where the
+    // delimiters are the ones a person actually typed as emphasis: the opener
+    // follows a space or the start of the line, and the closer is followed by a
+    // space, punctuation, or the end. An emphasis run is written that way; a path
+    // is not.
     //
-    // NOT `__underscore__` emphasis: an agent writes bold as `**bold**`, while
-    // `__` is what real text puts around a Python dunder — unwrapping it rewrites
-    // `File "/app/pkg/__init__.py"` (a traceback we are quite likely to be showing
-    // as a node's ERROR) into `.../init.py`. Silently corrupting a failure message
-    // is far worse than leaving two underscores in a preview.
-    .replace(/(\*\*|~~)(.*?)\1/g, "$2")
+    // Without that, the `**` in one glob pairs with the `**` in the NEXT one and
+    // both are eaten — `check src/**/*.ts and docs/**/*.md` came out as
+    // `check src//.ts and docs//.md`. A preview is not worth a wrong path.
+    //
+    // Underscores are left alone entirely: an agent writes bold as `**bold**`,
+    // while `__` is what real text puts around a Python dunder — unwrapping it
+    // rewrites `File "/app/pkg/__init__.py"` into `.../init.py`.
+    .replace(
+      /(?<=^|\s)(\*\*|~~)(?!\s)(.+?)(?<!\s)\1(?=[\s.,:;!?)\]}"']|$)/g,
+      "$2",
+    )
     // Single-asterisk italics, only where the asterisk is a real delimiter: not
     // glued to a word (`*ngFor`), not doubled (a `**bold**` remnant), and not
     // wrapping whitespace — so a glob (`src/**/*.test.ts`) and a literal `2 * 3`

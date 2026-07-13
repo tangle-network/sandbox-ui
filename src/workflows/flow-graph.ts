@@ -37,24 +37,40 @@ export interface BuildFlowGraphOptions {
   compact?: boolean;
 }
 
-/** Accept either an options object or a bare `nodeState` map as the second arg:
- *  an object carrying no known option key is treated as a legacy node-state map
- *  (`buildFlowGraph(yaml, { a0: state })`), so an older positional caller keeps
- *  working instead of silently losing run state. Node ids (`trigger`, `a0`,
- *  `a0-b1`) never collide with an option key, so the discrimination is safe. */
+/** A bare run-state map (`buildFlowGraph(yaml, { a0: { status: "running" } })`),
+ *  recognized by what it CONTAINS: every value is a run state, i.e. an object with
+ *  a `status`. */
+function isNodeStateMap(arg: object): arg is Record<string, WfNodeState> {
+  const values = Object.values(arg);
+  return (
+    values.length > 0 &&
+    values.every(
+      (v) => v !== null && typeof v === "object" && "status" in (v as object),
+    )
+  );
+}
+
+/**
+ * Accept either an options object or a bare `nodeState` map as the second arg, so
+ * an older positional caller keeps working instead of silently losing its run
+ * state.
+ *
+ * Both branches are POSITIVE tests — known option keys, or values that are run
+ * states. Nothing falls through to "must be a node-state map", because that is how
+ * an argument the graph doesn't understand (a dropped option, a typo, a key from a
+ * newer version) gets read as run state: `nodeState` would then be defined, which
+ * is the signal for "a run overlay is in play", and the graph would silently
+ * reserve run rows for a definition that has no run at all. An unrecognized shape
+ * is no options, not imaginary run state.
+ */
 function normalizeFlowGraphOptions(
   arg: BuildFlowGraphOptions | Record<string, WfNodeState> | undefined,
 ): BuildFlowGraphOptions {
   if (!arg) return {};
-  // An EMPTY object is empty options — not an empty run-state map. Read the other
-  // way, `buildFlowGraph(yaml, {})` would set `nodeState: {}`, which is the signal
-  // for "a run overlay is in play": the graph would reserve run rows (and pick the
-  // taller compact box) for a definition that has no run at all.
-  if (Object.keys(arg).length === 0) return {};
   if ("nodeState" in arg || "direction" in arg || "compact" in arg) {
     return arg as BuildFlowGraphOptions;
   }
-  return { nodeState: arg as Record<string, WfNodeState> };
+  return isNodeStateMap(arg) ? { nodeState: arg } : {};
 }
 
 /**

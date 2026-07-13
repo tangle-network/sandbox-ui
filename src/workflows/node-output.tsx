@@ -36,6 +36,25 @@ export type OutputShape =
 const MAX_JSON_ENTRIES = 6;
 
 /**
+ * A line that is pure structure — a code fence (with or without a language tag), a
+ * table's rule row, a thematic break — and so carries no words to keep.
+ *
+ * Every test is a SINGLE quantified character class: unambiguous, and linear in the
+ * length of the line. Written as one pattern (`[\s|:-]+\|[\s|:-]*`) the two
+ * quantifiers would compete for the same `|`, which is the shape that backtracks.
+ * Recognize the charset in one pass instead, then ask the cheap questions — is
+ * there a pipe? a dash? — with plain string checks.
+ */
+function isStructureOnly(line: string): boolean {
+  if (/^(```|~~~)/.test(line)) return true;
+  const isBreak = /^([-*_])\1{2,}$/.test(line);
+  // A table rule is made only of pipes, dashes, colons and spaces — and needs at
+  // least one pipe AND one dash to be a rule rather than a stray divider.
+  if (/^[\s|:-]+$/.test(line) && line.includes("|")) return line.includes("-");
+  return isBreak;
+}
+
+/**
  * Flatten an agent's markdown answer into the sentence a person would read out
  * of it. On a two-line card preview the syntax IS the noise: a `## Heading` mid
  * paragraph, a `**bold**` run and a bullet's `-` all survive the clamp while the
@@ -67,13 +86,7 @@ export function condenseText(text: string): string {
     }))
     // Structure-only lines carry no words at all: a code fence (with or without a
     // language tag), a table's rule row, a thematic break.
-    .filter(
-      ({ text: line }) =>
-        line !== "" &&
-        !/^(```|~~~)/.test(line) &&
-        !/^\|?[\s|:-]+\|[\s|:-]*$/.test(line) &&
-        !/^([-*_])\1{2,}$/.test(line),
-    );
+    .filter(({ text: line }) => line !== "" && !isStructureOnly(line));
 
   return lines
     .map(({ item, text: line }, i) =>

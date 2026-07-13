@@ -38,6 +38,17 @@ describe("condenseText", () => {
     expect(condenseText("![](https://example.com/x.png) after")).toBe("after");
   });
 
+  it("stays linear on an adversarial near-miss line (no catastrophic backtracking)", () => {
+    // The structure test recognizes its charset in ONE quantified pass, so a long
+    // line of pipes/dashes/colons that ALMOST matches cannot make it backtrack.
+    // (The card path clamps input long before this, but a regex that can blow up is
+    // a regex that will, somewhere.)
+    const nearMiss = `${"|-: ".repeat(20000)}x`;
+    const started = performance.now();
+    condenseText(nearMiss);
+    expect(performance.now() - started).toBeLessThan(250);
+  });
+
   it("drops structure-only lines (fences, table rules)", () => {
     const md = ["```ts", "const x = 1;", "```"].join("\n");
     expect(condenseText(md)).toBe("const x = 1;");

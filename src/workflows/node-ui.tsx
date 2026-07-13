@@ -6,8 +6,8 @@
  * Colors resolve to the SEMANTIC surface tokens (`--surface-success-text`,
  * `--surface-danger-text`, …), which carry a light AND a dark value tuned for
  * contrast against the card. A literal palette hex (`#22c55e`) or a stock
- * Tailwind shade (`text-red-400`) only ever suits one theme — it was the direct
- * cause of the strain-to-read status text this design replaced.
+ * Tailwind shade (`text-red-400`) carries ONE value, so it can only ever hold its
+ * contrast in one of the two themes — never use one for a status color.
  *
  * Inline `style` colors here use the RAW brand tokens (`hsl(var(--primary))`,
  * `var(--surface-…)`) — NOT the `--color-*` @theme aliases, which are undefined

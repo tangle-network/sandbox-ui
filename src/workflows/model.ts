@@ -335,14 +335,13 @@ const CONTROL_FLOW = new Set<string>(CONTROL_FLOW_KEYS);
 /**
  * The action kind a `do` entry declares. A `do` entry is a one-key action map
  * that may also carry the control-flow siblings above, and YAML preserves the
- * author's key order — so `- if: … / agent.run: …` puts `if` first, and taking
- * "the first key" produced a node titled "if" that showed nothing of the agent it
- * was guarding.
+ * author's key order — so `- if: … / agent.run: …` puts `if` first. The kind can
+ * therefore never be "the first key": that names a guarded step after its guard.
  *
- * The kind is therefore whatever is NOT control flow — by EXCLUSION, not by
- * matching a list of kinds we happen to know. An allowlist would have re-broken
- * the moment the API adds a kind (`agent.review`), silently resurrecting the very
- * bug this fixes.
+ * It is whatever is NOT control flow — chosen by EXCLUSION, not by matching a list
+ * of kinds we happen to know. An allowlist would silently start naming steps after
+ * their guard again the moment the API adds a kind (`agent.review`), since an
+ * unknown kind would fall out of the list and the guard would win by position.
  */
 function actionKind(rec: Record<string, unknown>): string | undefined {
   return Object.keys(rec).find((k) => !CONTROL_FLOW.has(k));

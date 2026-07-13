@@ -120,7 +120,10 @@ function StatusFooter({
   return (
     <div className="mt-auto border-border/60 border-t">
       <div className="h-1 w-full overflow-hidden" style={{ background: MUTED_TRACK }}>
+        {/* Only a RUNNING bar animates. A `waiting` run is stopped at this node
+            until a human answers it, and a moving bar would say otherwise. */}
         <div
+          data-testid="wf-node-progress"
           className={`h-full ${status === "running" ? "animate-pulse" : ""}`}
           style={{ width: progressFill(status), background: STATUS_COLOR[status] }}
         />

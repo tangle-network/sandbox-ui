@@ -116,7 +116,7 @@ describe("WorkflowNode", () => {
     // The bug this fixes: a `waiting` node collapsed into `running`, so the step
     // the run was STUCK on rendered as the live one — pulsing bar, primary accent,
     // "Running" pill — while it was in fact going nowhere without the viewer.
-    const { container } = renderNode({
+    renderNode({
       title: "Ship the release?",
       kind: "decision",
       subtitle: "approve · reject",
@@ -131,9 +131,23 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("approve · reject")).toBeTruthy();
     // The progress bar sits where the run stopped, and does NOT animate — a
     // moving bar would say the workflow is working.
-    const bar = container.querySelector('[style*="58%"]');
-    expect(bar).toBeTruthy();
-    expect(bar?.className).not.toContain("animate-pulse");
+    const bar = screen.getByTestId("wf-node-progress");
+    expect(bar.style.width).toBe("58%");
+    expect(bar.className).not.toContain("animate-pulse");
+  });
+
+  it("animates the progress bar only for a running node", () => {
+    // The counterpart to the assertion above: the ONE status that means "work is
+    // happening right now" is the one that moves.
+    const { unmount } = renderNode({ ...BASE, state: { status: "running" } });
+    expect(screen.getByTestId("wf-node-progress").className).toContain(
+      "animate-pulse",
+    );
+    unmount();
+    renderNode({ ...BASE, state: { status: "succeeded" } });
+    expect(screen.getByTestId("wf-node-progress").className).not.toContain(
+      "animate-pulse",
+    );
   });
 
   it("surfaces the agent round count on the progress strip", () => {

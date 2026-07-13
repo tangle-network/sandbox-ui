@@ -15,7 +15,19 @@ import { providerLabel } from "./provider-label";
 
 export type WfNodeTone = "trigger" | "structural" | "action";
 
-export type WfNodeStatus = "queued" | "running" | "succeeded" | "failed";
+/**
+ * A node's live run status. `waiting` is NOT a variant of `running`: the run has
+ * stopped at that node and makes no further progress until a human answers it (a
+ * `decision` action). Collapsing it into `running` tells the viewer the workflow
+ * is working when in fact it is blocked on them — so it gets its own status, its
+ * own colour, and a static (un-animated) progress bar.
+ */
+export type WfNodeStatus =
+  | "queued"
+  | "running"
+  | "waiting"
+  | "succeeded"
+  | "failed";
 
 /**
  * Live RUN state for one node, supplied by the host (keyed by node id) and
@@ -304,6 +316,31 @@ function describeActionBase(action: unknown): WfNodeData {
         isRoot: false,
         tone: "action",
       };
+    case "decision": {
+      // The human-in-the-loop pause. Its TITLE is the question being asked and
+      // its OPTIONS are the answers — both belong on the card, because a viewer
+      // looking at a parked run needs to see what is being asked and what the
+      // choices are, not just that the run stopped here.
+      const options = Array.isArray(cfg.options)
+        ? cfg.options.filter((o): o is string => typeof o === "string")
+        : [];
+      return {
+        title: str(cfg.title) ?? "Decision",
+        kind,
+        subtitle: options.length > 0 ? options.join(" · ") : str(cfg.prompt),
+        detail: pickDetail(cfg, [
+          "title",
+          "prompt",
+          "options",
+          "onTimeout",
+          "default",
+          "timeout",
+        ]),
+        isRoot: false,
+        // Control flow, like parallel/foreach: it decides where the run goes next.
+        tone: "structural",
+      };
+    }
     case "parallel": {
       const branches = Array.isArray(cfg.branches) ? cfg.branches : [];
       return {

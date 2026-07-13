@@ -112,6 +112,30 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("partial answer")).toBeTruthy();
   });
 
+  it("renders a parked decision as blocked on the viewer, not as in-flight", () => {
+    // The bug this fixes: a `waiting` node collapsed into `running`, so the step
+    // the run was STUCK on rendered as the live one — pulsing bar, primary accent,
+    // "Running" pill — while it was in fact going nowhere without the viewer.
+    const { container } = renderNode({
+      title: "Ship the release?",
+      kind: "decision",
+      subtitle: "approve · reject",
+      isRoot: false,
+      tone: "structural",
+      state: { status: "waiting" },
+    });
+    expect(screen.getByText("Waiting on you")).toBeTruthy();
+    expect(screen.queryByText("Running")).toBeNull();
+    // The question and its options are both on the card.
+    expect(screen.getByText("Ship the release?")).toBeTruthy();
+    expect(screen.getByText("approve · reject")).toBeTruthy();
+    // The progress bar sits where the run stopped, and does NOT animate — a
+    // moving bar would say the workflow is working.
+    const bar = container.querySelector('[style*="58%"]');
+    expect(bar).toBeTruthy();
+    expect(bar?.className).not.toContain("animate-pulse");
+  });
+
   it("surfaces the agent round count on the progress strip", () => {
     renderNode({
       ...BASE,

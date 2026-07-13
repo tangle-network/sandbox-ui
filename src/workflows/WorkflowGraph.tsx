@@ -197,7 +197,12 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const wrapperStyle = state
     ? state.status === "running"
       ? { boxShadow: "0 0 22px -6px hsl(var(--primary))" }
-      : undefined
+      : state.status === "waiting"
+        ? // The parked node is the one the viewer has to act on, so it gets the
+          // same "look here" glow as the live one — in warning amber, because it
+          // is blocked, not working.
+          { boxShadow: "0 0 22px -6px var(--surface-warning-text)" }
+        : undefined
     : {
         borderColor: `color-mix(in srgb, ${accent} 42%, transparent)`,
         backgroundColor: `color-mix(in srgb, ${accent} 6%, hsl(var(--card)))`,

@@ -71,6 +71,51 @@ do:
     expect(agent?.data.subtitle).toBe("Summarize the overnight alerts.");
   });
 
+  it("asks a decision's question and lists its options on the card", () => {
+    // A `decision` parks the run until a human answers it. Falling through to the
+    // unknown-kind default rendered a card titled "decision" with no question and
+    // no options — the viewer could see the run had stopped, but not what it had
+    // stopped to ask them.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * 1"
+do:
+  - decision:
+      title: Ship the release?
+      prompt: 3 PRs merged since the last tag.
+      options: [approve, reject]
+      onTimeout: default
+      default: reject
+      timeout: 24h
+`;
+    const node = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(node?.data.title).toBe("Ship the release?");
+    expect(node?.data.kind).toBe("decision");
+    expect(node?.data.subtitle).toBe("approve · reject");
+    // It steers where the run goes next, so it reads as control flow.
+    expect(node?.data.tone).toBe("structural");
+    // The timeout policy is what happens if nobody answers — the drawer must be
+    // able to say so.
+    expect(node?.data.detail).toMatchObject({
+      onTimeout: "default",
+      default: "reject",
+    });
+    expect(node?.data.config).toMatchObject({ options: ["approve", "reject"] });
+  });
+
+  it("falls back to the prompt, then to a generic title, for a sparse decision", () => {
+    const node = buildWorkflowGraph(`
+do:
+  - decision:
+      prompt: Pick one.
+`).nodes.find((n) => n.id === "a0");
+    // No title → a generic one, never an empty card. No options → the prompt is
+    // the most useful thing left to show.
+    expect(node?.data.title).toBe("Decision");
+    expect(node?.data.subtitle).toBe("Pick one.");
+  });
+
   it("collapses nodes to the fixed compact size when measured for compact density", () => {
     const yaml = `
 on:

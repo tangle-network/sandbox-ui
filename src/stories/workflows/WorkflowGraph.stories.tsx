@@ -165,6 +165,49 @@ const failed = (o: Partial<WfNodeState> = {}): WfNodeState => ({
   ...o,
 });
 const queued = (): WfNodeState => ({ status: "queued" });
+const waiting = (o: Partial<WfNodeState> = {}): WfNodeState => ({
+  status: "waiting",
+  ...o,
+});
+
+// A run parked on a human `decision`: the agent has finished, the decision node
+// is blocked on the viewer, and the branch after it hasn't started. This is the
+// shape that used to render as an empty box badged "Running".
+const HUMAN_DECISION = `
+on:
+  schedule:
+    cron: "0 9 * * 1"
+do:
+  - agent.run:
+      model: anthropic/claude-haiku-4-5
+      prompt: Find my most recent merged pull request and summarize it.
+  - decision:
+      title: Ship the release?
+      prompt: 3 PRs merged since the last tag.
+      options: [approve, reject]
+      onTimeout: default
+      default: reject
+      timeout: 24h
+  - agent.run:
+      model: anthropic/claude-haiku-4-5
+      prompt: The user chose to \${steps[1].choice}. Act on it.
+`;
+
+const DECISION_WAITING: Record<string, WfNodeState> = {
+  trigger: done({ durationMs: undefined, costUsd: undefined }),
+  a0: done({
+    model: "anthropic/claude-haiku-4-5",
+    costUsd: 0.0016,
+    durationMs: 6100,
+    rounds: 1,
+    inputTokens: 6,
+    outputTokens: 392,
+    outputPreview:
+      "Perfect! I found your most recent merged pull request. Here are the details: ## Your Most…",
+  }),
+  a1: waiting(),
+  a2: queued(),
+};
 
 // Linear, fully succeeded (mirrors the real `workflow-green-run` capture).
 const LINEAR_DONE: Record<string, WfNodeState> = {
@@ -297,6 +340,35 @@ export const LinearSucceeded: Story = {
         variant="full"
         className="h-full w-full"
         nodeState={LINEAR_DONE}
+        onNodeClick={() => {}}
+      />
+    </GraphPanel>
+  ),
+};
+
+export const DecisionWaiting: Story = {
+  name: "Decision — parked on a human",
+  render: () => (
+    <GraphPanel>
+      <WorkflowGraphLazy
+        yaml={HUMAN_DECISION}
+        variant="full"
+        className="h-full w-full"
+        nodeState={DECISION_WAITING}
+        onNodeClick={() => {}}
+      />
+    </GraphPanel>
+  ),
+};
+
+export const DecisionDefinition: Story = {
+  name: "Decision — definition only",
+  render: () => (
+    <GraphPanel>
+      <WorkflowGraphLazy
+        yaml={HUMAN_DECISION}
+        variant="full"
+        className="h-full w-full"
         onNodeClick={() => {}}
       />
     </GraphPanel>

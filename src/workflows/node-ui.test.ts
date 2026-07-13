@@ -1,13 +1,29 @@
 import { describe, expect, it } from "vitest";
 import type { WfNodeStatus } from "./model";
-import { edgeColor, progressFill, statusBorder } from "./node-ui";
+import {
+  edgeColor,
+  progressFill,
+  STATUS_BADGE,
+  STATUS_COLOR,
+  STATUS_LABEL,
+  statusBorder,
+} from "./node-ui";
 
-const STATUSES: WfNodeStatus[] = ["queued", "running", "succeeded", "failed"];
+const STATUSES: WfNodeStatus[] = [
+  "queued",
+  "running",
+  "waiting",
+  "succeeded",
+  "failed",
+];
 
 describe("progressFill", () => {
   it("maps each status to its determinate fill fraction", () => {
     expect(progressFill("queued")).toBe("6%");
     expect(progressFill("running")).toBe("58%");
+    // The run reached this node but hasn't finished it — same fill as running.
+    // (The bar is deliberately not ANIMATED for `waiting`; see WorkflowNode.)
+    expect(progressFill("waiting")).toBe("58%");
     expect(progressFill("succeeded")).toBe("100%");
     expect(progressFill("failed")).toBe("100%");
   });
@@ -45,7 +61,39 @@ describe("statusBorder", () => {
     expect(statusBorder("queued")).toBe("opacity-70");
   });
 
+  it("rings a waiting node as prominently as a running one, in warning amber", () => {
+    // The parked node is the one the viewer has to act on, so it must not fall to
+    // the `queued` dim — and it must not borrow the primary accent, which would
+    // say the run is working when it is blocked on them.
+    const waiting = statusBorder("waiting");
+    expect(waiting).toContain("ring-1");
+    expect(waiting).toContain("surface-warning-border");
+    expect(waiting).not.toContain("primary");
+    expect(waiting).not.toContain("opacity-70");
+  });
+
   it("returns a non-empty class for every status", () => {
     for (const s of STATUSES) expect(statusBorder(s).length).toBeGreaterThan(0);
+  });
+});
+
+describe("waiting is a first-class status, never a flavour of running", () => {
+  it("colors a waiting node and its inbound edge amber, not the running accent", () => {
+    expect(STATUS_COLOR.waiting).toBe("var(--surface-warning-text)");
+    expect(edgeColor("waiting")).toBe("var(--surface-warning-text)");
+    expect(edgeColor("waiting")).not.toBe(edgeColor("running"));
+  });
+
+  it("labels it as blocked on the viewer, not as in-flight", () => {
+    expect(STATUS_LABEL.waiting).toBe("Waiting on you");
+    expect(STATUS_BADGE.waiting).toContain("surface-warning");
+  });
+
+  it("gives every status a colour, label, and badge — none may fall through", () => {
+    for (const s of STATUSES) {
+      expect(STATUS_COLOR[s]).toBeTruthy();
+      expect(STATUS_LABEL[s]).toBeTruthy();
+      expect(STATUS_BADGE[s]).toBeTruthy();
+    }
   });
 });

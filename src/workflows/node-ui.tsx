@@ -20,6 +20,7 @@ import {
   Repeat,
   Sparkles,
   Split,
+  UserCheck,
   Webhook,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -42,9 +43,14 @@ const EDGE_MUTED = "hsl(var(--muted-foreground))";
 const EDGE_DONE = "#22c55e";
 const EDGE_FAIL = "#ef4444";
 export const EDGE_RUNNING = "hsl(var(--primary))";
+/** `waiting` borrows the warning surface — the same amber the design system uses
+ *  for "needs attention". A blocked run is not a live one, so it must never read
+ *  as the primary "running" accent. */
+export const EDGE_WAITING = "var(--surface-warning-text)";
 export const STATUS_COLOR: Record<WfNodeStatus, string> = {
   queued: EDGE_MUTED,
   running: EDGE_RUNNING,
+  waiting: EDGE_WAITING,
   succeeded: EDGE_DONE,
   failed: EDGE_FAIL,
 };
@@ -56,6 +62,8 @@ export function edgeColor(status: WfNodeStatus | undefined): string {
   switch (status) {
     case "running":
       return EDGE_RUNNING;
+    case "waiting":
+      return EDGE_WAITING;
     case "succeeded":
       return EDGE_DONE;
     case "failed":
@@ -68,29 +76,37 @@ export function edgeColor(status: WfNodeStatus | undefined): string {
 export const STATUS_LABEL: Record<WfNodeStatus, string> = {
   queued: "Queued",
   running: "Running",
+  waiting: "Waiting on you",
   succeeded: "Done",
   failed: "Failed",
 };
 
 // Status badge colour. `running` reuses the primary accent (the card also
 // pulses); succeeded/failed use the green/red palette already in the design
-// system (see TONE + run-history coloring).
+// system (see TONE + run-history coloring); `waiting` uses the warning surface,
+// so a step blocked on a human reads as "needs attention", not as in-flight.
 export const STATUS_BADGE: Record<WfNodeStatus, string> = {
   queued: "bg-surface-container-high text-muted-foreground",
   running: "bg-primary/15 text-primary",
+  waiting:
+    "bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]",
   succeeded: "bg-green-600/10 text-green-600",
   failed: "bg-red-500/10 text-red-400",
 };
 
 /** Border/ring override applied ON TOP of the tone card when a node has live run
- *  state — so the running node reads live and terminal nodes read green/red at a
- *  glance. */
+ *  state — so the running node reads live, a node awaiting a human reads amber,
+ *  and terminal nodes read green/red at a glance. */
 export function statusBorder(status: WfNodeStatus): string {
   switch (status) {
     case "running":
       // The soft glow (inline, per node) + the animated inbound edge carry the
       // "live" signal — no whole-card pulse, which would fade the text too.
       return "border-primary ring-1 ring-primary/40";
+    case "waiting":
+      // Same ring treatment as running so the parked node is equally prominent —
+      // it is, after all, the one node the viewer has to act on.
+      return "border-[var(--surface-warning-border)] ring-1 ring-[var(--surface-warning-border)]";
     case "succeeded":
       return "border-green-500";
     case "failed":
@@ -101,12 +117,14 @@ export function statusBorder(status: WfNodeStatus): string {
 }
 
 /** Determinate progress fraction for a node's status: queued reads near-empty,
- *  running a partial (the caller pulses it), terminal full. Shared so every
- *  progress treatment (bar, footer, fill) maps status → fill identically. */
+ *  running and waiting a partial (the run reached this node but hasn't finished
+ *  it), terminal full. Shared so every progress treatment (bar, footer, fill)
+ *  maps status → fill identically. A `waiting` bar is deliberately NOT animated
+ *  by its callers: the run is stopped, and a moving bar would say otherwise. */
 export function progressFill(status: WfNodeStatus): string {
   return status === "succeeded" || status === "failed"
     ? "100%"
-    : status === "running"
+    : status === "running" || status === "waiting"
       ? "58%"
       : "6%";
 }
@@ -122,6 +140,9 @@ export const KIND_ICON: Record<string, LucideIcon> = {
   parallel: Split,
   foreach: Repeat,
   "sandbox.spawn": Box,
+  // A `decision` is answered by a PERSON — the icon says who the run is waiting
+  // on, which is the one thing the viewer needs to know when it parks here.
+  decision: UserCheck,
 };
 
 /** The type icon in a tinted square, colored by tone. */

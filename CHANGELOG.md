@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.76.0
+
+### Workflows
+
+- The **`decision` action now renders as itself**, not as an unknown kind. A human-in-the-loop `decision` fell through to the default branch of the node describer, so it drew a card titled `"decision"` with no subtitle, no detail, and an empty body — a viewer could see that the run had stopped there, but not what it had stopped to *ask* them. The node now carries the decision's **title as its question**, its **options as the subtitle** (`approve · reject`), a person icon (a `decision` is answered by a human), and the timeout policy (`onTimeout`/`default`/`timeout`) in its `detail` map for a drawer.
+- New **`waiting` node status**, and it is deliberately *not* a flavour of `running`. A run parked on a decision makes no further progress until a human answers it, so a host that had to map it onto `running` was telling the viewer the workflow was working while it was in fact blocked on them. `waiting` gets the warning-amber accent (border ring, status colour, inbound-edge colour), a **"Waiting on you"** status pill, and a progress bar that sits where the run stopped **without animating** — a moving bar would say otherwise. It reads as prominently as the running node, because it is the one node the viewer has to act on.
+- New API: `WfNodeStatus` gains `"waiting"`, and `node-ui` exports `EDGE_WAITING`. Additive for a host that renders the graph; a consumer holding an exhaustive `Record<WfNodeStatus, T>` of its own must add the new key.
+
 ## 0.75.0
 
 ### Workflows

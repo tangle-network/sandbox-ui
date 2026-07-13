@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.77.0
+
+### Workflows
+
+- **New `waiting` node status — a run blocked on a human is not a run that is working.** `0.76.0` models the `decision` step but has no status for the state it puts the run INTO: a host had to map it onto `running`, so the step the run was *stuck* on rendered as the live one — pulsing bar, primary accent, "Running" pill — while it went nowhere without the viewer. `waiting` is now first-class: the warning-amber accent (status colour, pill, border ring, inbound edge, and a soft glow), a **"Waiting on you"** label, and a progress bar that sits where the run stopped **without animating** — a moving bar would say otherwise. It reads as prominently as the running node, because it is the one node the viewer has to act on.
+- New API: `WfNodeStatus` (exported from `./workflows`) gains `"waiting"`. Additive for a host that renders the graph — pass `{ status: "waiting" }` in `nodeState` and the node styles itself. A consumer holding an exhaustive `Record<WfNodeStatus, T>` of its own must add the new key. Everything the status drives (colour, pill, border, edge) is internal to the package.
+
 ## 0.76.0
 
 ### Workflows

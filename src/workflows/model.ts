@@ -23,7 +23,19 @@ import { parse as parseYaml } from "yaml";
 
 export type WfNodeTone = "trigger" | "structural" | "action";
 
-export type WfNodeStatus = "queued" | "running" | "succeeded" | "failed";
+/**
+ * A node's live run status. `waiting` is NOT a variant of `running`: the run has
+ * stopped at that node and makes no further progress until a human answers it (a
+ * `decision` step). Collapsing it into `running` tells the viewer the workflow is
+ * working when in fact it is blocked on THEM — so it gets its own colour, its own
+ * label, and a progress bar that does not move.
+ */
+export type WfNodeStatus =
+  | "queued"
+  | "running"
+  | "waiting"
+  | "succeeded"
+  | "failed";
 
 /**
  * Live RUN state for one node, supplied by the host (keyed by node id) and

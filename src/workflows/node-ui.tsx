@@ -50,9 +50,14 @@ const STATUS_QUEUED = "hsl(var(--muted-foreground))";
 const STATUS_DONE = "var(--surface-success-text)";
 const STATUS_FAILED = "var(--surface-danger-text)";
 export const STATUS_RUNNING = "hsl(var(--primary))";
+/** A run blocked on a human borrows the warning surface — the same amber the
+ *  design system uses for "needs attention". It must never read as the primary
+ *  "running" accent: the workflow is not working, it is waiting on the viewer. */
+const STATUS_WAITING = "var(--surface-warning-text)";
 export const STATUS_COLOR: Record<WfNodeStatus, string> = {
   queued: STATUS_QUEUED,
   running: STATUS_RUNNING,
+  waiting: STATUS_WAITING,
   succeeded: STATUS_DONE,
   failed: STATUS_FAILED,
 };
@@ -67,6 +72,7 @@ export function edgeColor(status: WfNodeStatus | undefined): string {
 export const STATUS_LABEL: Record<WfNodeStatus, string> = {
   queued: "Queued",
   running: "Running",
+  waiting: "Waiting on you",
   succeeded: "Done",
   failed: "Failed",
 };
@@ -87,6 +93,11 @@ export const STATUS_PILL: Record<
     background: "color-mix(in srgb, hsl(var(--primary)) 14%, transparent)",
     color: "hsl(var(--primary))",
     borderColor: "color-mix(in srgb, hsl(var(--primary)) 40%, transparent)",
+  },
+  waiting: {
+    background: "var(--surface-warning-bg)",
+    color: "var(--surface-warning-text)",
+    borderColor: "var(--surface-warning-border)",
   },
   succeeded: {
     background: "var(--surface-success-bg)",
@@ -110,8 +121,13 @@ export function statusBorder(status: WfNodeStatus): {
   const color = STATUS_COLOR[status];
   switch (status) {
     case "running":
-      // The soft glow (plus the animated inbound edge) carries the "live" signal
-      // — no whole-card pulse, which would fade the text along with it.
+    case "waiting":
+      // The soft glow (plus, for `running`, the animated inbound edge) carries the
+      // "look here" signal — no whole-card pulse, which would fade the text along
+      // with it. `waiting` gets the SAME treatment because the parked node is the
+      // one the viewer has to act on: it must be at least as prominent as the live
+      // one. It just must not read as live — hence the amber `color`, the still
+      // progress bar, and the un-animated edge.
       return {
         borderColor: color,
         boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 45%, transparent), 0 0 24px -6px ${color}`,
@@ -128,12 +144,14 @@ export function statusBorder(status: WfNodeStatus): {
 }
 
 /** Determinate progress fraction for a node's status: queued reads near-empty,
- *  running a partial (the caller pulses it), terminal full. Shared so every
- *  progress treatment (bar, footer, fill) maps status → fill identically. */
+ *  running and waiting a partial (the run reached this node but has not finished
+ *  it), terminal full. Shared so every progress treatment (bar, footer, fill) maps
+ *  status → fill identically. A `waiting` bar is deliberately NOT animated by its
+ *  callers: the run is stopped there, and a moving bar would say otherwise. */
 export function progressFill(status: WfNodeStatus): string {
   return status === "succeeded" || status === "failed"
     ? "100%"
-    : status === "running"
+    : status === "running" || status === "waiting"
       ? "58%"
       : "6%";
 }

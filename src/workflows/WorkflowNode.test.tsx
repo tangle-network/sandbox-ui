@@ -94,6 +94,44 @@ describe("buildStyledEdges", () => {
 });
 
 describe("WorkflowNode", () => {
+  it("renders a parked decision as blocked on the viewer, not as in-flight", () => {
+    // Without a `waiting` status a host had to map the parked run onto `running`,
+    // so the step the run was STUCK on rendered as the live one — pulsing bar,
+    // primary accent, "Running" pill — while it went nowhere without the viewer.
+    renderNode({
+      title: "Ship the release?",
+      kind: "decision",
+      subtitle: "approve / reject",
+      isRoot: false,
+      tone: "structural",
+      state: { status: "waiting" },
+    });
+    expect(screen.getByText("Waiting on you")).toBeTruthy();
+    expect(screen.queryByText("Running")).toBeNull();
+    // The question and its options are both on the card.
+    expect(screen.getByText("Ship the release?")).toBeTruthy();
+    expect(screen.getByText("approve / reject")).toBeTruthy();
+    // The bar sits where the run stopped and does NOT move — a moving bar would
+    // say the workflow is working.
+    const bar = screen.getByTestId("wf-node-progress");
+    expect(bar.style.width).toBe("58%");
+    expect(bar.className).not.toContain("animate-pulse");
+  });
+
+  it("animates the progress bar only for a running node", () => {
+    // The counterpart: the ONE status that means "work is happening right now" is
+    // the only one that moves.
+    const { unmount } = renderNode({ ...BASE, state: { status: "running" } });
+    expect(screen.getByTestId("wf-node-progress").className).toContain(
+      "animate-pulse",
+    );
+    unmount();
+    renderNode({ ...BASE, state: { status: "succeeded" } });
+    expect(screen.getByTestId("wf-node-progress").className).not.toContain(
+      "animate-pulse",
+    );
+  });
+
   it("renders the live status, model, cost, duration, and output once a run state is present", () => {
     renderNode({
       ...BASE,

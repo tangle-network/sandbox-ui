@@ -4,16 +4,26 @@ import {
   edgeColor,
   progressFill,
   STATUS_COLOR,
+  STATUS_LABEL,
   STATUS_PILL,
   statusBorder,
 } from "./node-ui";
 
-const STATUSES: WfNodeStatus[] = ["queued", "running", "succeeded", "failed"];
+const STATUSES: WfNodeStatus[] = [
+  "queued",
+  "running",
+  "waiting",
+  "succeeded",
+  "failed",
+];
 
 describe("progressFill", () => {
   it("maps each status to its determinate fill fraction", () => {
     expect(progressFill("queued")).toBe("6%");
     expect(progressFill("running")).toBe("58%");
+    // The run reached this node but has not finished it — same fill as running.
+    // (The bar is deliberately not ANIMATED for `waiting`; see WorkflowNode.)
+    expect(progressFill("waiting")).toBe("58%");
     expect(progressFill("succeeded")).toBe("100%");
     expect(progressFill("failed")).toBe("100%");
   });
@@ -85,6 +95,39 @@ describe("statusBorder", () => {
   it("returns a border color for every status", () => {
     for (const s of STATUSES) {
       expect(statusBorder(s).borderColor.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("waiting is a first-class status, never a flavour of running", () => {
+  it("colours a waiting node and its inbound edge amber, not the running accent", () => {
+    // A run blocked on a human is not a run that is working. Borrowing the primary
+    // "live" accent would say the opposite of what is true.
+    expect(STATUS_COLOR.waiting).toBe("var(--surface-warning-text)");
+    expect(edgeColor("waiting")).toBe(STATUS_COLOR.waiting);
+    expect(edgeColor("waiting")).not.toBe(edgeColor("running"));
+  });
+
+  it("labels it as blocked on the viewer, not as in-flight", () => {
+    expect(STATUS_LABEL.waiting).toBe("Waiting on you");
+    expect(STATUS_PILL.waiting.color).toBe("var(--surface-warning-text)");
+  });
+
+  it("rings the parked node as prominently as the live one", () => {
+    // It is the one node the viewer has to act on, so it must not fall back to the
+    // quiet `queued` treatment — it carries the same glow, in amber.
+    const waiting = statusBorder("waiting");
+    expect(waiting.borderColor).toBe(STATUS_COLOR.waiting);
+    expect(waiting.boxShadow).toBeTruthy();
+    expect(waiting.boxShadow).toContain("24px");
+    expect(waiting.borderColor).not.toBe(statusBorder("queued").borderColor);
+  });
+
+  it("gives every status a colour, label, and pill — none may fall through", () => {
+    for (const s of STATUSES) {
+      expect(STATUS_COLOR[s]).toBeTruthy();
+      expect(STATUS_LABEL[s]).toBeTruthy();
+      expect(STATUS_PILL[s]).toBeTruthy();
     }
   });
 });

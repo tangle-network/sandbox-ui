@@ -3,9 +3,9 @@ import type { WfNodeStatus } from "./model";
 import {
   edgeColor,
   progressFill,
-  STATUS_BADGE,
   STATUS_COLOR,
   STATUS_LABEL,
+  STATUS_PILL,
   statusBorder,
 } from "./node-ui";
 
@@ -21,7 +21,7 @@ describe("progressFill", () => {
   it("maps each status to its determinate fill fraction", () => {
     expect(progressFill("queued")).toBe("6%");
     expect(progressFill("running")).toBe("58%");
-    // The run reached this node but hasn't finished it — same fill as running.
+    // The run reached this node but has not finished it — same fill as running.
     // (The bar is deliberately not ANIMATED for `waiting`; see WorkflowNode.)
     expect(progressFill("waiting")).toBe("58%");
     expect(progressFill("succeeded")).toBe("100%");
@@ -34,10 +34,10 @@ describe("progressFill", () => {
 });
 
 describe("edgeColor", () => {
-  it("colors an edge by its target status, using raw tokens/literals (never a --color-* alias)", () => {
+  it("colors an edge by its target status, from the semantic (theme-aware) tokens", () => {
     expect(edgeColor("running")).toBe("hsl(var(--primary))");
-    expect(edgeColor("succeeded")).toBe("#22c55e");
-    expect(edgeColor("failed")).toBe("#ef4444");
+    expect(edgeColor("succeeded")).toBe("var(--surface-success-text)");
+    expect(edgeColor("failed")).toBe("var(--surface-danger-text)");
     expect(edgeColor("queued")).toBe("hsl(var(--muted-foreground))");
   });
 
@@ -53,47 +53,81 @@ describe("edgeColor", () => {
   });
 });
 
+describe("status colors", () => {
+  it("resolves every status through a token — no literal hex, no palette shade", () => {
+    // A literal (`#22c55e`) or a stock Tailwind shade (`text-red-400`) carries ONE
+    // value, so it can only ever be legible in one theme. Each status color must
+    // therefore resolve through a var() that has a light AND a dark definition.
+    for (const status of STATUSES) {
+      expect(STATUS_COLOR[status]).toMatch(/^(hsl\()?var\(--/);
+      expect(STATUS_COLOR[status]).not.toContain("var(--color-");
+    }
+  });
+
+  it("gives every status pill a background, a text color, and a border", () => {
+    for (const status of STATUSES) {
+      const pill = STATUS_PILL[status];
+      expect(pill.background).toBeTruthy();
+      expect(pill.color).toBeTruthy();
+      expect(pill.borderColor).toBeTruthy();
+      for (const value of Object.values(pill)) {
+        expect(value).not.toContain("var(--color-");
+      }
+    }
+  });
+});
+
 describe("statusBorder", () => {
-  it("returns the running ring, terminal borders, and the queued dim", () => {
-    expect(statusBorder("running")).toBe("border-primary ring-1 ring-primary/40");
-    expect(statusBorder("succeeded")).toBe("border-green-500");
-    expect(statusBorder("failed")).toBe("border-red-500");
-    expect(statusBorder("queued")).toBe("opacity-70");
+  it("borders a running/terminal node in its status color, and leaves a queued one at rest", () => {
+    expect(statusBorder("running").borderColor).toBe(STATUS_COLOR.running);
+    expect(statusBorder("succeeded").borderColor).toBe(STATUS_COLOR.succeeded);
+    expect(statusBorder("failed").borderColor).toBe(STATUS_COLOR.failed);
+    // A node the run hasn't reached yet wears the resting border — it is NOT
+    // dimmed, which would only fight the contrast the rest of this design fixes.
+    expect(statusBorder("queued").borderColor).toBe("hsl(var(--border))");
   });
 
-  it("rings a waiting node as prominently as a running one, in warning amber", () => {
-    // The parked node is the one the viewer has to act on, so it must not fall to
-    // the `queued` dim — and it must not borrow the primary accent, which would
-    // say the run is working when it is blocked on them.
-    const waiting = statusBorder("waiting");
-    expect(waiting).toContain("ring-1");
-    expect(waiting).toContain("surface-warning-border");
-    expect(waiting).not.toContain("primary");
-    expect(waiting).not.toContain("opacity-70");
+  it("glows only the running node", () => {
+    expect(statusBorder("running").boxShadow).toContain("24px");
+    expect(statusBorder("queued").boxShadow).toBeUndefined();
   });
 
-  it("returns a non-empty class for every status", () => {
-    for (const s of STATUSES) expect(statusBorder(s).length).toBeGreaterThan(0);
+  it("returns a border color for every status", () => {
+    for (const s of STATUSES) {
+      expect(statusBorder(s).borderColor.length).toBeGreaterThan(0);
+    }
   });
 });
 
 describe("waiting is a first-class status, never a flavour of running", () => {
-  it("colors a waiting node and its inbound edge amber, not the running accent", () => {
+  it("colours a waiting node and its inbound edge amber, not the running accent", () => {
+    // A run blocked on a human is not a run that is working. Borrowing the primary
+    // "live" accent would say the opposite of what is true.
     expect(STATUS_COLOR.waiting).toBe("var(--surface-warning-text)");
-    expect(edgeColor("waiting")).toBe("var(--surface-warning-text)");
+    expect(edgeColor("waiting")).toBe(STATUS_COLOR.waiting);
     expect(edgeColor("waiting")).not.toBe(edgeColor("running"));
   });
 
   it("labels it as blocked on the viewer, not as in-flight", () => {
     expect(STATUS_LABEL.waiting).toBe("Waiting on you");
-    expect(STATUS_BADGE.waiting).toContain("surface-warning");
+    expect(STATUS_PILL.waiting.color).toBe("var(--surface-warning-text)");
   });
 
-  it("gives every status a colour, label, and badge — none may fall through", () => {
+  it("rings the parked node as prominently as the live one", () => {
+    // It is the one node the viewer has to act on, so it must not fall back to the
+    // quiet `queued` treatment — it carries the same glow, in amber.
+    const waiting = statusBorder("waiting");
+    expect(waiting.borderColor).toBe(STATUS_COLOR.waiting);
+    expect(waiting.boxShadow).toBeTruthy();
+    expect(waiting.boxShadow).toContain("24px");
+    expect(waiting.borderColor).not.toBe(statusBorder("queued").borderColor);
+  });
+
+  it("gives every status a colour, label, and pill — none may fall through", () => {
     for (const s of STATUSES) {
       expect(STATUS_COLOR[s]).toBeTruthy();
       expect(STATUS_LABEL[s]).toBeTruthy();
-      expect(STATUS_BADGE[s]).toBeTruthy();
+      expect(STATUS_PILL[s]).toBeTruthy();
     }
   });
 });

@@ -89,11 +89,40 @@ describe("buildFlowGraph", () => {
     expect(compactHeight).toBeLessThan(tallestExpanded);
   });
 
-  it("honors a caller-supplied measure for node sizing", () => {
-    const { nodes } = buildFlowGraph(YAML, {
-      measure: () => ({ width: 111, height: 55 }),
-    });
-    expect(nodes.every((n) => n.width === 111 && n.height === 55)).toBe(true);
+  it("never reads an unrecognized option object as run state", () => {
+    // The legacy positional form (`buildFlowGraph(yaml, { a0: state })`) is
+    // recognized by what it CONTAINS. An object that is neither options nor run
+    // states — a dropped option like `{ measure }`, a typo, a key from a newer
+    // version — must be treated as NO options. Read as a run-state map instead, it
+    // would make `nodeState` defined, which is the signal for "a run overlay is in
+    // play": the graph would reserve run rows for a definition that has no run.
+    const dropped = buildFlowGraph(YAML, {
+      measure: () => ({ width: 1, height: 1 }),
+    } as unknown as Record<string, WfNodeState>);
+    const clean = buildFlowGraph(YAML);
+    expect(dropped.nodes.map((n) => n.height)).toEqual(
+      clean.nodes.map((n) => n.height),
+    );
+    expect(dropped.nodes.every((n) => n.data.state === undefined)).toBe(true);
+  });
+
+  it("still honors a bare run-state map (the legacy positional form)", () => {
+    const { nodes } = buildFlowGraph(YAML, { a0: { status: "running" } });
+    const a0 = nodes.find((n) => n.id === "a0");
+    expect(a0?.data.state?.status).toBe("running");
+  });
+
+  it("pitches compact layers tighter than expanded ones, so the tiles don't drift apart", () => {
+    // A compact node's BOX is wider than its tile (the name underneath is), so a
+    // layer separator sized for the expanded cards would leave a canyon between
+    // two tiles. Density owns its own pitch.
+    const compact = buildFlowGraph(YAML, { compact: true });
+    const expanded = buildFlowGraph(YAML);
+    const gap = (nodes: Node<WfNodeData>[]) => {
+      const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+      return byId.a0.position.x - (byId.trigger.position.x + (byId.trigger.width ?? 0));
+    };
+    expect(gap(compact.nodes)).toBeLessThan(gap(expanded.nodes));
   });
 });
 

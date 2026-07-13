@@ -4,6 +4,8 @@
  * parser (a `model.ts` dependency) into their bundle.
  */
 
+import { humanizeIdentifier } from "./naming";
+
 const PROVIDER_LABELS: Record<string, string> = {
   github: "GitHub",
   gitlab: "GitLab",
@@ -14,9 +16,14 @@ const PROVIDER_LABELS: Record<string, string> = {
   discord: "Discord",
 };
 
+/**
+ * The label above is a curated exception list (brands whose casing no rule
+ * predicts: "GitHub", "GitLab"). Everything else is title-cased from its slug —
+ * a connector id is multi-word far more often than not (`google-sheets`,
+ * `microsoft-teams`), and merely capitalizing the first letter left the node
+ * NAMED after the machine identifier: "Google-sheets".
+ */
 export function providerLabel(provider: string): string {
   const key = provider.toLowerCase();
-  return (
-    PROVIDER_LABELS[key] ?? provider.charAt(0).toUpperCase() + provider.slice(1)
-  );
+  return PROVIDER_LABELS[key] ?? humanizeIdentifier(provider, "title");
 }

@@ -144,6 +144,35 @@ do:
       prompt: Summarize the build result for the team channel.
 `;
 
+// Every node kind in one graph: a branded provider trigger, a guarded agent
+// (control-flow keys FIRST, the order that used to render a node titled "if"),
+// a human-in-the-loop decision, and two provider integrations.
+const CONTROL_FLOW = `on:
+  provider_event:
+    connection: github
+    event: pull_request
+    actions: [opened, ready_for_review]
+    repo: tangle-network/agent-dev-container
+do:
+  - if:
+      equals: ["\${trigger.payload.draft}", false]
+    agent.run:
+      profile: pr-reviewer
+      model: anthropic/claude-sonnet-5
+      prompt: Review the pull request diff and summarize the risks.
+      maxRounds: 6
+    retry:
+      attempts: 2
+  - decision:
+      title: Approve the release?
+      options: [approve, request changes]
+      prompt: The reviewer flagged two medium-severity findings.
+  - integration.invoke:
+      path: github.pulls.reviews.create
+  - integration.invoke:
+      path: slack.postMessage
+`;
+
 // ---------------------------------------------------------------------------
 // Run-state builders: small helpers to compose a `nodeState` map keyed by node
 // id (`trigger`, `a0`, `a0-b1`, …). Absent ⇒ the static definition view.
@@ -221,7 +250,11 @@ const LINEAR_DONE: Record<string, WfNodeState> = {
     outputPreview:
       '"Today is a new page; write something worth remembering." — Ralph Waldo Emerson',
   }),
-  a1: done({ costUsd: undefined, durationMs: 380, outputPreview: '{"status":200}' }),
+  a1: done({
+    costUsd: undefined,
+    durationMs: 380,
+    outputPreview: '{"status":200,"id":4821,"url":"https://httpbin.org/post"}',
+  }),
 };
 
 // Parallel fan-out mid-run: one branch done, one running, one queued.
@@ -263,6 +296,40 @@ const MIXED_FAILED: Record<string, WfNodeState> = {
     error: "notify: refusing to follow a 302 redirect to an unvetted address",
   }),
   a3: queued(),
+};
+
+// Control-flow pipeline mid-run: the guarded agent is done, the decision is
+// waiting on a human, and the integrations haven't been reached.
+const CONTROL_FLOW_RUNNING: Record<string, WfNodeState> = {
+  trigger: done({ durationMs: undefined, costUsd: undefined }),
+  a0: done({
+    model: "anthropic/claude-sonnet-5",
+    costUsd: 0.0316,
+    durationMs: 48200,
+    rounds: 4,
+    inputTokens: 8240,
+    outputTokens: 1409,
+    outputPreview:
+      "Perfect! I reviewed the diff.\n\n## Summary\n\n- **Blocking**: none\n- **Medium**: the retry loop never caps its backoff\n- **Nit**: `parseArgs` shadows an import",
+  }),
+  a1: running(),
+  a2: queued(),
+  a3: queued(),
+};
+
+// The provider-event spine mid-run, used by the TB stories (a fan-out would make
+// the direction flip harder to read at a glance).
+const PROVIDER_EVENT_RUNNING: Record<string, WfNodeState> = {
+  trigger: done({ durationMs: undefined, costUsd: undefined }),
+  a0: done({
+    model: "anthropic/claude-sonnet-5",
+    costUsd: 0.0312,
+    durationMs: 41200,
+    rounds: 3,
+    outputPreview: "Reviewed 14 files. No blocking issues.",
+  }),
+  a1: running(),
+  a2: queued(),
 };
 
 const meta: Meta<typeof WorkflowGraphLazy> = {
@@ -405,19 +472,109 @@ export const MixedFailed: Story = {
   ),
 };
 
-export const CompactRun: Story = {
-  name: "Parallel — mid-run (compact density)",
+export const ExpandedRun: Story = {
+  name: "Parallel — mid-run (expanded density)",
   render: () => (
-    <GraphPanel>
+    <GraphPanel height="h-[32rem]">
       <WorkflowGraphLazy
         yaml={PARALLEL_SYNTHESIS}
         variant="full"
-        defaultCompact
+        defaultCompact={false}
         className="h-full w-full"
         nodeState={PARALLEL_RUNNING}
         onNodeClick={() => {}}
       />
     </GraphPanel>
+  ),
+};
+
+export const MixedFailedExpanded: Story = {
+  name: "Mixed — failed run (expanded density)",
+  render: () => (
+    <GraphPanel height="h-[34rem]">
+      <WorkflowGraphLazy
+        yaml={MIXED}
+        variant="full"
+        defaultCompact={false}
+        className="h-full w-full"
+        nodeState={MIXED_FAILED}
+        onNodeClick={() => {}}
+      />
+    </GraphPanel>
+  ),
+};
+
+export const ControlFlow: Story = {
+  name: "Control flow — guarded agent + decision (definition)",
+  render: () => (
+    <GraphPanel>
+      <WorkflowGraphLazy
+        yaml={CONTROL_FLOW}
+        variant="full"
+        className="h-full w-full"
+      />
+    </GraphPanel>
+  ),
+};
+
+export const ControlFlowRunning: Story = {
+  name: "Control flow — mid-run",
+  render: () => (
+    <GraphPanel>
+      <WorkflowGraphLazy
+        yaml={CONTROL_FLOW}
+        variant="full"
+        className="h-full w-full"
+        nodeState={CONTROL_FLOW_RUNNING}
+        onNodeClick={() => {}}
+      />
+    </GraphPanel>
+  ),
+};
+
+export const ControlFlowExpanded: Story = {
+  name: "Control flow — mid-run (expanded density)",
+  render: () => (
+    <GraphPanel height="h-[32rem]">
+      <WorkflowGraphLazy
+        yaml={CONTROL_FLOW}
+        variant="full"
+        defaultCompact={false}
+        className="h-full w-full"
+        nodeState={CONTROL_FLOW_RUNNING}
+        onNodeClick={() => {}}
+      />
+    </GraphPanel>
+  ),
+};
+
+export const TopToBottom: Story = {
+  name: "Top-to-bottom direction (compact + expanded)",
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <div className="grid grid-cols-2 gap-6 p-6">
+      <GraphPanel title="TB · compact" height="h-[34rem]">
+        <WorkflowGraphLazy
+          yaml={PROVIDER_EVENT}
+          variant="full"
+          direction="TB"
+          className="h-full w-full"
+          nodeState={PROVIDER_EVENT_RUNNING}
+          onNodeClick={() => {}}
+        />
+      </GraphPanel>
+      <GraphPanel title="TB · expanded" height="h-[34rem]">
+        <WorkflowGraphLazy
+          yaml={PROVIDER_EVENT}
+          variant="full"
+          direction="TB"
+          defaultCompact={false}
+          className="h-full w-full"
+          nodeState={PROVIDER_EVENT_RUNNING}
+          onNodeClick={() => {}}
+        />
+      </GraphPanel>
+    </div>
   ),
 };
 

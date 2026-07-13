@@ -14,7 +14,7 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import { STATUS_BADGE, STATUS_COLOR, statusBorder } from "../src/workflows/node-ui";
+import { STATUS_COLOR, STATUS_PILL, statusBorder } from "../src/workflows/node-ui";
 
 const STATUSES = ["queued", "running", "waiting", "succeeded", "failed"];
 
@@ -34,9 +34,13 @@ const DECLARED = (() => {
   return out;
 })();
 
-/** Every `var(--x)` a style string references. */
+/** Every `var(--x)` a style value references. A status surface is a string
+ *  (`STATUS_COLOR`) or a style object (`STATUS_PILL`, `statusBorder`), so walk
+ *  both — a token hiding in one object field is exactly the one that rots. */
 function tokensUsed(value) {
-  return [...value.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]);
+  const text =
+    typeof value === "string" ? value : Object.values(value ?? {}).join(" ");
+  return [...text.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]);
 }
 
 /**
@@ -58,12 +62,12 @@ describe("workflow node status tokens", () => {
     expect(DECLARED.has("--surface-warning-border")).toBe(true);
   });
 
-  it("declares every token the status colour/badge/border maps reference", () => {
+  it("declares every token the status colour/pill/border maps reference", () => {
     const missing = [];
     for (const status of STATUSES) {
       for (const surface of [
         STATUS_COLOR[status],
-        STATUS_BADGE[status],
+        STATUS_PILL[status],
         statusBorder(status),
       ]) {
         for (const token of tokensUsed(surface)) {

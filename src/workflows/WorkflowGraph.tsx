@@ -25,6 +25,7 @@ import "@xyflow/react/dist/style.css";
 import { Maximize2, Minimize2 } from "lucide-react";
 import {
   createContext,
+  type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   useCallback,
   useContext,
@@ -34,6 +35,8 @@ import {
   useState,
 } from "react";
 import {
+  COMPACT_NODE_SIZE,
+  COMPACT_TILE,
   type WfDirection,
   type WfNodeData,
   type WfNodeState,
@@ -42,24 +45,31 @@ import {
 import { buildFlowGraph, mergeRunState } from "./flow-graph";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 import { classifyOutput, NodeOutputBody } from "./node-output";
+import { shortModel } from "./naming";
 import {
   edgeColor,
-  EDGE_RUNNING,
-  MetaChip,
-  NodeIcon,
+  NodeMark,
   progressFill,
-  STATUS_BADGE,
   STATUS_COLOR,
   STATUS_LABEL,
+  STATUS_PILL,
   statusBorder,
   TONE_ACCENT,
 } from "./node-ui";
-import { providerLabel } from "./provider-label";
-import { ProviderIcon } from "../integrations/provider-logo";
 
 /** Track color behind a progress bar — a faint wash of the muted token. */
 const MUTED_TRACK =
   "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)";
+
+/**
+ * How the graph frames itself. The floor is the point of it: fitting a long
+ * pipeline into a short panel by zooming out without limit is what shrank the
+ * nodes to unreadable specks. Below `minZoom` the graph stops shrinking and
+ * becomes pannable instead — a legible graph you scroll beats an illegible one
+ * that fits. `maxZoom: 1` keeps a two-node graph from blowing its cards up to
+ * fill the canvas.
+ */
+const FIT_VIEW = { padding: 0.16, minZoom: 0.55, maxZoom: 1 } as const;
 
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
  *  background) themes with the rest of the app. */
@@ -94,13 +104,13 @@ export const DensityContext = createContext<boolean>(false);
 
 /**
  * The run status FOOTER: a progress bar (queued = near-empty, running = pulsing
- * partial, terminal = full green/red) over a caption row. Pinned to the card's
- * BOTTOM via `mt-auto` so it lands at the same place on every node regardless of
- * how much content sits above it — unlike an inline strip, whose height drifts.
- * The caption reads agent rounds on the left and elapsed on the right; status
- * itself is carried by the bar color + the header pill, so it is NOT restated
- * here. The caption row always renders (even when empty) so the footer band keeps
- * a constant height across nodes.
+ * partial, terminal = full) over a caption row. Pinned to the card's BOTTOM via
+ * `mt-auto` so it lands at the same place on every node regardless of how much
+ * content sits above it — unlike an inline strip, whose height drifts. The
+ * caption reads agent rounds on the left and elapsed on the right; status itself
+ * is carried by the bar color + the header pill, so it is NOT restated here. The
+ * caption row always renders (even when empty) so the footer band keeps a
+ * constant height across nodes.
  */
 function StatusFooter({
   status,
@@ -118,27 +128,108 @@ function StatusFooter({
       ? `${rounds} round${rounds === 1 ? "" : "s"}`
       : undefined;
   return (
-    <div className="mt-auto border-border/60 border-t">
-      <div className="h-1 w-full overflow-hidden" style={{ background: MUTED_TRACK }}>
+    <div className="mt-auto border-border border-t">
+      <div
+        className="h-1 w-full overflow-hidden"
+        style={{ background: MUTED_TRACK }}
+      >
         {/* Only a RUNNING bar animates. A `waiting` run is stopped at this node
             until a human answers it, and a moving bar would say otherwise. */}
         <div
           data-testid="wf-node-progress"
           className={`h-full ${status === "running" ? "animate-pulse" : ""}`}
-          style={{ width: progressFill(status), background: STATUS_COLOR[status] }}
+          style={{
+            width: progressFill(status),
+            background: STATUS_COLOR[status],
+          }}
         />
       </div>
-      <div className="flex items-center justify-between gap-2 px-3 py-1 text-[9px] text-muted-foreground">
-        <span className="truncate">{roundsLabel ?? ""}</span>
-        {elapsed && <span className="shrink-0">{elapsed}</span>}
+      <div className="flex items-center justify-between gap-2 px-3.5 py-1 text-[10px] text-muted-foreground leading-[15px]">
+        {/* Both spans always render (even empty) and the line box is pinned, so a
+            node with nothing to caption keeps the same footer height as one with
+            rounds AND elapsed — the band the layout reserved. */}
+        <span className="min-h-[15px] truncate">{roundsLabel ?? ""}</span>
+        <span className="min-h-[15px] shrink-0 tabular-nums">{elapsed ?? ""}</span>
       </div>
     </div>
+  );
+}
+
+/**
+ * What an expanded card says where its output WOULD be, when it has none. The
+ * card is sized for the output it may yet have (the layout is computed once,
+ * before any run state, so it can never reflow mid-run) — leaving that space
+ * blank reads as a broken card rather than as a step with nothing to report. A
+ * running node is the exception: its output may still be on its way, so it waits
+ * quietly rather than claiming there is none.
+ */
+function emptySlotLabel(status: WfNodeStatus): string | undefined {
+  switch (status) {
+    case "queued":
+      return "Not run yet";
+    case "succeeded":
+      return "No output";
+    case "failed":
+      return "No error reported";
+    default:
+      return undefined;
+  }
+}
+
+/** The status pill in a card's header — the one place the run state is spelled
+ *  out in words. */
+function StatusPill({ status }: { status: WfNodeStatus }) {
+  return (
+    <span
+      className="shrink-0 rounded-full border px-2 py-[1px] font-medium text-[10px]"
+      style={STATUS_PILL[status]}
+    >
+      {STATUS_LABEL[status]}
+    </span>
   );
 }
 
 // Handles are positioned anchors for edges; we hide the dots so edges appear to
 // connect to the node body for a clean diagram look.
 const HANDLE_CLASS = "!h-2 !w-2 !min-w-0 !border-0 !bg-transparent opacity-0";
+
+/**
+ * Where a compact node's edges attach. The compact BOX spans the icon tile AND
+ * its name (so a name can never collide with a neighbour), but the edges belong
+ * to the TILE — at the box's default anchors they would leave from the whitespace
+ * beside the name. These pin each handle to the tile's own edge midpoint.
+ *
+ * Every anchor is given as an explicit `left`/`top` with a centering transform,
+ * overriding React Flow's per-side defaults (which offset by half the handle and
+ * anchor Bottom/Right from the far edge). Restating all four in one coordinate
+ * system is what makes the anchor exactly the tile's edge — and not, say, 4px
+ * past it, which is what the library's own bottom transform would have done.
+ */
+function compactHandleStyle(
+  position: Position,
+  isLR: boolean,
+): CSSProperties {
+  // LR: tile centered along the box's top. TB: tile at the box's leading edge.
+  const tileLeft = isLR ? (COMPACT_NODE_SIZE.width - COMPACT_TILE) / 2 : 0;
+  const center = COMPACT_TILE / 2;
+  const anchor = (left: number, top: number): CSSProperties => ({
+    left,
+    top,
+    right: "auto",
+    bottom: "auto",
+    transform: "translate(-50%, -50%)",
+  });
+  switch (position) {
+    case Position.Left:
+      return anchor(tileLeft, center);
+    case Position.Right:
+      return anchor(tileLeft + COMPACT_TILE, center);
+    case Position.Top:
+      return anchor(tileLeft + center, 0);
+    default:
+      return anchor(tileLeft + center, COMPACT_TILE);
+  }
+}
 
 export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const d = data;
@@ -150,22 +241,32 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   const sourcePos = isLR ? Position.Right : Position.Bottom;
   const accent = TONE_ACCENT[d.tone];
   const isAgent = d.kind === "agent.run";
-  // The model the card shows: what the run ACTUALLY used wins over the requested
-  // one, so a fan-out branch / fallback is visible once a run is live.
-  const model = state?.model ?? d.model;
+  // What the card says the step IS. For an agent, the model a run ACTUALLY used
+  // supersedes the requested one, so a fan-out branch / fallback model is visible
+  // once live — shortened the same way the definition's model was, so the label
+  // doesn't grow a vendor prefix the moment the run starts.
+  const subtitle =
+    isAgent && state?.model ? shortModel(state.model) : d.subtitle;
+  // Whether this card may render the bands a RUN adds — the metrics line, the
+  // output block, the "nothing to report" line, and the status footer. It mirrors
+  // `nodeHeight` (model.ts), which reserves those rows for an action but NOT for a
+  // trigger: a trigger only fires, so it is spaced by its static height alone.
+  // Render a run band on a trigger and it has nowhere to go — it overflows the box
+  // the layout gave it. The two rules are one rule; keep them in step.
+  const runBands = state !== undefined && d.tone !== "trigger";
   const duration = fmtDuration(state?.durationMs);
   const cost = fmtCost(state?.costUsd);
-  // Tokens are an agent.run concern; other kinds never show a token chip.
+  // Tokens are an agent.run concern; other kinds never show a token count.
   const tokens = isAgent
     ? fmtTokens(state?.inputTokens, state?.outputTokens)
     : undefined;
-  // The output block once a node has run: a failure's error (red) or a success/
-  // partial output preview. Bound the host-supplied string before it hits the DOM
-  // (the card shows a short preview; CSS clamping is visual only), then classify
-  // it so JSON renders as key/value and prose as prose. Null while there's nothing
-  // to show yet (queued, or a running node before its first token) — and also when
-  // the preview classifies to `empty` (e.g. whitespace-only host data), so the card
-  // never shows a bare "Output"/"Error" label over an empty body.
+  // The output block once a node has run: a failure's error or a success/partial
+  // output preview. Bound the host-supplied string before it hits the DOM (the
+  // card shows a short preview; CSS clamping is visual only), then classify it so
+  // JSON renders as key/value and prose as prose. Null while there's nothing to
+  // show yet (queued, or a running node before its first token) — and also when
+  // the preview classifies to `empty` (e.g. whitespace-only host data), so the
+  // card never shows a bare "Output"/"Error" label over an empty body.
   const runOutput = ((): {
     shape: ReturnType<typeof classifyOutput>;
     tone: "default" | "error";
@@ -175,7 +276,11 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
       state?.status === "failed" && state.error
         ? { text: state.error, tone: "error" as const, label: "Error" }
         : state && state.status !== "failed" && state.outputPreview
-          ? { text: state.outputPreview, tone: "default" as const, label: "Output" }
+          ? {
+              text: state.outputPreview,
+              tone: "default" as const,
+              label: "Output",
+            }
           : null;
     if (!source) return null;
     // Reject blank/whitespace-only host text up front: otherwise `clampPreview`
@@ -185,158 +290,218 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
     // a lone-surrogate-only preview stripped to "").
     const trimmed = source.text.trim();
     if (!trimmed) return null;
-    const shape = classifyOutput(clampPreview(trimmed));
+    // Flatten markdown ONLY for an agent's own answer, which is the thing that
+    // reads as a word dump. An error (a stack trace, a diff, a shell glob) and a
+    // non-agent node's output (an API response body) are not markdown, and
+    // condensing them REWRITES them — see classifyOutput.
+    const shape = classifyOutput(
+      clampPreview(trimmed),
+      isAgent && source.tone !== "error",
+    );
     return shape.kind === "empty"
       ? null
       : { shape, tone: source.tone, label: source.label };
   })();
 
-  // Border/glow + static tone tint are shared by both densities. Once a run is
-  // live, the status-border className takes over; a running node also gets a soft
-  // primary glow so the active step reads at a glance.
-  const wrapperClass = `relative flex h-full w-full flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition-colors ${
-    state ? statusBorder(state.status) : ""
-  }`;
-  const wrapperStyle = state
-    ? state.status === "running"
-      ? { boxShadow: "0 0 22px -6px hsl(var(--primary))" }
-      : state.status === "waiting"
-        ? // The parked node is the one the viewer has to act on, so it gets the
-          // same "look here" glow as the live one — in warning amber, because it
-          // is blocked, not working.
-          { boxShadow: "0 0 22px -6px var(--surface-warning-text)" }
-        : undefined
-    : {
-        borderColor: `color-mix(in srgb, ${accent} 42%, transparent)`,
-        backgroundColor: `color-mix(in srgb, ${accent} 6%, hsl(var(--card)))`,
-      };
   const handles = (
     <>
       {!d.isRoot && (
-        <Handle type="target" position={targetPos} className={HANDLE_CLASS} />
+        <Handle
+          type="target"
+          position={targetPos}
+          className={HANDLE_CLASS}
+          style={compact ? compactHandleStyle(targetPos, isLR) : undefined}
+        />
       )}
-      <Handle type="source" position={sourcePos} className={HANDLE_CLASS} />
+      <Handle
+        type="source"
+        position={sourcePos}
+        className={HANDLE_CLASS}
+        style={compact ? compactHandleStyle(sourcePos, isLR) : undefined}
+      />
     </>
   );
 
-  // COMPACT: icon + title + a one-line summary + tiny cost/time, with a thin
-  // progress line while running. The density a toggle collapses to.
+  // COMPACT (the default): an n8n-style icon tile with the node's name alongside.
+  // The tile is the node; the name is unboxed, on the canvas. Everything else —
+  // prompts, metrics, output — is a click away in the node detail, or one density
+  // toggle away on the card.
+  //
+  // The name sits UNDER the tile in LR and BESIDE it in TB, because an edge leaves
+  // the tile's trailing edge: the right in LR (clear of a name below it), the
+  // BOTTOM in TB (which is exactly where a name below it would be). Same node, laid
+  // out so that no edge is ever drawn through a word. See COMPACT_NODE_SIZE_TB.
   if (compact) {
     return (
-      <div className={`${wrapperClass} justify-center px-2.5`} style={wrapperStyle}>
+      <div
+        className={`relative flex h-full w-full ${
+          isLR ? "flex-col items-center" : "flex-row items-center"
+        }`}
+      >
         {handles}
-        <div className="flex items-center gap-2.5">
-          <NodeIcon kind={d.kind} accent={accent} box={32} glyph={16} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="truncate font-medium text-[12px] text-foreground">
-                {d.title}
-              </span>
-              {state ? (
-                <span
-                  className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: STATUS_COLOR[state.status] }}
-                />
-              ) : (
-                d.badge && (
-                  <span className="ml-auto shrink-0 rounded bg-surface-container-high px-1 py-0.5 text-[9px] text-muted-foreground">
-                    {d.badge}
-                  </span>
-                )
-              )}
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-              <span className="truncate">{model ?? d.subtitle ?? d.kind}</span>
-              {cost && <span className="ml-auto shrink-0">{cost}</span>}
-              {duration && <span className="shrink-0">· {duration}</span>}
-            </div>
-          </div>
-        </div>
-        {state?.status === "running" && (
-          <div
-            className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full"
-            style={{ background: MUTED_TRACK }}
-          >
-            <div
-              className="h-full w-1/2 animate-pulse rounded-full"
-              style={{ background: EDGE_RUNNING }}
+        <span
+          className="relative flex items-center justify-center rounded-xl border bg-card shadow-sm transition-colors"
+          style={{
+            width: COMPACT_TILE,
+            height: COMPACT_TILE,
+            ...(state
+              ? statusBorder(state.status)
+              : {
+                  borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
+                }),
+          }}
+        >
+          <NodeMark
+            kind={d.kind}
+            provider={d.provider}
+            accent={accent}
+            tile={Math.round(COMPACT_TILE * 0.62)}
+          />
+          {d.badge && !state && (
+            <span className="-right-1.5 -top-1.5 absolute rounded-full border border-border bg-card px-1.5 py-[1px] font-medium text-[10px] text-muted-foreground">
+              {d.badge}
+            </span>
+          )}
+          {state && (
+            <span
+              className={`-right-1 -top-1 absolute h-2.5 w-2.5 rounded-full border-2 ${
+                state.status === "running" ? "animate-pulse" : ""
+              }`}
+              style={{
+                background: STATUS_COLOR[state.status],
+                borderColor: "hsl(var(--card))",
+              }}
+              aria-label={STATUS_LABEL[state.status]}
             />
+          )}
+        </span>
+        <div
+          className={`min-w-0 ${
+            isLR ? "mt-2 w-full px-1 text-center" : "ml-2 flex-1 text-left"
+          }`}
+        >
+          <div
+            className="truncate font-semibold text-[12px] text-foreground leading-tight"
+            title={d.title}
+          >
+            {d.title}
           </div>
-        )}
+          {subtitle && (
+            <div
+              className="truncate text-[11px] text-muted-foreground leading-tight"
+              title={subtitle}
+            >
+              {subtitle}
+            </div>
+          )}
+          {/* A run's headline numbers — what n8n shows under an executed node.
+              Absent until the node has actually produced them. */}
+          {(duration || cost) && (
+            <div className="truncate text-[10px] text-muted-foreground/90 leading-tight tabular-nums">
+              {[duration, cost].filter(Boolean).join(" · ")}
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
-  // EXPANDED: an identity/detail region over a bottom-pinned status footer. The
-  // region (`flex-1`) top-aligns the icon header, subtitle, provider chip, metric
-  // chips, and the content-aware output block; the footer (`mt-auto`) carries the
-  // progress bar + rounds/elapsed and always sits flush at the card's base.
+  // EXPANDED: identity (mark + title + subtitle), then what it does, then what it
+  // did — each its own band, in that order, over a bottom-pinned status footer.
   return (
-    <div className={wrapperClass} style={wrapperStyle}>
+    <div
+      className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-colors"
+      style={
+        state
+          ? statusBorder(state.status)
+          : {
+              borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
+            }
+      }
+    >
       {handles}
-      <div className="flex min-h-0 flex-1 flex-col px-3 pt-2 pb-2">
-        <div className="flex items-center gap-2">
-          <NodeIcon kind={d.kind} accent={accent} box={24} glyph={14} />
-          <span className="truncate font-medium text-[12px] text-foreground">
-            {d.title}
-          </span>
-          {state ? (
-            <span
-              className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] ${STATUS_BADGE[state.status]}`}
+      {/* The content region owns its overflow: each band is `shrink-0`, so a band
+          that renders taller than its reservation (a consumer's font metrics) is
+          CLIPPED here rather than squeezed — a squeezed band cuts a line of text
+          in half, and pushes the pinned footer off the card. */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
+        <div className="flex shrink-0 items-center gap-2.5">
+          <NodeMark
+            kind={d.kind}
+            provider={d.provider}
+            accent={accent}
+            tile={34}
+          />
+          <div className="min-w-0 flex-1">
+            <div
+              className="truncate font-semibold text-[13px] text-foreground leading-tight"
+              title={d.title}
             >
-              {STATUS_LABEL[state.status]}
-            </span>
+              {d.title}
+            </div>
+            {subtitle && (
+              <div
+                className="truncate text-[11px] text-muted-foreground leading-tight"
+                title={subtitle}
+              >
+                {subtitle}
+              </div>
+            )}
+          </div>
+          {state ? (
+            <StatusPill status={state.status} />
           ) : (
             d.badge && (
-              <span className="ml-auto shrink-0 rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              <span className="shrink-0 rounded-full border border-border bg-surface-container-high px-2 py-[1px] font-medium text-[10px] text-muted-foreground">
                 {d.badge}
               </span>
             )
           )}
         </div>
-        {d.subtitle && (
+
+        {/* What the step actually says: the agent's prompt, the notify URL, the
+            events a trigger listens for. Two lines, then it's a click away. */}
+        {d.description && (
           <p
-            className="mt-1 truncate text-[11px] text-muted-foreground"
-            title={d.subtitle}
+            className="mt-2 line-clamp-2 shrink-0 text-[11px] text-muted-foreground leading-snug"
+            title={d.description}
           >
-            {d.subtitle}
+            {d.description}
           </p>
         )}
-        {d.provider && (
-          <span className="mt-1.5 inline-flex w-fit items-center gap-1 rounded bg-surface-container-high px-1.5 py-0.5 text-[10px] text-muted-foreground">
-            <ProviderIcon
-              id={d.provider}
-              displayName={providerLabel(d.provider)}
-              size={12}
-              className="rounded-[2px]"
-            />
-            {providerLabel(d.provider)}
-          </span>
-        )}
-        {/* Type-aware metric chips: only what applies (model/cost are shown by any
-            run; tokens are agent-only). Rounds + elapsed live in the footer. */}
-        {(model || cost || tokens) && (
-          <div className="mt-1.5 flex flex-wrap items-center gap-1">
-            {model && <MetaChip title={model}>{model}</MetaChip>}
-            {cost && <MetaChip>{cost}</MetaChip>}
-            {tokens && <MetaChip>{tokens}</MetaChip>}
+
+        {/* Run metrics as ONE quiet line, not a row of boxes: cost and tokens are
+            values, and values don't need a container each. Elapsed lives in the
+            footer, beside the progress it belongs to. */}
+        {runBands && (cost || tokens) && (
+          <div className="mt-2 shrink-0 truncate text-[11px] text-muted-foreground tabular-nums">
+            {[cost, tokens].filter(Boolean).join(" · ")}
           </div>
         )}
-        {/* Content-aware output/error block with a micro-label — JSON renders as
-            key/value, prose as prose. Suppressed for a failure with no error. */}
-        {runOutput && (
-          <div className="mt-1.5 min-h-0">
-            <div className="mb-0.5 font-medium text-[8px] text-muted-foreground/70 uppercase tracking-[0.08em]">
+
+        {/* Content-aware output/error block — JSON renders as key/value, prose as
+            prose. Suppressed for a failure with no error. */}
+        {runBands && runOutput && (
+          <div className="mt-2 min-h-0 shrink-0 rounded-lg border border-border bg-surface-container-high/60 px-2 py-1.5">
+            <div className="mb-1 font-semibold text-[9px] text-muted-foreground uppercase tracking-[0.09em]">
               {runOutput.label}
             </div>
-            <NodeOutputBody shape={runOutput.shape} tone={runOutput.tone} rows={2} />
+            <NodeOutputBody
+              shape={runOutput.shape}
+              tone={runOutput.tone}
+              rows={2}
+            />
+          </div>
+        )}
+
+        {/* A card with nothing to report SAYS so, rather than showing a void. */}
+        {runBands && state && !runOutput && emptySlotLabel(state.status) && (
+          <div className="mt-2 flex flex-1 items-center text-[11px] text-muted-foreground italic">
+            {emptySlotLabel(state.status)}
           </div>
         )}
       </div>
-      {/* The status footer is an action/branch concern. A trigger only fires (no
-          rounds/output/progress), so it reserves no footer rows and skips it —
-          rendering one would clip its shorter box. */}
-      {state && d.tone !== "trigger" && (
+      {runBands && state && (
         <StatusFooter
           status={state.status}
           rounds={isAgent ? state.rounds : undefined}
@@ -380,9 +545,11 @@ export interface WorkflowGraphProps {
   /** Flow direction: "LR" (default) reads left-to-right — best for the wide/short
    *  run-detail panel; "TB" is a vertical column. */
   direction?: WfDirection;
-  /** Start collapsed (compact icon tiles) rather than expanded. The full variant
-   *  exposes a toggle to switch densities; the preview variant is always compact.
-   *  Defaults to `false` (expanded). */
+  /** Start collapsed (compact icon tiles) rather than expanded. Defaults to
+   *  `true`: a graph is read structure-first, and the tiles are what make the
+   *  shape of the run legible at a glance — the per-node detail is one density
+   *  toggle (or one node click) away. The full variant exposes the toggle; the
+   *  preview variant is always compact. */
   defaultCompact?: boolean;
   /** Sizing for the wrapper; the caller controls height. */
   className?: string;
@@ -407,7 +574,7 @@ export function WorkflowGraph({
   yaml,
   variant = "full",
   direction = "LR",
-  defaultCompact = false,
+  defaultCompact = true,
   className,
   nodeState,
   onNodeClick,
@@ -491,7 +658,7 @@ export function WorkflowGraph({
     if (!inst || typeof requestAnimationFrame === "undefined") return;
     // cancelAnimationFrame is universally paired with requestAnimationFrame, so
     // the single guard above covers the cleanup too.
-    const raf = requestAnimationFrame(() => inst.fitView({ padding: 0.18 }));
+    const raf = requestAnimationFrame(() => inst.fitView(FIT_VIEW));
     return () => cancelAnimationFrame(raf);
   }, [structural]);
 
@@ -528,7 +695,7 @@ export function WorkflowGraph({
         }}
         onNodeClick={onNodeClick ? handleNodeClick : undefined}
         fitView
-        fitViewOptions={{ padding: 0.18 }}
+        fitViewOptions={FIT_VIEW}
         proOptions={{ hideAttribution: true }}
         // Node dragging is reserved for the full editor; a preview stays
         // read-only so its layout can't be disturbed. Both variants pan + zoom so

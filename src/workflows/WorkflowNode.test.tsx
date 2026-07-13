@@ -3,7 +3,7 @@ import type { Edge, Node, NodeProps } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { WfNodeData } from "./model";
+import type { WfNodeData, WfNodeState } from "./model";
 import { classifyOutput, NodeOutputBody } from "./node-output";
 import {
   buildStyledEdges,
@@ -16,7 +16,7 @@ import {
 afterEach(cleanup);
 
 const BASE: WfNodeData = {
-  title: "Run agent",
+  title: "AI Agent",
   kind: "agent.run",
   isRoot: false,
   tone: "action",
@@ -45,7 +45,7 @@ describe("buildStyledEdges", () => {
       [edge("a", "b"), edge("b", "c"), edge("c", "d")],
       { b: { status: "succeeded" }, c: { status: "running" } },
     );
-    expect(done.style?.stroke).toBe("#22c55e");
+    expect(done.style?.stroke).toBe("var(--surface-success-text)");
     expect(running.style?.stroke).toBe("hsl(var(--primary))");
     expect(running.animated).toBe(true);
     // An unreached (no-state) target is the muted neutral, animated off.
@@ -69,7 +69,7 @@ describe("buildStyledEdges", () => {
     // @theme registers those aliases) but is UNDEFINED in a consumer that only
     // ships `tokens.css` (e.g. platform-web), where it silently computes to
     // `stroke: none` — the invisible unreached edges bug. Every edge/marker color
-    // must therefore use a raw token or literal.
+    // must therefore use a raw token.
     const edges = buildStyledEdges(
       [edge("a", "b")],
       // exercise every status branch
@@ -106,19 +106,33 @@ describe("WorkflowNode", () => {
       },
     });
     expect(screen.getByText("Running")).toBeTruthy();
+    // The live model names the step (it supersedes the requested one)…
     expect(screen.getByText("gpt-4o")).toBeTruthy();
+    // …and the run's numbers read as ONE line, not a row of boxes.
     expect(screen.getByText("$0.0032")).toBeTruthy();
     expect(screen.getByText("4.2s")).toBeTruthy();
     expect(screen.getByText("partial answer")).toBeTruthy();
   });
 
-  it("surfaces the agent round count on the progress strip", () => {
+  it("shows the model a run ACTUALLY used, shortened like the requested one", () => {
+    // A fan-out branch / fallback can run a different model than the definition
+    // asked for — and it must not grow a vendor prefix the definition's didn't.
     renderNode({
       ...BASE,
-      subtitle: "Review the PR diff",
+      subtitle: "claude-sonnet-5",
+      state: { status: "running", model: "deepseek/deepseek-chat" },
+    });
+    expect(screen.getByText("deepseek-chat")).toBeTruthy();
+    expect(screen.queryByText("claude-sonnet-5")).toBeNull();
+  });
+
+  it("surfaces the agent round count in the footer, alongside the prompt", () => {
+    renderNode({
+      ...BASE,
+      description: "Review the PR diff",
       state: { status: "running", model: "glm-5", rounds: 3, durationMs: 8200 },
     });
-    // Rounds are an agent progress signal; the prompt subtitle is shown too.
+    // Rounds are an agent progress signal; the prompt description is shown too.
     expect(screen.getByText("3 rounds")).toBeTruthy();
     expect(screen.getByText("Review the PR diff")).toBeTruthy();
   });
@@ -142,14 +156,76 @@ describe("WorkflowNode", () => {
         <DensityContext.Provider value={true}>
           <WorkflowNode
             {...({
-              data: { ...BASE, state: { status: "running", model: "m" } },
+              data: {
+                ...BASE,
+                description: "the prompt",
+                state: { status: "running", model: "m" },
+              },
             } as NodeProps<Node<WfNodeData>>)}
           />
         </DensityContext.Provider>
       </ReactFlowProvider>,
     );
     expect(screen.queryByText("Running")).toBeNull();
+    // Name + subtitle only: a compact node is an icon and a name. The prompt and
+    // the output stay behind the expand toggle / the node detail.
+    expect(screen.getByText("AI Agent")).toBeTruthy();
     expect(screen.getByText("m")).toBeTruthy();
+    expect(screen.queryByText("the prompt")).toBeNull();
+  });
+
+  it("anchors a compact node's handles to its TILE, not to the box that holds its name", () => {
+    // The compact box spans the tile AND the name beneath it (so a name can't
+    // collide with the node below). Left at the box's default center, the edges
+    // would attach to empty canvas beside the label.
+    const { container } = render(
+      <ReactFlowProvider>
+        <DensityContext.Provider value={true}>
+          <WorkflowNode {...({ data: BASE } as NodeProps<Node<WfNodeData>>)} />
+        </DensityContext.Provider>
+      </ReactFlowProvider>,
+    );
+    const left = container.querySelector<HTMLElement>(
+      ".react-flow__handle-left",
+    );
+    const right = container.querySelector<HTMLElement>(
+      ".react-flow__handle-right",
+    );
+    // Every anchor is stated in ONE coordinate system (left/top + a centering
+    // transform), so it lands exactly on the tile's edge midpoint — not half a
+    // handle past it, which is where React Flow's own per-side offsets put the
+    // Right/Bottom ones.
+    expect(left?.style.left).toBe("46px"); // the tile's left edge…
+    expect(left?.style.top).toBe("38px"); // …at its vertical middle
+    expect(right?.style.left).toBe("122px"); // the tile's right edge
+    expect(right?.style.right).toBe("auto");
+    expect(right?.style.transform).toBe("translate(-50%, -50%)");
+  });
+
+  it("anchors a compact node's handles to the tile under TB too (top/bottom edges)", () => {
+    // The vertical mirror of the LR case. `bottom: auto` is required to override
+    // React Flow's bottom-anchored default.
+    const { container } = render(
+      <ReactFlowProvider>
+        <DirectionContext.Provider value="TB">
+          <DensityContext.Provider value={true}>
+            <WorkflowNode {...({ data: BASE } as NodeProps<Node<WfNodeData>>)} />
+          </DensityContext.Provider>
+        </DirectionContext.Provider>
+      </ReactFlowProvider>,
+    );
+    const top = container.querySelector<HTMLElement>(".react-flow__handle-top");
+    const bottom = container.querySelector<HTMLElement>(
+      ".react-flow__handle-bottom",
+    );
+    // In TB the tile sits at the box's LEADING edge and the name beside it, so the
+    // handles are on the tile's own top/bottom, centered on its width (38) — and
+    // the edge that leaves the bottom passes under the tile, never through the name.
+    expect(top?.style.left).toBe("38px");
+    expect(top?.style.top).toBe("0px");
+    expect(bottom?.style.left).toBe("38px");
+    expect(bottom?.style.top).toBe("76px");
+    expect(bottom?.style.bottom).toBe("auto");
   });
 
   it("consumes DirectionContext: places handles top/bottom under TB", () => {
@@ -176,13 +252,14 @@ do:
       url: https://example.com
 `;
 
-  it("flips the density label when the toggle button is clicked", () => {
+  it("starts compact and flips the density label when the toggle is clicked", () => {
     render(<WorkflowGraph yaml={YAML} variant="full" />);
-    // Expanded by default → the toggle offers "Compact".
-    const toggle = screen.getByRole("button", { name: /compact/i });
+    // Compact by DEFAULT (the graph is read structure-first) → the toggle offers
+    // to expand.
+    const toggle = screen.getByRole("button", { name: /expand/i });
     fireEvent.click(toggle);
-    // After collapsing, the toggle offers "Expand".
-    expect(screen.getByRole("button", { name: /expand/i })).toBeTruthy();
+    // Once expanded, the toggle offers to collapse again.
+    expect(screen.getByRole("button", { name: /compact/i })).toBeTruthy();
   });
 
   it("does not show a token chip for a non-agent node", () => {
@@ -228,27 +305,64 @@ do:
       state: { status: "failed", outputPreview: "suppressed while failed" },
     });
     expect(screen.getByText("Failed")).toBeTruthy();
-    // The red error <p> is only rendered when a failed node carries an error
-    // (the failed status badge is a <span>, so scope the query to <p>).
-    expect(container.querySelector("p.text-red-400")).toBeNull();
+    // No output/error block at all — neither its caption nor a body.
+    expect(container.querySelector("p")).toBeNull();
+    expect(screen.queryByText("Error")).toBeNull();
     // outputPreview is suppressed for a failed node (error channel only).
     expect(screen.queryByText("suppressed while failed")).toBeNull();
   });
 
-  it("shows a trigger's status but no progress strip (a trigger only fires)", () => {
-    // The trigger reserves no run-state rows, so it must NOT render the progress
-    // strip — doing so would clip. Its status shows in the header pill instead.
-    renderNode({
+  it("renders NO run band on a trigger — not the footer, the metrics, the output, nor the empty-slot line", () => {
+    // The layout spaces a trigger by its STATIC height (`nodeHeight`, model.ts,
+    // reserves the run rows only for an action) — a trigger only fires. So every
+    // band a run adds must be absent here: rendered, it would have nowhere to go
+    // and would overflow the box the layout gave it. This is the invariant that
+    // ties the card's render rule to the model's reservation rule; if one moves,
+    // this test is what says the other must.
+    const { container } = renderNode({
       title: "Schedule",
       kind: "schedule",
       tone: "trigger",
       isRoot: true,
-      subtitle: "0 9 * * *",
-      state: { status: "succeeded", durationMs: 3200 },
+      subtitle: "Daily at 09:00",
+      description: "0 9 * * *",
+      state: {
+        status: "succeeded",
+        durationMs: 3200,
+        costUsd: 0.004,
+        outputPreview: "fired",
+      },
     });
+    // Its status still shows — in the header pill, which the static height covers.
     expect(screen.getByText("Done")).toBeTruthy();
-    // Elapsed only ever appears in the progress strip; absent for a trigger.
-    expect(screen.queryByText("3.2s")).toBeNull();
+    expect(screen.getByText("Daily at 09:00")).toBeTruthy();
+    // …and nothing a run adds.
+    expect(container.querySelector(".mt-auto")).toBeNull(); // no status footer
+    expect(screen.queryByText("3.2s")).toBeNull(); // no elapsed
+    expect(screen.queryByText("$0.0040")).toBeNull(); // no metrics line
+    expect(screen.queryByText("fired")).toBeNull(); // no output block
+    expect(screen.queryByText("No output")).toBeNull(); // no empty-slot line
+  });
+
+  it("says what an empty output slot means, rather than showing a void", () => {
+    // The card is sized for the output it MAY yet have (the layout is computed
+    // once, before any run state, so it can never reflow mid-run). A node with
+    // nothing to report must therefore say so — a blank region reads as a broken
+    // card. A running node is the exception: its output may still be on its way.
+    const cases: [WfNodeState["status"], string | null][] = [
+      ["queued", "Not run yet"],
+      ["succeeded", "No output"],
+      ["failed", "No error reported"],
+      ["running", null],
+    ];
+    for (const [status, label] of cases) {
+      const { unmount } = renderNode({ ...BASE, state: { status } });
+      if (label) expect(screen.getByText(label)).toBeTruthy();
+      for (const other of ["Not run yet", "No output", "No error reported"]) {
+        if (other !== label) expect(screen.queryByText(other)).toBeNull();
+      }
+      unmount();
+    }
   });
 
   it("shows the static badge and no run status when there is no state", () => {
@@ -291,7 +405,7 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     });
     // The bottom-pin only works if the card itself is a column flex container —
     // assert the wrapper's layout, not just that some .mt-auto element exists.
-    const wrapper = container.querySelector(".overflow-hidden.rounded-lg");
+    const wrapper = container.querySelector(".overflow-hidden.rounded-xl");
     expect(wrapper).toBeTruthy();
     const wrapperClasses = (wrapper?.className ?? "").split(/\s+/);
     expect(wrapperClasses).toContain("flex");
@@ -344,16 +458,18 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(dt?.getAttribute("title")).toBe(key);
   });
 
-  it("renders a JSON-shaped error in the red error tone, not neutral", () => {
-    // A failure whose message is a JSON object must still read as red, like a
-    // prose error — not neutral key/value that looks like normal output.
+  it("renders a JSON-shaped error in the error tone, not neutral", () => {
+    // A failure whose message is a JSON object must still read as an error, like a
+    // prose one — not neutral key/value that looks like normal output. The color
+    // is the semantic danger TOKEN, so it holds up in light and dark alike.
     const { container } = renderNode({
       ...BASE,
       state: { status: "failed", error: '{"message":"timeout","code":504}' },
     });
     expect(screen.getByText("Error")).toBeTruthy();
-    expect(container.querySelector("dd")?.className).toContain("text-red-400");
-    expect(container.querySelector("dt")?.className).toContain("text-red-400/80");
+    const danger = "var(--surface-danger-text)";
+    expect(container.querySelector("dd")?.style.color).toBe(danger);
+    expect(container.querySelector("dt")?.style.color).toBe(danger);
     expect(screen.getByText("timeout")).toBeTruthy();
   });
 

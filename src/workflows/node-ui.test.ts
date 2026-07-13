@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { WfNodeStatus } from "./model";
-import { edgeColor, progressFill, statusBorder } from "./node-ui";
+import {
+  edgeColor,
+  progressFill,
+  STATUS_COLOR,
+  STATUS_PILL,
+  statusBorder,
+} from "./node-ui";
 
 const STATUSES: WfNodeStatus[] = ["queued", "running", "succeeded", "failed"];
 
@@ -18,10 +24,10 @@ describe("progressFill", () => {
 });
 
 describe("edgeColor", () => {
-  it("colors an edge by its target status, using raw tokens/literals (never a --color-* alias)", () => {
+  it("colors an edge by its target status, from the semantic (theme-aware) tokens", () => {
     expect(edgeColor("running")).toBe("hsl(var(--primary))");
-    expect(edgeColor("succeeded")).toBe("#22c55e");
-    expect(edgeColor("failed")).toBe("#ef4444");
+    expect(edgeColor("succeeded")).toBe("var(--surface-success-text)");
+    expect(edgeColor("failed")).toBe("var(--surface-danger-text)");
     expect(edgeColor("queued")).toBe("hsl(var(--muted-foreground))");
   });
 
@@ -37,15 +43,48 @@ describe("edgeColor", () => {
   });
 });
 
-describe("statusBorder", () => {
-  it("returns the running ring, terminal borders, and the queued dim", () => {
-    expect(statusBorder("running")).toBe("border-primary ring-1 ring-primary/40");
-    expect(statusBorder("succeeded")).toBe("border-green-500");
-    expect(statusBorder("failed")).toBe("border-red-500");
-    expect(statusBorder("queued")).toBe("opacity-70");
+describe("status colors", () => {
+  it("resolves every status through a token — no literal hex, no palette shade", () => {
+    // A literal (`#22c55e`) or a stock Tailwind shade (`text-red-400`) carries ONE
+    // value, so it can only ever be legible in one theme. Each status color must
+    // therefore resolve through a var() that has a light AND a dark definition.
+    for (const status of STATUSES) {
+      expect(STATUS_COLOR[status]).toMatch(/^(hsl\()?var\(--/);
+      expect(STATUS_COLOR[status]).not.toContain("var(--color-");
+    }
   });
 
-  it("returns a non-empty class for every status", () => {
-    for (const s of STATUSES) expect(statusBorder(s).length).toBeGreaterThan(0);
+  it("gives every status pill a background, a text color, and a border", () => {
+    for (const status of STATUSES) {
+      const pill = STATUS_PILL[status];
+      expect(pill.background).toBeTruthy();
+      expect(pill.color).toBeTruthy();
+      expect(pill.borderColor).toBeTruthy();
+      for (const value of Object.values(pill)) {
+        expect(value).not.toContain("var(--color-");
+      }
+    }
+  });
+});
+
+describe("statusBorder", () => {
+  it("borders a running/terminal node in its status color, and leaves a queued one at rest", () => {
+    expect(statusBorder("running").borderColor).toBe(STATUS_COLOR.running);
+    expect(statusBorder("succeeded").borderColor).toBe(STATUS_COLOR.succeeded);
+    expect(statusBorder("failed").borderColor).toBe(STATUS_COLOR.failed);
+    // A node the run hasn't reached yet wears the resting border — it is NOT
+    // dimmed, which would only fight the contrast the rest of this design fixes.
+    expect(statusBorder("queued").borderColor).toBe("hsl(var(--border))");
+  });
+
+  it("glows only the running node", () => {
+    expect(statusBorder("running").boxShadow).toContain("24px");
+    expect(statusBorder("queued").boxShadow).toBeUndefined();
+  });
+
+  it("returns a border color for every status", () => {
+    for (const s of STATUSES) {
+      expect(statusBorder(s).borderColor.length).toBeGreaterThan(0);
+    }
   });
 });

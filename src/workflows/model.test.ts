@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildWorkflowGraph, COMPACT_NODE_SIZE } from "./model";
+import {
+  buildWorkflowGraph,
+  COMPACT_NODE_SIZE,
+  COMPACT_NODE_SIZE_RUN,
+  COMPACT_TILE,
+} from "./model";
 
 describe("buildWorkflowGraph", () => {
   it("builds a trigger → action spine for a linear workflow", () => {
@@ -21,16 +26,21 @@ do:
     expect(error).toBeNull();
     expect(nodes.map((n) => n.id)).toEqual(["trigger", "a0", "a1"]);
 
+    // The trigger IS its provider — the node is named and branded for it, and the
+    // event it wakes on reads as a phrase rather than a raw event id.
     const trigger = nodes[0];
     expect(trigger.data.tone).toBe("trigger");
     expect(trigger.data.isRoot).toBe(true);
     expect(trigger.data.provider).toBe("github");
-    expect(trigger.data.subtitle).toContain("GitHub");
-    expect(trigger.data.subtitle).toContain("pull_request");
+    expect(trigger.data.title).toBe("GitHub");
+    expect(trigger.data.subtitle).toBe("On pull request");
+    expect(trigger.data.description).toBe("opened");
 
-    // integration.invoke surfaces its provider (the path's leading segment).
-    expect(nodes[2].data.title).toBe("Integration");
+    // integration.invoke is likewise named for its provider (the path's leading
+    // segment), with the operation as its subtitle.
+    expect(nodes[2].data.title).toBe("Slack");
     expect(nodes[2].data.provider).toBe("slack");
+    expect(nodes[2].data.subtitle).toBe("send: messages");
 
     // Spine edges connect sequential nodes (trigger → action → action).
     expect(edges).toEqual([
@@ -54,24 +64,178 @@ do:
     expect(nodes.find((n) => n.id === "a1")?.data.isRoot).toBe(false);
   });
 
-  it("uses the prompt (not the model) as an agent.run subtitle, with the model on its own field", () => {
-    // The model is shown as a dedicated chip, so the subtitle carries the more
-    // useful prompt — no duplication of the model string.
+  it("names an agent.run for its profile and its model, with the prompt as the description", () => {
+    // Title = who the agent is, subtitle = what it runs on, description = the
+    // prompt. The model slug drops its vendor prefix (the card's width is scarce)
+    // but the full value stays on `model` + in the config.
     const yaml = `
 on:
   schedule:
     cron: "0 9 * * *"
 do:
   - agent.run:
-      model: glm-5
+      profile: pr-reviewer
+      model: anthropic/claude-sonnet-5
       prompt: Summarize the overnight alerts.
 `;
     const agent = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
-    expect(agent?.data.model).toBe("glm-5");
-    expect(agent?.data.subtitle).toBe("Summarize the overnight alerts.");
+    expect(agent?.data.title).toBe("PR reviewer");
+    expect(agent?.data.subtitle).toBe("claude-sonnet-5");
+    expect(agent?.data.description).toBe("Summarize the overnight alerts.");
+    expect(agent?.data.model).toBe("anthropic/claude-sonnet-5");
   });
 
-  it("collapses nodes to the fixed compact size when measured for compact density", () => {
+  it("falls back to a generic agent name when the profile is inline (unnamed)", () => {
+    const yaml = `
+do:
+  - agent.run:
+      profile:
+        systemPrompt: You are a reviewer.
+      prompt: Review it.
+`;
+    const agent = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(agent?.data.title).toBe("AI Agent");
+    expect(agent?.data.subtitle).toBe("Agent");
+  });
+
+  it("reads an `if`-guarded action as the action it guards, never as `if`", () => {
+    // A `do` entry may carry control-flow siblings (`if`/`retry`/`onError`)
+    // alongside its action key, and YAML preserves the author's key order — so a
+    // guard written first is the entry's FIRST key. Picking the kind by position
+    // rendered a node titled "if" that showed none of the agent it was guarding.
+    const yaml = `
+do:
+  - if:
+      equals: ["\${trigger.payload.action}", "opened"]
+    agent.run:
+      profile: pr-reviewer
+      prompt: Review the diff.
+    retry:
+      attempts: 2
+`;
+    const node = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(node?.data.kind).toBe("agent.run");
+    expect(node?.data.title).toBe("PR reviewer");
+    expect(node?.data.description).toBe("Review the diff.");
+    // The config is the ACTION's config — not the guard's condition.
+    expect(node?.data.config?.prompt).toBe("Review the diff.");
+    expect(node?.data.config?.equals).toBeUndefined();
+  });
+
+  it("carries the control-flow envelope in the config, not just the action's own fields", () => {
+    // A step that may be skipped by a guard, and that retries twice, is not the
+    // same step as one that does neither. Selecting the action by kind must not
+    // throw its envelope away — the detail view is the one place that promises
+    // every field.
+    const yaml = `
+do:
+  - if:
+      equals: ["\${trigger.payload.action}", "opened"]
+    agent.run:
+      profile: pr-reviewer
+      prompt: Review the diff.
+    retry:
+      attempts: 2
+    onError: continue
+`;
+    const node = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(node?.data.config?.prompt).toBe("Review the diff.");
+    expect(node?.data.config?.if).toEqual({
+      equals: ["\${trigger.payload.action}", "opened"],
+    });
+    expect(node?.data.config?.retry).toEqual({ attempts: 2 });
+    expect(node?.data.config?.onError).toBe("continue");
+  });
+
+  it("reads a guarded action of a kind it does not know yet as that action, not as `if`", () => {
+    // The kind is whatever is NOT control flow — by exclusion, never by matching a
+    // list of kinds we happen to know today. An allowlist would re-break the moment
+    // the API adds a kind, resurrecting the "node titled if" bug for it.
+    const yaml = `
+do:
+  - if:
+      equals: ["a", "b"]
+    agent.review:
+      target: main
+`;
+    const node = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(node?.data.kind).toBe("agent.review");
+    expect(node?.data.title).toBe("Agent review");
+    expect(node?.data.config?.target).toBe("main");
+  });
+
+  it("lays a compact node's name BESIDE its tile under TB, so no edge crosses a word", () => {
+    // In TB an edge leaves the tile's BOTTOM — exactly where an LR node puts its
+    // name. The TB box is therefore one tile tall and wider, with the name beside
+    // the tile.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * *"
+do:
+  - notify:
+      url: https://example.com
+`;
+    const lr = buildWorkflowGraph(yaml, { compact: true, direction: "LR" });
+    const tb = buildWorkflowGraph(yaml, { compact: true, direction: "TB" });
+    expect(lr.nodes[0].height).toBeGreaterThan(COMPACT_TILE); // tile + name below
+    expect(tb.nodes[0].height).toBe(COMPACT_TILE); // one tile tall
+    expect(tb.nodes[0].width).toBeGreaterThan(lr.nodes[0].width); // name beside it
+    // Uniform, as ever — every TB tile is the same box, run state or not.
+    const tbRun = buildWorkflowGraph(yaml, {
+      compact: true,
+      direction: "TB",
+      reserveRunState: true,
+    });
+    expect(new Set(tbRun.nodes.map((n) => n.height)).size).toBe(1);
+    expect(tbRun.nodes[0].height).toBe(COMPACT_TILE);
+  });
+
+  it("names a decision node with the title its author wrote", () => {
+    const yaml = `
+do:
+  - decision:
+      title: Approve the release?
+      options: [approve, reject]
+      prompt: Ship v2.4 to production?
+`;
+    const node = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(node?.data.kind).toBe("decision");
+    expect(node?.data.title).toBe("Approve the release?");
+    expect(node?.data.subtitle).toBe("approve / reject");
+    expect(node?.data.description).toBe("Ship v2.4 to production?");
+    expect(node?.data.tone).toBe("structural");
+  });
+
+  it("humanizes an action kind it does not model yet", () => {
+    // A new kind must still read as words — never as its raw identifier.
+    const yaml = `
+do:
+  - agent.review:
+      target: main
+`;
+    const node = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(node?.data.title).toBe("Agent review");
+    expect(node?.data.kind).toBe("agent.review");
+  });
+
+  it("says a schedule in English, keeping the expression as the detail", () => {
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * 1-5"
+    timezone: America/New_York
+do:
+  - notify:
+      url: https://example.com/hook
+`;
+    const trigger = buildWorkflowGraph(yaml).nodes[0];
+    expect(trigger.data.title).toBe("Schedule");
+    expect(trigger.data.subtitle).toBe("Weekdays at 09:00");
+    expect(trigger.data.description).toBe("0 9 * * 1-5 · America/New_York");
+  });
+
+  it("collapses every node to the fixed icon-tile size at compact density", () => {
     const yaml = `
 on:
   schedule:
@@ -86,15 +250,37 @@ do:
     const expanded = buildWorkflowGraph(yaml, { reserveRunState: true });
     const compact = buildWorkflowGraph(yaml, {
       reserveRunState: true,
-      measure: () => COMPACT_NODE_SIZE,
+      compact: true,
     });
-    // Expanded nodes vary by content; compact nodes are all the fixed size.
+    // Expanded nodes vary by content; compact nodes are all the one fixed size.
     expect(new Set(compact.nodes.map((n) => n.height)).size).toBe(1);
-    expect(compact.nodes.every((n) => n.height === COMPACT_NODE_SIZE.height)).toBe(true);
-    expect(compact.nodes.every((n) => n.width === COMPACT_NODE_SIZE.width)).toBe(true);
-    // The compact card is shorter than the tall expanded agent card.
+    expect(
+      compact.nodes.every((n) => n.height === COMPACT_NODE_SIZE_RUN.height),
+    ).toBe(true);
+    expect(
+      compact.nodes.every((n) => n.width === COMPACT_NODE_SIZE_RUN.width),
+    ).toBe(true);
+    // The compact tile is shorter than the tall expanded agent card.
     const expandedAgent = expanded.nodes.find((n) => n.id === "a0");
-    expect(expandedAgent?.height).toBeGreaterThan(COMPACT_NODE_SIZE.height);
+    expect(expandedAgent?.height).toBeGreaterThan(COMPACT_NODE_SIZE_RUN.height);
+  });
+
+  it("reserves the run metrics line on a compact node up front, so a live run never reflows it", () => {
+    // The layout is computed ONCE, before any run state merges in — a compact node
+    // that later shows its duration/cost must already have the room for it.
+    const yaml = `
+do:
+  - notify:
+      url: https://example.com
+`;
+    const still = buildWorkflowGraph(yaml, { compact: true }).nodes[0];
+    const running = buildWorkflowGraph(yaml, {
+      compact: true,
+      reserveRunState: true,
+    }).nodes[0];
+    expect(still.height).toBe(COMPACT_NODE_SIZE.height);
+    expect(running.height).toBe(COMPACT_NODE_SIZE_RUN.height);
+    expect(running.height).toBeGreaterThan(still.height);
   });
 
   it("fans out parallel branches as dangling leaves on the spine node", () => {
@@ -222,11 +408,12 @@ do:
     const byId = (g: ReturnType<typeof buildWorkflowGraph>) =>
       Object.fromEntries(g.nodes.map((n) => [n.id, n]));
     const R = byId(buildWorkflowGraph(yaml, { reserveRunState: true }));
-    // Trigger only fires: chrome(18) + header(28) + subtitle(20); no meta/output/footer.
-    expect(R.trigger.height).toBe(18 + 28 + 20);
-    // A run-state agent adds the meta row(46), the output block(44), and the
-    // bottom status footer(26) on top of chrome + header + subtitle.
-    expect(R.a0.height).toBe(18 + 28 + 20 + 46 + 44 + 26);
+    // The schedule trigger only fires: chrome(20) + header(34) + its description
+    // (the cron expression, 40). No metrics, no output, no footer.
+    expect(R.trigger.height).toBe(20 + 34 + 40);
+    // A run-state agent adds the metrics line(27), the output block(72), and the
+    // bottom status footer(28) on top of chrome + header + description(prompt).
+    expect(R.a0.height).toBe(20 + 34 + 40 + 27 + 72 + 28);
   });
 
   it("routes a fan-out through fork+join edges and reconverges on the next layer", () => {
@@ -341,8 +528,8 @@ do:
   });
 
   it("attaches the raw, untruncated config to action and trigger nodes", () => {
-    // A prompt far longer than the compact `detail` clamp (200 chars) — the
-    // full-detail `config` must carry it verbatim, never truncated.
+    // A prompt far longer than the card's description clamp — the full-detail
+    // `config` must carry it verbatim, never truncated.
     const longPrompt = `Review this PR carefully. ${"x".repeat(500)}`;
     const yaml = `
 name: pr-review
@@ -382,11 +569,11 @@ do:
       repo: "${trigger.repository.full_name}",
       pr: "${trigger.pull_request.number}",
     });
-    // The compact `detail` still clamps the prompt (so the card stays small),
-    // proving `config` is the distinct full-fidelity surface.
-    expect((agent?.data.detail?.prompt?.length ?? 0)).toBeLessThan(
-      longPrompt.length,
-    );
+    // The CARD's copy of the prompt is bounded (it clamps to two lines and feeds a
+    // tooltip); `config` is the distinct full-fidelity surface the detail view
+    // reads — so the whole prompt is never lost, just never in the card's DOM.
+    expect(agent?.data.description?.length).toBeLessThan(longPrompt.length);
+    expect(agent?.data.config?.prompt).toBe(longPrompt);
   });
 
   it("omits config for an action and a trigger that declare none", () => {

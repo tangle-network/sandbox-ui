@@ -10,8 +10,16 @@
  * so the spine stays a single readable column.
  */
 
-import { parse as parseYaml } from "yaml";
+import { describeCron } from "./cron";
+import { clampPreview } from "./format";
+import {
+  actionPathLabel,
+  humanizeIdentifier,
+  parseActionPath,
+  shortModel,
+} from "./naming";
 import { providerLabel } from "./provider-label";
+import { parse as parseYaml } from "yaml";
 
 export type WfNodeTone = "trigger" | "structural" | "action";
 
@@ -52,32 +60,50 @@ export interface WfNodeState {
 // Extends Record<string, unknown> so it satisfies React Flow's node-data
 // constraint — letting the graph use the typed `Node<WfNodeData>` /
 // `NodeProps<Node<WfNodeData>>` generics instead of unsafe `as unknown as` casts.
+/**
+ * A node's card-facing content. Three tiers, so both densities can show the
+ * right amount without either re-deriving it:
+ *
+ *  - {@link title} — WHO the step is ("GitHub", "AI Agent", a decision's own
+ *    title). Never a machine identifier.
+ *  - {@link subtitle} — WHAT it does, in one short phrase ("create: pulls.reviews",
+ *    the model, "Weekdays at 09:00", "3 branches").
+ *  - {@link description} — the free-text detail worth reading when there's room
+ *    (an agent's prompt, a notify URL, the events a trigger listens for).
+ *
+ * The compact node shows title + subtitle; the expanded node adds the
+ * description, the run metrics, and the output. Any longer/raw values live in
+ * {@link config} for the full-detail view.
+ */
 export interface WfNodeData extends Record<string, unknown> {
-  /** Headline for the node, e.g. "Run agent". */
+  /** Human headline for the node, e.g. "GitHub", "AI Agent". */
   title: string;
   /** The action/trigger kind verbatim, e.g. "agent.run", "schedule". Set on every
-   *  node `buildWorkflowGraph` produces so a card can label what it is regardless
-   *  of which subtitle it shows; optional on the type so external consumers
-   *  constructing `WfNodeData` directly aren't forced to supply it (the render
-   *  guards its usage). */
+   *  node `buildWorkflowGraph` produces so a consumer can dispatch on the node's
+   *  type (icon, detail rendering) regardless of what its title says; optional on
+   *  the type so external consumers constructing `WfNodeData` directly aren't
+   *  forced to supply it (the render guards its usage). */
   kind?: string;
-  /** Secondary detail, e.g. an integration path or a cron expression. */
+  /** The one-phrase qualifier under the title, e.g. "create: pulls.reviews". */
   subtitle?: string;
-  /** Requested model (agent.run), shown as a chip even before a run. */
+  /** Free-text detail (agent prompt, notify URL, trigger events) — shown only by
+   *  the expanded node, which has the room to clamp it to two lines. */
+  description?: string;
+  /** Requested model (agent.run). A live run's ACTUAL model (`state.model`)
+   *  supersedes it on the card. */
   model?: string;
   /** `integration.invoke` provider.method path. */
   path?: string;
-  /** Notable config fields for the expand drawer (kept small + stringified). */
-  detail?: Record<string, string>;
   /** The raw, UNTRUNCATED config for this node — the action/trigger config from
-   *  the definition. The compact card reads {@link detail}; a full-detail view
-   *  (e.g. a node drawer) reads this to render every field — the complete prompt,
-   *  all profile/source/input keys — without the card-sized clamp. It is a
-   *  JSON-safe deep copy of the config (cycles and non-JSON values normalized),
-   *  so a consumer can serialize or render it freely. Omitted when the node has
-   *  no config. */
+   *  the definition. The card shows the summary above; a full-detail view (e.g. a
+   *  node drawer) reads this to render every field — the complete prompt, all
+   *  profile/source/input keys — without the card-sized clamp. It is a JSON-safe
+   *  deep copy of the config (cycles and non-JSON values normalized), so a
+   *  consumer can serialize or render it freely. Omitted when the node has no
+   *  config. */
   config?: Record<string, unknown>;
-  /** Connector slug (e.g. `github`) for the provider chip, when one applies. */
+  /** Connector slug (e.g. `github`) — drives the node's brand logo, so a provider
+   *  step is recognizable before any text is read. */
   provider?: string;
   /** Small corner tag, e.g. "×3" for a parallel fan-out. */
   badge?: string;
@@ -124,31 +150,78 @@ export interface WfGraph {
 // spacing is collision-free with no measure/reflow pass (see WfNode.height).
 /** Fixed card width — uniform so every layer is evenly pitched and the cards read
  *  as one system. */
-const NODE_W = 244;
+const NODE_W = 292;
 /** Gap between successive layers along the main axis. */
-const RANK_SEP = 76;
+const RANK_SEP = 72;
 /** Gap between two nodes stacked in the same layer (branch leaves) along the
  *  cross axis. */
-const CROSS_SEP = 22;
-/** A card's fixed chrome: content padding (pt-2 + pb-2) + top/bottom border. */
-const CARD_CHROME = 18;
-/** The always-present header row (type-icon box + title + status pill). */
-const HEADER_ROW = 28;
-/** A single-line text row (subtitle, provider chip). */
-const TEXT_ROW = 20;
-/** The meta-chip row, which can wrap to two lines (model/cost/token chips). */
-const META_ROW = 46;
-/** The output block: an "OUTPUT"/"ERROR" micro-label over a two-line, clamped
- *  content-aware body (JSON key/value, prose, or a monospace fragment). */
-const OUTPUT_ROW = 44;
+const CROSS_SEP = 24;
+// Each band below is the row's RENDERED height, measured in the browser at the
+// library's default font config — content height plus the `mt-2` that separates
+// it from the band above. They are reservations, not estimates: the card's bands
+// are `shrink-0` inside an `overflow-hidden` region, so a consumer whose fonts
+// render a band taller sees that band CLIPPED within its fixed box — never a
+// squeezed line of text, and never a reflow of the graph.
+/** A card's fixed chrome: content padding (pt-2.5 + pb-2) + top/bottom border. */
+const CARD_CHROME = 20;
+/** The always-present header row — the type tile (34px), which is taller than the
+ *  title + subtitle stacked beside it. */
+const HEADER_ROW = 34;
+// The text bands below carry 2px of headroom over their measured height: a
+// rendered row is fractional (2 × 15.125px for a two-line clamp) and scales with
+// the consumer's base line-height, so reserving the exact measurement leaves a
+// band one rounding error from being cut.
+/** The two-line, clamped description (agent prompt, notify URL, trigger events). */
+const DESCRIPTION_ROW = 40;
+/** The single-line run metrics (cost · tokens). */
+const META_ROW = 27;
+/** The output block: a framed well holding an "Output"/"Error" caption over a
+ *  two-line, clamped content-aware body (JSON key/value, prose, or monospace). */
+const OUTPUT_ROW = 72;
 /** The run status FOOTER pinned to the card's bottom: a top border (1px), the
- *  progress bar (`h-1`, 4px), and a `py-1` + `text-[9px]` caption row. Measures
- *  ~24.5px with the library's default fonts; reserved at 26 so the reservation
- *  stays ≥ the rendered footer (with headroom for a consumer's font metrics). */
-const FOOTER_ROW = 26;
-/** Fixed dimensions of a compact (collapsed) node — icon + title + one-line
- *  summary, uniform so the collapsed graph reads as an even grid. */
-export const COMPACT_NODE_SIZE = { width: 240, height: 64 };
+ *  progress bar (`h-1`, 4px), and a `py-1` caption row whose line box is pinned
+ *  (so a node with no rounds/elapsed to report keeps the same footer as one that
+ *  has both — otherwise the band's height would drift with its content). */
+const FOOTER_ROW = 28;
+
+/**
+ * A compact node is an n8n-style ICON TILE with its name alongside: the tile is
+ * the visual node (bordered, the logo/glyph centered in it) and the name sits
+ * next to it, unboxed, on the canvas. The box the layout spaces by covers BOTH —
+ * so a name can never collide with its neighbour — while the edges attach to the
+ * TILE, not the box (the node component offsets its handles onto the tile's edges
+ * using the constants here).
+ *
+ * WHICH side the name sits on is the flow direction's business, and it is not
+ * cosmetic. An edge leaves the tile's trailing edge — the right in LR, the BOTTOM
+ * in TB — so a name placed under the tile in TB would have every outgoing edge
+ * drawn straight through it. The name therefore goes UNDER the tile in LR (edges
+ * pass left and right of it) and BESIDE the tile in TB (edges pass above and
+ * below it). Either way, no edge ever crosses a word.
+ */
+export const COMPACT_TILE = 76;
+/** The gap between the tile and its name, either axis. */
+export const COMPACT_GAP = 8;
+/** The name block's width when it sits BESIDE the tile (TB). */
+export const COMPACT_LABEL_W = 152;
+/** LR: the tile, the gap, and a two-line name block (title + subtitle) beneath it
+ *  — plus one more line of run metrics once a run is in play, reserved up front so
+ *  the merge never reflows. */
+export const COMPACT_NODE_SIZE = {
+  width: 168,
+  height: COMPACT_TILE + COMPACT_GAP + 34,
+};
+export const COMPACT_NODE_SIZE_RUN = {
+  width: 168,
+  height: COMPACT_TILE + COMPACT_GAP + 34 + 15,
+};
+/** TB: the name sits beside the tile, so the box is the tile's height — the name
+ *  block (2-3 short lines) is shorter than the tile it sits next to, run state or
+ *  not, which is why TB needs no separate run-reserved size. */
+export const COMPACT_NODE_SIZE_TB = {
+  width: COMPACT_TILE + COMPACT_GAP + COMPACT_LABEL_W,
+  height: COMPACT_TILE,
+};
 
 /**
  * The card's box height. The React Flow node is PINNED to this height (the card
@@ -157,7 +230,7 @@ export const COMPACT_NODE_SIZE = { width: 240, height: 64 };
  * layout, not an estimate of the DOM. The row constants are tuned for the
  * library's default token/font config; a consumer whose fonts render a row
  * taller just sees that content clamped within the fixed box, never a reflow.
- * `withRunState` reserves the rows live run state adds (the meta-chip row, the
+ * `withRunState` reserves the rows live run state adds (the metrics line, the
  * output block, and the bottom status footer) so the layout — computed ONCE,
  * before any run state is merged in — already leaves room for a node that later
  * runs, and the merge never reflows. A trigger only ever shows a status (no
@@ -166,13 +239,9 @@ export const COMPACT_NODE_SIZE = { width: 240, height: 64 };
  */
 function nodeHeight(data: WfNodeData, withRunState: boolean): number {
   let h = CARD_CHROME + HEADER_ROW;
-  if (data.subtitle) h += TEXT_ROW;
-  if (data.provider) h += TEXT_ROW;
-  // The meta row renders for a node with a model chip (pre-run) and for any node
-  // once a run populates cost/tokens — reserve it whenever either can apply.
-  if (withRunState || data.model) h += META_ROW;
-  // A run overlay adds the output block and the pinned status footer.
-  if (withRunState) h += OUTPUT_ROW + FOOTER_ROW;
+  if (data.description) h += DESCRIPTION_ROW;
+  // Metrics (cost · tokens) and the output block exist only once a run does.
+  if (withRunState) h += META_ROW + OUTPUT_ROW + FOOTER_ROW;
   return h;
 }
 
@@ -183,21 +252,48 @@ export type WfDirection = "LR" | "TB";
 /** Options for {@link buildWorkflowGraph}. */
 export interface BuildWorkflowGraphOptions {
   /**
-   * Reserve space for the rows live run state adds to a node (the meta-chip row +
-   * the output/error preview), so the RUN view never overlaps once a node starts
-   * or terminates. The static/preview layout (no run overlay) leaves this off to
-   * stay compact. Defaults to `false`.
+   * Reserve space for the rows live run state adds to a node (the metrics line,
+   * the output/error preview, the status footer), so the RUN view never overlaps
+   * once a node starts or terminates. The static/preview layout (no run overlay)
+   * leaves this off to stay compact. Defaults to `false`.
    */
   reserveRunState?: boolean;
   /** Flow direction. Defaults to "LR". */
   direction?: WfDirection;
-  /** Override the node dimensions the layout spaces by (and the card renders at).
-   *  Defaults to a fixed width + {@link nodeHeight}. A caller with a different node
-   *  design supplies its own sizing so the layout stays collision-free. */
-  measure?: (
-    data: WfNodeData,
-    withRunState: boolean,
-  ) => { width: number; height: number };
+  /** Collapse every node to the fixed icon-tile size, and pitch the layers for
+   *  it. Defaults to `false` (the full, expanded card). */
+  compact?: boolean;
+}
+
+/**
+ * The node box + the layer/lane separators for one density, resolved ONCE per
+ * graph. The two travel together: a compact box is much wider than the tile it
+ * draws (the name underneath it is), so the separator is only part of the gap a
+ * reader actually sees — the box's own margin supplies the rest. Its layers
+ * therefore pitch much tighter than the expanded cards', to land at a comparable
+ * VISUAL gap rather than a comparable numeric one.
+ *
+ * `runMode` is the GRAPH's — not the individual node's. Every compact tile is
+ * the same box even though a trigger shows no metrics line, because the tile sits
+ * at the top of its box: a shorter trigger box would ride its tile up out of line
+ * with the row it belongs to. (An expanded card, whose content starts at the top
+ * edge either way, is free to be exactly as tall as it needs — see nodeHeight.)
+ */
+function geometry(compact: boolean, runMode: boolean, direction: WfDirection) {
+  if (compact) {
+    // TB lays the name beside the tile (see COMPACT_NODE_SIZE_TB), so its box is
+    // one tile tall whether or not a run is on — and its layers, which advance
+    // DOWN past that short box, need a little more air between them than LR's do.
+    if (direction === "TB") {
+      return { size: COMPACT_NODE_SIZE_TB, rankSep: 34, crossSep: 24 };
+    }
+    return {
+      size: runMode ? COMPACT_NODE_SIZE_RUN : COMPACT_NODE_SIZE,
+      rankSep: 20,
+      crossSep: 20,
+    };
+  }
+  return { size: undefined, rankSep: RANK_SEP, crossSep: CROSS_SEP };
 }
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -210,6 +306,14 @@ function str(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() !== "" ? v : undefined;
 }
 
+/** A free-text field as a node DESCRIPTION: bounded, because the card clamps it
+ *  to two lines and hangs it in a tooltip — an 8k prompt has no business in
+ *  either. The untruncated value stays on `config` for the detail view. */
+function describeText(v: unknown): string | undefined {
+  const text = str(v);
+  return text ? clampPreview(text.trim(), 220) : undefined;
+}
+
 /** Host of an https URL for a compact `notify` subtitle; the raw value if it
  *  isn't a parseable URL (e.g. a `${...}` expression). */
 function urlHost(url: string): string {
@@ -220,57 +324,67 @@ function urlHost(url: string): string {
   }
 }
 
-/** Collect a small, stringified map of notable config for the expand drawer.
- *  Bounded to the named keys and short values so the drawer stays readable and
- *  the node data never carries an arbitrarily large payload. */
-function pickDetail(
-  cfg: Record<string, unknown>,
-  keys: string[],
-): Record<string, string> | undefined {
-  const out: Record<string, string> = {};
-  for (const key of keys) {
-    const v = cfg[key];
-    if (v === undefined || v === null) continue;
-    const text =
-      typeof v === "string"
-        ? v
-        : typeof v === "number" || typeof v === "boolean"
-          ? String(v)
-          : Array.isArray(v)
-            ? `${v.length} item${v.length === 1 ? "" : "s"}`
-            : "…";
-    out[key] = text.length > 200 ? `${text.slice(0, 200)}…` : text;
-  }
-  return Object.keys(out).length > 0 ? out : undefined;
+/**
+ * The keys a `do` entry may carry ALONGSIDE its one action key: the guard, the
+ * retry policy, and the failure policy. They are not actions and never name a
+ * node.
+ */
+const CONTROL_FLOW_KEYS = ["if", "retry", "onError"] as const;
+const CONTROL_FLOW = new Set<string>(CONTROL_FLOW_KEYS);
+
+/**
+ * The action kind a `do` entry declares. A `do` entry is a one-key action map
+ * that may also carry the control-flow siblings above, and YAML preserves the
+ * author's key order — so `- if: … / agent.run: …` puts `if` first, and taking
+ * "the first key" produced a node titled "if" that showed nothing of the agent it
+ * was guarding.
+ *
+ * The kind is therefore whatever is NOT control flow — by EXCLUSION, not by
+ * matching a list of kinds we happen to know. An allowlist would have re-broken
+ * the moment the API adds a kind (`agent.review`), silently resurrecting the very
+ * bug this fixes.
+ */
+function actionKind(rec: Record<string, unknown>): string | undefined {
+  return Object.keys(rec).find((k) => !CONTROL_FLOW.has(k));
 }
 
-/** Build the card-facing node data for a single `do` leaf or top-level action:
- *  title, subtitle, and the compact `detail` map. The action object is a
- *  single-key map (`{ "integration.invoke": {...} }`), mirroring the YAML
- *  schema. Returns the base data WITHOUT the raw `config`. */
+/** The agent's name: a named profile reads as the role it plays ("pr-reviewer" →
+ *  "PR reviewer"); an inline profile object has no name to show, so the node is
+ *  the generic agent. */
+function agentTitle(profile: unknown): string {
+  const named = str(profile);
+  return named ? humanizeIdentifier(named) : "AI Agent";
+}
+
+/** Build the card-facing node data for a single `do` leaf or top-level action.
+ *  The action object is a single-key map (`{ "integration.invoke": {...} }`),
+ *  mirroring the YAML schema, optionally alongside control-flow siblings.
+ *  Returns the base data WITHOUT the raw `config`. */
 function describeActionBase(action: unknown): WfNodeData {
   const rec = asRecord(action);
-  const [kind] = Object.keys(rec);
-  const cfg = asRecord(rec[kind]);
+  const kind = actionKind(rec);
+  const cfg = asRecord(kind ? rec[kind] : undefined);
   switch (kind) {
     case "sandbox.spawn":
       return {
-        title: "Spawn sandbox",
+        title: "Sandbox",
         kind,
-        subtitle: str(cfg.template),
-        detail: pickDetail(cfg, ["template", "size", "region"]),
+        subtitle: str(cfg.template) ?? "Provision",
+        description: describeText(cfg.prompt),
         isRoot: false,
         tone: "action",
       };
     case "integration.invoke": {
       const path = str(cfg.path);
+      const parts = path ? parseActionPath(path) : null;
       return {
-        title: "Integration",
+        // The provider IS the node's identity, exactly as in n8n — its logo and
+        // its name. What it does with it goes in the subtitle.
+        title: parts ? providerLabel(parts.provider) : "Integration",
         kind,
-        subtitle: path,
+        subtitle: path ? actionPathLabel(path) : undefined,
         path,
-        provider: path?.split(".")[0],
-        detail: pickDetail(cfg, ["path"]),
+        provider: parts?.provider,
         isRoot: false,
         tone: "action",
       };
@@ -281,29 +395,25 @@ function describeActionBase(action: unknown): WfNodeData {
         title: "Notify",
         kind,
         subtitle: url ? urlHost(url) : undefined,
-        detail: pickDetail(cfg, ["url"]),
+        description: describeText(url),
         isRoot: false,
         tone: "action",
       };
     }
-    case "agent.run":
+    case "agent.run": {
+      const model = str(cfg.model);
       return {
-        title: "Run agent",
+        title: agentTitle(cfg.profile),
         kind,
-        // The prompt says what the agent does; the model is shown as its own
-        // chip, so it's not duplicated here.
-        subtitle: str(cfg.prompt) ?? str(cfg.profile),
-        model: str(cfg.model),
-        detail: pickDetail(cfg, [
-          "profile",
-          "model",
-          "maxRounds",
-          "size",
-          "prompt",
-        ]),
+        // The model is the agent's defining trait, so it names the step; the
+        // prompt — the long part — is the description the expanded card clamps.
+        subtitle: model ? shortModel(model) : "Agent",
+        description: describeText(cfg.prompt),
+        model,
         isRoot: false,
         tone: "action",
       };
+    }
     case "parallel": {
       const branches = Array.isArray(cfg.branches) ? cfg.branches : [];
       return {
@@ -319,15 +429,34 @@ function describeActionBase(action: unknown): WfNodeData {
       return {
         title: "For each",
         kind,
-        subtitle: typeof cfg.items === "string" ? cfg.items : "list",
-        detail: pickDetail(cfg, ["items"]),
+        subtitle: "Repeat per item",
+        description: typeof cfg.items === "string" ? cfg.items : "Literal list",
         // Only fans out when a `do` template is actually present.
         isRoot: false,
         tone: "structural",
       };
+    case "decision": {
+      const options = Array.isArray(cfg.options)
+        ? cfg.options.filter((o): o is string => typeof o === "string")
+        : [];
+      return {
+        // A decision is the one step whose author already wrote it a human title.
+        title: str(cfg.title) ?? "Decision",
+        kind,
+        subtitle:
+          options.length > 0
+            ? describeText(options.join(" / "))
+            : "Waits for a human",
+        description: describeText(cfg.prompt),
+        isRoot: false,
+        tone: "structural",
+      };
+    }
     default:
       return {
-        title: kind ? kind : "Action",
+        // An action kind this version doesn't model yet still gets a readable
+        // name ("agent.review" → "Agent review") rather than its raw identifier.
+        title: kind ? humanizeIdentifier(kind) : "Action",
         kind: kind ?? "action",
         isRoot: false,
         tone: "action",
@@ -397,13 +526,35 @@ function withConfig(base: WfNodeData, cfg: Record<string, unknown>): WfNodeData 
     : base;
 }
 
-/** Describe one action as node data, attaching the raw, untruncated `config` for
- *  a full-detail view on top of the card-facing summary from
- *  {@link describeActionBase}. Config is omitted when the action carries none. */
+/**
+ * Describe one action as node data, attaching the raw, untruncated `config` for a
+ * full-detail view on top of the card-facing summary from
+ * {@link describeActionBase}.
+ *
+ * The config carries the action's own fields PLUS any control-flow the entry
+ * declares (`if`/`retry`/`onError`), under those names. A step that may be skipped
+ * by a guard, or that retries three times, is not the same step as one that does
+ * neither — dropping the envelope would leave the two indistinguishable in the
+ * detail view, which is the one place that promises every field.
+ */
 function describeAction(action: unknown): WfNodeData {
   const rec = asRecord(action);
-  const [kind] = Object.keys(rec);
-  return withConfig(describeActionBase(action), asRecord(rec[kind]));
+  const kind = actionKind(rec);
+  const base = describeActionBase(action);
+  // Normalize the action's config on its OWN — never a shallow copy of it. A copy
+  // is a different object than the one a recursive YAML anchor points back at, so
+  // `toJsonSafe` would no longer recognize the cycle on its first repeat and would
+  // unroll one level of it before collapsing.
+  const config = toJsonSafe(asRecord(kind ? rec[kind] : {})) as Record<
+    string,
+    unknown
+  >;
+  // The control-flow envelope rides alongside the action's fields, each value
+  // normalized in its own right.
+  for (const key of CONTROL_FLOW_KEYS) {
+    if (rec[key] !== undefined) config[key] = toJsonSafe(rec[key]);
+  }
+  return Object.keys(config).length > 0 ? { ...base, config } : base;
 }
 
 /** Describe the `on:` trigger as the spine's root node. */
@@ -417,15 +568,21 @@ function describeTrigger(on: unknown): WfNodeData {
       ? ev.actions.filter((a): a is string => typeof a === "string")
       : [];
     const repo = str(ev.repo);
-    let subtitle = connection ? providerLabel(connection) : "Event";
-    if (event) subtitle += ` · ${event}`;
-    if (actions.length > 0) subtitle += ` (${actions.join("/")})`;
-    if (repo) subtitle += ` on ${repo}`;
+    // The event the workflow wakes on reads as a sentence — "On pull request" —
+    // with the narrowing (which sub-actions, which repo) as the detail below it.
+    const description = describeText(
+      [actions.length > 0 ? actions.join(", ") : undefined, repo]
+        .filter(Boolean)
+        .join(" · "),
+    );
     return withConfig(
       {
-        title: "Trigger",
+        title: connection ? providerLabel(connection) : "Trigger",
         kind: "provider_event",
-        subtitle,
+        subtitle: event
+          ? `On ${humanizeIdentifier(event, "lower")}`
+          : "On an event",
+        description,
         provider: connection,
         isRoot: true,
         tone: "trigger",
@@ -441,7 +598,10 @@ function describeTrigger(on: unknown): WfNodeData {
       {
         title: "Schedule",
         kind: "schedule",
-        subtitle: cron ? (tz ? `${cron} (${tz})` : cron) : undefined,
+        // The cron in English; the expression itself stays in the description (and
+        // in full in the config) so the exact timetable is never hidden.
+        subtitle: cron ? describeCron(cron) : "On a timetable",
+        description: cron ? (tz ? `${cron} · ${tz}` : cron) : undefined,
         isRoot: true,
         tone: "trigger",
       },
@@ -456,6 +616,7 @@ function describeTrigger(on: unknown): WfNodeData {
     {
       title: "Trigger",
       kind: "trigger",
+      subtitle: kind ? humanizeIdentifier(kind) : undefined,
       isRoot: true,
       tone: "trigger",
     },
@@ -481,7 +642,12 @@ interface LayoutNode {
  * reconverges cleanly. Because dims are authoritative and each layer is pitched
  * by its widest/tallest node plus a separator, layers can never overlap.
  */
-function layoutLayers(nodes: LayoutNode[], direction: WfDirection): WfNode[] {
+function layoutLayers(
+  nodes: LayoutNode[],
+  direction: WfDirection,
+  rankSep: number,
+  crossSep: number,
+): WfNode[] {
   const isLR = direction === "LR";
   const mainSize = (n: LayoutNode) => (isLR ? n.width : n.height);
   const crossSize = (n: LayoutNode) => (isLR ? n.height : n.width);
@@ -499,7 +665,7 @@ function layoutLayers(nodes: LayoutNode[], direction: WfDirection): WfNode[] {
   let cursor = 0;
   for (const r of ranks) {
     mainStart.set(r, cursor);
-    cursor += Math.max(...byRank.get(r)!.map(mainSize)) + RANK_SEP;
+    cursor += Math.max(...byRank.get(r)!.map(mainSize)) + rankSep;
   }
 
   const out: WfNode[] = [];
@@ -508,7 +674,7 @@ function layoutLayers(nodes: LayoutNode[], direction: WfDirection): WfNode[] {
     const extent = Math.max(...layer.map(mainSize));
     const span =
       layer.reduce((s, n) => s + crossSize(n), 0) +
-      CROSS_SEP * (layer.length - 1);
+      crossSep * (layer.length - 1);
     let cross = -span / 2;
     for (const n of layer) {
       // Center each node within its layer's main extent — a no-op for LR's
@@ -521,7 +687,7 @@ function layoutLayers(nodes: LayoutNode[], direction: WfDirection): WfNode[] {
         height: n.height,
         data: n.data,
       });
-      cross += crossSize(n) + CROSS_SEP;
+      cross += crossSize(n) + crossSep;
     }
   }
 
@@ -539,14 +705,14 @@ function layoutLayers(nodes: LayoutNode[], direction: WfDirection): WfNode[] {
  *  malformed YAML or an empty definition returns an `error` the UI can fall
  *  back on (e.g. show the raw YAML while authoring). `reserveRunState` leaves
  *  room for the rows live run state adds (see {@link nodeHeight}); `direction`
- *  picks the flow axis (default "LR"). */
+ *  picks the flow axis (default "LR"); `compact` collapses nodes to icon tiles. */
 export function buildWorkflowGraph(
   yaml: string,
   options?: BuildWorkflowGraphOptions,
 ): WfGraph {
   const reserveRunState = options?.reserveRunState ?? false;
   const direction = options?.direction ?? "LR";
-  const measure = options?.measure;
+  const compact = options?.compact ?? false;
   if (!yaml || yaml.trim() === "") {
     return { nodes: [], edges: [], error: "No definition" };
   }
@@ -564,6 +730,7 @@ export function buildWorkflowGraph(
 
   const logical: LayoutNode[] = [];
   const edges: WfEdge[] = [];
+  const geo = geometry(compact, reserveRunState, direction);
 
   const addNode = (
     id: string,
@@ -571,9 +738,10 @@ export function buildWorkflowGraph(
     rank: number,
     withRunState: boolean,
   ) => {
-    const dims = measure
-      ? measure(data, withRunState)
-      : { width: NODE_W, height: nodeHeight(data, withRunState) };
+    const dims = geo.size ?? {
+      width: NODE_W,
+      height: nodeHeight(data, withRunState),
+    };
     logical.push({ id, data, width: dims.width, height: dims.height, rank });
   };
   const addEdge = (source: string, target: string, kind: WfEdgeKind) => {
@@ -641,5 +809,9 @@ export function buildWorkflowGraph(
     }
   });
 
-  return { nodes: layoutLayers(logical, direction), edges, error: null };
+  return {
+    nodes: layoutLayers(logical, direction, geo.rankSep, geo.crossSep),
+    edges,
+    error: null,
+  };
 }

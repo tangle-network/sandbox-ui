@@ -89,11 +89,17 @@ describe("buildFlowGraph", () => {
     expect(compactHeight).toBeLessThan(tallestExpanded);
   });
 
-  it("honors a caller-supplied measure for node sizing", () => {
-    const { nodes } = buildFlowGraph(YAML, {
-      measure: () => ({ width: 111, height: 55 }),
-    });
-    expect(nodes.every((n) => n.width === 111 && n.height === 55)).toBe(true);
+  it("pitches compact layers tighter than expanded ones, so the tiles don't drift apart", () => {
+    // A compact node's BOX is wider than its tile (the name underneath is), so a
+    // layer separator sized for the expanded cards would leave a canyon between
+    // two tiles. Density owns its own pitch.
+    const compact = buildFlowGraph(YAML, { compact: true });
+    const expanded = buildFlowGraph(YAML);
+    const gap = (nodes: Node<WfNodeData>[]) => {
+      const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
+      return byId.a0.position.x - (byId.trigger.position.x + (byId.trigger.width ?? 0));
+    };
+    expect(gap(compact.nodes)).toBeLessThan(gap(expanded.nodes));
   });
 });
 

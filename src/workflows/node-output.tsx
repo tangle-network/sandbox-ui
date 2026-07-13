@@ -14,6 +14,10 @@
 
 import type { ReactElement } from "react";
 
+/** Failure text, in the semantic danger token — which carries a light AND a dark
+ *  value. A palette shade (`text-red-400`) only ever reads well in one theme. */
+const ERROR_TEXT = { color: "var(--surface-danger-text)" } as const;
+
 /** The recovered shape of an output preview. */
 export type OutputShape =
   | { kind: "empty" }
@@ -30,6 +34,71 @@ export type OutputShape =
 /** Max key/value pairs a shallow-object output renders before it reports
  *  `truncated` — the card only has room for a couple rows anyway. */
 const MAX_JSON_ENTRIES = 6;
+
+/**
+ * Flatten an agent's markdown answer into the sentence a person would read out
+ * of it. On a two-line card preview the syntax IS the noise: a `## Heading` mid
+ * paragraph, a `**bold**` run and a bullet's `-` all survive the clamp while the
+ * words that carry the meaning get pushed past it. Stripping the markup (never
+ * the words) is what turns the preview back into prose — the full text, markup
+ * and all, is still rendered by the node's detail view.
+ *
+ * Structure-only lines (a fence, a table rule) are dropped; everything else keeps
+ * its text and is joined into one flowing line.
+ */
+export function condenseText(text: string): string {
+  const isListItem = (line: string) =>
+    /^\s*([-*+]\s|\d+[.)]\s)/.test(line);
+  const lines = text
+    .split("\n")
+    .map((line) => ({
+      // A list item keeps its boundary when the lines are joined: run three
+      // bullets together with plain spaces and they read as one long sentence,
+      // which is the "word dump" all over again.
+      item: isListItem(line),
+      text: line
+        // Leading block markers: heading hashes, quote carets, list bullets,
+        // ordered-list numerals, and task-list checkboxes.
+        .replace(/^\s{0,3}#{1,6}\s+/, "")
+        .replace(/^\s{0,3}>\s?/, "")
+        .replace(/^\s*[-*+]\s+(\[[ xX]\]\s+)?/, "")
+        .replace(/^\s*\d+[.)]\s+/, "")
+        .trim(),
+    }))
+    // Structure-only lines carry no words at all: a code fence (with or without a
+    // language tag), a table's rule row, a thematic break.
+    .filter(
+      ({ text: line }) =>
+        line !== "" &&
+        !/^(```|~~~)/.test(line) &&
+        !/^\|?[\s|:-]+\|[\s|:-]*$/.test(line) &&
+        !/^([-*_])\1{2,}$/.test(line),
+    );
+
+  return lines
+    .map(({ item, text: line }, i) =>
+      i > 0 && item ? `· ${line}` : line,
+    )
+    .join(" ")
+    // Inline emphasis/code/strikethrough markers, unwrapped in place.
+    //
+    // NOT `__underscore__` emphasis: an agent writes bold as `**bold**`, while
+    // `__` is what real text puts around a Python dunder — unwrapping it rewrites
+    // `File "/app/pkg/__init__.py"` (a traceback we are quite likely to be showing
+    // as a node's ERROR) into `.../init.py`. Silently corrupting a failure message
+    // is far worse than leaving two underscores in a preview.
+    .replace(/(\*\*|~~)(.*?)\1/g, "$2")
+    // Single-asterisk italics, only where the asterisk is a real delimiter: not
+    // glued to a word (`*ngFor`), not doubled (a `**bold**` remnant), and not
+    // wrapping whitespace — so a glob (`src/**/*.test.ts`) and a literal `2 * 3`
+    // survive intact.
+    .replace(/(?<![\w*])\*(?!\s)([^*]+?)(?<!\s)\*(?![\w*])/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    // Links/images → their text (an image with no alt text leaves nothing).
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 /** A single JSON value as a compact one-line string for the key/value render.
  *  Scalars render verbatim; a nested object/array collapses to a shape marker so
@@ -53,8 +122,19 @@ function scalar(value: unknown): string {
  * sentence is never mis-parsed. A begins-like-JSON string that fails to parse
  * (the host clamped it mid-value) still renders as `code`, not prose, so it keeps
  * its monospace/data affordance.
+ *
+ * `condenseMarkdown` says the prose IS markdown and may be flattened for the
+ * preview ({@link condenseText}). It is OFF by default, and the caller must only
+ * turn it on for text an agent actually authored as markdown. Applied to anything
+ * else it does not merely look wrong — it silently REWRITES the text: a stack
+ * trace's `__init__.py` loses its underscores, and a shell glob `src/**` pairs
+ * with a later `**` and both vanish. An error message is the one string a person
+ * reads to find out what broke; it must reach them exactly as it was thrown.
  */
-export function classifyOutput(preview: string | undefined): OutputShape {
+export function classifyOutput(
+  preview: string | undefined,
+  condenseMarkdown = false,
+): OutputShape {
   let trimmed = preview?.trim() ?? "";
   // Strip every lone surrogate — a high surrogate not followed by a low, or a low
   // not preceded by a high — anywhere in the string, since it renders as the
@@ -91,7 +171,14 @@ export function classifyOutput(preview: string | undefined): OutputShape {
       return { kind: "code", text: trimmed };
     }
   }
-  return { kind: "text", text: trimmed };
+  // Prose the caller did NOT vouch for as markdown reaches the reader verbatim.
+  if (!condenseMarkdown) return { kind: "text", text: trimmed };
+  // Markdown prose: condense it, so the two visible lines are two lines of WORDS.
+  // Text that condenses to nothing (markup only) is empty, not a blank block.
+  const condensed = condenseText(trimmed);
+  return condensed === ""
+    ? { kind: "empty" }
+    : { kind: "text", text: condensed };
 }
 
 /** Line-clamp utility per row budget, so `code`/`text` shapes honor `rows` the
@@ -137,24 +224,35 @@ export function NodeOutputBody({
     // otherwise a failure with a structured message is indistinguishable from
     // normal output but for the label.
     const isError = tone === "error";
-    const keyClass = isError ? "text-red-400/80" : "text-muted-foreground";
-    const valueClass = isError ? "text-red-400" : "text-foreground";
+    const keyStyle = isError ? ERROR_TEXT : undefined;
+    const keyClass = isError ? "" : "text-muted-foreground";
+    const valueClass = isError ? "" : "text-foreground";
     return (
-      <dl className="space-y-0.5 font-mono text-[10px] leading-tight">
+      <dl className="space-y-0.5 font-mono text-[10.5px] leading-snug">
         {visible.map(([key, value]) => (
           <div key={key} className="flex gap-1.5">
             {/* Bound the key column so a long host-supplied key can't push the
                 value out of a fixed-width card; the value keeps the flex remainder. */}
-            <dt className={`max-w-[45%] shrink-0 truncate ${keyClass}`} title={key}>
+            <dt
+              className={`max-w-[45%] shrink-0 truncate ${keyClass}`}
+              style={keyStyle}
+              title={key}
+            >
               {key}
             </dt>
-            <dd className={`min-w-0 flex-1 truncate ${valueClass}`} title={value}>
+            <dd
+              className={`min-w-0 flex-1 truncate ${valueClass}`}
+              style={isError ? ERROR_TEXT : undefined}
+              title={value}
+            >
               {value}
             </dd>
           </div>
         ))}
         {overflow && (
-          <div className={`text-[9px] ${keyClass}`}>…</div>
+          <div className={`text-[10px] ${keyClass}`} style={keyStyle}>
+            …
+          </div>
         )}
       </dl>
     );
@@ -163,9 +261,10 @@ export function NodeOutputBody({
   if (shape.kind === "code") {
     return (
       <pre
-        className={`${clampClass} ${codeWrap} font-mono text-[10px] leading-tight ${
-          tone === "error" ? "text-red-400" : "text-foreground/80"
+        className={`${clampClass} ${codeWrap} font-mono text-[10.5px] leading-snug ${
+          tone === "error" ? "" : "text-foreground"
         }`}
+        style={tone === "error" ? ERROR_TEXT : undefined}
         title={shape.text}
       >
         {shape.text}
@@ -175,9 +274,10 @@ export function NodeOutputBody({
 
   return (
     <p
-      className={`${clampClass} text-[10px] leading-snug ${
-        tone === "error" ? "text-red-400" : "text-muted-foreground"
+      className={`${clampClass} text-[11px] leading-snug ${
+        tone === "error" ? "" : "text-foreground"
       }`}
+      style={tone === "error" ? ERROR_TEXT : undefined}
       title={shape.text}
     >
       {shape.text}

@@ -7,9 +7,7 @@
 
 import { Position, type Edge, type Node } from "@xyflow/react";
 import {
-  type BuildWorkflowGraphOptions,
   buildWorkflowGraph,
-  COMPACT_NODE_SIZE,
   type WfDirection,
   type WfNodeData,
   type WfNodeState,
@@ -34,12 +32,9 @@ export interface BuildFlowGraphOptions {
   nodeState?: Record<string, WfNodeState>;
   /** Flow direction. Defaults to "LR". */
   direction?: WfDirection;
-  /** Collapse nodes to the fixed compact size (icon + title + one-line summary).
-   *  Defaults to `false` (the full, expanded node). */
+  /** Collapse nodes to the icon-tile density (logo + name). Defaults to `false`
+   *  (the full, expanded card). */
   compact?: boolean;
-  /** Override node dimensions (see {@link buildWorkflowGraph}'s `measure`).
-   *  Ignored when `compact` is set (compact pins its own fixed size). */
-  measure?: BuildWorkflowGraphOptions["measure"];
 }
 
 /** Accept either an options object or a bare `nodeState` map as the second arg:
@@ -51,12 +46,12 @@ function normalizeFlowGraphOptions(
   arg: BuildFlowGraphOptions | Record<string, WfNodeState> | undefined,
 ): BuildFlowGraphOptions {
   if (!arg) return {};
-  if (
-    "nodeState" in arg ||
-    "direction" in arg ||
-    "compact" in arg ||
-    "measure" in arg
-  ) {
+  // An EMPTY object is empty options — not an empty run-state map. Read the other
+  // way, `buildFlowGraph(yaml, {})` would set `nodeState: {}`, which is the signal
+  // for "a run overlay is in play": the graph would reserve run rows (and pick the
+  // taller compact box) for a definition that has no run at all.
+  if (Object.keys(arg).length === 0) return {};
+  if ("nodeState" in arg || "direction" in arg || "compact" in arg) {
     return arg as BuildFlowGraphOptions;
   }
   return { nodeState: arg as Record<string, WfNodeState> };
@@ -82,9 +77,7 @@ export function buildFlowGraph(
   const graph = buildWorkflowGraph(yaml, {
     reserveRunState: nodeState !== undefined,
     direction,
-    // Compact nodes are a fixed size; otherwise honor the caller's `measure` (or
-    // fall back to the default content sizing).
-    measure: compact ? () => COMPACT_NODE_SIZE : options?.measure,
+    compact,
   });
   const isLR = direction === "LR";
   const sourcePosition = isLR ? Position.Right : Position.Bottom;

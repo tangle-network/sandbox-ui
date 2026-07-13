@@ -121,16 +121,13 @@ export function statusBorder(status: WfNodeStatus): {
   const color = STATUS_COLOR[status];
   switch (status) {
     case "running":
-      // The soft glow (plus the animated inbound edge) carries the "live" signal
-      // — no whole-card pulse, which would fade the text along with it.
-      return {
-        borderColor: color,
-        boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 45%, transparent), 0 0 24px -6px ${color}`,
-      };
     case "waiting":
-      // The SAME glow the running node gets, in amber. The parked node is the one
-      // the viewer has to act on, so it must be at least as prominent as the live
-      // one — it just must not read as live.
+      // The soft glow (plus, for `running`, the animated inbound edge) carries the
+      // "look here" signal — no whole-card pulse, which would fade the text along
+      // with it. `waiting` gets the SAME treatment because the parked node is the
+      // one the viewer has to act on: it must be at least as prominent as the live
+      // one. It just must not read as live — hence the amber `color`, the still
+      // progress bar, and the un-animated edge.
       return {
         borderColor: color,
         boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 45%, transparent), 0 0 24px -6px ${color}`,

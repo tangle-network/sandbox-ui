@@ -317,17 +317,30 @@ function describeActionBase(action: unknown): WfNodeData {
         tone: "action",
       };
     case "decision": {
-      // The human-in-the-loop pause. Its TITLE is the question being asked and
-      // its OPTIONS are the answers — both belong on the card, because a viewer
-      // looking at a parked run needs to see what is being asked and what the
-      // choices are, not just that the run stopped here.
+      // The human-in-the-loop pause. Its QUESTION and its OPTIONS both belong on
+      // the card: a viewer looking at a parked run needs to see what is being
+      // asked and what the choices are, not just that the run stopped here.
       const options = Array.isArray(cfg.options)
         ? cfg.options.filter((o): o is string => typeof o === "string")
         : [];
+      // The question is the `title` when the author wrote one, else the `prompt`.
+      // Never let both fall away to a generic headline: a decision whose author
+      // wrote only a prompt would otherwise render as "Decision" over its options,
+      // with the actual question — the one thing the viewer has to read — nowhere
+      // on the card.
+      const prompt = str(cfg.prompt);
+      const question = str(cfg.title) ?? prompt;
       return {
-        title: str(cfg.title) ?? "Decision",
+        title: question ?? "Decision",
         kind,
-        subtitle: options.length > 0 ? options.join(" · ") : str(cfg.prompt),
+        // The options are the answers, so they earn the subtitle. With none to
+        // show, the prompt takes it — unless it is already serving as the title.
+        subtitle:
+          options.length > 0
+            ? options.join(" · ")
+            : prompt === question
+              ? undefined
+              : prompt,
         detail: pickDetail(cfg, [
           "title",
           "prompt",

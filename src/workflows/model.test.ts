@@ -104,16 +104,50 @@ do:
     expect(node?.data.config).toMatchObject({ options: ["approve", "reject"] });
   });
 
-  it("falls back to the prompt, then to a generic title, for a sparse decision", () => {
+  it("never drops the question: a title-less decision is headlined by its prompt", () => {
+    // The gap: with `options` present but no `title`, a generic "Decision"
+    // headline over the options left the actual question — the one thing the
+    // viewer has to read — nowhere on the card.
+    const node = buildWorkflowGraph(`
+do:
+  - decision:
+      prompt: Ship the release?
+      options: [approve, reject]
+`).nodes.find((n) => n.id === "a0");
+    expect(node?.data.title).toBe("Ship the release?");
+    expect(node?.data.subtitle).toBe("approve · reject");
+  });
+
+  it("does not repeat the prompt as both headline and subtitle", () => {
     const node = buildWorkflowGraph(`
 do:
   - decision:
       prompt: Pick one.
 `).nodes.find((n) => n.id === "a0");
-    // No title → a generic one, never an empty card. No options → the prompt is
-    // the most useful thing left to show.
+    // The prompt is serving as the title, so it must not be echoed beneath it.
+    expect(node?.data.title).toBe("Pick one.");
+    expect(node?.data.subtitle).toBeUndefined();
+  });
+
+  it("shows the prompt beneath an authored title when there are no options", () => {
+    const node = buildWorkflowGraph(`
+do:
+  - decision:
+      title: Ship it?
+      prompt: 3 PRs merged since the last tag.
+`).nodes.find((n) => n.id === "a0");
+    expect(node?.data.title).toBe("Ship it?");
+    expect(node?.data.subtitle).toBe("3 PRs merged since the last tag.");
+  });
+
+  it("falls back to a generic title only when the author wrote no question at all", () => {
+    const node = buildWorkflowGraph(`
+do:
+  - decision:
+      options: [yes, no]
+`).nodes.find((n) => n.id === "a0");
     expect(node?.data.title).toBe("Decision");
-    expect(node?.data.subtitle).toBe("Pick one.");
+    expect(node?.data.subtitle).toBe("yes · no");
   });
 
   it("collapses nodes to the fixed compact size when measured for compact density", () => {

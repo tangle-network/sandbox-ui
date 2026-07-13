@@ -45,13 +45,15 @@ const EDGE_FAIL = "#ef4444";
 export const EDGE_RUNNING = "hsl(var(--primary))";
 /** `waiting` borrows the warning surface — the same amber the design system uses
  *  for "needs attention". A blocked run is not a live one, so it must never read
- *  as the primary "running" accent.
+ *  as the primary "running" accent. Module-local (unlike {@link EDGE_RUNNING},
+ *  which the compact node's live bar reads): the waiting treatment is reached
+ *  entirely through {@link STATUS_COLOR} and {@link edgeColor}.
  *
  *  NO `hsl()` wrapper, unlike `--primary`: brand's `--surface-warning-text` is a
  *  COMPLETE color (`#fbbf24` dark / `#b45309` light), whereas `--primary` is raw
  *  HSL channels (`--primary: var(--hsl-primary)`) and therefore needs one.
  *  Wrapping this token would produce an invalid color, not a safer one. */
-export const EDGE_WAITING = "var(--surface-warning-text)";
+const EDGE_WAITING = "var(--surface-warning-text)";
 export const STATUS_COLOR: Record<WfNodeStatus, string> = {
   queued: EDGE_MUTED,
   running: EDGE_RUNNING,

@@ -18,19 +18,35 @@ import { STATUS_BADGE, STATUS_COLOR, statusBorder } from "../src/workflows/node-
 
 const STATUSES = ["queued", "running", "waiting", "succeeded", "failed"];
 
-/** The custom properties brand declares, across every theme block. */
+/** Every declaration brand makes, as `--token` → [values, across theme blocks]. */
 const DECLARED = (() => {
   const require = createRequire(import.meta.url);
   const css = readFileSync(
     require.resolve("@tangle-network/brand/styles/tokens.css"),
     "utf8",
   );
-  return new Set(css.match(/--[\w-]+(?=\s*:)/g) ?? []);
+  const out = new Map();
+  for (const [, token, value] of css.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+    const values = out.get(token) ?? [];
+    values.push(value.trim());
+    out.set(token, values);
+  }
+  return out;
 })();
 
 /** Every `var(--x)` a style string references. */
 function tokensUsed(value) {
   return [...value.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]);
+}
+
+/**
+ * A token whose value is a COMPLETE color (`#fbbf24`, `rgb(...)`) can be used bare
+ * — `var(--x)`. One whose value is raw HSL CHANNELS (`38 92% 50%`, or an alias to
+ * such) must be wrapped — `hsl(var(--x))`. Getting this backwards does not throw:
+ * the declaration is simply dropped and the node quietly loses the colour.
+ */
+function isCompleteColor(value) {
+  return /^(#|rgb|hsl|oklch|color-mix|transparent|currentColor)/i.test(value);
 }
 
 describe("workflow node status tokens", () => {
@@ -56,5 +72,35 @@ describe("workflow node status tokens", () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+
+  it("keeps the bare-vs-hsl() distinction the warning and primary tokens sit on", () => {
+    // The workflow node uses the warning surface BARE (`var(--surface-warning-text)`)
+    // and the primary accent WRAPPED (`hsl(var(--primary))`). That asymmetry is not
+    // a slip — it is what each token's value requires. If brand ever flips one of
+    // them to the other form, the node silently loses that colour, so pin it here.
+    for (const token of [
+      "--surface-warning-text",
+      "--surface-warning-bg",
+      "--surface-warning-border",
+    ]) {
+      for (const value of DECLARED.get(token) ?? []) {
+        expect(
+          isCompleteColor(value),
+          `${token} is used bare as var(${token}), so it must be a complete color — got "${value}"`,
+        ).toBe(true);
+      }
+    }
+    // Its counterpart: `--primary` resolves to raw channels, which is exactly why
+    // every use of it in the node is `hsl(var(--primary))`.
+    for (const value of DECLARED.get("--primary") ?? []) {
+      const resolved = value.startsWith("var(")
+        ? (DECLARED.get(value.slice(4, -1))?.[0] ?? value)
+        : value;
+      expect(
+        isCompleteColor(resolved),
+        `--primary is used as hsl(var(--primary)), so it must NOT already be a complete color — got "${resolved}"`,
+      ).toBe(false);
+    }
   });
 });

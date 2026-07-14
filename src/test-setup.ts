@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom/vitest"
+import {
+  installMemoryStorage,
+  needsMemoryStorage,
+} from "./test-support/memory-storage"
 
 // jsdom lacks the pointer-capture, scroll, and resize-observer APIs that
 // Radix UI primitives (e.g. Select) call during interaction. Provide no-op
@@ -23,50 +27,17 @@ if (!globalThis.ResizeObserver) {
   }
 }
 
-// Node ships its own `localStorage` global, and it is `undefined` unless the
-// process was started with --localstorage-file. Vitest's jsdom environment skips
-// any key that already exists on the global, so jsdom's own storage is never
-// installed and every component that persists a preference sees
-// `localStorage === undefined` and throws. (`sessionStorage` is unaffected, which
-// is why the hole looks arbitrary.) Back it with an in-memory Storage.
+// A usable `localStorage` for anything that persists a preference. Both the
+// "missing" and the "throws on read" cases, and why they exist, are documented on
+// the helper — which is exported so they can be TESTED rather than asserted in a
+// comment (see memory-storage.test.ts).
 //
-// The store is per-PROCESS, not per-file: this property is not one jsdom created,
-// so the environment teardown does not delete it. That is only harmless while
-// vitest runs each test file in its own process (`isolate`, the default) — turn
-// isolation off and this Map would carry state between files.
-//
-// Reading it is itself guarded: where localStorage is a real getter it can THROW
-// rather than return undefined (jsdom raises SecurityError on an opaque origin), and
-// an unguarded probe would take this setup file down before the replacement is
-// installed — the one case the replacement exists for.
-let needsLocalStorage: boolean
-try {
-  needsLocalStorage = !globalThis.localStorage
-} catch {
-  needsLocalStorage = true
-}
-
-if (needsLocalStorage) {
-  const entries = new Map<string, string>()
-  const storage: Storage = {
-    get length() {
-      return entries.size
-    },
-    key: (i) => [...entries.keys()][i] ?? null,
-    getItem: (k) => entries.get(k) ?? null,
-    setItem: (k, v) => {
-      entries.set(k, String(v))
-    },
-    removeItem: (k) => {
-      entries.delete(k)
-    },
-    clear: () => entries.clear(),
-  }
-  Object.defineProperty(globalThis, "localStorage", {
-    value: storage,
-    configurable: true,
-    writable: true,
-  })
+// The store is per-PROCESS, not per-file: this property is not one jsdom created, so
+// the environment teardown does not delete it. That is only harmless while vitest
+// runs each test file in its own process (`isolate`, the default) — turn isolation
+// off and this Map would carry state between files.
+if (needsMemoryStorage(globalThis)) {
+  installMemoryStorage(globalThis)
 }
 
 // jsdom does not implement DataTransfer (https://github.com/jsdom/jsdom/issues/1568),

@@ -78,10 +78,13 @@ const FIT_VIEW = { padding: 0.16, minZoom: 0.55, maxZoom: 1 } as const;
  *  make the toggle feel laggy, and skipped entirely for a reader who asked the
  *  system for less motion. */
 export function fitViewOnLayoutChange() {
-  const still =
+  // Motion is opt-OUT, so it is only added where the reader's preference can be
+  // read and says nothing against it. Somewhere without `matchMedia` cannot say a
+  // reader tolerates movement, so the graph reframes without it.
+  const moves =
     typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
-  return still ? FIT_VIEW : { ...FIT_VIEW, duration: 220 };
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === false;
+  return moves ? { ...FIT_VIEW, duration: 220 } : FIT_VIEW;
 }
 
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,

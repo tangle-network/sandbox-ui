@@ -58,6 +58,13 @@ describe("reframing the viewport when the layout changes", () => {
     expect(fitViewOnLayoutChange()).not.toHaveProperty("duration");
   });
 
+  it("does not move at all where the preference cannot be read", () => {
+    // Motion is opt-OUT. Somewhere without matchMedia cannot tell us a reader
+    // tolerates movement, so it does not get any.
+    vi.stubGlobal("matchMedia", undefined);
+    expect(fitViewOnLayoutChange()).not.toHaveProperty("duration");
+  });
+
   it("keeps the SAME framing either way — only the transition differs", () => {
     prefersReducedMotion(true);
     const still = fitViewOnLayoutChange();
@@ -290,6 +297,19 @@ describe("WorkflowNode", () => {
     expect(container.querySelector('[aria-label="Anthropic"]')?.className).toContain(
       "h-7",
     );
+  });
+
+  it("leaves an integration node's PROVIDER mark alone", () => {
+    // A model brand belongs to an agent. On an integration node the provider IS the
+    // identity (n8n's rule, and what the title says), so it keeps its own logo — the
+    // model brand must not take the tile from it.
+    const { container } = renderNode({
+      ...BASE,
+      kind: "integration.invoke",
+      provider: "github",
+      model: "anthropic/claude-sonnet-4-5",
+    });
+    expect(container.querySelector('[aria-label="Anthropic"]')).toBeNull();
   });
 
   it("keeps the kind glyph for a model with no published mark", () => {

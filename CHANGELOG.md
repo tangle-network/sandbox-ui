@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.80.0
+
+### Chat
+
+- **`AgentComposer` handles clipboard paste.** Pasting files onto the textarea funnels them through the existing `onAttach(FileList)` contract — no new callback, so every consumer that already wires `onAttach` gets paste for free. A clipboard bitmap arrives named `image.png` in every browser; it is auto-renamed `pasted-image-<n>.<ext>` (per-mount counter) so two screenshots don't collide. Plain-text paste is untouched, and paste is inert when `onAttach` isn't set — same gate as drag-and-drop.
+- **Attachment chips can carry an image thumbnail and a retryable error.** `ComposerFile` gains `previewUrl` (object URL, rendered in place of the paperclip icon — the app owns creation and revocation) and `errorMessage` (shown truncated on an error chip, full text in the tooltip). New `onRetryFile` prop renders a retry button on error chips, so a failed upload is recoverable without re-selecting the file. A `pending` chip is now visually distinct from a `ready` one (dimmed).
+- **Two opt-in send gates.** `canSubmitWhileBusy` lets Enter keep submitting while a turn streams — for composers that queue the next turn instead of blocking on the current one (the Stop button rule is unchanged). `canSubmitAttachmentsOnly` allows submitting with empty text when at least one attachment is staged — a screenshot IS the message. Both default off; no existing consumer changes behavior.
+- **New pure validation module** (exported from `./chat`): `validateComposerFiles(files, { maxSizeBytes, maxCount, currentCount, accept })` returns `{ accepted, rejected }` with human-readable rejection reasons, and `isAcceptedType` matches the native `<input accept>` grammar (`.png`, exact MIME, `image/*`). Lets an app reject oversize/over-count/wrong-type files before any network call, with the same rules the picker enforces.
+
 ## 0.77.0
 
 ### Workflows

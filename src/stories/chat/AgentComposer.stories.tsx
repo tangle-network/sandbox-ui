@@ -188,15 +188,118 @@ export const WithAttachmentsAndStreaming: Story = {
         onCancel={() => setBusy(false)}
         focusShortcut
         placeholder="Ask, or drop files…"
-        onAttach={() =>
+        onAttach={(fileList) =>
           setFiles((f) => [
             ...f,
-            { id: String(f.length + 1), name: "new.txt", kind: "file", status: "pending" },
+            ...Array.from(fileList).map((file, index) => ({
+              id: `${f.length + index + 1}`,
+              name: file.name,
+              kind: "file" as const,
+              status: "pending" as const,
+            })),
           ])
         }
         onAttachFolder={() => {}}
         attachments={files}
         onRemoveFile={(id) => setFiles((f) => f.filter((x) => x.id !== id))}
+        model={{ value: model, onChange: setModel, models: MODELS }}
+        reasoning={{
+          value: reasoning,
+          onChange: setReasoning,
+          options: DEFAULT_REASONING_LEVEL_OPTIONS,
+        }}
+      />
+    );
+  },
+};
+
+// A tiny inline SVG data URI stands in for a real object URL from
+// `URL.createObjectURL` — no network fetch, works offline in Storybook.
+function thumbnailDataUri(fill: string): string {
+  return `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${fill}"/></svg>`,
+  )}`;
+}
+
+/** Image chips render a thumbnail in place of the paperclip icon. */
+export const WithThumbnails: Story = {
+  name: "Attachments with thumbnails",
+  render: () => {
+    const [value, setValue] = useState("");
+    const [model, setModel] = useState("anthropic/claude-opus-4-8");
+    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
+    const [files, setFiles] = useState<ComposerFile[]>([
+      {
+        id: "1",
+        name: "hero-shot.png",
+        kind: "file",
+        status: "ready",
+        previewUrl: thumbnailDataUri("#5b4ed4"),
+      },
+      {
+        id: "2",
+        name: "logo.svg",
+        kind: "file",
+        status: "ready",
+        previewUrl: thumbnailDataUri("#22c55e"),
+      },
+      { id: "3", name: "notes.txt", kind: "file", status: "pending" },
+    ]);
+    return (
+      <AgentComposer
+        value={value}
+        onChange={setValue}
+        onSubmit={() => setValue("")}
+        placeholder="Ask about the attached images…"
+        onAttach={() => {}}
+        attachments={files}
+        onRemoveFile={(id) => setFiles((f) => f.filter((x) => x.id !== id))}
+        model={{ value: model, onChange: setModel, models: MODELS }}
+        reasoning={{
+          value: reasoning,
+          onChange: setReasoning,
+          options: DEFAULT_REASONING_LEVEL_OPTIONS,
+        }}
+      />
+    );
+  },
+};
+
+/** A failed upload chip shows its error and offers a retry action. */
+export const WithErrorAndRetry: Story = {
+  name: "Attachment error + retry",
+  render: () => {
+    const [value, setValue] = useState("");
+    const [model, setModel] = useState("anthropic/claude-opus-4-8");
+    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
+    const [files, setFiles] = useState<ComposerFile[]>([
+      { id: "1", name: "design-spec.pdf", kind: "file", status: "ready" },
+      {
+        id: "2",
+        name: "video-4k-master.mov",
+        kind: "file",
+        status: "error",
+        errorMessage: "Upload failed: file exceeds the 25 MB limit.",
+      },
+    ]);
+    return (
+      <AgentComposer
+        value={value}
+        onChange={setValue}
+        onSubmit={() => setValue("")}
+        placeholder="Ask, or drop files…"
+        onAttach={() => {}}
+        attachments={files}
+        onRemoveFile={(id) => setFiles((f) => f.filter((x) => x.id !== id))}
+        onRetryFile={(id) =>
+          setFiles((f) =>
+            f.map((file) =>
+              file.id === id
+                ? { ...file, status: "uploading", errorMessage: undefined }
+                : file,
+            ),
+          )
+        }
         model={{ value: model, onChange: setModel, models: MODELS }}
         reasoning={{
           value: reasoning,

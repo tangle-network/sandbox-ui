@@ -5,6 +5,7 @@ import {
   Folder,
   Loader2,
   Paperclip,
+  RotateCcw,
   Square,
   Upload,
   X,
@@ -12,12 +13,38 @@ import {
 import * as React from "react";
 import { cn } from "../lib/utils";
 import {
+  validateComposerFiles,
+  type ComposerFileRejection,
+} from "./attachment-validation";
+import {
   AgentSessionControls,
   type AgentSessionHarnessControl,
   type AgentSessionModelControl,
   type AgentSessionProfileControl,
   type AgentSessionReasoningControl,
 } from "./agent-session-controls";
+
+const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/bmp": "bmp",
+  "image/svg+xml": "svg",
+};
+
+/** Matches the generic names browsers give clipboard-pasted bitmaps. */
+function isGenericImageName(name: string): boolean {
+  return /^(image)?(\.[a-z0-9]+)?$/i.test(name.trim());
+}
+
+function imageExtension(file: File): string {
+  const fromMime = IMAGE_EXTENSION_BY_MIME[file.type.toLowerCase()];
+  if (fromMime) return fromMime;
+  const fromName = /\.([a-z0-9]+)$/i.exec(file.name)?.[1];
+  return fromName?.toLowerCase() ?? "png";
+}
 
 /** A staged attachment shown as a chip above the input. */
 export interface ComposerFile {
@@ -28,6 +55,14 @@ export interface ComposerFile {
   /** File count for a folder chip. */
   fileCount?: number;
   status: "pending" | "uploading" | "ready" | "error";
+  /**
+   * Object URL for an image thumbnail. The app owns creation and revocation
+   * (e.g. `URL.createObjectURL` on stage, `URL.revokeObjectURL` on remove) —
+   * the composer only ever reads it.
+   */
+  previewUrl?: string;
+  /** Shown on the chip when `status === "error"`. */
+  errorMessage?: string;
 }
 
 export interface AgentComposerProps {
@@ -76,9 +111,44 @@ export interface AgentComposerProps {
   onAttachFolder?: (files: FileList) => void;
   attachments?: ReadonlyArray<ComposerFile>;
   onRemoveFile?: (id: string) => void;
+  /** When set, chips with `status === "error"` render a retry button. */
+  onRetryFile?: (id: string) => void;
+  /**
+   * File types the composer takes, in the native `<input accept>` grammar.
+   * Enforced on every ingress path — the picker dialog, drag-and-drop, and
+   * clipboard paste — so a type the picker won't offer can't arrive by another
+   * route. Non-matching files go to `onRejectFiles` and never reach
+   * `onAttach`. Folder attach is exempt (directory selection has no native
+   * accept semantics); size/count limits are the app's job in `onAttach`.
+   */
   accept?: string;
+  /**
+   * Called with the files `accept` filtered out of a drop/paste/pick, each
+   * with a human-readable reason. Without it rejection is silent — the same
+   * feedback the native picker gives for a type it won't offer.
+   */
+  onRejectFiles?: (rejections: ComposerFileRejection[]) => void;
   dropTitle?: string;
   dropDescription?: string;
+
+  /**
+   * `canSend` ignores `busy` so Enter/onSubmit keep firing while a turn is
+   * streaming. For composers that queue the next turn instead of blocking on
+   * the current one — the Stop-button rendering rule (`busy && onCancel`) is
+   * unaffected, so the button still flips to Stop while this is set. Default
+   * false.
+   */
+  canSubmitWhileBusy?: boolean;
+
+  /**
+   * Allow submitting with empty text when at least one attachment is staged
+   * (an image-only message). Counts attachments of ANY status — a gate on
+   * `ready` would make Enter silently dead while an upload is in flight,
+   * with no way for the app to explain why. The app's onSubmit owns the send
+   * policy (block, queue, or toast on pending/errored files) and what the
+   * message body becomes. Default false.
+   */
+  canSubmitAttachmentsOnly?: boolean;
 
   /** Cmd/Ctrl+L focuses the input and shows a hint. Default false. */
   focusShortcut?: boolean;
@@ -100,9 +170,11 @@ export interface AgentComposerProps {
  * router-backed composer (no harness) and the sandbox-backed one (with harness).
  *
  * Opt-in extras make it the superset of every app's hand-rolled composer:
- * file/folder attachments with drag-and-drop + chips, a streaming Stop button
- * (`busy` + `onCancel`), a `controls` override slot for bespoke picker rows, and
- * a Cmd/Ctrl+L focus shortcut.
+ * file/folder attachments with drag-and-drop + chips + clipboard paste
+ * (`onAttach` also gates pasting files onto the textarea, auto-naming
+ * generic clipboard image blobs `pasted-image-<n>.<ext>`), a streaming Stop
+ * button (`busy` + `onCancel`), a `controls` override slot for bespoke
+ * picker rows, and a Cmd/Ctrl+L focus shortcut.
  */
 export function AgentComposer({
   value,
@@ -123,9 +195,13 @@ export function AgentComposer({
   onAttachFolder,
   attachments = [],
   onRemoveFile,
+  onRetryFile,
   accept,
+  onRejectFiles,
   dropTitle = "Drop files to add context",
   dropDescription = "They attach to your next message.",
+  canSubmitWhileBusy = false,
+  canSubmitAttachmentsOnly = false,
   focusShortcut = false,
   minRows = 2,
   maxHeight = 200,
@@ -138,6 +214,7 @@ export function AgentComposer({
   const folderInputRef = React.useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
   const dragDepth = React.useRef(0);
+  const pastedImageCount = React.useRef(0);
 
   const resize = React.useCallback(
     (el: HTMLTextAreaElement) => {
@@ -166,7 +243,11 @@ export function AgentComposer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [focusShortcut, disabled]);
 
-  const canSend = !disabled && !busy && value.trim().length > 0;
+  const canSend =
+    !disabled &&
+    (!busy || canSubmitWhileBusy) &&
+    (value.trim().length > 0 ||
+      (canSubmitAttachmentsOnly && attachments.length > 0));
 
   const submit = () => {
     if (!canSend) return;
@@ -198,6 +279,18 @@ export function AgentComposer({
     event.stopPropagation();
     if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
   };
+  // Single funnel for every file ingress (picker, drop, paste): enforce
+  // `accept`, report the rest, hand `onAttach` only what passed.
+  const deliverFiles = (files: File[]) => {
+    if (!onAttach || files.length === 0) return;
+    const { accepted, rejected } = validateComposerFiles(files, { accept });
+    if (rejected.length > 0) onRejectFiles?.(rejected);
+    if (accepted.length === 0) return;
+    const dt = new DataTransfer();
+    for (const file of accepted) dt.items.add(file);
+    onAttach(dt.files);
+  };
+
   const handleDrop = (event: React.DragEvent) => {
     if (!dropEnabled) return;
     event.preventDefault();
@@ -205,7 +298,30 @@ export function AgentComposer({
     dragDepth.current = 0;
     setDragOver(false);
     const files = event.dataTransfer?.files;
-    if (files?.length) onAttach?.(files);
+    if (files?.length) deliverFiles(Array.from(files));
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!onAttach) return;
+    const clipboardFiles = event.clipboardData?.files;
+    if (!clipboardFiles || clipboardFiles.length === 0) return;
+
+    // Files are the payload — suppress the default text paste even when every
+    // file is rejected, so a rejection never half-pastes stray text.
+    event.preventDefault();
+
+    const files = Array.from(clipboardFiles).map((file) => {
+      if (file.type.startsWith("image/") && isGenericImageName(file.name)) {
+        pastedImageCount.current += 1;
+        return new File(
+          [file],
+          `pasted-image-${pastedImageCount.current}.${imageExtension(file)}`,
+          { type: file.type },
+        );
+      }
+      return file;
+    });
+    deliverFiles(files);
   };
 
   const folderChips = attachments.filter((file) => file.kind === "folder");
@@ -247,42 +363,69 @@ export function AgentComposer({
       >
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {[...folderChips, ...fileChips].map((file) => (
-              <span
-                key={file.id}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs",
-                  file.status === "error"
-                    ? "border-[var(--status-error,#ff4d6d)]/40 text-[var(--status-error,#ff4d6d)]"
-                    : "border-[var(--md3-outline-variant)] bg-surface-container text-foreground",
-                )}
-              >
-                {file.kind === "folder" ? (
-                  <Folder className="size-3 shrink-0" />
-                ) : (
-                  <Paperclip className="size-3 shrink-0" />
-                )}
-                <span className="max-w-[150px] truncate">{file.name}</span>
-                {file.fileCount !== undefined && (
-                  <span className="text-muted-foreground">
-                    ({file.fileCount})
-                  </span>
-                )}
-                {file.status === "uploading" && (
-                  <Loader2 className="size-3 animate-spin" />
-                )}
-                {onRemoveFile && (
-                  <button
-                    type="button"
-                    aria-label={`Remove ${file.name}`}
-                    onClick={() => onRemoveFile(file.id)}
-                    className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    <X className="size-3" />
-                  </button>
-                )}
-              </span>
-            ))}
+            {[...folderChips, ...fileChips].map((file) => {
+              const isError = file.status === "error";
+              const isPending = file.status === "pending";
+              return (
+                <span
+                  key={file.id}
+                  title={isError ? file.errorMessage : undefined}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs",
+                    isError
+                      ? "border-[var(--status-error,#ff4d6d)]/40 text-[var(--status-error,#ff4d6d)]"
+                      : "border-[var(--md3-outline-variant)] bg-surface-container text-foreground",
+                    isPending && "opacity-60",
+                  )}
+                >
+                  {file.kind !== "folder" && file.previewUrl ? (
+                    <img
+                      src={file.previewUrl}
+                      alt=""
+                      className="size-8 rounded object-cover"
+                    />
+                  ) : file.kind === "folder" ? (
+                    <Folder className="size-3 shrink-0" />
+                  ) : (
+                    <Paperclip className="size-3 shrink-0" />
+                  )}
+                  <span className="max-w-[150px] truncate">{file.name}</span>
+                  {file.fileCount !== undefined && (
+                    <span className="text-muted-foreground">
+                      ({file.fileCount})
+                    </span>
+                  )}
+                  {file.status === "uploading" && (
+                    <Loader2 className="size-3 animate-spin" />
+                  )}
+                  {isError && file.errorMessage && (
+                    <span className="max-w-[150px] truncate text-[var(--status-error,#ff4d6d)]/80">
+                      {file.errorMessage}
+                    </span>
+                  )}
+                  {isError && onRetryFile && (
+                    <button
+                      type="button"
+                      aria-label={`Retry upload ${file.name}`}
+                      onClick={() => onRetryFile(file.id)}
+                      className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <RotateCcw className="size-3" />
+                    </button>
+                  )}
+                  {onRemoveFile && (
+                    <button
+                      type="button"
+                      aria-label={`Remove ${file.name}`}
+                      onClick={() => onRemoveFile(file.id)}
+                      className="rounded p-0.5 text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </span>
+              );
+            })}
           </div>
         )}
 
@@ -294,6 +437,7 @@ export function AgentComposer({
           autoFocus={autoFocus}
           onChange={(event) => onChange(event.target.value)}
           onInput={(event) => resize(event.currentTarget)}
+          onPaste={handlePaste}
           onKeyDown={(event) => {
             if (
               event.key === "Enter" &&
@@ -345,7 +489,10 @@ export function AgentComposer({
                 className="hidden"
                 accept={accept}
                 onChange={(event) => {
-                  if (event.target.files?.length) onAttach(event.target.files);
+                  // Re-filter: picker dialogs let the user override the
+                  // accept filter with "All Files".
+                  if (event.target.files?.length)
+                    deliverFiles(Array.from(event.target.files));
                   event.target.value = "";
                 }}
               />

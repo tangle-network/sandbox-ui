@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { modelBrandFor } from "./model-brand"
+import { modelBrandFor, resolveModelBrandIdentity } from "./model-brand"
 
 /**
  * `modelBrandFor` is the whole public surface a caller holding a model STRING has:
@@ -42,5 +42,97 @@ describe("modelBrandFor", () => {
     expect(() => modelBrandFor("/")).not.toThrow()
     expect(() => modelBrandFor("///")).not.toThrow()
     expect(modelBrandFor("/")).toBeNull()
+  })
+})
+
+/**
+ * `resolveModelBrandIdentity` is the layer under {@link modelBrandFor}: it takes a
+ * whole `ModelInfo` (which the picker has and a workflow node does not) and answers
+ * WHO hosts the model and WHO made it. Two marks, or one where they are the same.
+ *
+ * Almost all of it is a precedence chain, and a precedence chain is exactly the kind
+ * of thing that reorders silently under a refactor — so each rung gets a test.
+ */
+describe("resolveModelBrandIdentity", () => {
+  it("takes the host and the lab straight from `logos` when they are given", () => {
+    // An explicit override outranks everything the id could imply.
+    const identity = resolveModelBrandIdentity({
+      id: "anthropic/claude-sonnet-4-5",
+      _provider: "openai",
+      logos: { host: "groq", lab: "meta" },
+    })
+    expect(identity.host.key).toBe("groq")
+    expect(identity.lab.key).toBe("meta")
+    expect(identity.combined).toBe(false)
+  })
+
+  it("prefers `hostProvider` over the router's provider fields", () => {
+    // A gateway can serve someone else's model: the HOST is who takes the request.
+    const identity = resolveModelBrandIdentity({
+      id: "claude-sonnet-4-5",
+      hostProvider: "openrouter",
+      _provider: "anthropic",
+      provider: "openai",
+    })
+    expect(identity.host.key).toBe("openrouter")
+  })
+
+  it("falls back through `_provider`, then `provider`, then the id's first segment", () => {
+    expect(
+      resolveModelBrandIdentity({ id: "x", _provider: "groq", provider: "openai" })
+        .host.key,
+    ).toBe("groq")
+    expect(resolveModelBrandIdentity({ id: "x", provider: "openai" }).host.key).toBe(
+      "openai",
+    )
+    expect(resolveModelBrandIdentity({ id: "mistral/mixtral" }).host.key).toBe(
+      "mistral",
+    )
+  })
+
+  it("takes the lab from `modelLab` before inferring it from the id", () => {
+    const identity = resolveModelBrandIdentity({
+      id: "openrouter/some-model",
+      modelLab: "deepseek",
+    })
+    expect(identity.lab.key).toBe("deepseek")
+  })
+
+  it("infers the lab from the model id when nothing declares it", () => {
+    // The id is the last thing left, and usually enough: a name carries its lab.
+    expect(
+      resolveModelBrandIdentity({ id: "openrouter/claude-sonnet-4-5" }).lab.key,
+    ).toBe("anthropic")
+    expect(resolveModelBrandIdentity({ id: "groq/llama-3.3-70b" }).lab.key).toBe(
+      "meta",
+    )
+  })
+
+  it("reports ONE mark when the lab hosts its own model", () => {
+    // `combined` is what decides whether the card draws a stack or a single glyph.
+    expect(
+      resolveModelBrandIdentity({ id: "anthropic/claude-sonnet-4-5" }).combined,
+    ).toBe(true)
+    expect(
+      resolveModelBrandIdentity({ id: "openrouter/anthropic/claude-sonnet-4-5" })
+        .combined,
+    ).toBe(false)
+  })
+
+  it("uses a caller's own artwork over the bundled glyph, and marks it full-colour", () => {
+    // A host-supplied logo may be full-colour art; the bundled marks are monochrome
+    // masks tinted with the foreground token, so the two cannot be rendered alike.
+    const identity = resolveModelBrandIdentity({
+      id: "anthropic/claude-sonnet-4-5",
+      logos: { hostUrl: "https://cdn.example/host.svg" },
+    })
+    expect(identity.host.logoUrl).toBe("https://cdn.example/host.svg")
+    expect(identity.host.monochrome).toBe(false)
+  })
+
+  it("answers with the unknown brand rather than throwing on a model it cannot place", () => {
+    const identity = resolveModelBrandIdentity({ id: "some-internal/model-x" })
+    expect(identity.host.key).toBe("unknown")
+    expect(identity.lab.key).toBe("unknown")
   })
 })

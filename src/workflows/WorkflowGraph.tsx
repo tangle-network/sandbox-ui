@@ -71,6 +71,22 @@ const MUTED_TRACK =
  */
 const FIT_VIEW = { padding: 0.16, minZoom: 0.55, maxZoom: 1 } as const;
 
+/** The same framing, animated. Used when the layout changes UNDER a reader who is
+ *  already looking at the graph (the density toggle) — an instant jump to the new
+ *  viewport reads as the graph being replaced, while a short glide reads as the
+ *  same graph being reframed, which is what actually happened. Short enough not to
+ *  make the toggle feel laggy, and skipped entirely for a reader who asked the
+ *  system for less motion. */
+export function fitViewOnLayoutChange() {
+  // Motion is opt-OUT, so it is only added where the reader's preference can be
+  // read and says nothing against it. Somewhere without `matchMedia` cannot say a
+  // reader tolerates movement, so the graph reframes without it.
+  const moves =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === false;
+  return moves ? { ...FIT_VIEW, duration: 220 } : FIT_VIEW;
+}
+
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
  *  background) themes with the rest of the app. */
 function useColorMode(): ColorMode {
@@ -247,6 +263,10 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   // doesn't grow a vendor prefix the moment the run starts.
   const subtitle =
     isAgent && state?.model ? shortModel(state.model) : d.subtitle;
+  // The brand mark names the SAME model the subtitle does. A run that fell back to
+  // another lab would otherwise sit under its requested lab's logo — an Anthropic
+  // mark beside the words "gpt-5.4".
+  const markModel = isAgent && state?.model ? state.model : d.model;
   // Whether this card may render the bands a RUN adds — the metrics line, the
   // output block, the "nothing to report" line, and the status footer. It mirrors
   // `nodeHeight` (model.ts), which reserves those rows for an action but NOT for a
@@ -354,6 +374,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           <NodeMark
             kind={d.kind}
             provider={d.provider}
+            model={markModel}
             accent={accent}
             tile={Math.round(COMPACT_TILE * 0.62)}
           />
@@ -429,6 +450,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           <NodeMark
             kind={d.kind}
             provider={d.provider}
+            model={markModel}
             accent={accent}
             tile={34}
           />
@@ -646,6 +668,9 @@ export function WorkflowGraph({
   // graph would otherwise be left mis-zoomed. Deferred a frame so it runs after
   // the re-seeded nodes (with their new sizes) commit. A run-state tick doesn't
   // change `structural`, so a live run is never yanked around.
+  //
+  // Animated, because a reader is watching: the nodes resize in place and the
+  // viewport glides to the new framing.
   const didInitialFitRef = useRef(false);
   useEffect(() => {
     // ReactFlow's `fitView` prop already frames the initial render — skip this
@@ -656,9 +681,10 @@ export function WorkflowGraph({
     }
     const inst = rfRef.current;
     if (!inst || typeof requestAnimationFrame === "undefined") return;
-    // cancelAnimationFrame is universally paired with requestAnimationFrame, so
-    // the single guard above covers the cleanup too.
-    const raf = requestAnimationFrame(() => inst.fitView(FIT_VIEW));
+    // Cancelling the frame un-schedules a fit that hasn't run. One already in
+    // flight is left to finish: it only writes the viewport of a store nobody is
+    // reading any more, and React Flow exposes no way to interrupt it.
+    const raf = requestAnimationFrame(() => inst.fitView(fitViewOnLayoutChange()));
     return () => cancelAnimationFrame(raf);
   }, [structural]);
 

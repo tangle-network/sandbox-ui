@@ -30,6 +30,7 @@ import {
   Zap,
 } from "lucide-react";
 import { ProviderIcon } from "../integrations/provider-logo";
+import { ModelBrandStack, modelBrandFor } from "../lib/model-brand";
 import type { WfNodeStatus, WfNodeTone } from "./model";
 import { providerLabel } from "./provider-label";
 
@@ -181,23 +182,30 @@ export const KIND_ICON: Record<string, LucideIcon> = {
 export function NodeMark({
   kind,
   provider,
+  model,
   accent,
   tile,
 }: {
   kind?: string;
   provider?: string;
+  /** The model an agent runs, e.g. "anthropic/claude-sonnet-4-5". Its lab/host
+   *  brand mark identifies the node far faster than a generic sparkle. */
+  model?: string;
   accent: string;
   /** Edge length of the square the mark is centered in. */
   tile: number;
 }) {
   const Icon = (kind && KIND_ICON[kind]) || Circle;
+  // An agent is identified by WHO runs it. A published brand mark says that at a
+  // glance; a model with no mark keeps the kind glyph rather than an invented one.
+  const brand = !provider && model ? modelBrandFor(model) : null;
   // A logo is a full-bleed image, so it fills more of the tile than a line glyph,
   // which needs the surrounding air to stay legible.
   const mark = Math.round(tile * (provider ? 0.58 : 0.5));
   return (
     <span
       aria-hidden="true"
-      className="flex shrink-0 items-center justify-center rounded-lg border border-border"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border"
       style={{
         width: tile,
         height: tile,
@@ -210,6 +218,16 @@ export function NodeMark({
           displayName={providerLabel(provider)}
           size={mark}
           className="rounded-[3px]"
+        />
+      ) : brand ? (
+        // One lab's own model draws ONE mark (28px at `md`) and fills the tile. A
+        // HOSTED model draws two — host behind, lab in front — and that stack is
+        // 36px wide, which would push the lab chip past the border of an expanded
+        // card's 34px tile. So the stacked pair steps down unless the tile can hold
+        // it; the single mark never has to.
+        <ModelBrandStack
+          identity={brand}
+          size={brand.combined || tile >= 38 ? "md" : "sm"}
         />
       ) : (
         <Icon size={mark} strokeWidth={1.75} style={{ color: accent }} />

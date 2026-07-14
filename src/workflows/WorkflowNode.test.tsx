@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 import type { Edge, Node, NodeProps } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { WfNodeData, WfNodeState } from "./model";
+import { buildWorkflowGraph, type WfNodeData, type WfNodeState } from "./model";
 import { classifyOutput, NodeOutputBody } from "./node-output";
 import {
   buildStyledEdges,
   DensityContext,
   DirectionContext,
+  fitViewOnLayoutChange,
   WorkflowGraph,
   WorkflowNode,
 } from "./WorkflowGraph";
@@ -30,6 +31,57 @@ function renderNode(data: WfNodeData) {
       <WorkflowNode {...({ data } as NodeProps<Node<WfNodeData>>)} />
     </ReactFlowProvider>,
   );
+}
+
+describe("reframing the viewport when the layout changes", () => {
+  // The density toggle re-frames the graph under a reader who is already looking at
+  // it, so the viewport GLIDES to its new framing rather than jumping. A reader who
+  // asked the system for less motion gets the framing without the glide.
+  const prefersReducedMotion = (reduce: boolean) =>
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) => ({
+        matches: reduce && query.includes("prefers-reduced-motion"),
+        media: query,
+      }),
+    );
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("glides by default", () => {
+    prefersReducedMotion(false);
+    expect(fitViewOnLayoutChange()).toHaveProperty("duration", 220);
+  });
+
+  it("reframes instantly for a reader who asked for less motion", () => {
+    prefersReducedMotion(true);
+    expect(fitViewOnLayoutChange()).not.toHaveProperty("duration");
+  });
+
+  it("does not move at all where the preference cannot be read", () => {
+    // Motion is opt-OUT. Somewhere without matchMedia cannot tell us a reader
+    // tolerates movement, so it does not get any.
+    vi.stubGlobal("matchMedia", undefined);
+    expect(fitViewOnLayoutChange()).not.toHaveProperty("duration");
+  });
+
+  it("keeps the SAME framing either way — only the transition differs", () => {
+    prefersReducedMotion(true);
+    const still = fitViewOnLayoutChange();
+    prefersReducedMotion(false);
+    const glide = fitViewOnLayoutChange();
+    expect(glide.padding).toBe(still.padding);
+    expect(glide.minZoom).toBe(still.minZoom);
+    expect(glide.maxZoom).toBe(still.maxZoom);
+  });
+});
+
+/** The brand mark inside a node's tile. Queried off the DOM rather than by its
+ *  accessible name: the tile is `aria-hidden` (the mark is decorative — see the test
+ *  below), and `getByLabelText` does NOT prune an aria-hidden subtree, so a name-based
+ *  query would assert something a screen reader never receives. */
+function brandMark(container: HTMLElement, label: string): HTMLElement | null {
+  return container.querySelector<HTMLElement>(`[aria-label="${label}"]`)
 }
 
 describe("buildStyledEdges", () => {
@@ -210,6 +262,101 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("AI Agent")).toBeTruthy();
     expect(screen.getByText("m")).toBeTruthy();
     expect(screen.queryByText("the prompt")).toBeNull();
+  });
+
+  it("marks an agent node with its model's brand", () => {
+    const { container } = renderNode({
+      ...BASE,
+      model: "anthropic/claude-sonnet-4-5",
+    });
+    expect(brandMark(container, "Anthropic")).toBeTruthy();
+  });
+
+  it("does not announce the mark — the model is already read out as TEXT", () => {
+    // The tile is DECORATIVE: it stands for the model, and the model is on the card
+    // in words (the subtitle). A screen reader gets "AI Agent, claude-sonnet-4-5";
+    // announcing the logo too would only say the same thing a second time, so the
+    // tile stays out of the accessibility tree — the same treatment the kind glyph
+    // and the provider icon get.
+    //
+    // Note the mark can only be found by querying the DOM directly: `getByLabelText`
+    // would happily return it (Testing Library does not prune an aria-hidden
+    // subtree), which is exactly the false comfort this test exists to deny.
+    //
+    // Built the way the graph builds it, so the subtitle under test is the real one
+    // rather than a fixture that assumes the answer.
+    const built = buildWorkflowGraph(`
+do:
+  - agent.run:
+      model: anthropic/claude-sonnet-4-5
+      prompt: Review it.
+`).nodes.find((n) => n.id === "a0");
+    const { container } = renderNode(built?.data as WfNodeData);
+
+    expect(
+      brandMark(container, "Anthropic")?.closest("[aria-hidden]"),
+    ).toBeTruthy();
+    // …and the thing it stands for IS announced, in words.
+    expect(screen.getByText("claude-sonnet-4-5")).toBeTruthy();
+  });
+
+  it("marks the model the run ACTUALLY used, not the one it asked for", () => {
+    // The subtitle already shows the actual model once a run is live (a router can
+    // fall back to another lab). The mark has to agree with it, or the card shows
+    // an Anthropic logo beside the words "gpt-5.4".
+    const { container } = renderNode({
+      ...BASE,
+      model: "anthropic/claude-sonnet-4-5",
+      state: { status: "succeeded", model: "openai/gpt-5.4" },
+    });
+    expect(brandMark(container, "OpenAI")).toBeTruthy();
+    expect(brandMark(container, "Anthropic")).toBeNull();
+  });
+
+  it("steps a HOSTED model's two-mark stack down so it can't overflow the tile", () => {
+    // One lab's own model is a single 28px mark and fills the expanded card's 34px
+    // tile. A hosted model stacks host + lab, and that pair is 36px wide — wider
+    // than the tile, so the lab chip would hang over the border.
+    const { container } = renderNode({
+      ...BASE,
+      model: "openrouter/anthropic/claude-sonnet-4-5",
+    });
+    const stack = container.querySelector('[aria-label*="hosting"]');
+    expect(stack).toBeTruthy();
+    // The narrow stack (h-4 w-6 = 16×24), not the wide one (h-7 w-9 = 28×36).
+    expect(stack?.className).toContain("w-6");
+    expect(stack?.className).not.toContain("w-9");
+  });
+
+  it("keeps a single lab's mark at full size — it was never the one that overflowed", () => {
+    const { container } = renderNode({
+      ...BASE,
+      model: "anthropic/claude-sonnet-4-5",
+    });
+    expect(container.querySelector('[aria-label="Anthropic"]')?.className).toContain(
+      "h-7",
+    );
+  });
+
+  it("leaves an integration node's PROVIDER mark alone", () => {
+    // A model brand belongs to an agent. On an integration node the provider IS the
+    // identity (n8n's rule, and what the title says), so it keeps its own logo — the
+    // model brand must not take the tile from it.
+    const { container } = renderNode({
+      ...BASE,
+      kind: "integration.invoke",
+      provider: "github",
+      model: "anthropic/claude-sonnet-4-5",
+    });
+    expect(container.querySelector('[aria-label="Anthropic"]')).toBeNull();
+  });
+
+  it("keeps the kind glyph for a model with no published mark", () => {
+    // An unknown provider keeps the generic icon rather than getting an invented
+    // logo.
+    const { container } = renderNode({ ...BASE, model: "some-internal/model-x" });
+    expect(brandMark(container, "Anthropic")).toBeNull();
+    expect(brandMark(container, "OpenAI")).toBeNull();
   });
 
   it("anchors a compact node's handles to its TILE, not to the box that holds its name", () => {

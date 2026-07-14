@@ -85,6 +85,69 @@ do:
     expect(agent?.data.model).toBe("anthropic/claude-sonnet-5");
   });
 
+  it("does not mangle a minted catalog id into a name", () => {
+    // The platform mints a stored profile's id as `ap_` + random bytes. Humanising
+    // it produces noise ("Ap nro qux n7d c7 ll30") that names nothing, and the
+    // catalog that could resolve it lives in the host, not here — so the node stays
+    // the generic agent and the host titles it if it can.
+    const yaml = `
+do:
+  - agent.run:
+      profile: ap_NROQux-n7dC7Ll30
+      model: anthropic/claude-sonnet-5
+      prompt: Review it.
+`;
+    const agent = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(agent?.data.title).toBe("AI Agent");
+    // The readable-slug case is untouched.
+    expect(
+      buildWorkflowGraph(`
+do:
+  - agent.run:
+      profile: pr-reviewer
+      prompt: Review it.
+`).nodes.find((n) => n.id === "a0")?.data.title,
+    ).toBe("PR reviewer");
+  });
+
+  it("keeps a human-authored slug that merely BEGINS with the minted prefix", () => {
+    // A minted id is `ap_` + exactly 16 base64url chars. Matching `ap_` + "8 or
+    // more" would also swallow a name a person wrote, replacing it with "AI Agent".
+    const title = (profile: string) =>
+      buildWorkflowGraph(`
+do:
+  - agent.run:
+      profile: ${profile}
+      prompt: Review it.
+`).nodes.find((n) => n.id === "a0")?.data.title;
+
+    expect(title("ap_code_review")).toBe("Ap code review");
+    expect(title("ap_analytics_bot")).toBe("Ap analytics bot");
+    // …while the real thing is still recognised.
+    expect(title("ap_NROQux-n7dC7Ll30")).toBe("AI Agent");
+  });
+
+  it("recognises a minted id by its EXACT length, one character either side", () => {
+    // `ap_` + 12 random bytes as base64url is exactly 16 characters. The boundary is
+    // where an off-by-one would hide: one short and a real minted id gets humanised
+    // into noise; one long and a name a person wrote gets replaced by "AI Agent".
+    const title = (profile: string) =>
+      buildWorkflowGraph(`
+do:
+  - agent.run:
+      profile: ${profile}
+      prompt: Review it.
+`).nodes.find((n) => n.id === "a0")?.data.title;
+
+    const minted = "ap_NROQux-n7dC7Ll30";
+    expect(minted.length - "ap_".length).toBe(16);
+    expect(title(minted)).toBe("AI Agent");
+
+    // 15 and 17 are not the shape the platform mints, so they are somebody's name.
+    expect(title(minted.slice(0, -1))).not.toBe("AI Agent");
+    expect(title(`${minted}X`)).not.toBe("AI Agent");
+  });
+
   it("falls back to a generic agent name when the profile is inline (unnamed)", () => {
     const yaml = `
 do:

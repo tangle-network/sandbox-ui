@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.81.0
+
+### Workflows
+
+- **An agent node says WHO runs it.** A node whose profile is a minted catalog id (`ap_` + 16 random characters) was titled by humanising that id — "Ap nro qux n7d c7 ll30", which names nothing and cannot be resolved without the host's catalog. It is now the generic **"AI Agent"**, carrying the brand mark of the model it runs, resolved from the model slug alone. A model with no published mark keeps its kind glyph rather than getting an invented logo. A human-authored slug is untouched — the minted-id shape is pinned to its exact length, so `ap_code_review` stays "Ap code review".
+- **The mark names the model the run ACTUALLY used.** The subtitle already yields to `state.model` once a run is live (a router can fall back to another lab); the mark now agrees with it, so a fallback run can't show one lab's logo beside another lab's name.
+- **The graph reframes itself when density changes.** Node ids and count are unchanged across a compact/expanded flip, so React Flow won't auto-fit and the graph was left mis-zoomed. It now refits — and *glides* to the new framing rather than jumping, because the reader is watching it happen. Motion is opt-out: a reader who asked for `prefers-reduced-motion`, or an environment that cannot report the preference, gets the framing without the movement.
+
+### Dashboard
+
+- **New API:** `modelBrandFor(model: string)` and `ModelBrandStack` (exported from `./dashboard`) — the mark for a model, resolved from the id alone, so any surface holding a model string shows the same glyph the picker does instead of deriving one of its own. Returns `null` for a model with no published mark.
+
+### Internal
+
+- The brand table, its resolution, and the marks move to a leaf module. Rendering a mark previously meant importing from the model picker, and a bundler cannot split a source module — so the `./workflows` entry pulled in the entire picker (`@radix-ui/react-dropdown-menu`, the `ModelPicker` component and its rows). A consumer rendering a workflow graph downloaded a dropdown it never shows. The picker re-exports the leaf, so nothing about the public API changes.
+
 ## 0.80.0
 
 ### Chat

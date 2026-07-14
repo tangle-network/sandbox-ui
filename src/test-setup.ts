@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom/vitest"
+import {
+  installMemoryStorage,
+  needsMemoryStorage,
+} from "./test-support/memory-storage"
 
 // jsdom lacks the pointer-capture, scroll, and resize-observer APIs that
 // Radix UI primitives (e.g. Select) call during interaction. Provide no-op
@@ -21,6 +25,19 @@ if (!globalThis.ResizeObserver) {
     unobserve() {}
     disconnect() {}
   }
+}
+
+// A usable `localStorage` for anything that persists a preference. Both the
+// "missing" and the "throws on read" cases, and why they exist, are documented on
+// the helper — which is exported so they can be TESTED rather than asserted in a
+// comment (see memory-storage.test.ts).
+//
+// The store is per-PROCESS, not per-file: this property is not one jsdom created, so
+// the environment teardown does not delete it. That is only harmless while vitest
+// runs each test file in its own process (`isolate`, the default) — turn isolation
+// off and this Map would carry state between files.
+if (needsMemoryStorage(globalThis)) {
+  installMemoryStorage(globalThis)
 }
 
 // jsdom does not implement DataTransfer (https://github.com/jsdom/jsdom/issues/1568),

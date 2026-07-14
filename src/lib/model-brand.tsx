@@ -12,7 +12,7 @@
 
 import type { ReasoningEffort } from "@tangle-network/agent-interface";
 import { TangleKnot } from "@tangle-network/brand";
-import { ProviderLogo } from "../dashboard/provider-logo";
+import { ProviderLogo } from "./provider-logo";
 import { cn } from "./utils";
 import ai21Logo from "@lobehub/icons-static-svg/icons/ai21.svg";
 import alibabaLogo from "@lobehub/icons-static-svg/icons/alibaba.svg";

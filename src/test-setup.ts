@@ -34,7 +34,19 @@ if (!globalThis.ResizeObserver) {
 // so the environment teardown does not delete it. That is only harmless while
 // vitest runs each test file in its own process (`isolate`, the default) — turn
 // isolation off and this Map would carry state between files.
-if (!globalThis.localStorage) {
+//
+// Reading it is itself guarded: where localStorage is a real getter it can THROW
+// rather than return undefined (jsdom raises SecurityError on an opaque origin), and
+// an unguarded probe would take this setup file down before the replacement is
+// installed — the one case the replacement exists for.
+let needsLocalStorage: boolean
+try {
+  needsLocalStorage = !globalThis.localStorage
+} catch {
+  needsLocalStorage = true
+}
+
+if (needsLocalStorage) {
   const entries = new Map<string, string>()
   const storage: Storage = {
     get length() {

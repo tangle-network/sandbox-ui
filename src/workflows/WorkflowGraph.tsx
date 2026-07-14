@@ -10,6 +10,8 @@ import {
   type ColorMode,
   Controls,
   type Edge,
+  getNodesBounds,
+  getViewportForBounds,
   Handle,
   MarkerType,
   type Node,
@@ -608,6 +610,9 @@ export function WorkflowGraph({
   const [userCompact, setUserCompact] = useState(defaultCompact);
   const compact = isPreview || userCompact;
   const rfRef = useRef<ReactFlowInstance<Node<WfNodeData>> | null>(null);
+  // The canvas wrapper — measured when reframing, since the viewport math needs
+  // the frame's real width/height and the RF instance doesn't expose them.
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   // Structural graph from the YAML alone — STABLE across nodeState ticks. Built
   // with run-state spacing reserved whenever a run overlay is in play (nodeState
@@ -666,8 +671,14 @@ export function WorkflowGraph({
   // orientation, the density toggle, or a run-overlay transition) — node ids/count
   // are unchanged across a density flip, so React Flow won't auto-fit and the
   // graph would otherwise be left mis-zoomed. Deferred a frame so it runs after
-  // the re-seeded nodes (with their new sizes) commit. A run-state tick doesn't
-  // change `structural`, so a live run is never yanked around.
+  // the re-seeded nodes commit. A run-state tick doesn't change `structural`,
+  // so a live run is never yanked around.
+  //
+  // The viewport is computed from the STRUCTURAL nodes' own geometry — the
+  // layouter's authoritative position + size for exactly this layout — never
+  // from `fitView`, which reads React Flow's MEASURED node boxes. Measurement
+  // (a ResizeObserver) lags a density flip by a frame or more, so a fitView
+  // here raced it and framed the OLD node sizes as often as the new ones.
   //
   // Animated, because a reader is watching: the nodes resize in place and the
   // viewport glides to the new framing.
@@ -680,11 +691,30 @@ export function WorkflowGraph({
       return;
     }
     const inst = rfRef.current;
-    if (!inst || typeof requestAnimationFrame === "undefined") return;
-    // Cancelling the frame un-schedules a fit that hasn't run. One already in
-    // flight is left to finish: it only writes the viewport of a store nobody is
-    // reading any more, and React Flow exposes no way to interrupt it.
-    const raf = requestAnimationFrame(() => inst.fitView(fitViewOnLayoutChange()));
+    const wrapper = wrapperRef.current;
+    if (!inst || !wrapper || typeof requestAnimationFrame === "undefined") {
+      return;
+    }
+    // Cancelling the frame un-schedules a reframe that hasn't run. One already
+    // in flight is left to finish: it only writes the viewport of a store nobody
+    // is reading any more, and React Flow exposes no way to interrupt it.
+    const raf = requestAnimationFrame(() => {
+      const { width, height } = wrapper.getBoundingClientRect();
+      // A hidden canvas (display:none ancestor) has no frame to fit into.
+      if (width === 0 || height === 0) return;
+      const options = fitViewOnLayoutChange();
+      inst.setViewport(
+        getViewportForBounds(
+          getNodesBounds(structural.nodes),
+          width,
+          height,
+          options.minZoom,
+          options.maxZoom,
+          options.padding,
+        ),
+        "duration" in options ? { duration: options.duration } : undefined,
+      );
+    });
     return () => cancelAnimationFrame(raf);
   }, [structural]);
 
@@ -708,7 +738,7 @@ export function WorkflowGraph({
   return (
     <DirectionContext.Provider value={direction}>
       <DensityContext.Provider value={compact}>
-      <div className={`wf-graph ${className ?? ""}`}>
+      <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

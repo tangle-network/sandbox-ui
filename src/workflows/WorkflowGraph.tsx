@@ -71,6 +71,13 @@ const MUTED_TRACK =
  */
 const FIT_VIEW = { padding: 0.16, minZoom: 0.55, maxZoom: 1 } as const;
 
+/** The same framing, animated. Used when the layout changes UNDER a reader who is
+ *  already looking at the graph (the density toggle) — an instant jump to the new
+ *  viewport reads as the graph being replaced, while a short glide reads as the
+ *  same graph being reframed, which is what actually happened. Short enough not to
+ *  make the toggle feel laggy. */
+const FIT_VIEW_ANIMATED = { ...FIT_VIEW, duration: 220 } as const;
+
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
  *  background) themes with the rest of the app. */
 function useColorMode(): ColorMode {
@@ -648,6 +655,9 @@ export function WorkflowGraph({
   // graph would otherwise be left mis-zoomed. Deferred a frame so it runs after
   // the re-seeded nodes (with their new sizes) commit. A run-state tick doesn't
   // change `structural`, so a live run is never yanked around.
+  //
+  // Animated, because a reader is watching: the nodes resize in place and the
+  // viewport glides to the new framing.
   const didInitialFitRef = useRef(false);
   useEffect(() => {
     // ReactFlow's `fitView` prop already frames the initial render — skip this
@@ -660,7 +670,7 @@ export function WorkflowGraph({
     if (!inst || typeof requestAnimationFrame === "undefined") return;
     // cancelAnimationFrame is universally paired with requestAnimationFrame, so
     // the single guard above covers the cleanup too.
-    const raf = requestAnimationFrame(() => inst.fitView(FIT_VIEW));
+    const raf = requestAnimationFrame(() => inst.fitView(FIT_VIEW_ANIMATED));
     return () => cancelAnimationFrame(raf);
   }, [structural]);
 

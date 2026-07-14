@@ -30,7 +30,7 @@ import {
   Zap,
 } from "lucide-react";
 import { ProviderIcon } from "../integrations/provider-logo";
-import { ModelBrandStack, modelBrandFor } from "../dashboard/model-picker";
+import { ModelBrandStack, modelBrandFor } from "../lib/model-brand";
 import type { WfNodeStatus, WfNodeTone } from "./model";
 import { providerLabel } from "./provider-label";
 
@@ -205,7 +205,7 @@ export function NodeMark({
   return (
     <span
       aria-hidden="true"
-      className="flex shrink-0 items-center justify-center rounded-lg border border-border"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border"
       style={{
         width: tile,
         height: tile,
@@ -220,7 +220,10 @@ export function NodeMark({
           className="rounded-[3px]"
         />
       ) : brand ? (
-        <ModelBrandStack identity={brand} size={tile >= 30 ? "md" : "sm"} />
+        // A hosted model draws TWO marks (host + lab), and the `md` stack is 36px
+        // wide — wider than an expanded card's 34px tile, which would push the lab
+        // chip out past the border. `md` only where the tile can hold it.
+        <ModelBrandStack identity={brand} size={tile >= 38 ? "md" : "sm"} />
       ) : (
         <Icon size={mark} strokeWidth={1.75} style={{ color: accent }} />
       )}

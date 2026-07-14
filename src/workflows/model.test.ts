@@ -110,6 +110,23 @@ do:
     ).toBe("PR reviewer");
   });
 
+  it("keeps a human-authored slug that merely BEGINS with the minted prefix", () => {
+    // A minted id is `ap_` + exactly 16 base64url chars. Matching `ap_` + "8 or
+    // more" would also swallow a name a person wrote, replacing it with "AI Agent".
+    const title = (profile: string) =>
+      buildWorkflowGraph(`
+do:
+  - agent.run:
+      profile: ${profile}
+      prompt: Review it.
+`).nodes.find((n) => n.id === "a0")?.data.title;
+
+    expect(title("ap_code_review")).toBe("Ap code review");
+    expect(title("ap_analytics_bot")).toBe("Ap analytics bot");
+    // …while the real thing is still recognised.
+    expect(title("ap_NROQux-n7dC7Ll30")).toBe("AI Agent");
+  });
+
   it("falls back to a generic agent name when the profile is inline (unnamed)", () => {
     const yaml = `
 do:

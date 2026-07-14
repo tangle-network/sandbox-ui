@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { Edge, Node, NodeProps } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { WfNodeData, WfNodeState } from "./model";
 import { classifyOutput, NodeOutputBody } from "./node-output";
@@ -9,6 +9,7 @@ import {
   buildStyledEdges,
   DensityContext,
   DirectionContext,
+  fitViewOnLayoutChange,
   WorkflowGraph,
   WorkflowNode,
 } from "./WorkflowGraph";
@@ -31,6 +32,42 @@ function renderNode(data: WfNodeData) {
     </ReactFlowProvider>,
   );
 }
+
+describe("reframing the viewport when the layout changes", () => {
+  // The density toggle re-frames the graph under a reader who is already looking at
+  // it, so the viewport GLIDES to its new framing rather than jumping. A reader who
+  // asked the system for less motion gets the framing without the glide.
+  const prefersReducedMotion = (reduce: boolean) =>
+    vi.stubGlobal(
+      "matchMedia",
+      (query: string) => ({
+        matches: reduce && query.includes("prefers-reduced-motion"),
+        media: query,
+      }),
+    );
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("glides by default", () => {
+    prefersReducedMotion(false);
+    expect(fitViewOnLayoutChange()).toHaveProperty("duration", 220);
+  });
+
+  it("reframes instantly for a reader who asked for less motion", () => {
+    prefersReducedMotion(true);
+    expect(fitViewOnLayoutChange()).not.toHaveProperty("duration");
+  });
+
+  it("keeps the SAME framing either way — only the transition differs", () => {
+    prefersReducedMotion(true);
+    const still = fitViewOnLayoutChange();
+    prefersReducedMotion(false);
+    const glide = fitViewOnLayoutChange();
+    expect(glide.padding).toBe(still.padding);
+    expect(glide.minZoom).toBe(still.minZoom);
+    expect(glide.maxZoom).toBe(still.maxZoom);
+  });
+});
 
 describe("buildStyledEdges", () => {
   const edge = (source: string, target: string): Edge => ({
@@ -210,6 +247,57 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("AI Agent")).toBeTruthy();
     expect(screen.getByText("m")).toBeTruthy();
     expect(screen.queryByText("the prompt")).toBeNull();
+  });
+
+  it("marks an agent node with its model's brand", () => {
+    renderNode({ ...BASE, model: "anthropic/claude-sonnet-4-5" });
+    expect(screen.getByLabelText("Anthropic")).toBeTruthy();
+  });
+
+  it("marks the model the run ACTUALLY used, not the one it asked for", () => {
+    // The subtitle already shows the actual model once a run is live (a router can
+    // fall back to another lab). The mark has to agree with it, or the card shows
+    // an Anthropic logo beside the words "gpt-5.4".
+    renderNode({
+      ...BASE,
+      model: "anthropic/claude-sonnet-4-5",
+      state: { status: "succeeded", model: "openai/gpt-5.4" },
+    });
+    expect(screen.getByLabelText("OpenAI")).toBeTruthy();
+    expect(screen.queryByLabelText("Anthropic")).toBeNull();
+  });
+
+  it("steps a HOSTED model's two-mark stack down so it can't overflow the tile", () => {
+    // One lab's own model is a single 28px mark and fills the expanded card's 34px
+    // tile. A hosted model stacks host + lab, and that pair is 36px wide — wider
+    // than the tile, so the lab chip would hang over the border.
+    const { container } = renderNode({
+      ...BASE,
+      model: "openrouter/anthropic/claude-sonnet-4-5",
+    });
+    const stack = container.querySelector('[aria-label*="hosting"]');
+    expect(stack).toBeTruthy();
+    // The narrow stack (h-4 w-6 = 16×24), not the wide one (h-7 w-9 = 28×36).
+    expect(stack?.className).toContain("w-6");
+    expect(stack?.className).not.toContain("w-9");
+  });
+
+  it("keeps a single lab's mark at full size — it was never the one that overflowed", () => {
+    const { container } = renderNode({
+      ...BASE,
+      model: "anthropic/claude-sonnet-4-5",
+    });
+    expect(container.querySelector('[aria-label="Anthropic"]')?.className).toContain(
+      "h-7",
+    );
+  });
+
+  it("keeps the kind glyph for a model with no published mark", () => {
+    // An unknown provider keeps the generic icon rather than getting an invented
+    // logo.
+    renderNode({ ...BASE, model: "some-internal/model-x" });
+    expect(screen.queryByLabelText("Anthropic")).toBeNull();
+    expect(screen.queryByLabelText("OpenAI")).toBeNull();
   });
 
   it("anchors a compact node's handles to its TILE, not to the box that holds its name", () => {

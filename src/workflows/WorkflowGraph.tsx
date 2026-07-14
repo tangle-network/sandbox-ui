@@ -77,7 +77,7 @@ const FIT_VIEW = { padding: 0.16, minZoom: 0.55, maxZoom: 1 } as const;
  *  same graph being reframed, which is what actually happened. Short enough not to
  *  make the toggle feel laggy, and skipped entirely for a reader who asked the
  *  system for less motion. */
-function fitViewOnLayoutChange() {
+export function fitViewOnLayoutChange() {
   const still =
     typeof window !== "undefined" &&
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
@@ -260,6 +260,10 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   // doesn't grow a vendor prefix the moment the run starts.
   const subtitle =
     isAgent && state?.model ? shortModel(state.model) : d.subtitle;
+  // The brand mark names the SAME model the subtitle does. A run that fell back to
+  // another lab would otherwise sit under its requested lab's logo — an Anthropic
+  // mark beside the words "gpt-5.4".
+  const markModel = isAgent && state?.model ? state.model : d.model;
   // Whether this card may render the bands a RUN adds — the metrics line, the
   // output block, the "nothing to report" line, and the status footer. It mirrors
   // `nodeHeight` (model.ts), which reserves those rows for an action but NOT for a
@@ -367,7 +371,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           <NodeMark
             kind={d.kind}
             provider={d.provider}
-            model={d.model}
+            model={markModel}
             accent={accent}
             tile={Math.round(COMPACT_TILE * 0.62)}
           />
@@ -443,7 +447,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           <NodeMark
             kind={d.kind}
             provider={d.provider}
-            model={d.model}
+            model={markModel}
             accent={accent}
             tile={34}
           />

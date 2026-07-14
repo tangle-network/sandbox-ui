@@ -220,10 +220,15 @@ export function NodeMark({
           className="rounded-[3px]"
         />
       ) : brand ? (
-        // A hosted model draws TWO marks (host + lab), and the `md` stack is 36px
-        // wide — wider than an expanded card's 34px tile, which would push the lab
-        // chip out past the border. `md` only where the tile can hold it.
-        <ModelBrandStack identity={brand} size={tile >= 38 ? "md" : "sm"} />
+        // One lab's own model draws ONE mark (28px at `md`) and fills the tile. A
+        // HOSTED model draws two — host behind, lab in front — and that stack is
+        // 36px wide, which would push the lab chip past the border of an expanded
+        // card's 34px tile. So the stacked pair steps down unless the tile can hold
+        // it; the single mark never has to.
+        <ModelBrandStack
+          identity={brand}
+          size={brand.combined || tile >= 38 ? "md" : "sm"}
+        />
       ) : (
         <Icon size={mark} strokeWidth={1.75} style={{ color: accent }} />
       )}

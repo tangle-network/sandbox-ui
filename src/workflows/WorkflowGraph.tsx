@@ -75,8 +75,14 @@ const FIT_VIEW = { padding: 0.16, minZoom: 0.55, maxZoom: 1 } as const;
  *  already looking at the graph (the density toggle) — an instant jump to the new
  *  viewport reads as the graph being replaced, while a short glide reads as the
  *  same graph being reframed, which is what actually happened. Short enough not to
- *  make the toggle feel laggy. */
-const FIT_VIEW_ANIMATED = { ...FIT_VIEW, duration: 220 } as const;
+ *  make the toggle feel laggy, and skipped entirely for a reader who asked the
+ *  system for less motion. */
+function fitViewOnLayoutChange() {
+  const still =
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+  return still ? FIT_VIEW : { ...FIT_VIEW, duration: 220 };
+}
 
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
  *  background) themes with the rest of the app. */
@@ -668,9 +674,10 @@ export function WorkflowGraph({
     }
     const inst = rfRef.current;
     if (!inst || typeof requestAnimationFrame === "undefined") return;
-    // cancelAnimationFrame is universally paired with requestAnimationFrame, so
-    // the single guard above covers the cleanup too.
-    const raf = requestAnimationFrame(() => inst.fitView(FIT_VIEW_ANIMATED));
+    // Cancelling the frame un-schedules a fit that hasn't run. One already in
+    // flight is left to finish: it only writes the viewport of a store nobody is
+    // reading any more, and React Flow exposes no way to interrupt it.
+    const raf = requestAnimationFrame(() => inst.fitView(fitViewOnLayoutChange()));
     return () => cancelAnimationFrame(raf);
   }, [structural]);
 

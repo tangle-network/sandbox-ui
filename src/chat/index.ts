@@ -47,6 +47,13 @@ export {
 } from "./agent-composer";
 
 export {
+  isAcceptedType,
+  validateComposerFiles,
+  type ComposerFileRejection,
+  type ComposerFileValidationConfig,
+} from "./attachment-validation";
+
+export {
   AgentProfilePicker,
   type AgentProfileCapability,
   type AgentProfileDraft,

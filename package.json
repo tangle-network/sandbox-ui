@@ -1,7 +1,7 @@
 {
   "name": "@tangle-network/sandbox-ui",
-  "version": "0.81.0",
-  "description": "Unified UI component library for Tangle Sandbox — primitives, chat, dashboard, terminal, editor, and workspace components",
+  "version": "0.82.0",
+  "description": "Unified UI component library for Tangle Sandbox \u2014 primitives, chat, dashboard, terminal, editor, and workspace components",
   "repository": {
     "type": "git",
     "url": "https://github.com/tangle-network/sandbox-ui"

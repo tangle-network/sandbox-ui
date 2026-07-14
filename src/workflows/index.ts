@@ -27,3 +27,14 @@ export {
 // WorkflowGraph component is reached only through the lazy wrapper's import().
 export type { WorkflowGraphProps } from "./WorkflowGraph";
 export { WorkflowGraph as WorkflowGraphLazy } from "./WorkflowGraphLazy";
+
+// The brand mark of the model a node ran on. The graph's own node cards resolve and
+// render these (node-ui.tsx), so a host labelling a node OUTSIDE the canvas — a side
+// panel, a run row — reaches for the same two symbols. Exported here so it can have
+// them without importing the dashboard entry, which drags the whole model-picker /
+// widget surface in behind them.
+export {
+  type ModelBrandIdentity,
+  ModelBrandStack,
+  modelBrandFor,
+} from "../lib/model-brand";

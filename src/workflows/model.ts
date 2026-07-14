@@ -359,12 +359,20 @@ function actionKind(rec: Record<string, unknown>): string | undefined {
   return Object.keys(rec).find((k) => !CONTROL_FLOW.has(k));
 }
 
-/** The agent's name: a named profile reads as the role it plays ("pr-reviewer" →
- *  "PR reviewer"); an inline profile object has no name to show, so the node is
- *  the generic agent. */
+/** An id the platform MINTED for a stored profile (`ap_` + random bytes). It names
+ *  the profile to a database, not to a reader — humanising it yields noise
+ *  ("ap_NROQux-n7dC7Ll30" → "Ap nro qux n7d c7 ll30"), and only the host holds the
+ *  catalog that could resolve it to a name. */
+const MINTED_PROFILE_ID = /^ap_[A-Za-z0-9_-]{8,}$/;
+
+/** The agent's name: a profile named by a readable slug reads as the role it plays
+ *  ("pr-reviewer" → "PR reviewer"). An inline profile object, or one named only by
+ *  a minted catalog id, has no readable name here — the node is the generic agent
+ *  rather than a mangled identifier. */
 function agentTitle(profile: unknown): string {
   const named = str(profile);
-  return named ? humanizeIdentifier(named) : "AI Agent";
+  if (!named || MINTED_PROFILE_ID.test(named)) return "AI Agent";
+  return humanizeIdentifier(named);
 }
 
 /** Build the card-facing node data for a single `do` leaf or top-level action.

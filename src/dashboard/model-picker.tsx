@@ -778,6 +778,23 @@ function ModelRow({
   );
 }
 
+/**
+ * The brand identity to show for a model id, or `null` when no published mark
+ * exists for it — a caller then falls back to its own generic glyph rather than
+ * rendering an empty chip or inventing a logo.
+ *
+ * Takes the bare id ("anthropic/claude-sonnet-4-5") so a surface that knows only
+ * the model string — a workflow node, a run header — can render the same mark the
+ * picker does.
+ */
+export function modelBrandFor(model: string): ModelBrandIdentity | null {
+  const trimmed = model.trim();
+  if (!trimmed) return null;
+  const identity = resolveModelBrandIdentity({ id: trimmed });
+  const real = hasRealLogo(identity.host) || hasRealLogo(identity.lab);
+  return real ? identity : null;
+}
+
 export function ModelBrandStack({ identity, size }: { identity: ModelBrandIdentity; size: "sm" | "md" }) {
   if (identity.combined) return <BrandLogo brand={identity.lab} size={size} />;
   const hasHostLogo = hasRealLogo(identity.host);

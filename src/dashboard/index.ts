@@ -134,6 +134,15 @@ export {
   type ModelPickerProps,
   type ModelPickerVariant,
   type ModelInfo,
+  // The model's brand mark, so any surface that knows a model id — a workflow
+  // node, a run header — shows the same glyph the picker does instead of
+  // re-deriving one.
+  ModelBrandStack,
+  modelBrandFor,
+  resolveModelBrandIdentity,
+  type ModelBrandIdentity,
+  type ModelBrandInfo,
+  type ModelBrandKey,
 } from "./model-picker";
 export {
   BillingDashboard,

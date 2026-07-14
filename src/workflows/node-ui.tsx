@@ -30,6 +30,7 @@ import {
   Zap,
 } from "lucide-react";
 import { ProviderIcon } from "../integrations/provider-logo";
+import { ModelBrandStack, modelBrandFor } from "../dashboard/model-picker";
 import type { WfNodeStatus, WfNodeTone } from "./model";
 import { providerLabel } from "./provider-label";
 
@@ -181,16 +182,23 @@ export const KIND_ICON: Record<string, LucideIcon> = {
 export function NodeMark({
   kind,
   provider,
+  model,
   accent,
   tile,
 }: {
   kind?: string;
   provider?: string;
+  /** The model an agent runs, e.g. "anthropic/claude-sonnet-4-5". Its lab/host
+   *  brand mark identifies the node far faster than a generic sparkle. */
+  model?: string;
   accent: string;
   /** Edge length of the square the mark is centered in. */
   tile: number;
 }) {
   const Icon = (kind && KIND_ICON[kind]) || Circle;
+  // An agent is identified by WHO runs it. A published brand mark says that at a
+  // glance; a model with no mark keeps the kind glyph rather than an invented one.
+  const brand = !provider && model ? modelBrandFor(model) : null;
   // A logo is a full-bleed image, so it fills more of the tile than a line glyph,
   // which needs the surrounding air to stay legible.
   const mark = Math.round(tile * (provider ? 0.58 : 0.5));
@@ -211,6 +219,8 @@ export function NodeMark({
           size={mark}
           className="rounded-[3px]"
         />
+      ) : brand ? (
+        <ModelBrandStack identity={brand} size={tile >= 30 ? "md" : "sm"} />
       ) : (
         <Icon size={mark} strokeWidth={1.75} style={{ color: accent }} />
       )}

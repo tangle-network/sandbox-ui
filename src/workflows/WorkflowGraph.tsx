@@ -354,6 +354,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           <NodeMark
             kind={d.kind}
             provider={d.provider}
+            model={d.model}
             accent={accent}
             tile={Math.round(COMPACT_TILE * 0.62)}
           />
@@ -429,6 +430,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           <NodeMark
             kind={d.kind}
             provider={d.provider}
+            model={d.model}
             accent={accent}
             tile={34}
           />

@@ -85,6 +85,31 @@ do:
     expect(agent?.data.model).toBe("anthropic/claude-sonnet-5");
   });
 
+  it("does not mangle a minted catalog id into a name", () => {
+    // The platform mints a stored profile's id as `ap_` + random bytes. Humanising
+    // it produces noise ("Ap nro qux n7d c7 ll30") that names nothing, and the
+    // catalog that could resolve it lives in the host, not here — so the node stays
+    // the generic agent and the host titles it if it can.
+    const yaml = `
+do:
+  - agent.run:
+      profile: ap_NROQux-n7dC7Ll30
+      model: anthropic/claude-sonnet-5
+      prompt: Review it.
+`;
+    const agent = buildWorkflowGraph(yaml).nodes.find((n) => n.id === "a0");
+    expect(agent?.data.title).toBe("AI Agent");
+    // The readable-slug case is untouched.
+    expect(
+      buildWorkflowGraph(`
+do:
+  - agent.run:
+      profile: pr-reviewer
+      prompt: Review it.
+`).nodes.find((n) => n.id === "a0")?.data.title,
+    ).toBe("PR reviewer");
+  });
+
   it("falls back to a generic agent name when the profile is inline (unnamed)", () => {
     const yaml = `
 do:

@@ -13,6 +13,10 @@ import {
 import * as React from "react";
 import { cn } from "../lib/utils";
 import {
+  validateComposerFiles,
+  type ComposerFileRejection,
+} from "./attachment-validation";
+import {
   AgentSessionControls,
   type AgentSessionHarnessControl,
   type AgentSessionModelControl,
@@ -109,7 +113,21 @@ export interface AgentComposerProps {
   onRemoveFile?: (id: string) => void;
   /** When set, chips with `status === "error"` render a retry button. */
   onRetryFile?: (id: string) => void;
+  /**
+   * File types the composer takes, in the native `<input accept>` grammar.
+   * Enforced on every ingress path — the picker dialog, drag-and-drop, and
+   * clipboard paste — so a type the picker won't offer can't arrive by another
+   * route. Non-matching files go to `onRejectFiles` and never reach
+   * `onAttach`. Folder attach is exempt (directory selection has no native
+   * accept semantics); size/count limits are the app's job in `onAttach`.
+   */
   accept?: string;
+  /**
+   * Called with the files `accept` filtered out of a drop/paste/pick, each
+   * with a human-readable reason. Without it rejection is silent — the same
+   * feedback the native picker gives for a type it won't offer.
+   */
+  onRejectFiles?: (rejections: ComposerFileRejection[]) => void;
   dropTitle?: string;
   dropDescription?: string;
 
@@ -124,7 +142,10 @@ export interface AgentComposerProps {
 
   /**
    * Allow submitting with empty text when at least one attachment is staged
-   * (an image-only message). The app's onSubmit still decides what the
+   * (an image-only message). Counts attachments of ANY status — a gate on
+   * `ready` would make Enter silently dead while an upload is in flight,
+   * with no way for the app to explain why. The app's onSubmit owns the send
+   * policy (block, queue, or toast on pending/errored files) and what the
    * message body becomes. Default false.
    */
   canSubmitAttachmentsOnly?: boolean;
@@ -176,6 +197,7 @@ export function AgentComposer({
   onRemoveFile,
   onRetryFile,
   accept,
+  onRejectFiles,
   dropTitle = "Drop files to add context",
   dropDescription = "They attach to your next message.",
   canSubmitWhileBusy = false,
@@ -257,6 +279,18 @@ export function AgentComposer({
     event.stopPropagation();
     if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
   };
+  // Single funnel for every file ingress (picker, drop, paste): enforce
+  // `accept`, report the rest, hand `onAttach` only what passed.
+  const deliverFiles = (files: File[]) => {
+    if (!onAttach || files.length === 0) return;
+    const { accepted, rejected } = validateComposerFiles(files, { accept });
+    if (rejected.length > 0) onRejectFiles?.(rejected);
+    if (accepted.length === 0) return;
+    const dt = new DataTransfer();
+    for (const file of accepted) dt.items.add(file);
+    onAttach(dt.files);
+  };
+
   const handleDrop = (event: React.DragEvent) => {
     if (!dropEnabled) return;
     event.preventDefault();
@@ -264,7 +298,7 @@ export function AgentComposer({
     dragDepth.current = 0;
     setDragOver(false);
     const files = event.dataTransfer?.files;
-    if (files?.length) onAttach?.(files);
+    if (files?.length) deliverFiles(Array.from(files));
   };
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -272,25 +306,22 @@ export function AgentComposer({
     const clipboardFiles = event.clipboardData?.files;
     if (!clipboardFiles || clipboardFiles.length === 0) return;
 
-    const dt = new DataTransfer();
-    for (const file of Array.from(clipboardFiles)) {
-      const isImage = file.type.startsWith("image/");
-      if (isImage && isGenericImageName(file.name)) {
+    // Files are the payload — suppress the default text paste even when every
+    // file is rejected, so a rejection never half-pastes stray text.
+    event.preventDefault();
+
+    const files = Array.from(clipboardFiles).map((file) => {
+      if (file.type.startsWith("image/") && isGenericImageName(file.name)) {
         pastedImageCount.current += 1;
-        const renamed = new File(
+        return new File(
           [file],
           `pasted-image-${pastedImageCount.current}.${imageExtension(file)}`,
           { type: file.type },
         );
-        dt.items.add(renamed);
-      } else {
-        dt.items.add(file);
       }
-    }
-
-    // Files were consumed as attachments — suppress the default text paste.
-    event.preventDefault();
-    onAttach(dt.files);
+      return file;
+    });
+    deliverFiles(files);
   };
 
   const folderChips = attachments.filter((file) => file.kind === "folder");
@@ -458,7 +489,10 @@ export function AgentComposer({
                 className="hidden"
                 accept={accept}
                 onChange={(event) => {
-                  if (event.target.files?.length) onAttach(event.target.files);
+                  // Re-filter: picker dialogs let the user override the
+                  // accept filter with "All Files".
+                  if (event.target.files?.length)
+                    deliverFiles(Array.from(event.target.files));
                   event.target.value = "";
                 }}
               />

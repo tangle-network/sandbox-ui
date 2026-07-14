@@ -64,6 +64,86 @@ describe("AgentComposer — clipboard paste", () => {
   });
 });
 
+describe("AgentComposer — accept enforcement", () => {
+  it("pasting a non-matching type routes to onRejectFiles, never onAttach", () => {
+    const onAttach = vi.fn();
+    const onRejectFiles = vi.fn();
+    render(
+      <AgentComposer
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        onAttach={onAttach}
+        onRejectFiles={onRejectFiles}
+        accept=".pdf"
+      />,
+    );
+    const textarea = screen.getByRole("textbox", { name: /message input/i });
+    const dt = new DataTransfer();
+    dt.items.add(makeImageFile());
+    fireEvent.paste(textarea, { clipboardData: dt });
+
+    expect(onAttach).not.toHaveBeenCalled();
+    expect(onRejectFiles).toHaveBeenCalledTimes(1);
+    const rejections = onRejectFiles.mock.calls[0][0] as Array<{
+      file: File;
+      reason: string;
+    }>;
+    expect(rejections).toHaveLength(1);
+    expect(rejections[0]?.reason).toMatch(/pasted-image-1\.png/);
+  });
+
+  it("dropping mixed types delivers only the matching files", () => {
+    const onAttach = vi.fn();
+    const onRejectFiles = vi.fn();
+    render(
+      <AgentComposer
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        onAttach={onAttach}
+        onRejectFiles={onRejectFiles}
+        accept="image/*"
+      />,
+    );
+    const surface = screen.getByTestId("agent-composer");
+    const dt = new DataTransfer();
+    dt.items.add(makeImageFile("shot.png"));
+    dt.items.add(new File(["x"], "notes.txt", { type: "text/plain" }));
+    fireEvent.drop(surface, { dataTransfer: dt });
+
+    expect(onAttach).toHaveBeenCalledTimes(1);
+    const files = onAttach.mock.calls[0][0] as FileList;
+    expect(files).toHaveLength(1);
+    expect(files[0]?.name).toBe("shot.png");
+    expect(onRejectFiles).toHaveBeenCalledTimes(1);
+    expect(onRejectFiles.mock.calls[0][0]).toHaveLength(1);
+  });
+
+  it("without accept, every dropped file passes through", () => {
+    const onAttach = vi.fn();
+    const onRejectFiles = vi.fn();
+    render(
+      <AgentComposer
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        onAttach={onAttach}
+        onRejectFiles={onRejectFiles}
+      />,
+    );
+    const surface = screen.getByTestId("agent-composer");
+    const dt = new DataTransfer();
+    dt.items.add(makeImageFile("shot.png"));
+    dt.items.add(new File(["x"], "notes.txt", { type: "text/plain" }));
+    fireEvent.drop(surface, { dataTransfer: dt });
+
+    expect(onAttach).toHaveBeenCalledTimes(1);
+    expect(onAttach.mock.calls[0][0]).toHaveLength(2);
+    expect(onRejectFiles).not.toHaveBeenCalled();
+  });
+});
+
 describe("AgentComposer — thumbnails", () => {
   it("renders an <img> for a chip with previewUrl", () => {
     const attachments: ComposerFile[] = [

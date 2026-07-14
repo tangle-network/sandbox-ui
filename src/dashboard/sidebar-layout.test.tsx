@@ -244,7 +244,7 @@ describe("SidebarLayout — expandable nav item", () => {
 
 describe("SidebarLayout — collapsed rail interactions", () => {
   beforeEach(() => {
-    try { localStorage.clear() } catch { /* opaque origin */ }
+    localStorage.clear()
   })
 
   it("expands when the empty rail body is clicked (collapsed)", () => {

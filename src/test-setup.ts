@@ -22,3 +22,32 @@ if (!globalThis.ResizeObserver) {
     disconnect() {}
   }
 }
+
+// Node ships its own `localStorage` global, and it is `undefined` unless the
+// process was started with --localstorage-file. That own property shadows the one
+// jsdom installs on the window, so every component that persists a preference sees
+// `localStorage === undefined` and throws. (`sessionStorage` is unaffected, which
+// is why the hole looks arbitrary.) Back it with an in-memory Storage — per-file,
+// like the rest of the jsdom environment.
+if (!globalThis.localStorage) {
+  const entries = new Map<string, string>()
+  const storage: Storage = {
+    get length() {
+      return entries.size
+    },
+    key: (i) => [...entries.keys()][i] ?? null,
+    getItem: (k) => entries.get(k) ?? null,
+    setItem: (k, v) => {
+      entries.set(k, String(v))
+    },
+    removeItem: (k) => {
+      entries.delete(k)
+    },
+    clear: () => entries.clear(),
+  }
+  Object.defineProperty(globalThis, "localStorage", {
+    value: storage,
+    configurable: true,
+    writable: true,
+  })
+}

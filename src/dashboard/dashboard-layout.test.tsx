@@ -70,14 +70,8 @@ describe("DashboardLayout — rail collapse control", () => {
 
   // The collapse toggle persists rail state to localStorage; reset it so each
   // test starts from the provider's default (expanded), independent of order.
-  // localStorage is unavailable in some jsdom setups (opaque origin) where the
-  // provider's writes are already no-ops, so guard the clear.
   beforeEach(() => {
-    try {
-      localStorage.clear()
-    } catch {
-      /* localStorage unavailable — nothing was persisted to reset */
-    }
+    localStorage.clear()
   })
 
   it("renders a discoverable collapse toggle on the labeled rail", () => {

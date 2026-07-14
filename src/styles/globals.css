@@ -14,6 +14,11 @@
  * reasons. Consumers own font loading now. */
 
 @import "@tangle-network/brand/styles/tokens.css";
+/* Brand's named themes (`data-theme="<name>"`). They re-skin the surface ladder
+ * and nothing else — the Tangle accent stays put. Imported here so a consuming
+ * app opting into one resolves it through the single composed entry point,
+ * rather than reaching into brand for a second stylesheet. */
+@import "@tangle-network/brand/styles/named-themes.css";
 
 @import "tailwindcss";
 

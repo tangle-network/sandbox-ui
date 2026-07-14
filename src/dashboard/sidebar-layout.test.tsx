@@ -243,6 +243,9 @@ describe("SidebarLayout — expandable nav item", () => {
 })
 
 describe("SidebarLayout — collapsed rail interactions", () => {
+  // Unguarded on purpose: `setupFiles` runs before every test file, and the setup
+  // installs an in-memory Storage wherever the host does not supply a usable one —
+  // including where reading `localStorage` throws (see test-support/memory-storage).
   beforeEach(() => {
     localStorage.clear()
   })

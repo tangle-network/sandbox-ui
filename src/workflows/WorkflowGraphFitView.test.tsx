@@ -24,6 +24,9 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 const setViewport = vi.fn()
 const getViewport = vi.fn(() => ({ x: 0, y: 0, zoom: 1 }))
 const fitView = vi.fn()
+/** Every `nodes` prop the component handed React Flow, in write order — the
+ *  observable record of what the graph actually rendered over time. */
+let nodeWrites: Array<Array<{ id: string; data: { state?: { status?: string } } }>> = []
 
 vi.mock("@xyflow/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@xyflow/react")>()
@@ -32,15 +35,18 @@ vi.mock("@xyflow/react", async (importOriginal) => {
     ...actual,
     ReactFlow: ({
       children,
+      nodes,
       onInit,
     }: {
       children?: React.ReactNode
+      nodes?: Array<{ id: string; data: { state?: { status?: string } } }>
       onInit?: (instance: {
         setViewport: typeof setViewport
         getViewport: typeof getViewport
         fitView: typeof fitView
       }) => void
     }) => {
+      if (nodes) nodeWrites.push(nodes)
       useEffect(() => {
         onInit?.({ setViewport, getViewport, fitView })
       }, [onInit])
@@ -98,6 +104,7 @@ afterEach(() => {
   setViewport.mockClear()
   getViewport.mockClear()
   fitView.mockClear()
+  nodeWrites = []
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
@@ -152,6 +159,29 @@ describe("reframing on the density toggle", () => {
     // prove there isn't one.
     await new Promise((r) => setTimeout(r, LAYOUT_TRANSITION_MS + 50))
     expect(setViewport).toHaveBeenCalledTimes(1)
+  })
+
+  it("carries a run-state tick that lands mid-tween through to the final frame", async () => {
+    matchMediaSaying(false)
+    timerDrivenFrames()
+    measureableFrame()
+    // An empty nodeState opts the graph into run-overlay mode, same as a
+    // host that has a run but no per-node status yet.
+    const { rerender } = render(<WorkflowGraph yaml={YAML} nodeState={{}} />)
+    const id = nodeWrites.at(-1)?.[0]?.id
+    expect(id).toBeTruthy()
+
+    fireEvent.click(screen.getByRole("button", { name: /expand|compact/i }))
+    // The tick lands while the tween is running…
+    rerender(
+      <WorkflowGraph yaml={YAML} nodeState={{ [id!]: { status: "succeeded" } }} />,
+    )
+    await new Promise((r) => setTimeout(r, LAYOUT_TRANSITION_MS * 3))
+    // …and the LAST write the graph made still carries it: the tween merges
+    // run state at write time instead of stomping frames with a snapshot
+    // taken when it started.
+    const finalNode = nodeWrites.at(-1)?.find((n) => n.id === id)
+    expect(finalNode?.data.state?.status).toBe("succeeded")
   })
 
   it("leaves the viewport alone while the canvas has no frame to fit into", async () => {

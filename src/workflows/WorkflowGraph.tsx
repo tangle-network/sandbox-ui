@@ -731,20 +731,22 @@ export function WorkflowGraph({
   // raced it and framed the OLD node sizes as often as the new ones.
   const didInitialSeedRef = useRef(false);
   useEffect(() => {
-    // The current run state, re-merged into every write this effect makes so a
-    // tween frame can't wipe a node's live status (the merge effect above only
-    // re-fires on its own deps).
-    const state = nodeStateRef.current;
-    const target = state
-      ? structural.nodes.map((n) =>
-          state[n.id] ? { ...n, data: { ...n.data, state: state[n.id] } } : n,
-        )
-      : structural.nodes;
+    // The run state is merged at WRITE time — read fresh from the ref inside
+    // every setNodes this effect makes — so a status tick landing mid-tween is
+    // carried by the very next frame instead of being stomped by a snapshot
+    // taken when the tween started (and then stranded if no later tick comes).
+    const withRunState = (nodes: Node<WfNodeData>[]) => {
+      const state = nodeStateRef.current;
+      if (!state) return nodes;
+      return nodes.map((n) =>
+        state[n.id] ? { ...n, data: { ...n.data, state: state[n.id] } } : n,
+      );
+    };
     // ReactFlow's `fitView` prop frames the initial render — the first pass
     // only seeds the nodes and leaves the viewport alone.
     if (!didInitialSeedRef.current) {
       didInitialSeedRef.current = true;
-      setNodes(target);
+      setNodes(withRunState(structural.nodes));
       setDisplayCompact(compact);
       return;
     }
@@ -752,7 +754,7 @@ export function WorkflowGraph({
     const frame = wrapperRef.current?.getBoundingClientRect();
     // A hidden canvas (display:none ancestor) has no frame to fit into.
     if (!inst || !frame || frame.width === 0 || frame.height === 0) {
-      setNodes(target);
+      setNodes(withRunState(structural.nodes));
       setDisplayCompact(compact);
       return;
     }
@@ -774,7 +776,7 @@ export function WorkflowGraph({
       !motionAllowed() ||
       typeof requestAnimationFrame === "undefined"
     ) {
-      setNodes(target);
+      setNodes(withRunState(structural.nodes));
       setDisplayCompact(compact);
       inst.setViewport(endViewport);
       return;
@@ -792,26 +794,28 @@ export function WorkflowGraph({
       const t = Math.min(1, (now - startedAt) / LAYOUT_TRANSITION_MS);
       const e = easeInOutCubic(t);
       setNodes(
-        t >= 1
-          ? target
-          : target.map((n) => {
-              const p = prevById.get(n.id);
-              if (!p || p.width === undefined || p.height === undefined) {
-                return n;
-              }
-              const width = lerp(p.width, n.width ?? p.width, e);
-              const height = lerp(p.height, n.height ?? p.height, e);
-              return {
-                ...n,
-                position: {
-                  x: lerp(p.position.x, n.position.x, e),
-                  y: lerp(p.position.y, n.position.y, e),
-                },
-                width,
-                height,
-                style: { ...n.style, width, height },
-              };
-            }),
+        withRunState(
+          t >= 1
+            ? structural.nodes
+            : structural.nodes.map((n) => {
+                const p = prevById.get(n.id);
+                if (!p || p.width === undefined || p.height === undefined) {
+                  return n;
+                }
+                const width = lerp(p.width, n.width ?? p.width, e);
+                const height = lerp(p.height, n.height ?? p.height, e);
+                return {
+                  ...n,
+                  position: {
+                    x: lerp(p.position.x, n.position.x, e),
+                    y: lerp(p.position.y, n.position.y, e),
+                  },
+                  width,
+                  height,
+                  style: { ...n.style, width, height },
+                };
+              }),
+        ),
       );
       inst.setViewport({
         x: lerp(startViewport.x, endViewport.x, e),

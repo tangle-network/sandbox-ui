@@ -68,10 +68,20 @@ const MUTED_TRACK =
  * pipeline into a short panel by zooming out without limit is what shrank the
  * nodes to unreadable specks. Below `minZoom` the graph stops shrinking and
  * becomes pannable instead — a legible graph you scroll beats an illegible one
- * that fits. `maxZoom: 1` keeps a two-node graph from blowing its cards up to
- * fill the canvas.
+ * that fits.
+ *
+ * The CEILING depends on density. Full cards at 1 are already their designed
+ * size — zooming a two-node graph past that just blows the cards up to fill the
+ * canvas. Compact tiles are small BY DESIGN, so fitting them into the same
+ * canvas legitimately zooms past 1; capping them there strands a short compact
+ * graph as specks in empty space.
  */
-const FIT_VIEW = { padding: 0.16, minZoom: 0.55, maxZoom: 1 } as const;
+const FIT_VIEW = { padding: 0.16, minZoom: 0.55 } as const;
+
+/** Zoom ceiling for a fit at the given density (see FIT_VIEW). */
+export function fitZoomCeiling(compact: boolean): number {
+  return compact ? 1.5 : 1;
+}
 
 /** The same framing, animated. Used when the layout changes UNDER a reader who is
  *  already looking at the graph (the density toggle) — an instant jump to the new
@@ -709,14 +719,14 @@ export function WorkflowGraph({
           width,
           height,
           options.minZoom,
-          options.maxZoom,
+          fitZoomCeiling(compact),
           options.padding,
         ),
         "duration" in options ? { duration: options.duration } : undefined,
       );
     });
     return () => cancelAnimationFrame(raf);
-  }, [structural]);
+  }, [structural, compact]);
 
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {
@@ -751,7 +761,7 @@ export function WorkflowGraph({
         }}
         onNodeClick={onNodeClick ? handleNodeClick : undefined}
         fitView
-        fitViewOptions={FIT_VIEW}
+        fitViewOptions={{ ...FIT_VIEW, maxZoom: fitZoomCeiling(compact) }}
         proOptions={{ hideAttribution: true }}
         // Node dragging is reserved for the full editor; a preview stays
         // read-only so its layout can't be disturbed. Both variants pan + zoom so

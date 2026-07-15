@@ -10,6 +10,7 @@ import {
   DensityContext,
   DirectionContext,
   fitViewOnLayoutChange,
+  fitZoomCeiling,
   WorkflowGraph,
   WorkflowNode,
 } from "./WorkflowGraph";
@@ -72,7 +73,13 @@ describe("reframing the viewport when the layout changes", () => {
     const glide = fitViewOnLayoutChange();
     expect(glide.padding).toBe(still.padding);
     expect(glide.minZoom).toBe(still.minZoom);
-    expect(glide.maxZoom).toBe(still.maxZoom);
+  });
+
+  it("lets a compact fit zoom past 1, and holds full cards at their size", () => {
+    // Compact tiles are small by design — fitting them into the canvas
+    // legitimately zooms in; full cards at 1 are already their designed size.
+    expect(fitZoomCeiling(true)).toBeGreaterThan(1);
+    expect(fitZoomCeiling(false)).toBe(1);
   });
 });
 

@@ -88,6 +88,17 @@ export function fitZoomCeiling(compact: boolean): number {
  *  reframed rather than replaced. */
 export const LAYOUT_TRANSITION_MS = 220;
 
+/**
+ * When the RENDERED density flips inside the layout tween, as a fraction of
+ * LAYOUT_TRANSITION_MS. The box morphs first and the incoming content fades in
+ * mid-motion (see `.wf-node-body-in`) — flipping while everything is already
+ * moving is what keeps the swap from reading as a pop. Direction matters: the
+ * two densities' shells are closest in size near the COMPACT geometry, so
+ * growing (→ expanded) flips just after the box starts to grow, and shrinking
+ * (→ compact) flips once the card has nearly collapsed.
+ */
+const DENSITY_FLIP_AT = { grow: 0.12, shrink: 0.75 } as const;
+
 /** Motion is opt-OUT, so it is only used where the reader's preference can be
  *  read and says nothing against it. Somewhere without `matchMedia` cannot say
  *  a reader tolerates movement, so it gets none. */
@@ -162,7 +173,7 @@ function StatusFooter({
       ? `${rounds} round${rounds === 1 ? "" : "s"}`
       : undefined;
   return (
-    <div className="mt-auto border-border border-t">
+    <div className="wf-node-body-in mt-auto border-border border-t">
       <div
         className="h-1 w-full overflow-hidden"
         style={{ background: MUTED_TRACK }}
@@ -389,13 +400,18 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
                 }),
           }}
         >
-          <NodeMark
-            kind={d.kind}
-            provider={d.provider}
-            model={markModel}
-            accent={accent}
-            tile={Math.round(COMPACT_TILE * 0.62)}
-          />
+          {/* Fade the CONTENT in when the density swap lands mid layout-morph;
+              the shell (this bordered tile / the card border) stays opaque so
+              the node never blinks out. */}
+          <span className="wf-node-body-in flex items-center justify-center">
+            <NodeMark
+              kind={d.kind}
+              provider={d.provider}
+              model={markModel}
+              accent={accent}
+              tile={Math.round(COMPACT_TILE * 0.62)}
+            />
+          </span>
           {d.badge && !state && (
             <span className="-right-1.5 -top-1.5 absolute rounded-full border border-border bg-card px-1.5 py-[1px] font-medium text-[10px] text-muted-foreground">
               {d.badge}
@@ -415,7 +431,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           )}
         </span>
         <div
-          className={`min-w-0 ${
+          className={`wf-node-body-in min-w-0 ${
             isLR ? "mt-2 w-full px-1 text-center" : "ml-2 flex-1 text-left"
           }`}
         >
@@ -462,8 +478,10 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
       {/* The content region owns its overflow: each band is `shrink-0`, so a band
           that renders taller than its reservation (a consumer's font metrics) is
           CLIPPED here rather than squeezed — a squeezed band cuts a line of text
-          in half, and pushes the pinned footer off the card. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
+          in half, and pushes the pinned footer off the card. Fades in when the
+          density swap lands mid layout-morph; the card's border/surface (the
+          root) stays opaque so the node never blinks out. */}
+      <div className="wf-node-body-in flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
         <div className="flex shrink-0 items-center gap-2.5">
           <NodeMark
             kind={d.kind}
@@ -625,6 +643,11 @@ export function WorkflowGraph({
   // variant defaults per prop and lets the user toggle density.
   const [userCompact, setUserCompact] = useState(defaultCompact);
   const compact = isPreview || userCompact;
+  // What the nodes RENDER (content + handle anchors). Inside a layout tween it
+  // TRAILS `compact` — the target density drives the layout and the camera at
+  // once, while the rendered swap lands mid-motion (DENSITY_FLIP_AT); the
+  // transition effect keeps the two in step on every non-tweened path.
+  const [displayCompact, setDisplayCompact] = useState(compact);
   const rfRef = useRef<ReactFlowInstance<Node<WfNodeData>> | null>(null);
   // The canvas wrapper — measured when reframing, since the viewport math needs
   // the frame's real width/height and the RF instance doesn't expose them.
@@ -722,6 +745,7 @@ export function WorkflowGraph({
     if (!didInitialSeedRef.current) {
       didInitialSeedRef.current = true;
       setNodes(target);
+      setDisplayCompact(compact);
       return;
     }
     const inst = rfRef.current;
@@ -729,6 +753,7 @@ export function WorkflowGraph({
     // A hidden canvas (display:none ancestor) has no frame to fit into.
     if (!inst || !frame || frame.width === 0 || frame.height === 0) {
       setNodes(target);
+      setDisplayCompact(compact);
       return;
     }
     const endViewport = getViewportForBounds(
@@ -750,9 +775,17 @@ export function WorkflowGraph({
       typeof requestAnimationFrame === "undefined"
     ) {
       setNodes(target);
+      setDisplayCompact(compact);
       inst.setViewport(endViewport);
       return;
     }
+    // The rendered density lands mid-tween: growing flips early, shrinking
+    // flips once the card has nearly collapsed (see DENSITY_FLIP_AT).
+    const flipTimer = setTimeout(
+      () => setDisplayCompact(compact),
+      LAYOUT_TRANSITION_MS *
+        (compact ? DENSITY_FLIP_AT.shrink : DENSITY_FLIP_AT.grow),
+    );
     const startViewport = inst.getViewport();
     const startedAt = performance.now();
     let raf = requestAnimationFrame(function step(now: number) {
@@ -787,11 +820,15 @@ export function WorkflowGraph({
       });
       if (t < 1) raf = requestAnimationFrame(step);
     });
-    // Cancelling un-schedules the next frame only. When the layout changes
-    // again mid-flight, the replacing tween starts from the CURRENT rendered
-    // geometry (nodesRef), so a rapid double-toggle redirects smoothly instead
-    // of jumping to either end.
-    return () => cancelAnimationFrame(raf);
+    // Cancelling un-schedules the next frame and the pending density flip.
+    // When the layout changes again mid-flight, the replacing tween starts
+    // from the CURRENT rendered geometry (nodesRef), so a rapid double-toggle
+    // redirects smoothly instead of jumping to either end — and a bounce that
+    // reverses before its flip fired never swaps the content at all.
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(flipTimer);
+    };
   }, [structural, compact, setNodes]);
 
   const handleNodeClick = useCallback(
@@ -813,7 +850,7 @@ export function WorkflowGraph({
 
   return (
     <DirectionContext.Provider value={direction}>
-      <DensityContext.Provider value={compact}>
+      <DensityContext.Provider value={displayCompact}>
       <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
       <ReactFlow
         nodes={nodes}

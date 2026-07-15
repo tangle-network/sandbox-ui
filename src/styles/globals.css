@@ -347,6 +347,26 @@
     animation: fade-in 0.25s ease-out;
   }
 
+  /* A workflow node's content when its density swap lands mid layout-morph:
+     the incoming content materializes inside the moving box instead of popping
+     in. Opacity only — movement belongs to the layout tween — and applied to
+     CONTENT, never to a node's border/surface shell, so the node itself never
+     blinks out during the swap. */
+  .wf-node-body-in {
+    animation: wf-node-body-in 150ms ease-out both;
+  }
+
+  @keyframes wf-node-body-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .wf-node-body-in {
+      animation: none;
+    }
+  }
+
   /* Quiet enter for optimistically-inserted list rows. */
   .animate-row-in {
     animation: row-in 0.18s ease-out;

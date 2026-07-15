@@ -9,7 +9,7 @@ import {
   buildStyledEdges,
   DensityContext,
   DirectionContext,
-  fitViewOnLayoutChange,
+  fitZoomCeiling,
   WorkflowGraph,
   WorkflowNode,
 } from "./WorkflowGraph";
@@ -33,46 +33,14 @@ function renderNode(data: WfNodeData) {
   );
 }
 
-describe("reframing the viewport when the layout changes", () => {
-  // The density toggle re-frames the graph under a reader who is already looking at
-  // it, so the viewport GLIDES to its new framing rather than jumping. A reader who
-  // asked the system for less motion gets the framing without the glide.
-  const prefersReducedMotion = (reduce: boolean) =>
-    vi.stubGlobal(
-      "matchMedia",
-      (query: string) => ({
-        matches: reduce && query.includes("prefers-reduced-motion"),
-        media: query,
-      }),
-    );
-
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("glides by default", () => {
-    prefersReducedMotion(false);
-    expect(fitViewOnLayoutChange()).toHaveProperty("duration", 220);
-  });
-
-  it("reframes instantly for a reader who asked for less motion", () => {
-    prefersReducedMotion(true);
-    expect(fitViewOnLayoutChange()).not.toHaveProperty("duration");
-  });
-
-  it("does not move at all where the preference cannot be read", () => {
-    // Motion is opt-OUT. Somewhere without matchMedia cannot tell us a reader
-    // tolerates movement, so it does not get any.
-    vi.stubGlobal("matchMedia", undefined);
-    expect(fitViewOnLayoutChange()).not.toHaveProperty("duration");
-  });
-
-  it("keeps the SAME framing either way — only the transition differs", () => {
-    prefersReducedMotion(true);
-    const still = fitViewOnLayoutChange();
-    prefersReducedMotion(false);
-    const glide = fitViewOnLayoutChange();
-    expect(glide.padding).toBe(still.padding);
-    expect(glide.minZoom).toBe(still.minZoom);
-    expect(glide.maxZoom).toBe(still.maxZoom);
+describe("fitZoomCeiling", () => {
+  it("lets a compact fit zoom past 1, and holds full cards at their size", () => {
+    // Compact tiles are small by design — fitting them into the canvas
+    // legitimately zooms in; full cards at 1 are already their designed size.
+    // (How the reframe itself runs — the tween, and the reduced-motion instant
+    // path — is covered in WorkflowGraphFitView.test.tsx.)
+    expect(fitZoomCeiling(true)).toBeGreaterThan(1);
+    expect(fitZoomCeiling(false)).toBe(1);
   });
 });
 

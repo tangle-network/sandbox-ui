@@ -10,6 +10,8 @@ import {
   type ColorMode,
   Controls,
   type Edge,
+  getNodesBounds,
+  getViewportForBounds,
   Handle,
   MarkerType,
   type Node,
@@ -66,26 +68,53 @@ const MUTED_TRACK =
  * pipeline into a short panel by zooming out without limit is what shrank the
  * nodes to unreadable specks. Below `minZoom` the graph stops shrinking and
  * becomes pannable instead — a legible graph you scroll beats an illegible one
- * that fits. `maxZoom: 1` keeps a two-node graph from blowing its cards up to
- * fill the canvas.
+ * that fits.
+ *
+ * The CEILING depends on density. Full cards at 1 are already their designed
+ * size — zooming a two-node graph past that just blows the cards up to fill the
+ * canvas. Compact tiles are small BY DESIGN, so fitting them into the same
+ * canvas legitimately zooms past 1; capping them there strands a short compact
+ * graph as specks in empty space.
  */
-const FIT_VIEW = { padding: 0.16, minZoom: 0.55, maxZoom: 1 } as const;
+const FIT_VIEW = { padding: 0.16, minZoom: 0.55 } as const;
 
-/** The same framing, animated. Used when the layout changes UNDER a reader who is
- *  already looking at the graph (the density toggle) — an instant jump to the new
- *  viewport reads as the graph being replaced, while a short glide reads as the
- *  same graph being reframed, which is what actually happened. Short enough not to
- *  make the toggle feel laggy, and skipped entirely for a reader who asked the
- *  system for less motion. */
-export function fitViewOnLayoutChange() {
-  // Motion is opt-OUT, so it is only added where the reader's preference can be
-  // read and says nothing against it. Somewhere without `matchMedia` cannot say a
-  // reader tolerates movement, so the graph reframes without it.
-  const moves =
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === false;
-  return moves ? { ...FIT_VIEW, duration: 220 } : FIT_VIEW;
+/** Zoom ceiling for a fit at the given density (see FIT_VIEW). */
+export function fitZoomCeiling(compact: boolean): number {
+  return compact ? 1.5 : 1;
 }
+
+/** How long a layout transition (the density toggle) runs — short enough that
+ *  the toggle feels immediate, long enough to read as the same graph being
+ *  reframed rather than replaced. */
+export const LAYOUT_TRANSITION_MS = 220;
+
+/**
+ * When the RENDERED density flips inside the layout tween, as a fraction of
+ * LAYOUT_TRANSITION_MS. The box morphs first and the incoming content fades in
+ * mid-motion (see `.wf-node-body-in`) — flipping while everything is already
+ * moving is what keeps the swap from reading as a pop. Direction matters: the
+ * two densities' shells are closest in size near the COMPACT geometry, so
+ * growing (→ expanded) flips just after the box starts to grow, and shrinking
+ * (→ compact) flips once the card has nearly collapsed.
+ */
+const DENSITY_FLIP_AT = { grow: 0.12, shrink: 0.75 } as const;
+
+/** Motion is opt-OUT, so it is only used where the reader's preference can be
+ *  read and says nothing against it. Somewhere without `matchMedia` cannot say
+ *  a reader tolerates movement, so it gets none. */
+function motionAllowed(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === false
+  );
+}
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/** The layout tween's easing — gentle into and out of the motion, so neither
+ *  end of the morph reads as a snap. */
+const easeInOutCubic = (t: number) =>
+  t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
  *  background) themes with the rest of the app. */
@@ -144,7 +173,7 @@ function StatusFooter({
       ? `${rounds} round${rounds === 1 ? "" : "s"}`
       : undefined;
   return (
-    <div className="mt-auto border-border border-t">
+    <div className="wf-node-body-in mt-auto border-border border-t">
       <div
         className="h-1 w-full overflow-hidden"
         style={{ background: MUTED_TRACK }}
@@ -371,13 +400,18 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
                 }),
           }}
         >
-          <NodeMark
-            kind={d.kind}
-            provider={d.provider}
-            model={markModel}
-            accent={accent}
-            tile={Math.round(COMPACT_TILE * 0.62)}
-          />
+          {/* Fade the CONTENT in when the density swap lands mid layout-morph;
+              the shell (this bordered tile / the card border) stays opaque so
+              the node never blinks out. */}
+          <span className="wf-node-body-in flex items-center justify-center">
+            <NodeMark
+              kind={d.kind}
+              provider={d.provider}
+              model={markModel}
+              accent={accent}
+              tile={Math.round(COMPACT_TILE * 0.62)}
+            />
+          </span>
           {d.badge && !state && (
             <span className="-right-1.5 -top-1.5 absolute rounded-full border border-border bg-card px-1.5 py-[1px] font-medium text-[10px] text-muted-foreground">
               {d.badge}
@@ -397,7 +431,7 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
           )}
         </span>
         <div
-          className={`min-w-0 ${
+          className={`wf-node-body-in min-w-0 ${
             isLR ? "mt-2 w-full px-1 text-center" : "ml-2 flex-1 text-left"
           }`}
         >
@@ -444,8 +478,10 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
       {/* The content region owns its overflow: each band is `shrink-0`, so a band
           that renders taller than its reservation (a consumer's font metrics) is
           CLIPPED here rather than squeezed — a squeezed band cuts a line of text
-          in half, and pushes the pinned footer off the card. */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
+          in half, and pushes the pinned footer off the card. Fades in when the
+          density swap lands mid layout-morph; the card's border/surface (the
+          root) stays opaque so the node never blinks out. */}
+      <div className="wf-node-body-in flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
         <div className="flex shrink-0 items-center gap-2.5">
           <NodeMark
             kind={d.kind}
@@ -607,7 +643,15 @@ export function WorkflowGraph({
   // variant defaults per prop and lets the user toggle density.
   const [userCompact, setUserCompact] = useState(defaultCompact);
   const compact = isPreview || userCompact;
+  // What the nodes RENDER (content + handle anchors). Inside a layout tween it
+  // TRAILS `compact` — the target density drives the layout and the camera at
+  // once, while the rendered swap lands mid-motion (DENSITY_FLIP_AT); the
+  // transition effect keeps the two in step on every non-tweened path.
+  const [displayCompact, setDisplayCompact] = useState(compact);
   const rfRef = useRef<ReactFlowInstance<Node<WfNodeData>> | null>(null);
+  // The canvas wrapper — measured when reframing, since the viewport math needs
+  // the frame's real width/height and the RF instance doesn't expose them.
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   // Structural graph from the YAML alone — STABLE across nodeState ticks. Built
   // with run-state spacing reserved whenever a run overlay is in play (nodeState
@@ -638,13 +682,14 @@ export function WorkflowGraph({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(styledEdges);
-
-  // Re-seed React Flow's nodes when the definition (or run-mode) changes. The
-  // merge effect below re-applies the current run state in its own pass, so this
-  // only needs the static base nodes.
-  useEffect(() => {
-    setNodes(structural.nodes);
-  }, [structural, setNodes]);
+  // Live mirrors for the layout transition below: the tween reads its STARTING
+  // geometry from whatever is currently rendered (including a mid-flight tween
+  // it is redirecting), and re-merges the current run state into every frame it
+  // writes — without the transition effect re-firing on node/state ticks.
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+  const nodeStateRef = useRef(nodeState);
+  nodeStateRef.current = nodeState;
 
   // Repaint edges whenever the styling (structure or run state) changes. Edge ids
   // are stable, so React Flow updates color/animation in place.
@@ -662,31 +707,133 @@ export function WorkflowGraph({
     setNodes((prev) => mergeRunState(prev, baseById, nodeState));
   }, [nodeState, structural, setNodes]);
 
-  // Reframe the viewport when the layout STRUCTURE changes (a definition edit,
-  // orientation, the density toggle, or a run-overlay transition) — node ids/count
-  // are unchanged across a density flip, so React Flow won't auto-fit and the
-  // graph would otherwise be left mis-zoomed. Deferred a frame so it runs after
-  // the re-seeded nodes (with their new sizes) commit. A run-state tick doesn't
-  // change `structural`, so a live run is never yanked around.
+  // Move the graph to a NEW layout when the STRUCTURE changes (a definition
+  // edit, orientation, the density toggle, a run-overlay transition). A
+  // run-state tick doesn't change `structural`, so a live run is never yanked
+  // around.
   //
-  // Animated, because a reader is watching: the nodes resize in place and the
-  // viewport glides to the new framing.
-  const didInitialFitRef = useRef(false);
+  // For a same-node relayout with motion allowed — the density toggle — node
+  // geometry and the camera tween TOGETHER through React Flow's store, so the
+  // edges re-route against the moving nodes on every frame. (A CSS transform
+  // transition can't give that: edge paths are computed from store positions,
+  // so they would snap to the final layout while the nodes glided.) The node
+  // CONTENT swaps at the start and its box morphs around it — the card clips
+  // via overflow-hidden, so mid-tween content reads as a reveal, not a spill.
+  //
+  // Every other transition — a different node set, reduced motion, a hidden
+  // canvas — lands ATOMICALLY: nodes and camera written in the same pass, never
+  // a lingering frame of the new layout under the old camera.
+  //
+  // The end viewport is computed from the STRUCTURAL nodes' own geometry — the
+  // layouter's authoritative position + size for exactly this layout — never
+  // from `fitView`, which reads React Flow's MEASURED node boxes. Measurement
+  // (a ResizeObserver) lags a relayout by a frame or more, so a fitView here
+  // raced it and framed the OLD node sizes as often as the new ones.
+  const didInitialSeedRef = useRef(false);
   useEffect(() => {
-    // ReactFlow's `fitView` prop already frames the initial render — skip this
-    // effect's first run so we don't double-fit on mount.
-    if (!didInitialFitRef.current) {
-      didInitialFitRef.current = true;
+    // The run state is merged at WRITE time — read fresh from the ref inside
+    // every setNodes this effect makes — so a status tick landing mid-tween is
+    // carried by the very next frame instead of being stomped by a snapshot
+    // taken when the tween started (and then stranded if no later tick comes).
+    const withRunState = (nodes: Node<WfNodeData>[]) => {
+      const state = nodeStateRef.current;
+      if (!state) return nodes;
+      return nodes.map((n) =>
+        state[n.id] ? { ...n, data: { ...n.data, state: state[n.id] } } : n,
+      );
+    };
+    // ReactFlow's `fitView` prop frames the initial render — the first pass
+    // only seeds the nodes and leaves the viewport alone.
+    if (!didInitialSeedRef.current) {
+      didInitialSeedRef.current = true;
+      setNodes(withRunState(structural.nodes));
+      setDisplayCompact(compact);
       return;
     }
     const inst = rfRef.current;
-    if (!inst || typeof requestAnimationFrame === "undefined") return;
-    // Cancelling the frame un-schedules a fit that hasn't run. One already in
-    // flight is left to finish: it only writes the viewport of a store nobody is
-    // reading any more, and React Flow exposes no way to interrupt it.
-    const raf = requestAnimationFrame(() => inst.fitView(fitViewOnLayoutChange()));
-    return () => cancelAnimationFrame(raf);
-  }, [structural]);
+    const frame = wrapperRef.current?.getBoundingClientRect();
+    // A hidden canvas (display:none ancestor) has no frame to fit into.
+    if (!inst || !frame || frame.width === 0 || frame.height === 0) {
+      setNodes(withRunState(structural.nodes));
+      setDisplayCompact(compact);
+      return;
+    }
+    const endViewport = getViewportForBounds(
+      getNodesBounds(structural.nodes),
+      frame.width,
+      frame.height,
+      FIT_VIEW.minZoom,
+      fitZoomCeiling(compact),
+      FIT_VIEW.padding,
+    );
+    const prev = nodesRef.current;
+    const prevById = new Map(prev.map((n) => [n.id, n]));
+    const sameNodeSet =
+      prev.length === structural.nodes.length &&
+      structural.nodes.every((n) => prevById.has(n.id));
+    if (
+      !sameNodeSet ||
+      !motionAllowed() ||
+      typeof requestAnimationFrame === "undefined"
+    ) {
+      setNodes(withRunState(structural.nodes));
+      setDisplayCompact(compact);
+      inst.setViewport(endViewport);
+      return;
+    }
+    // The rendered density lands mid-tween: growing flips early, shrinking
+    // flips once the card has nearly collapsed (see DENSITY_FLIP_AT).
+    const flipTimer = setTimeout(
+      () => setDisplayCompact(compact),
+      LAYOUT_TRANSITION_MS *
+        (compact ? DENSITY_FLIP_AT.shrink : DENSITY_FLIP_AT.grow),
+    );
+    const startViewport = inst.getViewport();
+    const startedAt = performance.now();
+    let raf = requestAnimationFrame(function step(now: number) {
+      const t = Math.min(1, (now - startedAt) / LAYOUT_TRANSITION_MS);
+      const e = easeInOutCubic(t);
+      setNodes(
+        withRunState(
+          t >= 1
+            ? structural.nodes
+            : structural.nodes.map((n) => {
+                const p = prevById.get(n.id);
+                if (!p || p.width === undefined || p.height === undefined) {
+                  return n;
+                }
+                const width = lerp(p.width, n.width ?? p.width, e);
+                const height = lerp(p.height, n.height ?? p.height, e);
+                return {
+                  ...n,
+                  position: {
+                    x: lerp(p.position.x, n.position.x, e),
+                    y: lerp(p.position.y, n.position.y, e),
+                  },
+                  width,
+                  height,
+                  style: { ...n.style, width, height },
+                };
+              }),
+        ),
+      );
+      inst.setViewport({
+        x: lerp(startViewport.x, endViewport.x, e),
+        y: lerp(startViewport.y, endViewport.y, e),
+        zoom: lerp(startViewport.zoom, endViewport.zoom, e),
+      });
+      if (t < 1) raf = requestAnimationFrame(step);
+    });
+    // Cancelling un-schedules the next frame and the pending density flip.
+    // When the layout changes again mid-flight, the replacing tween starts
+    // from the CURRENT rendered geometry (nodesRef), so a rapid double-toggle
+    // redirects smoothly instead of jumping to either end — and a bounce that
+    // reverses before its flip fired never swaps the content at all.
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(flipTimer);
+    };
+  }, [structural, compact, setNodes]);
 
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {
@@ -707,8 +854,8 @@ export function WorkflowGraph({
 
   return (
     <DirectionContext.Provider value={direction}>
-      <DensityContext.Provider value={compact}>
-      <div className={`wf-graph ${className ?? ""}`}>
+      <DensityContext.Provider value={displayCompact}>
+      <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -721,7 +868,7 @@ export function WorkflowGraph({
         }}
         onNodeClick={onNodeClick ? handleNodeClick : undefined}
         fitView
-        fitViewOptions={FIT_VIEW}
+        fitViewOptions={{ ...FIT_VIEW, maxZoom: fitZoomCeiling(compact) }}
         proOptions={{ hideAttribution: true }}
         // Node dragging is reserved for the full editor; a preview stays
         // read-only so its layout can't be disturbed. Both variants pan + zoom so

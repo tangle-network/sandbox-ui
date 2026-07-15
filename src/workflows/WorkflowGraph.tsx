@@ -83,21 +83,27 @@ export function fitZoomCeiling(compact: boolean): number {
   return compact ? 1.5 : 1;
 }
 
-/** The same framing, animated. Used when the layout changes UNDER a reader who is
- *  already looking at the graph (the density toggle) — an instant jump to the new
- *  viewport reads as the graph being replaced, while a short glide reads as the
- *  same graph being reframed, which is what actually happened. Short enough not to
- *  make the toggle feel laggy, and skipped entirely for a reader who asked the
- *  system for less motion. */
-export function fitViewOnLayoutChange() {
-  // Motion is opt-OUT, so it is only added where the reader's preference can be
-  // read and says nothing against it. Somewhere without `matchMedia` cannot say a
-  // reader tolerates movement, so the graph reframes without it.
-  const moves =
+/** How long a layout transition (the density toggle) runs — short enough that
+ *  the toggle feels immediate, long enough to read as the same graph being
+ *  reframed rather than replaced. */
+export const LAYOUT_TRANSITION_MS = 220;
+
+/** Motion is opt-OUT, so it is only used where the reader's preference can be
+ *  read and says nothing against it. Somewhere without `matchMedia` cannot say
+ *  a reader tolerates movement, so it gets none. */
+function motionAllowed(): boolean {
+  return (
     typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === false;
-  return moves ? { ...FIT_VIEW, duration: 220 } : FIT_VIEW;
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === false
+  );
 }
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/** The layout tween's easing — gentle into and out of the motion, so neither
+ *  end of the morph reads as a snap. */
+const easeInOutCubic = (t: number) =>
+  t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
 /** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
  *  background) themes with the rest of the app. */
@@ -653,13 +659,14 @@ export function WorkflowGraph({
 
   const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(styledEdges);
-
-  // Re-seed React Flow's nodes when the definition (or run-mode) changes. The
-  // merge effect below re-applies the current run state in its own pass, so this
-  // only needs the static base nodes.
-  useEffect(() => {
-    setNodes(structural.nodes);
-  }, [structural, setNodes]);
+  // Live mirrors for the layout transition below: the tween reads its STARTING
+  // geometry from whatever is currently rendered (including a mid-flight tween
+  // it is redirecting), and re-merges the current run state into every frame it
+  // writes — without the transition effect re-firing on node/state ticks.
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+  const nodeStateRef = useRef(nodeState);
+  nodeStateRef.current = nodeState;
 
   // Repaint edges whenever the styling (structure or run state) changes. Edge ids
   // are stable, so React Flow updates color/animation in place.
@@ -677,56 +684,115 @@ export function WorkflowGraph({
     setNodes((prev) => mergeRunState(prev, baseById, nodeState));
   }, [nodeState, structural, setNodes]);
 
-  // Reframe the viewport when the layout STRUCTURE changes (a definition edit,
-  // orientation, the density toggle, or a run-overlay transition) — node ids/count
-  // are unchanged across a density flip, so React Flow won't auto-fit and the
-  // graph would otherwise be left mis-zoomed. Deferred a frame so it runs after
-  // the re-seeded nodes commit. A run-state tick doesn't change `structural`,
-  // so a live run is never yanked around.
+  // Move the graph to a NEW layout when the STRUCTURE changes (a definition
+  // edit, orientation, the density toggle, a run-overlay transition). A
+  // run-state tick doesn't change `structural`, so a live run is never yanked
+  // around.
   //
-  // The viewport is computed from the STRUCTURAL nodes' own geometry — the
+  // For a same-node relayout with motion allowed — the density toggle — node
+  // geometry and the camera tween TOGETHER through React Flow's store, so the
+  // edges re-route against the moving nodes on every frame. (A CSS transform
+  // transition can't give that: edge paths are computed from store positions,
+  // so they would snap to the final layout while the nodes glided.) The node
+  // CONTENT swaps at the start and its box morphs around it — the card clips
+  // via overflow-hidden, so mid-tween content reads as a reveal, not a spill.
+  //
+  // Every other transition — a different node set, reduced motion, a hidden
+  // canvas — lands ATOMICALLY: nodes and camera written in the same pass, never
+  // a lingering frame of the new layout under the old camera.
+  //
+  // The end viewport is computed from the STRUCTURAL nodes' own geometry — the
   // layouter's authoritative position + size for exactly this layout — never
   // from `fitView`, which reads React Flow's MEASURED node boxes. Measurement
-  // (a ResizeObserver) lags a density flip by a frame or more, so a fitView
-  // here raced it and framed the OLD node sizes as often as the new ones.
-  //
-  // Animated, because a reader is watching: the nodes resize in place and the
-  // viewport glides to the new framing.
-  const didInitialFitRef = useRef(false);
+  // (a ResizeObserver) lags a relayout by a frame or more, so a fitView here
+  // raced it and framed the OLD node sizes as often as the new ones.
+  const didInitialSeedRef = useRef(false);
   useEffect(() => {
-    // ReactFlow's `fitView` prop already frames the initial render — skip this
-    // effect's first run so we don't double-fit on mount.
-    if (!didInitialFitRef.current) {
-      didInitialFitRef.current = true;
+    // The current run state, re-merged into every write this effect makes so a
+    // tween frame can't wipe a node's live status (the merge effect above only
+    // re-fires on its own deps).
+    const state = nodeStateRef.current;
+    const target = state
+      ? structural.nodes.map((n) =>
+          state[n.id] ? { ...n, data: { ...n.data, state: state[n.id] } } : n,
+        )
+      : structural.nodes;
+    // ReactFlow's `fitView` prop frames the initial render — the first pass
+    // only seeds the nodes and leaves the viewport alone.
+    if (!didInitialSeedRef.current) {
+      didInitialSeedRef.current = true;
+      setNodes(target);
       return;
     }
     const inst = rfRef.current;
-    const wrapper = wrapperRef.current;
-    if (!inst || !wrapper || typeof requestAnimationFrame === "undefined") {
+    const frame = wrapperRef.current?.getBoundingClientRect();
+    // A hidden canvas (display:none ancestor) has no frame to fit into.
+    if (!inst || !frame || frame.width === 0 || frame.height === 0) {
+      setNodes(target);
       return;
     }
-    // Cancelling the frame un-schedules a reframe that hasn't run. One already
-    // in flight is left to finish: it only writes the viewport of a store nobody
-    // is reading any more, and React Flow exposes no way to interrupt it.
-    const raf = requestAnimationFrame(() => {
-      const { width, height } = wrapper.getBoundingClientRect();
-      // A hidden canvas (display:none ancestor) has no frame to fit into.
-      if (width === 0 || height === 0) return;
-      const options = fitViewOnLayoutChange();
-      inst.setViewport(
-        getViewportForBounds(
-          getNodesBounds(structural.nodes),
-          width,
-          height,
-          options.minZoom,
-          fitZoomCeiling(compact),
-          options.padding,
-        ),
-        "duration" in options ? { duration: options.duration } : undefined,
+    const endViewport = getViewportForBounds(
+      getNodesBounds(structural.nodes),
+      frame.width,
+      frame.height,
+      FIT_VIEW.minZoom,
+      fitZoomCeiling(compact),
+      FIT_VIEW.padding,
+    );
+    const prev = nodesRef.current;
+    const prevById = new Map(prev.map((n) => [n.id, n]));
+    const sameNodeSet =
+      prev.length === structural.nodes.length &&
+      structural.nodes.every((n) => prevById.has(n.id));
+    if (
+      !sameNodeSet ||
+      !motionAllowed() ||
+      typeof requestAnimationFrame === "undefined"
+    ) {
+      setNodes(target);
+      inst.setViewport(endViewport);
+      return;
+    }
+    const startViewport = inst.getViewport();
+    const startedAt = performance.now();
+    let raf = requestAnimationFrame(function step(now: number) {
+      const t = Math.min(1, (now - startedAt) / LAYOUT_TRANSITION_MS);
+      const e = easeInOutCubic(t);
+      setNodes(
+        t >= 1
+          ? target
+          : target.map((n) => {
+              const p = prevById.get(n.id);
+              if (!p || p.width === undefined || p.height === undefined) {
+                return n;
+              }
+              const width = lerp(p.width, n.width ?? p.width, e);
+              const height = lerp(p.height, n.height ?? p.height, e);
+              return {
+                ...n,
+                position: {
+                  x: lerp(p.position.x, n.position.x, e),
+                  y: lerp(p.position.y, n.position.y, e),
+                },
+                width,
+                height,
+                style: { ...n.style, width, height },
+              };
+            }),
       );
+      inst.setViewport({
+        x: lerp(startViewport.x, endViewport.x, e),
+        y: lerp(startViewport.y, endViewport.y, e),
+        zoom: lerp(startViewport.zoom, endViewport.zoom, e),
+      });
+      if (t < 1) raf = requestAnimationFrame(step);
     });
+    // Cancelling un-schedules the next frame only. When the layout changes
+    // again mid-flight, the replacing tween starts from the CURRENT rendered
+    // geometry (nodesRef), so a rapid double-toggle redirects smoothly instead
+    // of jumping to either end.
     return () => cancelAnimationFrame(raf);
-  }, [structural, compact]);
+  }, [structural, compact, setNodes]);
 
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {

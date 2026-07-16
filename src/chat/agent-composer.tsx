@@ -163,8 +163,9 @@ export interface AgentComposerProps {
 
 /**
  * The canonical agent chat input: one rounded surface holding an auto-growing
- * textarea, the embedded control strip (profile · harness · model · effort) at
- * the bottom-left, and the send button at the bottom-right. The strip's pickers
+ * textarea and a bottom row that runs left → right — attach buttons, the
+ * embedded control strip (profile · harness · model · effort), trailing slot,
+ * and the send button on the far right. The strip's pickers
  * snap the harness↔model pair automatically; which controls appear is driven
  * purely by which control objects are passed, so the same component is the
  * router-backed composer (no harness) and the sandbox-backed one (with harness).
@@ -457,19 +458,11 @@ export function AgentComposer({
           )}
         />
 
+        {/* Bottom row, left → right: attach · folder · control strip
+            (profile · harness · model · effort) · trailing · send. The attach
+            buttons lead so the paperclip sits at the far left, ahead of the
+            control pickers. */}
         <div className="flex items-end gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            {controls ?? (
-              <AgentSessionControls
-                context={context}
-                harness={harness}
-                profile={profile}
-                model={model}
-                reasoning={reasoning}
-              />
-            )}
-          </div>
-
           {onAttach && (
             <>
               <button
@@ -524,6 +517,18 @@ export function AgentComposer({
               />
             </>
           )}
+
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            {controls ?? (
+              <AgentSessionControls
+                context={context}
+                harness={harness}
+                profile={profile}
+                model={model}
+                reasoning={reasoning}
+              />
+            )}
+          </div>
 
           {trailing && (
             <div className="flex shrink-0 items-center gap-2">{trailing}</div>

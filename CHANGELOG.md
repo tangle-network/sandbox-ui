@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.84.0
+
+### Chat
+
+- **`AgentComposer` leads its bottom row with the attach buttons.** The paperclip (and folder) buttons sat after the `flex-1` control strip, so they landed mid-row between the model picker and the send button. Attachment is the composer's primary left-side affordance, so the row now runs attach · folder · controls · trailing · send — the attach buttons come first and the control strip keeps its `flex-1` growth, so `trailing` + send stay pinned to the far right. Pure reorder: no change to the attach handlers, drag-and-drop overlay, or clipboard-paste ingress.
+
 ## 0.81.0
 
 ### Workflows

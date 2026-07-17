@@ -69,11 +69,15 @@ function isBareYamlScalar(value: string): boolean {
   );
 }
 
-/** Bare YAML key when safe, quoted otherwise. Keys use the stricter
- *  identifier rule (must start with a letter/underscore) rather than the
- *  scalar rule, since a dotted or digit-led key reads poorly unquoted. */
+/** Bare YAML key when safe, quoted otherwise. Keys use the stricter identifier
+ *  rule (must start with a letter/underscore) rather than the scalar rule,
+ *  since a dotted or digit-led key reads poorly unquoted — but a key that spells
+ *  a reserved scalar word (`true`/`null`/`on`/…) must still be quoted, or a
+ *  YAML 1.1 parser loads the KEY as a boolean/null instead of the string. */
 function yamlKey(key: string): string {
-  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) ? key : JSON.stringify(key);
+  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) && !YAML_RESERVED_SCALAR.test(key)
+    ? key
+    : JSON.stringify(key);
 }
 
 /**

@@ -72,8 +72,13 @@ function collectRows(
     properties as Record<string, unknown>,
   )) {
     const prop = asNode(rawProp) ?? {};
+    // `JSON.stringify` returns `undefined` for a non-serializable member
+    // (function/symbol/`undefined`) — the prop is `unknown`, so drop those so
+    // `enumValues` is genuinely `string[]` and no stray "undefined" renders.
     const enumValues = Array.isArray(prop.enum)
-      ? prop.enum.map((v) => JSON.stringify(v))
+      ? prop.enum
+          .map((v) => JSON.stringify(v))
+          .filter((v): v is string => typeof v === "string")
       : null;
     out.push({
       name: prefix ? `${prefix}.${name}` : name,

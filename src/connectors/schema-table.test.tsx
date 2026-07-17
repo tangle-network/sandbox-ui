@@ -96,6 +96,25 @@ describe("SchemaTable", () => {
     expect(screen.queryByRole("button", { name: "Raw JSON" })).toBeNull();
   });
 
+  it("drops non-serializable enum members instead of rendering undefined", () => {
+    // `undefined` in an enum stringifies to `undefined` (not a string); it must
+    // be filtered so the rendered "One of:" list has no stray token.
+    render(
+      <SchemaTable
+        label="Input"
+        schema={{
+          type: "object",
+          properties: {
+            event: { type: "string", enum: ["COMMENT", undefined, "APPROVE"] },
+          },
+        }}
+      />,
+    );
+    const cell = screen.getByText(/One of:/);
+    expect(cell).toHaveTextContent('One of: "COMMENT", "APPROVE"');
+    expect(cell).not.toHaveTextContent("undefined");
+  });
+
   it("says so when an object schema declares no fields", () => {
     render(
       <SchemaTable label="Input" schema={{ type: "object", properties: {} }} />,

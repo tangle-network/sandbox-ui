@@ -82,6 +82,25 @@ describe("integrationStepYaml", () => {
     expect(yaml).not.toContain("flag: true");
   });
 
+  it("quotes a key that spells a reserved YAML scalar word", () => {
+    // A field literally named `true`/`null`/`on` must be quoted, or a YAML 1.1
+    // parser loads the key as a boolean/null instead of the string.
+    const yaml = integrationStepYaml("x.y", {
+      type: "object",
+      properties: {
+        on: { type: "string" },
+        null: { type: "string" },
+        No: { type: "string" },
+        keep: { type: "string" },
+      },
+    });
+    expect(yaml).toContain('"on": ""');
+    expect(yaml).toContain('"null": ""');
+    expect(yaml).toContain('"No": ""');
+    // A normal field name stays bare.
+    expect(yaml).toContain("keep: ");
+  });
+
   it("quotes keys that are not bare-safe in YAML", () => {
     const yaml = integrationStepYaml("x.y", {
       type: "object",

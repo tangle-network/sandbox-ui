@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.85.0
+
+### Connectors
+
+- **New `./connectors` module** — building blocks for a browsable Tangle-hub integration/connector library, a sibling of the existing `./integrations` module. Not framework-generic UI: it encodes Tangle-product concepts (the `provider.action` path model, `integration.invoke` workflow steps, the hub action/risk shape), so it's authored here rather than in `@tangle-network/ui`. Host-**app**-agnostic within Tangle, though — any Tangle app (not just the platform) can render the same catalog over its own hub data, since the components take their data as props and leave fetching, navigation, and connect flows to the host:
+  - **`ConnectorCatalogList`** — a searchable, category/auth-filterable browse list. The host supplies `entries`, a `getConnectorHref` resolver, an optional `onOpenConnector` for SPA navigation (a modifier/middle-click still falls through to the real href for open-in-new-tab), an optional `renderIcon` for brand marks, and an optional `onRequestIntegration`. Rows show a category · auth · N actions · M trigger events detail line and a connected indicator.
+  - **`ConnectorActionList`** — a searchable list of a connector's invokable actions; each row expands to its `provider.action` path (copyable), a readable input/output schema table, a ready-to-paste `integration.invoke` step (Copy step YAML), and an optional Build-with-assistant callback. Risk renders as a Badge (`read`/`write`/`destructive`/`unclassified`).
+  - **`SchemaTable`** — a readable field table for a JSON input/output schema (required marks, nested objects, array item types, enum values) with a raw-JSON toggle; falls back to raw JSON for shapes it can't tabulate.
+  - **`integrationStepYaml(path, inputSchema)`** — a pure helper that stubs a workflow `integration.invoke` step block from an action's input schema.
+
 ## 0.84.0
 
 ### Chat

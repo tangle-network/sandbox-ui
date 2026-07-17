@@ -56,6 +56,32 @@ describe("integrationStepYaml", () => {
     expect(yaml).toContain('event: "COMMENT"');
   });
 
+  it("skips non-string enum members and stubs by type instead", () => {
+    // A non-string first enum member must not be inlined — JSON.stringify would
+    // emit a type-changing bare token (`true`, `0`, `{}`) or, for a malformed
+    // `undefined` member, the literal `undefined`. The type placeholder is used
+    // instead, and a later string member is preferred when present.
+    const yaml = integrationStepYaml("x.y", {
+      type: "object",
+      properties: {
+        flag: { type: "boolean", enum: [true, false] },
+        size: { type: "integer", enum: [1, 2] },
+        shape: { type: "object", enum: [{}] },
+        broken: { enum: [undefined] },
+        nullable: { type: "string", enum: [null, "keep"] },
+      },
+    });
+    expect(yaml).toContain("flag: false");
+    expect(yaml).toContain("size: 0");
+    expect(yaml).toContain("shape: {}");
+    expect(yaml).toContain('broken: ""');
+    // A null member is skipped in favor of the first real string.
+    expect(yaml).toContain('nullable: "keep"');
+    // Never emits type-changing or invalid bare tokens from the enum branch.
+    expect(yaml).not.toContain("undefined");
+    expect(yaml).not.toContain("flag: true");
+  });
+
   it("quotes keys that are not bare-safe in YAML", () => {
     const yaml = integrationStepYaml("x.y", {
       type: "object",

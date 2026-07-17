@@ -19,14 +19,21 @@ function asSchemaObject(value: unknown): JsonSchemaObject | null {
     : null;
 }
 
-/** YAML scalar placeholder for a property schema. Enums stub their first
- *  value (a real accepted input beats an empty string); otherwise the
- *  placeholder is the type's empty value. */
+/** YAML scalar placeholder for a property schema. A string enum stubs its
+ *  first string member (a real accepted input beats an empty string, quoted so
+ *  it stays a string); otherwise — non-string/undefined/object enum values, or
+ *  no enum — the placeholder is the type's empty value. Non-string enum members
+ *  are intentionally NOT inlined: `JSON.stringify` on them would emit a
+ *  type-changing bare token (`true`, `{}`, or even `undefined` for a malformed
+ *  member), which the type placeholder handles honestly instead. */
 function placeholderFor(propSchema: unknown): string {
   const schema = asSchemaObject(propSchema);
   if (!schema) return '""';
-  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
-    return JSON.stringify(schema.enum[0]);
+  if (Array.isArray(schema.enum)) {
+    const firstString = schema.enum.find(
+      (value): value is string => typeof value === "string",
+    );
+    if (firstString !== undefined) return JSON.stringify(firstString);
   }
   const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
   switch (type) {

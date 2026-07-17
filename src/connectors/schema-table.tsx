@@ -111,10 +111,22 @@ export interface SchemaTableProps {
   label: string;
 }
 
+/** `JSON.stringify` that survives a value it cannot serialize. Schemas arrive
+ *  over the wire as JSON (acyclic), but the prop is `unknown`, so a hand-built
+ *  cyclic object must degrade to a readable note in the raw-JSON view rather
+ *  than throw and take down the host. */
+function safeJsonStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2) ?? "null";
+  } catch {
+    return "(schema cannot be shown as JSON)";
+  }
+}
+
 export function SchemaTable({ schema, label }: SchemaTableProps) {
   const [showRaw, setShowRaw] = useState(false);
   const rows = schemaRows(schema);
-  const rawJson = JSON.stringify(schema, null, 2) ?? "null";
+  const rawJson = safeJsonStringify(schema);
 
   return (
     <div>

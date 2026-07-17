@@ -102,4 +102,27 @@ describe("SchemaTable", () => {
     );
     expect(screen.getByText("No fields.")).toBeInTheDocument();
   });
+
+  it("renders a cyclic schema without crashing the host", () => {
+    // Schemas arriving over the wire are JSON (acyclic), but the component
+    // takes `unknown`, so a hand-built cyclic object must degrade gracefully.
+    // Two independent guards: the MAX_DEPTH cap bounds `collectRows` recursion
+    // (the cycle truncates like any deep schema — no stack overflow), and the
+    // raw-JSON view uses a safe stringify (a cycle would otherwise throw
+    // "Converting circular structure to JSON" and take down the host).
+    const cyclic: Record<string, unknown> = { type: "object", properties: {} };
+    (cyclic.properties as Record<string, unknown>).self = cyclic;
+
+    expect(() =>
+      render(<SchemaTable label="Input" schema={cyclic} />),
+    ).not.toThrow();
+    // The field view renders the cycle, truncated at the depth cap.
+    expect(screen.getAllByText("self").length).toBeGreaterThan(0);
+
+    // The raw-JSON view degrades to a note instead of throwing.
+    fireEvent.click(screen.getByRole("button", { name: "Raw JSON" }));
+    expect(
+      screen.getByText("(schema cannot be shown as JSON)"),
+    ).toBeInTheDocument();
+  });
 });

@@ -45,6 +45,35 @@ describe("SchemaTable", () => {
     expect(screen.getByText("name")).toBeInTheDocument();
   });
 
+  it("recurses into the object properties of an array's items", () => {
+    render(
+      <SchemaTable
+        label="Input"
+        schema={{
+          type: "object",
+          properties: {
+            fields: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  customFieldId: { type: "integer" },
+                  fieldValue: { type: "string", description: "The value" },
+                },
+              },
+            },
+          },
+        }}
+      />,
+    );
+    // The array itself is typed, and its object items' fields are tabulated.
+    expect(screen.getByText("fields")).toBeInTheDocument();
+    expect(screen.getByText("array<object>")).toBeInTheDocument();
+    expect(screen.getByText("customFieldId")).toBeInTheDocument();
+    expect(screen.getByText("fieldValue")).toBeInTheDocument();
+    expect(screen.getByText("The value")).toBeInTheDocument();
+  });
+
   it("toggles between the field view and raw JSON", () => {
     render(
       <SchemaTable

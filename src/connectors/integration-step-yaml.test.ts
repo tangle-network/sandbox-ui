@@ -85,4 +85,25 @@ describe("integrationStepYaml", () => {
     expect(yaml).toContain('real: ""');
     expect(yaml).not.toContain("ghost");
   });
+
+  it("emits a normal dotted path bare", () => {
+    expect(integrationStepYaml("github.issues.create", undefined)).toContain(
+      "    path: github.issues.create\n",
+    );
+  });
+
+  it("quotes a path a YAML parser would coerce to a non-string", () => {
+    // Reserved scalar words and pure-numeric tokens would load as
+    // boolean/null/number if emitted bare — real hub paths never look like
+    // this, but the helper must not silently change the path's type.
+    for (const path of ["true", "false", "null", "no", "123", "1.2"]) {
+      const yaml = integrationStepYaml(path, undefined);
+      expect(yaml).toContain(`    path: ${JSON.stringify(path)}\n`);
+    }
+  });
+
+  it("quotes a path with structural YAML characters", () => {
+    const yaml = integrationStepYaml("a: b\n- c", undefined);
+    expect(yaml).toContain(`    path: ${JSON.stringify("a: b\n- c")}\n`);
+  });
 });

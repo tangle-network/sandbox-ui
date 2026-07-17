@@ -44,7 +44,27 @@ function placeholderFor(propSchema: unknown): string {
   }
 }
 
-/** Bare YAML key when safe, quoted otherwise. */
+/** YAML 1.1 plain scalars a parser would coerce away from a string —
+ *  booleans, null, and the empty value. Numbers are caught separately (they
+ *  have no letter, so the "must contain a letter" rule below rejects them). */
+const YAML_RESERVED_SCALAR = /^(?:true|false|null|yes|no|on|off|~)$/i;
+
+/** True when `value` is safe to emit as a bare (unquoted) YAML scalar: a plain
+ *  identifier-ish token that a YAML parser will load back as the same string.
+ *  Requires at least one letter so pure-numeric tokens (`123`, `1.2`) quote,
+ *  and rejects reserved words so `true`/`null`/`no` quote — both would
+ *  otherwise load as a non-string type. */
+function isBareYamlScalar(value: string): boolean {
+  return (
+    /^[A-Za-z0-9_.-]+$/.test(value) &&
+    /[A-Za-z]/.test(value) &&
+    !YAML_RESERVED_SCALAR.test(value)
+  );
+}
+
+/** Bare YAML key when safe, quoted otherwise. Keys use the stricter
+ *  identifier rule (must start with a letter/underscore) rather than the
+ *  scalar rule, since a dotted or digit-led key reads poorly unquoted. */
 function yamlKey(key: string): string {
   return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) ? key : JSON.stringify(key);
 }
@@ -80,10 +100,9 @@ export function integrationStepYaml(
 ): string {
   const fields = stubFields(inputSchema);
   // Paths are catalog-controlled dotted identifiers; quote anything else so a
-  // hostile manifest value can't break the emitted YAML structure.
-  const pathScalar = /^[A-Za-z0-9_.-]+$/.test(path)
-    ? path
-    : JSON.stringify(path);
+  // hostile manifest value — a YAML-special token or a structural character —
+  // can't change the emitted step's shape or the path's loaded type.
+  const pathScalar = isBareYamlScalar(path) ? path : JSON.stringify(path);
   const lines = [
     "- integration.invoke:",
     `    path: ${pathScalar}`,

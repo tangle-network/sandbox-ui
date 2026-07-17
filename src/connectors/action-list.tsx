@@ -149,7 +149,11 @@ function ActionRow({
           {action.outputSchema != null && (
             <details>
               <summary className="cursor-pointer text-muted-foreground text-sm transition-colors hover:text-foreground">
-                Output shape (for {"`${steps[N]…}`"} expressions)
+                Output shape (for{" "}
+                <code className="rounded bg-surface-container-high px-1 py-0.5 font-mono text-xs">
+                  {"${steps[N]…}"}
+                </code>{" "}
+                expressions)
               </summary>
               <div className="mt-2">
                 <SchemaTable schema={action.outputSchema} label="Output" />

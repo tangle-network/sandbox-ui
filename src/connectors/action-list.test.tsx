@@ -84,6 +84,24 @@ describe("ConnectorActionList", () => {
     ).toBeInTheDocument();
   });
 
+  it("copies the path and confirms, then surfaces failure visibly", async () => {
+    const writeText = vi.fn().mockResolvedValueOnce(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<ConnectorActionList actions={actions} providerTitle="GitHub" />);
+    fireEvent.click(screen.getByRole("button", { name: /Create issue/ }));
+
+    const copyPath = screen.getByRole("button", { name: /Copy path/ });
+    fireEvent.click(copyPath);
+    await screen.findByRole("button", { name: /Copied/ });
+    expect(writeText).toHaveBeenCalledWith("github.issues.create");
+
+    // A clipboard rejection (insecure context / denied permission) shows a
+    // visible "Copy failed" state instead of silently reverting.
+    writeText.mockRejectedValueOnce(new Error("denied"));
+    fireEvent.click(screen.getByRole("button", { name: /Copy step YAML/ }));
+    await screen.findByRole("button", { name: /Copy failed/ });
+  });
+
   it("keeps only one row expanded at a time", () => {
     render(<ConnectorActionList actions={actions} providerTitle="GitHub" />);
 

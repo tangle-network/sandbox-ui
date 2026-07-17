@@ -25,8 +25,11 @@ function RiskBadge({ risk }: { risk?: ConnectorAction["risk"] }) {
   return <Badge variant={badge.variant}>{badge.label}</Badge>;
 }
 
-/** Copy-to-clipboard button with a transient "Copied" confirmation. Failures
- *  are logged rather than surfaced — the label reverts and the user can retry. */
+/** Copy-to-clipboard button with a transient confirmation. `navigator.clipboard`
+ *  is unavailable in insecure contexts (and can reject on a permission denial),
+ *  so a failure surfaces a visible "Copy failed" state rather than reverting
+ *  silently — the user learns the copy didn't happen and can select the text
+ *  manually. */
 function CopyButton({
   text,
   label,
@@ -36,7 +39,7 @@ function CopyButton({
   label: string;
   title?: string;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -47,24 +50,27 @@ function CopyButton({
   );
 
   const copy = async () => {
+    let next: "copied" | "failed";
     try {
       await navigator.clipboard.writeText(text);
-      setCopied(true);
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setCopied(false), 2000);
+      next = "copied";
     } catch (err) {
       console.warn("Clipboard write failed:", err);
+      next = "failed";
     }
+    setState(next);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setState("idle"), 2000);
   };
 
   return (
     <Button type="button" variant="outline" size="sm" onClick={copy} title={title}>
-      {copied ? (
+      {state === "copied" ? (
         <Check className="h-3.5 w-3.5 text-[var(--surface-success-text)]" />
       ) : (
         <Copy className="h-3.5 w-3.5" />
       )}
-      {copied ? "Copied" : label}
+      {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : label}
     </Button>
   );
 }

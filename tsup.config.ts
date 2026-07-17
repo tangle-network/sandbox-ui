@@ -17,6 +17,7 @@ export default defineConfig({
     markdown: "src/markdown/index.ts",
     auth: "src/auth/index.ts",
     integrations: "src/integrations/index.ts",
+    connectors: "src/connectors/index.ts",
     pages: "src/pages/index.ts",
     hooks: "src/hooks/index.ts",
     "sdk-hooks": "src/sdk-hooks.ts",

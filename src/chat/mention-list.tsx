@@ -75,8 +75,8 @@ export const MentionList = React.forwardRef<MentionListHandle, MentionListProps>
         role="listbox"
         aria-label="File mentions"
         className={cn(
-          "max-h-64 min-w-[16rem] max-w-sm overflow-y-auto rounded-xl border border-[var(--md3-outline-variant)]",
-          "bg-surface-container-high p-1 shadow-lg",
+          "max-h-64 min-w-[16rem] max-w-sm overflow-y-auto rounded-xl border border-border",
+          "bg-popover text-popover-foreground p-1 shadow-lg",
         )}
       >
         {loading && (

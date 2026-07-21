@@ -114,7 +114,10 @@ export const MentionList = React.forwardRef<MentionListHandle, MentionListProps>
                   event.preventDefault();
                   onSelect(item);
                 }}
-                onMouseEnter={() => setSelected(index)}
+                // Routes through the same path arrows use so the imperative
+                // Enter/Tab handler (which reads `selectedRef`, not `selected`)
+                // agrees with the row the pointer is over.
+                onMouseEnter={() => move(index)}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm",
                   active

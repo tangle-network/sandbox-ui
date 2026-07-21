@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { useState } from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Editor } from "@tiptap/core";
 import {
@@ -158,6 +158,58 @@ describe("AgentComposer — mention path", () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
+  it("fires onMentionsChange for a programmatic value restore, and guards against a duplicate fire", async () => {
+    const user = userEvent.setup();
+    const onMentionsChange = vi.fn();
+    const fetchItems = vi.fn(async () => FILES);
+    let setValueExternal: (value: string) => void = () => {};
+    const Wrapper = () => {
+      const [value, setValue] = useState("");
+      setValueExternal = setValue;
+      return (
+        <AgentComposer
+          value={value}
+          onChange={setValue}
+          onSubmit={() => {}}
+          mention={mentionProp({ onMentionsChange, fetchItems })}
+        />
+      );
+    };
+    const { container } = render(<Wrapper />);
+    const editor = await waitFor(() => {
+      const node = container.querySelector<HTMLElement>(
+        '[contenteditable="true"]',
+      );
+      if (!node) throw new Error("editor not mounted");
+      return node;
+    });
+
+    // Open the popover so `knownRef` learns "src/app.tsx" from the fetch
+    // response, then back out without inserting — no mention has been
+    // reported to `onMentionsChange` yet.
+    editor.focus();
+    await user.type(editor, "@a");
+    await waitFor(() => expect(fetchItems).toHaveBeenCalled());
+    await screen.findAllByRole("option");
+    await user.keyboard("{Escape}");
+    onMentionsChange.mockClear();
+
+    // A programmatic restore (set from outside, not typed) containing the
+    // now-known id must still surface it.
+    act(() => setValueExternal("intro @src/app.tsx outro"));
+    await waitFor(() =>
+      expect(onMentionsChange).toHaveBeenCalledWith([
+        { id: "src/app.tsx", label: "app.tsx", kind: "file" },
+      ]),
+    );
+    expect(onMentionsChange).toHaveBeenCalledTimes(1);
+
+    // A second restore carrying the same mention set (different surrounding
+    // text) must not re-fire the callback.
+    act(() => setValueExternal("other @src/app.tsx wrapper"));
+    await waitFor(() => expect(editor.textContent).toContain("wrapper"));
+    expect(onMentionsChange).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("mention node", () => {

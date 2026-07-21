@@ -299,6 +299,12 @@ export function AgentComposer({
     onSubmit();
   };
 
+  // Stable identity so the mention editor's registration effect only reruns
+  // when the editor instance itself changes, not on every parent render.
+  const registerRichFocus = React.useCallback((focus: () => void) => {
+    richFocusRef.current = focus;
+  }, []);
+
   const dropEnabled = Boolean(onAttach);
 
   const handleDragEnter = (event: React.DragEvent) => {
@@ -511,9 +517,7 @@ export function AgentComposer({
               minRows={minRows}
               maxHeight={maxHeight}
               mention={mention}
-              registerFocus={(focus) => {
-                richFocusRef.current = focus;
-              }}
+              registerFocus={registerRichFocus}
               onPasteFiles={onAttach ? handleEditorPasteFiles : undefined}
             />
           </React.Suspense>

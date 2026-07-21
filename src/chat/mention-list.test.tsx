@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { createRef } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import type { MentionItem } from "./agent-composer";
 import { MentionList, type MentionListHandle } from "./mention-list";
 
@@ -108,6 +108,29 @@ describe("MentionList", () => {
     );
     expect(ref.current!.onKeyDown(key("Enter"))).toBe(true);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("selects the hovered item on Enter, not the arrow-highlighted default", () => {
+    const onSelect = vi.fn();
+    const ref = createRef<MentionListHandle>();
+    render(
+      <MentionList
+        ref={ref}
+        items={ITEMS}
+        loading={false}
+        error={false}
+        onSelect={onSelect}
+      />,
+    );
+
+    const options = screen.getAllByRole("option");
+    // Index 0 is highlighted by default; hover moves the highlight to index 2
+    // without ever touching the keyboard.
+    fireEvent.mouseEnter(options[2]!);
+    expect(options[2]).toHaveAttribute("aria-selected", "true");
+
+    expect(ref.current!.onKeyDown(key("Enter"))).toBe(true);
+    expect(onSelect).toHaveBeenCalledWith(ITEMS[2]);
   });
 
   it("does not consume unrelated keys", () => {

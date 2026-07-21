@@ -7,6 +7,7 @@ import {
   type AgentProfileOption,
   type ComposerFile,
   DEFAULT_REASONING_LEVEL_OPTIONS,
+  type MentionItem,
   type ReasoningLevel,
 } from "../../chat";
 import type { HarnessType, ModelInfo } from "../../dashboard";
@@ -307,6 +308,65 @@ export const WithErrorAndRetry: Story = {
           options: DEFAULT_REASONING_LEVEL_OPTIONS,
         }}
       />
+    );
+  },
+};
+
+// A fake workspace file index for the mention popover. `fetchItems` mimics a
+// sandbox round-trip: a short delay, then name/path substring filtering.
+const MENTION_FILES: MentionItem[] = [
+  { id: "src/app.tsx", label: "app.tsx", detail: "src", kind: "file" },
+  { id: "src/routes/api.chat.ts", label: "api.chat.ts", detail: "src/routes", kind: "file" },
+  { id: "src/lib/utils.ts", label: "utils.ts", detail: "src/lib", kind: "file" },
+  { id: "src/chat/agent-composer.tsx", label: "agent-composer.tsx", detail: "src/chat", kind: "file" },
+  { id: "package.json", label: "package.json", detail: ".", kind: "file" },
+  { id: "README.md", label: "README.md", detail: ".", kind: "file" },
+];
+
+async function fakeFetchItems(query: string): Promise<MentionItem[]> {
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  const q = query.toLowerCase();
+  if (!q) return MENTION_FILES.slice(0, 5);
+  return MENTION_FILES.filter(
+    (file) =>
+      file.label.toLowerCase().includes(q) || file.id.toLowerCase().includes(q),
+  );
+}
+
+/**
+ * Mentions: typing `@` opens a caret-anchored popover backed by an async
+ * provider; a selection becomes an atomic pill that serializes to `@<id>`.
+ */
+export const WithMentions: Story = {
+  name: "Mentions (@-file picker)",
+  render: () => {
+    const [value, setValue] = useState("");
+    const [model, setModel] = useState("anthropic/claude-opus-4-8");
+    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
+    const [mentioned, setMentioned] = useState<MentionItem[]>([]);
+    return (
+      <div className="flex flex-col gap-2">
+        <AgentComposer
+          value={value}
+          onChange={setValue}
+          onSubmit={() => setValue("")}
+          placeholder="Ask about your files — type @ to reference one…"
+          mention={{
+            fetchItems: fakeFetchItems,
+            onMentionsChange: setMentioned,
+            emptyText: "No files match",
+          }}
+          model={{ value: model, onChange: setModel, models: MODELS }}
+          reasoning={{
+            value: reasoning,
+            onChange: setReasoning,
+            options: DEFAULT_REASONING_LEVEL_OPTIONS,
+          }}
+        />
+        <p className="px-1 text-muted-foreground text-xs">
+          Referenced: {mentioned.map((m) => m.id).join(", ") || "none"}
+        </p>
+      </div>
     );
   },
 };

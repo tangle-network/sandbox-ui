@@ -19,6 +19,12 @@ if (!Element.prototype.releasePointerCapture) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {}
 }
+// jsdom has no layout engine, so ProseMirror's coordinate lookups
+// (posAtCoords → elementFromPoint) have nothing to hit. A null-returning shim
+// lets the editor process pointer events in tests without throwing.
+if (!Document.prototype.elementFromPoint) {
+  Document.prototype.elementFromPoint = () => null
+}
 if (!globalThis.ResizeObserver) {
   globalThis.ResizeObserver = class {
     observe() {}

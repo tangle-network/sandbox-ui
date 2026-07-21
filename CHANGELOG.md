@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.85.1
+
+### Chat
+
+- **Workspace chat send now base64-encodes text parts on the wire (fixes #183).** `useSessionStream`'s `send()` posted `{ type: "text", text }` as raw UTF-8, but the sidecar's send-message route base64-decodes every text part at the request boundary (its universal wire format — readable prompt bodies false-positive on ingress WAF shell-injection rules). Any message with a character outside the base64 alphabet (a space, punctuation) was rejected with `400 INVALID_REQUEST`; a message that happened to be valid base64 (a bare word) was silently mis-decoded to garbage. Chat was non-functional for real input. The text part is now encoded via a new internal `encodeTextForWire` helper that mirrors the sandbox SDK and the server decoder byte-for-byte; the receive path is unchanged (the sidecar persists decoded UTF-8, so history and streamed parts already arrive as plain text).
+
 ## 0.85.0
 
 ### Connectors

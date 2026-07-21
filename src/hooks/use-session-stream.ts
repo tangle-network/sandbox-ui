@@ -1,6 +1,7 @@
 import type { ReasoningEffort } from '@tangle-network/agent-interface';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SessionMessage, SessionPart, TextPart, ToolPart, ReasoningPart } from '@tangle-network/ui/types';
+import { encodeTextForWire } from './wire-encoding';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -386,7 +387,9 @@ export function useSessionStream({
       await fetchJson<unknown>(url, token, {
         method: 'POST',
         body: JSON.stringify({
-          parts: [{ type: 'text', text }],
+          // The sidecar base64-decodes every text part at the route boundary;
+          // a raw-UTF-8 part is rejected 400 (or mis-decoded). See wire-encoding.ts.
+          parts: [{ type: 'text', text: encodeTextForWire(text) }],
           ...(options?.agent ? { agent: options.agent } : {}),
           ...(options?.model ? { model: options.model } : {}),
           ...(options?.system ? { system: options.system } : {}),

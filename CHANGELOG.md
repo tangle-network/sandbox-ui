@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.86.0
+
+### Chat
+
+- **`AgentComposer` learns `@`-mentions (opt-in).** A new optional `mention` prop swaps the plain `<textarea>` for a TipTap-based rich input: typing the trigger (default `@`) opens a caret-anchored suggestion popover fed by the host's async `fetchItems(query)`, keyboard-navigable (↑/↓, Enter/Tab selects, Esc closes — a popover-open Enter selects and never submits), with loading/empty/error states. A picked item becomes an **atomic inline pill** (`@label`, full id on hover): not enterable, skipped over by arrow keys, deleted whole by a single backspace. `value` stays a plain string — pills serialize as `@<id>` and restore from a programmatic value set for ids the editor has seen — so the controlled contract, Enter/Shift+Enter, autosize, placeholder/disabled/autoFocus, Cmd/Ctrl+L, clipboard file paste → `onAttach`, drag-and-drop, and IME composition guards all behave exactly as the textarea path does. Suggestion fetches are debounced (100 ms) with stale-response protection, and the popover re-anchors on scroll/resize instead of detaching from the caret.
+- **Without the `mention` prop, nothing changes.** The textarea path is untouched and behavior-identical, and the TipTap stack (including the two new deps `@tiptap/extension-mention` and `@tiptap/suggestion`) lives in a lazily-loaded chunk — `./chat` consumers that never pass `mention` download none of it.
+- **New API** (exported from `./chat`): `MentionItem` (`{ id, label, detail?, kind? }`) and `AgentComposerMention` (`{ trigger?, fetchItems, onMentionsChange?, renderItem?, emptyText? }`). `onMentionsChange` reports the pills currently in the document — including after a programmatic restore — so a host can mirror the mentioned items into its send body. Designed to plug directly into `@tangle-network/agent-app`'s `useFileMentions` hook for sandbox file mentions.
+
 ## 0.85.1
 
 ### Chat

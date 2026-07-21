@@ -42,8 +42,10 @@ export {
 
 export {
   AgentComposer,
+  type AgentComposerMention,
   type AgentComposerProps,
   type ComposerFile,
+  type MentionItem,
 } from "./agent-composer";
 
 export {

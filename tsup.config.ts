@@ -48,6 +48,8 @@ export default defineConfig({
     "@tiptap/core",
     "@tiptap/react",
     "@tiptap/starter-kit",
+    "@tiptap/extension-mention",
+    "@tiptap/suggestion",
     "@tiptap/extension-collaboration",
     "@tiptap/extension-collaboration-cursor",
     "yjs",

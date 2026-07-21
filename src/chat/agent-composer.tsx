@@ -46,6 +46,39 @@ function imageExtension(file: File): string {
   return fromName?.toLowerCase() ?? "png";
 }
 
+/** A selectable item in the `@`-mention popover. Generic — file semantics live
+ * in the consuming app, not here. */
+export interface MentionItem {
+  id: string;
+  label: string;
+  detail?: string;
+  kind?: string;
+}
+
+/**
+ * Opt-in `@`-mention support. Present ⇒ the composer swaps its textarea for a
+ * TipTap rich input that renders mentions as atomic pills; absent ⇒ exactly
+ * today's plain-textarea behavior. Data-agnostic: the app supplies items.
+ */
+export interface AgentComposerMention {
+  /** The character that opens the popover. Default "@". */
+  trigger?: string;
+  /** Async provider called with the query typed after the trigger. */
+  fetchItems: (query: string) => Promise<MentionItem[]>;
+  /** Fired with the mentions currently in the document whenever they change. */
+  onMentionsChange?: (mentions: MentionItem[]) => void;
+  /** Custom row renderer for a popover item. */
+  renderItem?: (item: MentionItem) => React.ReactNode;
+  /** Shown when a fetch resolves to zero items. Default "No matches". */
+  emptyText?: string;
+}
+
+/**
+ * The TipTap editor is a lazy chunk: only consumers that pass `mention` pull
+ * the editor stack into their bundle, and only when the mention path renders.
+ */
+const MentionEditor = React.lazy(() => import("./mention-editor"));
+
 /** A staged attachment shown as a chip above the input. */
 export interface ComposerFile {
   id: string;
@@ -150,6 +183,13 @@ export interface AgentComposerProps {
    */
   canSubmitAttachmentsOnly?: boolean;
 
+  /**
+   * Opt-in `@`-mentions. When set, the textarea is replaced by a rich input
+   * that renders mentions as atomic pills and serializes them to `@<id>` in
+   * `value`. Omit for exactly today's plain-textarea behavior.
+   */
+  mention?: AgentComposerMention;
+
   /** Cmd/Ctrl+L focuses the input and shows a hint. Default false. */
   focusShortcut?: boolean;
   /** Minimum textarea rows before it grows. Default 2. */
@@ -203,6 +243,7 @@ export function AgentComposer({
   dropDescription = "They attach to your next message.",
   canSubmitWhileBusy = false,
   canSubmitAttachmentsOnly = false,
+  mention,
   focusShortcut = false,
   minRows = 2,
   maxHeight = 200,
@@ -211,6 +252,8 @@ export function AgentComposer({
   autoFocus,
 }: AgentComposerProps) {
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+  // Set by the mention editor so the focus shortcut reaches it in the rich path.
+  const richFocusRef = React.useRef<(() => void) | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const folderInputRef = React.useRef<HTMLInputElement | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
@@ -237,12 +280,13 @@ export function AgentComposer({
     function onKeyDown(event: globalThis.KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "l") {
         event.preventDefault();
-        textareaRef.current?.focus();
+        if (mention) richFocusRef.current?.();
+        else textareaRef.current?.focus();
       }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [focusShortcut, disabled]);
+  }, [focusShortcut, disabled, mention]);
 
   const canSend =
     !disabled &&
@@ -254,6 +298,12 @@ export function AgentComposer({
     if (!canSend) return;
     onSubmit();
   };
+
+  // Stable identity so the mention editor's registration effect only reruns
+  // when the editor instance itself changes, not on every parent render.
+  const registerRichFocus = React.useCallback((focus: () => void) => {
+    richFocusRef.current = focus;
+  }, []);
 
   const dropEnabled = Boolean(onAttach);
 
@@ -302,16 +352,10 @@ export function AgentComposer({
     if (files?.length) deliverFiles(Array.from(files));
   };
 
-  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    if (!onAttach) return;
-    const clipboardFiles = event.clipboardData?.files;
-    if (!clipboardFiles || clipboardFiles.length === 0) return;
-
-    // Files are the payload — suppress the default text paste even when every
-    // file is rejected, so a rejection never half-pastes stray text.
-    event.preventDefault();
-
-    const files = Array.from(clipboardFiles).map((file) => {
+  // Auto-name generic clipboard image blobs so a paste of the same bitmap
+  // twice doesn't collide on `image.png`.
+  const renamePastedFiles = (files: File[]): File[] =>
+    files.map((file) => {
       if (file.type.startsWith("image/") && isGenericImageName(file.name)) {
         pastedImageCount.current += 1;
         return new File(
@@ -322,7 +366,24 @@ export function AgentComposer({
       }
       return file;
     });
-    deliverFiles(files);
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!onAttach) return;
+    const clipboardFiles = event.clipboardData?.files;
+    if (!clipboardFiles || clipboardFiles.length === 0) return;
+
+    // Files are the payload — suppress the default text paste even when every
+    // file is rejected, so a rejection never half-pastes stray text.
+    event.preventDefault();
+    deliverFiles(renamePastedFiles(Array.from(clipboardFiles)));
+  };
+
+  // The rich-input equivalent of `handlePaste`: returns true when clipboard
+  // files were the payload so the editor suppresses its default text paste.
+  const handleEditorPasteFiles = (clipboardFiles: FileList): boolean => {
+    if (!onAttach || clipboardFiles.length === 0) return false;
+    deliverFiles(renamePastedFiles(Array.from(clipboardFiles)));
+    return true;
   };
 
   const folderChips = attachments.filter((file) => file.kind === "folder");
@@ -430,33 +491,65 @@ export function AgentComposer({
           </div>
         )}
 
-        <textarea
-          ref={textareaRef}
-          rows={minRows}
-          value={value}
-          disabled={disabled}
-          autoFocus={autoFocus}
-          onChange={(event) => onChange(event.target.value)}
-          onInput={(event) => resize(event.currentTarget)}
-          onPaste={handlePaste}
-          onKeyDown={(event) => {
-            if (
-              event.key === "Enter" &&
-              !event.shiftKey &&
-              !event.nativeEvent.isComposing &&
-              event.keyCode !== 229
-            ) {
-              event.preventDefault();
-              submit();
+        {mention ? (
+          <React.Suspense
+            fallback={
+              <textarea
+                rows={minRows}
+                value={value}
+                disabled
+                placeholder={placeholder}
+                aria-label="Message input"
+                className={cn(
+                  "w-full resize-none bg-transparent px-2 py-1 text-sm leading-relaxed text-foreground outline-none",
+                  "placeholder:text-muted-foreground",
+                )}
+              />
             }
-          }}
-          placeholder={placeholder}
-          aria-label="Message input"
-          className={cn(
-            "w-full resize-none bg-transparent px-2 py-1 text-sm leading-relaxed text-foreground outline-none",
-            "placeholder:text-muted-foreground",
-          )}
-        />
+          >
+            <MentionEditor
+              value={value}
+              onChange={onChange}
+              onSubmit={submit}
+              placeholder={placeholder}
+              disabled={disabled}
+              autoFocus={autoFocus}
+              minRows={minRows}
+              maxHeight={maxHeight}
+              mention={mention}
+              registerFocus={registerRichFocus}
+              onPasteFiles={onAttach ? handleEditorPasteFiles : undefined}
+            />
+          </React.Suspense>
+        ) : (
+          <textarea
+            ref={textareaRef}
+            rows={minRows}
+            value={value}
+            disabled={disabled}
+            autoFocus={autoFocus}
+            onChange={(event) => onChange(event.target.value)}
+            onInput={(event) => resize(event.currentTarget)}
+            onPaste={handlePaste}
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing &&
+                event.keyCode !== 229
+              ) {
+                event.preventDefault();
+                submit();
+              }
+            }}
+            placeholder={placeholder}
+            aria-label="Message input"
+            className={cn(
+              "w-full resize-none bg-transparent px-2 py-1 text-sm leading-relaxed text-foreground outline-none",
+              "placeholder:text-muted-foreground",
+            )}
+          />
+        )}
 
         {/* Bottom row, left → right: attach · folder · control strip
             (profile · harness · model · effort) · trailing · send. The attach

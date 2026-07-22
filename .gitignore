@@ -1,5 +1,7 @@
 node_modules
 dist
+storybook-static
+*.tgz
 *.tsbuildinfo
 .DS_Store
 .agent-memory/

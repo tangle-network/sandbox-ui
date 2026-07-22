@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.87.1
+
+### Packaging
+
+- **Published imports now install every declared runtime dependency.** Version `0.87.0` externalized the mention editor's five TipTap modules but listed them only as development dependencies, so a clean consumer importing `./chat` failed its production build with `Could not resolve "@tiptap/core"`; the package now owns those private implementation dependencies, repeats the optional peer contract for the UI editor and session-store surfaces it re-exports, and proves every public JS/CSS export from the packed tarball in a clean Vite consumer before release.
+- **Releases now publish the artifact CI actually tested.** The workflow packs once, verifies the tarball in a blank consumer, compares its SHA-1 with npm and GitHub Packages, publishes only missing identical versions, verifies both registries, and creates the GitHub Release last so partial runs are safely resumable.
+- **Package maintenance is current and single-sourced.** The stale npm lockfile, unused collaboration and rendering packages, manually duplicated bundler exclusions, and obsolete Storybook 8 packages are gone; pnpm, Node, Storybook, the shared Tangle UI packages, and direct dependencies now use their current supported releases.
+- **TypeScript remains on `5.9.3` intentionally.** TypeScript 7 typechecks the source, but tsup's declaration bundler currently rejects it; moving to a pre-1.0 replacement bundler only for that version bump would add release risk without changing the published API.
+
+### Chat
+
+- **Reasoning controls follow the current agent-interface capability contract.** Codex exposes its supported `xhigh` and `ultracode` levels, Kimi's off state uses canonical `none`, and switching agents can only preserve or reduce an explicit effort rather than silently increasing it.
+
 ## 0.87.0
 
 ### Chat

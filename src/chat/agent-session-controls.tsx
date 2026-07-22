@@ -496,7 +496,7 @@ export function AgentSessionControls({
 
   // Re-clamp the reasoning effort into the set the (harness, model) pair supports
   // whenever that pair changes, so the picker's label can never disagree with the
-  // value actually in effect (e.g. a stale `ultracode` after switching to codex).
+  // value actually in effect (e.g. a stale `ultracode` after switching to Kimi).
   // Only the sandbox (harness) path is clamped; router-mode effort is its own concern.
   const clampEffort = (
     harnessValue: HarnessType,
@@ -638,8 +638,8 @@ export function AgentSessionControls({
       options={reasoningOptions}
       disabled={reasoning.disabled || !selectorHonorsEffort}
       // Smart switch: show only the reasoning levels the selected (harness, model) pair supports —
-      // the harness clamp (codex caps high, cli-base only `none`, claude full) intersected with the
-      // model's own capability. Driven entirely by agent-interface's `reasoningEffortsFor`.
+      // the harness capability set (cli-base only `none`, Kimi binary, Codex extended) intersected
+      // with the model's own capability. Driven entirely by agent-interface's `reasoningEffortsFor`.
       available={
         harness
           ? reasoningEffortsFor(harness.value, modelReasoning)

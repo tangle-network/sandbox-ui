@@ -15,8 +15,8 @@ import { cn } from "../lib/utils";
  * sends no explicit override); every other value is the canonical `ReasoningEffort` from
  * `@tangle-network/agent-interface` (the single source of truth — `none` … `ultracode`). The picker
  * shows only the levels the chosen harness/model supports — see `reasoningEffortsFor` + the
- * `available` prop — so unsupported levels (codex's `xhigh`/`ultracode`, kimi's mid-range) never
- * appear rather than being silently degraded.
+ * `available` prop — so unsupported levels (such as Kimi's mid-range) never appear rather than being
+ * silently degraded.
  */
 export type ReasoningLevel = "auto" | ReasoningEffort;
 
@@ -25,10 +25,10 @@ export const REASONING_LADDER: ReadonlyArray<ReasoningEffort> = reasoningLadder;
 
 /**
  * Snap a reasoning selection into the set a (harness, model) pair supports. The `auto` sentinel and
- * any value already in `available` pass through unchanged; a value above the ceiling (a stale
- * `ultracode` after switching to codex, say) snaps down to the highest still-available effort, so
- * the picker's label can never disagree with the value actually in effect. With no capability set
- * known (`available` omitted) the value is left untouched.
+ * any value already in `available` pass through unchanged. An unsupported value snaps to the
+ * strongest available effort that does not exceed the request. If every available effort is
+ * stronger, it falls back to `auto` rather than silently increasing the user's selection. With no
+ * capability set known (`available` omitted) the value is left untouched.
  */
 export function clampReasoningLevel(
   value: ReasoningLevel,
@@ -41,7 +41,19 @@ export function clampReasoningLevel(
   ) {
     return value;
   }
-  return available.length ? available[available.length - 1] : "auto";
+  const requestedRank = REASONING_LADDER.indexOf(value as ReasoningEffort);
+  let closest: ReasoningEffort | undefined;
+  let closestRank = -1;
+
+  for (const effort of available) {
+    const rank = REASONING_LADDER.indexOf(effort);
+    if (rank <= requestedRank && rank > closestRank) {
+      closest = effort;
+      closestRank = rank;
+    }
+  }
+
+  return closest ?? "auto";
 }
 
 /**
@@ -92,7 +104,7 @@ export interface ReasoningLevelPickerProps {
   /**
    * Capability filter — the reasoning efforts the currently-selected harness/model supports, from
    * `reasoningEffortsFor(harness, model)`. When provided, the picker shows ONLY these (plus the
-   * `auto` sentinel), so a harness that can't do `ultracode`/`xhigh` (e.g. codex) never offers it.
+   * `auto` sentinel), so a harness never offers a level it cannot express.
    * Omit to show every option.
    */
   available?: ReadonlyArray<ReasoningEffort>;
@@ -125,7 +137,7 @@ export const DEFAULT_REASONING_LEVEL_OPTIONS: ReadonlyArray<ReasoningLevelOption
  * only supported values render.
  *
  * `kimi-code` is a BINARY thinking toggle, not a gradient: its `--thinking` flag is simply off or on.
- * `minimal` is the only value that emits `--no-thinking` (off) and `high` maps to thinking-on, so the
+ * `none` emits `--no-thinking` (off) and `high` maps to thinking-on, so the
  * menu reads Auto / No thinking / Thinking rather than a misleading five-step scale.
  */
 export const HARNESS_REASONING_OPTIONS: Partial<
@@ -133,7 +145,7 @@ export const HARNESS_REASONING_OPTIONS: Partial<
 > = {
   "kimi-code": [
     { value: "auto", label: "Auto", description: "Use Kimi's default." },
-    { value: "minimal", label: "No thinking", description: "Kimi answers directly — thinking off." },
+    { value: "none", label: "No thinking", description: "Kimi answers directly — thinking off." },
     { value: "high", label: "Thinking", description: "Kimi reasons before answering." },
   ],
 };

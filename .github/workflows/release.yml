@@ -1,6 +1,7 @@
 name: Auto Release & Publish
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths: [package.json]
@@ -13,71 +14,78 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     concurrency:
       group: release-publish
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 2
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Check for version change
-        id: version
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          NEW_VERSION=$(jq -r '.version' package.json)
-          if ! gh release view "v${NEW_VERSION}" >/dev/null 2>&1; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-          fi
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
 
-      - uses: pnpm/action-setup@v4
-        if: steps.version.outputs.changed == 'true'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          version: 10
-
-      - uses: actions/setup-node@v5
-        if: steps.version.outputs.changed == 'true'
-        with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
+          node-version: 22.23.1
           cache: pnpm
 
-      - name: Install, build, and publish
-        if: steps.version.outputs.changed == 'true'
-        run: |
-          # OIDC trusted publishing needs npm >= 11.5.1; Node 22 ships npm 10.x.
-          # Pinned (not @latest): npm 12.0.0 (2026-07-08) broke `--provenance` with
-          # "MODULE_NOT_FOUND: Cannot find module 'sigstore'". 11.18.0 is the last
-          # known-good release. Revisit once a fixed npm 12.x ships.
-          npm install -g npm@11.18.0
-          pnpm install --frozen-lockfile
-          pnpm run build
-          # No NODE_AUTH_TOKEN: with id-token:write + a configured trusted
-          # publisher, npm authenticates via OIDC. Passing a token here forces
-          # token-auth instead (and our scoped tokens 404 on this package).
-          # setup-node wrote an _authToken=${NODE_AUTH_TOKEN} line; with the
-          # env unset it expands empty — strip it so npm falls back to OIDC.
-          npm pkg get name >/dev/null 2>&1 || true
-          if [ -f "$HOME/.npmrc" ]; then sed -i '/_authToken=/d' "$HOME/.npmrc" || true; fi
-          npm publish --provenance --access public
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Publish to GitHub Packages
-        if: steps.version.outputs.changed == 'true'
+      - name: Validate and build
         run: |
-          cat > .npmrc <<EOF
-          @tangle-network:registry=https://npm.pkg.github.com
-          //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
-          EOF
-          npm publish
+          pnpm typecheck
+          pnpm build
+          pnpm test
+
+      - name: Pack release artifact
+        id: package
+        run: |
+          PACK_DIR="${RUNNER_TEMP}/sandbox-ui-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          TARBALL_PATH=$(./scripts/pack-package.sh "$PACK_DIR")
+          echo "path=$TARBALL_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Test packed artifact
+        env:
+          SANDBOX_UI_TARBALL: ${{ steps.package.outputs.path }}
+        run: pnpm test:package
+
+      - name: Install trusted-publishing npm
+        run: npm install --global npm@12.0.1
+
+      - name: Publish and verify npm artifact
+        run: >-
+          node scripts/publish-package.mjs
+          "${{ steps.package.outputs.path }}"
+          https://registry.npmjs.org
+          latest
+          --provenance
+
+      - name: Publish and verify GitHub Packages artifact
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          node scripts/publish-package.mjs
+          "${{ steps.package.outputs.path }}"
+          https://npm.pkg.github.com
+          latest
 
       - name: Create GitHub Release
-        if: steps.version.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-        run: gh release create "v${RELEASE_VERSION}" --generate-notes
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          TAG="v${VERSION}"
+          TAG_SHA=$(git ls-remote origin "refs/tags/${TAG}" "refs/tags/${TAG}^{}" | awk '/\^\{\}$/ { peeled=$1 } !/\^\{\}$/ { direct=$1 } END { print peeled ? peeled : direct }')
+
+          if [[ -n "$TAG_SHA" && "$TAG_SHA" != "$GITHUB_SHA" ]]; then
+            echo "Tag ${TAG} points to ${TAG_SHA}, expected tested commit ${GITHUB_SHA}" >&2
+            exit 1
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub Release ${TAG} already exists at tested commit ${GITHUB_SHA}; skipping"
+          elif [[ -n "$TAG_SHA" ]]; then
+            gh release create "$TAG" --verify-tag --generate-notes
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --generate-notes
+          fi

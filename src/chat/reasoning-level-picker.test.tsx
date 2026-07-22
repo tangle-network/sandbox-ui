@@ -20,7 +20,6 @@ describe("clampReasoningLevel", () => {
   });
 
   it("snaps a value above the ceiling down to the highest available effort", () => {
-    // codex caps at `high` → a stale `ultracode` lands on `high`, not "Auto".
     expect(
       clampReasoningLevel("ultracode", [
         "none",
@@ -34,6 +33,14 @@ describe("clampReasoningLevel", () => {
 
   it("snaps to `none` for a non-reasoning model (only `none` available)", () => {
     expect(clampReasoningLevel("high", ["none"])).toBe("none");
+  });
+
+  it("never increases a request when the available set starts above it", () => {
+    expect(clampReasoningLevel("none", ["minimal", "low"])).toBe("auto");
+  });
+
+  it("snaps down across a sparse capability set", () => {
+    expect(clampReasoningLevel("medium", ["none", "high"])).toBe("none");
   });
 
   it("leaves the value untouched when the available set is unknown", () => {
@@ -61,7 +68,7 @@ describe("HARNESS_REASONING_OPTIONS", () => {
     const kimi = HARNESS_REASONING_OPTIONS["kimi-code"];
     expect(kimi?.map((o) => [o.value, o.label])).toEqual([
       ["auto", "Auto"],
-      ["minimal", "No thinking"],
+      ["none", "No thinking"],
       ["high", "Thinking"],
     ]);
   });
@@ -71,7 +78,7 @@ describe("ReasoningLevelPicker — available filter", () => {
   const openMenu = () =>
     userEvent.click(screen.getByRole("button", { name: /reasoning level/i }));
 
-  it("a codex-shaped available set hides `none` and the high-end tail", async () => {
+  it("a bounded available set hides unsupported low- and high-end values", async () => {
     render(
       <ReasoningLevelPicker
         value="auto"
@@ -108,7 +115,7 @@ describe("ReasoningLevelPicker — available filter", () => {
         value="auto"
         onChange={() => {}}
         options={HARNESS_REASONING_OPTIONS["kimi-code"]}
-        available={["minimal", "high"]}
+        available={["none", "high"]}
       />,
     );
     await openMenu();

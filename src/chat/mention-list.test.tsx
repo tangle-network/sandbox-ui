@@ -133,6 +133,22 @@ describe("MentionList", () => {
     expect(onSelect).toHaveBeenCalledWith(ITEMS[2]);
   });
 
+  it("merges a consumer className onto the popover root, after its own classes", () => {
+    render(
+      <MentionList
+        items={ITEMS}
+        loading={false}
+        error={false}
+        onSelect={() => {}}
+        className="border-primary/40"
+      />,
+    );
+    const popover = screen.getByRole("listbox");
+    expect(popover).toHaveClass("border-primary/40");
+    // The component's own surface classes are still present alongside it.
+    expect(popover).toHaveClass("bg-popover");
+  });
+
   it("does not consume unrelated keys", () => {
     const ref = createRef<MentionListHandle>();
     render(

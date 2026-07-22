@@ -71,6 +71,13 @@ export interface AgentComposerMention {
   renderItem?: (item: MentionItem) => React.ReactNode;
   /** Shown when a fetch resolves to zero items. Default "No matches". */
   emptyText?: string;
+  /**
+   * Extra classes merged onto the suggestion popover's root element
+   * (`role="listbox"`), applied last so they win over the component's own —
+   * the supported way to retheme the popover instead of targeting it by its
+   * ARIA attributes.
+   */
+  popoverClassName?: string;
 }
 
 /**

@@ -114,6 +114,18 @@ describe("AgentComposer — mention path", () => {
     expect(await screen.findByTestId("mention-popover")).toBeInTheDocument();
   });
 
+  it("threads mention.popoverClassName onto the suggestion popover", async () => {
+    const user = userEvent.setup();
+    const { editor } = await renderMentionComposer({
+      mention: mentionProp({ popoverClassName: "border-primary/40" }),
+    });
+    editor.focus();
+    await user.type(editor, "@a");
+
+    const popover = await screen.findByRole("listbox");
+    expect(popover).toHaveClass("border-primary/40");
+  });
+
   it("Enter selects the highlighted item and never submits while open", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

@@ -355,6 +355,9 @@ export const WithMentions: Story = {
             fetchItems: fakeFetchItems,
             onMentionsChange: setMentioned,
             emptyText: "No files match",
+            // Demonstrates retheming the popover via the supported prop
+            // instead of targeting it by its ARIA attributes.
+            popoverClassName: "border-primary/40",
           }}
           model={{ value: model, onChange: setModel, models: MODELS }}
           reasoning={{

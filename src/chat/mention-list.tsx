@@ -17,6 +17,9 @@ export interface MentionListProps {
   emptyText?: string;
   renderItem?: (item: MentionItem) => React.ReactNode;
   onSelect: (item: MentionItem) => void;
+  /** Extra classes merged onto the popover's root element, applied last so
+   * they win over the component's own. */
+  className?: string;
 }
 
 /**
@@ -27,7 +30,15 @@ export interface MentionListProps {
  */
 export const MentionList = React.forwardRef<MentionListHandle, MentionListProps>(
   function MentionList(
-    { items, loading, error, emptyText = "No matches", renderItem, onSelect },
+    {
+      items,
+      loading,
+      error,
+      emptyText = "No matches",
+      renderItem,
+      onSelect,
+      className,
+    },
     ref,
   ) {
     const [selected, setSelected] = React.useState(0);
@@ -77,6 +88,7 @@ export const MentionList = React.forwardRef<MentionListHandle, MentionListProps>
         className={cn(
           "max-h-64 min-w-[16rem] max-w-sm overflow-y-auto rounded-xl border border-border",
           "bg-popover text-popover-foreground p-1 shadow-lg",
+          className,
         )}
       >
         {loading && (

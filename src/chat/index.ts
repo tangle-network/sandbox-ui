@@ -48,6 +48,8 @@ export {
   type MentionItem,
 } from "./agent-composer";
 
+export { MENTION_PILL_CLASS } from "./mention-pill";
+
 export {
   isAcceptedType,
   validateComposerFiles,

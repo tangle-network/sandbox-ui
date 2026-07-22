@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.87.0
+
+### Chat
+
+- **The `@`-mention suggestion popover floats on the popover surface.** It shipped filled with `bg-surface-container-high` — a token a host can legitimately rescope for its composer area, where it resolved to effectively transparent and left the popover bleeding into the conversation behind it. It now takes `bg-popover` / `text-popover-foreground` with the standard border, the same surface family the library's other floating panels use, so it reads as an overlay in any host without one having to correct it.
+- **New API:** `MENTION_PILL_CLASS` (exported from `./chat`) — the mention pill's class contract. It was private to the editor, so a host rendering a pill anywhere else (a sent message's transcript row being the obvious case) could only copy the string, leaving one visual contract living as two unlinked copies that silently desync the moment the composer is restyled. It now lives in a leaf module with no editor import, so re-exporting it does not pull the lazily-loaded TipTap chunk into a consumer's bundle.
+- **New API:** `AgentComposerMention.popoverClassName` — a supported hook for retheming the suggestion popover. Without it a host has to reach in through the popover's ARIA attributes from app CSS, which an `aria-label` copy-edit here would silently break. Merged onto the popover root after the component's own classes, so the consumer's win.
+
 ## 0.86.0
 
 ### Chat

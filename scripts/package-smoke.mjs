@@ -175,7 +175,9 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { AgentComposer } from "@tangle-network/sandbox-ui/chat";
 
-console.log([${publicEntries}].map((entry) => Object.keys(entry).length));
+document.documentElement.dataset.sandboxUiExportCount = String(
+  [${publicEntries}].reduce((count, entry) => count + Object.keys(entry).length, 0),
+);
 createRoot(document.getElementById("root")).render(
   React.createElement(AgentComposer, {
     value: "",

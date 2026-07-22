@@ -26,13 +26,14 @@ Some root re-exports are deliberately curated as *named* (not `export *`) to avo
 
 ## Commands
 
-Package manager is **pnpm** (CI uses `pnpm install --frozen-lockfile`; a stale `package-lock.json` also exists but pnpm is authoritative).
+Package manager is **pnpm** (the version is pinned in `package.json`; CI uses `pnpm install --frozen-lockfile`).
 
 ```bash
 pnpm build           # tsup — bundle all entry points + .d.ts, then copy/compile styles
 pnpm dev             # tsup --watch
 pnpm typecheck       # tsc --noEmit (strict)
 pnpm test            # vitest run (jsdom)
+pnpm test:package    # install the packed artifact in a blank Vite consumer
 pnpm test:watch      # vitest
 pnpm test:bridge     # build, then run ONLY the re-export identity test (needs dist)
 pnpm storybook       # storybook dev -p 6006
@@ -45,7 +46,7 @@ pnpm vitest run src/workflows/model.test.ts
 pnpm vitest run -t "forwards to @tangle-network/ui"
 ```
 
-CI (`.github/workflows/ci.yml`) runs, in order: `typecheck`, `build`, `test`. Match that locally before pushing.
+CI (`.github/workflows/ci.yml`) runs, in order: `typecheck`, `build`, `test:package`, `test`, `build-storybook`. Match that locally before pushing.
 
 ## Adding or changing a subpath export
 
@@ -75,7 +76,7 @@ Forgetting any one yields a build that "works" locally but fails to resolve for 
 
 ## Release flow
 
-Releases are automated by `.github/workflows/release.yml`: a push to `main` that changes `package.json` (the version field) triggers a build and npm publish via OIDC trusted publishing (no token), plus a GitHub Packages publish and a generated GitHub Release. **Bumping the version is the release trigger.** `CHANGELOG.md` is hand-maintained — add an entry when bumping the version.
+Releases are automated by `.github/workflows/release.yml`: a push to `main` that changes `package.json` (the version field) runs the full validation suite, packs once, tests that exact tarball, publishes and verifies the same bytes on npm and GitHub Packages, then creates a GitHub Release. **Bumping the version is the normal release trigger; manual dispatch safely resumes a partial release.** `CHANGELOG.md` is hand-maintained — add an entry when bumping the version.
 
 Commit messages follow Conventional Commits with a scope matching the area: `feat(integrations): ...`, `fix(dashboard): ...`, `chore(release): ...`. PRs are referenced as `(#NNN)`.
 

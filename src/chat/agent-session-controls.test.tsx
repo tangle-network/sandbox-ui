@@ -314,7 +314,7 @@ describe("AgentSessionControls — reasoning effort re-clamp", () => {
     },
   ];
 
-  it("snaps a too-high effort down when switching to a lower-ceiling harness", async () => {
+  it("preserves an effort newly supported by the selected harness", async () => {
     const onEffortChange = vi.fn();
     render(
       <AgentSessionControls
@@ -330,8 +330,22 @@ describe("AgentSessionControls — reasoning effort re-clamp", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /agent harness/i }),
     );
-    // codex caps at `high` — `ultracode` is snapped down, never left dangling.
     await userEvent.click(await screen.findByText("Codex"));
+    expect(onEffortChange).not.toHaveBeenCalled();
+  });
+
+  it("snaps a too-high effort down across a sparse capability set", async () => {
+    const onEffortChange = vi.fn();
+    render(
+      <AgentSessionControls
+        harness={{ value: "opencode", onChange: () => {} }}
+        reasoning={{ value: "ultracode", onChange: onEffortChange }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    await userEvent.click(await screen.findByText("Kimi Code"));
     expect(onEffortChange).toHaveBeenCalledWith("high");
   });
 
@@ -375,7 +389,7 @@ describe("AgentSessionControls — per-harness reasoning options", () => {
     expect(screen.queryByText("Medium")).not.toBeInTheDocument();
   });
 
-  it("codex harness drops `none` and the xhigh/ultracode tail", async () => {
+  it("codex harness drops `none` and exposes its full supported range", async () => {
     render(
       <AgentSessionControls
         harness={{ value: "codex", onChange: () => {} }}
@@ -386,8 +400,8 @@ describe("AgentSessionControls — per-harness reasoning options", () => {
     expect(await screen.findByText("Minimal")).toBeInTheDocument();
     expect(screen.getByText("High")).toBeInTheDocument();
     expect(screen.queryByText("None")).not.toBeInTheDocument();
-    expect(screen.queryByText("Extra High")).not.toBeInTheDocument();
-    expect(screen.queryByText("Ultracode")).not.toBeInTheDocument();
+    expect(screen.getByText("Extra High")).toBeInTheDocument();
+    expect(screen.getByText("Ultracode")).toBeInTheDocument();
   });
 
   it("claude-code harness drops `none`/`minimal` and reaches ultracode", async () => {

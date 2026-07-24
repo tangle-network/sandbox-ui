@@ -233,7 +233,7 @@ export function ModelPicker({
   popular,
   excludeProviders,
   modalities,
-  variant = "field",
+  variant = "pill",
   label = "Model",
   placeholder = "Choose a model",
   className,

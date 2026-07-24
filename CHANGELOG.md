@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.88.0
+
+### Chat
+
+- **The model picker defaults to the compact pill.** `ModelPicker`'s default `variant` is now `pill` — the inline, cost-showing trigger every current consumer already opts into — instead of the full-width `field`. The labelled form-field layout is still available via `variant="field"`.
+
 ## 0.87.1
 
 ### Packaging

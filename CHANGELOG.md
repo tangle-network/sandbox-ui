@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.88.1
+
+### Terminal
+
+- **The terminal WebSocket offers the `tangle.terminal.v1` echo subprotocol.** `usePtySession` previously offered only the `bearer.<…>` credential. A server must never echo that back — it would put the live terminal token in a response header — so both backends select no subprotocol, and Chrome then fails the handshake with "Sent non-empty 'Sec-WebSocket-Protocol' header but no response was received". The non-credential marker is now offered alongside the credential so the server has something safe to select, which is what the sandbox-api and sidecar edges already look for.
+
 ## 0.88.0
 
 ### Chat

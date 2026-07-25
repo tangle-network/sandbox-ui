@@ -795,8 +795,15 @@ describe("usePtySession WebSocket transport", () => {
     // the `bearer.` prefix. Verify the encoding round-trips cleanly:
     // backends decode the part after `bearer.` and base64url-decode
     // it back to the raw token.
-    expect(handles[0].protocols).toHaveLength(1)
-    const proto = handles[0].protocols[0]
+    // Two offers: the non-credential marker the server echoes into the 101,
+    // then the credential. The marker is REQUIRED — a server must never echo
+    // `bearer.<…>` back in a response header, and Chrome fails the handshake
+    // when it offered subprotocols and the server selected none.
+    expect(handles[0].protocols).toEqual([
+      "tangle.terminal.v1",
+      expect.stringMatching(/^bearer\./),
+    ])
+    const proto = handles[0].protocols[1]
     expect(proto.startsWith("bearer.")).toBe(true)
     const encoded = proto.slice("bearer.".length)
     // base64url-safe characters only

@@ -106,16 +106,23 @@ function toWsUrl(apiUrl: string, sessionId: string): string | null {
  * value first. The matching server reverses the encoding before
  * validating.
  *
- * Per RFC 6455 §4.2.2, if the server doesn't recognize any of the
- * offered subprotocols it omits `Sec-WebSocket-Protocol` from the
- * response and the connection is established as if no subprotocol
- * was requested. Sending `bearer.<…>` is therefore non-disruptive
- * against backends that don't yet consume it — they can authenticate
- * the user via a same-origin session cookie, and a future backend
- * change can start consuming the subprotocol to extend WS auth to
- * non-cookie consumers.
+ * The credential is offered alongside {@link TERMINAL_WS_ECHO_SUBPROTOCOL}.
+ * A server must never echo `bearer.<…>` — that would put the live credential
+ * in a response header — so it selects the marker instead. The marker is
+ * required, not decorative: Chrome fails a handshake with "Sent non-empty
+ * 'Sec-WebSocket-Protocol' header but no response was received" when the
+ * client offered subprotocols and the server selected none, so a
+ * credential-only offer can never complete against a correct server.
  */
 const BEARER_SUBPROTOCOL_PREFIX = 'bearer.';
+
+/**
+ * Non-credential subprotocol the server echoes into the 101 to satisfy the
+ * client's subprotocol negotiation. Must match the value the backends select
+ * (`TERMINAL_WS_ECHO_SUBPROTOCOL` in sandbox-api / the sidecar's
+ * `ws-subprotocol-auth`).
+ */
+const TERMINAL_WS_ECHO_SUBPROTOCOL = 'tangle.terminal.v1';
 
 function toBearerSubprotocol(token: string): string | null {
   if (typeof btoa === 'undefined') return null;
@@ -364,7 +371,7 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
         // Pass the bearer token in the WebSocket subprotocol header
         // rather than the URL query string. See `toBearerSubprotocol`
         // for the encoding contract and the security rationale.
-        ws = new WebSocket(wsUrl, [subprotocol]);
+        ws = new WebSocket(wsUrl, [TERMINAL_WS_ECHO_SUBPROTOCOL, subprotocol]);
       } catch {
         resolve(false);
         return;

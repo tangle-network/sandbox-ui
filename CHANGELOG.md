@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.89.0
+
+### Chat
+
+- **Sandbox UI now uses the current canonical agent-interface contract.** Chat controls consume canonical harness values directly and require `@tangle-network/agent-interface ^0.34.0`; that version intentionally removed deprecated alias names, so the package no longer advertises support for an incompatible older contract.
+
 ## 0.88.1
 
 ### Terminal

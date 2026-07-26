@@ -7,3 +7,6 @@ overrides:
 allowBuilds:
   canvas: false
   esbuild: true
+
+minimumReleaseAgeExclude:
+  - '@tangle-network/agent-interface@0.34.0'

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  canonicalizeHarness,
   harnessHonorsEffort,
   harnessHonorsModel,
   type ModelReasoningCapability,
@@ -629,8 +628,7 @@ export function AgentSessionControls({
   // labels; every other harness uses the caller's options (or the picker's default ladder). The
   // `available` capability filter still applies on top, so only supported values render either way.
   const reasoningOptions =
-    (harness && HARNESS_REASONING_OPTIONS[canonicalizeHarness(harness.value)]) ??
-    reasoning?.options;
+    (harness && HARNESS_REASONING_OPTIONS[harness.value]) ?? reasoning?.options;
   const reasoningNode = reasoning && (
     <ReasoningLevelPicker
       value={reasoning.value}

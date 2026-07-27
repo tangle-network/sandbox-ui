@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "vite";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -25,6 +25,7 @@ const mentionRuntimeDependencies = [
   "@tiptap/starter-kit",
   "@tiptap/suggestion",
 ];
+const expectedAgentInterfaceRange = "^0.35.0";
 
 function packedManifest(tarballPath) {
   return JSON.parse(
@@ -74,6 +75,14 @@ try {
     typeof manifest.exports !== "object"
   ) {
     throw new Error("packed package.json must contain name, version, and exports");
+  }
+  if (
+    manifest.peerDependencies?.["@tangle-network/agent-interface"] !==
+    expectedAgentInterfaceRange
+  ) {
+    throw new Error(
+      `packed package must require @tangle-network/agent-interface ${expectedAgentInterfaceRange}`,
+    );
   }
 
   const optionalPeers = Object.entries(manifest.peerDependenciesMeta ?? {})
@@ -142,6 +151,21 @@ try {
   }
 
   const consumerRequire = createRequire(join(consumerDir, "package.json"));
+  const agentInterfaceEntry = consumerRequire.resolve("@tangle-network/agent-interface");
+  const agentInterfaceManifest = JSON.parse(
+    readFileSync(resolve(dirname(agentInterfaceEntry), "../package.json"), "utf8"),
+  );
+  if (!/^0\.35\./.test(agentInterfaceManifest.version)) {
+    throw new Error(
+      `clean consumer installed agent-interface ${agentInterfaceManifest.version}, expected 0.35.x`,
+    );
+  }
+  const { harnessTypeSchema } = await import(pathToFileURL(agentInterfaceEntry));
+  for (const removedAlias of ["claude", "claudish", "kimi"]) {
+    if (harnessTypeSchema.safeParse(removedAlias).success) {
+      throw new Error(`agent-interface accepted removed harness alias ${removedAlias}`);
+    }
+  }
   for (const dependency of mentionRuntimeDependencies) {
     consumerRequire.resolve(dependency);
     if (!manifest.dependencies?.[dependency]) {

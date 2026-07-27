@@ -1,6 +1,6 @@
 {
   "name": "@tangle-network/sandbox-ui",
-  "version": "0.89.0",
+  "version": "0.90.0",
   "packageManager": "pnpm@11.15.1",
   "description": "Unified UI component library for Tangle Sandbox — primitives, chat, dashboard, terminal, editor, and workspace components",
   "repository": {
@@ -130,7 +130,7 @@
   "peerDependencies": {
     "@hocuspocus/provider": ">=2.15.0 <5.0.0",
     "@nanostores/react": ">=0.8.4 <2.0.0",
-    "@tangle-network/agent-interface": "^0.34.0",
+    "@tangle-network/agent-interface": "^0.35.0",
     "@tangle-network/brand": "^1.1.0",
     "@tangle-network/ui": "^11.0.0",
     "@tanstack/react-query": "^5.0.0",
@@ -198,10 +198,10 @@
   "devDependencies": {
     "@hocuspocus/provider": "^4.4.0",
     "@nanostores/react": "^1.1.0",
-    "@storybook/react": "^10.5.3",
-    "@storybook/react-vite": "^10.5.3",
+    "@storybook/react": "^10.5.4",
+    "@storybook/react-vite": "^10.5.4",
     "@tailwindcss/postcss": "^4.3.3",
-    "@tangle-network/agent-interface": "^0.34.0",
+    "@tangle-network/agent-interface": "^0.35.0",
     "@tangle-network/brand": "^1.1.0",
     "@tangle-network/ui": "^11.2.0",
     "@tanstack/react-query": "^5.101.4",
@@ -225,7 +225,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-syntax-highlighter": "^16.1.1",
-    "storybook": "^10.5.3",
+    "storybook": "^10.5.4",
     "tailwindcss": "^4.3.3",
     "tailwindcss-animate": "^1.0.7",
     "tsup": "^8.4.0",

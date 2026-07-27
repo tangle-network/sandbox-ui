@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.90.0
+
+### Agent interface
+
+- **Sandbox UI now requires `@tangle-network/agent-interface ^0.35.0`.** Picker and chat APIs continue to accept only canonical `HarnessType` values such as `claude-code` and `kimi-code`; the removed `claude`, `claudish`, and `kimi` aliases remain rejected rather than normalized.
+
+### Maintenance
+
+- **The development toolchain has no known audited vulnerabilities.** Storybook moves to `10.5.4`, and patched transitive releases replace vulnerable `ws`, `brace-expansion`, and `esbuild` versions.
+
 ## 0.89.0
 
 ### Chat

@@ -16,7 +16,8 @@ React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a
 npm install @tangle-network/sandbox-ui
 ```
 
-**Peer dependencies:** `react` and `react-dom` (18 or 19). Optional peers for specific subpaths — see [package.json](./package.json).
+**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^0.35.0`, `@tangle-network/brand ^1.1.0`, and `@tangle-network/ui ^11.0.0`.
+Optional peers are required only by the subpaths that use them; see [package.json](./package.json).
 
 ## Usage
 

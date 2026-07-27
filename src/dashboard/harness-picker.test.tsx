@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { harnessTypeSchema } from "@tangle-network/agent-interface";
 import {
   HARNESS_OPTIONS,
   chatCapableHarnesses,
@@ -8,10 +9,7 @@ import {
 } from "./harness-picker";
 
 describe("HARNESS_OPTIONS", () => {
-  it("matches the BackendType enum exported by the sandbox SDK", () => {
-    // If the SDK adds a backend, this list must be extended in lockstep.
-    // The SDK's pi/forge/acp/cursor backends are deliberately deferred
-    // (not yet surfaced) and so are absent here on purpose.
+  it("contains only supported canonical harness values", () => {
     const expected: HarnessType[] = [
       "opencode",
       "claude-code",
@@ -24,7 +22,16 @@ describe("HARNESS_OPTIONS", () => {
       "hermes",
       "cli-base",
     ];
-    expect(HARNESS_OPTIONS.map((h) => h.type)).toEqual(expected);
+    const surfaced = HARNESS_OPTIONS.map((h) => h.type);
+
+    expect(surfaced).toEqual(expected);
+    for (const harness of surfaced) {
+      expect(harnessTypeSchema.safeParse(harness).success).toBe(true);
+    }
+    for (const removedAlias of ["claude", "claudish", "kimi"]) {
+      expect(harnessTypeSchema.safeParse(removedAlias).success).toBe(false);
+      expect(surfaced).not.toContain(removedAlias);
+    }
   });
 
   it("opencode is first (default-recommended)", () => {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.90.1
+
+### Agent interface
+
+- **Sandbox UI now requires `@tangle-network/agent-interface ^0.36.0`.** Package metadata, workspace pins, documentation, and the packed-consumer check use the same current contract.
+
 ## 0.90.0
 
 ### Agent interface

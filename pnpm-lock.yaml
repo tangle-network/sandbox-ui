@@ -69,8 +69,8 @@ importers:
         specifier: ^4.3.3
         version: 4.3.3
       '@tangle-network/agent-interface':
-        specifier: ^0.35.0
-        version: 0.35.0
+        specifier: ^0.36.0
+        version: 0.36.0
       '@tangle-network/brand':
         specifier: ^1.1.0
         version: 1.1.0(react@19.2.8)
@@ -2049,8 +2049,8 @@ packages:
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
 
-  '@tangle-network/agent-interface@0.35.0':
-    resolution: {integrity: sha512-ySgnHeARqyPcal3aG4bpUhyA0YRuu/zYFc2337afefqUUKtRdBTipM2i7OBUPlj676pgVRcgxnVR/VnOq3KGXA==}
+  '@tangle-network/agent-interface@0.36.0':
+    resolution: {integrity: sha512-l48SiAY5Atx6ZTL86/XP2wSUPfJJ1sga82/F6V0KqwVkE5MHWiFql6wsLoqk0lc7s4EJe6+cKky+2zzxFuxDpg==}
 
   '@tangle-network/brand@1.1.0':
     resolution: {integrity: sha512-S3yWSJ8466hRgJhoWIKq1Dgm4tNr3if2kzJLJYZQORlRCOBe8OneyRKFcmOO8z6whKyTUNib2eEeVvX0jIdAKw==}
@@ -5785,7 +5785,7 @@ snapshots:
       postcss: 8.5.21
       tailwindcss: 4.3.3
 
-  '@tangle-network/agent-interface@0.35.0':
+  '@tangle-network/agent-interface@0.36.0':
     dependencies:
       '@noble/hashes': 1.8.0
       zod: 4.4.3

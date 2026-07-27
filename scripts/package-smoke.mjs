@@ -25,7 +25,7 @@ const mentionRuntimeDependencies = [
   "@tiptap/starter-kit",
   "@tiptap/suggestion",
 ];
-const expectedAgentInterfaceRange = "^0.35.0";
+const expectedAgentInterfaceRange = "^0.36.0";
 
 function packedManifest(tarballPath) {
   return JSON.parse(
@@ -155,9 +155,9 @@ try {
   const agentInterfaceManifest = JSON.parse(
     readFileSync(resolve(dirname(agentInterfaceEntry), "../package.json"), "utf8"),
   );
-  if (!/^0\.35\./.test(agentInterfaceManifest.version)) {
+  if (!/^0\.36\./.test(agentInterfaceManifest.version)) {
     throw new Error(
-      `clean consumer installed agent-interface ${agentInterfaceManifest.version}, expected 0.35.x`,
+      `clean consumer installed agent-interface ${agentInterfaceManifest.version}, expected 0.36.x`,
     );
   }
   const { harnessTypeSchema } = await import(pathToFileURL(agentInterfaceEntry));

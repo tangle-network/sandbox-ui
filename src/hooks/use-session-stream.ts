@@ -97,12 +97,11 @@ interface ApiMessage {
  * so an unrelated refetch (a history resync, or the previous turn's refetch
  * still in flight) cannot wipe it back off.
  *
- * `sessionId` scopes the echo to the session that produced it: the hook can be
- * pointed at a different session, and an echo the new session's history will
- * never contain must not be re-applied to it.
+ * An echo belongs to the session that produced it, and only that session's turn
+ * ending retires it — so the map is emptied whenever the hook is pointed at a
+ * different session.
  */
 interface PendingEcho {
-  sessionId: string;
   message: SessionMessage;
   parts: SessionPart[];
 }
@@ -188,6 +187,16 @@ export function useSessionStream({
   const pendingEchoesRef = useRef<Map<string, PendingEcho>>(new Map());
   const handleSSEEventRef = useRef<((type: string, raw: Record<string, unknown>) => void) | null>(null);
 
+  // ── Echo lifetime ───────────────────────────────────────────────────
+
+  // Only the producing session's turn ending retires its echoes, so pointing
+  // the hook at another session strands them. Dropping them on the identity
+  // change is what keeps a later return to the original session from
+  // re-applying an echo whose canonical copy is in the history by then.
+  useEffect(() => {
+    pendingEchoesRef.current.clear();
+  }, [sessionId]);
+
   // ── Fetch full message history ──────────────────────────────────────
 
   const refetch = useCallback(async () => {
@@ -209,9 +218,7 @@ export function useSessionStream({
       // History is authoritative for everything the backend has recorded, but
       // an in-flight turn's user message may not be in it yet — carry those
       // echoes across so the sender's message does not blink out mid-turn.
-      for (const [echoId, echo] of pendingEchoesRef.current) {
-        if (echo.sessionId !== sessionId) pendingEchoesRef.current.delete(echoId);
-      }
+      // They are the newest messages by construction, hence appended last.
       const echoes = [...pendingEchoesRef.current.values()];
 
       setMessages([...newMessages, ...echoes.map((echo) => echo.message)]);
@@ -435,7 +442,6 @@ export function useSessionStream({
 
     const echoId = `local-echo-${echoCounterRef.current++}`;
     const echo: PendingEcho = {
-      sessionId,
       message: {
         id: echoId,
         role: 'user',

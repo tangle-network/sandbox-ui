@@ -179,7 +179,12 @@ describe("useSessionStream local echo", () => {
     stream = controllableEventStream();
 
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes("/session/events")) return stream.response;
+      if (url.includes("/session/events")) {
+        // A stream body reads once, so every (re)connect gets a fresh one;
+        // `stream` tracks the newest so `emit` targets the live connection.
+        stream = controllableEventStream();
+        return stream.response;
+      }
       if (url.includes("/messages") && methodOf(init) === "POST") {
         return postFails
           ? jsonResponse({}, false, 500)
@@ -329,13 +334,47 @@ describe("useSessionStream local echo", () => {
     expect(userTexts(result.current)).toEqual(["meant for sess-a"]);
 
     history = [historyMessage("msg-b", "user", "already in sess-b")];
-    stream = controllableEventStream();
     await act(async () => {
       rerender({ sessionId: "sess-b" });
     });
 
     await waitFor(() =>
       expect(userTexts(result.current)).toEqual(["already in sess-b"]),
+    );
+  });
+
+  it("strands no echo when the session changes with the stream disabled", async () => {
+    const { result, rerender } = renderHook(
+      (props: { sessionId: string; enabled: boolean }) =>
+        useSessionStream({
+          apiUrl: "http://sidecar.test",
+          token: "tok",
+          ...props,
+        }),
+      { initialProps: { sessionId: "sess-a", enabled: true } },
+    );
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    await act(async () => {
+      await result.current.send("meant for sess-a");
+    });
+    expect(userTexts(result.current)).toEqual(["meant for sess-a"]);
+
+    // Disabled, so nothing refetches on the way out of sess-a — the echo is
+    // stranded unless the session change itself drops it.
+    await act(async () => {
+      rerender({ sessionId: "sess-b", enabled: false });
+    });
+
+    // Back on sess-a, whose history now holds the canonical copy. A surviving
+    // echo would match this session again and render the message twice.
+    history = [historyMessage("msg-a", "user", "meant for sess-a")];
+    await act(async () => {
+      rerender({ sessionId: "sess-a", enabled: true });
+    });
+
+    await waitFor(() =>
+      expect(userTexts(result.current)).toEqual(["meant for sess-a"]),
     );
   });
 });

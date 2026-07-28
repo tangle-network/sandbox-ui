@@ -169,6 +169,7 @@ describe("useSessionStream send()", () => {
 describe("useSessionStream local echo", () => {
   let history: unknown[];
   let stream: ReturnType<typeof controllableEventStream>;
+  let openStreams: ReturnType<typeof controllableEventStream>[];
   let postFails: boolean;
   let historyGate: Promise<void> | null;
 
@@ -176,13 +177,16 @@ describe("useSessionStream local echo", () => {
     history = [];
     postFails = false;
     historyGate = null;
+    openStreams = [];
     stream = controllableEventStream();
 
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.includes("/session/events")) {
         // A stream body reads once, so every (re)connect gets a fresh one;
-        // `stream` tracks the newest so `emit` targets the live connection.
+        // `stream` tracks the newest so `emit` targets the live connection,
+        // and every one is kept so teardown can close them all.
         stream = controllableEventStream();
+        openStreams.push(stream);
         return stream.response;
       }
       if (url.includes("/messages") && methodOf(init) === "POST") {
@@ -200,7 +204,7 @@ describe("useSessionStream local echo", () => {
   });
 
   afterEach(() => {
-    stream.close();
+    for (const open of openStreams) open.close();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -332,6 +336,27 @@ describe("useSessionStream local echo", () => {
     });
 
     expect(userTexts(result.current)).toEqual(["the real turn"]);
+    expect(result.current.isStreaming).toBe(true);
+  });
+
+  it("keeps a detached run streaming when a send with no turn of its own fails", async () => {
+    const { result } = await mounted("sess-detached");
+
+    // An assistant is already streaming into this session without any echo of
+    // its own — a run this client did not start.
+    await act(async () => {
+      stream.emit("message.updated", {
+        properties: { info: { id: "msg-detached", role: "assistant" } },
+      });
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+
+    postFails = true;
+    await act(async () => {
+      await result.current.send("fires during the detached run");
+    });
+
+    expect(userTexts(result.current)).toEqual([]);
     expect(result.current.isStreaming).toBe(true);
   });
 

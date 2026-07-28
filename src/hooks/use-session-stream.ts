@@ -484,11 +484,16 @@ export function useSessionStream({
         delete next[echoId];
         return next;
       });
-      // Release the composer only when this was the sole turn in flight. Not
-      // every caller gates on `isStreaming` — an in-transcript action button
-      // can send mid-run — and clearing the flag under a live turn would
-      // unlock the composer and drop its progress indicator.
-      if (pendingEchoesRef.current.size === 0) setIsStreaming(false);
+      // Release the composer only when nothing else is running. Not every
+      // caller gates on `isStreaming` — an in-transcript action button can
+      // send mid-run — so this failure may land under another turn: either a
+      // send whose echo is still pending, or an assistant already streaming
+      // into the session with no echo of its own (a detached run). Clearing
+      // the flag under either would unlock the composer and drop its progress
+      // indicator.
+      if (pendingEchoesRef.current.size === 0 && !streamingMsgIdRef.current) {
+        setIsStreaming(false);
+      }
       const msg = err instanceof Error ? err.message : 'Failed to send message';
       setError(msg);
     }

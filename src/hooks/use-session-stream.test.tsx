@@ -44,6 +44,46 @@ function methodOf(init?: RequestInit): string {
   return (init?.method ?? "GET").toUpperCase();
 }
 
+/** An SSE response the test drives frame by frame. */
+function controllableEventStream() {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(c) {
+      controller = c;
+    },
+  });
+  return {
+    response: {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      body,
+      json: async () => ({}),
+    } as unknown as Response,
+    emit(type: string, data: unknown) {
+      controller.enqueue(
+        encoder.encode(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`),
+      );
+    },
+    close() {
+      controller.close();
+    },
+  };
+}
+
+/** A history entry in the shape `GET /session/sessions/{id}/messages` returns. */
+function historyMessage(
+  id: string,
+  role: "user" | "assistant",
+  text: string,
+): unknown {
+  return {
+    info: { id, role, timestamp: new Date(0).toISOString() },
+    parts: [{ type: "text", text }],
+  };
+}
+
 describe("useSessionStream send()", () => {
   let calls: Call[];
 
@@ -123,5 +163,179 @@ describe("useSessionStream send()", () => {
     });
     expect(body.agent).toBe("build");
     expect(body.system).toBe("be terse");
+  });
+});
+
+describe("useSessionStream local echo", () => {
+  let history: unknown[];
+  let stream: ReturnType<typeof controllableEventStream>;
+  let postFails: boolean;
+  let historyGate: Promise<void> | null;
+
+  beforeEach(() => {
+    history = [];
+    postFails = false;
+    historyGate = null;
+    stream = controllableEventStream();
+
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/session/events")) return stream.response;
+      if (url.includes("/messages") && methodOf(init) === "POST") {
+        return postFails
+          ? jsonResponse({}, false, 500)
+          : jsonResponse({ userMessageId: "msg-user" });
+      }
+      if (url.includes("/messages")) {
+        if (historyGate) await historyGate;
+        return jsonResponse(history);
+      }
+      return jsonResponse({});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    stream.close();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  /** Hold every subsequent history GET; returns the release. */
+  function holdHistory(): () => void {
+    let release!: () => void;
+    historyGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    return () => {
+      historyGate = null;
+      release();
+    };
+  }
+
+  type Streamed = ReturnType<typeof useSessionStream>;
+
+  /** The rendered text of every user message, in transcript order. */
+  function userTexts(current: Streamed): string[] {
+    return current.messages
+      .filter((message) => message.role === "user")
+      .map((message) =>
+        (current.partMap[message.id] ?? [])
+          .filter((part) => part.type === "text")
+          .map((part) => part.text)
+          .join(""),
+      );
+  }
+
+  async function mounted(sessionId: string) {
+    const rendered = renderHook(() =>
+      useSessionStream({
+        apiUrl: "http://sidecar.test",
+        token: "tok",
+        sessionId,
+      }),
+    );
+    await waitFor(() => expect(rendered.result.current.connected).toBe(true));
+    return rendered;
+  }
+
+  it("renders the sender's message before the agent answers (regression: #4354 showed it only after the reply)", async () => {
+    const { result } = await mounted("sess-echo");
+
+    await act(async () => {
+      await result.current.send("what does this repo do?");
+    });
+
+    // No `session.idle`, no history refetch — only the send has happened.
+    expect(userTexts(result.current)).toEqual(["what does this repo do?"]);
+    expect(result.current.isStreaming).toBe(true);
+  });
+
+  it("replaces the echo with the backend's copy once the turn goes idle", async () => {
+    const { result } = await mounted("sess-idle");
+
+    await act(async () => {
+      await result.current.send("hello");
+    });
+    expect(userTexts(result.current)).toEqual(["hello"]);
+
+    history = [
+      historyMessage("msg-1", "user", "hello"),
+      historyMessage("msg-2", "assistant", "hi there"),
+    ];
+    await act(async () => {
+      stream.emit("session.idle", { properties: { sessionID: "sess-idle" } });
+    });
+
+    // Exactly one user message: the canonical one, not the echo beside it.
+    await waitFor(() => expect(userTexts(result.current)).toEqual(["hello"]));
+    expect(result.current.messages.map((message) => message.id)).toEqual([
+      "msg-1",
+      "msg-2",
+    ]);
+    expect(result.current.isStreaming).toBe(false);
+  });
+
+  it("keeps a message sent while the previous turn's refetch is still in flight", async () => {
+    const { result } = await mounted("sess-race");
+
+    history = [historyMessage("msg-1", "user", "first")];
+    const releaseHistory = holdHistory();
+    await act(async () => {
+      stream.emit("session.idle", { properties: { sessionID: "sess-race" } });
+    });
+
+    // The composer unlocks on idle, so the next message can be sent before the
+    // refetch it triggered has come back.
+    await act(async () => {
+      await result.current.send("second");
+    });
+    await act(async () => {
+      releaseHistory();
+    });
+
+    await waitFor(() =>
+      expect(userTexts(result.current)).toEqual(["first", "second"]),
+    );
+  });
+
+  it("drops the echo and releases the composer when the send is rejected", async () => {
+    const { result } = await mounted("sess-fail");
+    postFails = true;
+
+    await act(async () => {
+      await result.current.send("never lands");
+    });
+
+    expect(userTexts(result.current)).toEqual([]);
+    expect(result.current.isStreaming).toBe(false);
+    expect(result.current.error).toContain("500");
+  });
+
+  it("does not carry an echo into a different session's transcript", async () => {
+    const { result, rerender } = renderHook(
+      ({ sessionId }: { sessionId: string }) =>
+        useSessionStream({
+          apiUrl: "http://sidecar.test",
+          token: "tok",
+          sessionId,
+        }),
+      { initialProps: { sessionId: "sess-a" } },
+    );
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    await act(async () => {
+      await result.current.send("meant for sess-a");
+    });
+    expect(userTexts(result.current)).toEqual(["meant for sess-a"]);
+
+    history = [historyMessage("msg-b", "user", "already in sess-b")];
+    stream = controllableEventStream();
+    await act(async () => {
+      rerender({ sessionId: "sess-b" });
+    });
+
+    await waitFor(() =>
+      expect(userTexts(result.current)).toEqual(["already in sess-b"]),
+    );
   });
 });

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.90.3
+
+### Integrations
+
+- **Integration cards now stay inside narrow app panels.**
+  Provider labels and connection metadata shrink and truncate while status and actions remain visible, including the 320 px mobile layout.
+- **Products can distinguish OAuth readiness from inbound-event readiness.**
+  `ProviderReadiness.eventIngressConfigured` is an optional shared field, so email, Slack, and Teams receivers can report missing event delivery setup without inventing a product-local type.
+
 ## 0.90.2
 
 ### Fixes

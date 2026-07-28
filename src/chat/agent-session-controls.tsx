@@ -436,7 +436,16 @@ function HarnessDropdown({
   }
 
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root
+      // The search is scoped to one opening of the menu. Reset on CLOSE rather
+      // than on select: selecting keeps this menu open (Radix `preventDefault`),
+      // so clearing there would expand the list under the user's cursor — but
+      // reopening later with a stale filter makes the harness they want look
+      // missing, with nothing on screen explaining why.
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setQuery("");
+      }}
+    >
       <DropdownMenu.Trigger asChild>
         <button
           type="button"

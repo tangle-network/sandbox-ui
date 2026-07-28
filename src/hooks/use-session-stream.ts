@@ -475,8 +475,7 @@ export function useSessionStream({
       });
     } catch (err) {
       // The turn was never admitted, so no backend copy will arrive to replace
-      // the echo: drop it instead of leaving a message the session never saw,
-      // and release the composer.
+      // the echo: drop it instead of leaving a message the session never saw.
       pendingEchoesRef.current.delete(echoId);
       setMessages((prev) => prev.filter((message) => message.id !== echoId));
       setPartMap((prev) => {
@@ -485,7 +484,11 @@ export function useSessionStream({
         delete next[echoId];
         return next;
       });
-      setIsStreaming(false);
+      // Release the composer only when this was the sole turn in flight. Not
+      // every caller gates on `isStreaming` — an in-transcript action button
+      // can send mid-run — and clearing the flag under a live turn would
+      // unlock the composer and drop its progress indicator.
+      if (pendingEchoesRef.current.size === 0) setIsStreaming(false);
       const msg = err instanceof Error ? err.message : 'Failed to send message';
       setError(msg);
     }

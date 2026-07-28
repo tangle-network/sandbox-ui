@@ -316,6 +316,25 @@ describe("useSessionStream local echo", () => {
     expect(result.current.error).toContain("500");
   });
 
+  it("keeps the live turn streaming when a concurrent send is rejected", async () => {
+    const { result } = await mounted("sess-concurrent");
+
+    await act(async () => {
+      await result.current.send("the real turn");
+    });
+    expect(result.current.isStreaming).toBe(true);
+
+    // Not every caller gates on `isStreaming` — an in-transcript action button
+    // sends straight through while the first turn is still running.
+    postFails = true;
+    await act(async () => {
+      await result.current.send("fires mid-run");
+    });
+
+    expect(userTexts(result.current)).toEqual(["the real turn"]);
+    expect(result.current.isStreaming).toBe(true);
+  });
+
   it("does not carry an echo into a different session's transcript", async () => {
     const { result, rerender } = renderHook(
       ({ sessionId }: { sessionId: string }) =>

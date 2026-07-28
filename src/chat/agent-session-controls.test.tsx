@@ -422,7 +422,7 @@ describe("AgentSessionControls — per-harness reasoning options", () => {
 describe("AgentSessionControls — harnesses that ignore selectors", () => {
   const MODELS = [{ id: "openai/gpt-5", name: "GPT-5", _provider: "openai" }];
 
-  it("marks ignore-both harnesses in the dropdown (amp, nanoclaw)", async () => {
+  it("marks harnesses that supply both selectors themselves (amp, nanoclaw)", async () => {
     render(
       <AgentSessionControls
         harness={{ value: "opencode", onChange: () => {} }}
@@ -431,14 +431,14 @@ describe("AgentSessionControls — harnesses that ignore selectors", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /agent harness/i }),
     );
-    // amp + nanoclaw drop both selectors → flagged, not silently offered.
+    // amp + nanoclaw drop both selectors → named, not silently offered.
     expect(await screen.findByText("AMP")).toBeInTheDocument();
     expect(
-      screen.getAllByText(/ignores model & effort/i).length,
+      screen.getAllByText(/own model \+ thinking/i).length,
     ).toBeGreaterThan(0);
   });
 
-  it("marks effort-only ignore harnesses (factory-droids / hermes honor model, drop effort)", async () => {
+  it("marks effort-only harnesses (factory-droids / hermes honor model, drop effort)", async () => {
     render(
       <AgentSessionControls
         harness={{ value: "opencode", onChange: () => {} }}
@@ -447,9 +447,47 @@ describe("AgentSessionControls — harnesses that ignore selectors", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /agent harness/i }),
     );
+    expect(screen.getAllByText(/own thinking/i).length).toBeGreaterThan(0);
+  });
+
+  it("groups harnesses by whether they honor the model + effort pickers", async () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "opencode", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    // Both sections are present and non-empty, so the split actually organizes
+    // the list rather than collapsing every harness into one bucket.
     expect(
-      screen.getAllByText(/ignores reasoning effort/i).length,
-    ).toBeGreaterThan(0);
+      await screen.findByText(/uses your model & thinking/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/brings its own setup/i)).toBeInTheDocument();
+
+    // A fully-steerable harness carries no autonomy note; a fixed one does.
+    // Scope to the menu — the trigger also renders the selected harness label.
+    const rows = screen.getAllByRole("menuitem");
+    const rowText = (label: string) =>
+      rows.find((row) => row.textContent?.includes(label))?.textContent ?? "";
+    expect(rowText("OpenCode")).not.toMatch(/own model|own thinking/i);
+    expect(rowText("AMP")).toMatch(/own model \+ thinking/i);
+  });
+
+  it("keeps credential env-var names out of the harness menu", async () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "opencode", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    await screen.findByText("Claude Code");
+    // Which keys a deployment supplies is a product decision; an env-var name is
+    // developer text and must never reach a customer-facing menu.
+    expect(document.body.textContent).not.toMatch(/_API_KEY/);
   });
 
   it("disables the model + effort pickers when the selected harness ignores them", () => {

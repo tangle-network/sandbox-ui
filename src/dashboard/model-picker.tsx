@@ -1,9 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Search, Sparkles, Loader2 } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 import * as Popover from "@radix-ui/react-dropdown-menu";
 import { cn } from "../lib/utils";
+import {
+  PickerMenuFooter,
+  PickerMenuMeta,
+  PickerMenuSearch,
+  PickerMenuSection,
+  PickerMenuTag,
+  pickerMenuBodyClass,
+  pickerMenuContentClass,
+  pickerMenuItemClass,
+} from "../lib/picker-menu";
 import {
   BrandLogo,
   brandInfo,
@@ -422,44 +432,17 @@ export function ModelPicker({
             align={variant === "pill" ? "start" : "start"}
             avoidCollisions={avoidCollisions}
             collisionPadding={24}
-            className={cn(
-              "z-50 w-[var(--radix-dropdown-menu-trigger-width)] min-w-[320px] max-w-[460px]",
-              // Cap to the smaller of the fixed height and the viewport space on
-              // the open side, so a list pinned downward never runs off-screen.
-              "max-h-[min(440px,var(--radix-dropdown-menu-content-available-height))] overflow-hidden flex flex-col",
-              "rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
-              "data-[state=open]:animate-in data-[state=closed]:animate-out",
-              "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-              "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            )}
+            className={pickerMenuContentClass}
           >
-            {/* Search bar */}
-            <div className="flex items-center gap-2 border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
-              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  // Radix dropdown-menu Content has built-in typeahead: each
-                  // character keydown that bubbles to the Content moves focus
-                  // to a matching menu item (via setTimeout(item.focus())),
-                  // which would steal focus from this search input as soon as
-                  // the typed text matches any model. Stop printable keys at
-                  // the input so the typeahead never sees them. Non-character
-                  // keys (Escape, Arrow*, Tab, Enter) still propagate.
-                  if (e.key.length === 1) e.stopPropagation();
-                }}
-                placeholder="Search models..."
-                autoFocus
-                className="flex-1 bg-transparent text-sm font-medium outline-none placeholder:font-normal placeholder:text-muted-foreground"
-              />
-              {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-            </div>
+            <PickerMenuSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="Search models..."
+              loading={loading}
+              inputRef={searchInputRef}
+            />
 
-            {/* Body */}
-            <div className="flex-1 overflow-y-auto">
+            <div className={pickerMenuBodyClass}>
               {/* Recommended (catalog `featured` flag, or curated fallback) */}
               {!query && featuredModels.length > 0 && (
                 <Section label="Recommended" tone="featured">
@@ -525,10 +508,9 @@ export function ModelPicker({
               )}
             </div>
 
-            {/* Footer count */}
-            <div className="border-t border-[var(--md3-outline-variant)] px-3 py-1.5 text-[10px] text-muted-foreground">
+            <PickerMenuFooter>
               {filtered.length} of {deduped.length} model{deduped.length === 1 ? "" : "s"}
-            </div>
+            </PickerMenuFooter>
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
@@ -538,21 +520,21 @@ export function ModelPicker({
 
 // ── Subcomponents ──────────────────────────────────────────────────────────
 
+/**
+ * Provider section header. The chrome comes from the shared picker-menu leaf so
+ * this menu and the harness menu stay one family; only the brand glyph — which
+ * is model-specific — is supplied here.
+ */
 function Section({ label, children, tone }: { label: string; children: React.ReactNode; tone?: "featured" }) {
   const identity = brandInfo(normalizeBrandKey(label));
   return (
-    <div className="py-1">
-      <div
-        className={cn(
-          "flex items-center gap-1.5 px-3 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-widest",
-          tone === "featured" ? "text-primary" : "text-muted-foreground",
-        )}
-      >
-        {identity.key !== "unknown" && <BrandLogo brand={identity} size="xs" />}
-        <span>{label}</span>
-      </div>
-      <div>{children}</div>
-    </div>
+    <PickerMenuSection
+      label={label}
+      tone={tone}
+      glyph={identity.key !== "unknown" ? <BrandLogo brand={identity} size="xs" /> : undefined}
+    >
+      {children}
+    </PickerMenuSection>
   );
 }
 
@@ -573,14 +555,7 @@ function PickerItem({
         e.preventDefault();
         onSelect();
       }}
-      className={cn(
-        "flex cursor-pointer items-start gap-2 rounded-md px-3 py-2 outline-none",
-        "transition-colors duration-[var(--transition-fast)]",
-        "hover:bg-accent/50 focus:bg-accent/50",
-        featured && "mx-1 border border-primary/10 bg-primary/[0.04] px-2.5",
-        active &&
-          "bg-primary/10 font-medium text-foreground ring-1 ring-inset ring-primary/25 hover:bg-primary/15 focus:bg-primary/15",
-      )}
+      className={pickerMenuItemClass({ active, featured })}
     >
       {children}
     </Popover.Item>
@@ -613,19 +588,11 @@ function ModelRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="min-w-0 truncate text-sm font-medium">{model.name ?? model.id}</span>
-          {via && (
-            <span className="shrink-0 rounded-full border border-[var(--md3-outline-variant)] bg-surface-container px-1.5 py-px text-[9px] font-medium text-muted-foreground">
-              via {via}
-            </span>
-          )}
+          {via && <PickerMenuTag>via {via}</PickerMenuTag>}
         </div>
-        {(ctx || pricing) && (
-          <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            {ctx && <span className="shrink-0">{ctx}</span>}
-            {ctx && pricing && <span className="shrink-0 opacity-40">·</span>}
-            {pricing && <span className="shrink-0 font-mono">{pricing}</span>}
-          </div>
-        )}
+        <PickerMenuMeta
+          parts={[ctx, pricing ? <span className="font-mono">{pricing}</span> : null]}
+        />
       </div>
     </PickerItem>
   );

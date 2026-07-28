@@ -87,3 +87,20 @@ describe("SessionSidebar — optimistic items", () => {
     expect(getByText("Custom-name thread")).toBeInTheDocument();
   });
 });
+
+describe("SessionSidebar — header alignment", () => {
+  // SidebarLayout pins the rail header and the view header to h-14 "for
+  // cross-view alignment". The panel header has to agree or the workspace shows
+  // a stepped top edge: three panels, three different divider heights. This
+  // shipped as py-1.5 (41px measured against the rail's 56px), and a consuming
+  // app carried a CSS override that named the wrong element and never fixed it.
+  it("pins the panel header to the same h-14 as the rail and view headers", () => {
+    const { getByText } = render(<SessionSidebar title="Chats" items={baseItems} />);
+    const header = getByText("Chats").closest("div.flex.h-14");
+    expect(header).not.toBeNull();
+    expect(header).toHaveClass("h-14");
+    // Height IS the contract — padding cannot stand in for it, because the
+    // header's content height varies with the optional subtitle.
+    expect(header?.className).not.toMatch(/\bpy-/);
+  });
+});

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.90.2
+
+### Fixes
+
+- **The terminal's REST fallback now sends a JSON body when creating a PTY.** It declared `Content-Type: application/json` and sent nothing, so the sidecar rejected the request as malformed before the handler ran. The request now carries the current geometry — the same fields the WebSocket `init` frame uses — which also spares the new PTY a resize round-trip. The fallback runs only when the direct WebSocket dial fails, so this surfaced solely on stacks without that path, where the terminal could not open at all.
+
 ## 0.90.1
 
 ### Agent interface

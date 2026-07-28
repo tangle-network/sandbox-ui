@@ -215,6 +215,19 @@ function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
   return { handles }
 }
 
+/** True when `body` is a string parsing to a JSON object — what a route
+ *  declaring an object schema accepts. `null`/`undefined` are the empty-body
+ *  case the sidecar rejects. */
+function parsesAsJsonObject(body: BodyInit | null | undefined): boolean {
+  if (typeof body !== "string" || body.length === 0) return false
+  try {
+    const parsed: unknown = JSON.parse(body)
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+  } catch {
+    return false
+  }
+}
+
 /**
  * Test harness that stubs `fetch` and separates the three surfaces
  * `usePtySession` talks to: terminal creation, SSE stream, and input
@@ -230,6 +243,17 @@ function installFetchHarness() {
     const method = (init?.method ?? "GET").toUpperCase()
 
     if (href.endsWith("/terminals") && method === "POST") {
+      // Mirror the sidecar contract rather than accepting anything: the route
+      // declares a required JSON object, so an absent or unparseable body is
+      // a 400 there. A mock that answers 201 regardless cannot observe a
+      // client that stops sending one.
+      if (!parsesAsJsonObject(init?.body)) {
+        return mockResponse({
+          ok: false,
+          status: 400,
+          body: JSON.stringify({ error: "Malformed JSON in request body" }),
+        })
+      }
       return mockResponse({
         ok: true,
         status: 201,
@@ -331,6 +355,27 @@ describe("usePtySession input serialization", () => {
     })
     return { ...harness, hook }
   }
+
+  it("creates the terminal with a JSON object body carrying the geometry", async () => {
+    const { fetchMock } = await mountAndWaitForSession()
+
+    const create = fetchMock.mock.calls.find(([url, init]) => {
+      const href = typeof url === "string" ? url : url.toString()
+      return href.endsWith("/terminals") && (init?.method ?? "GET").toUpperCase() === "POST"
+    })
+    expect(create).toBeDefined()
+
+    const [, init] = create!
+    // Declaring JSON and then sending nothing is what the sidecar rejects as
+    // malformed — the header and the body have to agree.
+    expect(
+      new Headers(init?.headers as HeadersInit).get("content-type"),
+    ).toBe("application/json")
+    expect(typeof init?.body).toBe("string")
+    // The hook's pre-resize defaults (80x24), inlined rather than exported —
+    // the values are module-private and not part of the public surface.
+    expect(JSON.parse(init!.body as string)).toEqual({ cols: 80, rows: 24 })
+  })
 
   it("dispatches at most one input POST at a time", async () => {
     const { inputPosts, hook } = await mountAndWaitForSession()

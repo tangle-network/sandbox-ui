@@ -690,6 +690,11 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
         inputAbortRef.current = null;
       }
 
+      // The body is mandatory: the sidecar route declares a JSON object, so a
+      // `Content-Type: application/json` request with no body is rejected as
+      // malformed before the handler runs. Sending the current geometry also
+      // spares the fresh PTY a resize round-trip — same fields the WS `init`
+      // frame carries.
       const res = await fetch(`${apiUrl}/terminals`, {
         method: 'POST',
         headers: {
@@ -697,6 +702,10 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
           'Content-Type': 'application/json',
         },
         credentials: 'include',
+        body: JSON.stringify({
+          cols: colsRef.current,
+          rows: rowsRef.current,
+        }),
       });
 
       if (!res.ok) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.91.3
+
+### Workspace
+
+- **The rail, list, record, and mobile drawer headers now share one 56 px row.** Workspace panes consume a single exported header component, including the session sidebar, so their dividers cannot drift into the stepped edge that appeared when local padding produced 36–41 px headers.
+
 ## 0.91.2
 
 ### Fixes

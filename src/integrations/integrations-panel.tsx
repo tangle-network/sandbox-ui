@@ -241,6 +241,53 @@ export function IntegrationsPanel({
     setDisconnectError(null);
   }, []);
 
+  // Connect is asynchronous and can fail — most commonly when the provider's
+  // OAuth app has no credentials wired and the platform answers the start call
+  // with 503. The click handler used to call `onConnect` without awaiting it,
+  // so a rejection became an unhandled promise rejection: no pending state, no
+  // message, a tile that visibly did nothing. Disconnect has surfaced its
+  // errors inline since it was written; connect now does the same.
+  const [connectingId, setConnectingId] = React.useState<string | null>(null);
+  const [connectError, setConnectError] = React.useState<string | null>(null);
+  const activeConnect = React.useRef(0);
+
+  const startConnect = React.useCallback(
+    async (input: { providerId: string; connectorId: string }) => {
+      const reqId = (activeConnect.current += 1);
+      setConnectError(null);
+      let pending: void | Promise<void>;
+      try {
+        pending = onConnect(input);
+      } catch (e) {
+        // A consumer that throws synchronously is the same failure to the
+        // user as one that rejects.
+        setConnectError(
+          e instanceof Error ? e.message : "Failed to start the connection.",
+        );
+        return;
+      }
+      // A synchronous consumer has already done its work — there is nothing to
+      // wait on, so it gets no busy state and no extra render.
+      if (typeof (pending as Promise<void> | undefined)?.then !== "function") {
+        return;
+      }
+      setConnectingId(input.providerId);
+      try {
+        await pending;
+        // On success the consumer navigates to the provider's consent screen,
+        // so this component is usually unmounted before the next line runs.
+      } catch (e) {
+        if (activeConnect.current !== reqId) return;
+        setConnectError(
+          e instanceof Error ? e.message : "Failed to start the connection.",
+        );
+      } finally {
+        if (activeConnect.current === reqId) setConnectingId(null);
+      }
+    },
+    [onConnect],
+  );
+
   const confirmDisconnect = React.useCallback(async () => {
     if (!disconnectTarget) return;
     const reqId = (activeDisconnect.current += 1);
@@ -348,6 +395,16 @@ export function IntegrationsPanel({
           ))}
         </div>
       </div>
+
+      {connectError ? (
+        <div
+          role="alert"
+          data-testid="integration-connect-error"
+          className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {connectError}
+        </div>
+      ) : null}
 
       {visible.length === 0 ? (
         <EmptyState
@@ -507,9 +564,17 @@ export function IntegrationsPanel({
                 type="button"
                 data-testid={`integration-${provider.providerId}`}
                 data-connected="false"
-                onClick={() =>
-                  onConnect({ providerId: provider.providerId, connectorId })
+                data-connecting={
+                  connectingId === provider.providerId ? "true" : undefined
                 }
+                disabled={connectingId === provider.providerId}
+                aria-busy={connectingId === provider.providerId}
+                onClick={() => {
+                  void startConnect({
+                    providerId: provider.providerId,
+                    connectorId,
+                  });
+                }}
                 title={
                   provider.description
                     ? provider.description

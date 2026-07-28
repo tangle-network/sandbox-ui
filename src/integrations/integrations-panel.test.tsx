@@ -423,4 +423,60 @@ describe("IntegrationsPanel", () => {
     renderPanel({ catalog: [], emptyCatalogLabel: "Nothing here yet" });
     expect(screen.getByText("Nothing here yet")).toBeInTheDocument();
   });
+
+  describe("a connect attempt that fails must say so", () => {
+    // The common real failure: the provider's OAuth app has no credentials
+    // wired, so the platform answers the start call with 503 and the
+    // consumer's connect() rejects. Clicking used to produce an unhandled
+    // promise rejection and no visible change at all.
+    it("surfaces the rejection instead of doing nothing", async () => {
+      const onConnect = vi
+        .fn()
+        .mockRejectedValue(
+          new Error("Failed to start OAuth (503): Hub provider config missing"),
+        );
+      renderPanel({ onConnect });
+
+      fireEvent.click(screen.getByTestId("integration-slack"));
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("integration-connect-error"),
+        ).toBeInTheDocument();
+      });
+      expect(screen.getByRole("alert")).toHaveTextContent(/503/);
+      expect(onConnect).toHaveBeenCalledTimes(1);
+    });
+
+    it("marks the tile busy while the attempt is in flight", async () => {
+      let release: (() => void) | undefined;
+      const onConnect = vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          }),
+      );
+      renderPanel({ onConnect });
+
+      const tile = screen.getByTestId("integration-slack");
+      fireEvent.click(tile);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("integration-slack")).toHaveAttribute(
+          "data-connecting",
+          "true",
+        );
+      });
+      // A second click while the first is pending must not open two flows.
+      fireEvent.click(screen.getByTestId("integration-slack"));
+      expect(onConnect).toHaveBeenCalledTimes(1);
+
+      release?.();
+      await waitFor(() => {
+        expect(screen.getByTestId("integration-slack")).not.toHaveAttribute(
+          "data-connecting",
+        );
+      });
+    });
+  });
 });

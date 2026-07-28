@@ -131,6 +131,30 @@ describe("IntegrationsPanel", () => {
     expect(screen.queryByTestId("account-slack")).toBeNull();
   });
 
+  it("keeps long connected account names inside narrow grid tiles", () => {
+    renderPanel({
+      connections: [
+        {
+          id: "c1",
+          providerId: "google",
+          connectorId: "gmail",
+          status: "connected",
+          accountDisplay:
+            "relationship-operations-owner@long-company-domain.example",
+        },
+      ],
+    });
+
+    const tile = screen.getByTestId("integration-google");
+    const account = screen.getByTestId("account-google");
+    expect(tile).toHaveClass("min-w-0");
+    expect(account).toHaveClass("truncate");
+    expect(account.parentElement?.parentElement).toHaveClass(
+      "w-full",
+      "min-w-0",
+    );
+  });
+
   it("does not disconnect when the confirmation dialog is cancelled", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     const onDisconnect = vi.fn();

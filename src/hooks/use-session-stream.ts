@@ -87,6 +87,25 @@ interface ApiMessage {
   source?: string;
 }
 
+/**
+ * A message this client sent that the backend's history has not replaced yet.
+ *
+ * The session bus emits `message.updated` only for the assistant's reply, so a
+ * user message first reaches this hook through the `session.idle` refetch —
+ * after the agent has finished answering it. Echoing locally on send is what
+ * puts it on screen immediately; the echo is carried here until the turn ends
+ * so an unrelated refetch (a history resync, or the previous turn's refetch
+ * still in flight) cannot wipe it back off.
+ *
+ * An echo belongs to the session that produced it, and only that session's turn
+ * ending retires it — so the map is emptied whenever the hook is pointed at a
+ * different session.
+ */
+interface PendingEcho {
+  message: SessionMessage;
+  parts: SessionPart[];
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -164,7 +183,19 @@ export function useSessionStream({
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamingMsgIdRef = useRef<string | null>(null);
   const insertionCounterRef = useRef(0);
+  const echoCounterRef = useRef(0);
+  const pendingEchoesRef = useRef<Map<string, PendingEcho>>(new Map());
   const handleSSEEventRef = useRef<((type: string, raw: Record<string, unknown>) => void) | null>(null);
+
+  // ── Echo lifetime ───────────────────────────────────────────────────
+
+  // Only the producing session's turn ending retires its echoes, so pointing
+  // the hook at another session strands them. Dropping them on the identity
+  // change is what keeps a later return to the original session from
+  // re-applying an echo whose canonical copy is in the history by then.
+  useEffect(() => {
+    pendingEchoesRef.current.clear();
+  }, [sessionId]);
 
   // ── Fetch full message history ──────────────────────────────────────
 
@@ -184,8 +215,17 @@ export function useSessionStream({
         newPartMap[message.id] = parts;
       }
 
-      setMessages(newMessages);
-      setPartMap(newPartMap);
+      // History is authoritative for everything the backend has recorded, but
+      // an in-flight turn's user message may not be in it yet — carry those
+      // echoes across so the sender's message does not blink out mid-turn.
+      // They are the newest messages by construction, hence appended last.
+      const echoes = [...pendingEchoesRef.current.values()];
+
+      setMessages([...newMessages, ...echoes.map((echo) => echo.message)]);
+      setPartMap({
+        ...newPartMap,
+        ...Object.fromEntries(echoes.map((echo) => [echo.message.id, echo.parts])),
+      });
       streamingMsgIdRef.current = null;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch messages';
@@ -365,6 +405,11 @@ export function useSessionStream({
     } else if (type === 'session.idle') {
       setIsStreaming(false);
       streamingMsgIdRef.current = null;
+      // The turn is over, so its messages are in the backend's history now:
+      // retire the echoes so the refetch below installs the canonical copies.
+      // Retiring before the refetch keeps an echo created while it is in
+      // flight (the composer unlocks on this event) out of the retired set.
+      pendingEchoesRef.current.clear();
       // Refetch to get canonical message state
       refetch();
     } else if (type === 'session.error') {
@@ -372,6 +417,7 @@ export function useSessionStream({
       streamingMsgIdRef.current = null;
       const errorMsg = (props.error as string) ?? (props.message as string) ?? 'Agent error';
       setError(errorMsg);
+      pendingEchoesRef.current.clear();
       refetch();
     }
   }, [refetch]);
@@ -380,8 +426,37 @@ export function useSessionStream({
 
   // ── Send message ───────────────────────────────────────────────────
 
+  /**
+   * Sends the text and echoes it into the transcript immediately.
+   *
+   * The echo is what makes the sender's own message visible during the turn:
+   * the session bus carries `message.updated` only for the assistant's reply,
+   * so the user's message otherwise first surfaces in the `session.idle`
+   * refetch — after the agent has finished answering it. The echo carries a
+   * client-minted id and never has to agree with the backend's, because it is
+   * retired wholesale when the turn ends rather than matched against a
+   * canonical message.
+   */
   const send = useCallback(async (text: string, options?: SendMessageOptions) => {
     if (!token || !sessionId || !apiUrl) return;
+
+    const echoId = `local-echo-${echoCounterRef.current++}`;
+    const echo: PendingEcho = {
+      message: {
+        id: echoId,
+        role: 'user',
+        time: { created: Date.now() },
+        _insertionIndex: insertionCounterRef.current++,
+      },
+      parts: [{ type: 'text', text } satisfies TextPart],
+    };
+    pendingEchoesRef.current.set(echoId, echo);
+    setMessages((prev) => [...prev, echo.message]);
+    setPartMap((prev) => ({ ...prev, [echoId]: echo.parts }));
+    // The turn is in flight from the user's point of view the moment they hit
+    // send; composers gate their submit on this.
+    setIsStreaming(true);
+
     try {
       const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}/messages`;
       await fetchJson<unknown>(url, token, {
@@ -398,8 +473,27 @@ export function useSessionStream({
             : {}),
         }),
       });
-      setIsStreaming(true);
     } catch (err) {
+      // The turn was never admitted, so no backend copy will arrive to replace
+      // the echo: drop it instead of leaving a message the session never saw.
+      pendingEchoesRef.current.delete(echoId);
+      setMessages((prev) => prev.filter((message) => message.id !== echoId));
+      setPartMap((prev) => {
+        if (!(echoId in prev)) return prev;
+        const next = { ...prev };
+        delete next[echoId];
+        return next;
+      });
+      // Release the composer only when nothing else is running. Not every
+      // caller gates on `isStreaming` — an in-transcript action button can
+      // send mid-run — so this failure may land under another turn: either a
+      // send whose echo is still pending, or an assistant already streaming
+      // into the session with no echo of its own (a detached run). Clearing
+      // the flag under either would unlock the composer and drop its progress
+      // indicator.
+      if (pendingEchoesRef.current.size === 0 && !streamingMsgIdRef.current) {
+        setIsStreaming(false);
+      }
       const msg = err instanceof Error ? err.message : 'Failed to send message';
       setError(msg);
     }

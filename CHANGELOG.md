@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.91.1
+
+### Fixes
+
+- **A message you send now appears in the transcript immediately.** `useSessionStream` recorded nothing locally on send, and the session bus carries `message.updated` only for the assistant's reply — so a user message first arrived in the `session.idle` refetch, after the agent had finished answering it. The wait scaled with the model's response time. `send` now echoes the message into `messages`/`partMap` before the request and flips `isStreaming`, so the transcript updates on submit and composers gate a second send. Echoes are retired when the turn ends, when the send is rejected, or when the hook is pointed at another session, so the backend's history stays authoritative.
+
 ## 0.90.3
 
 ### Integrations

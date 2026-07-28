@@ -238,6 +238,31 @@ interface MobileDrawerProps {
   children: ReactNode;
 }
 
+/**
+ * Every top-level workspace pane shares the shell's 56px header row. Keeping
+ * the height, border, and surface in one component prevents the rail, center,
+ * and optional side panes from forming a stepped divider when their header
+ * content has different intrinsic heights.
+ */
+function WorkspaceTopHeader({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex h-14 shrink-0 items-center border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerProps) {
   return (
     <div className="fixed inset-0 z-50 flex lg:hidden" aria-modal="true" role="dialog" aria-label={title}>
@@ -253,7 +278,7 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
           side === "left" ? "border-r" : "ml-auto border-l",
         )}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--md3-outline-variant)] px-3 py-2">
+        <WorkspaceTopHeader className="justify-between gap-3">
           <div className="min-w-0 flex-1">{header ?? <span className="text-[13px] font-medium text-foreground">{title}</span>}</div>
           <button
             type="button"
@@ -263,7 +288,7 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
           >
             <X className="h-4 w-4" />
           </button>
-        </div>
+        </WorkspaceTopHeader>
         <div className="flex-1 overflow-auto">{children}</div>
       </aside>
     </div>
@@ -430,7 +455,7 @@ export function WorkspaceLayout({
               className="hidden shrink-0 border-r border-[var(--md3-outline-variant)] bg-surface-container-low lg:flex lg:flex-col"
             >
               {leftHeader && (
-                <div className="flex items-center justify-between gap-2 border-b border-[var(--md3-outline-variant)] px-3 py-1.5 bg-surface-container-high">
+                <WorkspaceTopHeader className="justify-between gap-2">
                   <div className="min-w-0 flex-1">{leftHeader}</div>
                   <button
                     type="button"
@@ -440,7 +465,7 @@ export function WorkspaceLayout({
                   >
                     <PanelLeftClose className="h-4 w-4" />
                   </button>
-                </div>
+                </WorkspaceTopHeader>
               )}
               <div className="min-h-0 flex-1 overflow-auto py-1">{left}</div>
             </aside>
@@ -456,7 +481,7 @@ export function WorkspaceLayout({
 
         <main className="flex min-w-0 flex-1 flex-col">
           {(centerHeader || left || right || bottom) && (
-            <div className="flex items-center gap-2 border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-1.5">
+            <WorkspaceTopHeader className="gap-2">
               {left && !leftOpen && (
                 <button
                   type="button"
@@ -488,7 +513,7 @@ export function WorkspaceLayout({
                   <PanelRightOpen className="h-4 w-4" />
                 </button>
               )}
-            </div>
+            </WorkspaceTopHeader>
           )}
 
           <div className="min-h-0 flex-1 overflow-auto">{center}</div>
@@ -552,7 +577,7 @@ export function WorkspaceLayout({
               style={rightStyle}
               className="hidden shrink-0 border-l border-[var(--md3-outline-variant)] bg-surface-container-low lg:flex lg:flex-col"
             >
-              <div className="flex items-center justify-between gap-2 border-b border-[var(--md3-outline-variant)] px-3 py-1.5 bg-surface-container-high">
+              <WorkspaceTopHeader className="justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   {rightHeader ?? <span className="text-[13px] font-medium text-foreground">Artifacts</span>}
                 </div>
@@ -564,7 +589,7 @@ export function WorkspaceLayout({
                 >
                   <PanelRightClose className="h-4 w-4" />
                 </button>
-              </div>
+              </WorkspaceTopHeader>
               <div className="min-h-0 flex-1 overflow-auto">{right}</div>
             </aside>
           </>

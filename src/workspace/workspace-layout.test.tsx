@@ -37,3 +37,27 @@ describe("WorkspaceLayout — theme", () => {
     expect(root.hasAttribute("data-sandbox-theme")).toBe(false)
   })
 })
+
+describe("WorkspaceLayout — top header alignment", () => {
+  it("pins every desktop pane header to the shell's 56px row", () => {
+    const { getByText } = render(
+      <WorkspaceLayout
+        left={<div>Left content</div>}
+        leftHeader={<span>Left header</span>}
+        center={<div>Center content</div>}
+        centerHeader={<span>Center header</span>}
+        right={<div>Right content</div>}
+        rightHeader={<span>Right header</span>}
+        defaultRightOpen
+        resizable={false}
+      />,
+    )
+
+    for (const label of ["Left header", "Center header", "Right header"]) {
+      const header = getByText(label).closest("div.flex.h-14")
+      expect(header).not.toBeNull()
+      expect(header).toHaveClass("h-14", "shrink-0")
+      expect(header?.className).not.toMatch(/\bpy-/)
+    }
+  })
+})

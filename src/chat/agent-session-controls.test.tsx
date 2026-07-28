@@ -475,6 +475,29 @@ describe("AgentSessionControls — harnesses that ignore selectors", () => {
     expect(rowText("AMP")).toMatch(/own model \+ thinking/i);
   });
 
+  it("clears the harness search when the menu closes", async () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "opencode", onChange: () => {} }}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /agent harness/i });
+    await userEvent.click(trigger);
+    const search = await screen.findByPlaceholderText(/search agents/i);
+    // "kimi" matches exactly one harness. ("codex" would match two — OpenClaw's
+    // description names Codex — which is the description search working.)
+    await userEvent.type(search, "kimi");
+    expect(screen.getAllByRole("menuitem")).toHaveLength(1);
+
+    // Close, then reopen. A stale filter would leave every other harness
+    // looking absent with nothing on screen explaining why.
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(
+      screen.getByRole("button", { name: /agent harness/i }),
+    );
+    expect(screen.getAllByRole("menuitem").length).toBeGreaterThan(1);
+  });
+
   it("keeps credential env-var names out of the harness menu", async () => {
     render(
       <AgentSessionControls

@@ -27,6 +27,16 @@ import {
 } from "../dashboard/harness-picker";
 import { HarnessLogo } from "../dashboard/harness-logo";
 import {
+  PickerMenuFooter,
+  PickerMenuMeta,
+  PickerMenuSearch,
+  PickerMenuSection,
+  PickerMenuTag,
+  pickerMenuBodyClass,
+  pickerMenuContentClass,
+  pickerMenuItemClass,
+} from "../lib/picker-menu";
+import {
   isModelCompatibleWithHarness,
   snapHarnessToModel,
   snapModelToHarness,
@@ -190,18 +200,64 @@ interface HarnessDropdownProps extends AgentSessionHarnessControl {
 }
 
 /**
- * A short note for a harness that drops one or both per-turn selectors, so the picker can warn
- * before it's chosen (rather than silently ignoring the user's model/effort pick). `null` when the
- * harness honors both. Driven by agent-interface's `harnessHonorsModel`/`harnessHonorsEffort`.
+ * A short note naming which per-turn selectors a harness supplies for itself, so
+ * the user learns it BEFORE picking rather than watching their model choice get
+ * silently ignored. `null` when the harness honors both.
+ *
+ * Phrased as what the agent brings ("own model") rather than what it takes away
+ * ("Ignores model selection"): the same fact, but it reads as a property of the
+ * agent instead of an alarm, which is what lets it sit quietly in the row's
+ * metadata line beside the description instead of shouting from its own badge.
+ *
+ * Driven by agent-interface's `harnessHonorsModel`/`harnessHonorsEffort`, so a
+ * newly-added harness is classified by the canonical capability table rather
+ * than by a list maintained here.
  */
-function selectorIgnoreNote(harness: HarnessType): string | null {
-  const ignoresModel = !harnessHonorsModel(harness);
-  const ignoresEffort = !harnessHonorsEffort(harness);
-  if (ignoresModel && ignoresEffort) return "Ignores model & effort";
-  if (ignoresModel) return "Ignores model selection";
-  if (ignoresEffort) return "Ignores reasoning effort";
+function harnessAutonomyNote(harness: HarnessType): string | null {
+  const ownModel = !harnessHonorsModel(harness);
+  const ownEffort = !harnessHonorsEffort(harness);
+  if (ownModel && ownEffort) return "own model + thinking";
+  if (ownModel) return "own model";
+  if (ownEffort) return "own thinking";
   return null;
 }
+
+/**
+ * Which section a harness belongs to. The split answers the one question the
+ * menu is actually asked — "if I pick this, do my model and thinking choices
+ * still apply?" — and it is derived from the capability table, not hardcoded,
+ * so it stays true as harnesses are added.
+ */
+type HarnessGroupKey = "steerable" | "fixed" | "no-agent";
+
+const HARNESS_GROUP_LABELS: Record<HarnessGroupKey, string> = {
+  steerable: "Uses your model & thinking",
+  fixed: "Brings its own setup",
+  "no-agent": "No agent",
+};
+
+/** Section order — the fully-steerable agents first. */
+const HARNESS_GROUP_ORDER: readonly HarnessGroupKey[] = [
+  "steerable",
+  "fixed",
+  "no-agent",
+];
+
+function harnessGroup(option: {
+  type: HarnessType;
+  chatCapable: boolean;
+}): HarnessGroupKey {
+  if (!option.chatCapable) return "no-agent";
+  return harnessAutonomyNote(option.type) === null ? "steerable" : "fixed";
+}
+
+/**
+ * Show the search field only once the list is long enough to be worth
+ * searching. A search box above four visible rows is furniture, not a feature —
+ * and a product that filters the harnesses down to its plan tier should not
+ * inherit one.
+ */
+const HARNESS_SEARCH_THRESHOLD = 7;
 
 /**
  * Locked-harness trigger that explains the lock and offers a fork. The harness
@@ -334,6 +390,36 @@ function HarnessDropdown({
   const options = HARNESS_OPTIONS.filter((h) => allowed.has(h.type));
   const selected = options.find((option) => option.type === value);
 
+  const [query, setQuery] = React.useState("");
+  const showSearch = options.length > HARNESS_SEARCH_THRESHOLD;
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(
+      (o) =>
+        o.label.toLowerCase().includes(q) ||
+        o.type.toLowerCase().includes(q) ||
+        (o.description?.toLowerCase() ?? "").includes(q),
+    );
+  }, [options, query]);
+
+  // Group into sections, preserving the curated order inside each one.
+  const sections = React.useMemo(() => {
+    const byGroup = new Map<HarnessGroupKey, typeof filtered>();
+    for (const option of filtered) {
+      const key = harnessGroup(option);
+      const bucket = byGroup.get(key);
+      if (bucket) bucket.push(option);
+      else byGroup.set(key, [option]);
+    }
+    return HARNESS_GROUP_ORDER.map((key) => ({
+      key,
+      label: HARNESS_GROUP_LABELS[key],
+      items: byGroup.get(key) ?? [],
+    })).filter((section) => section.items.length > 0);
+  }, [filtered]);
+
   // A locked harness with a fork action becomes the informative-lock chip;
   // without one it falls back to the bare inert trigger below.
   if (locked && onNewChat) {
@@ -380,47 +466,64 @@ function HarnessDropdown({
           avoidCollisions={avoidCollisions}
           collisionPadding={24}
           sideOffset={6}
-          className={cn(
-            // Cap to the viewport space on the open side and scroll, so a tall
-            // backend list pinned downward (floating composer) never runs off
-            // the bottom edge.
-            "z-50 w-72 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
-            "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-          )}
+          className={pickerMenuContentClass}
         >
-          {options.map((option) => (
-            <DropdownMenu.Item
-              key={option.type}
-              onSelect={(event) => {
-                event.preventDefault();
-                onChange(option.type);
-              }}
-              className={cn(
-                "flex cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-2 outline-none",
-                "transition-colors hover:bg-accent/50 focus:bg-accent/50",
-                option.type === value &&
-                  "bg-primary/10 font-medium text-foreground ring-1 ring-inset ring-primary/25 hover:bg-primary/15 focus:bg-primary/15",
-              )}
-            >
-              <HarnessLogo type={option.type} size={20} className="mt-0.5" />
-              <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-sm font-medium">{option.label}</span>
-                {option.description && (
-                  <span className="text-xs text-muted-foreground">
-                    {option.description}
-                  </span>
-                )}
-                {selectorIgnoreNote(option.type) && (
-                  <span className="mt-0.5 inline-flex w-fit items-center rounded border border-[var(--md3-outline-variant)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    {selectorIgnoreNote(option.type)}
-                  </span>
-                )}
-              </span>
-            </DropdownMenu.Item>
-          ))}
+          {showSearch && (
+            <PickerMenuSearch
+              value={query}
+              onChange={setQuery}
+              placeholder="Search agents..."
+            />
+          )}
+          <div className={pickerMenuBodyClass}>
+            {sections.length === 0 ? (
+              <div className="px-3 py-8 text-center text-xs text-muted-foreground">
+                No agents match.
+              </div>
+            ) : (
+              sections.map((section) => (
+                <PickerMenuSection key={section.key} label={section.label}>
+                  {section.items.map((option) => (
+                    <DropdownMenu.Item
+                      key={option.type}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        onChange(option.type);
+                      }}
+                      className={pickerMenuItemClass({
+                        active: option.type === value,
+                      })}
+                    >
+                      <HarnessLogo
+                        type={option.type}
+                        size={20}
+                        className="mt-0.5"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="min-w-0 truncate text-sm font-medium">
+                            {option.label}
+                          </span>
+                          {harnessAutonomyNote(option.type) && (
+                            <PickerMenuTag>
+                              {harnessAutonomyNote(option.type)}
+                            </PickerMenuTag>
+                          )}
+                        </div>
+                        <PickerMenuMeta parts={[option.description]} />
+                      </div>
+                    </DropdownMenu.Item>
+                  ))}
+                </PickerMenuSection>
+              ))
+            )}
+          </div>
+          {showSearch && (
+            <PickerMenuFooter>
+              {filtered.length} of {options.length} agent
+              {options.length === 1 ? "" : "s"}
+            </PickerMenuFooter>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

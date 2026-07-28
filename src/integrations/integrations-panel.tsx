@@ -378,7 +378,7 @@ export function IntegrationsPanel({
                       : name
                   }
                   className={cn(
-                    "group relative flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
+                    "group relative flex min-w-0 aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
                     "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]",
                   )}
                 >
@@ -403,7 +403,7 @@ export function IntegrationsPanel({
                   </span>
                   {/* Decorative content — pointer-events-none so a click
                       anywhere on the body falls through to the Manage link. */}
-                  <div className="pointer-events-none flex flex-col items-center gap-2">
+                  <div className="pointer-events-none flex w-full min-w-0 flex-col items-center gap-2">
                     <ProviderIcon
                       id={provider.providerId}
                       iconUrl={provider.iconUrl}
@@ -516,7 +516,7 @@ export function IntegrationsPanel({
                     : `Connect ${name}`
                 }
                 className={cn(
-                  "group flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-3 text-center transition-all",
+                  "group flex min-w-0 aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-3 text-center transition-all",
                   "hover:border-primary/40 hover:bg-accent/40 hover:shadow-sm focus:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20",
                 )}
               >

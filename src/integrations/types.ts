@@ -37,6 +37,11 @@ export interface IntegrationProvider {
   description?: string;
   iconUrl?: string;
   connectors?: IntegrationConnector[];
+  /**
+   * True when the platform can currently receive this provider's events.
+   * Absent means the platform predates inbound-readiness discovery.
+   */
+  eventIngressConfigured?: boolean;
 }
 
 export interface IntegrationHealth {

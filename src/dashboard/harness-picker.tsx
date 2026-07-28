@@ -25,55 +25,61 @@ interface HarnessOption extends Backend {
 /**
  * Default option list with human-readable copy. Order is curated so the
  * recommended choice (`opencode`) appears first; `cli-base` (no agent) last.
+ *
+ * Descriptions name what the AGENT is, in one short line that fits the menu row
+ * without wrapping. They deliberately do NOT mention credentials: which keys a
+ * deployment supplies is a product decision, not a property of the harness, and
+ * an env-var name (`ANTHROPIC_API_KEY`) is developer text that has no place in a
+ * customer-facing menu. A product whose deployment really does require a
+ * user-supplied key says so through `optionsOverride`.
  */
 export const HARNESS_OPTIONS: readonly HarnessOption[] = [
   {
     type: "opencode",
     label: "OpenCode",
-    description: "Default agent — broad model support, deterministic streaming",
+    description: "Broad model support, deterministic streaming",
     chatCapable: true,
   },
   {
     type: "claude-code",
     label: "Claude Code",
-    description: "Native Claude skills and tools (requires ANTHROPIC_API_KEY)",
+    description: "Native Claude skills and tools",
     chatCapable: true,
   },
   {
     type: "codex",
     label: "Codex",
-    description: "OpenAI Codex CLI (requires OPENAI_API_KEY)",
+    description: "OpenAI's Codex CLI",
     chatCapable: true,
   },
   {
     type: "amp",
     label: "AMP",
-    description: "Sourcegraph AMP agent",
+    description: "Sourcegraph's coding agent",
     chatCapable: true,
   },
   {
     type: "factory-droids",
     label: "Factory Droids",
-    description: "Factory Droid agent",
+    description: "Factory's Droid agent",
     chatCapable: true,
   },
   {
     type: "kimi-code",
     label: "Kimi Code",
-    description:
-      "Moonshot Kimi Code CLI (Kimi subscription OAuth or MOONSHOT_API_KEY)",
+    description: "Moonshot's Kimi Code CLI",
     chatCapable: true,
   },
   {
     type: "openclaw",
     label: "OpenClaw",
-    description: "Dispatcher routing to Claude / Codex / Gemini CLIs",
+    description: "Routes to Claude, Codex, or Gemini",
     chatCapable: true,
   },
   {
     type: "nanoclaw",
     label: "NanoClaw",
-    description: "Local socket-bridge agent backend",
+    description: "Local socket-bridge backend",
     chatCapable: true,
   },
   {
@@ -85,7 +91,7 @@ export const HARNESS_OPTIONS: readonly HarnessOption[] = [
   {
     type: "cli-base",
     label: "CLI base (no agent)",
-    description: "Shell tools only — for non-AI scheduled tasks",
+    description: "Shell tools only, for non-AI scheduled tasks",
     chatCapable: false,
   },
 ] as const;

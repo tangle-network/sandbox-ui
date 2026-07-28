@@ -298,9 +298,13 @@ export function SessionSidebar({
       className={cn("relative flex shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low", className)}
       style={{ width: resizable ? resize.width : defaultWidth }}
     >
-      {/* Header — matches the layout panel header rhythm (px-3 py-1.5, muted
-          band) so the top border and baseline line up with adjacent panels. */}
-      <div className="flex shrink-0 items-center border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-1.5">
+      {/* Header — pinned to the same h-14 (56px) SidebarLayout gives the rail
+          header and the view header, so all three bottom borders land on one
+          line. This used to be `py-1.5`, which measured 41px against the rail's
+          56px: three panels, three different divider heights, visible as a
+          stepped edge across the top of every workspace view. Height is the
+          alignment contract here — do not swap it back for padding. */}
+      <div className="flex h-14 shrink-0 items-center border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3">
         <div className="flex w-full items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary">

@@ -109,6 +109,15 @@ describe("WorkflowGraph editing gates", () => {
     expect(flowProps.deleteKeyCode).toEqual(["Backspace", "Delete"]);
   });
 
+  it("never lets an edge be deleted on a read-only canvas", () => {
+    // The disarmed delete key already prevents this, but the elements say it
+    // themselves too — the same stance nodes take. Resting on one gate alone
+    // leaves read-only-ness depending on a prop nobody can see from the edge.
+    render(<WorkflowGraph yaml={YAML} edges={DECLARED} />);
+    expect(flowProps.edges?.length).toBeGreaterThan(0);
+    expect(flowProps.edges?.every((e) => e.deletable === false)).toBe(true);
+  });
+
   it("never lets a node be deleted, in either mode", () => {
     // React Flow deletes a selected node together with every edge touching it,
     // so a deletable node on an armed canvas would report edge removals the

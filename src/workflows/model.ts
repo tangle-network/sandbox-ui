@@ -154,7 +154,13 @@ const TRIGGER_NODE_ID_PATTERN = new RegExp(`^${TRIGGER_NODE_ID}:(\\d+)$`);
 
 /** The node for the `index`th entry of a list-form `on:`. Entry 0 IS
  *  {@link TRIGGER_NODE_ID}, so a single-trigger graph — the overwhelmingly
- *  common one — keeps the plain id a host may already have persisted. */
+ *  common one — keeps the plain id a host may already have persisted.
+ *
+ *  `index` is a position in the definition's `on:` list: a non-negative
+ *  integer. Anything else formats an id no node bears, which a declared
+ *  topology then rejects by name ("…names "trigger:NaN", which this definition
+ *  has no step for") — reported there rather than thrown from here, because
+ *  {@link buildWorkflowGraph} calls this and must never throw. */
 export function triggerNodeId(index: number): string {
   return index === 0 ? TRIGGER_NODE_ID : `${TRIGGER_NODE_ID}:${index}`;
 }

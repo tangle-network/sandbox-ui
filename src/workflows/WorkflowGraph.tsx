@@ -885,13 +885,18 @@ export function WorkflowGraph({
   // status; the active hop animates). Derived from the STABLE structural edges +
   // nodeState, so a poll/SSE tick repaints edge color/flow without touching node
   // layout. Neutral throughout the static definition/preview view (no nodeState).
-  const styledEdges = useMemo(() => {
+  const styledEdges = useMemo<WfFlowEdge[]>(() => {
     const styled = buildStyledEdges(structural.edges, nodeState, maxNodeVisits);
-    if (!editable) return styled;
-    // `deletable` is React Flow's own gate on the Delete key, so setting it
-    // here keeps a fork or trigger edge from ever reaching onEdgesDelete —
-    // belt to the suspenders the handler wears anyway.
-    return styled.map((e) => ({ ...e, deletable: isEditableEdge(e) }));
+    // `deletable` is React Flow's own gate on the Delete key. A read-only canvas
+    // says so on the elements themselves rather than resting on `deleteKeyCode`
+    // alone — the same stance nodes take, which are marked undeletable in both
+    // modes. On an editable canvas only a declared edge may go: this keeps a
+    // fork or trigger edge from ever reaching onEdgesDelete, belt to the
+    // suspenders the handler wears anyway.
+    return styled.map((e) => ({
+      ...e,
+      deletable: editable ? isEditableEdge(e) : false,
+    }));
   }, [structural.edges, nodeState, maxNodeVisits, editable]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);

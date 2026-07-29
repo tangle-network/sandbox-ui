@@ -1,8 +1,8 @@
 {
   "name": "@tangle-network/sandbox-ui",
-  "version": "0.91.5",
+  "version": "0.92.0",
   "packageManager": "pnpm@11.15.1",
-  "description": "Unified UI component library for Tangle Sandbox — primitives, chat, dashboard, terminal, editor, and workspace components",
+  "description": "Unified UI component library for Tangle Sandbox \u2014 primitives, chat, dashboard, terminal, editor, and workspace components",
   "repository": {
     "type": "git",
     "url": "https://github.com/tangle-network/sandbox-ui"

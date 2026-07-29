@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.92.0
+
+### Dashboard
+
+- **Every section is reachable on a phone.** `hideBelow` set `display:none` on the whole rail and nothing replaced it, so below the breakpoint an app's destinations had no entry point at all — measured across the four Tangle agent products at 390x844: 0 menu buttons, 0 of 5 destinations reachable, against 5 of 5 on desktop. `SidebarLayout` now renders a mobile bar (menu + brand/switcher + account) and a left drawer built from the SAME nav-item renderer the rail uses, so a product that adds a destination gets it on both surfaces. The drawer also absorbs the docked panel's content, since a phone has no room to dock a panel beside a rail. `SIDEBAR_MOBILE_WIDTH` already existed and was documented as the mobile drawer's width; this is the drawer it was waiting for. Consumers that hand-rolled their own mobile bar should delete it or two bars will stack.
+
+### Chat
+
+- **The composer no longer clips its own send button.** The pickers sat in a `shrink-0` box, so on a narrow viewport they kept their full intrinsic width (measured 347px) and pushed send to `right: 470` against a 390px viewport — outside the card, where `overflow-hidden` clipped it, and with `scrollWidth === clientWidth` it could not even be scrolled to. Attach and send are now pinned and everything between them shares one shrinkable, horizontally scrollable strip; `ml-auto` on the trailing group preserves the previous right-alignment, so a desktop composer is unchanged. Measured on gtm at 390x844: clipped nodes 10 to 0, send button right edge 470 to 359, visible false to true.
+
 ## 0.91.5
 
 ### Integrations

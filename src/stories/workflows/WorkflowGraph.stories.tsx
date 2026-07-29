@@ -1,5 +1,5 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   actionNodeId,
   WorkflowGraphLazy,
@@ -817,8 +817,19 @@ const EDITABLE_EDGES: WfEdgeSpec[] = [
 ];
 
 function EditableHarness() {
-  const [log, setLog] = useState<string[]>([]);
-  const note = (line: string) => setLog((l) => [line, ...l].slice(0, 6));
+  // The log is an event stream, so identity is the OCCURRENCE, not the text: the
+  // same gesture legitimately repeats (guard the same edge twice, reconnect and
+  // delete it again), and keying by the line would then hand React duplicate
+  // keys. Keying by array index is no better on a list that prepends and slices.
+  const [log, setLog] = useState<{ id: number; line: string }[]>([]);
+  const nextId = useRef(0);
+  const note = (line: string) => {
+    // The id is taken OUTSIDE the updater: a state updater must be pure, and
+    // React invokes it twice under StrictMode — incrementing in there would
+    // burn two ids per gesture.
+    const id = nextId.current++;
+    setLog((l) => [{ id, line }, ...l].slice(0, 6));
+  };
   return (
     <div className="flex w-[1000px] max-w-full flex-col gap-3">
       <GraphPanel title="Graph — editable" height="h-[26rem]">
@@ -840,7 +851,7 @@ function EditableHarness() {
       >
         {log.length === 0
           ? "Drag a handle to connect · click an edge to guard it · select an edge and press Delete"
-          : log.map((line) => <div key={line}>{line}</div>)}
+          : log.map((entry) => <div key={entry.id}>{entry.line}</div>)}
       </div>
     </div>
   );

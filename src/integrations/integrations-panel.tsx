@@ -81,6 +81,12 @@ export interface IntegrationsPanelProps {
   featuredIds?: string[];
   /** Initial sort mode. Defaults to "featured". */
   defaultSort?: IntegrationSort;
+  /**
+   * Tiles the loading skeleton draws. A skeleton exists to reserve the space
+   * the real content will take, so pass the catalog size you expect when the
+   * consumer knows it; the default fills two rows at the widest breakpoint.
+   */
+  skeletonCount?: number;
   className?: string;
 }
 
@@ -122,6 +128,97 @@ const DEFAULT_FEATURED_IDS = [
 
 function defaultConnectorOf(provider: IntegrationProvider): string {
   return provider.connectors?.[0]?.connectorId ?? provider.providerId;
+}
+
+// The tile grid, shared by the skeleton and the loaded panel. A skeleton tile
+// and a provider tile are both `aspect-square` children of THIS class string,
+// so a row of placeholders is exactly as tall as the row it becomes.
+const TILE_GRID_CLASS =
+  "grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6";
+
+// Default skeleton tiles: two full rows at the widest breakpoint (lg = 6 cols).
+const DEFAULT_SKELETON_COUNT = 12;
+
+// The tile box, shared by the skeleton tile and both provider tiles.
+//
+// `aspect-square` governs the height only while the column is WIDER than the
+// tile's content: 12px padding + a 48px logo + an 8px gap + a fixed 32px
+// two-line label + 12px padding = 112px. Below that width content wins and
+// every real tile is 112px tall. That is why the skeleton tile below carries
+// the same logo and label blocks rather than being an empty square — an empty
+// square is exactly square at every width, so at mobile widths it measured 14px
+// short per row, 56px over the four rows a 3-column grid makes of 12 tiles.
+const TILE_BOX_CLASS =
+  "flex min-w-0 aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center";
+
+/**
+ * Search + sort row. Rendered by the skeleton AND the loaded panel from this
+ * one component, which is the whole point: the row is ~74px tall with a 16px
+ * gap under it, and a skeleton that omitted it under-reserved the page by that
+ * much on every single load — the panel visibly dropped when data arrived.
+ * Height parity here is structural, not a matched pair of magic numbers.
+ *
+ * The controls stay live while loading. They drive local state only (`query`,
+ * `sort`), so typing during the fetch is applied the moment the catalog lands
+ * instead of being thrown away — and keeping the same input element mounted
+ * across the transition is what preserves its autofocus.
+ */
+function IntegrationsToolbar({
+  query,
+  onQueryChange,
+  sort,
+  onSortChange,
+}: {
+  query: string;
+  onQueryChange: (next: string) => void;
+  sort: IntegrationSort;
+  onSortChange: (next: IntegrationSort) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          placeholder="Search integrations..."
+          autoFocus
+          data-testid="integration-search"
+          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+      <div
+        role="tablist"
+        aria-label="Sort integrations"
+        className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card p-1"
+      >
+        {(
+          [
+            ["featured", "Featured"],
+            ["alpha", "A–Z"],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={sort === value}
+            onClick={() => onSortChange(value)}
+            data-testid={`sort-${value}`}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              sort === value
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // Single logo edge length shared by connected and unconnected tiles so the grid
@@ -187,6 +284,7 @@ export function IntegrationsPanel({
   emptyCatalogLabel = "No integrations available yet.",
   featuredIds = DEFAULT_FEATURED_IDS,
   defaultSort = "featured",
+  skeletonCount = DEFAULT_SKELETON_COUNT,
   className,
 }: IntegrationsPanelProps) {
   const [query, setQuery] = React.useState("");
@@ -322,18 +420,33 @@ export function IntegrationsPanel({
 
   if (isLoading && catalog.length === 0) {
     return (
-      <div
-        className={cn(
-          "grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6",
-          className,
-        )}
-      >
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div
-            key={i}
-            className="aspect-square animate-pulse rounded-xl border border-border bg-muted/40"
-          />
-        ))}
+      <div className={cn("space-y-4", className)} data-testid="integrations-skeleton">
+        <IntegrationsToolbar
+          query={query}
+          onQueryChange={setQuery}
+          sort={sort}
+          onSortChange={setSort}
+        />
+        <div className={TILE_GRID_CLASS}>
+          {Array.from({ length: skeletonCount }).map((_, i) => (
+            <div
+              key={i}
+              aria-hidden
+              className={cn(
+                TILE_BOX_CLASS,
+                "animate-pulse border-border bg-muted/40",
+              )}
+            >
+              <div
+                className="shrink-0 rounded-2xl bg-muted"
+                style={{ width: LOGO_SIZE, height: LOGO_SIZE }}
+              />
+              <div className="flex h-8 w-full items-center justify-center">
+                <div className="h-2.5 w-3/4 rounded bg-muted" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -351,50 +464,13 @@ export function IntegrationsPanel({
   const disconnectAccountLabel = disconnectTarget?.accountDisplay;
 
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search integrations..."
-            autoFocus
-            data-testid="integration-search"
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-        </div>
-        <div
-          role="tablist"
-          aria-label="Sort integrations"
-          className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card p-1"
-        >
-          {(
-            [
-              ["featured", "Featured"],
-              ["alpha", "A–Z"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={sort === value}
-              onClick={() => setSort(value)}
-              data-testid={`sort-${value}`}
-              className={cn(
-                "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                sort === value
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className={cn("space-y-4", className)} data-testid="integrations-panel">
+      <IntegrationsToolbar
+        query={query}
+        onQueryChange={setQuery}
+        sort={sort}
+        onSortChange={setSort}
+      />
 
       {connectError ? (
         <div
@@ -412,7 +488,7 @@ export function IntegrationsPanel({
           description={`No integrations match "${query.trim()}".`}
         />
       ) : (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+        <div className={TILE_GRID_CLASS}>
           {visible.map((provider) => {
             const connectorId = defaultConnectorOf(provider);
             const live = connectionIndex.get(
@@ -435,7 +511,8 @@ export function IntegrationsPanel({
                       : name
                   }
                   className={cn(
-                    "group relative flex min-w-0 aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center",
+                    TILE_BOX_CLASS,
+                    "group relative",
                     "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]",
                   )}
                 >
@@ -581,7 +658,8 @@ export function IntegrationsPanel({
                     : `Connect ${name}`
                 }
                 className={cn(
-                  "group flex min-w-0 aspect-square flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card p-3 text-center transition-all",
+                  TILE_BOX_CLASS,
+                  "group border-border bg-card transition-all",
                   "hover:border-primary/40 hover:bg-accent/40 hover:shadow-sm focus:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20",
                 )}
               >

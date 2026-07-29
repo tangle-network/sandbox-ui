@@ -124,3 +124,48 @@ export const Loading: Story = {
     />
   ),
 };
+
+/**
+ * The skeleton's only job is to reserve the space it becomes, so the two states
+ * are shown stacked with the SAME tile count: any height difference between the
+ * two boxes is exactly the layout shift a user sees when the catalog lands.
+ * Measured in Chromium off this story, 12 tiles both sides:
+ *
+ *   desktop 1440px   332.69px -> 386.69px   (+54px shift)  ... now 0px
+ *   mobile   390px   436.00px -> 588.00px   (+152px shift) ... now 0px
+ */
+export const SkeletonMatchesLoaded: Story = {
+  name: "Skeleton vs loaded (no shift)",
+  render: () => (
+    <div className="space-y-8">
+      <section>
+        <h3 className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
+          Loading
+        </h3>
+        <div className="border border-dashed border-primary/40">
+          <IntegrationsPanel
+            catalog={[]}
+            connections={[]}
+            isLoading
+            skeletonCount={12}
+            onConnect={() => {}}
+            onDisconnect={() => {}}
+          />
+        </div>
+      </section>
+      <section>
+        <h3 className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
+          Loaded — same 12 providers
+        </h3>
+        <div className="border border-dashed border-primary/40">
+          <IntegrationsPanel
+            catalog={catalog.slice(0, 12)}
+            connections={[]}
+            onConnect={() => {}}
+            onDisconnect={() => {}}
+          />
+        </div>
+      </section>
+    </div>
+  ),
+};

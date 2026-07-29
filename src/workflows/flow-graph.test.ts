@@ -1,7 +1,12 @@
 import { Position, type Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
-import { buildFlowGraph, mergeRunState, sameRunState } from "./flow-graph";
-import type { WfNodeData, WfNodeState } from "./model";
+import {
+  buildFlowGraph,
+  mergeRunState,
+  sameRunState,
+  WF_EDGE_TYPE,
+} from "./flow-graph";
+import { actionNodeId, type WfNodeData, type WfNodeState } from "./model";
 
 const YAML = `
 on:
@@ -240,5 +245,78 @@ describe("sameRunState", () => {
         { status: "running", rounds: 2 },
       ),
     ).toBe(true);
+  });
+});
+
+describe("buildFlowGraph — declared topology", () => {
+  const YAML_3 = `
+on:
+  webhook: {}
+do:
+  - agent.run:
+      prompt: One
+  - agent.run:
+      prompt: Two
+  - agent.run:
+      prompt: Three
+`;
+
+  it("recognizes `edges` as an option instead of swallowing the whole call", () => {
+    // The second argument is overloaded (options OR a bare run-state map), and
+    // an option key missing from that check makes the object fail the run-state
+    // test and fall through to `{}` — losing EVERY option, not just the new one.
+    // So this asserts the topology actually took effect, not merely that the
+    // call returned.
+    const { edges } = buildFlowGraph(YAML_3, {
+      edges: [{ from: actionNodeId(0), to: actionNodeId(2) }],
+    });
+    expect(edges.map((e) => e.id)).toContain("a0->a2");
+    // The positional chain it replaced is gone.
+    expect(edges.map((e) => e.id)).not.toContain("a1->a2");
+  });
+
+  it("routes only decorated edges through the custom renderer", () => {
+    // The custom edge exists for guard chips and cycle badges. Every other edge
+    // keeps the built-in `smoothstep`, so a graph with no declared topology
+    // renders exactly as it always has.
+    const { edges } = buildFlowGraph(YAML_3, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1), whenLabel: "ok" },
+        { from: actionNodeId(1), to: actionNodeId(2) },
+        { from: actionNodeId(2), to: actionNodeId(1) },
+      ],
+    });
+    const byId = new Map(edges.map((e) => [e.id, e]));
+    expect(byId.get("a0->a1")?.type).toBe(WF_EDGE_TYPE); // guarded
+    expect(byId.get("a2->a1")?.type).toBe(WF_EDGE_TYPE); // cycle
+    expect(byId.get("a1->a2")?.type).toBe("smoothstep"); // plain
+    expect(byId.get("a0->a1")?.data?.whenLabel).toBe("ok");
+    expect(byId.get("a2->a1")?.data?.backEdge).toBe(true);
+  });
+
+  it("keeps every inferred-spine edge on the built-in renderer", () => {
+    const { edges } = buildFlowGraph(YAML_3);
+    expect(edges.every((e) => e.type === "smoothstep")).toBe(true);
+    expect(edges.every((e) => e.data?.kind === "spine")).toBe(true);
+  });
+});
+
+describe("buildFlowGraph — nodes are never canvas-deletable", () => {
+  it("marks every node undeletable, in both densities and with a run overlay", () => {
+    // A node is a `do` entry; removing one is a list edit, not a canvas gesture.
+    // This is load-bearing on an EDITABLE canvas, where the delete key is armed
+    // for edges: React Flow deletes a selected node together with every edge
+    // touching it, so a deletable node would vanish from the canvas AND report
+    // each of its edges through onEdgeDelete — asking the host to drop declared
+    // edges nobody touched.
+    for (const options of [
+      undefined,
+      { compact: true },
+      { nodeState: { a0: { status: "running" as const } } },
+    ]) {
+      const { nodes } = buildFlowGraph(YAML, options);
+      expect(nodes.length).toBeGreaterThan(0);
+      expect(nodes.every((n) => n.deletable === false)).toBe(true);
+    }
   });
 });

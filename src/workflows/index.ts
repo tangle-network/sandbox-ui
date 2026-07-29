@@ -11,9 +11,16 @@
  */
 
 export {
+  actionNodeId,
+  branchNodeId,
   type BuildWorkflowGraphOptions,
   buildWorkflowGraph,
+  TRIGGER_NODE_ID,
+  triggerNodeId,
+  triggerNodeIndex,
   type WfEdge,
+  type WfEdgeKind,
+  type WfEdgeSpec,
   type WfGraph,
   type WfNode,
   type WfNodeData,

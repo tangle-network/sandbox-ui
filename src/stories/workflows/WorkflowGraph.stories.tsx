@@ -1,6 +1,11 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
-import { useEffect } from "react";
-import { WorkflowGraphLazy, type WfNodeState } from "../../workflows";
+import { useEffect, useRef, useState } from "react";
+import {
+  actionNodeId,
+  WorkflowGraphLazy,
+  type WfEdgeSpec,
+  type WfNodeState,
+} from "../../workflows";
 
 /**
  * Iteration harness for the workflow visualizer. Renders the real
@@ -619,4 +624,240 @@ export const Gallery: Story = {
       </div>
     );
   },
+};
+
+// --- Declared topology -----------------------------------------------------
+// The shapes a positional spine cannot express: a diamond, guarded branches,
+// and a guarded cycle. The YAML below is the same `do` list in every one — only
+// the declared `edges` differ, which is the point: what connects to what is the
+// topology's to say, not the list order's.
+
+const GRAPH_BODY = `on:
+  provider_event:
+    connection: github
+    event: pull_request
+    actions: [opened, synchronize]
+do:
+  - agent.run:
+      profile: triage
+      prompt: Triage the change and decide what review it needs.
+  - agent.run:
+      profile: security-reviewer
+      prompt: Review the diff for security regressions.
+  - script.run:
+      source: |
+        export default async ({ steps }) => ({ lint: steps.triage.output });
+      connections: [github]
+  - agent.run:
+      profile: synthesizer
+      prompt: Merge both reviews into one verdict.
+  - integration.invoke:
+      path: github.pulls.reviews.create
+`;
+
+const DIAMOND_EDGES: WfEdgeSpec[] = [
+  { from: actionNodeId(0), to: actionNodeId(1) },
+  { from: actionNodeId(0), to: actionNodeId(2) },
+  { from: actionNodeId(1), to: actionNodeId(3) },
+  { from: actionNodeId(2), to: actionNodeId(3) },
+  { from: actionNodeId(3), to: actionNodeId(4) },
+];
+
+const GUARDED_EDGES: WfEdgeSpec[] = [
+  { from: actionNodeId(0), to: actionNodeId(1), whenLabel: "risk == high" },
+  { from: actionNodeId(0), to: actionNodeId(2), whenLabel: "risk != high" },
+  { from: actionNodeId(1), to: actionNodeId(3) },
+  { from: actionNodeId(2), to: actionNodeId(3) },
+  {
+    from: actionNodeId(3),
+    to: actionNodeId(4),
+    whenLabel: "verdict == approved",
+  },
+];
+
+const CYCLE_EDGES: WfEdgeSpec[] = [
+  { from: actionNodeId(0), to: actionNodeId(1) },
+  { from: actionNodeId(1), to: actionNodeId(3) },
+  // The loop: synthesis sends it back for another review round.
+  { from: actionNodeId(3), to: actionNodeId(1), whenLabel: "needs another pass" },
+  { from: actionNodeId(3), to: actionNodeId(4), whenLabel: "verdict == approved" },
+];
+
+export const DeclaredDiamond: Story = {
+  name: "Declared: diamond (definition)",
+  render: () => (
+    <GraphPanel title="Graph — declared topology">
+      <WorkflowGraphLazy
+        yaml={GRAPH_BODY}
+        edges={DIAMOND_EDGES}
+        variant="full"
+        defaultCompact={false}
+        className="h-full w-full"
+      />
+    </GraphPanel>
+  ),
+};
+
+export const DeclaredGuards: Story = {
+  name: "Declared: guarded branches",
+  render: () => (
+    <GraphPanel title="Graph — guarded edges">
+      <WorkflowGraphLazy
+        yaml={GRAPH_BODY}
+        edges={GUARDED_EDGES}
+        variant="full"
+        className="h-full w-full"
+      />
+    </GraphPanel>
+  ),
+};
+
+export const DeclaredCycle: Story = {
+  name: "Declared: guarded cycle + visit budget",
+  render: () => (
+    <GraphPanel title="Graph — cycle">
+      <WorkflowGraphLazy
+        yaml={GRAPH_BODY}
+        edges={CYCLE_EDGES}
+        maxNodeVisits={25}
+        variant="full"
+        className="h-full w-full"
+      />
+    </GraphPanel>
+  ),
+};
+
+export const DeclaredCycleRunning: Story = {
+  name: "Declared: cycle mid-run",
+  render: () => (
+    <GraphPanel title="Graph — cycle, second pass">
+      <WorkflowGraphLazy
+        yaml={GRAPH_BODY}
+        edges={CYCLE_EDGES}
+        maxNodeVisits={25}
+        variant="full"
+        nodeState={
+          {
+            [actionNodeId(0)]: { status: "succeeded", costUsd: 0.004 },
+            [actionNodeId(1)]: { status: "running", rounds: 2 },
+            [actionNodeId(3)]: { status: "succeeded", costUsd: 0.011 },
+          } satisfies Record<string, WfNodeState>
+        }
+        className="h-full w-full"
+      />
+    </GraphPanel>
+  ),
+};
+
+export const DeclaredSelected: Story = {
+  name: "Declared: node selected",
+  render: () => (
+    <GraphPanel title="Graph — selection reflected from the host">
+      <WorkflowGraphLazy
+        yaml={GRAPH_BODY}
+        edges={DIAMOND_EDGES}
+        selectedNodeId={actionNodeId(3)}
+        variant="full"
+        className="h-full w-full"
+      />
+    </GraphPanel>
+  ),
+};
+
+export const MultiTrigger: Story = {
+  name: "List-form trigger (one node per subscription)",
+  render: () => (
+    <GraphPanel title="Graph — three ways to start">
+      <WorkflowGraphLazy
+        yaml={`on:
+  - provider_event:
+      connection: github
+      event: pull_request
+      actions: [opened]
+  - schedule:
+      cron: "0 9 * * 1-5"
+  - webhook: {}
+do:
+  - agent.run:
+      profile: triage
+      prompt: Handle whatever woke us.
+  - sandbox.snapshot:
+      sandbox: \${steps.triage.sandboxId}
+  - trace.analyze:
+      trace: \${steps.triage.traceRef.stepsPath}
+      kinds: [failure-mode, knowledge-gap]
+`}
+        variant="full"
+        defaultCompact={false}
+        className="h-full w-full"
+      />
+    </GraphPanel>
+  ),
+};
+
+/**
+ * The canvas as an EDITOR. Supplying `onEdgeConnect` is what arms it: handles
+ * become visible and draggable, an edge takes focus and answers Delete, and
+ * clicking one asks to edit its guard. The gestures are reported as node ids —
+ * turning one into a definition edit is the host's job — so this harness just
+ * records what it was told, which is exactly the contract a consumer implements.
+ */
+// Two roots (a0 and a2), so the trigger fans out — which is both a realistic
+// shape and the one that makes the synthesized trigger edges visibly distinct
+// from the declared ones a host may actually edit.
+const EDITABLE_EDGES: WfEdgeSpec[] = [
+  { from: actionNodeId(0), to: actionNodeId(1), whenLabel: "risk == high" },
+  { from: actionNodeId(1), to: actionNodeId(3) },
+  { from: actionNodeId(2), to: actionNodeId(3) },
+  {
+    from: actionNodeId(3),
+    to: actionNodeId(4),
+    whenLabel: "verdict == approved",
+  },
+];
+
+function EditableHarness() {
+  // The log is an event stream, so identity is the OCCURRENCE, not the text: the
+  // same gesture legitimately repeats (guard the same edge twice, reconnect and
+  // delete it again), and keying by the line would then hand React duplicate
+  // keys. Keying by array index is no better on a list that prepends and slices.
+  const [log, setLog] = useState<{ id: number; line: string }[]>([]);
+  const nextId = useRef(0);
+  const note = (line: string) => {
+    // The id is taken OUTSIDE the updater: a state updater must be pure, and
+    // React invokes it twice under StrictMode — incrementing in there would
+    // burn two ids per gesture.
+    const id = nextId.current++;
+    setLog((l) => [{ id, line }, ...l].slice(0, 6));
+  };
+  return (
+    <div className="flex w-[1000px] max-w-full flex-col gap-3">
+      <GraphPanel title="Graph — editable" height="h-[26rem]">
+        <WorkflowGraphLazy
+          yaml={GRAPH_BODY}
+          edges={EDITABLE_EDGES}
+          variant="full"
+          defaultCompact={false}
+          className="h-full w-full"
+          onEdgeConnect={(source, target) => note(`connect ${source} → ${target}`)}
+          onEdgeDelete={(source, target) => note(`delete ${source} → ${target}`)}
+          onEdgeClick={(source, target) => note(`guard ${source} → ${target}`)}
+          onNodeClick={(nodeId) => note(`select ${nodeId}`)}
+        />
+      </GraphPanel>
+      <div
+        data-testid="gesture-log"
+        className="rounded-lg border border-border bg-card p-3 font-mono text-text-muted text-xs"
+      >
+        {log.length === 0
+          ? "Drag a handle to connect · click an edge to guard it · select an edge and press Delete"
+          : log.map((entry) => <div key={entry.id}>{entry.line}</div>)}
+      </div>
+    </div>
+  );
+}
+
+export const DeclaredEditable: Story = {
+  name: "Declared: editable canvas",
+  render: () => <EditableHarness />,
 };

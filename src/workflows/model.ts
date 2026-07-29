@@ -137,6 +137,54 @@ export interface WfNode {
   data: WfNodeData;
 }
 
+/**
+ * Node ids are PUBLIC contract, not an internal detail. A host keys its live
+ * `nodeState` by them, points the graph's `selectedNodeId` at one, and — once it
+ * supplies a declared topology — names its own edge endpoints with them. They
+ * are bare strings, so a host that re-derives the format at the call site gets
+ * no type error when the format changes here; the graph simply renders without
+ * edges. The format is therefore written in exactly one place (these helpers)
+ * and read everywhere else through them.
+ */
+
+/** The workflow's first (or only) trigger. */
+export const TRIGGER_NODE_ID = "trigger";
+
+const TRIGGER_NODE_ID_PATTERN = new RegExp(`^${TRIGGER_NODE_ID}:(\\d+)$`);
+
+/** The node for the `index`th entry of a list-form `on:`. Entry 0 IS
+ *  {@link TRIGGER_NODE_ID}, so a single-trigger graph — the overwhelmingly
+ *  common one — keeps the plain id a host may already have persisted.
+ *
+ *  `index` is a position in the definition's `on:` list: a non-negative
+ *  integer. Anything else formats an id no node bears, which a declared
+ *  topology then rejects by name ("…names "trigger:NaN", which this definition
+ *  has no step for") — reported there rather than thrown from here, because
+ *  {@link buildWorkflowGraph} calls this and must never throw. */
+export function triggerNodeId(index: number): string {
+  return index === 0 ? TRIGGER_NODE_ID : `${TRIGGER_NODE_ID}:${index}`;
+}
+
+/** The `on:` entry a trigger node stands for, or null when the id names
+ *  anything else — so a host can tell a trigger from an action without
+ *  matching the id format itself. */
+export function triggerNodeIndex(nodeId: string): number | null {
+  if (nodeId === TRIGGER_NODE_ID) return 0;
+  const match = TRIGGER_NODE_ID_PATTERN.exec(nodeId);
+  return match ? Number(match[1]) : null;
+}
+
+/** The node for the `do` entry at `index`. */
+export function actionNodeId(index: number): string {
+  return `a${index}`;
+}
+
+/** The node for the `branchIndex`th fan-out leaf of the `do` entry at
+ *  `actionIndex` — a `parallel` branch or a `foreach` template. */
+export function branchNodeId(actionIndex: number, branchIndex: number): string {
+  return `${actionNodeId(actionIndex)}-b${branchIndex}`;
+}
+
 export type WfEdgeKind = "spine" | "fork" | "join";
 
 export interface WfEdge {
@@ -144,8 +192,45 @@ export interface WfEdge {
   source: string;
   target: string;
   /** Spine = trigger→action→action; fork = fan-out into a branch leaf; join =
-   *  a branch leaf reconverging onto the next spine node. Drives edge styling. */
+   *  a branch leaf reconverging onto the next spine node. Drives edge styling.
+   *
+   *  A DECLARED edge ({@link BuildWorkflowGraphOptions.edges}) is a `spine`
+   *  edge: it is the flow. Fork edges survive a declared topology unchanged (a
+   *  branch leaf is this module's own node, which no declared spec addresses);
+   *  join edges do not exist under one, because what follows a fan-out is then
+   *  declared rather than inferred from list position. */
   kind: WfEdgeKind;
+  /** Short, already-human summary of the edge's guard, when it carries one.
+   *  Supplied by {@link WfEdgeSpec.whenLabel} — this module never interprets a
+   *  condition, it only places the label its host wrote. */
+  whenLabel?: string;
+  /** True when this edge closes a cycle: it points back at a node that is
+   *  already on the path reaching it. Rendered distinctly (dashed, with the
+   *  visit budget) because such an edge is the one that can run a node twice. */
+  backEdge?: boolean;
+}
+
+/**
+ * One edge of a DECLARED topology — the caller's answer to "what actually
+ * connects to what", replacing the positional spine this module would otherwise
+ * infer from `do`-list order.
+ *
+ * Endpoints are node ids from THIS graph, so name them with {@link actionNodeId}
+ * / {@link branchNodeId} / {@link TRIGGER_NODE_ID} rather than by hand. Edges
+ * into a node that has none are how a root is identified: every trigger node
+ * gets an edge to every root, so the caller declares only the topology it owns
+ * and never has to restate what the trigger connects to.
+ *
+ * The guard arrives PRE-SUMMARIZED (`whenLabel`). A condition's schema belongs
+ * to the system that compiles and evaluates it — this library renders graphs and
+ * has no business owning a second, drifting interpretation of one. The same
+ * summary the host writes here is then the one it can show elsewhere (a skipped
+ * step's row), which is what keeps the two readings identical.
+ */
+export interface WfEdgeSpec {
+  from: string;
+  to: string;
+  whenLabel?: string;
 }
 
 export interface WfGraph {
@@ -174,6 +259,21 @@ const CROSS_SEP = 24;
 // are `shrink-0` inside an `overflow-hidden` region, so a consumer whose fonts
 // render a band taller sees that band CLIPPED within its fixed box — never a
 // squeezed line of text, and never a reflow of the graph.
+/**
+ * The layer gap a graph uses once its edges carry labels (a guard summary, a
+ * cycle badge). An edge label sits in the corridor BETWEEN two layers, so the
+ * corridor has to be wide enough to hold one — at the ordinary separations (72
+ * expanded, 20 compact) a chip is several times the gap it sits in and spills
+ * across the nodes either side.
+ *
+ * Reserved for the same reason node heights are: the layout renders the label,
+ * so the layout owes it room. Sized to the chip's own max width (`max-w-40`,
+ * 160px — the chips stack rather than sit side by side, so the widest possible
+ * group is one chip) plus breathing space. Applied only to graphs that actually
+ * have labelled edges, so nothing else spreads out.
+ */
+const EDGE_LABEL_LANE = 180;
+
 /** A card's fixed chrome: content padding (pt-2.5 + pb-2) + top/bottom border. */
 const CARD_CHROME = 20;
 /** The always-present header row — the type tile (34px), which is taller than the
@@ -275,6 +375,22 @@ export interface BuildWorkflowGraphOptions {
   /** Collapse every node to the fixed icon-tile size, and pitch the layers for
    *  it. Defaults to `false` (the full, expanded card). */
   compact?: boolean;
+  /**
+   * The graph's DECLARED topology. Omit — the default — and edges are inferred
+   * from `do`-list order: a linear spine, which is exactly right for a workflow
+   * that runs as one, and wrong for any workflow whose definition declares its
+   * own edges (`needs`, guards, cycles). Supply it and the inferred spine is
+   * replaced wholesale by these edges, the layout is re-ranked to the shape they
+   * describe (so a diamond reads as a diamond rather than a chain drawn over
+   * one), and cycle-closing edges are marked {@link WfEdge.backEdge}.
+   *
+   * An edge naming a node this graph has no slot for is an ERROR
+   * ({@link WfGraph.error}), never a quiet fall back to the positional spine:
+   * the two disagreeing means the topology and the definition came from
+   * different places, and a graph that draws edges the run will not take is
+   * worse than one that says it cannot be drawn.
+   */
+  edges?: readonly WfEdgeSpec[];
 }
 
 /**
@@ -479,6 +595,60 @@ function describeActionBase(action: unknown): WfNodeData {
         tone: "structural",
       };
     }
+    case "script.run": {
+      const connections = Array.isArray(cfg.connections)
+        ? cfg.connections.filter((c): c is string => typeof c === "string")
+        : [];
+      return {
+        title: "Script",
+        kind,
+        // What the box is GRANTED is the thing that distinguishes one script
+        // step from another at a glance; the timeout is a bound, and bounds read
+        // in the detail view with the rest of the config.
+        subtitle:
+          connections.length > 0
+            ? `TypeScript · ${connections.length} connection${connections.length === 1 ? "" : "s"}`
+            : "TypeScript",
+        // The head of the module — the same role the prompt plays on an agent:
+        // the text that says what this particular step actually does.
+        description: describeText(cfg.source),
+        isRoot: false,
+        tone: "action",
+      };
+    }
+    case "sandbox.snapshot":
+      return {
+        title: "Snapshot",
+        kind,
+        // WHICH sandbox is the only thing separating one snapshot step from
+        // another, and it is usually a `${steps…}` reference — so the subtitle
+        // reads as the step whose disk is being captured.
+        subtitle: str(cfg.sandbox) ?? "Capture a sandbox",
+        isRoot: false,
+        tone: "action",
+      };
+    case "trace.analyze": {
+      const kinds = Array.isArray(cfg.kinds)
+        ? cfg.kinds.filter((k): k is string => typeof k === "string")
+        : [];
+      return {
+        title: "Trace analysis",
+        kind,
+        // The analysts that run ARE the step. The model it runs them on is
+        // incidental here (unlike agent.run, where the model IS the identity),
+        // so it stays in the config for the detail view and the node keeps its
+        // own glyph rather than borrowing a lab's brand mark.
+        subtitle:
+          kinds.length > 0
+            ? describeText(
+                kinds.map((k) => humanizeIdentifier(k, "lower")).join(", "),
+              )
+            : "Default analysts",
+        description: describeText(cfg.trace),
+        isRoot: false,
+        tone: "action",
+      };
+    }
     default:
       return {
         // An action kind this version doesn't model yet still gets a readable
@@ -635,9 +805,25 @@ function describeTrigger(on: unknown): WfNodeData {
       sch,
     );
   }
+  if (rec.webhook !== undefined) {
+    // The generic inbound hook: a signed per-workflow URL whose request body
+    // becomes the trigger payload. Its config is empty by schema, so the node
+    // has only its name to carry — which is exactly why it needs one, rather
+    // than falling to the generic "Trigger" that names no way of starting.
+    return withConfig(
+      {
+        title: "Webhook",
+        kind: "webhook",
+        subtitle: "On an inbound POST",
+        isRoot: true,
+        tone: "trigger",
+      },
+      asRecord(rec.webhook),
+    );
+  }
   // Unknown/custom trigger kind: still surface its raw config so the full-detail
-  // view stays consistent with provider_event/schedule (and with actions, which
-  // expose config for every kind).
+  // view stays consistent with provider_event/schedule/webhook (and with
+  // actions, which expose config for every kind).
   const [kind] = Object.keys(rec);
   return withConfig(
     {
@@ -728,11 +914,112 @@ function layoutLayers(
   return out;
 }
 
+/**
+ * The edges that close a cycle, by edge id — an edge whose target is already on
+ * the path that reached it, which is the one edge in a loop that can make a node
+ * run twice.
+ *
+ * The walk starts at the graph's ENTRY POINTS and only then at whatever they
+ * miss. Both orders find a correct back edge for every cycle (any DFS does), but
+ * only this one picks the edge a reader would point at: entering `a→b→c→a` from
+ * its entry marks `c→a`, while starting mid-cycle would just as validly mark
+ * `a→b`. Nodes no entry point reaches — a loop closed entirely on itself — are
+ * walked afterwards, so every edge is classified either way.
+ */
+function classifyBackEdges(
+  orderedIds: readonly string[],
+  edges: readonly WfEdge[],
+): Set<string> {
+  const outgoing = new Map<string, WfEdge[]>();
+  const hasIncoming = new Set<string>();
+  for (const e of edges) {
+    const list = outgoing.get(e.source);
+    if (list) list.push(e);
+    else outgoing.set(e.source, [e]);
+    hasIncoming.add(e.target);
+  }
+  const walkOrder = [
+    ...orderedIds.filter((id) => !hasIncoming.has(id)),
+    ...orderedIds.filter((id) => hasIncoming.has(id)),
+  ];
+
+  const back = new Set<string>();
+  // 0 = unvisited, 1 = on the current path, 2 = finished. An edge into a node at
+  // 1 points back into the walk that is still in progress: a cycle.
+  const color = new Map<string, 0 | 1 | 2>(orderedIds.map((id) => [id, 0]));
+  for (const start of walkOrder) {
+    if (color.get(start) !== 0) continue;
+    color.set(start, 1);
+    // An explicit stack rather than recursion. Depth here is the graph's, not a
+    // constant, and this module's contract is that it never throws — a
+    // RangeError on a pathologically deep definition would break that.
+    const stack: { id: string; next: number }[] = [{ id: start, next: 0 }];
+    while (stack.length > 0) {
+      const frame = stack[stack.length - 1];
+      const out = outgoing.get(frame.id);
+      if (!out || frame.next >= out.length) {
+        color.set(frame.id, 2);
+        stack.pop();
+        continue;
+      }
+      const edge = out[frame.next];
+      frame.next += 1;
+      const target = color.get(edge.target);
+      if (target === 1) {
+        back.add(edge.id);
+      } else if (target === 0) {
+        color.set(edge.target, 1);
+        stack.push({ id: edge.target, next: 0 });
+      }
+    }
+  }
+  return back;
+}
+
+/**
+ * Layer each node by its LONGEST path from an entry point. Longest, not
+ * shortest, is what makes a diamond's two arms meet again in one column: the
+ * node both arms lead to sits past the later of them, instead of a layer short
+ * with an edge reaching forward over its neighbour.
+ *
+ * Back edges are excluded — they are what makes the graph cyclic, and layering
+ * is defined only on an acyclic one. Removing every DFS back edge always leaves
+ * a DAG, so the sweep below drains completely and no node is left unranked.
+ */
+function rankByTopology(
+  orderedIds: readonly string[],
+  edges: readonly WfEdge[],
+  backEdgeIds: ReadonlySet<string>,
+): Map<string, number> {
+  const outgoing = new Map<string, WfEdge[]>();
+  const indegree = new Map<string, number>(orderedIds.map((id) => [id, 0]));
+  for (const e of edges) {
+    if (backEdgeIds.has(e.id)) continue;
+    const list = outgoing.get(e.source);
+    if (list) list.push(e);
+    else outgoing.set(e.source, [e]);
+    indegree.set(e.target, (indegree.get(e.target) ?? 0) + 1);
+  }
+  const rank = new Map<string, number>(orderedIds.map((id) => [id, 0]));
+  const queue = orderedIds.filter((id) => indegree.get(id) === 0);
+  for (let head = 0; head < queue.length; head += 1) {
+    const id = queue[head];
+    for (const e of outgoing.get(id) ?? []) {
+      rank.set(e.target, Math.max(rank.get(e.target) ?? 0, (rank.get(id) ?? 0) + 1));
+      const remaining = (indegree.get(e.target) ?? 0) - 1;
+      indegree.set(e.target, remaining);
+      if (remaining === 0) queue.push(e.target);
+    }
+  }
+  return rank;
+}
+
 /** Build a positioned graph from a workflow YAML string. Never throws —
  *  malformed YAML or an empty definition returns an `error` the UI can fall
  *  back on (e.g. show the raw YAML while authoring). `reserveRunState` leaves
  *  room for the rows live run state adds (see {@link nodeHeight}); `direction`
- *  picks the flow axis (default "LR"); `compact` collapses nodes to icon tiles. */
+ *  picks the flow axis (default "LR"); `compact` collapses nodes to icon tiles;
+ *  `edges` replaces the inferred positional spine with a declared topology. */
 export function buildWorkflowGraph(
   yaml: string,
   options?: BuildWorkflowGraphOptions,
@@ -740,6 +1027,7 @@ export function buildWorkflowGraph(
   const reserveRunState = options?.reserveRunState ?? false;
   const direction = options?.direction ?? "LR";
   const compact = options?.compact ?? false;
+  const declared = options?.edges;
   if (!yaml || yaml.trim() === "") {
     return { nodes: [], edges: [], error: "No definition" };
   }
@@ -751,7 +1039,16 @@ export function buildWorkflowGraph(
   }
   const def = asRecord(parsed);
   const actions = Array.isArray(def.do) ? def.do : [];
-  if (!def.on && actions.length === 0) {
+  // `on:` is ONE trigger or a LIST of them (OR semantics — any one starts the
+  // same body). Both shapes normalize to a list here so each entry becomes its
+  // own node: read as a single node, a three-subscription workflow would draw
+  // one unlabelled "Trigger" and hide two of the three ways it can start.
+  const triggers: unknown[] = !def.on
+    ? []
+    : Array.isArray(def.on)
+      ? def.on
+      : [def.on];
+  if (triggers.length === 0 && actions.length === 0) {
     return { nodes: [], edges: [], error: "Empty workflow" };
   }
 
@@ -771,38 +1068,63 @@ export function buildWorkflowGraph(
     };
     logical.push({ id, data, width: dims.width, height: dims.height, rank });
   };
-  const addEdge = (source: string, target: string, kind: WfEdgeKind) => {
-    edges.push({ id: `${source}->${target}`, source, target, kind });
+  const edgeIds = new Set<string>();
+  const addEdge = (
+    source: string,
+    target: string,
+    kind: WfEdgeKind,
+    whenLabel?: string,
+  ) => {
+    const id = `${source}->${target}`;
+    // One edge per ordered pair. A declared topology can name the same pair
+    // twice (two `needs` rows that resolve to it), and two identical lines are
+    // one line plus a duplicate React Flow key.
+    if (edgeIds.has(id)) return;
+    edgeIds.add(id);
+    edges.push({
+      id,
+      source,
+      target,
+      kind,
+      ...(whenLabel ? { whenLabel } : {}),
+    });
   };
 
   let rank = 0;
   // The node ids the NEXT spine node reconverges from: the current action, or —
   // once it fans out — each of its branch leaves, so a fan-out visibly rejoins
-  // the spine instead of dead-ending.
+  // the spine instead of dead-ending. Positional wiring only; a declared
+  // topology says what connects to what and never consults this.
   let prevExits: string[] = [];
   // Branch leaf ids, tracked explicitly so a reconvergence edge is classified as
   // a join by membership — not by string-matching the id format.
   const branchLeafIds = new Set<string>();
+  const triggerIds = triggers.map((_, i) => triggerNodeId(i));
 
-  if (def.on) {
+  triggers.forEach((trigger, i) => {
     // A trigger only shows a status (no metrics/output/progress), so it's spaced
     // by its static height — the node component skips its progress strip to match.
-    addNode("trigger", describeTrigger(def.on), rank, false);
-    prevExits = ["trigger"];
+    addNode(triggerNodeId(i), describeTrigger(trigger), rank, false);
+  });
+  if (triggers.length > 0) {
+    prevExits = [...triggerIds];
     rank += 1;
   }
 
   actions.forEach((action, i) => {
-    const id = `a${i}`;
+    const id = actionNodeId(i);
     const data = describeAction(action);
     // With no `on:` trigger, the first action IS the spine root, so it shows no
-    // inbound handle (nothing points at it).
-    if (i === 0 && !def.on) data.isRoot = true;
+    // inbound handle (nothing points at it). Under a declared topology this is
+    // recomputed below from what actually points at each node.
+    if (i === 0 && triggers.length === 0) data.isRoot = true;
     addNode(id, data, rank, reserveRunState);
-    for (const from of prevExits) {
-      // An edge arriving from a branch leaf is a join (reconvergence); from a
-      // spine node or the trigger it's the spine itself.
-      addEdge(from, id, branchLeafIds.has(from) ? "join" : "spine");
+    if (!declared) {
+      for (const from of prevExits) {
+        // An edge arriving from a branch leaf is a join (reconvergence); from a
+        // spine node or the trigger it's the spine itself.
+        addEdge(from, id, branchLeafIds.has(from) ? "join" : "spine");
+      }
     }
 
     const rec = asRecord(action);
@@ -820,8 +1142,11 @@ export function buildWorkflowGraph(
       const branchRank = rank + 1;
       const branchIds: string[] = [];
       children.forEach((child, j) => {
-        const cid = `${id}-b${j}`;
+        const cid = branchNodeId(i, j);
         addNode(cid, describeAction(child), branchRank, reserveRunState);
+        // Fan-out survives a declared topology unchanged: a branch leaf is this
+        // module's own node, derived from the structural action's config, and no
+        // declared spec addresses it.
         addEdge(id, cid, "fork");
         branchIds.push(cid);
         branchLeafIds.add(cid);
@@ -836,8 +1161,63 @@ export function buildWorkflowGraph(
     }
   });
 
+  if (declared) {
+    const known = new Set(logical.map((n) => n.id));
+    for (const spec of declared) {
+      const missing = !known.has(spec.from)
+        ? spec.from
+        : !known.has(spec.to)
+          ? spec.to
+          : null;
+      if (missing !== null) {
+        return {
+          nodes: [],
+          edges: [],
+          error: `Declared topology names "${missing}", which this definition has no step for`,
+        };
+      }
+      addEdge(spec.from, spec.to, "spine", spec.whenLabel);
+    }
+    // Every trigger starts every ROOT. A node nothing points at is precisely
+    // what "the workflow begins here" means, and OR-semantics triggers each
+    // begin the whole body — so this is the model's edge to draw, not something
+    // the caller should have to restate in a topology that describes only the
+    // steps it owns.
+    const rootward = new Set(edges.map((e) => e.target));
+    for (const n of logical) {
+      if (triggerNodeIndex(n.id) !== null) continue;
+      if (rootward.has(n.id)) continue;
+      for (const triggerId of triggerIds) addEdge(triggerId, n.id, "spine");
+    }
+
+    const orderedIds = logical.map((n) => n.id);
+    const backEdgeIds = classifyBackEdges(orderedIds, edges);
+    for (const e of edges) {
+      if (backEdgeIds.has(e.id)) e.backEdge = true;
+    }
+    const rankById = rankByTopology(orderedIds, edges, backEdgeIds);
+    // `isRoot` now means what it says — nothing points at this node — rather
+    // than the positional stand-in for it, so a declared graph whose entry is
+    // not the first `do` entry renders its handles correctly.
+    const incoming = new Set(edges.map((e) => e.target));
+    for (const n of logical) {
+      n.rank = rankById.get(n.id) ?? 0;
+      n.data = { ...n.data, isRoot: !incoming.has(n.id) };
+    }
+  }
+
+  // A labelled edge needs a corridor it fits in — see EDGE_LABEL_LANE. Decided
+  // here, after classification, because a back edge is only known by then and
+  // it is one of the two things that puts a chip on the canvas.
+  const labelled = edges.some(
+    (e) => e.whenLabel !== undefined || e.backEdge === true,
+  );
+  const rankSep = labelled
+    ? Math.max(geo.rankSep, EDGE_LABEL_LANE)
+    : geo.rankSep;
+
   return {
-    nodes: layoutLayers(logical, direction, geo.rankSep, geo.crossSep),
+    nodes: layoutLayers(logical, direction, rankSep, geo.crossSep),
     edges,
     error: null,
   };

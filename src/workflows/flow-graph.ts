@@ -9,13 +9,39 @@ import { Position, type Edge, type Node } from "@xyflow/react";
 import {
   buildWorkflowGraph,
   type WfDirection,
+  type WfEdgeKind,
+  type WfEdgeSpec,
   type WfNodeData,
   type WfNodeState,
 } from "./model";
 
+/**
+ * What an edge carries beyond its endpoints. Only a DECLARED topology produces
+ * either extra: a positional spine has no guards and cannot loop, so its edges
+ * keep the plain built-in renderer and this data is inert on them.
+ */
+export interface WfFlowEdgeData extends Record<string, unknown> {
+  kind: WfEdgeKind;
+  /** Already-human guard summary, placed verbatim (see {@link WfEdgeSpec}). */
+  whenLabel?: string;
+  /** This edge closes a cycle. */
+  backEdge?: boolean;
+  /** Per-node visit budget, rendered beside a back edge so the loop states its
+   *  own bound. Merged in at style time by the component that knows it. */
+  maxNodeVisits?: number;
+}
+
+export type WfFlowEdge = Edge<WfFlowEdgeData>;
+
+/** Edge type name for the custom renderer that draws guard chips and cycle
+ *  badges. Used ONLY by edges that need one — everything else stays on the
+ *  built-in `smoothstep`, so a graph without a declared topology renders
+ *  exactly as it always has. */
+export const WF_EDGE_TYPE = "wfEdge";
+
 export interface FlowGraph {
   nodes: Node<WfNodeData>[];
-  edges: Edge[];
+  edges: WfFlowEdge[];
   /** Set when the YAML couldn't be parsed into a renderable graph. */
   error: string | null;
 }
@@ -35,6 +61,9 @@ export interface BuildFlowGraphOptions {
   /** Collapse nodes to the icon-tile density (logo + name). Defaults to `false`
    *  (the full, expanded card). */
   compact?: boolean;
+  /** Declared topology, replacing the inferred positional spine. Passed
+   *  straight through to `buildWorkflowGraph` — see {@link WfEdgeSpec}. */
+  edges?: readonly WfEdgeSpec[];
 }
 
 /** A bare run-state map (`buildFlowGraph(yaml, { a0: { status: "running" } })`),
@@ -67,7 +96,16 @@ function normalizeFlowGraphOptions(
   arg: BuildFlowGraphOptions | Record<string, WfNodeState> | undefined,
 ): BuildFlowGraphOptions {
   if (!arg) return {};
-  if ("nodeState" in arg || "direction" in arg || "compact" in arg) {
+  // Every option key must be listed here. One that is missing makes an options
+  // object fall through to the run-state test below, which it fails — so the
+  // call silently loses ALL of its options rather than the one that was
+  // forgotten. Adding an option to BuildFlowGraphOptions means adding it here.
+  if (
+    "nodeState" in arg ||
+    "direction" in arg ||
+    "compact" in arg ||
+    "edges" in arg
+  ) {
     return arg as BuildFlowGraphOptions;
   }
   return isNodeStateMap(arg) ? { nodeState: arg } : {};
@@ -94,6 +132,7 @@ export function buildFlowGraph(
     reserveRunState: nodeState !== undefined,
     direction,
     compact,
+    ...(options.edges ? { edges: options.edges } : {}),
   });
   const isLR = direction === "LR";
   const sourcePosition = isLR ? Position.Right : Position.Bottom;
@@ -107,6 +146,13 @@ export function buildFlowGraph(
         position: n.position,
         width: n.width,
         height: n.height,
+        // A node is a `do` entry, and removing one is a list edit — never a
+        // canvas gesture. This matters most on an EDITABLE canvas, where the
+        // delete key is armed for edges: React Flow deletes a selected node
+        // together with every edge touching it, so a node left deletable would
+        // vanish from the canvas AND report each of its edges as removed,
+        // asking the host to drop declared edges nobody touched.
+        deletable: false,
         // Fix the DOM box to the laid-out size so the card can't grow past its
         // reserved space and overlap a neighbour (see model.ts nodeHeight).
         style: { width: n.width, height: n.height },
@@ -117,12 +163,23 @@ export function buildFlowGraph(
           : n.data,
       }),
     ),
-    edges: graph.edges.map((e) => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      type: "smoothstep",
-    })),
+    edges: graph.edges.map((e): WfFlowEdge => {
+      // A guard chip or a cycle badge needs the custom renderer; nothing else
+      // does, so nothing else pays for it. Both are declared-topology-only, so
+      // an inferred spine keeps the built-in edge it has always used.
+      const decorated = e.whenLabel !== undefined || e.backEdge === true;
+      return {
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        type: decorated ? WF_EDGE_TYPE : "smoothstep",
+        data: {
+          kind: e.kind,
+          ...(e.whenLabel !== undefined ? { whenLabel: e.whenLabel } : {}),
+          ...(e.backEdge === true ? { backEdge: true } : {}),
+        },
+      };
+    }),
   };
 }
 

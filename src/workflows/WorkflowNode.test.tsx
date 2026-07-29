@@ -1,15 +1,24 @@
 // @vitest-environment jsdom
-import type { Edge, Node, NodeProps } from "@xyflow/react";
+import type { Node, NodeProps } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { buildWorkflowGraph, type WfNodeData, type WfNodeState } from "./model";
+import {
+  buildWorkflowGraph,
+  COMPACT_TILE,
+  type WfNodeData,
+  type WfNodeState,
+} from "./model";
+import type { WfFlowEdge } from "./flow-graph";
 import { classifyOutput, NodeOutputBody } from "./node-output";
 import {
   buildStyledEdges,
+  ConnectableContext,
   DensityContext,
   DirectionContext,
   fitZoomCeiling,
+  isEditableEdge,
+  SelectedNodeContext,
   WorkflowGraph,
   WorkflowNode,
 } from "./WorkflowGraph";
@@ -53,11 +62,14 @@ function brandMark(container: HTMLElement, label: string): HTMLElement | null {
 }
 
 describe("buildStyledEdges", () => {
-  const edge = (source: string, target: string): Edge => ({
+  // Shaped as `buildFlowGraph` emits an inferred-spine edge: the built-in
+  // renderer, and edge data carrying its kind.
+  const edge = (source: string, target: string): WfFlowEdge => ({
     id: `${source}->${target}`,
     source,
     target,
     type: "smoothstep",
+    data: { kind: "spine" },
   });
 
   it("colors an edge by its target's status and animates only the running hop", () => {
@@ -677,5 +689,184 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
       <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={3} />,
     );
     expect(textC.querySelector("p")?.className).toContain("line-clamp-3");
+  });
+});
+
+describe("buildStyledEdges — declared topology", () => {
+  const backEdge = (source: string, target: string): WfFlowEdge => ({
+    id: `${source}->${target}`,
+    source,
+    target,
+    type: "wfEdge",
+    data: { kind: "spine", backEdge: true },
+  });
+
+  it("dashes a cycle-closing edge and never animates it", () => {
+    // A back edge points at a node the run may re-enter, so its target can very
+    // well be `running` — but animating the RETURN path would read as the run
+    // travelling backwards along it.
+    const [e] = buildStyledEdges([backEdge("a2", "a1")], {
+      a1: { status: "running" },
+    });
+    expect(e.style?.strokeDasharray).toBe("6 3");
+    expect(e.animated).toBe(false);
+    // It still takes its target's color, so the loop reads as part of the run.
+    expect(e.style?.stroke).toBe("hsl(var(--primary))");
+  });
+
+  it("stamps the visit budget onto cycle edges only", () => {
+    const plain: WfFlowEdge = {
+      id: "a0->a1",
+      source: "a0",
+      target: "a1",
+      type: "smoothstep",
+      data: { kind: "spine" },
+    };
+    const [loop, forward] = buildStyledEdges(
+      [backEdge("a2", "a1"), plain],
+      undefined,
+      25,
+    );
+    expect(loop.data?.maxNodeVisits).toBe(25);
+    // A forward edge has no loop to bound, so it carries no budget.
+    expect(forward.data?.maxNodeVisits).toBeUndefined();
+  });
+
+  it("leaves a forward edge undashed", () => {
+    const [e] = buildStyledEdges(
+      [
+        {
+          id: "a0->a1",
+          source: "a0",
+          target: "a1",
+          type: "smoothstep",
+          data: { kind: "spine" },
+        },
+      ],
+      { a1: { status: "running" } },
+    );
+    expect(e.style?.strokeDasharray).toBeUndefined();
+    expect(e.animated).toBe(true);
+  });
+});
+
+describe("WorkflowNode selection", () => {
+  function renderWithSelection(
+    id: string,
+    selectedNodeId: string | undefined,
+    data: WfNodeData = BASE,
+  ) {
+    return render(
+      <ReactFlowProvider>
+        <SelectedNodeContext.Provider value={selectedNodeId}>
+          <WorkflowNode {...({ id, data } as NodeProps<Node<WfNodeData>>)} />
+        </SelectedNodeContext.Provider>
+      </ReactFlowProvider>,
+    );
+  }
+  const ringed = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll<HTMLElement>("[style]")).some((el) =>
+      (el.getAttribute("style") ?? "").includes("outline"),
+    );
+
+  it("rings the selected node and leaves its neighbours alone", () => {
+    const selectedRender = renderWithSelection("a0", "a0");
+    expect(ringed(selectedRender.container)).toBe(true);
+    selectedRender.unmount();
+    expect(ringed(renderWithSelection("a1", "a0").container)).toBe(false);
+  });
+
+  it("rings nothing when the host has no selection", () => {
+    // The identity trap: an unset selection must not match a node whose id is
+    // likewise unset, or "nothing selected" renders as "this one is".
+    expect(ringed(renderWithSelection("a0", undefined).container)).toBe(false);
+  });
+
+  it("rings the TILE when compact, not the wider name box", () => {
+    const { container } = render(
+      <ReactFlowProvider>
+        <DensityContext.Provider value={true}>
+          <SelectedNodeContext.Provider value="a0">
+            <WorkflowNode
+              {...({ id: "a0", data: BASE } as NodeProps<Node<WfNodeData>>)}
+            />
+          </SelectedNodeContext.Provider>
+        </DensityContext.Provider>
+      </ReactFlowProvider>,
+    );
+    const outlined = Array.from(
+      container.querySelectorAll<HTMLElement>("[style]"),
+    ).find((el) => (el.getAttribute("style") ?? "").includes("outline"));
+    // The compact node's box spans tile + name; the tile is the visual node, and
+    // it is the one that carries the ring (its style pins the tile's own size).
+    expect(outlined?.getAttribute("style")).toContain(`width: ${COMPACT_TILE}px`);
+  });
+});
+
+describe("isEditableEdge", () => {
+  it("accepts a declared edge between two steps", () => {
+    expect(
+      isEditableEdge({ source: "a0", data: { kind: "spine" } }),
+    ).toBe(true);
+  });
+
+  it("refuses a fan-out edge", () => {
+    // A fork edge is derived from a structural action's own config (a
+    // parallel's branches, a foreach's template). It is not a row in anyone's
+    // declared topology, so there is nothing for a delete to remove.
+    expect(isEditableEdge({ source: "a0", data: { kind: "fork" } })).toBe(false);
+  });
+
+  it("refuses an edge out of any trigger", () => {
+    // A trigger edge is what "nothing points at this node" RENDERS as — it is
+    // synthesized, not declared. Deleting one would ask the host to remove an
+    // edge the definition never contained.
+    expect(isEditableEdge({ source: "trigger", data: { kind: "spine" } })).toBe(
+      false,
+    );
+    // …including the later entries of a list-form `on:`.
+    expect(
+      isEditableEdge({ source: "trigger:2", data: { kind: "spine" } }),
+    ).toBe(false);
+  });
+
+  it("does not mistake a step whose id merely starts with the trigger word", () => {
+    expect(
+      isEditableEdge({ source: "triggerish", data: { kind: "spine" } }),
+    ).toBe(true);
+  });
+});
+
+describe("WorkflowNode connection handles", () => {
+  const handles = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll<HTMLElement>(".react-flow__handle"));
+
+  function renderAt(connectable: boolean) {
+    return render(
+      <ReactFlowProvider>
+        <ConnectableContext.Provider value={connectable}>
+          <WorkflowNode
+            {...({ id: "a0", data: BASE } as NodeProps<Node<WfNodeData>>)}
+          />
+        </ConnectableContext.Provider>
+      </ReactFlowProvider>,
+    );
+  }
+
+  it("hides its handles on a read-only canvas", () => {
+    // The diagram reads as edges meeting the node body; a visible dot on every
+    // node is noise when nothing can be dragged.
+    const found = handles(renderAt(false).container);
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((h) => h.className.includes("opacity-0"))).toBe(true);
+  });
+
+  it("shows them once the canvas can be edited", () => {
+    // A handle you cannot see is a handle you cannot find, and dragging one IS
+    // the connect gesture.
+    const found = handles(renderAt(true).container);
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((h) => h.className.includes("opacity-0"))).toBe(false);
+    expect(found.every((h) => h.className.includes("opacity-100"))).toBe(true);
   });
 });

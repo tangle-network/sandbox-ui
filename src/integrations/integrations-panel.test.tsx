@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  cleanup,
   render,
   screen,
   fireEvent,
@@ -478,5 +479,98 @@ describe("IntegrationsPanel", () => {
         );
       });
     });
+  });
+});
+
+/**
+ * A loading skeleton exists to reserve the space the real content takes, so a
+ * skeleton that reserves LESS guarantees the layout shift it was added to
+ * prevent. Measured in Chromium at 12 tiles both sides, the panel jumped down
+ * 54px on desktop (1440) and 152px on mobile (390) when the catalog landed.
+ *
+ * jsdom has no layout, so these assert the two STRUCTURAL causes instead: the
+ * skeleton omitted the toolbar row entirely, and its tile was a bare square
+ * while a real tile's content (48px logo + gap + 32px label + padding = 112px)
+ * beats `aspect-square` once the column is narrower than that.
+ */
+describe("IntegrationsPanel — the skeleton reserves the loaded layout", () => {
+  // The classes that decide a tile's box. A skeleton tile that drops any of
+  // these stops measuring the same as the provider tile it becomes.
+  const TILE_BOX_CLASSES = [
+    "flex",
+    "aspect-square",
+    "flex-col",
+    "items-center",
+    "justify-center",
+    "gap-2",
+    "rounded-xl",
+    "border",
+    "p-3",
+  ];
+
+  function skeletonTiles() {
+    const skeleton = screen.getByTestId("integrations-skeleton");
+    // The grid is a child of the shell once the toolbar shares the shell, and
+    // was the root itself before that. Accept either so a regression fails on
+    // the assertion that names the defect, not on the lookup.
+    const grid = skeleton.classList.contains("grid")
+      ? skeleton
+      : skeleton.querySelector(".grid");
+    if (!grid) throw new Error("skeleton has no tile grid");
+    return Array.from(grid.children) as HTMLElement[];
+  }
+
+  it("renders the same search + sort toolbar the loaded panel renders", () => {
+    const { unmount } = renderPanel({ catalog: [], isLoading: true });
+
+    expect(screen.getByTestId("integrations-skeleton")).toBeInTheDocument();
+    expect(screen.getByTestId("integration-search")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-featured")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-alpha")).toBeInTheDocument();
+
+    unmount();
+
+    // The same three controls, in the loaded state — one component, both states.
+    renderPanel();
+    expect(screen.getByTestId("integration-search")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-featured")).toBeInTheDocument();
+    expect(screen.getByTestId("sort-alpha")).toBeInTheDocument();
+  });
+
+  it("gives a skeleton tile the same box classes as a provider tile", () => {
+    const { unmount } = renderPanel({ catalog: [], isLoading: true });
+    const skeletonClasses = skeletonTiles()[0]!.className;
+    unmount();
+
+    renderPanel();
+    const providerClasses = screen.getByTestId("integration-google").className;
+
+    for (const cls of TILE_BOX_CLASSES) {
+      expect(providerClasses.split(/\s+/)).toContain(cls);
+      expect(skeletonClasses.split(/\s+/)).toContain(cls);
+    }
+  });
+
+  it("fills a skeleton tile with the same logo and label blocks a real tile has", () => {
+    renderPanel({ catalog: [], isLoading: true });
+    const tile = skeletonTiles()[0]!;
+
+    // 48px logo placeholder — LOGO_SIZE, the same edge a ProviderIcon renders.
+    const logo = tile.querySelector<HTMLElement>('[style*="48px"]');
+    expect(logo).not.toBeNull();
+    expect(logo?.style.height).toBe("48px");
+    expect(logo?.style.width).toBe("48px");
+
+    // The fixed two-line label block every provider tile carries (`h-8`).
+    expect(tile.querySelector(".h-8")).not.toBeNull();
+  });
+
+  it("reserves the tile count the consumer expects", () => {
+    renderPanel({ catalog: [], isLoading: true });
+    expect(skeletonTiles()).toHaveLength(12);
+    cleanup();
+
+    renderPanel({ catalog: [], isLoading: true, skeletonCount: 24 });
+    expect(skeletonTiles()).toHaveLength(24);
   });
 });

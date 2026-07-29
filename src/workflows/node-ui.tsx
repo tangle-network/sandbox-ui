@@ -161,10 +161,18 @@ export function progressFill(status: WfNodeStatus): string {
 }
 
 // One lucide glyph per action/trigger kind, for the steps that have no provider
-// logo to show. A kind we don't model yet falls back to a neutral dot.
+// logo to show. A kind we don't model YET falls back to a neutral dot — which is
+// right for a kind from a newer API than this library, and wrong for one the
+// model already emits: that node would quietly render as an anonymous dot with
+// nothing to say it lost its glyph. Every kind `buildWorkflowGraph` produces must
+// therefore appear here, which the icon-coverage test enforces.
 export const KIND_ICON: Record<string, LucideIcon> = {
   schedule: Clock,
+  // Both wake the workflow on an inbound POST, so they share the mark. A
+  // `provider_event` normally shows its provider's LOGO instead and reaches this
+  // glyph only when the connector has none.
   provider_event: Webhook,
+  webhook: Webhook,
   trigger: Zap,
   "agent.run": Sparkles,
   "integration.invoke": Cable,

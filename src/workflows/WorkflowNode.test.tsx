@@ -1,15 +1,22 @@
 // @vitest-environment jsdom
-import type { Edge, Node, NodeProps } from "@xyflow/react";
+import type { Node, NodeProps } from "@xyflow/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { buildWorkflowGraph, type WfNodeData, type WfNodeState } from "./model";
+import {
+  buildWorkflowGraph,
+  COMPACT_TILE,
+  type WfNodeData,
+  type WfNodeState,
+} from "./model";
+import type { WfFlowEdge } from "./flow-graph";
 import { classifyOutput, NodeOutputBody } from "./node-output";
 import {
   buildStyledEdges,
   DensityContext,
   DirectionContext,
   fitZoomCeiling,
+  SelectedNodeContext,
   WorkflowGraph,
   WorkflowNode,
 } from "./WorkflowGraph";
@@ -53,11 +60,14 @@ function brandMark(container: HTMLElement, label: string): HTMLElement | null {
 }
 
 describe("buildStyledEdges", () => {
-  const edge = (source: string, target: string): Edge => ({
+  // Shaped as `buildFlowGraph` emits an inferred-spine edge: the built-in
+  // renderer, and edge data carrying its kind.
+  const edge = (source: string, target: string): WfFlowEdge => ({
     id: `${source}->${target}`,
     source,
     target,
     type: "smoothstep",
+    data: { kind: "spine" },
   });
 
   it("colors an edge by its target's status and animates only the running hop", () => {
@@ -677,5 +687,116 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
       <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={3} />,
     );
     expect(textC.querySelector("p")?.className).toContain("line-clamp-3");
+  });
+});
+
+describe("buildStyledEdges — declared topology", () => {
+  const backEdge = (source: string, target: string): WfFlowEdge => ({
+    id: `${source}->${target}`,
+    source,
+    target,
+    type: "wfEdge",
+    data: { kind: "spine", backEdge: true },
+  });
+
+  it("dashes a cycle-closing edge and never animates it", () => {
+    // A back edge points at a node the run may re-enter, so its target can very
+    // well be `running` — but animating the RETURN path would read as the run
+    // travelling backwards along it.
+    const [e] = buildStyledEdges([backEdge("a2", "a1")], {
+      a1: { status: "running" },
+    });
+    expect(e.style?.strokeDasharray).toBe("6 3");
+    expect(e.animated).toBe(false);
+    // It still takes its target's color, so the loop reads as part of the run.
+    expect(e.style?.stroke).toBe("hsl(var(--primary))");
+  });
+
+  it("stamps the visit budget onto cycle edges only", () => {
+    const plain: WfFlowEdge = {
+      id: "a0->a1",
+      source: "a0",
+      target: "a1",
+      type: "smoothstep",
+      data: { kind: "spine" },
+    };
+    const [loop, forward] = buildStyledEdges(
+      [backEdge("a2", "a1"), plain],
+      undefined,
+      25,
+    );
+    expect(loop.data?.maxNodeVisits).toBe(25);
+    // A forward edge has no loop to bound, so it carries no budget.
+    expect(forward.data?.maxNodeVisits).toBeUndefined();
+  });
+
+  it("leaves a forward edge undashed", () => {
+    const [e] = buildStyledEdges(
+      [
+        {
+          id: "a0->a1",
+          source: "a0",
+          target: "a1",
+          type: "smoothstep",
+          data: { kind: "spine" },
+        },
+      ],
+      { a1: { status: "running" } },
+    );
+    expect(e.style?.strokeDasharray).toBeUndefined();
+    expect(e.animated).toBe(true);
+  });
+});
+
+describe("WorkflowNode selection", () => {
+  function renderWithSelection(
+    id: string,
+    selectedNodeId: string | undefined,
+    data: WfNodeData = BASE,
+  ) {
+    return render(
+      <ReactFlowProvider>
+        <SelectedNodeContext.Provider value={selectedNodeId}>
+          <WorkflowNode {...({ id, data } as NodeProps<Node<WfNodeData>>)} />
+        </SelectedNodeContext.Provider>
+      </ReactFlowProvider>,
+    );
+  }
+  const ringed = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll<HTMLElement>("[style]")).some((el) =>
+      (el.getAttribute("style") ?? "").includes("outline"),
+    );
+
+  it("rings the selected node and leaves its neighbours alone", () => {
+    const selectedRender = renderWithSelection("a0", "a0");
+    expect(ringed(selectedRender.container)).toBe(true);
+    selectedRender.unmount();
+    expect(ringed(renderWithSelection("a1", "a0").container)).toBe(false);
+  });
+
+  it("rings nothing when the host has no selection", () => {
+    // The identity trap: an unset selection must not match a node whose id is
+    // likewise unset, or "nothing selected" renders as "this one is".
+    expect(ringed(renderWithSelection("a0", undefined).container)).toBe(false);
+  });
+
+  it("rings the TILE when compact, not the wider name box", () => {
+    const { container } = render(
+      <ReactFlowProvider>
+        <DensityContext.Provider value={true}>
+          <SelectedNodeContext.Provider value="a0">
+            <WorkflowNode
+              {...({ id: "a0", data: BASE } as NodeProps<Node<WfNodeData>>)}
+            />
+          </SelectedNodeContext.Provider>
+        </DensityContext.Provider>
+      </ReactFlowProvider>,
+    );
+    const outlined = Array.from(
+      container.querySelectorAll<HTMLElement>("[style]"),
+    ).find((el) => (el.getAttribute("style") ?? "").includes("outline"));
+    // The compact node's box spans tile + name; the tile is the visual node, and
+    // it is the one that carries the ring (its style pins the tile's own size).
+    expect(outlined?.getAttribute("style")).toContain(`width: ${COMPACT_TILE}px`);
   });
 });

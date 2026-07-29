@@ -19,11 +19,14 @@ import {
   Bell,
   Box,
   Cable,
+  Camera,
   Circle,
   Clock,
+  Code,
   GitBranch,
   type LucideIcon,
   Repeat,
+  ScanSearch,
   Sparkles,
   UserCheck,
   Webhook,
@@ -170,6 +173,9 @@ export const KIND_ICON: Record<string, LucideIcon> = {
   foreach: Repeat,
   decision: UserCheck,
   "sandbox.spawn": Box,
+  "sandbox.snapshot": Camera,
+  "script.run": Code,
+  "trace.analyze": ScanSearch,
 };
 
 /**

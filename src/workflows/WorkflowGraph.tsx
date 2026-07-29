@@ -7,10 +7,13 @@
 
 import {
   Background,
+  BaseEdge,
   type ColorMode,
   Controls,
-  type Edge,
+  EdgeLabelRenderer,
+  type EdgeProps,
   getNodesBounds,
+  getSmoothStepPath,
   getViewportForBounds,
   Handle,
   MarkerType,
@@ -40,11 +43,17 @@ import {
   COMPACT_NODE_SIZE,
   COMPACT_TILE,
   type WfDirection,
+  type WfEdgeSpec,
   type WfNodeData,
   type WfNodeState,
   type WfNodeStatus,
 } from "./model";
-import { buildFlowGraph, mergeRunState } from "./flow-graph";
+import {
+  buildFlowGraph,
+  mergeRunState,
+  WF_EDGE_TYPE,
+  type WfFlowEdge,
+} from "./flow-graph";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 import { classifyOutput, NodeOutputBody } from "./node-output";
 import { shortModel } from "./naming";
@@ -146,6 +155,23 @@ export const DirectionContext = createContext<WfDirection>("LR");
  *  renders the icon-tile summary instead of the full card. Set by the density
  *  toggle (and forced on for the proposal-card preview). */
 export const DensityContext = createContext<boolean>(false);
+
+/**
+ * The node the HOST considers selected, if any. Carried by context rather than
+ * merged into node data because selection is not a property of the workflow:
+ * writing it into `data` would rebuild the node objects on every selection
+ * change, which is the one thing the run-state merge works hard to avoid.
+ */
+export const SelectedNodeContext = createContext<string | undefined>(undefined);
+
+/** The selected node's ring. An `outline` rather than a border or a box-shadow
+ *  because both of those are already spoken for — the border carries tone and
+ *  run status, the shadow carries the running/waiting glow — and an outline
+ *  composes with both without disturbing the laid-out box. */
+const SELECTION_OUTLINE: CSSProperties = {
+  outline: "2px solid hsl(var(--primary))",
+  outlineOffset: 2,
+};
 
 /**
  * The run status FOOTER: a progress bar (queued = near-empty, running = pulsing
@@ -276,11 +302,16 @@ function compactHandleStyle(
   }
 }
 
-export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
+export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   const d = data;
   const state = d.state;
   const direction = useContext(DirectionContext);
   const compact = useContext(DensityContext);
+  const hostSelection = useContext(SelectedNodeContext);
+  // Compared only once the host HAS a selection: `undefined === undefined` would
+  // otherwise ring a node whose id is also unset, so "nothing is selected" would
+  // render as "this one is".
+  const selected = hostSelection !== undefined && hostSelection === id;
   const isLR = direction === "LR";
   const targetPos = isLR ? Position.Left : Position.Top;
   const sourcePos = isLR ? Position.Right : Position.Bottom;
@@ -398,6 +429,9 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
               : {
                   borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
                 }),
+            // The TILE is the compact node (the name beside it is unboxed), so
+            // the selection ring belongs to it and not to the wider box.
+            ...(selected ? SELECTION_OUTLINE : {}),
           }}
         >
           {/* Fade the CONTENT in when the density swap lands mid layout-morph;
@@ -466,13 +500,14 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   return (
     <div
       className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-colors"
-      style={
-        state
+      style={{
+        ...(state
           ? statusBorder(state.status)
           : {
               borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
-            }
-      }
+            }),
+        ...(selected ? SELECTION_OUTLINE : {}),
+      }}
     >
       {handles}
       {/* The content region owns its overflow: each band is `shrink-0`, so a band
@@ -570,27 +605,123 @@ export function WorkflowNode({ data }: NodeProps<Node<WfNodeData>>) {
   );
 }
 
-// Stable identity so React Flow doesn't warn about a new nodeTypes object.
+/** Chip styling shared by the guard summary and the cycle badge, so an edge's
+ *  two possible annotations read as one pair rather than two designs. */
+const EDGE_CHIP_CLASS =
+  "rounded-full border border-border bg-card/90 px-1.5 py-[1px] text-[10px] leading-tight backdrop-blur";
+
+/**
+ * An edge with something to say: a guard summary, a cycle marker, or both. Only
+ * a declared topology produces either, so everything else stays on React Flow's
+ * built-in `smoothstep` renderer and is unaffected by this component's
+ * existence.
+ *
+ * The guard chip is truncated with its full text on `title`: a summary is
+ * usually a few words, but it is host-supplied and nothing bounds it, and an
+ * unbounded label on an edge overlaps the nodes either side of it.
+ */
+function WfEdgeRenderer({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  data,
+  markerEnd,
+  style,
+}: EdgeProps<WfFlowEdge>) {
+  // The same path shape the built-in edges draw, so a decorated edge and a
+  // plain one in the same graph are the same line with different furniture.
+  const [path, labelX, labelY] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+  const backEdge = data?.backEdge === true;
+  const whenLabel = data?.whenLabel;
+  const visits = data?.maxNodeVisits;
+  return (
+    <>
+      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
+      <EdgeLabelRenderer>
+        {/* `nodrag nopan` so dragging a label pans nothing and drags nothing —
+            the chips are readouts, not handles. They STACK rather than sit side
+            by side: the corridor the layout reserves (EDGE_LABEL_LANE) is sized
+            for one chip, and a guarded cycle carries two. */}
+        <div
+          className="nodrag nopan absolute flex flex-col items-center gap-0.5"
+          style={{
+            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+          }}
+        >
+          {whenLabel && (
+            <span
+              title={whenLabel}
+              className={`${EDGE_CHIP_CLASS} max-w-40 truncate text-muted-foreground`}
+            >
+              {whenLabel}
+            </span>
+          )}
+          {backEdge && (
+            <span
+              title={
+                visits !== undefined
+                  ? `Loops back — each node runs at most ${visits} time${visits === 1 ? "" : "s"} per run`
+                  : "Loops back to a step that has already run"
+              }
+              className={`${EDGE_CHIP_CLASS} shrink-0 text-foreground`}
+            >
+              {visits !== undefined ? `↺ ≤${visits}` : "↺"}
+            </span>
+          )}
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+// Stable identities so React Flow doesn't warn about a new types object.
 const NODE_TYPES = { wfNode: WorkflowNode };
+const EDGE_TYPES = { [WF_EDGE_TYPE]: WfEdgeRenderer };
 
 export function buildStyledEdges(
-  base: Edge[],
+  base: WfFlowEdge[],
   nodeState: Record<string, WfNodeState> | undefined,
-): Edge[] {
+  /** Per-node visit budget, stamped onto cycle-closing edges so the loop states
+   *  its own bound. Omitted ⇒ the badge shows the loop without a number. */
+  maxNodeVisits?: number,
+): WfFlowEdge[] {
   return base.map((e) => {
     const status = nodeState?.[e.target]?.status;
     const color = edgeColor(nodeState ? status : undefined);
+    const backEdge = e.data?.backEdge === true;
     return {
       ...e,
-      // The active hop flows; everything else is static.
-      animated: status === "running",
-      style: { strokeWidth: 1.75, stroke: color },
+      // The active hop flows; everything else is static. A cycle-closing edge
+      // never flows even into a running target: it is the loop's RETURN path,
+      // and animating it would read as the run travelling backwards.
+      animated: !backEdge && status === "running",
+      style: {
+        strokeWidth: 1.75,
+        stroke: color,
+        // Dashed, so a return path is distinguishable from a forward hop before
+        // its badge is read — and at a zoom where the badge isn't legible.
+        ...(backEdge ? { strokeDasharray: "6 3" } : {}),
+      },
       markerEnd: {
         type: MarkerType.ArrowClosed,
         width: 15,
         height: 15,
         color,
       },
+      ...(backEdge && maxNodeVisits !== undefined && e.data
+        ? { data: { ...e.data, maxNodeVisits } }
+        : {}),
     };
   });
 }
@@ -623,6 +754,22 @@ export interface WorkflowGraphProps {
    * fresh record each update — e.g. from a poll/SSE tick — satisfies this.
    */
   nodeState?: Record<string, WfNodeState>;
+  /**
+   * The graph's DECLARED topology, replacing the spine inferred from `do`-list
+   * order — see {@link WfEdgeSpec}. Name endpoints with the exported id helpers
+   * (`actionNodeId`, `branchNodeId`, `TRIGGER_NODE_ID`).
+   *
+   * Immutability contract, as for `nodeState`: the layout memo keys on this
+   * array's reference, so pass a stable one (a `useMemo`, or a value derived
+   * once per fetch) rather than a fresh literal each render.
+   */
+  edges?: readonly WfEdgeSpec[];
+  /** Per-node visit budget for a cyclic graph, shown on cycle-closing edges.
+   *  Meaningless without `edges` (an inferred spine cannot loop). */
+  maxNodeVisits?: number;
+  /** The node to ring as selected — e.g. the one whose detail panel is open.
+   *  Selection is the host's state; the graph only reflects it. */
+  selectedNodeId?: string;
   /** Click handler for a node (e.g. open a detail drawer). Absent ⇒ nodes are
    *  non-interactive on click. */
   onNodeClick?: (nodeId: string, data: WfNodeData) => void;
@@ -635,6 +782,9 @@ export function WorkflowGraph({
   defaultCompact = true,
   className,
   nodeState,
+  edges: declaredEdges,
+  maxNodeVisits,
+  selectedNodeId,
   onNodeClick,
 }: WorkflowGraphProps) {
   const colorMode = useColorMode();
@@ -648,7 +798,9 @@ export function WorkflowGraph({
   // once, while the rendered swap lands mid-motion (DENSITY_FLIP_AT); the
   // transition effect keeps the two in step on every non-tweened path.
   const [displayCompact, setDisplayCompact] = useState(compact);
-  const rfRef = useRef<ReactFlowInstance<Node<WfNodeData>> | null>(null);
+  const rfRef = useRef<ReactFlowInstance<Node<WfNodeData>, WfFlowEdge> | null>(
+    null,
+  );
   // The canvas wrapper — measured when reframing, since the viewport math needs
   // the frame's real width/height and the RF instance doesn't expose them.
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -667,8 +819,9 @@ export function WorkflowGraph({
         nodeState: hasRunOverlay ? {} : undefined,
         direction,
         compact,
+        ...(declaredEdges ? { edges: declaredEdges } : {}),
       }),
-    [yaml, hasRunOverlay, direction, compact],
+    [yaml, hasRunOverlay, direction, compact, declaredEdges],
   );
 
   // Edges restyled from the current run state (colored by each edge's target
@@ -676,8 +829,8 @@ export function WorkflowGraph({
   // nodeState, so a poll/SSE tick repaints edge color/flow without touching node
   // layout. Neutral throughout the static definition/preview view (no nodeState).
   const styledEdges = useMemo(
-    () => buildStyledEdges(structural.edges, nodeState),
-    [structural.edges, nodeState],
+    () => buildStyledEdges(structural.edges, nodeState, maxNodeVisits),
+    [structural.edges, nodeState, maxNodeVisits],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);
@@ -855,6 +1008,7 @@ export function WorkflowGraph({
   return (
     <DirectionContext.Provider value={direction}>
       <DensityContext.Provider value={displayCompact}>
+      <SelectedNodeContext.Provider value={selectedNodeId}>
       <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
       <ReactFlow
         nodes={nodes}
@@ -862,6 +1016,7 @@ export function WorkflowGraph({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={NODE_TYPES}
+        edgeTypes={EDGE_TYPES}
         colorMode={colorMode}
         onInit={(inst) => {
           rfRef.current = inst;
@@ -917,6 +1072,7 @@ export function WorkflowGraph({
         )}
       </ReactFlow>
       </div>
+      </SelectedNodeContext.Provider>
       </DensityContext.Provider>
     </DirectionContext.Provider>
   );

@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  actionNodeId,
+  branchNodeId,
   buildWorkflowGraph,
   COMPACT_NODE_SIZE,
   COMPACT_NODE_SIZE_RUN,
   COMPACT_TILE,
+  TRIGGER_NODE_ID,
+  triggerNodeId,
+  triggerNodeIndex,
+  type WfEdgeSpec,
 } from "./model";
 
 describe("buildWorkflowGraph", () => {
@@ -792,5 +798,451 @@ do:
     expect(buildWorkflowGraph("description: just text").error).toBe(
       "Empty workflow",
     );
+  });
+});
+
+describe("node id helpers", () => {
+  it("produce exactly the ids the builder emits", () => {
+    // THE contract test. Hosts re-derive these ids constantly — a run overlay is
+    // keyed by them, a declared topology names its endpoints with them — and they
+    // are bare strings, so nothing type-checks a drift between a helper and the
+    // builder. Asserting the helpers against a REAL build (never against string
+    // literals) is what makes a rename fail HERE, in the package that owns the
+    // format, instead of silently in a consumer whose graph loses its edges.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * 1-5"
+do:
+  - agent.run:
+      prompt: First
+  - parallel:
+      branches:
+        - notify:
+            url: https://example.com/a
+        - notify:
+            url: https://example.com/b
+`;
+    const { nodes, edges } = buildWorkflowGraph(yaml);
+    expect(nodes.map((n) => n.id)).toEqual([
+      TRIGGER_NODE_ID,
+      actionNodeId(0),
+      actionNodeId(1),
+      branchNodeId(1, 0),
+      branchNodeId(1, 1),
+    ]);
+    // Edge endpoints speak the same ids, so a host can match an edge to the
+    // nodes it joins without parsing either.
+    expect(edges.map((e) => `${e.source}->${e.target}`)).toContain(
+      `${TRIGGER_NODE_ID}->${actionNodeId(0)}`,
+    );
+    expect(edges.map((e) => `${e.source}->${e.target}`)).toContain(
+      `${actionNodeId(1)}->${branchNodeId(1, 0)}`,
+    );
+  });
+
+  it("round-trips a trigger index and refuses anything that is not one", () => {
+    expect(triggerNodeId(0)).toBe(TRIGGER_NODE_ID);
+    expect(triggerNodeIndex(triggerNodeId(0))).toBe(0);
+    expect(triggerNodeIndex(triggerNodeId(3))).toBe(3);
+    expect(triggerNodeIndex(actionNodeId(0))).toBeNull();
+    expect(triggerNodeIndex(branchNodeId(0, 1))).toBeNull();
+    // A near-miss must read as "not a trigger", never as index NaN — a host
+    // branching on `!== null` would otherwise take the trigger path for it.
+    expect(triggerNodeIndex("trigger:x")).toBeNull();
+    expect(triggerNodeIndex("triggerish")).toBeNull();
+  });
+});
+
+describe("buildWorkflowGraph — list-form triggers", () => {
+  const LIST_YAML = `
+on:
+  - provider_event:
+      connection: github
+      event: pull_request
+  - schedule:
+      cron: "0 9 * * 1-5"
+do:
+  - agent.run:
+      prompt: Handle it
+`;
+
+  it("draws one node per subscription, and every one starts the body", () => {
+    // `on:` as a list is OR semantics — ANY entry starts the same body. Modelled
+    // as a single node it rendered as one unlabelled "Trigger", hiding both the
+    // number of ways the workflow can start and what each of them is.
+    const { nodes, edges, error } = buildWorkflowGraph(LIST_YAML);
+    expect(error).toBeNull();
+    expect(nodes.map((n) => n.id)).toEqual([
+      TRIGGER_NODE_ID,
+      triggerNodeId(1),
+      actionNodeId(0),
+    ]);
+    expect(nodes[0].data.title).toBe("GitHub");
+    expect(nodes[0].data.subtitle).toBe("On pull request");
+    expect(nodes[1].data.title).toBe("Schedule");
+    // Both triggers reach the body.
+    expect(edges.map((e) => e.id)).toEqual([
+      `${TRIGGER_NODE_ID}->${actionNodeId(0)}`,
+      `${triggerNodeId(1)}->${actionNodeId(0)}`,
+    ]);
+  });
+
+  it("names a webhook trigger rather than falling to the generic Trigger", () => {
+    // `webhook` is one of exactly three trigger kinds and its config is empty by
+    // schema, so the node's name is all it has to say how the workflow starts.
+    const [node] = buildWorkflowGraph("on:\n  webhook: {}\ndo:\n  - notify:\n      url: https://e.co\n").nodes;
+    expect(node.data.title).toBe("Webhook");
+    expect(node.data.kind).toBe("webhook");
+    expect(node.data.subtitle).toBe("On an inbound POST");
+  });
+
+  it("stacks the trigger nodes in one layer rather than down the spine", () => {
+    // Alternative subscriptions are siblings, not sequential steps: they share
+    // rank 0 (same x in LR) and separate along the cross axis.
+    const { nodes } = buildWorkflowGraph(LIST_YAML);
+    const [first, second] = nodes;
+    expect(second.position.x).toBe(first.position.x);
+    expect(second.position.y).not.toBe(first.position.y);
+  });
+
+  it("leaves a single-trigger graph byte-identical", () => {
+    // Entry 0 keeps the plain `trigger` id, so the overwhelmingly common shape
+    // is unchanged — including for a host that persisted the old id.
+    const single = `
+on:
+  schedule:
+    cron: "0 9 * * 1-5"
+do:
+  - agent.run:
+      prompt: Handle it
+`;
+    const listOfOne = `
+on:
+  - schedule:
+      cron: "0 9 * * 1-5"
+do:
+  - agent.run:
+      prompt: Handle it
+`;
+    expect(buildWorkflowGraph(listOfOne)).toEqual(buildWorkflowGraph(single));
+  });
+
+  it("treats an empty trigger list as no trigger at all", () => {
+    // `on: []` subscribes to nothing. It must not produce a zero-node layout,
+    // whose min/max over an empty set yields NaN positions.
+    expect(buildWorkflowGraph("on: []").error).toBe("Empty workflow");
+    const { nodes } = buildWorkflowGraph("on: []\ndo:\n  - notify:\n      url: https://e.co\n");
+    expect(nodes.map((n) => n.id)).toEqual([actionNodeId(0)]);
+    expect(nodes[0].data.isRoot).toBe(true);
+    expect(Number.isFinite(nodes[0].position.x)).toBe(true);
+  });
+});
+
+describe("buildWorkflowGraph — declared topology", () => {
+  const FOUR = `
+on:
+  webhook: {}
+do:
+  - agent.run:
+      prompt: Fan out
+  - agent.run:
+      prompt: Left
+  - agent.run:
+      prompt: Right
+  - agent.run:
+      prompt: Join
+`;
+  const diamond: WfEdgeSpec[] = [
+    { from: actionNodeId(0), to: actionNodeId(1) },
+    { from: actionNodeId(0), to: actionNodeId(2) },
+    { from: actionNodeId(1), to: actionNodeId(3) },
+    { from: actionNodeId(2), to: actionNodeId(3) },
+  ];
+
+  it("replaces the inferred spine with the declared edges", () => {
+    const { edges, error } = buildWorkflowGraph(FOUR, { edges: diamond });
+    expect(error).toBeNull();
+    // The positional chain a1→a2→a3 is gone; what remains is what was declared,
+    // plus the trigger's edge to the one node nothing points at.
+    expect(edges.map((e) => e.id).sort()).toEqual(
+      [
+        "a0->a1",
+        "a0->a2",
+        "a1->a3",
+        "a2->a3",
+        `${TRIGGER_NODE_ID}->a0`,
+      ].sort(),
+    );
+    expect(edges.every((e) => e.kind === "spine")).toBe(true);
+  });
+
+  it("lays a diamond out as a diamond rather than a chain", () => {
+    // This is the half a positional builder cannot do even with the right edges:
+    // both arms must share a layer and their join must sit past BOTH of them,
+    // otherwise the declared edges are drawn over a chain's positions.
+    const byId = new Map(
+      buildWorkflowGraph(FOUR, { edges: diamond }).nodes.map((n) => [
+        n.id,
+        n.position,
+      ]),
+    );
+    const x = (id: string) => byId.get(id)?.x ?? Number.NaN;
+    expect(x("a1")).toBe(x("a2"));
+    expect(x("a1")).toBeGreaterThan(x("a0"));
+    expect(x("a3")).toBeGreaterThan(x("a1"));
+    // The arms separate on the cross axis instead of overlapping.
+    expect(byId.get("a1")?.y).not.toBe(byId.get("a2")?.y);
+
+    // Contrast: the same YAML with no declared topology is a straight chain, so
+    // no two action nodes ever share a layer.
+    const chain = buildWorkflowGraph(FOUR).nodes.map((n) => n.position.x);
+    expect(new Set(chain).size).toBe(chain.length);
+  });
+
+  it("marks the edge that closes a cycle, and only that edge", () => {
+    const { edges } = buildWorkflowGraph(FOUR, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1) },
+        { from: actionNodeId(1), to: actionNodeId(2) },
+        // Back to a1: the loop's return path.
+        { from: actionNodeId(2), to: actionNodeId(1) },
+      ],
+    });
+    const back = edges.filter((e) => e.backEdge === true).map((e) => e.id);
+    expect(back).toEqual(["a2->a1"]);
+    // Every forward edge omits the flag entirely rather than carrying `false`,
+    // so a host can test truthiness.
+    for (const e of edges.filter((e) => e.id !== "a2->a1")) {
+      expect(e.backEdge).toBeUndefined();
+    }
+  });
+
+  it("still ranks every node of a cyclic graph", () => {
+    // Layering is defined on a DAG; the back edge is excluded so the sweep
+    // drains. A node left unranked would silently pile up at the origin.
+    const { nodes } = buildWorkflowGraph(FOUR, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1) },
+        { from: actionNodeId(1), to: actionNodeId(2) },
+        { from: actionNodeId(2), to: actionNodeId(1) },
+        { from: actionNodeId(2), to: actionNodeId(3) },
+      ],
+    });
+    const xs = nodes.map((n) => n.position.x);
+    expect(xs.every((v) => Number.isFinite(v))).toBe(true);
+    const byId = new Map(nodes.map((n) => [n.id, n.position.x]));
+    expect(byId.get("a2")).toBeGreaterThan(byId.get("a1") as number);
+    expect(byId.get("a3")).toBeGreaterThan(byId.get("a2") as number);
+  });
+
+  it("carries a guard summary verbatim onto its edge", () => {
+    const { edges } = buildWorkflowGraph(FOUR, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1), whenLabel: "status == failed" },
+        { from: actionNodeId(0), to: actionNodeId(2) },
+      ],
+    });
+    const guarded = edges.find((e) => e.id === "a0->a1");
+    expect(guarded?.whenLabel).toBe("status == failed");
+    // An unguarded edge omits the field rather than carrying an empty string.
+    expect(edges.find((e) => e.id === "a0->a2")?.whenLabel).toBeUndefined();
+  });
+
+  it("attaches every trigger to every root, and nothing else", () => {
+    const twoTriggers = FOUR.replace(
+      "on:\n  webhook: {}",
+      "on:\n  - webhook: {}\n  - schedule:\n      cron: \"0 9 * * *\"",
+    );
+    const { edges } = buildWorkflowGraph(twoTriggers, {
+      // a0 and a2 are roots (nothing points at them); a1 and a3 are not.
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1) },
+        { from: actionNodeId(2), to: actionNodeId(3) },
+      ],
+    });
+    const fromTriggers = edges
+      .filter((e) => triggerNodeIndex(e.source) !== null)
+      .map((e) => e.id)
+      .sort();
+    expect(fromTriggers).toEqual(
+      [
+        `${TRIGGER_NODE_ID}->a0`,
+        `${TRIGGER_NODE_ID}->a2`,
+        `${triggerNodeId(1)}->a0`,
+        `${triggerNodeId(1)}->a2`,
+      ].sort(),
+    );
+  });
+
+  it("keeps fan-out edges and drops the positional join", () => {
+    // A branch leaf is this module's own node — no declared spec addresses it —
+    // so its fork edge survives. The leaf reconverging on "the next list entry"
+    // is a positional artifact, and the declared topology now says what follows.
+    const yaml = `
+on:
+  webhook: {}
+do:
+  - parallel:
+      branches:
+        - notify:
+            url: https://example.com/a
+        - notify:
+            url: https://example.com/b
+  - agent.run:
+      prompt: After
+`;
+    const { edges } = buildWorkflowGraph(yaml, {
+      edges: [{ from: actionNodeId(0), to: actionNodeId(1) }],
+    });
+    expect(edges.filter((e) => e.kind === "fork").map((e) => e.id)).toEqual([
+      `${actionNodeId(0)}->${branchNodeId(0, 0)}`,
+      `${actionNodeId(0)}->${branchNodeId(0, 1)}`,
+    ]);
+    expect(edges.some((e) => e.kind === "join")).toBe(false);
+    // The leaves are NOT roots, so the trigger does not adopt them.
+    expect(
+      edges.filter((e) => triggerNodeIndex(e.source) !== null).map((e) => e.id),
+    ).toEqual([`${TRIGGER_NODE_ID}->${actionNodeId(0)}`]);
+  });
+
+  it("recomputes isRoot from what actually points at a node", () => {
+    // Without a trigger the FIRST list entry is the positional root — but a
+    // declared topology can make any node the entry, and the handle has to
+    // follow the edges rather than the list order.
+    const { nodes } = buildWorkflowGraph(
+      `
+do:
+  - agent.run:
+      prompt: Second
+  - agent.run:
+      prompt: First
+`,
+      { edges: [{ from: actionNodeId(1), to: actionNodeId(0) }] },
+    );
+    const byId = new Map(nodes.map((n) => [n.id, n.data.isRoot]));
+    expect(byId.get(actionNodeId(1))).toBe(true);
+    expect(byId.get(actionNodeId(0))).toBe(false);
+  });
+
+  it("errors loudly when an edge names a step that does not exist", () => {
+    // Never a quiet fall back to the positional spine: the two disagreeing means
+    // the topology and the definition came from different places, and drawing
+    // edges the run will not take is worse than refusing to draw.
+    const { nodes, edges, error } = buildWorkflowGraph(FOUR, {
+      edges: [{ from: actionNodeId(0), to: actionNodeId(9) }],
+    });
+    expect(error).toContain("a9");
+    expect(nodes).toEqual([]);
+    expect(edges).toEqual([]);
+  });
+
+  it("draws one line for a pair declared twice", () => {
+    const { edges } = buildWorkflowGraph(FOUR, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1) },
+        { from: actionNodeId(0), to: actionNodeId(1) },
+      ],
+    });
+    expect(edges.filter((e) => e.id === "a0->a1")).toHaveLength(1);
+    expect(new Set(edges.map((e) => e.id)).size).toBe(edges.length);
+  });
+
+  it("survives a self-referencing edge", () => {
+    // The compiler rejects a step that needs itself, so this only ever arrives
+    // as corrupt data — and a visualiser that hangs or NaNs on corrupt data is
+    // worse than one that draws it. The loop is simply its own back edge.
+    const { nodes, edges, error } = buildWorkflowGraph(FOUR, {
+      edges: [{ from: actionNodeId(0), to: actionNodeId(0) }],
+    });
+    expect(error).toBeNull();
+    expect(edges.find((e) => e.id === "a0->a0")?.backEdge).toBe(true);
+    expect(nodes.every((n) => Number.isFinite(n.position.x))).toBe(true);
+  });
+
+  it("ranks disjoint chains that never meet", () => {
+    // Two independent components: nothing links them, so neither can be reached
+    // from the other's entry. Both must still be laid out.
+    const { nodes, error } = buildWorkflowGraph(FOUR, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1) },
+        { from: actionNodeId(2), to: actionNodeId(3) },
+      ],
+    });
+    expect(error).toBeNull();
+    expect(nodes.every((n) => Number.isFinite(n.position.x))).toBe(true);
+  });
+
+  it("treats an empty declared topology as every step being a root", () => {
+    // `edges: []` is a DECLARED topology that happens to have no edges — not the
+    // same as omitting it (which infers the positional spine). Every step is
+    // then independent, so the trigger starts all of them.
+    const { edges } = buildWorkflowGraph(FOUR, { edges: [] });
+    expect(edges.map((e) => e.id).sort()).toEqual(
+      ["trigger->a0", "trigger->a1", "trigger->a2", "trigger->a3"].sort(),
+    );
+  });
+
+  it("never throws on a graph that is one large cycle", () => {
+    // No node has in-degree 0, so there is no entry point to walk from; the
+    // classifier must still terminate and rank every node.
+    const { nodes, error } = buildWorkflowGraph(FOUR, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1) },
+        { from: actionNodeId(1), to: actionNodeId(2) },
+        { from: actionNodeId(2), to: actionNodeId(0) },
+      ],
+    });
+    expect(error).toBeNull();
+    expect(nodes).toHaveLength(5);
+    expect(nodes.every((n) => Number.isFinite(n.position.x))).toBe(true);
+  });
+});
+
+describe("buildWorkflowGraph — graph-era action kinds", () => {
+  it("names script.run, sandbox.snapshot and trace.analyze as themselves", () => {
+    // Before these were modelled they fell to the generic branch and read as
+    // "Script run" / "Sandbox snapshot" / "Trace analyze" with no subtitle —
+    // the humanized identifier, not a description of the step.
+    const yaml = `
+do:
+  - script.run:
+      source: "export default async () => ({ ok: true });"
+      connections: [github, slack]
+  - sandbox.snapshot:
+      sandbox: \${steps.build.sandboxId}
+  - trace.analyze:
+      trace: \${steps.review.traceRef.stepsPath}
+      kinds: [failure-mode, knowledge-gap]
+`;
+    const [script, snapshot, trace] = buildWorkflowGraph(yaml).nodes;
+
+    expect(script.data.title).toBe("Script");
+    expect(script.data.kind).toBe("script.run");
+    expect(script.data.subtitle).toBe("TypeScript · 2 connections");
+    expect(script.data.description).toContain("export default");
+
+    expect(snapshot.data.title).toBe("Snapshot");
+    expect(snapshot.data.subtitle).toBe("${steps.build.sandboxId}");
+
+    expect(trace.data.title).toBe("Trace analysis");
+    expect(trace.data.subtitle).toBe("failure mode, knowledge gap");
+    expect(trace.data.description).toContain("traceRef");
+    // The model is incidental to a trace analysis (unlike agent.run, where it IS
+    // the identity), so it stays in the config and the node keeps its own glyph.
+    expect(trace.data.model).toBeUndefined();
+  });
+
+  it("falls back gracefully when the graph-era configs are empty", () => {
+    const yaml = `
+do:
+  - script.run: {}
+  - sandbox.snapshot: {}
+  - trace.analyze: {}
+`;
+    const [script, snapshot, trace] = buildWorkflowGraph(yaml).nodes;
+    expect(script.data.subtitle).toBe("TypeScript");
+    expect(snapshot.data.subtitle).toBe("Capture a sandbox");
+    expect(trace.data.subtitle).toBe("Default analysts");
   });
 });

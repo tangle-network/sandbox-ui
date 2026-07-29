@@ -17,7 +17,7 @@ import {
   ProfileAvatar,
 } from "./app-sidebar"
 import type { SidebarUser, AppearanceController, RailExpandableSubItem } from "./app-sidebar"
-import { SidebarProvider, useSidebar } from "./sidebar-context"
+import { SidebarProvider, useSidebar, SIDEBAR_MOBILE_WIDTH } from "./sidebar-context"
 
 // ============================================================================
 // Types
@@ -172,6 +172,29 @@ const HIDE_BELOW_CLASS = {
   lg: "max-lg:hidden",
 } as const
 
+/** Inverse of {@link HIDE_BELOW_CLASS} — the mobile surfaces that stand in for
+ *  the hidden rail show exactly where the rail does not. */
+const SHOW_BELOW_CLASS = {
+  md: "md:hidden",
+  lg: "lg:hidden",
+} as const
+
+function MenuIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M3 6h18M3 12h18M3 18h18" />
+    </svg>
+  )
+}
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  )
+}
+
 function DefaultLink({
   href,
   to,
@@ -239,6 +262,108 @@ function SidebarLayoutInner({
   // hover tooltips via each RailButton's `title`).
   const showLabels = railLabels && !railCollapsed
 
+  // The mobile drawer's own open state. Local rather than context: the rail's
+  // collapse and the slide-out panel both persist across reloads, and a nav
+  // drawer that reopened itself on every page load would be a bug, not a
+  // feature.
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false)
+  const closeMobileNav = React.useCallback(() => setMobileNavOpen(false), [])
+
+  /**
+   * One nav list, rendered twice — once in the desktop rail, once in the mobile
+   * drawer. Sharing the renderer is the point: a product adds a destination to
+   * `navItems` and it appears on both, so a phone can never silently lose a
+   * door the desktop has.
+   */
+  function renderNavItems({
+    showLabels,
+    onNavigate,
+  }: {
+    showLabels: boolean
+    onNavigate?: () => void
+  }) {
+    return navItems.map((item) => {
+      if (item.expandable) {
+        return (
+          <RailExpandable
+            key={item.id}
+            icon={item.icon}
+            label={item.label}
+            href={item.href}
+            isActive={activeId === item.id}
+            showLabel={showLabels}
+            subItems={item.subItems}
+            loadSubItems={item.loadSubItems}
+            activeSubIds={item.subActiveIds}
+            emptyLabel={item.emptyLabel}
+            defaultOpen={item.defaultOpen}
+            onNavigate={onNavigate}
+            LinkComponent={LinkComponent}
+          />
+        )
+      }
+      if (item.flyoutItems && item.flyoutItems.length > 0) {
+        const activeSet = new Set(item.flyoutActiveIds ?? [])
+        return (
+          <RailFlyout
+            key={item.id}
+            icon={item.icon}
+            label={item.label}
+            title={item.label}
+            showLabel={showLabels}
+            isActive={activeId === item.id || item.flyoutItems.some((f) => activeSet.has(f.id))}
+          >
+            {item.flyoutItems.map((f) => {
+              const FIcon = f.icon
+              const active = activeSet.has(f.id)
+              return (
+                <Link
+                  key={f.id}
+                  href={f.href}
+                  to={f.href}
+                  onClick={onNavigate}
+                  {...(f.prefetch !== undefined ? { prefetch: f.prefetch } : {})}
+                  className={cn(
+                    "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",
+                    active
+                      ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
+                      : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
+                  )}
+                >
+                  <FIcon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{f.label}</span>
+                </Link>
+              )
+            })}
+          </RailFlyout>
+        )
+      }
+      return item.togglesPanel ? (
+        <RailButton
+          key={item.id}
+          icon={item.icon}
+          label={item.label}
+          badge={item.badge}
+          isActive={panelOpen}
+          onClick={() => {
+            togglePanel()
+            onNavigate?.()
+          }}
+          showLabel={showLabels}
+        />
+      ) : (
+        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild>
+          <Link
+            href={item.href}
+            to={item.href}
+            onClick={onNavigate}
+            {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
+          />
+        </RailButton>
+      )
+    })
+  }
+
   return (
     <div className={cn("min-h-screen bg-surface text-foreground", className)}>
       {/* Wrap the fixed sidebar so the responsive-hide class lands on an
@@ -263,83 +388,7 @@ function SidebarLayoutInner({
             )}
 
             <SidebarRailNav className={cn(showLabels ? "px-2" : undefined, expandOnEmptyClick && "cursor-pointer")} onClick={expandOnEmptyClick}>
-              {navItems.map((item) => {
-                if (item.expandable) {
-                  return (
-                    <RailExpandable
-                      key={item.id}
-                      icon={item.icon}
-                      label={item.label}
-                      href={item.href}
-                      isActive={activeId === item.id}
-                      showLabel={showLabels}
-                      subItems={item.subItems}
-                      loadSubItems={item.loadSubItems}
-                      activeSubIds={item.subActiveIds}
-                      emptyLabel={item.emptyLabel}
-                      defaultOpen={item.defaultOpen}
-                      onNavigate={handleNavClick}
-                      LinkComponent={LinkComponent}
-                    />
-                  )
-                }
-                if (item.flyoutItems && item.flyoutItems.length > 0) {
-                  const activeSet = new Set(item.flyoutActiveIds ?? [])
-                  return (
-                    <RailFlyout
-                      key={item.id}
-                      icon={item.icon}
-                      label={item.label}
-                      title={item.label}
-                      showLabel={showLabels}
-                      isActive={activeId === item.id || item.flyoutItems.some((f) => activeSet.has(f.id))}
-                    >
-                      {item.flyoutItems.map((f) => {
-                        const FIcon = f.icon
-                        const active = activeSet.has(f.id)
-                        return (
-                          <Link
-                            key={f.id}
-                            href={f.href}
-                            to={f.href}
-                            onClick={handleNavClick}
-                            {...(f.prefetch !== undefined ? { prefetch: f.prefetch } : {})}
-                            className={cn(
-                              "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",
-                              active
-                                ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
-                                : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
-                            )}
-                          >
-                            <FIcon className="h-4 w-4 shrink-0" />
-                            <span className="truncate">{f.label}</span>
-                          </Link>
-                        )
-                      })}
-                    </RailFlyout>
-                  )
-                }
-                return item.togglesPanel ? (
-                  <RailButton
-                    key={item.id}
-                    icon={item.icon}
-                    label={item.label}
-                    badge={item.badge}
-                    isActive={panelOpen}
-                    onClick={togglePanel}
-                    showLabel={showLabels}
-                  />
-                ) : (
-                  <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild>
-                    <Link
-                      href={item.href}
-                      to={item.href}
-                      onClick={handleNavClick}
-                      {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
-                    />
-                  </RailButton>
-                )
-              })}
+              {renderNavItems({ showLabels, onNavigate: handleNavClick })}
             </SidebarRailNav>
 
             {(railFooter !== undefined || hasProfile) && (
@@ -367,7 +416,217 @@ function SidebarLayoutInner({
         </Sidebar>
       </div>
 
-      <SidebarContent className={contentClassName}>{children}</SidebarContent>
+      <SidebarContent className={contentClassName}>
+        {/* Below `hideBelow` the rail is display:none, so without this bar the
+            app's sections have no entry point at all on a phone. It renders as
+            the first child of <main> rather than a sibling so a consumer's
+            `h-screen flex-col` content class keeps working: the bar is a
+            shrink-0 row and the app's own content flexes beneath it. */}
+        {hideBelow && (
+          <header
+            className={cn(
+              "flex h-14 shrink-0 items-center gap-1 border-b border-[var(--md3-outline-variant)] bg-surface px-2",
+              SHOW_BELOW_CLASS[hideBelow],
+            )}
+          >
+            <button
+              type="button"
+              aria-label="Open navigation"
+              aria-expanded={mobileNavOpen}
+              aria-controls="sidebar-mobile-nav"
+              aria-haspopup="dialog"
+              onClick={() => setMobileNavOpen(true)}
+              className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground"
+            >
+              <MenuIcon className="size-5" />
+            </button>
+            <div className="flex min-w-0 flex-1 items-center">
+              {railHeaderContent ?? (
+                logo !== undefined ? (
+                  <Link href={logoHref} to={logoHref} className="flex min-w-0 items-center">
+                    {logo}
+                  </Link>
+                ) : null
+              )}
+            </div>
+            {hasProfile && (
+              <ProfileAvatar
+                user={user ?? undefined}
+                isLoading={isLoading}
+                onLogout={onLogout}
+                onSettingsClick={onSettingsClick}
+                settingsHref={settingsHref}
+                appearance={appearance}
+                LinkComponent={Link}
+              >
+                {profileMenuItems}
+              </ProfileAvatar>
+            )}
+          </header>
+        )}
+        {children}
+      </SidebarContent>
+
+      {hideBelow && mobileNavOpen && (
+        <MobileNavDrawer
+          breakpoint={hideBelow}
+          onClose={closeMobileNav}
+          header={railHeaderContent ?? logo}
+          footer={
+            railFooter !== undefined || hasProfile ? (
+              <>
+                {railFooter}
+                {hasProfile && (
+                  <ProfileAvatar
+                    user={user ?? undefined}
+                    isLoading={isLoading}
+                    onLogout={onLogout}
+                    onSettingsClick={onSettingsClick}
+                    settingsHref={settingsHref}
+                    showDetails
+                    appearance={appearance}
+                    LinkComponent={Link}
+                  >
+                    {profileMenuItems}
+                  </ProfileAvatar>
+                )}
+              </>
+            ) : null
+          }
+          panel={panel}
+        >
+          {/* Labels always show here — the drawer has the width the rail does
+              not, and an icon-only phone drawer would be a worse rail. */}
+          {renderNavItems({
+            showLabels: true,
+            onNavigate: () => {
+              handleNavClick?.()
+              closeMobileNav()
+            },
+          })}
+        </MobileNavDrawer>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// MobileNavDrawer — the rail's stand-in below `hideBelow`
+// ============================================================================
+
+/**
+ * A left slide-over holding the same nav items the rail renders, plus the
+ * slide-out panel's content when the app has one (on a phone there is no room
+ * to dock a panel beside a rail, so the two stack in one surface).
+ *
+ * Deliberately built on plain elements rather than a dialog dependency: the
+ * package ships no modal primitive, and a nav drawer needs only a backdrop,
+ * Escape, a focus trap and a scroll lock.
+ */
+function MobileNavDrawer({
+  breakpoint,
+  onClose,
+  header,
+  footer,
+  panel,
+  children,
+}: {
+  breakpoint: "md" | "lg"
+  onClose: () => void
+  header?: React.ReactNode
+  footer?: React.ReactNode
+  panel?: React.ReactNode
+  children: React.ReactNode
+}) {
+  const panelRef = React.useRef<HTMLDivElement>(null)
+
+  // Escape closes, and Tab cycles inside the drawer. Without the trap, tabbing
+  // walks into the page behind the backdrop, which a screen reader then reads
+  // as if the drawer were not there.
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation()
+        onClose()
+        return
+      }
+      if (event.key !== "Tab") return
+      const root = panelRef.current
+      if (!root) return
+      const focusable = root.querySelectorAll<HTMLElement>(
+        'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener("keydown", onKeyDown, true)
+    return () => document.removeEventListener("keydown", onKeyDown, true)
+  }, [onClose])
+
+  // Scroll lock, restoring whatever the page had rather than assuming "".
+  React.useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [])
+
+  // Move focus in on open so a keyboard or screen-reader user lands inside the
+  // drawer instead of on the page behind it.
+  React.useEffect(() => {
+    panelRef.current?.querySelector<HTMLElement>("button,a[href]")?.focus()
+  }, [])
+
+  return (
+    <div className={cn("fixed inset-0 z-50", SHOW_BELOW_CLASS[breakpoint])}>
+      <button
+        type="button"
+        aria-label="Close navigation"
+        tabIndex={-1}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/50"
+      />
+      <div
+        ref={panelRef}
+        id="sidebar-mobile-nav"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+        style={{ width: SIDEBAR_MOBILE_WIDTH }}
+        className="absolute inset-y-0 left-0 flex max-w-[85vw] flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low shadow-xl"
+      >
+        <div className="flex h-14 shrink-0 items-center gap-1 border-b border-[var(--md3-outline-variant)] px-2">
+          <div className="flex min-w-0 flex-1 items-center">{header}</div>
+          <button
+            type="button"
+            aria-label="Close navigation"
+            onClick={onClose}
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground"
+          >
+            <CloseIcon className="size-5" />
+          </button>
+        </div>
+
+        <nav aria-label="Sections" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2">
+          {children}
+          {panel != null && (
+            <div className="mt-2 border-t border-[var(--md3-outline-variant)] pt-2">{panel}</div>
+          )}
+        </nav>
+
+        {footer != null && (
+          <div className="shrink-0 border-t border-[var(--md3-outline-variant)] px-2 py-2">{footer}</div>
+        )}
+      </div>
     </div>
   )
 }

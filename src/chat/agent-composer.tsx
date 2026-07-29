@@ -618,7 +618,22 @@ export function AgentComposer({
             </>
           )}
 
-          <div className="flex min-w-0 flex-1 items-center gap-2">
+          {/* Attach and send are pinned; everything between them shares ONE
+              shrinkable, horizontally scrollable strip.
+
+              The pickers used to sit in a `shrink-0` box, so on a narrow
+              viewport they kept their full intrinsic width and pushed the send
+              button past the composer's edge — where the card's `overflow-hidden`
+              clipped it out of reach (measured at 390px: the strip was 347px
+              wide and send landed at right:470 against a 390px viewport, with
+              `scrollWidth === clientWidth`, so it could not even be scrolled to).
+              Send is the one control a composer cannot afford to lose, so the
+              pickers give up width first and stay reachable by swipe.
+
+              `ml-auto` on the trailing group reproduces the previous
+              right-alignment, so a desktop composer with room to spare lays out
+              exactly as before. */}
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {controls ?? (
               <AgentSessionControls
                 context={context}
@@ -628,11 +643,12 @@ export function AgentComposer({
                 reasoning={reasoning}
               />
             )}
+            {trailing && (
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                {trailing}
+              </div>
+            )}
           </div>
-
-          {trailing && (
-            <div className="flex shrink-0 items-center gap-2">{trailing}</div>
-          )}
 
           {busy && onCancel ? (
             <button

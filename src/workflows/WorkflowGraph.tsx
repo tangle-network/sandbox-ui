@@ -1082,9 +1082,14 @@ export function WorkflowGraph({
       if (!nodeId) return;
       const node = nodes.find((n) => n.id === nodeId);
       if (!node) return;
-      // Space scrolls the page by default, and Enter would otherwise also
-      // reach whatever the node renders.
+      // The key is CONSUMED here, so say so both ways: preventDefault stops
+      // Space scrolling the page, and stopPropagation keeps a key we have
+      // already acted on from also reaching the host around the graph (a form
+      // that submits on Enter should not, when the user meant "open this node").
+      // Both run only once a node is resolved — a press on canvas chrome, or on
+      // nothing, is not ours to swallow.
       event.preventDefault();
+      event.stopPropagation();
       onNodeClick?.(node.id, node.data);
     },
     [nodes, onNodeClick],

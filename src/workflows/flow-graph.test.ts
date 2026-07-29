@@ -300,3 +300,23 @@ do:
     expect(edges.every((e) => e.data?.kind === "spine")).toBe(true);
   });
 });
+
+describe("buildFlowGraph — nodes are never canvas-deletable", () => {
+  it("marks every node undeletable, in both densities and with a run overlay", () => {
+    // A node is a `do` entry; removing one is a list edit, not a canvas gesture.
+    // This is load-bearing on an EDITABLE canvas, where the delete key is armed
+    // for edges: React Flow deletes a selected node together with every edge
+    // touching it, so a deletable node would vanish from the canvas AND report
+    // each of its edges through onEdgeDelete — asking the host to drop declared
+    // edges nobody touched.
+    for (const options of [
+      undefined,
+      { compact: true },
+      { nodeState: { a0: { status: "running" as const } } },
+    ]) {
+      const { nodes } = buildFlowGraph(YAML, options);
+      expect(nodes.length).toBeGreaterThan(0);
+      expect(nodes.every((n) => n.deletable === false)).toBe(true);
+    }
+  });
+});

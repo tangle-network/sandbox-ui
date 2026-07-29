@@ -42,7 +42,9 @@ import {
 import {
   COMPACT_NODE_SIZE,
   COMPACT_TILE,
+  triggerNodeIndex,
   type WfDirection,
+  type WfEdgeKind,
   type WfEdgeSpec,
   type WfNodeData,
   type WfNodeState,
@@ -173,6 +175,27 @@ const SELECTION_OUTLINE: CSSProperties = {
   outlineOffset: 2,
 };
 
+/** Whether the canvas is currently an EDITOR — read by the node so its
+ *  connection handles become visible targets rather than the invisible anchors
+ *  a read-only diagram wants. A handle you cannot see is a handle you cannot
+ *  find, and dragging one is the whole gesture. */
+export const ConnectableContext = createContext<boolean>(false);
+
+/**
+ * Whether an edge is the HOST's to change. Only a declared edge is: a fork edge
+ * is fan-out structure derived from a structural action's own config, and an
+ * edge out of a trigger is what "nothing points at this node" renders as.
+ * Neither appears in anyone's declared topology, so neither can be connected,
+ * deleted, or guarded — offering the gesture would invite an edit with nowhere
+ * to land.
+ */
+export function isEditableEdge(edge: {
+  source: string;
+  data?: { kind?: WfEdgeKind } | undefined;
+}): boolean {
+  return edge.data?.kind !== "fork" && triggerNodeIndex(edge.source) === null;
+}
+
 /**
  * The run status FOOTER: a progress bar (queued = near-empty, running = pulsing
  * partial, terminal = full) over a caption row. Pinned to the card's BOTTOM via
@@ -264,6 +287,12 @@ function StatusPill({ status }: { status: WfNodeStatus }) {
 // connect to the node body for a clean diagram look.
 const HANDLE_CLASS = "!h-2 !w-2 !min-w-0 !border-0 !bg-transparent opacity-0";
 
+/** On an EDITABLE canvas the handle stops being a hidden anchor and becomes the
+ *  thing you drag. Drawn as a small ring in the muted token so it reads as an
+ *  affordance without competing with the node's own mark or status border. */
+const HANDLE_CONNECTABLE_CLASS =
+  "!h-2.5 !w-2.5 !min-w-0 !rounded-full !border !border-border !bg-muted-foreground/70 opacity-100 transition-opacity hover:!bg-primary";
+
 /**
  * Where a compact node's edges attach. The compact BOX spans the icon tile AND
  * its name (so a name can never collide with a neighbour), but the edges belong
@@ -307,6 +336,7 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   const state = d.state;
   const direction = useContext(DirectionContext);
   const compact = useContext(DensityContext);
+  const connectable = useContext(ConnectableContext);
   const hostSelection = useContext(SelectedNodeContext);
   // Compared only once the host HAS a selection: `undefined === undefined` would
   // otherwise ring a node whose id is also unset, so "nothing is selected" would
@@ -383,20 +413,21 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
       : { shape, tone: source.tone, label: source.label };
   })();
 
+  const handleClass = connectable ? HANDLE_CONNECTABLE_CLASS : HANDLE_CLASS;
   const handles = (
     <>
       {!d.isRoot && (
         <Handle
           type="target"
           position={targetPos}
-          className={HANDLE_CLASS}
+          className={handleClass}
           style={compact ? compactHandleStyle(targetPos, isLR) : undefined}
         />
       )}
       <Handle
         type="source"
         position={sourcePos}
-        className={HANDLE_CLASS}
+        className={handleClass}
         style={compact ? compactHandleStyle(sourcePos, isLR) : undefined}
       />
     </>
@@ -773,6 +804,25 @@ export interface WorkflowGraphProps {
   /** Click handler for a node (e.g. open a detail drawer). Absent ⇒ nodes are
    *  non-interactive on click. */
   onNodeClick?: (nodeId: string, data: WfNodeData) => void;
+  /**
+   * Editing gestures. Supplying `onEdgeConnect` turns the canvas from a diagram
+   * into an EDITOR: node handles become visible and draggable, an edge can be
+   * selected and removed with Delete/Backspace, and clicking one asks to edit
+   * its guard. Omit all three — the default — and the graph stays the read-only
+   * visualisation it has always been.
+   *
+   * Every callback speaks node ids (`actionNodeId`, `branchNodeId`), never
+   * positions: this component reports the gesture, and turning it into a
+   * definition edit is the host's job — it owns the YAML, and only it knows
+   * what a `needs` row is. Fan-out and trigger edges never fire any of these
+   * ({@link isEditableEdge}), because neither is a row in anyone's topology.
+   *
+   * The canvas holds no pending state: an accepted edit comes back as new
+   * `yaml` + `edges`, and a rejected one simply never arrives.
+   */
+  onEdgeConnect?: (sourceId: string, targetId: string) => void;
+  onEdgeDelete?: (sourceId: string, targetId: string) => void;
+  onEdgeClick?: (sourceId: string, targetId: string) => void;
 }
 
 export function WorkflowGraph({
@@ -786,7 +836,14 @@ export function WorkflowGraph({
   maxNodeVisits,
   selectedNodeId,
   onNodeClick,
+  onEdgeConnect,
+  onEdgeDelete,
+  onEdgeClick,
 }: WorkflowGraphProps) {
+  // One gesture turns the canvas into an editor, so one prop decides it: a host
+  // that cannot accept a new connection has no business showing a drag handle
+  // for one. The other two callbacks refine an editor, they don't create one.
+  const editable = onEdgeConnect !== undefined;
   const colorMode = useColorMode();
   const isPreview = variant === "preview";
   // The proposal-card preview is always compact (a small thumbnail); the full
@@ -828,10 +885,14 @@ export function WorkflowGraph({
   // status; the active hop animates). Derived from the STABLE structural edges +
   // nodeState, so a poll/SSE tick repaints edge color/flow without touching node
   // layout. Neutral throughout the static definition/preview view (no nodeState).
-  const styledEdges = useMemo(
-    () => buildStyledEdges(structural.edges, nodeState, maxNodeVisits),
-    [structural.edges, nodeState, maxNodeVisits],
-  );
+  const styledEdges = useMemo(() => {
+    const styled = buildStyledEdges(structural.edges, nodeState, maxNodeVisits);
+    if (!editable) return styled;
+    // `deletable` is React Flow's own gate on the Delete key, so setting it
+    // here keeps a fork or trigger edge from ever reaching onEdgesDelete —
+    // belt to the suspenders the handler wears anyway.
+    return styled.map((e) => ({ ...e, deletable: isEditableEdge(e) }));
+  }, [structural.edges, nodeState, maxNodeVisits, editable]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(styledEdges);
@@ -1009,6 +1070,7 @@ export function WorkflowGraph({
     <DirectionContext.Provider value={direction}>
       <DensityContext.Provider value={displayCompact}>
       <SelectedNodeContext.Provider value={selectedNodeId}>
+      <ConnectableContext.Provider value={editable}>
       <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
       <ReactFlow
         nodes={nodes}
@@ -1029,16 +1091,52 @@ export function WorkflowGraph({
         // read-only so its layout can't be disturbed. Both variants pan + zoom so
         // a dense graph is explorable.
         nodesDraggable={!isPreview}
-        nodesConnectable={false}
-        // The graph is a read-only run VISUALIZATION: dragging (full variant) and
-        // pan/zoom aid exploration, but a node/edge must never be deletable or
-        // reconnectable. With onNodesChange/onEdgesChange wired (needed so React
-        // Flow can persist measured sizes), the Delete/Backspace key would
-        // otherwise remove a selected node from the view until the next re-seed.
-        deleteKeyCode={null}
+        nodesConnectable={editable}
+        // Without editing callbacks the graph is a read-only run VISUALIZATION:
+        // dragging (full variant) and pan/zoom aid exploration, but a node/edge
+        // must never be deletable or reconnectable. With onNodesChange/
+        // onEdgesChange wired (needed so React Flow can persist measured sizes),
+        // the Delete/Backspace key would otherwise remove a selected node from
+        // the view until the next re-seed.
+        //
+        // An EDITOR arms the delete key and lets edges take focus — but only for
+        // edges, never nodes: a node is a `do` entry, and removing one is a list
+        // edit the step list owns, not a canvas gesture. `edgesReconnectable`
+        // stays off because dragging an existing edge's end is two edits at once
+        // (a delete and an add) with no way to express a half-applied one.
+        deleteKeyCode={editable ? ["Backspace", "Delete"] : null}
         edgesReconnectable={false}
         elementsSelectable={!isPreview}
-        edgesFocusable={false}
+        edgesFocusable={editable}
+        onConnect={
+          editable
+            ? (connection) => {
+                if (connection.source && connection.target) {
+                  onEdgeConnect(connection.source, connection.target);
+                }
+              }
+            : undefined
+        }
+        onEdgesDelete={
+          editable
+            ? (deleted) => {
+                for (const edge of deleted) {
+                  if (isEditableEdge(edge)) {
+                    onEdgeDelete?.(edge.source, edge.target);
+                  }
+                }
+              }
+            : undefined
+        }
+        onEdgeClick={
+          editable
+            ? (_event, edge) => {
+                if (isEditableEdge(edge)) {
+                  onEdgeClick?.(edge.source, edge.target);
+                }
+              }
+            : undefined
+        }
         // Wheel-scroll passes through to the page (it doesn't hijack the page to
         // zoom); pan by dragging, zoom via the Controls buttons or pinch.
         zoomOnScroll={false}
@@ -1072,6 +1170,7 @@ export function WorkflowGraph({
         )}
       </ReactFlow>
       </div>
+      </ConnectableContext.Provider>
       </SelectedNodeContext.Provider>
       </DensityContext.Provider>
     </DirectionContext.Provider>

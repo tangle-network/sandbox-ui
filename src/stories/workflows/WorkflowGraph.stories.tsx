@@ -1,5 +1,5 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   actionNodeId,
   WorkflowGraphLazy,
@@ -793,4 +793,60 @@ do:
       />
     </GraphPanel>
   ),
+};
+
+/**
+ * The canvas as an EDITOR. Supplying `onEdgeConnect` is what arms it: handles
+ * become visible and draggable, an edge takes focus and answers Delete, and
+ * clicking one asks to edit its guard. The gestures are reported as node ids —
+ * turning one into a definition edit is the host's job — so this harness just
+ * records what it was told, which is exactly the contract a consumer implements.
+ */
+// Two roots (a0 and a2), so the trigger fans out — which is both a realistic
+// shape and the one that makes the synthesized trigger edges visibly distinct
+// from the declared ones a host may actually edit.
+const EDITABLE_EDGES: WfEdgeSpec[] = [
+  { from: actionNodeId(0), to: actionNodeId(1), whenLabel: "risk == high" },
+  { from: actionNodeId(1), to: actionNodeId(3) },
+  { from: actionNodeId(2), to: actionNodeId(3) },
+  {
+    from: actionNodeId(3),
+    to: actionNodeId(4),
+    whenLabel: "verdict == approved",
+  },
+];
+
+function EditableHarness() {
+  const [log, setLog] = useState<string[]>([]);
+  const note = (line: string) => setLog((l) => [line, ...l].slice(0, 6));
+  return (
+    <div className="flex w-[1000px] max-w-full flex-col gap-3">
+      <GraphPanel title="Graph — editable" height="h-[26rem]">
+        <WorkflowGraphLazy
+          yaml={GRAPH_BODY}
+          edges={EDITABLE_EDGES}
+          variant="full"
+          defaultCompact={false}
+          className="h-full w-full"
+          onEdgeConnect={(source, target) => note(`connect ${source} → ${target}`)}
+          onEdgeDelete={(source, target) => note(`delete ${source} → ${target}`)}
+          onEdgeClick={(source, target) => note(`guard ${source} → ${target}`)}
+          onNodeClick={(nodeId) => note(`select ${nodeId}`)}
+        />
+      </GraphPanel>
+      <div
+        data-testid="gesture-log"
+        className="rounded-lg border border-border bg-card p-3 font-mono text-text-muted text-xs"
+      >
+        {log.length === 0
+          ? "Drag a handle to connect · click an edge to guard it · select an edge and press Delete"
+          : log.map((line) => <div key={line}>{line}</div>)}
+      </div>
+    </div>
+  );
+}
+
+export const DeclaredEditable: Story = {
+  name: "Declared: editable canvas",
+  render: () => <EditableHarness />,
 };

@@ -13,9 +13,11 @@ import type { WfFlowEdge } from "./flow-graph";
 import { classifyOutput, NodeOutputBody } from "./node-output";
 import {
   buildStyledEdges,
+  ConnectableContext,
   DensityContext,
   DirectionContext,
   fitZoomCeiling,
+  isEditableEdge,
   SelectedNodeContext,
   WorkflowGraph,
   WorkflowNode,
@@ -798,5 +800,73 @@ describe("WorkflowNode selection", () => {
     // The compact node's box spans tile + name; the tile is the visual node, and
     // it is the one that carries the ring (its style pins the tile's own size).
     expect(outlined?.getAttribute("style")).toContain(`width: ${COMPACT_TILE}px`);
+  });
+});
+
+describe("isEditableEdge", () => {
+  it("accepts a declared edge between two steps", () => {
+    expect(
+      isEditableEdge({ source: "a0", data: { kind: "spine" } }),
+    ).toBe(true);
+  });
+
+  it("refuses a fan-out edge", () => {
+    // A fork edge is derived from a structural action's own config (a
+    // parallel's branches, a foreach's template). It is not a row in anyone's
+    // declared topology, so there is nothing for a delete to remove.
+    expect(isEditableEdge({ source: "a0", data: { kind: "fork" } })).toBe(false);
+  });
+
+  it("refuses an edge out of any trigger", () => {
+    // A trigger edge is what "nothing points at this node" RENDERS as — it is
+    // synthesized, not declared. Deleting one would ask the host to remove an
+    // edge the definition never contained.
+    expect(isEditableEdge({ source: "trigger", data: { kind: "spine" } })).toBe(
+      false,
+    );
+    // …including the later entries of a list-form `on:`.
+    expect(
+      isEditableEdge({ source: "trigger:2", data: { kind: "spine" } }),
+    ).toBe(false);
+  });
+
+  it("does not mistake a step whose id merely starts with the trigger word", () => {
+    expect(
+      isEditableEdge({ source: "triggerish", data: { kind: "spine" } }),
+    ).toBe(true);
+  });
+});
+
+describe("WorkflowNode connection handles", () => {
+  const handles = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll<HTMLElement>(".react-flow__handle"));
+
+  function renderAt(connectable: boolean) {
+    return render(
+      <ReactFlowProvider>
+        <ConnectableContext.Provider value={connectable}>
+          <WorkflowNode
+            {...({ id: "a0", data: BASE } as NodeProps<Node<WfNodeData>>)}
+          />
+        </ConnectableContext.Provider>
+      </ReactFlowProvider>,
+    );
+  }
+
+  it("hides its handles on a read-only canvas", () => {
+    // The diagram reads as edges meeting the node body; a visible dot on every
+    // node is noise when nothing can be dragged.
+    const found = handles(renderAt(false).container);
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((h) => h.className.includes("opacity-0"))).toBe(true);
+  });
+
+  it("shows them once the canvas can be edited", () => {
+    // A handle you cannot see is a handle you cannot find, and dragging one IS
+    // the connect gesture.
+    const found = handles(renderAt(true).container);
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((h) => h.className.includes("opacity-0"))).toBe(false);
+    expect(found.every((h) => h.className.includes("opacity-100"))).toBe(true);
   });
 });

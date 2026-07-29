@@ -146,6 +146,13 @@ export function buildFlowGraph(
         position: n.position,
         width: n.width,
         height: n.height,
+        // A node is a `do` entry, and removing one is a list edit — never a
+        // canvas gesture. This matters most on an EDITABLE canvas, where the
+        // delete key is armed for edges: React Flow deletes a selected node
+        // together with every edge touching it, so a node left deletable would
+        // vanish from the canvas AND report each of its edges as removed,
+        // asking the host to drop declared edges nobody touched.
+        deletable: false,
         // Fix the DOM box to the laid-out size so the card can't grow past its
         // reserved space and overlap a neighbour (see model.ts nodeHeight).
         style: { width: n.width, height: n.height },

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.93.1
+
+### Workflows
+
+- **A node opens from the keyboard.** React Flow makes a node tabbable but gives it no activation key, so a keyboard user could reach every node in the graph and open none of them — the detail panel was mouse-only, on every consumer of this component. Enter and Space on a focused node now fire `onNodeClick` exactly as a click does, and consume the key both ways — `preventDefault` so Space doesn't scroll the page out from under the press, and `stopPropagation` so a key already spent on opening a node doesn't also reach the host around the graph (a form that submits on Enter shouldn't fire when the user meant "open this node"). Both only once a node actually resolves: a press on canvas chrome, or on nothing, is not the graph's to swallow. Armed only when the host supplies `onNodeClick`: a graph with nothing to activate into must not swallow Enter/Space from the page.
+
 ## 0.93.0
 
 ### Workflows

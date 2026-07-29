@@ -31,6 +31,7 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import {
   createContext,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   useCallback,
   useContext,
@@ -1061,6 +1062,34 @@ export function WorkflowGraph({
     [onNodeClick],
   );
 
+  /**
+   * Enter/Space on a focused node opens its detail, exactly as a click does.
+   * React Flow makes a node TABBABLE but gives it no activation key of its own,
+   * so a keyboard user could reach every node and open none of them — the
+   * detail panel was mouse-only.
+   *
+   * The handler sits on the flow wrapper and reads the node id off the focused
+   * element, because React Flow reports keys from the canvas rather than
+   * per-node: `onNodeClick` has no keyboard counterpart to hang this on.
+   */
+  const handleNodeKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      if (!(event.target instanceof HTMLElement)) return;
+      const nodeId = event.target
+        .closest(".react-flow__node")
+        ?.getAttribute("data-id");
+      if (!nodeId) return;
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+      // Space scrolls the page by default, and Enter would otherwise also
+      // reach whatever the node renders.
+      event.preventDefault();
+      onNodeClick?.(node.id, node.data);
+    },
+    [nodes, onNodeClick],
+  );
+
   if (structural.error || structural.nodes.length === 0) {
     return (
       <div
@@ -1089,6 +1118,9 @@ export function WorkflowGraph({
           rfRef.current = inst;
         }}
         onNodeClick={onNodeClick ? handleNodeClick : undefined}
+        // React Flow forwards unknown props onto its wrapper, so a keydown
+        // from a focused node bubbles here.
+        onKeyDown={onNodeClick ? handleNodeKeyDown : undefined}
         fitView
         fitViewOptions={{ ...FIT_VIEW, maxZoom: fitZoomCeiling(compact) }}
         proOptions={{ hideAttribution: true }}

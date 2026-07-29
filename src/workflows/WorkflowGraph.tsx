@@ -1080,7 +1080,11 @@ export function WorkflowGraph({
         .closest(".react-flow__node")
         ?.getAttribute("data-id");
       if (!nodeId) return;
-      const node = nodes.find((n) => n.id === nodeId);
+      // Read through the ref the tween already maintains, so this callback keeps
+      // a stable identity (like its sibling handleNodeClick) instead of being
+      // rebuilt on every run-state tick. An event fires after commit, so the ref
+      // holds the nodes currently on screen — which is the set the press means.
+      const node = nodesRef.current.find((n) => n.id === nodeId);
       if (!node) return;
       // The key is CONSUMED here, so say so both ways: preventDefault stops
       // Space scrolling the page, and stopPropagation keeps a key we have
@@ -1092,7 +1096,7 @@ export function WorkflowGraph({
       event.stopPropagation();
       onNodeClick?.(node.id, node.data);
     },
-    [nodes, onNodeClick],
+    [onNodeClick],
   );
 
   if (structural.error || structural.nodes.length === 0) {

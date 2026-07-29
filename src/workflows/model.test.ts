@@ -1183,9 +1183,15 @@ do:
     );
   });
 
-  it("never throws on a graph that is one large cycle", () => {
-    // No node has in-degree 0, so there is no entry point to walk from; the
-    // classifier must still terminate and rank every node.
+  it("lays out a cycle that has no entry point at all", () => {
+    // No node in the cycle has in-degree 0, so there is nowhere to start a walk
+    // from and no trigger edge is synthesized into it.
+    //
+    // Asserting DISTINCT layers, not merely finite ones: the failure this
+    // guards is every node collapsing to rank 0 and stacking on top of each
+    // other, and finite-but-identical coordinates would sail through a
+    // finiteness check. Removing all DFS back edges always leaves a DAG, and a
+    // finite DAG always has a source, so the sweep drains — this pins that.
     const { nodes, error } = buildWorkflowGraph(FOUR, {
       edges: [
         { from: actionNodeId(0), to: actionNodeId(1) },
@@ -1196,6 +1202,43 @@ do:
     expect(error).toBeNull();
     expect(nodes).toHaveLength(5);
     expect(nodes.every((n) => Number.isFinite(n.position.x))).toBe(true);
+    const cycleX = ["a0", "a1", "a2"].map(
+      (id) => nodes.find((n) => n.id === id)?.position.x,
+    );
+    expect(new Set(cycleX).size).toBe(3);
+  });
+
+  it("ranks a cycle whose entry node also carries an outside edge", () => {
+    // a1 has TWO incoming edges — one from the entry, one closing the loop — so
+    // breaking the cycle still leaves it with in-degree 1. The sweep must reach
+    // it from a0 rather than stalling.
+    const { nodes } = buildWorkflowGraph(FOUR, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1) },
+        { from: actionNodeId(1), to: actionNodeId(2) },
+        { from: actionNodeId(2), to: actionNodeId(1) },
+      ],
+    });
+    const x = (id: string) => nodes.find((n) => n.id === id)?.position.x ?? Number.NaN;
+    expect(x("a1")).toBeGreaterThan(x("a0"));
+    expect(x("a2")).toBeGreaterThan(x("a1"));
+  });
+
+  it("lays out two disjoint cycles independently", () => {
+    // Two components, neither reachable from the other; each must drain on its
+    // own rather than one stalling the sweep for both.
+    const { nodes, error } = buildWorkflowGraph(FOUR, {
+      edges: [
+        { from: actionNodeId(0), to: actionNodeId(1) },
+        { from: actionNodeId(1), to: actionNodeId(0) },
+        { from: actionNodeId(2), to: actionNodeId(3) },
+        { from: actionNodeId(3), to: actionNodeId(2) },
+      ],
+    });
+    expect(error).toBeNull();
+    const x = (id: string) => nodes.find((n) => n.id === id)?.position.x ?? Number.NaN;
+    expect(x("a0")).not.toBe(x("a1"));
+    expect(x("a2")).not.toBe(x("a3"));
   });
 });
 
@@ -1244,5 +1287,63 @@ do:
     expect(script.data.subtitle).toBe("TypeScript");
     expect(snapshot.data.subtitle).toBe("Capture a sandbox");
     expect(trace.data.subtitle).toBe("Default analysts");
+  });
+});
+
+describe("buildWorkflowGraph — the edge-label lane", () => {
+  const LABELLED = `
+on:
+  webhook: {}
+do:
+  - notify:
+      url: https://example.com/a
+  - notify:
+      url: https://example.com/b
+`;
+  const guard = [
+    { from: actionNodeId(0), to: actionNodeId(1), whenLabel: "status == ok" },
+  ];
+  /** Distance between the two action layers, along the flow axis. */
+  const pitch = (graph: ReturnType<typeof buildWorkflowGraph>) => {
+    const a0 = graph.nodes.find((n) => n.id === "a0");
+    const a1 = graph.nodes.find((n) => n.id === "a1");
+    return (a1?.position.x ?? 0) - (a0?.position.x ?? 0);
+  };
+
+  it("widens the layer pitch only when an edge actually carries a label", () => {
+    // The chip sits in the corridor BETWEEN two layers, so the corridor has to
+    // hold one. Unlabelled graphs keep their ordinary pitch — the lane is not a
+    // blanket change to every graph's spacing.
+    const plain = pitch(buildWorkflowGraph(LABELLED));
+    const labelled = pitch(buildWorkflowGraph(LABELLED, { edges: guard }));
+    expect(labelled).toBeGreaterThan(plain);
+  });
+
+  it("applies the same lane in COMPACT, where the chip is the same size", () => {
+    // A compact graph pitches its layers at 20px, and the chip does not shrink
+    // with the density — so compact is precisely the case that needs the lane
+    // most. The jump is large and deliberate: a chip that overlaps the nodes
+    // either side is the defect this reserves against, and a lane narrower than
+    // the chip would reintroduce it.
+    const compactPlain = pitch(buildWorkflowGraph(LABELLED, { compact: true }));
+    const compactLabelled = pitch(
+      buildWorkflowGraph(LABELLED, { compact: true, edges: guard }),
+    );
+    expect(compactLabelled).toBeGreaterThan(compactPlain);
+    // Wide enough for the chip's own max width (max-w-40 = 160px).
+    expect(compactLabelled).toBeGreaterThanOrEqual(160);
+  });
+
+  it("reserves the lane for a cycle badge too, not only a guard", () => {
+    // A back edge draws a ↺ badge even with no guard on it.
+    const cyclePitch = pitch(
+      buildWorkflowGraph(LABELLED, {
+        edges: [
+          { from: actionNodeId(0), to: actionNodeId(1) },
+          { from: actionNodeId(1), to: actionNodeId(0) },
+        ],
+      }),
+    );
+    expect(cyclePitch).toBeGreaterThan(pitch(buildWorkflowGraph(LABELLED)));
   });
 });

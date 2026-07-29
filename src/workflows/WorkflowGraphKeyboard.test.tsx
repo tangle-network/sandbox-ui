@@ -21,6 +21,7 @@ type FlowProps = {
     key: string;
     target: EventTarget | null;
     preventDefault: () => void;
+    stopPropagation: () => void;
   }) => void;
   nodes?: { id: string }[];
 };
@@ -67,11 +68,14 @@ function focusedNode(id: string): HTMLElement {
   return inner;
 }
 
-/** A key press on `target`, shaped as React hands it to onKeyDown. */
+/** A key press on `target`, shaped as React hands it to onKeyDown. Returns the
+ *  two "we consumed this" signals so a test can assert they fire on the
+ *  activation path AND stay untouched on every path that ignores the key. */
 function press(key: string, target: EventTarget | null) {
   const preventDefault = vi.fn();
-  flowProps.onKeyDown?.({ key, target, preventDefault });
-  return preventDefault;
+  const stopPropagation = vi.fn();
+  flowProps.onKeyDown?.({ key, target, preventDefault, stopPropagation });
+  return { preventDefault, stopPropagation };
 }
 
 describe("keyboard node activation", () => {
@@ -92,14 +96,19 @@ describe("keyboard node activation", () => {
     // Space is the page-scroll key; activating a node must consume it.
     const onNodeClick = vi.fn();
     render(<WorkflowGraph yaml={YAML} onNodeClick={onNodeClick} />);
-    expect(press(" ", focusedNode("a0"))).toHaveBeenCalled();
+    expect(press(" ", focusedNode("a0")).preventDefault).toHaveBeenCalled();
   });
 
   it("ignores keys that are not activation keys", () => {
     const onNodeClick = vi.fn();
     render(<WorkflowGraph yaml={YAML} onNodeClick={onNodeClick} />);
     const node = focusedNode("a0");
-    for (const key of ["a", "Tab", "Escape", "ArrowRight"]) press(key, node);
+    for (const key of ["a", "Tab", "Escape", "ArrowRight"]) {
+      const consumed = press(key, node);
+      // A key we do not act on must reach the page untouched.
+      expect(consumed.preventDefault).not.toHaveBeenCalled();
+      expect(consumed.stopPropagation).not.toHaveBeenCalled();
+    }
     expect(onNodeClick).not.toHaveBeenCalled();
   });
 
@@ -110,16 +119,23 @@ describe("keyboard node activation", () => {
     render(<WorkflowGraph yaml={YAML} onNodeClick={onNodeClick} />);
     const loose = document.createElement("button");
     document.body.appendChild(loose);
-    press("Enter", loose);
-    press("Enter", null);
+    for (const target of [loose, null]) {
+      const consumed = press("Enter", target);
+      // Swallowing here would eat Enter/Space from the canvas chrome and the
+      // page around it — the regression that would otherwise pass unnoticed.
+      expect(consumed.preventDefault).not.toHaveBeenCalled();
+      expect(consumed.stopPropagation).not.toHaveBeenCalled();
+    }
     expect(onNodeClick).not.toHaveBeenCalled();
   });
 
   it("ignores a node id the graph does not have", () => {
     const onNodeClick = vi.fn();
     render(<WorkflowGraph yaml={YAML} onNodeClick={onNodeClick} />);
-    press("Enter", focusedNode("a99"));
+    const consumed = press("Enter", focusedNode("a99"));
     expect(onNodeClick).not.toHaveBeenCalled();
+    expect(consumed.preventDefault).not.toHaveBeenCalled();
+    expect(consumed.stopPropagation).not.toHaveBeenCalled();
   });
 
   it("arms no key handler when the host has no click handler", () => {
@@ -127,5 +143,18 @@ describe("keyboard node activation", () => {
     // it must not swallow Enter/Space from the page.
     render(<WorkflowGraph yaml={YAML} />);
     expect(flowProps.onKeyDown).toBeUndefined();
+  });
+});
+
+describe("keyboard activation consumes the key", () => {
+  it("stops an activated key reaching the host around the graph", () => {
+    // Once the press has opened a node it is spent. A host that submits a form
+    // on Enter must not also see it — the user meant "open this node".
+    const onNodeClick = vi.fn();
+    render(<WorkflowGraph yaml={YAML} onNodeClick={onNodeClick} />);
+    const consumed = press("Enter", focusedNode("a0"));
+    expect(onNodeClick).toHaveBeenCalledTimes(1);
+    expect(consumed.preventDefault).toHaveBeenCalled();
+    expect(consumed.stopPropagation).toHaveBeenCalled();
   });
 });

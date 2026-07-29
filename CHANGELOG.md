@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.93.0
+
+### Workflows
+
+- **The graph can draw a topology it is told, instead of only the one it infers.** `buildWorkflowGraph` derived edges from `do`-list position — a linear spine — which is exactly right for a workflow that runs as one and wrong for any workflow whose definition declares its own (`needs`, guards, cycles). A new `edges` option (`WfEdgeSpec[]`) replaces the inferred spine with the declared one: guarded edges carry a `whenLabel` chip, cycle-closing edges are detected and rendered dashed with the run's visit budget (`maxNodeVisits`), and the layout is **re-ranked by longest path** so a diamond reads as a diamond rather than declared edges drawn over a chain's positions. Fan-out edges survive a declared topology (a branch leaf is the graph's own node, which no declared spec addresses); the positional join does not, because what follows a fan-out is then declared rather than inferred. An edge naming a step the definition has no slot for is a loud `error`, never a quiet fall back to the spine — drawing edges the run will not take is worse than refusing to draw. Guards arrive pre-summarized, so this package never acquires a second, drifting interpretation of a condition schema it does not own.
+
+- **Node ids are now exported instead of re-derived.** `a${index}`, `a${i}-b${j}` and `"trigger"` were internals that consumers had to reconstruct to key a run overlay or address a node — and `WfNode.id` is a bare `string`, so a rename here type-checked cleanly at every call site and simply lost their edges. `TRIGGER_NODE_ID`, `triggerNodeId`, `triggerNodeIndex`, `actionNodeId` and `branchNodeId` are the format's only spelling, asserted against a real build so a drift fails in this package rather than silently in a consumer.
+
+- **A list-form `on:` draws one node per subscription.** `on:` accepts one trigger or a list of them with OR semantics; modelled as a single node, a three-subscription workflow rendered one unlabelled "Trigger" and hid two of the three ways it could start. Each entry is now its own node in the trigger's layer, and every one of them edges into the body. Entry 0 keeps the plain `trigger` id, so a single-trigger graph — and any host that persisted that id — is unchanged. `on: []` is now "Empty workflow" rather than a zero-node layout whose min/max over an empty set produced NaN positions.
+
+- **`script.run`, `sandbox.snapshot`, `trace.analyze` and `webhook` are named steps.** All four fell to the generic branch and read as their humanized identifier with no subtitle. They now carry a title, a subtitle that says what distinguishes one from another (a script's granted connections, the sandbox a snapshot captures, the analysts a trace runs), a description, and their own glyph.
+
+- **The canvas can edit the topology it draws.** `onEdgeConnect` turns the graph from a diagram into an editor: node handles become visible and draggable, an edge takes focus and answers Delete/Backspace, and `onEdgeClick` asks to edit a guard. Every callback speaks node ids and the canvas holds no pending state — an accepted edit returns as new `yaml` + `edges`, a rejected one simply never arrives — so this package reports gestures and never has to know what a `needs` row is. Fan-out and trigger edges fire none of them: neither is a row in anyone's declared topology, so offering the gesture would invite an edit with nowhere to land. Omit the callbacks and the graph stays exactly the read-only visualisation it has always been; nodes remain undeletable and unconnectable either way, because a node is a `do` entry and removing one is a list edit, not a canvas gesture.
+
+- **`selectedNodeId` reflects the host's selection.** A consumer that opened a node's detail panel had no way to show which node it belonged to. Carried by context rather than merged into node data, so a selection change does not rebuild the node objects the run-state merge works to keep stable.
+
+- **Edge labels get a corridor they fit in.** A chip sits between two layers, and at the ordinary separations (72 expanded, 20 compact) it was several times the gap it occupied and spilled across the nodes either side. A graph with labelled edges now pitches its layers at `EDGE_LABEL_LANE`, and a guarded cycle's two chips stack rather than sit side by side — the same reservation principle the node heights already follow. Graphs without labelled edges are unaffected.
+
 ## 0.92.0
 
 ### Dashboard

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.91.5
+
+### Integrations
+
+- **The loading skeleton now reserves exactly the space it becomes.** It was smaller than the panel it turned into, so the page dropped every time the catalog landed — measured in Chromium at the same 12 tiles on both sides, 332.69px vs 386.69px on desktop (+54px) and 436px vs 588px on mobile (+152px). Two causes, both the skeleton guessing geometry rather than rendering it: it omitted the search and sort row entirely, and its tile was a bare `aspect-square` while a real tile's content (48px logo, an 8px gap, a fixed 32px label, 12px padding each side = 112px) beats the square once the column is narrower than that. The toolbar is now one component rendered by both states, and the skeleton tile carries the same box class and the same logo/label blocks as a provider tile, so all three read one shared constant. Both states now measure identically at both breakpoints. Adds `skeletonCount` (default 12) for consumers that know their catalog size.
+
+## 0.91.4
+
 ## 0.91.3
 
 ### Workspace

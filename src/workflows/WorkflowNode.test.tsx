@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   buildWorkflowGraph,
   COMPACT_TILE,
+  OUTPUT_ROWS,
   type WfNodeData,
   type WfNodeState,
 } from "./model";
@@ -459,9 +460,11 @@ do:
   it("clamps an over-long output preview before it reaches the DOM", () => {
     const long = "y".repeat(500);
     renderNode({ ...BASE, state: { status: "succeeded", outputPreview: long } });
-    // The full payload is never rendered; only the bounded preview is.
+    // The full payload is never rendered; only the bounded preview is. The bound
+    // is OUTPUT_PREVIEW_CHARS — spelled out so a change to it is a deliberate
+    // edit here too, since lowering it silently drops text the card has room for.
     expect(screen.queryByText(long)).toBeNull();
-    expect(screen.getByText(`${"y".repeat(200)}…`)).toBeTruthy();
+    expect(screen.getByText(`${"y".repeat(240)}…`)).toBeTruthy();
   });
 
   it("renders no error element for a failed node with no error, and suppresses its output", () => {
@@ -594,10 +597,11 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(screen.getAllByText("Failed")).toHaveLength(1);
   });
 
-  it("keeps a wide JSON output within the 2-line budget (entries + marker <= 2)", () => {
-    // A 5-field object at the card's 2-line output budget must render at most one
-    // key row plus the truncation marker — never two rows AND a marker (3 lines),
-    // which would clip or push into the footer of the fixed-height card.
+  it("keeps a wide JSON output within its line budget (entries + marker <= OUTPUT_ROWS)", () => {
+    // An object with more fields than fit must spend its LAST line on the
+    // truncation marker, so it renders at most OUTPUT_ROWS - 1 key rows. Rows and
+    // marker together exceeding the budget is what clips the well or pushes it
+    // into the footer of the fixed-height card.
     const { container } = renderNode({
       ...BASE,
       state: {
@@ -605,7 +609,10 @@ describe("WorkflowNode — status footer + content-aware output", () => {
         outputPreview: '{"a":1,"b":2,"c":3,"d":4,"e":5}',
       },
     });
-    expect(container.querySelectorAll("dt")).toHaveLength(1);
+    // Derived from OUTPUT_ROWS rather than written as a literal, so retuning the
+    // budget moves this expectation with it instead of failing for the wrong
+    // reason — the invariant is "rows + marker fits", not "there are two rows".
+    expect(container.querySelectorAll("dt")).toHaveLength(OUTPUT_ROWS - 1);
     expect(screen.getByText("…")).toBeTruthy();
   });
 

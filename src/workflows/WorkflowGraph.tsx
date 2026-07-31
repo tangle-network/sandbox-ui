@@ -43,6 +43,8 @@ import {
 import {
   COMPACT_NODE_SIZE,
   COMPACT_TILE,
+  OUTPUT_PREVIEW_CHARS,
+  OUTPUT_ROWS,
   triggerNodeIndex,
   type WfDirection,
   type WfEdgeKind,
@@ -401,12 +403,16 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
     // a lone-surrogate-only preview stripped to "").
     const trimmed = source.text.trim();
     if (!trimmed) return null;
+    // Bounded so the LINE clamp is what decides how much shows, rather than the
+    // text running out first: the character bound keeps an oversized payload out
+    // of the DOM and nothing more.
+    //
     // Flatten markdown ONLY for an agent's own answer, which is the thing that
     // reads as a word dump. An error (a stack trace, a diff, a shell glob) and a
     // non-agent node's output (an API response body) are not markdown, and
     // condensing them REWRITES them — see classifyOutput.
     const shape = classifyOutput(
-      clampPreview(trimmed),
+      clampPreview(trimmed, OUTPUT_PREVIEW_CHARS),
       isAgent && source.tone !== "error",
     );
     return shape.kind === "empty"
@@ -614,7 +620,7 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
             <NodeOutputBody
               shape={runOutput.shape}
               tone={runOutput.tone}
-              rows={2}
+              rows={OUTPUT_ROWS}
             />
           </div>
         )}

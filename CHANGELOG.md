@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.94.0
+
+### Workflows
+
+- **A node's output preview reads three lines instead of two.** The card was never short of SPACE so much as it was throwing away text it already held: the preview was bounded twice — once at 200 characters, then again at a two-line clamp — and two lines of a 292px card hold roughly half of what the host had already handed it, so a reader saw about half the answer. The body now clamps to three lines, and the character bound is raised to sit comfortably above what those lines can show, so the clamp decides what is visible and the bound does nothing but keep an oversized payload out of the DOM. The JSON branch gains the most: its budget is rows MINUS the truncation marker, so at two rows a seven-field object rendered a single field and an ellipsis, where it now renders two fields. A growing or content-sized card was not on the table and the reason is worth stating — the graph is laid out from the definition before any run state exists, so a card sized to its own output would re-lay-out the whole graph on every stream tick.
+
+- **The line budget and the height reserved for it are now one pair, not two literals.** `OUTPUT_ROWS` and the layout's reservation (72 → 89) live together and reference each other, because they are one decision written twice: raise the clamp without the reservation and the card claims a line it has no room to draw, and the extra line is silently clipped. The reservation records the measurement it was set from — prose runs 3 × 15.125px to an 85px well, JSON 3 × 14.4375px plus its `space-y-0.5` gaps to 86px — so the taller branch is stated rather than assumed, and a font change that invalidates it can be checked against the numbers. A story fixture renders both branches at full budget, which is the case every previous fixture's one-liner left untested.
+
 ## 0.93.1
 
 ### Workflows

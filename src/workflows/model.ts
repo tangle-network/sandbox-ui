@@ -287,9 +287,52 @@ const HEADER_ROW = 34;
 const DESCRIPTION_ROW = 40;
 /** The single-line run metrics (cost · tokens). */
 const META_ROW = 27;
-/** The output block: a framed well holding an "Output"/"Error" caption over a
- *  two-line, clamped content-aware body (JSON key/value, prose, or monospace). */
-const OUTPUT_ROW = 72;
+/**
+ * Lines of output body the card shows, and the reservation that holds them.
+ *
+ * The two are ONE decision written twice, so they live together: the card clamps
+ * to {@link OUTPUT_ROWS} and the layout reserves {@link OUTPUT_ROW} for exactly
+ * that many. Raise the clamp without the reservation and the extra line renders
+ * into a box with no room for it, so it is clipped — the card would claim three
+ * lines and show two.
+ *
+ * Three rather than two because the card was never short of SPACE so much as it
+ * was throwing away text it already held: the host hands it up to
+ * {@link OUTPUT_PREVIEW_CHARS} characters, and two lines of a 292px card hold
+ * roughly half of that. The JSON branch felt it worst — its budget is rows
+ * MINUS the overflow marker, so at two rows a seven-field object rendered a
+ * single field and an ellipsis.
+ */
+export const OUTPUT_ROWS = 3;
+/**
+ * The output block: a framed well holding an "Output"/"Error" caption over an
+ * {@link OUTPUT_ROWS}-line, clamped content-aware body (JSON key/value, prose,
+ * or monospace).
+ *
+ * Sized to the TALLER of the two bodies, measured in the browser at the default
+ * font config (the `OutputAtFullBudget` story renders both at full budget):
+ *
+ *   prose  3 x 15.125px line-height                    = 45px body → 85px well
+ *   json   3 x 14.4375px + 2 x 2px (`space-y-0.5`)     = 47px body → 86px well
+ *
+ * JSON wins despite the smaller type because its rows are separated where prose
+ * runs solid — which is why the reservation is set off it, and why eyeballing
+ * the prose case alone would under-size it. The well is the body plus the
+ * caption, the `py-1.5` padding, the border and the `mt-2` above it; 89 leaves
+ * 3px over the taller branch, the same headroom the neighbouring text bands
+ * carry against a fractional rendered line.
+ */
+const OUTPUT_ROW = 89;
+/**
+ * Characters of host-supplied preview the card admits before the line clamp gets
+ * it. This bound exists to keep an oversized payload out of the DOM, NOT to
+ * decide what is visible — the line clamp does that — so it is set comfortably
+ * above what {@link OUTPUT_ROWS} lines of a {@link NODE_W}-wide card can hold
+ * (roughly 50 characters a line). Set it at or below what the card can show and
+ * it stops being a safety bound and starts silently deleting text the card had
+ * the room for, which is the state this replaced.
+ */
+export const OUTPUT_PREVIEW_CHARS = 240;
 /** The run status FOOTER pinned to the card's bottom: a top border (1px), the
  *  progress bar (`h-1`, 4px), and a `py-1` caption row whose line box is pinned
  *  (so a node with no rounds/elapsed to report keeps the same footer as one that

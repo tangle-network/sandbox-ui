@@ -6,6 +6,7 @@ import {
   COMPACT_NODE_SIZE,
   COMPACT_NODE_SIZE_RUN,
   COMPACT_TILE,
+  OUTPUT_ROWS,
   TRIGGER_NODE_ID,
   triggerNodeId,
   triggerNodeIndex,
@@ -487,6 +488,45 @@ do:
     // too — the card clamps to a line count and the layout reserves for exactly
     // that many, and the two drifting apart is what clips the last line.
     expect(R.a0.height).toBe(20 + 34 + 40 + 27 + 89 + 28);
+  });
+
+  it("reserves enough output height for every line the card clamps to", () => {
+    // The drift this whole pairing exists to prevent: raise OUTPUT_ROWS without
+    // raising the reservation and the card clamps to a line the box has no room
+    // to draw, so the last line is silently clipped. The story renders the case,
+    // but a story only catches it if someone looks — this fails the build.
+    //
+    // Asserted on the ARITHMETIC, not on rendered pixels: jsdom performs no
+    // layout, so `offsetHeight`/`scrollHeight` are 0 there and a height
+    // assertion against the DOM would pass no matter how wrong the reservation
+    // got. These per-line figures are the ones measured in the browser and
+    // recorded on OUTPUT_ROW.
+    //
+    // The JSON branch sets the bound: its rows are 14.4375px with a 2px
+    // `space-y-0.5` between them, which totals higher than prose's solid
+    // 15.125px lines from three rows up.
+    const WELL_CHROME = 39.5; // mt-2(8) + border(2) + py-1.5(12) + caption+mb-1(17.5)
+    const JSON_ROW = 14.4375;
+    const JSON_ROW_GAP = 2;
+    const needed =
+      WELL_CHROME + OUTPUT_ROWS * JSON_ROW + (OUTPUT_ROWS - 1) * JSON_ROW_GAP;
+
+    // Recover the reservation from the built node rather than exporting it: the
+    // height is the sum of the bands, and every other band is pinned above.
+    const yaml = `
+on:
+  schedule:
+    cron: "0 9 * * 1-5"
+do:
+  - agent.run:
+      model: zai/glm-5
+      prompt: Generate a fresh motivational quote for the team.
+`;
+    const agent = buildWorkflowGraph(yaml, { reserveRunState: true }).nodes.find(
+      (n) => n.id === actionNodeId(0),
+    );
+    const reserved = (agent?.height ?? 0) - (20 + 34 + 40 + 27 + 28);
+    expect(reserved).toBeGreaterThanOrEqual(needed);
   });
 
   it("routes a fan-out through fork+join edges and reconverges on the next layer", () => {

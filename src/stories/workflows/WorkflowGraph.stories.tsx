@@ -401,7 +401,52 @@ export const Mixed: Story = {
   ),
 };
 
+/**
+ * The output block at FULL budget — the case it is sized for, and the one every
+ * other fixture's one-liner leaves untested. `a0` carries a preview at the
+ * host's cap, so the body clamps on lines rather than running out of text; `a1`
+ * carries an object with more fields than fit, which is the branch that overflows
+ * first (its budget is rows MINUS the truncation marker).
+ *
+ * If a retune ever leaves the reservation short of what the card clamps to, this
+ * is the story where the last line visibly disappears.
+ */
+const LINEAR_FULL_OUTPUT: Record<string, WfNodeState> = {
+  trigger: done({ durationMs: undefined, costUsd: undefined }),
+  a0: done({
+    model: "zai/glm-5",
+    costUsd: 0.0031,
+    durationMs: 5100,
+    inputTokens: 240,
+    outputTokens: 118,
+    outputPreview:
+      "Reviewed the diff across 6 files. The retry loop in worker.ts never caps its backoff, so a sustained 500 from the upstream will spin at full rate and starve the queue. Everything else looks correct; the tests cover both the success and failure paths.",
+  }),
+  a1: done({
+    costUsd: undefined,
+    durationMs: 410,
+    outputPreview:
+      '{"status":200,"id":4821,"url":"https://httpbin.org/post","merged":true,"sha":"9f2c1ab","files_changed":6}',
+  }),
+};
+
 // --- Run-state views -------------------------------------------------------
+
+export const OutputAtFullBudget: Story = {
+  name: "Output — at full line budget",
+  render: () => (
+    <GraphPanel height="h-[32rem]">
+      <WorkflowGraphLazy
+        yaml={LINEAR}
+        variant="full"
+        defaultCompact={false}
+        className="h-full w-full"
+        nodeState={LINEAR_FULL_OUTPUT}
+        onNodeClick={() => {}}
+      />
+    </GraphPanel>
+  ),
+};
 
 export const LinearSucceeded: Story = {
   name: "Linear — succeeded run",

@@ -480,9 +480,13 @@ do:
     // The schedule trigger only fires: chrome(20) + header(34) + its description
     // (the cron expression, 40). No metrics, no output, no footer.
     expect(R.trigger.height).toBe(20 + 34 + 40);
-    // A run-state agent adds the metrics line(27), the output block(72), and the
+    // A run-state agent adds the metrics line(27), the output block(89), and the
     // bottom status footer(28) on top of chrome + header + description(prompt).
-    expect(R.a0.height).toBe(20 + 34 + 40 + 27 + 72 + 28);
+    // The 89 holds OUTPUT_ROWS lines of body under the caption; the literal is
+    // spelled out so changing the reservation has to be a deliberate edit here
+    // too — the card clamps to a line count and the layout reserves for exactly
+    // that many, and the two drifting apart is what clips the last line.
+    expect(R.a0.height).toBe(20 + 34 + 40 + 27 + 89 + 28);
   });
 
   it("routes a fan-out through fork+join edges and reconverges on the next layer", () => {

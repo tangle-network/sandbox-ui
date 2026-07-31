@@ -304,10 +304,24 @@ const META_ROW = 27;
  * single field and an ellipsis.
  */
 export const OUTPUT_ROWS = 3;
-/** The output block: a framed well holding an "Output"/"Error" caption over an
- *  {@link OUTPUT_ROWS}-line, clamped content-aware body (JSON key/value, prose,
- *  or monospace). Measured on the JSON branch, which is the taller of the two —
- *  its rows carry `space-y-0.5` between them where prose runs solid. */
+/**
+ * The output block: a framed well holding an "Output"/"Error" caption over an
+ * {@link OUTPUT_ROWS}-line, clamped content-aware body (JSON key/value, prose,
+ * or monospace).
+ *
+ * Sized to the TALLER of the two bodies, measured in the browser at the default
+ * font config (the `OutputAtFullBudget` story renders both at full budget):
+ *
+ *   prose  3 x 15.125px line-height                    = 45px body → 85px well
+ *   json   3 x 14.4375px + 2 x 2px (`space-y-0.5`)     = 47px body → 86px well
+ *
+ * JSON wins despite the smaller type because its rows are separated where prose
+ * runs solid — which is why the reservation is set off it, and why eyeballing
+ * the prose case alone would under-size it. The well is the body plus the
+ * caption, the `py-1.5` padding, the border and the `mt-2` above it; 89 leaves
+ * 3px over the taller branch, the same headroom the neighbouring text bands
+ * carry against a fractional rendered line.
+ */
 const OUTPUT_ROW = 89;
 /**
  * Characters of host-supplied preview the card admits before the line clamp gets

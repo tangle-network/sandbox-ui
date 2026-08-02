@@ -20,5 +20,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test:package
+      - run: pnpm test:package
+        env:
+          SANDBOX_UI_AGENT_INTERFACE_VERSION: 0.36.0
       - run: pnpm test
       - run: pnpm build-storybook

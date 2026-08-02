@@ -25,7 +25,9 @@ const mentionRuntimeDependencies = [
   "@tiptap/starter-kit",
   "@tiptap/suggestion",
 ];
-const expectedAgentInterfaceRange = "^0.36.0";
+const expectedAgentInterfaceRange = ">=0.36.0 <0.43.0";
+const expectedAgentInterfaceVersion =
+  process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "0.42.1";
 
 function packedManifest(tarballPath) {
   return JSON.parse(
@@ -109,6 +111,7 @@ try {
       "--no-audit",
       "--no-fund",
       tarballPath,
+      `@tangle-network/agent-interface@${expectedAgentInterfaceVersion}`,
       "react@19",
       "react-dom@19",
       ...optionalPeers,
@@ -155,9 +158,9 @@ try {
   const agentInterfaceManifest = JSON.parse(
     readFileSync(resolve(dirname(agentInterfaceEntry), "../package.json"), "utf8"),
   );
-  if (!/^0\.36\./.test(agentInterfaceManifest.version)) {
+  if (agentInterfaceManifest.version !== expectedAgentInterfaceVersion) {
     throw new Error(
-      `clean consumer installed agent-interface ${agentInterfaceManifest.version}, expected 0.36.x`,
+      `clean consumer installed agent-interface ${agentInterfaceManifest.version}, expected ${expectedAgentInterfaceVersion}`,
     );
   }
   const { harnessTypeSchema } = await import(pathToFileURL(agentInterfaceEntry));

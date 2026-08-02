@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.94.1
+
+### Dependencies
+
+- **Sandbox UI now accepts every Agent Interface release it actually supports, from 0.36 through 0.42.**
+  The package had continued to declare `^0.36.0` even though its shared profile and model helpers remain compatible with 0.42.1, forcing current applications into a false peer-dependency conflict.
+  Clean packed-consumer tests now exercise both 0.36.0 and 0.42.1, and the development build uses 0.42.1.
+
 ## 0.94.0
 
 ### Workflows

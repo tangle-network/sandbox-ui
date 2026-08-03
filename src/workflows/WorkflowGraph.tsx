@@ -12,7 +12,6 @@ import {
   Controls,
   EdgeLabelRenderer,
   type EdgeProps,
-  getNodesBounds,
   getSmoothStepPath,
   getViewportForBounds,
   Handle,
@@ -23,8 +22,10 @@ import {
   Position,
   ReactFlow,
   type ReactFlowInstance,
+  type Rect,
   useEdgesState,
   useNodesState,
+  type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Maximize2, Minimize2 } from "lucide-react";
@@ -77,24 +78,110 @@ import {
 const MUTED_TRACK =
   "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)";
 
-/**
- * How the graph frames itself. The floor is the point of it: fitting a long
- * pipeline into a short panel by zooming out without limit is what shrank the
- * nodes to unreadable specks. Below `minZoom` the graph stops shrinking and
- * becomes pannable instead — a legible graph you scroll beats an illegible one
- * that fits.
- *
- * The CEILING depends on density. Full cards at 1 are already their designed
- * size — zooming a two-node graph past that just blows the cards up to fill the
- * canvas. Compact tiles are small BY DESIGN, so fitting them into the same
- * canvas legitimately zooms past 1; capping them there strands a short compact
- * graph as specks in empty space.
- */
-const FIT_VIEW = { padding: 0.16, minZoom: 0.55 } as const;
+/** How much of the canvas a fit leaves as margin. React Flow reads a numeric
+ *  padding as a scale factor, not a fraction — 0.16 fits the graph into 1/1.16
+ *  of the frame. */
+export const FIT_VIEW = { padding: 0.16 } as const;
 
-/** Zoom ceiling for a fit at the given density (see FIT_VIEW). */
+/**
+ * Zoom CEILING for a fit at the given density. Full cards at 1 are already
+ * their designed size — zooming a two-node graph past that just blows the cards
+ * up to fill the canvas. Compact tiles are small BY DESIGN, so fitting them
+ * into the same canvas legitimately zooms past 1; capping them there strands a
+ * short compact graph as specks in empty space.
+ */
 export function fitZoomCeiling(compact: boolean): number {
   return compact ? 1.5 : 1;
+}
+
+/**
+ * Zoom FLOOR for a fit at the given density — the point below which the graph
+ * stops shrinking to fit and becomes pannable instead.
+ *
+ * It depends on density for the same reason the ceiling does, because what a
+ * floor BUYS depends on what the node is made of. A compact node is a logo: at
+ * 0.55 the tile is still 42px and every step is recognisable at a glance, so
+ * refusing to shrink past it keeps the graph worth looking at. An expanded card
+ * is made of TEXT, and its text stops being readable around 0.75 — well before
+ * any zoom that would fit a real pipeline. Holding those cards at the compact
+ * floor therefore buys nothing legible and costs the right-hand column, which
+ * gets sliced by the canvas edge. Letting them shrink shows the whole shape
+ * instead, and reading one card is a click (or a zoom) away either way.
+ */
+export function fitZoomFloor(compact: boolean): number {
+  return compact ? 0.55 : 0.35;
+}
+
+/**
+ * The rectangle the LAID-OUT nodes occupy, in flow coordinates.
+ *
+ * Read straight off the layouter's own position + size rather than through
+ * React Flow's `getNodesBounds`. Both of that helper's forms prefer a node's
+ * MEASURED box — the standalone one falls back to it, and the `useReactFlow`
+ * one resolves every node through the store's `nodeLookup`, which holds nothing
+ * else — and measurement (a ResizeObserver) lags a relayout by a frame or more.
+ * Framing a fresh layout through either therefore frames the PREVIOUS layout's
+ * sizes as often as the new one, which is the same race that keeps `fitView`
+ * out of the reframe below. Every structural node carries an explicit
+ * width/height, and for exactly this layout that is the authority, so there is
+ * nothing to measure and no lookup to consult.
+ */
+export function layoutBounds(nodes: readonly Node<WfNodeData>[]): Rect {
+  if (nodes.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const node of nodes) {
+    minX = Math.min(minX, node.position.x);
+    minY = Math.min(minY, node.position.y);
+    maxX = Math.max(maxX, node.position.x + (node.width ?? 0));
+    maxY = Math.max(maxY, node.position.y + (node.height ?? 0));
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+/**
+ * The camera that frames `bounds` inside a `width`×`height` canvas.
+ *
+ * Whenever the zoom FLOOR clamps the fit (see FIT_VIEW), the graph is
+ * deliberately larger than the canvas — it is meant to be panned. React Flow
+ * CENTERS what it cannot fit, which splits the overflow across both ends at
+ * once: the trigger leaves the leading edge at the same moment the last step
+ * leaves the trailing one, so the reader sees neither terminus and has nothing
+ * to say which way the graph continues. Anchoring the leading edge instead puts
+ * the entry point on screen and leaves every hidden step in ONE direction — the
+ * direction the graph already reads in — so what is off-canvas is where panning
+ * naturally goes.
+ *
+ * The anchor is the canvas edge, not the padding inset: padding is slack, and a
+ * clamped fit is the case where there is none to give. It is also expressed as
+ * a clamp rather than a branch on "does it fit" — a fit the floor did NOT clamp
+ * is already centered with slack on both sides, so `max` returns it untouched,
+ * and nothing here has to re-derive React Flow's own reading of `padding`.
+ */
+export function framingViewport(
+  bounds: Rect,
+  width: number,
+  height: number,
+  compact: boolean,
+): Viewport {
+  const fit = getViewportForBounds(
+    bounds,
+    width,
+    height,
+    fitZoomFloor(compact),
+    fitZoomCeiling(compact),
+    FIT_VIEW.padding,
+  );
+  /** Slide `offset` just far enough that the bounds' leading edge is on canvas. */
+  const anchored = (offset: number, origin: number) =>
+    offset + Math.max(0, -(offset + origin * fit.zoom));
+  return {
+    zoom: fit.zoom,
+    x: anchored(fit.x, bounds.x),
+    y: anchored(fit.y, bounds.y),
+  };
 }
 
 /** How long a layout transition (the density toggle) runs — short enough that
@@ -334,7 +421,15 @@ function compactHandleStyle(
   }
 }
 
-export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
+export function WorkflowNode({
+  id,
+  data,
+  // Set only where the LAYOUT decides a node's own sides — a folded row that
+  // runs right-to-left, or the step that turns the corner and leaves downward.
+  // A straight layer flow leaves them to the direction, below.
+  sourcePosition,
+  targetPosition,
+}: NodeProps<Node<WfNodeData>>) {
   const d = data;
   const state = d.state;
   const direction = useContext(DirectionContext);
@@ -346,8 +441,8 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   // render as "this one is".
   const selected = hostSelection !== undefined && hostSelection === id;
   const isLR = direction === "LR";
-  const targetPos = isLR ? Position.Left : Position.Top;
-  const sourcePos = isLR ? Position.Right : Position.Bottom;
+  const targetPos = targetPosition ?? (isLR ? Position.Left : Position.Top);
+  const sourcePos = sourcePosition ?? (isLR ? Position.Right : Position.Bottom);
   const accent = TONE_ACCENT[d.tone];
   const isAgent = d.kind === "agent.run";
   // What the card says the step IS. For an agent, the model a run ACTUALLY used
@@ -781,6 +876,13 @@ export interface WorkflowGraphProps {
   /** Sizing for the wrapper; the caller controls height. */
   className?: string;
   /**
+   * Fold a long single-file pipeline into rows instead of one unbounded line,
+   * so it uses both axes of the panel rather than running off one edge. Only a
+   * straight chain folds; anything with fan-out keeps its layered flow. "LR"
+   * only. Defaults to `false`.
+   */
+  wrap?: boolean;
+  /**
    * Live per-node run state, keyed by graph node id (`trigger`, `a0`, `a0-b1`).
    * Absent ⇒ the static definition view (the proposal-card preview passes
    * nothing). When present, each node shows its status/cost/duration/output and
@@ -838,6 +940,7 @@ export function WorkflowGraph({
   direction = "LR",
   defaultCompact = true,
   className,
+  wrap = false,
   nodeState,
   edges: declaredEdges,
   maxNodeVisits,
@@ -868,6 +971,13 @@ export function WorkflowGraph({
   // The canvas wrapper — measured when reframing, since the viewport math needs
   // the frame's real width/height and the RF instance doesn't expose them.
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  // Whether the graph has been framed against a REAL canvas yet. Until it has,
+  // the camera is still ours to set; afterwards it belongs to the reader, and
+  // only a relayout moves it.
+  const framedRef = useRef(false);
+  // Bumped whenever framing might newly be possible — the instance arriving, or
+  // the canvas being measured. Inert once the graph is framed.
+  const [framingCue, setFramingCue] = useState(0);
 
   // Structural graph from the YAML alone — STABLE across nodeState ticks. Built
   // with run-state spacing reserved whenever a run overlay is in play (nodeState
@@ -883,9 +993,10 @@ export function WorkflowGraph({
         nodeState: hasRunOverlay ? {} : undefined,
         direction,
         compact,
+        wrap,
         ...(declaredEdges ? { edges: declaredEdges } : {}),
       }),
-    [yaml, hasRunOverlay, direction, compact, declaredEdges],
+    [yaml, hasRunOverlay, direction, compact, wrap, declaredEdges],
   );
 
   // Edges restyled from the current run state (colored by each edge's target
@@ -968,8 +1079,9 @@ export function WorkflowGraph({
         state[n.id] ? { ...n, data: { ...n.data, state: state[n.id] } } : n,
       );
     };
-    // ReactFlow's `fitView` prop frames the initial render — the first pass
-    // only seeds the nodes and leaves the viewport alone.
+    // The instance only arrives an async tick after mount (React Flow defers
+    // `onInit` past its own viewport setup), so the first pass has no camera to
+    // move: it seeds the nodes and leaves framing to the effect below.
     if (!didInitialSeedRef.current) {
       didInitialSeedRef.current = true;
       setNodes(withRunState(structural.nodes));
@@ -978,20 +1090,23 @@ export function WorkflowGraph({
     }
     const inst = rfRef.current;
     const frame = wrapperRef.current?.getBoundingClientRect();
-    // A hidden canvas (display:none ancestor) has no frame to fit into.
+    // A hidden canvas (display:none ancestor) has no frame to fit into. Leave
+    // `framedRef` alone so the framing effect below takes the graph the moment
+    // the canvas has a size.
     if (!inst || !frame || frame.width === 0 || frame.height === 0) {
       setNodes(withRunState(structural.nodes));
       setDisplayCompact(compact);
       return;
     }
-    const endViewport = getViewportForBounds(
-      getNodesBounds(structural.nodes),
+    const endViewport = framingViewport(
+      layoutBounds(structural.nodes),
       frame.width,
       frame.height,
-      FIT_VIEW.minZoom,
-      fitZoomCeiling(compact),
-      FIT_VIEW.padding,
+      compact,
     );
+    // This relayout IS the frame for the new structure — the effect below must
+    // not also claim it once the canvas is measured.
+    framedRef.current = true;
     const prev = nodesRef.current;
     const prevById = new Map(prev.map((n) => [n.id, n]));
     const sameNodeSet =
@@ -1060,6 +1175,56 @@ export function WorkflowGraph({
       clearTimeout(flipTimer);
     };
   }, [structural, compact, setNodes]);
+
+  /**
+   * Own the INITIAL frame.
+   *
+   * React Flow's `fitView` prop paints a first approximation before anything
+   * can be measured, and it fires exactly ONCE — the moment the nodes report a
+   * size, against whatever width/height the pane happens to have then. A canvas
+   * that is still 0×0 at that instant (a lazily-mounted chunk, a flex panel, a
+   * tab that mounts hidden) is framed against nothing, and nothing ever refits
+   * it. That fit also CENTERS a graph too big to fit, which is what pushed the
+   * trigger off the leading edge (see framingViewport).
+   *
+   * So the prop stays as the pre-paint approximation — dropping it would flash
+   * the graph at zoom 1 before this ran — and the real frame is taken here, as
+   * soon as there is an instance and a canvas with a size. Once taken, the
+   * camera is the reader's: later resizes are left alone rather than yanking
+   * someone who has panned somewhere deliberately.
+   */
+  useEffect(() => {
+    if (framedRef.current) return;
+    const inst = rfRef.current;
+    const frame = wrapperRef.current?.getBoundingClientRect();
+    if (!inst || !frame || frame.width === 0 || frame.height === 0) return;
+    inst.setViewport(
+      framingViewport(
+        layoutBounds(structural.nodes),
+        frame.width,
+        frame.height,
+        compact,
+      ),
+    );
+    framedRef.current = true;
+  }, [framingCue, structural, compact]);
+
+  // Re-attempt framing when a late-measured canvas finally has a size. Only
+  // until the graph is framed — after that a resize is the reader's business,
+  // and observing one would fight whatever they have panned to.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (framedRef.current) {
+        observer.disconnect();
+        return;
+      }
+      setFramingCue((cue) => cue + 1);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {
@@ -1131,13 +1296,25 @@ export function WorkflowGraph({
         colorMode={colorMode}
         onInit={(inst) => {
           rfRef.current = inst;
+          // The camera only becomes ours to set once the instance exists, so
+          // its arrival is what lets the framing effect take the real frame.
+          // Guarded, so a host or a stub that hands us the instance more than
+          // once re-renders nothing after the frame has been taken.
+          if (!framedRef.current) setFramingCue((cue) => cue + 1);
         }}
         onNodeClick={onNodeClick ? handleNodeClick : undefined}
         // React Flow forwards unknown props onto its wrapper, so a keydown
         // from a focused node bubbles here.
         onKeyDown={onNodeClick ? handleNodeKeyDown : undefined}
+        // A pre-paint approximation only — the authoritative frame is taken by
+        // the framing effect once the canvas has been measured. Without it the
+        // graph would paint once at zoom 1, top-left, before that lands.
         fitView
-        fitViewOptions={{ ...FIT_VIEW, maxZoom: fitZoomCeiling(compact) }}
+        fitViewOptions={{
+          ...FIT_VIEW,
+          minZoom: fitZoomFloor(compact),
+          maxZoom: fitZoomCeiling(compact),
+        }}
         proOptions={{ hideAttribution: true }}
         // Node dragging is reserved for the full editor; a preview stays
         // read-only so its layout can't be disturbed. Both variants pan + zoom so
@@ -1205,6 +1382,12 @@ export function WorkflowGraph({
             pinch-zooms and is always compact). */}
         {!isPreview && (
           <>
+            {/* Deliberately given no `fitViewOptions`, so its fit runs against
+                the canvas `minZoom` (0.2) rather than FIT_VIEW's floor. The
+                floor governs framing we do FOR the reader — never shrink a
+                pipeline to specks unasked; asking for a fit outright is the one
+                moment they have said the whole graph matters more than the size
+                of it, and this button is that ask. */}
             <Controls showInteractive={false} position="bottom-right" />
             <Panel position="top-left">
               <button

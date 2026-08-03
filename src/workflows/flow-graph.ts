@@ -13,6 +13,7 @@ import {
   type WfEdgeSpec,
   type WfNodeData,
   type WfNodeState,
+  type WfSide,
 } from "./model";
 
 /**
@@ -39,6 +40,15 @@ export type WfFlowEdge = Edge<WfFlowEdgeData>;
  *  exactly as it always has. */
 export const WF_EDGE_TYPE = "wfEdge";
 
+/** The layouter's compass sides in React Flow's terms — the one place the
+ *  RF-agnostic layout vocabulary is translated. */
+const SIDE_POSITION: Record<WfSide, Position> = {
+  left: Position.Left,
+  right: Position.Right,
+  top: Position.Top,
+  bottom: Position.Bottom,
+};
+
 export interface FlowGraph {
   nodes: Node<WfNodeData>[];
   edges: WfFlowEdge[];
@@ -61,6 +71,9 @@ export interface BuildFlowGraphOptions {
   /** Collapse nodes to the icon-tile density (logo + name). Defaults to `false`
    *  (the full, expanded card). */
   compact?: boolean;
+  /** Fold a long single-file pipeline into rows rather than one unbounded line.
+   *  Passed straight through to `buildWorkflowGraph`. Defaults to `false`. */
+  wrap?: boolean;
   /** Declared topology, replacing the inferred positional spine. Passed
    *  straight through to `buildWorkflowGraph` — see {@link WfEdgeSpec}. */
   edges?: readonly WfEdgeSpec[];
@@ -104,6 +117,7 @@ function normalizeFlowGraphOptions(
     "nodeState" in arg ||
     "direction" in arg ||
     "compact" in arg ||
+    "wrap" in arg ||
     "edges" in arg
   ) {
     return arg as BuildFlowGraphOptions;
@@ -132,6 +146,7 @@ export function buildFlowGraph(
     reserveRunState: nodeState !== undefined,
     direction,
     compact,
+    ...(options.wrap ? { wrap: true } : {}),
     ...(options.edges ? { edges: options.edges } : {}),
   });
   const isLR = direction === "LR";
@@ -156,8 +171,11 @@ export function buildFlowGraph(
         // Fix the DOM box to the laid-out size so the card can't grow past its
         // reserved space and overlap a neighbour (see model.ts nodeHeight).
         style: { width: n.width, height: n.height },
-        sourcePosition,
-        targetPosition,
+        // A folded layout names each node's own sides (a mirrored row, a corner
+        // that leaves downward); a straight one names none and takes the
+        // direction's answer for every node.
+        sourcePosition: n.sourceSide ? SIDE_POSITION[n.sourceSide] : sourcePosition,
+        targetPosition: n.targetSide ? SIDE_POSITION[n.targetSide] : targetPosition,
         data: nodeState?.[n.id]
           ? { ...n.data, state: nodeState[n.id] }
           : n.data,

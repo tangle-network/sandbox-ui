@@ -734,11 +734,57 @@ on:
 do:
   - notify: { url: "https://example.test/hook" }
 `);
-    // Past a couple of entries the names stop being readable on a card, so the
-    // count carries the narrowing instead.
+    // Past two entries the names stop being readable on a card, so the count
+    // carries the narrowing instead.
     expect(
       allowlist.nodes.find((n) => n.id === "trigger")?.data.description,
     ).toBe("repository: 3 selected");
+  });
+
+  it("labels a multi-dimension scope in key order, not YAML order", () => {
+    // The same logical scope, typed in two different orders. A node label that
+    // followed the author's key order would read differently for each — and a
+    // consumer diffing two graphs would see a change where there is none.
+    const description = (yaml: string) =>
+      buildWorkflowGraph(yaml).nodes.find((n) => n.id === "trigger")?.data
+        .description;
+
+    const repositoryFirst = `
+name: multi
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      repository:
+        default: include
+        except: [acme/noisy]
+      channel:
+        default: exclude
+        except: [C123]
+do:
+  - notify: { url: "https://example.test/hook" }
+`;
+    const channelFirst = `
+name: multi
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      channel:
+        default: exclude
+        except: [C123]
+      repository:
+        default: include
+        except: [acme/noisy]
+do:
+  - notify: { url: "https://example.test/hook" }
+`;
+    expect(description(repositoryFirst)).toBe(
+      "channel: C123 · repository: all but acme/noisy",
+    );
+    expect(description(channelFirst)).toBe(description(repositoryFirst));
   });
 
   it("attaches the raw, untruncated config to action and trigger nodes", () => {

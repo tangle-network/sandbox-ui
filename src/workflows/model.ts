@@ -924,18 +924,26 @@ function describeAction(action: unknown): WfNodeData {
  * the provider catalog, server-side), so it is used as written — `repository`,
  * `channel`. Both directions read as what they mean: a denylist is "all but",
  * an allowlist names its members when there are few enough to be worth naming.
+ *
+ * Dimensions are read in key order, not in the order the author happened to
+ * write them: `Object.entries` follows insertion order, so the same logical
+ * scope would otherwise label the node differently depending on how its YAML
+ * was typed. Sorted here for the same reason the platform sorts keys when it
+ * canonicalises a scope — one scope, one rendering.
  */
 function describeScope(scope: unknown): string | undefined {
   const rec = asRecord(scope);
   const parts: string[] = [];
-  for (const [dimension, raw] of Object.entries(rec)) {
+  for (const [dimension, raw] of Object.entries(rec).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
     const selection = asRecord(raw);
     const except = Array.isArray(selection.except)
       ? selection.except.filter((entry): entry is string => typeof entry === "string")
       : [];
     if (except.length === 0) continue;
-    // Few enough to name, name them; past that a bare count would read as an
-    // id, so it says what the number counts.
+    // Two or fewer are named; past that a bare count would read as an id, so
+    // it says what the number counts.
     const named =
       except.length <= 2 ? except.join(", ") : `${except.length} selected`;
     parts.push(

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.94.2
+
+### Dependencies
+
+- **Sandbox UI accepts Agent Interface 0.43.**
+  Its shared profile and model imports remain compatible with 0.43.0, and the packed-consumer check now installs that exact release while retaining the 0.36.0 lower-bound check.
+
 ## 0.94.1
 
 ### Dependencies

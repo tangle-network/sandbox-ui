@@ -79,8 +79,14 @@ vi.mock("@xyflow/react", async (importOriginal) => {
 })
 
 const { buildFlowGraph } = await import("./flow-graph")
-const { WorkflowGraph, LAYOUT_TRANSITION_MS, FIT_VIEW, framingViewport, layoutBounds } =
-  await import("./WorkflowGraph")
+const {
+  WorkflowGraph,
+  LAYOUT_TRANSITION_MS,
+  FIT_VIEW,
+  fitZoomFloor,
+  framingViewport,
+  layoutBounds,
+} = await import("./WorkflowGraph")
 
 const YAML = `
 do:
@@ -259,7 +265,7 @@ describe("framing a graph against its canvas", () => {
   it("frames a graph that fits whole, and centers it", () => {
     // Four steps of compact tiles fit the panel with room to spare.
     const { zoom, left, right } = framedSpan(chain(4), true)
-    expect(zoom).toBeGreaterThan(FIT_VIEW.minZoom)
+    expect(zoom).toBeGreaterThan(fitZoomFloor(true))
     expect(left).toBeGreaterThan(0)
     expect(right).toBeLessThan(PANEL.width)
     // Nothing to anchor away from: the slack is shared evenly, as React Flow
@@ -271,7 +277,7 @@ describe("framing a graph against its canvas", () => {
     // Seven compact steps need a zoom below the floor to fit 742px, so the fit
     // is clamped and the graph is deliberately wider than the canvas.
     const { zoom, left, right } = framedSpan(chain(7), true)
-    expect(zoom).toBe(FIT_VIEW.minZoom)
+    expect(zoom).toBe(fitZoomFloor(true))
     expect(right).toBeGreaterThan(PANEL.width)
     // The regression: centering the clamped fit put the FIRST node at a
     // negative offset — the trigger half off the canvas — at the same time as
@@ -280,12 +286,21 @@ describe("framing a graph against its canvas", () => {
     expect(left).toBeCloseTo(0, 5)
   })
 
-  it("anchors the same way for expanded cards, which stop fitting far sooner", () => {
+  it("lets expanded cards shrink past the compact floor rather than slicing one", () => {
     // Full cards are ~4x the width of a tile, so the density toggle alone can
-    // take a graph that fits into one that cannot.
-    expect(framedSpan(chain(4), true).right).toBeLessThan(PANEL.width)
+    // take a graph that fits into one that would not — at the COMPACT floor.
+    // An expanded card's text is unreadable well before any zoom that fits a
+    // real pipeline, so holding them there would only cost the last column.
     const expanded = framedSpan(chain(4), false)
-    expect(expanded.zoom).toBe(FIT_VIEW.minZoom)
+    expect(expanded.zoom).toBeLessThan(fitZoomFloor(true))
+    expect(expanded.zoom).toBeGreaterThan(fitZoomFloor(false))
+    expect(expanded.left).toBeGreaterThan(0)
+    expect(expanded.right).toBeLessThan(PANEL.width)
+  })
+
+  it("anchors expanded cards too, once even their own floor cannot fit them", () => {
+    const expanded = framedSpan(chain(6), false)
+    expect(expanded.zoom).toBe(fitZoomFloor(false))
     expect(expanded.right).toBeGreaterThan(PANEL.width)
     expect(expanded.left).toBeCloseTo(0, 5)
   })
@@ -295,7 +310,7 @@ describe("framing a graph against its canvas", () => {
     // not what moves the camera — running off the canvas is.
     const yaml = chain(6)
     const wide = framedSpan(yaml, true)
-    expect(wide.zoom).toBe(FIT_VIEW.minZoom)
+    expect(wide.zoom).toBe(fitZoomFloor(true))
     expect(wide.left).toBeGreaterThan(0)
     expect(wide.right).toBeLessThan(PANEL.width)
     expect(wide.left).toBeCloseTo(PANEL.width - wide.right, 5)
@@ -357,7 +372,7 @@ describe("framing a canvas that is measured late", () => {
     const [viewport] = setViewport.mock.calls[0]
     // Framed properly, not left at whatever the 0×0 fit produced: the layout
     // starts at the origin, so an anchored graph puts the camera there too.
-    expect(viewport.zoom).toBe(FIT_VIEW.minZoom)
+    expect(viewport.zoom).toBe(fitZoomFloor(true))
     expect(viewport.x).toBeCloseTo(0, 5)
   })
 

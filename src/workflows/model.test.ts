@@ -1461,24 +1461,32 @@ describe("buildWorkflowGraph — folding a long pipeline", () => {
     expect(first.at(-1)).toBe(second[0]);
   });
 
-  it("turns the corner through the box's bottom, never across a name", () => {
+  it("turns the corner out the side, never across a name", () => {
     const g = buildWorkflowGraph(chain(7), { compact: true, wrap: true });
-    const corners = g.nodes.filter((n) => n.sourceSide === "bottom");
-    // One corner per row change.
-    expect(corners).toHaveLength(2);
-    // The step arriving on the next row takes the edge in through its top.
-    expect(g.nodes.filter((n) => n.targetSide === "top")).toHaveLength(2);
-    // A mirrored row reverses the in-row sides rather than keeping LR's.
-    const secondRowY = [...new Set(g.nodes.map((n) => n.position.y))].sort(
+    const byId = new Map(g.nodes.map((n) => [n.id, n]));
+    const rows = [...new Set(g.nodes.map((n) => n.position.y))].sort(
       (a, b) => a - b,
-    )[1];
-    const mirrored = g.nodes.filter(
-      (n) => n.position.y === secondRowY && n.targetSide !== "top",
     );
-    expect(mirrored.every((n) => n.targetSide === "right")).toBe(true);
-    expect(
-      mirrored.every((n) => n.sourceSide === "left" || n.sourceSide === "bottom"),
-    ).toBe(true);
+    // Every node leaves the way its row travels and is entered from behind —
+    // the corner included. Nothing leaves downward: the name sits under the
+    // tile in LR, so a bottom exit would have to start below it, leaving the
+    // arrow floating clear of the node it comes from.
+    expect(g.nodes.some((n) => n.sourceSide === "bottom")).toBe(false);
+    expect(g.nodes.some((n) => n.targetSide === "top")).toBe(false);
+    for (const n of g.nodes) {
+      const travelsRight = rows.indexOf(n.position.y) % 2 === 0;
+      expect(n.sourceSide).toBe(travelsRight ? "right" : "left");
+      expect(n.targetSide).toBe(travelsRight ? "left" : "right");
+    }
+    // A turn is therefore same-side into the node directly below it, which is
+    // what the renderer draws as a bracket in the margin beside the column.
+    for (const edge of g.edges) {
+      const from = byId.get(edge.source);
+      const to = byId.get(edge.target);
+      if (!from || !to || from.position.y === to.position.y) continue;
+      expect(from.position.x).toBe(to.position.x);
+      expect(from.sourceSide).toBe(to.targetSide);
+    }
   });
 
   it("keeps a fan-out graph in its layered flow", () => {

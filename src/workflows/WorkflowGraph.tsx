@@ -78,24 +78,38 @@ import {
 const MUTED_TRACK =
   "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)";
 
-/**
- * How the graph frames itself. The floor is the point of it: fitting a long
- * pipeline into a short panel by zooming out without limit is what shrank the
- * nodes to unreadable specks. Below `minZoom` the graph stops shrinking and
- * becomes pannable instead — a legible graph you scroll beats an illegible one
- * that fits.
- *
- * The CEILING depends on density. Full cards at 1 are already their designed
- * size — zooming a two-node graph past that just blows the cards up to fill the
- * canvas. Compact tiles are small BY DESIGN, so fitting them into the same
- * canvas legitimately zooms past 1; capping them there strands a short compact
- * graph as specks in empty space.
- */
-export const FIT_VIEW = { padding: 0.16, minZoom: 0.55 } as const;
+/** How much of the canvas a fit leaves as margin. React Flow reads a numeric
+ *  padding as a scale factor, not a fraction — 0.16 fits the graph into 1/1.16
+ *  of the frame. */
+export const FIT_VIEW = { padding: 0.16 } as const;
 
-/** Zoom ceiling for a fit at the given density (see FIT_VIEW). */
+/**
+ * Zoom CEILING for a fit at the given density. Full cards at 1 are already
+ * their designed size — zooming a two-node graph past that just blows the cards
+ * up to fill the canvas. Compact tiles are small BY DESIGN, so fitting them
+ * into the same canvas legitimately zooms past 1; capping them there strands a
+ * short compact graph as specks in empty space.
+ */
 export function fitZoomCeiling(compact: boolean): number {
   return compact ? 1.5 : 1;
+}
+
+/**
+ * Zoom FLOOR for a fit at the given density — the point below which the graph
+ * stops shrinking to fit and becomes pannable instead.
+ *
+ * It depends on density for the same reason the ceiling does, because what a
+ * floor BUYS depends on what the node is made of. A compact node is a logo: at
+ * 0.55 the tile is still 42px and every step is recognisable at a glance, so
+ * refusing to shrink past it keeps the graph worth looking at. An expanded card
+ * is made of TEXT, and its text stops being readable around 0.75 — well before
+ * any zoom that would fit a real pipeline. Holding those cards at the compact
+ * floor therefore buys nothing legible and costs the right-hand column, which
+ * gets sliced by the canvas edge. Letting them shrink shows the whole shape
+ * instead, and reading one card is a click (or a zoom) away either way.
+ */
+export function fitZoomFloor(compact: boolean): number {
+  return compact ? 0.55 : 0.35;
 }
 
 /**
@@ -151,13 +165,12 @@ export function framingViewport(
   width: number,
   height: number,
   compact: boolean,
-  minZoom: number = FIT_VIEW.minZoom,
 ): Viewport {
   const fit = getViewportForBounds(
     bounds,
     width,
     height,
-    minZoom,
+    fitZoomFloor(compact),
     fitZoomCeiling(compact),
     FIT_VIEW.padding,
   );
@@ -404,14 +417,7 @@ function compactHandleStyle(
     case Position.Top:
       return anchor(tileLeft + center, 0);
     default:
-      // LR puts the name UNDER the tile, so an edge leaving the tile's bottom
-      // would be drawn straight through the word. Only a folded row ever leaves
-      // downward in LR, and it leaves from the BOX's bottom edge — below the
-      // name — where there is nothing to cross. TB's name sits beside the tile
-      // and its box is one tile tall, so the two are the same point there.
-      return isLR
-        ? { ...anchor(tileLeft + center, 0), top: "100%" }
-        : anchor(tileLeft + center, COMPACT_TILE);
+      return anchor(tileLeft + center, COMPACT_TILE);
   }
 }
 
@@ -877,13 +883,6 @@ export interface WorkflowGraphProps {
    */
   wrap?: boolean;
   /**
-   * Override the zoom FLOOR a fit is allowed to reach (see FIT_VIEW). Lower it
-   * and more of a long graph fits at once, at the cost of smaller nodes; raise
-   * it and the graph stays large and is panned instead. Defaults to
-   * `FIT_VIEW.minZoom`.
-   */
-  fitMinZoom?: number;
-  /**
    * Live per-node run state, keyed by graph node id (`trigger`, `a0`, `a0-b1`).
    * Absent ⇒ the static definition view (the proposal-card preview passes
    * nothing). When present, each node shows its status/cost/duration/output and
@@ -942,7 +941,6 @@ export function WorkflowGraph({
   defaultCompact = true,
   className,
   wrap = false,
-  fitMinZoom = FIT_VIEW.minZoom,
   nodeState,
   edges: declaredEdges,
   maxNodeVisits,
@@ -1105,7 +1103,6 @@ export function WorkflowGraph({
       frame.width,
       frame.height,
       compact,
-      fitMinZoom,
     );
     // This relayout IS the frame for the new structure — the effect below must
     // not also claim it once the canvas is measured.
@@ -1177,7 +1174,7 @@ export function WorkflowGraph({
       cancelAnimationFrame(raf);
       clearTimeout(flipTimer);
     };
-  }, [structural, compact, fitMinZoom, setNodes]);
+  }, [structural, compact, setNodes]);
 
   /**
    * Own the INITIAL frame.
@@ -1207,11 +1204,10 @@ export function WorkflowGraph({
         frame.width,
         frame.height,
         compact,
-        fitMinZoom,
       ),
     );
     framedRef.current = true;
-  }, [framingCue, structural, compact, fitMinZoom]);
+  }, [framingCue, structural, compact]);
 
   // Re-attempt framing when a late-measured canvas finally has a size. Only
   // until the graph is framed — after that a resize is the reader's business,
@@ -1316,7 +1312,7 @@ export function WorkflowGraph({
         fitView
         fitViewOptions={{
           ...FIT_VIEW,
-          minZoom: fitMinZoom,
+          minZoom: fitZoomFloor(compact),
           maxZoom: fitZoomCeiling(compact),
         }}
         proOptions={{ hideAttribution: true }}

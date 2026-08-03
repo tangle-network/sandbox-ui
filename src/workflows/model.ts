@@ -143,9 +143,8 @@ export interface WfNode {
    * Where this node's edges attach, when the LAYOUT decides rather than the
    * flow direction. A straight layer flow has one answer for every node (edges
    * enter the leading edge and leave the trailing one, per `direction`), so it
-   * sets neither and the renderer derives both. A folded layout does not: a row
-   * that runs right-to-left mirrors them, and the step that turns the corner
-   * leaves through the BOTTOM. Absent ⇒ derive from `direction`.
+   * sets neither and the renderer derives both. A folded layout does not — a row
+   * that runs right-to-left mirrors them. Absent ⇒ derive from `direction`.
    */
   sourceSide?: WfSide;
   targetSide?: WfSide;
@@ -939,10 +938,10 @@ const WRAP_TARGET_ASPECT = 742 / 480;
  */
 const WRAP_ASPECT_TRIGGER = 4.2;
 
-/** The corridor a row change needs. A layer separator is sized for the gap
- *  between two nodes standing side by side; the turn between rows has to clear
- *  the whole box — name included — and still leave an arrow worth seeing. */
-const WRAP_ROW_GAP = 44;
+/** The corridor a row change needs. A layer separator is sized for two nodes
+ *  standing side by side; stacked rows need enough air that the return bracket
+ *  reads as a turn rather than a collision. */
+const WRAP_ROW_GAP = 28;
 
 /** How many columns fold `count` equal cells closest to {@link
  *  WRAP_TARGET_ASPECT}. Compared in LOG space so being twice too wide and half
@@ -1022,8 +1021,6 @@ function layoutSerpentine(
     // Mirroring odd rows puts the last cell of one row directly above the first
     // cell of the next, so every row change is a vertical drop in one column.
     const col = leftToRight ? indexInRow : cols - 1 - indexInRow;
-    const turnsHere = indexInRow === cols - 1 && i < count - 1;
-    const arrivedFromAbove = indexInRow === 0 && i > 0;
     return {
       id: node.id,
       position: {
@@ -1033,16 +1030,15 @@ function layoutSerpentine(
       width: node.width,
       height: node.height,
       data: node.data,
-      targetSide: arrivedFromAbove
-        ? ("top" as const)
-        : leftToRight
-          ? ("left" as const)
-          : ("right" as const),
-      sourceSide: turnsHere
-        ? ("bottom" as const)
-        : leftToRight
-          ? ("right" as const)
-          : ("left" as const),
+      // Every node leaves the way its row travels and is entered from behind —
+      // including the one that turns the corner. Mirroring puts the last cell
+      // of a row directly above the first cell of the next, so a turn is
+      // source-right into target-right (or left into left): the renderer draws
+      // it as a bracket in the margin beside the column. Routing it through the
+      // BOTTOM instead would have to start below the name that sits under the
+      // tile, leaving the arrow floating clear of the node it comes from.
+      targetSide: leftToRight ? ("left" as const) : ("right" as const),
+      sourceSide: leftToRight ? ("right" as const) : ("left" as const),
     };
   });
 }

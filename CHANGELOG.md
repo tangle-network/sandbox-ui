@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.94.3
+
+### Fixes
+
+- **Chat now fails visibly and preserves messages that were not admitted.**
+  The session stream rejects disconnected sends, decodes nested server errors, reconnects closed streams with the last event id, and reconciles local echoes with server history.
+- **Assistant output is no longer lost when part events arrive before message metadata.**
+  Each part now uses its own message and part identifiers, including chunked CRLF event streams and overlapping assistant messages.
+
 ## 0.94.2
 
 ### Dependencies

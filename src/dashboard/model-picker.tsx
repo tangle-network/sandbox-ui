@@ -342,22 +342,6 @@ export function ModelPicker({
     });
   }, [eligible, query]);
 
-  // Group filtered models by model family first, then by provider for
-  // unknown labs. This keeps routed Claude/Gemini/Kimi rows where users
-  // expect them while row metadata still shows the hosting provider.
-  const grouped = React.useMemo(() => {
-    const groups = new Map<string, ModelInfo[]>();
-    for (const m of filtered) {
-      const key = modelGroupKey(m);
-      const list = groups.get(key);
-      if (list) list.push(m);
-      else groups.set(key, [m]);
-    }
-    return Array.from(groups.entries())
-      .map(([key, list]) => [key, [...list].sort(compareModelsByDisplayName)] as const)
-      .sort(([a], [b]) => compareModelGroups(a, b));
-  }, [filtered]);
-
   // Resolve the currently-selected model's display info.
   const current = React.useMemo(
     () => models.find((m) => canonicalModelId(m) === value),
@@ -409,6 +393,33 @@ export function ModelPicker({
       (a, b) => order.indexOf(modelDedupKey(a)) - order.indexOf(modelDedupKey(b)),
     );
   }, [eligible]);
+
+  // Group filtered models by model family first, then by provider for
+  // unknown labs. This keeps routed Claude/Gemini/Kimi rows where users
+  // expect them while row metadata still shows the hosting provider.
+  // Rows already surfaced by a curated section (Recommended/Top/Recent)
+  // are excluded — duplicating them at the head of every provider group
+  // doubled the visual weight of exactly the models the sections exist to
+  // lift out. Search bypasses the sections, so the exclusion only applies
+  // to the browsing view.
+  const grouped = React.useMemo(() => {
+    const curatedKeys = new Set(
+      [...featuredModels, ...popularModels, ...recentIds].map((m) =>
+        modelDedupKey(m),
+      ),
+    );
+    const groups = new Map<string, ModelInfo[]>();
+    for (const m of filtered) {
+      if (!query.trim() && curatedKeys.has(modelDedupKey(m))) continue;
+      const key = modelGroupKey(m);
+      const list = groups.get(key);
+      if (list) list.push(m);
+      else groups.set(key, [m]);
+    }
+    return Array.from(groups.entries())
+      .map(([key, list]) => [key, [...list].sort(compareModelsByDisplayName)] as const)
+      .sort(([a], [b]) => compareModelGroups(a, b));
+  }, [filtered, featuredModels, popularModels, recentIds, query]);
 
   const handleSelect = (id: string) => {
     onChange(id);

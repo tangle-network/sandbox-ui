@@ -151,12 +151,13 @@ export function framingViewport(
   width: number,
   height: number,
   compact: boolean,
+  minZoom: number = FIT_VIEW.minZoom,
 ): Viewport {
   const fit = getViewportForBounds(
     bounds,
     width,
     height,
-    FIT_VIEW.minZoom,
+    minZoom,
     fitZoomCeiling(compact),
     FIT_VIEW.padding,
   );
@@ -403,11 +404,26 @@ function compactHandleStyle(
     case Position.Top:
       return anchor(tileLeft + center, 0);
     default:
-      return anchor(tileLeft + center, COMPACT_TILE);
+      // LR puts the name UNDER the tile, so an edge leaving the tile's bottom
+      // would be drawn straight through the word. Only a folded row ever leaves
+      // downward in LR, and it leaves from the BOX's bottom edge — below the
+      // name — where there is nothing to cross. TB's name sits beside the tile
+      // and its box is one tile tall, so the two are the same point there.
+      return isLR
+        ? { ...anchor(tileLeft + center, 0), top: "100%" }
+        : anchor(tileLeft + center, COMPACT_TILE);
   }
 }
 
-export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
+export function WorkflowNode({
+  id,
+  data,
+  // Set only where the LAYOUT decides a node's own sides — a folded row that
+  // runs right-to-left, or the step that turns the corner and leaves downward.
+  // A straight layer flow leaves them to the direction, below.
+  sourcePosition,
+  targetPosition,
+}: NodeProps<Node<WfNodeData>>) {
   const d = data;
   const state = d.state;
   const direction = useContext(DirectionContext);
@@ -419,8 +435,8 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   // render as "this one is".
   const selected = hostSelection !== undefined && hostSelection === id;
   const isLR = direction === "LR";
-  const targetPos = isLR ? Position.Left : Position.Top;
-  const sourcePos = isLR ? Position.Right : Position.Bottom;
+  const targetPos = targetPosition ?? (isLR ? Position.Left : Position.Top);
+  const sourcePos = sourcePosition ?? (isLR ? Position.Right : Position.Bottom);
   const accent = TONE_ACCENT[d.tone];
   const isAgent = d.kind === "agent.run";
   // What the card says the step IS. For an agent, the model a run ACTUALLY used
@@ -854,6 +870,20 @@ export interface WorkflowGraphProps {
   /** Sizing for the wrapper; the caller controls height. */
   className?: string;
   /**
+   * Fold a long single-file pipeline into rows instead of one unbounded line,
+   * so it uses both axes of the panel rather than running off one edge. Only a
+   * straight chain folds; anything with fan-out keeps its layered flow. "LR"
+   * only. Defaults to `false`.
+   */
+  wrap?: boolean;
+  /**
+   * Override the zoom FLOOR a fit is allowed to reach (see FIT_VIEW). Lower it
+   * and more of a long graph fits at once, at the cost of smaller nodes; raise
+   * it and the graph stays large and is panned instead. Defaults to
+   * `FIT_VIEW.minZoom`.
+   */
+  fitMinZoom?: number;
+  /**
    * Live per-node run state, keyed by graph node id (`trigger`, `a0`, `a0-b1`).
    * Absent ⇒ the static definition view (the proposal-card preview passes
    * nothing). When present, each node shows its status/cost/duration/output and
@@ -911,6 +941,8 @@ export function WorkflowGraph({
   direction = "LR",
   defaultCompact = true,
   className,
+  wrap = false,
+  fitMinZoom = FIT_VIEW.minZoom,
   nodeState,
   edges: declaredEdges,
   maxNodeVisits,
@@ -963,9 +995,10 @@ export function WorkflowGraph({
         nodeState: hasRunOverlay ? {} : undefined,
         direction,
         compact,
+        wrap,
         ...(declaredEdges ? { edges: declaredEdges } : {}),
       }),
-    [yaml, hasRunOverlay, direction, compact, declaredEdges],
+    [yaml, hasRunOverlay, direction, compact, wrap, declaredEdges],
   );
 
   // Edges restyled from the current run state (colored by each edge's target
@@ -1072,6 +1105,7 @@ export function WorkflowGraph({
       frame.width,
       frame.height,
       compact,
+      fitMinZoom,
     );
     // This relayout IS the frame for the new structure — the effect below must
     // not also claim it once the canvas is measured.
@@ -1143,7 +1177,7 @@ export function WorkflowGraph({
       cancelAnimationFrame(raf);
       clearTimeout(flipTimer);
     };
-  }, [structural, compact, setNodes]);
+  }, [structural, compact, fitMinZoom, setNodes]);
 
   /**
    * Own the INITIAL frame.
@@ -1173,10 +1207,11 @@ export function WorkflowGraph({
         frame.width,
         frame.height,
         compact,
+        fitMinZoom,
       ),
     );
     framedRef.current = true;
-  }, [framingCue, structural, compact]);
+  }, [framingCue, structural, compact, fitMinZoom]);
 
   // Re-attempt framing when a late-measured canvas finally has a size. Only
   // until the graph is framed — after that a resize is the reader's business,
@@ -1279,7 +1314,11 @@ export function WorkflowGraph({
         // the framing effect once the canvas has been measured. Without it the
         // graph would paint once at zoom 1, top-left, before that lands.
         fitView
-        fitViewOptions={{ ...FIT_VIEW, maxZoom: fitZoomCeiling(compact) }}
+        fitViewOptions={{
+          ...FIT_VIEW,
+          minZoom: fitMinZoom,
+          maxZoom: fitZoomCeiling(compact),
+        }}
         proOptions={{ hideAttribution: true }}
         // Node dragging is reserved for the full editor; a preview stays
         // read-only so its layout can't be disturbed. Both variants pan + zoom so

@@ -170,6 +170,19 @@ export const DensityContext = createContext<boolean>(false);
  */
 export const SelectedNodeContext = createContext<string | undefined>(undefined);
 
+/**
+ * Whether the GRAPH is showing a run — read by the node so its card matches what
+ * the layout reserved for it.
+ *
+ * `nodeHeight` reserves the run bands for every action the moment the graph has
+ * any run state, because the layout is computed once and cannot revisit the
+ * decision. A node the host has no entry for would otherwise render its
+ * definition card — identity and nothing else — inside a box sized for a run,
+ * leaving over a hundred pixels of void under it. A run's graph is in run mode
+ * for all of its nodes, or none.
+ */
+export const RunModeContext = createContext<boolean>(false);
+
 /** The selected node's ring. An `outline` rather than a border or a box-shadow
  *  because both of those are already spoken for — the border carries tone and
  *  run status, the shadow carries the running/waiting glow — and an outline
@@ -253,6 +266,7 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   const state = d.state;
   const direction = useContext(DirectionContext);
   const compact = useContext(DensityContext);
+  const runMode = useContext(RunModeContext);
   const connectable = useContext(ConnectableContext);
   const hostSelection = useContext(SelectedNodeContext);
   // Compared only once the host HAS a selection: `undefined === undefined` would
@@ -274,13 +288,26 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   // another lab would otherwise sit under its requested lab's logo — an Anthropic
   // mark beside the words "gpt-5.4".
   const markModel = isAgent && state?.model ? state.model : d.model;
-  // Whether this card may render the bands a RUN adds — the metrics line, the
-  // output block, the "nothing to report" line, and the status footer. It mirrors
-  // `nodeHeight` (model.ts), which reserves those rows for an action but NOT for a
-  // trigger: a trigger only fires, so it is spaced by its static height alone.
-  // Render a run band on a trigger and it has nowhere to go — it overflows the box
-  // the layout gave it. The two rules are one rule; keep them in step.
-  const runBands = state !== undefined && d.tone !== "trigger";
+  // Whether this card may render the bands a RUN adds — the output block, the
+  // "nothing to report" line, and the status footer. It mirrors `nodeHeight`
+  // (model.ts), which reserves those rows for an action but NOT for a trigger: a
+  // trigger only fires, so it is spaced by its static height alone. Render a run
+  // band on a trigger and it has nowhere to go — it overflows the box the layout
+  // gave it. The two rules are one rule; keep them in step.
+  //
+  // Keyed on the GRAPH's mode rather than on this node's own state, for the same
+  // reason: the reservation was made for every action the moment the graph had a
+  // run, so a node the host sent no entry for is still a run card — one that has
+  // simply not been reached. Keyed on `state` instead, it rendered its definition
+  // card into a run-sized box and left the difference blank.
+  const runBands = runMode && d.tone !== "trigger";
+  // A node in a run graph that the host sent no entry for has not been reached.
+  // `buildStyledEdges` already resolves it that way — the edge INTO such a node
+  // is drawn in the queued neutral — so the card follows the same rule rather
+  // than inventing a second one, and the card fills the box the run reserved.
+  const runStatus: WfNodeStatus | undefined = runBands
+    ? (state?.status ?? "queued")
+    : state?.status;
   const duration = fmtDuration(state?.durationMs);
   const cost = fmtCost(state?.costUsd);
   // Tokens are an agent.run concern; other kinds never show a token count.
@@ -458,8 +485,8 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
     <div
       className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-colors"
       style={{
-        ...(state
-          ? statusBorder(state.status)
+        ...(runStatus
+          ? statusBorder(runStatus)
           : {
               borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
             }),
@@ -498,8 +525,8 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
           </div>
         )}
       </div>
-      {state ? (
-        <StatusPill status={state.status} />
+      {runStatus ? (
+        <StatusPill status={runStatus} />
       ) : (
         d.badge && (
           <span className="shrink-0 rounded-full border border-border bg-surface-container-high px-2 py-[1px] font-medium text-[10px] text-muted-foreground">
@@ -514,10 +541,10 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   // their own. Dropping the metrics row is what pays for the answer body, and
   // the caption had room for the values already — so the card gets shorter
   // without the reader losing what the step spent.
-  const footer = state ? (
+  const footer = runStatus ? (
     <StatusFooter
-      status={state.status}
-      rounds={isAgent ? state.rounds : undefined}
+      status={runStatus}
+      rounds={isAgent ? state?.rounds : undefined}
       cost={cost}
       tokens={tokens}
       elapsed={duration}
@@ -540,17 +567,24 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   // What a card says where its output WOULD be, when it has none — a step with
   // nothing to report SAYS so, rather than showing a void.
   const emptySlot =
-    state && !runOutput && emptySlotLabel(state.status) ? (
+    runStatus && !runOutput && emptySlotLabel(runStatus) ? (
       <div className="mt-2 flex flex-1 items-center text-[11px] text-muted-foreground italic">
-        {emptySlotLabel(state.status)}
+        {emptySlotLabel(runStatus)}
       </div>
     ) : null;
 
   // The framed well: a caption over a clamped, content-aware body. For these
   // kinds the output is an ATTRIBUTE of the step rather than the point of it.
+  // `grow shrink-0`, not `shrink-0`: the well FILLS the space its kind reserved
+  // rather than hugging a one-line body and leaving an orphan gap above the
+  // footer. Most outputs are far shorter than the reservation — the reservation
+  // is sized for the worst case and cannot shrink to the actual one, since the
+  // layout is fixed before any output exists — so a hugging well left the common
+  // card looking half-finished. Growing costs nothing and reads as a panel.
+  // `shrink-0` stays: a squeezed well would cut a line of text in half.
   const outputWell = (rows: number) =>
     runOutput ? (
-      <div className="mt-2 min-h-0 shrink-0 rounded-lg border border-border bg-surface-container-high/60 px-2 py-1.5">
+      <div className="mt-2 min-h-0 grow shrink-0 rounded-lg border border-border bg-surface-container-high/60 px-2 py-1.5">
         <div className="mb-1 font-semibold text-[9px] text-muted-foreground uppercase tracking-[0.09em]">
           {runOutput.label}
         </div>
@@ -564,14 +598,16 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
       emptySlot
     );
 
-  const body = (children: ReactNode) => (
+  const body = (children: ReactNode, justify = "") => (
     /* The content region owns its overflow: each band is `shrink-0`, so a band
        that renders taller than its reservation (a consumer's font metrics) is
        CLIPPED here rather than squeezed — a squeezed band cuts a line of text
        in half, and pushes the pinned footer off the card. Fades in when the
        density swap lands mid layout-morph; the card's border/surface (the
        root) stays opaque so the node never blinks out. */
-    <div className="wf-node-body-in flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
+    <div
+      className={`wf-node-body-in flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2 ${justify}`}
+    >
       {children}
     </div>
   );
@@ -588,12 +624,51 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
   }
 
   // A decision asks the reader a question and stops. The question is the card.
+  //
+  // Its identity STACKS rather than sharing one row, which every other kind can
+  // afford to do. "Waiting on you" is the widest pill there is, and beside a
+  // 34px mark it left about 120px of a 292px card for the title — so the one
+  // node the reader has to act on truncated both the question it was asking
+  // ("Approve the rele…") and the options it was offering. Dropping the pill to
+  // sit with the options gives the question the card's full width, and costs
+  // only the few pixels between a one-line header and a two-line one.
   if (d.kind === "decision") {
     return cardShell(
       <>
         {body(
           <>
-            {identityRow}
+            <div className="flex shrink-0 items-start gap-2.5">
+              <NodeMark
+                kind={d.kind}
+                provider={d.provider}
+                model={markModel}
+                accent={accent}
+                tile={34}
+              />
+              <div className="min-w-0 flex-1">
+                <div
+                  className="truncate font-semibold text-[13px] text-foreground leading-tight"
+                  title={d.title}
+                >
+                  {d.title}
+                </div>
+                <div className="mt-0.5 flex items-center gap-2">
+                  {subtitle && (
+                    <span
+                      className="truncate text-[11px] text-muted-foreground leading-tight"
+                      title={subtitle}
+                    >
+                      {subtitle}
+                    </span>
+                  )}
+                  {runStatus && (
+                    <span className="ml-auto shrink-0">
+                      <StatusPill status={runStatus} />
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
             {descriptionBand(true)}
           </>,
         )}
@@ -620,6 +695,11 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
               )}
             </div>
           </>,
+          // Centered, because the failure slot is empty on every run that does
+          // NOT fail — which is most of them. Reserved space it cannot give back
+          // (the layout is fixed before the run) reads as a gap under a
+          // top-aligned row, and as breathing room around a centered one.
+          "justify-center",
         )}
         {footer}
       </>,
@@ -628,10 +708,21 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
 
   // An agent, answer-first: its output is not an attribute of the node, it is
   // what the node produced, so it IS the body — no caption, no well, and set in
-  // the foreground rather than the muted token. Identity shrinks to a strip:
-  // once a node has answered, the answer identifies it better than its label,
-  // and the mark and model still say who ran.
+  // the foreground rather than the muted token. Identity shrinks to a strip,
+  // because once a node has answered, the answer identifies it better than its
+  // label does.
+  //
+  // The strip still names the agent as well as the model. Dropping the name and
+  // keeping only the model reads fine on one agent and fails on a fan-out: three
+  // branches of the same model rendered three cards all labelled "deepseek-chat",
+  // with nothing to tell them apart.
+  //
+  // And the body falls back to the PROMPT when there is no answer yet. Trading
+  // the prompt away is only right once there is something to trade it for — a
+  // queued branch that shows neither says nothing at all about what it will do.
+  // Both share the one reserved body, so the fallback costs no height.
   if (isAgent) {
+    const strip = [d.title, subtitle].filter(Boolean).join(" · ");
     return cardShell(
       <>
         {body(
@@ -646,12 +737,12 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
               />
               <span
                 className="truncate font-medium text-[11px] text-muted-foreground"
-                title={subtitle ?? d.title}
+                title={strip}
               >
-                {subtitle ?? d.title}
+                {strip}
               </span>
               <span className="flex-1" />
-              {state && <StatusPill status={state.status} />}
+              {runStatus && <StatusPill status={runStatus} />}
             </div>
             <div className="mt-2 min-h-0 flex-1 text-[12px] text-foreground leading-snug">
               {runOutput ? (
@@ -660,10 +751,26 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
                   tone={runOutput.tone}
                   rows={AGENT_BODY_ROWS}
                 />
+              ) : runStatus &&
+                runStatus !== "succeeded" &&
+                runStatus !== "failed" &&
+                d.description ? (
+                // What it is ABOUT to do, in the muted token — the answer, when it
+                // arrives, is the thing set in the foreground.
+                //
+                // Only while the node is still going to produce one. A FINISHED
+                // node that produced nothing must say so: showing its prompt
+                // there reads as the result it never returned.
+                <p
+                  className="line-clamp-5 text-[12px] text-muted-foreground"
+                  title={d.description}
+                >
+                  {d.description}
+                </p>
               ) : (
-                state && (
+                runStatus && (
                   <span className="text-muted-foreground italic">
-                    {emptySlotLabel(state.status)}
+                    {emptySlotLabel(runStatus)}
                   </span>
                 )
               )}
@@ -1177,6 +1284,7 @@ export function WorkflowGraph({
   return (
     <DirectionContext.Provider value={direction}>
       <DensityContext.Provider value={displayCompact}>
+      <RunModeContext.Provider value={hasRunOverlay}>
       <SelectedNodeContext.Provider value={selectedNodeId}>
       <ConnectableContext.Provider value={editable}>
       <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
@@ -1283,6 +1391,7 @@ export function WorkflowGraph({
       </div>
       </ConnectableContext.Provider>
       </SelectedNodeContext.Provider>
+      </RunModeContext.Provider>
       </DensityContext.Provider>
     </DirectionContext.Provider>
   );

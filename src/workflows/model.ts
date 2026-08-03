@@ -372,6 +372,20 @@ const AGENT_BODY_ROW = Math.ceil(8 + AGENT_BODY_ROWS * BODY_LINE);
 /** Control flow's one-line failure slot, plus the `mt-1.5` above it. */
 const CHIP_SLOT_ROW = 22;
 /**
+ * A decision's header, which STACKS where every other kind's sits on one row:
+ * the title takes the full width, and the options share the line below it with
+ * the status pill. "Waiting on you" is the widest pill in the set, and on one
+ * row beside a 34px mark it left roughly 120px of a {@link NODE_W} card for the
+ * question — which truncated both the question and the options on the one node
+ * whose whole purpose is to be read and answered.
+ *
+ * Measured at 42px in the browser: the title's line (16), the `mt-0.5` under it,
+ * and an options/pill row that the pill sets at 24 — its text is 10px but its
+ * padding and border are not. 45 carries the same ~3px headroom the other bands
+ * do against a fractional rendered line.
+ */
+const DECISION_HEADER_ROW = 45;
+/**
  * Kinds that route the run rather than do work. `decision` is deliberately NOT
  * here: it carries the same `structural` tone, but it is the one node that stops
  * the run to ask the reader something, and its card has to hold the question.
@@ -464,7 +478,7 @@ function nodeHeight(data: WfNodeData, withRunState: boolean): number {
   // trades its prompt away. It shares control flow's TONE, which is why the
   // split here is on `kind` — keying this off tone drops the question.
   if (data.kind === "decision") {
-    return CARD_CHROME + HEADER_ROW + DESCRIPTION_ROW + FOOTER_ROW;
+    return CARD_CHROME + DECISION_HEADER_ROW + DESCRIPTION_ROW + FOOTER_ROW;
   }
   if (isStructuralKind(data.kind)) {
     return CARD_CHROME + HEADER_ROW + CHIP_SLOT_ROW + FOOTER_ROW;

@@ -516,10 +516,10 @@ do:
     expect(R.a2.height).toBe(20 + 34 + 22 + 28);
 
     // A DECISION shares control flow's tone but keeps its QUESTION, which is
-    // what the reader has to act on: chrome(20) + header(34) + description(40) +
-    // footer(28). Keying the split off tone rather than kind is what would drop
-    // it, so this is the assertion that catches that.
-    expect(R.a3.height).toBe(20 + 34 + 40 + 28);
+    // what the reader has to act on: chrome(20) + its STACKED header(45) +
+    // description(40) + footer(28). Keying the split off tone rather than kind
+    // is what would drop it, so this is the assertion that catches that.
+    expect(R.a3.height).toBe(20 + 45 + 40 + 28);
     expect(R.a3.height).toBeGreaterThan(R.a2.height);
 
     // The point of the whole exercise: a node that can say nothing reserves less

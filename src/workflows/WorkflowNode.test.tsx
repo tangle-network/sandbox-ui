@@ -19,6 +19,7 @@ import {
   DirectionContext,
   fitZoomCeiling,
   isEditableEdge,
+  RunModeContext,
   SelectedNodeContext,
   WorkflowGraph,
   WorkflowNode,
@@ -46,10 +47,18 @@ const ACTION: WfNodeData = {
 
 // WorkflowNode renders React Flow <Handle>s, which read the flow store from
 // context — wrap it in a provider so it renders standalone.
-function renderNode(data: WfNodeData) {
+//
+// `RunModeContext` says whether the GRAPH is showing a run, which is what decides
+// whether a card renders its run bands (the graph reserves them for every action
+// the moment it has any run state). Defaulted here to "this node has state",
+// which is the case every test that passes one is describing; a test covering a
+// node the host sent NO entry for in a live run passes it explicitly.
+function renderNode(data: WfNodeData, runMode = data.state !== undefined) {
   return render(
     <ReactFlowProvider>
-      <WorkflowNode {...({ data } as NodeProps<Node<WfNodeData>>)} />
+      <RunModeContext.Provider value={runMode}>
+        <WorkflowNode {...({ data } as NodeProps<Node<WfNodeData>>)} />
+      </RunModeContext.Provider>
     </ReactFlowProvider>,
   );
 }
@@ -188,8 +197,9 @@ describe("WorkflowNode", () => {
       },
     });
     expect(screen.getByText("Running")).toBeTruthy();
-    // The live model names the step (it supersedes the requested one)…
-    expect(screen.getByText("gpt-4o")).toBeTruthy();
+    // The live model names the step (it supersedes the requested one) — beside
+    // the agent's own name, so a fan-out of one model is still tellable apart.
+    expect(screen.getByText("AI Agent · gpt-4o")).toBeTruthy();
     // …and the run's numbers read as ONE line, not a row of boxes.
     expect(screen.getByText("$0.0032")).toBeTruthy();
     expect(screen.getByText("4.2s")).toBeTruthy();
@@ -204,8 +214,8 @@ describe("WorkflowNode", () => {
       subtitle: "claude-sonnet-5",
       state: { status: "running", model: "deepseek/deepseek-chat" },
     });
-    expect(screen.getByText("deepseek-chat")).toBeTruthy();
-    expect(screen.queryByText("claude-sonnet-5")).toBeNull();
+    expect(screen.getByText(/deepseek-chat/)).toBeTruthy();
+    expect(screen.queryByText(/claude-sonnet-5/)).toBeNull();
   });
 
   it("trades an agent's prompt for its answer once the node has run", () => {
@@ -230,6 +240,70 @@ describe("WorkflowNode", () => {
     expect(
       screen.getByText("Found an uncapped retry loop in worker.ts"),
     ).toBeTruthy();
+  });
+
+  it("shows an agent's prompt while it has no answer yet, so a queued branch says what it will do", () => {
+    // A fan-out runs the same model on different prompts. Trading the prompt for
+    // the answer is only right once there IS an answer: a queued branch showing
+    // neither rendered as an anonymous card — three of them side by side, all
+    // labelled with the same model and nothing to tell them apart.
+    renderNode({
+      ...BASE,
+      description: "Audit the change for security vulnerabilities.",
+      subtitle: "deepseek-chat",
+      state: { status: "queued" },
+    });
+    expect(
+      screen.getByText("Audit the change for security vulnerabilities."),
+    ).toBeTruthy();
+    // The name rides with the model for the same reason.
+    expect(screen.getByText("AI Agent · deepseek-chat")).toBeTruthy();
+  });
+
+  it("says a FINISHED agent produced nothing, rather than falling back to its prompt", () => {
+    // The prompt stands in for an answer only while one is still coming. On a
+    // node that has finished, the same text reads as the result it returned.
+    renderNode({
+      ...BASE,
+      description: "Triage the change and decide what review it needs.",
+      state: { status: "succeeded" },
+    });
+    expect(screen.getByText("No output")).toBeTruthy();
+    expect(
+      screen.queryByText("Triage the change and decide what review it needs."),
+    ).toBeNull();
+  });
+
+  it("replaces that prompt with the answer as soon as one arrives", () => {
+    // The counterpart: the fallback must not linger beside the answer, which
+    // would spend the body on the question the reader already had answered.
+    renderNode({
+      ...BASE,
+      description: "Audit the change for security vulnerabilities.",
+      state: { status: "succeeded", outputPreview: "2 high-severity findings." },
+    });
+    expect(screen.getByText("2 high-severity findings.")).toBeTruthy();
+    expect(
+      screen.queryByText("Audit the change for security vulnerabilities."),
+    ).toBeNull();
+  });
+
+  it("renders a run card for a node the host sent no state for, matching what the layout reserved", () => {
+    // `nodeHeight` reserves the run bands for every action the moment the graph
+    // has ANY run state — the layout is computed once and cannot revisit it. A
+    // node missing from `nodeState` (the run has not reached it, and the host
+    // sent no entry) was therefore rendering its definition card into a
+    // run-sized box, leaving over a hundred pixels of void beneath it.
+    const { container } = renderNode({ ...ACTION, description: "post it" }, true);
+    // The footer is the tell: it is a run band, and it is what the box reserved.
+    expect(container.querySelector(":scope > div > .mt-auto")).toBeTruthy();
+  });
+
+  it("renders NO run bands when the graph is not showing a run at all", () => {
+    // The counterpart — a definition graph reserves none of them.
+    const { container } = renderNode({ ...ACTION, description: "post it" }, false);
+    expect(container.querySelector(":scope > div > .mt-auto")).toBeNull();
+    expect(screen.getByText("post it")).toBeTruthy();
   });
 
   it("keeps an agent's prompt on a DEFINITION card, which has no answer to show", () => {

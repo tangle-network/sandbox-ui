@@ -33,6 +33,7 @@ import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -43,8 +44,11 @@ import {
 import {
   COMPACT_NODE_SIZE,
   COMPACT_TILE,
+  ACTION_OUTPUT_ROWS,
+  AGENT_BODY_ROWS,
+  isStructuralKind,
   OUTPUT_PREVIEW_CHARS,
-  OUTPUT_ROWS,
+  STRUCTURAL_OUTPUT_ROWS,
   triggerNodeIndex,
   type WfDirection,
   type WfEdgeKind,
@@ -443,9 +447,14 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
     );
   }
 
-  // EXPANDED: identity (mark + title + subtitle), then what it does, then what it
-  // did — each its own band, in that order, over a bottom-pinned status footer.
-  return (
+  // EXPANDED: the card's anatomy follows what the node IS, because a single
+  // anatomy has to reserve for the worst case and every other node then pays for
+  // it (see nodeHeight). An agent is answer-first; control flow is a chip; a
+  // decision keeps its question; every other action gets a response well. Each
+  // branch's bands must add up to what nodeHeight reserved for that kind — they
+  // are one decision written twice, and model.test.ts asserts the per-kind
+  // arithmetic so the build fails when they drift.
+  const cardShell = (children: ReactNode) => (
     <div
       className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-colors"
       style={{
@@ -458,98 +467,225 @@ export function WorkflowNode({ id, data }: NodeProps<Node<WfNodeData>>) {
       }}
     >
       {handles}
-      {/* The content region owns its overflow: each band is `shrink-0`, so a band
-          that renders taller than its reservation (a consumer's font metrics) is
-          CLIPPED here rather than squeezed — a squeezed band cuts a line of text
-          in half, and pushes the pinned footer off the card. Fades in when the
-          density swap lands mid layout-morph; the card's border/surface (the
-          root) stays opaque so the node never blinks out. */}
-      <div className="wf-node-body-in flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
-        <div className="flex shrink-0 items-center gap-2.5">
-          <NodeMark
-            kind={d.kind}
-            provider={d.provider}
-            model={markModel}
-            accent={accent}
-            tile={34}
-          />
-          <div className="min-w-0 flex-1">
-            <div
-              className="truncate font-semibold text-[13px] text-foreground leading-tight"
-              title={d.title}
-            >
-              {d.title}
-            </div>
-            {subtitle && (
-              <div
-                className="truncate text-[11px] text-muted-foreground leading-tight"
-                title={subtitle}
-              >
-                {subtitle}
-              </div>
-            )}
-          </div>
-          {state ? (
-            <StatusPill status={state.status} />
-          ) : (
-            d.badge && (
-              <span className="shrink-0 rounded-full border border-border bg-surface-container-high px-2 py-[1px] font-medium text-[10px] text-muted-foreground">
-                {d.badge}
-              </span>
-            )
-          )}
+      {children}
+    </div>
+  );
+
+  // The identity row every card but the agent's keeps: a node you cannot name is
+  // not a node.
+  const identityRow = (
+    <div className="flex shrink-0 items-center gap-2.5">
+      <NodeMark
+        kind={d.kind}
+        provider={d.provider}
+        model={markModel}
+        accent={accent}
+        tile={34}
+      />
+      <div className="min-w-0 flex-1">
+        <div
+          className="truncate font-semibold text-[13px] text-foreground leading-tight"
+          title={d.title}
+        >
+          {d.title}
         </div>
-
-        {/* What the step actually says: the agent's prompt, the notify URL, the
-            events a trigger listens for. Two lines, then it's a click away. */}
-        {d.description && (
-          <p
-            className="mt-2 line-clamp-2 shrink-0 text-[11px] text-muted-foreground leading-snug"
-            title={d.description}
+        {subtitle && (
+          <div
+            className="truncate text-[11px] text-muted-foreground leading-tight"
+            title={subtitle}
           >
-            {d.description}
-          </p>
-        )}
-
-        {/* Run metrics as ONE quiet line, not a row of boxes: cost and tokens are
-            values, and values don't need a container each. Elapsed lives in the
-            footer, beside the progress it belongs to. */}
-        {runBands && (cost || tokens) && (
-          <div className="mt-2 shrink-0 truncate text-[11px] text-muted-foreground tabular-nums">
-            {[cost, tokens].filter(Boolean).join(" · ")}
-          </div>
-        )}
-
-        {/* Content-aware output/error block — JSON renders as key/value, prose as
-            prose. Suppressed for a failure with no error. */}
-        {runBands && runOutput && (
-          <div className="mt-2 min-h-0 shrink-0 rounded-lg border border-border bg-surface-container-high/60 px-2 py-1.5">
-            <div className="mb-1 font-semibold text-[9px] text-muted-foreground uppercase tracking-[0.09em]">
-              {runOutput.label}
-            </div>
-            <NodeOutputBody
-              shape={runOutput.shape}
-              tone={runOutput.tone}
-              rows={OUTPUT_ROWS}
-            />
-          </div>
-        )}
-
-        {/* A card with nothing to report SAYS so, rather than showing a void. */}
-        {runBands && state && !runOutput && emptySlotLabel(state.status) && (
-          <div className="mt-2 flex flex-1 items-center text-[11px] text-muted-foreground italic">
-            {emptySlotLabel(state.status)}
+            {subtitle}
           </div>
         )}
       </div>
-      {runBands && state && (
-        <StatusFooter
-          status={state.status}
-          rounds={isAgent ? state.rounds : undefined}
-          elapsed={duration}
-        />
+      {state ? (
+        <StatusPill status={state.status} />
+      ) : (
+        d.badge && (
+          <span className="shrink-0 rounded-full border border-border bg-surface-container-high px-2 py-[1px] font-medium text-[10px] text-muted-foreground">
+            {d.badge}
+          </span>
+        )
       )}
     </div>
+  );
+
+  // The run's numbers move INTO the footer caption rather than costing a band of
+  // their own. Dropping the metrics row is what pays for the answer body, and
+  // the caption had room for the values already — so the card gets shorter
+  // without the reader losing what the step spent.
+  const footer = state ? (
+    <StatusFooter
+      status={state.status}
+      rounds={isAgent ? state.rounds : undefined}
+      cost={cost}
+      tokens={tokens}
+      elapsed={duration}
+    />
+  ) : null;
+
+  // The description, clamped to the two lines the layout reserves for it.
+  const descriptionBand = (emphasized: boolean) =>
+    d.description ? (
+      <p
+        className={`mt-2 line-clamp-2 shrink-0 text-[11px] leading-snug ${
+          emphasized ? "text-foreground" : "text-muted-foreground"
+        }`}
+        title={d.description}
+      >
+        {d.description}
+      </p>
+    ) : null;
+
+  // What a card says where its output WOULD be, when it has none — a step with
+  // nothing to report SAYS so, rather than showing a void.
+  const emptySlot =
+    state && !runOutput && emptySlotLabel(state.status) ? (
+      <div className="mt-2 flex flex-1 items-center text-[11px] text-muted-foreground italic">
+        {emptySlotLabel(state.status)}
+      </div>
+    ) : null;
+
+  // The framed well: a caption over a clamped, content-aware body. For these
+  // kinds the output is an ATTRIBUTE of the step rather than the point of it.
+  const outputWell = (rows: number) =>
+    runOutput ? (
+      <div className="mt-2 min-h-0 shrink-0 rounded-lg border border-border bg-surface-container-high/60 px-2 py-1.5">
+        <div className="mb-1 font-semibold text-[9px] text-muted-foreground uppercase tracking-[0.09em]">
+          {runOutput.label}
+        </div>
+        <NodeOutputBody
+          shape={runOutput.shape}
+          tone={runOutput.tone}
+          rows={rows}
+        />
+      </div>
+    ) : (
+      emptySlot
+    );
+
+  const body = (children: ReactNode) => (
+    /* The content region owns its overflow: each band is `shrink-0`, so a band
+       that renders taller than its reservation (a consumer's font metrics) is
+       CLIPPED here rather than squeezed — a squeezed band cuts a line of text
+       in half, and pushes the pinned footer off the card. Fades in when the
+       density swap lands mid layout-morph; the card's border/surface (the
+       root) stays opaque so the node never blinks out. */
+    <div className="wf-node-body-in flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
+      {children}
+    </div>
+  );
+
+  // A definition card, and a trigger in any graph: what the step IS. There is no
+  // run to report, so there are no run bands and no footer.
+  if (!runBands) {
+    return cardShell(body(
+      <>
+        {identityRow}
+        {descriptionBand(false)}
+      </>,
+    ));
+  }
+
+  // A decision asks the reader a question and stops. The question is the card.
+  if (d.kind === "decision") {
+    return cardShell(
+      <>
+        {body(
+          <>
+            {identityRow}
+            {descriptionBand(true)}
+          </>,
+        )}
+        {footer}
+      </>,
+    );
+  }
+
+  // Control flow routes the run. It books no cost and emits no output; a failure
+  // is the only thing it ever has to say, and one line carries it.
+  if (isStructuralKind(d.kind)) {
+    return cardShell(
+      <>
+        {body(
+          <>
+            {identityRow}
+            <div className="mt-1.5 min-h-0 shrink-0">
+              {runOutput && (
+                <NodeOutputBody
+                  shape={runOutput.shape}
+                  tone={runOutput.tone}
+                  rows={STRUCTURAL_OUTPUT_ROWS}
+                />
+              )}
+            </div>
+          </>,
+        )}
+        {footer}
+      </>,
+    );
+  }
+
+  // An agent, answer-first: its output is not an attribute of the node, it is
+  // what the node produced, so it IS the body — no caption, no well, and set in
+  // the foreground rather than the muted token. Identity shrinks to a strip:
+  // once a node has answered, the answer identifies it better than its label,
+  // and the mark and model still say who ran.
+  if (isAgent) {
+    return cardShell(
+      <>
+        {body(
+          <>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <NodeMark
+                kind={d.kind}
+                provider={d.provider}
+                model={markModel}
+                accent={accent}
+                tile={18}
+              />
+              <span
+                className="truncate font-medium text-[11px] text-muted-foreground"
+                title={subtitle ?? d.title}
+              >
+                {subtitle ?? d.title}
+              </span>
+              <span className="flex-1" />
+              {state && <StatusPill status={state.status} />}
+            </div>
+            <div className="mt-2 min-h-0 flex-1 text-[12px] text-foreground leading-snug">
+              {runOutput ? (
+                <NodeOutputBody
+                  shape={runOutput.shape}
+                  tone={runOutput.tone}
+                  rows={AGENT_BODY_ROWS}
+                />
+              ) : (
+                state && (
+                  <span className="text-muted-foreground italic">
+                    {emptySlotLabel(state.status)}
+                  </span>
+                )
+              )}
+            </div>
+          </>,
+        )}
+        {footer}
+      </>,
+    );
+  }
+
+  // Every other action: what it is, then what came back.
+  return cardShell(
+    <>
+      {body(
+        <>
+          {identityRow}
+          {outputWell(ACTION_OUTPUT_ROWS)}
+        </>,
+      )}
+      {footer}
+    </>,
   );
 }
 
@@ -682,11 +818,15 @@ export interface WorkflowGraphProps {
   /** Flow direction: "LR" (default) reads left-to-right — best for the wide/short
    *  run-detail panel; "TB" is a vertical column. */
   direction?: WfDirection;
-  /** Start collapsed (compact icon tiles) rather than expanded. Defaults to
-   *  `true`: a graph is read structure-first, and the tiles are what make the
-   *  shape of the run legible at a glance — the per-node detail is one density
-   *  toggle (or one node click) away. The full variant exposes the toggle; the
-   *  preview variant is always compact. */
+  /**
+   * Start collapsed (compact icon tiles) rather than expanded.
+   *
+   * Defaults to whether the graph has a RUN: a definition is read
+   * structure-first, so it opens as tiles, while a run is read result-first and
+   * opens as cards — the answers are the reason the reader opened it. Passing
+   * the prop pins the density either way; the full variant still exposes the
+   * toggle, and the preview variant is always compact.
+   */
   defaultCompact?: boolean;
   /** Sizing for the wrapper; the caller controls height. */
   className?: string;
@@ -746,7 +886,7 @@ export function WorkflowGraph({
   yaml,
   variant = "full",
   direction = "LR",
-  defaultCompact = true,
+  defaultCompact,
   className,
   nodeState,
   edges: declaredEdges,
@@ -765,7 +905,16 @@ export function WorkflowGraph({
   const isPreview = variant === "preview";
   // The proposal-card preview is always compact (a small thumbnail); the full
   // variant defaults per prop and lets the user toggle density.
-  const [userCompact, setUserCompact] = useState(defaultCompact);
+  //
+  // Unpinned, the density follows whether there is a RUN to read. A definition
+  // is structure — the tiles are what make its shape legible at a glance, and
+  // there are no results to show. A run is read for its results, and opening it
+  // as tiles puts every answer behind a toggle the reader has to find first.
+  // Read ONCE, as the initial state: flipping density on a later tick would
+  // yank the canvas out from under someone who had chosen the other one.
+  const [userCompact, setUserCompact] = useState(
+    defaultCompact ?? nodeState === undefined,
+  );
   const compact = isPreview || userCompact;
   // What the nodes RENDER (content + handle anchors). Inside a layout tween it
   // TRAILS `compact` — the target density drives the layout and the camera at

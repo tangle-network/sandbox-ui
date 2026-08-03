@@ -216,10 +216,18 @@ export function StatusPill({ status }: { status: WfNodeStatus }) {
 export function StatusFooter({
   status,
   rounds,
+  cost,
+  tokens,
   elapsed,
 }: {
   status: WfNodeStatus;
   rounds?: number;
+  /** Formatted spend and token usage. These ride in the footer's caption rather
+   *  than a band of their own: they are VALUES the reader wants kept, and values
+   *  do not need a row of the card each. The caption already had the room, so
+   *  nothing that used to be visible had to be given up to shorten the card. */
+  cost?: string;
+  tokens?: string;
   elapsed?: string;
 }) {
   // `!== undefined` (not truthiness) so an explicit `rounds: 0` — a just-started
@@ -228,6 +236,7 @@ export function StatusFooter({
     rounds !== undefined
       ? `${rounds} round${rounds === 1 ? "" : "s"}`
       : undefined;
+  const caption = [roundsLabel, cost, tokens].filter(Boolean).join(" · ");
   return (
     <div className="wf-node-body-in mt-auto border-border border-t">
       <div
@@ -249,7 +258,7 @@ export function StatusFooter({
         {/* Both spans always render (even empty) and the line box is pinned, so a
             node with nothing to caption keeps the same footer height as one with
             rounds AND elapsed — the band the layout reserved. */}
-        <span className="min-h-[15px] truncate">{roundsLabel ?? ""}</span>
+        <span className="min-h-[15px] truncate tabular-nums">{caption}</span>
         <span className="min-h-[15px] shrink-0 tabular-nums">
           {elapsed ?? ""}
         </span>

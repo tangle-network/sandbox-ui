@@ -288,49 +288,106 @@ const DESCRIPTION_ROW = 40;
 /** The single-line run metrics (cost · tokens). */
 const META_ROW = 27;
 /**
- * Lines of output body the card shows, and the reservation that holds them.
+ * Lines of output body a card shows, per kind, and the reservations that hold
+ * them. Each pair is ONE decision written twice — the card clamps to the row
+ * count and the layout reserves for exactly that many — so they live together.
+ * Raise a clamp without its reservation and the extra line renders into a box
+ * with no room for it: the card claims N lines and shows N-1.
  *
- * The two are ONE decision written twice, so they live together: the card clamps
- * to {@link OUTPUT_ROWS} and the layout reserves {@link OUTPUT_ROW} for exactly
- * that many. Raise the clamp without the reservation and the extra line renders
- * into a box with no room for it, so it is clipped — the card would claim three
- * lines and show two.
+ * WHY PER KIND. A workflow graph is laid out once, from the YAML, before any run
+ * state exists, so whatever a card reserves is paid by every node of its kind
+ * whether or not that node fills it. A single budget therefore has to be the
+ * worst case, and every other node pays for it: a `parallel` books no cost and
+ * emits no output, and a queued node has neither yet, yet both were given the
+ * full metrics + 3-line-well + footer stack — a ~238px box holding one line.
  *
- * Three rather than two because the card was never short of SPACE so much as it
- * was throwing away text it already held: the host hands it up to
- * {@link OUTPUT_PREVIEW_CHARS} characters, and two lines of a 292px card hold
- * roughly half of that. The JSON branch felt it worst — its budget is rows
- * MINUS the overflow marker, so at two rows a seven-field object rendered a
- * single field and an ellipsis.
+ * What a reservation may key on is anything STRUCTURAL: the node's `kind`,
+ * whether it declares a description, whether the graph has a run at all. All of
+ * it is fixed when the YAML is parsed and constant for the whole run, so keying
+ * on it never reflows. It may NOT key on live state — a node's status, the
+ * length of its output, whether it failed — which changes on a tick.
  */
-export const OUTPUT_ROWS = 3;
 /**
- * The output block: a framed well holding an "Output"/"Error" caption over an
- * {@link OUTPUT_ROWS}-line, clamped content-aware body (JSON key/value, prose,
- * or monospace).
+ * An agent's answer is the thing a reader opens a run to see, so it gets the
+ * card's BODY rather than a well in the corner of one, and the most rows the
+ * data can actually fill.
  *
- * Sized to the TALLER of the two bodies, measured in the browser at the default
- * font config (the `OutputAtFullBudget` story renders both at full budget):
- *
- *   prose  3 x 15.125px line-height                    = 45px body → 85px well
- *   json   3 x 14.4375px + 2 x 2px (`space-y-0.5`)     = 47px body → 86px well
- *
- * JSON wins despite the smaller type because its rows are separated where prose
- * runs solid — which is why the reservation is set off it, and why eyeballing
- * the prose case alone would under-size it. The well is the body plus the
- * caption, the `py-1.5` padding, the border and the `mt-2` above it; 89 leaves
- * 3px over the taller branch, the same headroom the neighbouring text bands
- * carry against a fractional rendered line.
+ * Five because that is the ceiling, not a preference: the host caps the preview
+ * at {@link OUTPUT_PREVIEW_CHARS} characters and a {@link NODE_W}-wide card
+ * holds roughly 45 a line, so a sixth row would draw blank. Showing more needs
+ * the host to send more first.
  */
-const OUTPUT_ROW = 89;
+export const AGENT_BODY_ROWS = 5;
+/** Every other action — an integration response, a notify result, a sandbox
+ *  summary. A well rather than a body: for these the output is an attribute of
+ *  the step, not the point of it, and the full value is one click away in the
+ *  host's node panel. */
+export const ACTION_OUTPUT_ROWS = 3;
+/** Control flow routes the run; it does no work. The only thing it ever has to
+ *  report is a failure, and one line carries that. */
+export const STRUCTURAL_OUTPUT_ROWS = 1;
+
+// Rendered heights inside a framed well, measured in the browser at the
+// library's default font config. A well holds one of two bodies, and they do NOT
+// have the same height: prose runs solid, while the JSON key/value rows are
+// separated by `space-y-0.5`.
+const WELL_PROSE_LINE = 15.125;
+const WELL_JSON_LINE = 14.4375;
+const WELL_JSON_GAP = 2;
+/** Caption + `mb-1`, `py-1.5`, the border, and the `mt-2` above the well. */
+const WELL_CHROME = 39.5;
+/**
+ * Reservation for a well holding `rows` lines, with ~3px of headroom — the same
+ * the neighbouring text bands carry against a fractional rendered line.
+ *
+ * Sized to the TALLER of the two bodies rather than to prose alone. JSON wins
+ * from three rows up despite its smaller type, because its gaps accumulate where
+ * prose has none (3 rows: 47.3px json vs 45.4px prose) — so sizing off the prose
+ * case, which is the one that comes to mind, under-reserves exactly where the
+ * card is most crowded.
+ */
+function wellRow(rows: number): number {
+  const body = Math.max(
+    rows * WELL_PROSE_LINE,
+    rows * WELL_JSON_LINE + (rows - 1) * WELL_JSON_GAP,
+  );
+  return Math.ceil(WELL_CHROME + body) + 3;
+}
+/**
+ * The agent card's identity STRIP — a small mark, the model, the status pill.
+ * Demoted from a full header row because on a finished node the answer, not the
+ * label, is what identifies the step.
+ *
+ * Measured at 19px in the browser, and it is the PILL that sets that height, not
+ * the 18px mark beside it — so shrinking the mark alone would not buy anything
+ * back. 22 carries the same ~3px headroom the other bands do against a
+ * fractional rendered line.
+ */
+const SLIM_HEADER_ROW = 22;
+/** Rendered line height of the answer body (`text-[12px] leading-snug`), which
+ *  is set larger than a well's because it IS the card's content. */
+const BODY_LINE = 16.5;
+/** The answer body: {@link AGENT_BODY_ROWS} lines plus the `mt-2` above it. */
+const AGENT_BODY_ROW = Math.ceil(8 + AGENT_BODY_ROWS * BODY_LINE);
+/** Control flow's one-line failure slot, plus the `mt-1.5` above it. */
+const CHIP_SLOT_ROW = 22;
+/**
+ * Kinds that route the run rather than do work. `decision` is deliberately NOT
+ * here: it carries the same `structural` tone, but it is the one node that stops
+ * the run to ask the reader something, and its card has to hold the question.
+ */
+const STRUCTURAL_KINDS = new Set(["parallel", "foreach"]);
+export function isStructuralKind(kind: string | undefined): boolean {
+  return kind !== undefined && STRUCTURAL_KINDS.has(kind);
+}
 /**
  * Characters of host-supplied preview the card admits before the line clamp gets
  * it. This bound exists to keep an oversized payload out of the DOM, NOT to
- * decide what is visible — the line clamp does that — so it is set comfortably
- * above what {@link OUTPUT_ROWS} lines of a {@link NODE_W}-wide card can hold
- * (roughly 50 characters a line). Set it at or below what the card can show and
- * it stops being a safety bound and starts silently deleting text the card had
- * the room for, which is the state this replaced.
+ * decide what is visible — the line clamp does that.
+ *
+ * It matches the cap the host itself applies, which is what makes it the real
+ * ceiling on every card design rather than a safety valve: no reservation can
+ * show text the host never sent.
  */
 export const OUTPUT_PREVIEW_CHARS = 240;
 /** The run status FOOTER pinned to the card's bottom: a top border (1px), the
@@ -393,11 +450,34 @@ export const COMPACT_NODE_SIZE_TB = {
  * false) and the node component skips its footer to match.
  */
 function nodeHeight(data: WfNodeData, withRunState: boolean): number {
-  let h = CARD_CHROME + HEADER_ROW;
-  if (data.description) h += DESCRIPTION_ROW;
-  // Metrics (cost · tokens) and the output block exist only once a run does.
-  if (withRunState) h += META_ROW + OUTPUT_ROW + FOOTER_ROW;
-  return h;
+  // A definition card has no answer to show, so it shows what the step IS: the
+  // header and, where there is one, the description. A trigger only ever fires,
+  // so it is spaced this way even in a run graph (see `runBands` in the node).
+  if (!withRunState || data.tone === "trigger") {
+    return (
+      CARD_CHROME + HEADER_ROW + (data.description ? DESCRIPTION_ROW : 0)
+    );
+  }
+  // A decision's description is the QUESTION it is asking, and nothing
+  // supersedes it: a parked decision has no output to show instead, and it is
+  // the one node the reader has to act on. So it keeps its text where an agent
+  // trades its prompt away. It shares control flow's TONE, which is why the
+  // split here is on `kind` — keying this off tone drops the question.
+  if (data.kind === "decision") {
+    return CARD_CHROME + HEADER_ROW + DESCRIPTION_ROW + FOOTER_ROW;
+  }
+  if (isStructuralKind(data.kind)) {
+    return CARD_CHROME + HEADER_ROW + CHIP_SLOT_ROW + FOOTER_ROW;
+  }
+  if (data.kind === "agent.run") {
+    return CARD_CHROME + SLIM_HEADER_ROW + AGENT_BODY_ROW + FOOTER_ROW;
+  }
+  // Every other action. The prompt/URL is authoring detail a run's reader did
+  // not come for, so the description band is not reserved — the subtitle already
+  // says what was invoked, and the node panel holds the rest.
+  return (
+    CARD_CHROME + HEADER_ROW + wellRow(ACTION_OUTPUT_ROWS) + FOOTER_ROW
+  );
 }
 
 /** Main-axis flow direction: "LR" (left-to-right, default) suits the wide/short

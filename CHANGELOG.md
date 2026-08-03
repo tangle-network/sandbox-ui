@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.95.0
+
+### Workflows
+
+- **A node's card is now shaped by what the node IS, so an agent's answer is on it rather than behind a click.** Every node used to reserve the same bands — a metrics line, a three-line output well and a footer — whether or not its kind could ever fill them. Because a graph is laid out once from the definition, before any run state exists, that single reservation had to be the worst case and every other node paid for it: a `parallel` books no cost and emits no output, a queued node has neither yet, and both were given a ~238px box to hold one line. Each kind now reserves what it can actually use. An agent is answer-first — its output IS the card's body, five lines in the foreground with no caption or frame, because the answer is not an attribute of the step, it is what the step produced. Control flow is a chip with a single line for the only thing it can report, a failure. Every other action keeps a framed response well. The result is a card that shows more of the answer in less room: an agent's went from three clamped lines in 238px to the whole of what the host sends in 165px, and a `parallel` from 198px to 104px.
+- **A run's graph opens as cards, and a definition's opens as tiles.** The density default now follows whether there is a run to read, rather than always starting collapsed. A definition is structure — the tiles are what make its shape legible, and there are no results to show — while a run is opened for its results, and starting it as tiles put every answer behind a toggle the reader had to find first. Passing `defaultCompact` still pins the density either way, and the toggle is unchanged.
+- **A parked decision keeps the question it is asking.** A `decision` carries the same `structural` tone as `parallel` and `foreach`, so shaping the card off tone alone collapsed it to a chip and dropped its description — which for a decision is the question the run is waiting on, on the one node the reader has to act on. The split is on `kind` for exactly this reason.
+- **Nothing that was visible had to be given up to shorten the card.** The run's cost and token counts move into the footer's caption, which already had the room, instead of costing a band of their own.
+- **The output body honours every row budget a card can reserve.** It mapped only one, two and three lines and silently fell back to two for anything else, so a card that reserved more showed a short body in a tall well with nothing failing. It now covers the full range, and `rows="none"` renders unclamped for a container that scrolls or is sized by its content.
+
 ## 0.94.3
 
 ### Fixes

@@ -224,6 +224,12 @@ const CLAMP_BY_ROWS: Record<number, string> = {
  * design supplies its own container/label). `rows` caps the visible lines so the
  * body stays within a card's reserved output space; `tone="error"` colors it for
  * a failure message.
+ *
+ * `rows="none"` renders the body UNCLAMPED, for a container that scrolls or is
+ * sized by its content — a drawer, a detail panel, a selection overlay. It is a
+ * word rather than a large number because there is no number that means "do not
+ * clamp": a count outside {@link CLAMP_BY_ROWS} falls back to two lines, so
+ * `rows={99}` asks for everything and silently shows the least.
  */
 export function NodeOutputBody({
   shape,
@@ -231,10 +237,11 @@ export function NodeOutputBody({
   tone = "default",
 }: {
   shape: OutputShape;
-  rows?: number;
+  rows?: number | "none";
   tone?: "default" | "error";
 }): ReactElement | null {
-  const clampClass = CLAMP_BY_ROWS[rows] ?? "line-clamp-2";
+  const unclamped = rows === "none";
+  const clampClass = unclamped ? "" : (CLAMP_BY_ROWS[rows] ?? "line-clamp-2");
   // Wrapping is only for a multi-line code budget; at `rows === 1` it would fight
   // `truncate`'s `white-space: nowrap` and could re-wrap the single line.
   const codeWrap = rows === 1 ? "" : "whitespace-pre-wrap break-all";
@@ -246,8 +253,16 @@ export function NodeOutputBody({
     // fixed-height card reserves: when a marker is shown it takes the last line,
     // so at most `rows - 1` entries render. (More entries exist than fit, or
     // `classifyOutput` already capped a wide object — either way, overflow.)
-    const overflow = shape.truncated || shape.entries.length > rows;
-    const visible = shape.entries.slice(0, overflow ? Math.max(0, rows - 1) : rows);
+    //
+    // Unclamped, every recovered entry renders and the marker means only what
+    // `classifyOutput` already dropped (its MAX_JSON_ENTRIES cap) — a container
+    // with no line budget has no rows to run out of.
+    const overflow = unclamped
+      ? shape.truncated
+      : shape.truncated || shape.entries.length > rows;
+    const visible = unclamped
+      ? shape.entries
+      : shape.entries.slice(0, overflow ? Math.max(0, rows - 1) : rows);
     // A JSON-shaped error must still read as red, like the code/text branches —
     // otherwise a failure with a structured message is indistinguishable from
     // normal output but for the label.

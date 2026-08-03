@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   buildWorkflowGraph,
   COMPACT_TILE,
-  OUTPUT_ROWS,
+  ACTION_OUTPUT_ROWS,
   type WfNodeData,
   type WfNodeState,
 } from "./model";
@@ -29,6 +29,17 @@ afterEach(cleanup);
 const BASE: WfNodeData = {
   title: "AI Agent",
   kind: "agent.run",
+  isRoot: false,
+  tone: "action",
+};
+
+/** A non-agent action. An agent's card renders its answer as the card BODY —
+ *  no caption, no frame — so the framed output WELL, and everything about how it
+ *  clamps and labels itself, belongs to these kinds now. */
+const ACTION: WfNodeData = {
+  title: "Notify",
+  kind: "notify",
+  subtitle: "example.com",
   isRoot: false,
   tone: "action",
 };
@@ -197,15 +208,50 @@ describe("WorkflowNode", () => {
     expect(screen.queryByText("claude-sonnet-5")).toBeNull();
   });
 
-  it("surfaces the agent round count in the footer, alongside the prompt", () => {
+  it("trades an agent's prompt for its answer once the node has run", () => {
     renderNode({
       ...BASE,
       description: "Review the PR diff",
-      state: { status: "running", model: "glm-5", rounds: 3, durationMs: 8200 },
+      state: {
+        status: "running",
+        model: "glm-5",
+        rounds: 3,
+        durationMs: 8200,
+        outputPreview: "Found an uncapped retry loop in worker.ts",
+      },
     });
-    // Rounds are an agent progress signal; the prompt description is shown too.
+    // Rounds are an agent progress signal, and they ride in the footer caption.
     expect(screen.getByText("3 rounds")).toBeTruthy();
+    // The PROMPT is gone: it is authoring detail, and a reader who opened a run
+    // came for what the agent said, not for what it was asked. The card is sized
+    // for exactly this trade (nodeHeight reserves no description band for an
+    // agent with run state), so rendering it here would overflow the box.
+    expect(screen.queryByText("Review the PR diff")).toBeNull();
+    expect(
+      screen.getByText("Found an uncapped retry loop in worker.ts"),
+    ).toBeTruthy();
+  });
+
+  it("keeps an agent's prompt on a DEFINITION card, which has no answer to show", () => {
+    // The counterpart: with no run state there is nothing to trade the prompt
+    // for, so it stays — and `nodeHeight` reserves the description band for it.
+    renderNode({ ...BASE, description: "Review the PR diff" });
     expect(screen.getByText("Review the PR diff")).toBeTruthy();
+  });
+
+  it("renders an agent's answer as the card BODY, with no caption or well", () => {
+    // Answer-first: the output is not an attribute of the node, it is what the
+    // node produced. A caption over a framed well says the opposite, and costs
+    // the rows that let the answer be five lines instead of three.
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: "the whole answer" },
+    });
+    expect(screen.queryByText("Output")).toBeNull();
+    expect(screen.getByText("the whole answer")).toBeTruthy();
+    // Set in the foreground token, not the muted one a well's body uses.
+    const body = screen.getByText("the whole answer");
+    expect(body.className).toContain("text-foreground");
   });
 
   it("renders the singular '1 round'", () => {
@@ -544,7 +590,7 @@ do:
 describe("WorkflowNode — status footer + content-aware output", () => {
   it("renders a JSON output as key/value rows under an OUTPUT label, not one raw blob", () => {
     renderNode({
-      ...BASE,
+      ...ACTION,
       state: { status: "succeeded", outputPreview: '{"status":200,"id":4821}' },
     });
     // The block is labelled…
@@ -559,7 +605,7 @@ describe("WorkflowNode — status footer + content-aware output", () => {
 
   it("labels a failure's error block ERROR and renders the message", () => {
     renderNode({
-      ...BASE,
+      ...ACTION,
       state: { status: "failed", error: "provider 500: timed out" },
     });
     expect(screen.getByText("Error")).toBeTruthy();
@@ -597,29 +643,29 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(screen.getAllByText("Failed")).toHaveLength(1);
   });
 
-  it("keeps a wide JSON output within its line budget (entries + marker <= OUTPUT_ROWS)", () => {
+  it("keeps a wide JSON output within its line budget (entries + marker <= ACTION_OUTPUT_ROWS)", () => {
     // An object with more fields than fit must spend its LAST line on the
-    // truncation marker, so it renders at most OUTPUT_ROWS - 1 key rows. Rows and
+    // truncation marker, so it renders at most ACTION_OUTPUT_ROWS - 1 key rows. Rows and
     // marker together exceeding the budget is what clips the well or pushes it
     // into the footer of the fixed-height card.
     const { container } = renderNode({
-      ...BASE,
+      ...ACTION,
       state: {
         status: "succeeded",
         outputPreview: '{"a":1,"b":2,"c":3,"d":4,"e":5}',
       },
     });
-    // Derived from OUTPUT_ROWS rather than written as a literal, so retuning the
+    // Derived from ACTION_OUTPUT_ROWS rather than written as a literal, so retuning the
     // budget moves this expectation with it instead of failing for the wrong
     // reason — the invariant is "rows + marker fits", not "there are two rows".
-    expect(container.querySelectorAll("dt")).toHaveLength(OUTPUT_ROWS - 1);
+    expect(container.querySelectorAll("dt")).toHaveLength(ACTION_OUTPUT_ROWS - 1);
     expect(screen.getByText("…")).toBeTruthy();
   });
 
   it("constrains a long JSON key so it can't overflow the fixed-width card", () => {
     const key = "aVeryLongUnbrokenKeyThatWouldOverflowTheCard";
     const { container } = renderNode({
-      ...BASE,
+      ...ACTION,
       state: { status: "succeeded", outputPreview: `{"${key}":"v"}` },
     });
     const dt = container.querySelector("dt");
@@ -635,7 +681,7 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     // prose one — not neutral key/value that looks like normal output. The color
     // is the semantic danger TOKEN, so it holds up in light and dark alike.
     const { container } = renderNode({
-      ...BASE,
+      ...ACTION,
       state: { status: "failed", error: '{"message":"timeout","code":504}' },
     });
     expect(screen.getByText("Error")).toBeTruthy();
@@ -696,6 +742,45 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
       <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={3} />,
     );
     expect(textC.querySelector("p")?.className).toContain("line-clamp-3");
+  });
+
+  describe('rows="none" — a container that scrolls or is sized by its content', () => {
+    it("renders prose and code with no clamp class at all", () => {
+      const { container: textC } = render(
+        <NodeOutputBody shape={classifyOutput("a longer prose output")} rows="none" />,
+      );
+      const p = textC.querySelector("p");
+      expect(p?.className).not.toMatch(/line-clamp|truncate/);
+      const { container: codeC } = render(
+        <NodeOutputBody shape={classifyOutput('["a","b","c"]')} rows="none" />,
+      );
+      expect(codeC.querySelector("pre")?.className).not.toMatch(
+        /line-clamp|truncate/,
+      );
+    });
+
+    it("renders EVERY recovered JSON entry, with no row budget to run out of", () => {
+      // Six keys — more than any card's row budget, and exactly the case that
+      // renders as one field and an ellipsis inside a card.
+      const json = '{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6}';
+      const { container } = render(
+        <NodeOutputBody shape={classifyOutput(json)} rows="none" />,
+      );
+      expect(container.querySelectorAll("dt")).toHaveLength(6);
+      // The marker is what `classifyOutput` dropped, and it dropped nothing.
+      expect(container.textContent).not.toContain("…");
+    });
+
+    it("still marks entries the classifier itself capped", () => {
+      // MAX_JSON_ENTRIES is 6, so a seventh key is gone before the body sees it —
+      // unclamped or not, the reader has to be told something was dropped.
+      const json = `{${Array.from({ length: 9 }, (_, i) => `"k${i}":${i}`).join(",")}}`;
+      const { container } = render(
+        <NodeOutputBody shape={classifyOutput(json)} rows="none" />,
+      );
+      expect(container.querySelectorAll("dt")).toHaveLength(6);
+      expect(container.textContent).toContain("…");
+    });
   });
 
   // A card that RESERVES n lines and then silently clamps to two shows a short

@@ -204,13 +204,19 @@ export function classifyOutput(
 }
 
 /** Line-clamp utility per row budget, so `code`/`text` shapes honor `rows` the
- *  same way the JSON branch does (rather than always clamping to two). Capped at
- *  a realistic card budget; an unsupported count falls back to the two-line clamp.
+ *  same way the JSON branch does (rather than always clamping to two). Covers the
+ *  full range a card can reserve; an unsupported count falls back to the two-line
+ *  clamp, which renders FEWER lines than the caller asked for — so a card whose
+ *  reservation outgrows this map shows a short body inside a tall well rather
+ *  than erroring. Extend the map when a design reserves more.
  *  Class names are literal so the Tailwind scanner emits each utility. */
 const CLAMP_BY_ROWS: Record<number, string> = {
   1: "truncate",
   2: "line-clamp-2",
   3: "line-clamp-3",
+  4: "line-clamp-4",
+  5: "line-clamp-5",
+  6: "line-clamp-6",
 };
 
 /**

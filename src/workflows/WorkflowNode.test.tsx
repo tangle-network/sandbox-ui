@@ -697,6 +697,20 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
     );
     expect(textC.querySelector("p")?.className).toContain("line-clamp-3");
   });
+
+  // A card that RESERVES n lines and then silently clamps to two shows a short
+  // body in a tall well — the reservation and the render disagree, and nothing
+  // fails. So every budget a card can reserve has to map to its own utility.
+  it.each([4, 5, 6])("honors a %i-row budget rather than falling back to two", (rows) => {
+    const { container: textC } = render(
+      <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={rows} />,
+    );
+    expect(textC.querySelector("p")?.className).toContain(`line-clamp-${rows}`);
+    const { container: codeC } = render(
+      <NodeOutputBody shape={classifyOutput('["a","b","c","d"]')} rows={rows} />,
+    );
+    expect(codeC.querySelector("pre")?.className).toContain(`line-clamp-${rows}`);
+  });
 });
 
 describe("buildStyledEdges — declared topology", () => {

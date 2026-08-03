@@ -64,18 +64,15 @@ import { classifyOutput, NodeOutputBody } from "./node-output";
 import { shortModel } from "./naming";
 import {
   edgeColor,
+  emptySlotLabel,
   NodeMark,
-  progressFill,
   STATUS_COLOR,
   STATUS_LABEL,
-  STATUS_PILL,
+  StatusFooter,
+  StatusPill,
   statusBorder,
   TONE_ACCENT,
 } from "./node-ui";
-
-/** Track color behind a progress bar — a faint wash of the muted token. */
-const MUTED_TRACK =
-  "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)";
 
 /**
  * How the graph frames itself. The floor is the point of it: fitting a long
@@ -197,93 +194,6 @@ export function isEditableEdge(edge: {
   data?: { kind?: WfEdgeKind } | undefined;
 }): boolean {
   return edge.data?.kind !== "fork" && triggerNodeIndex(edge.source) === null;
-}
-
-/**
- * The run status FOOTER: a progress bar (queued = near-empty, running = pulsing
- * partial, terminal = full) over a caption row. Pinned to the card's BOTTOM via
- * `mt-auto` so it lands at the same place on every node regardless of how much
- * content sits above it — unlike an inline strip, whose height drifts. The
- * caption reads agent rounds on the left and elapsed on the right; status itself
- * is carried by the bar color + the header pill, so it is NOT restated here. The
- * caption row always renders (even when empty) so the footer band keeps a
- * constant height across nodes.
- */
-function StatusFooter({
-  status,
-  rounds,
-  elapsed,
-}: {
-  status: WfNodeStatus;
-  rounds?: number;
-  elapsed?: string;
-}) {
-  // `!== undefined` (not truthiness) so an explicit `rounds: 0` — a just-started
-  // agent — still renders "0 rounds" rather than being hidden.
-  const roundsLabel =
-    rounds !== undefined
-      ? `${rounds} round${rounds === 1 ? "" : "s"}`
-      : undefined;
-  return (
-    <div className="wf-node-body-in mt-auto border-border border-t">
-      <div
-        className="h-1 w-full overflow-hidden"
-        style={{ background: MUTED_TRACK }}
-      >
-        {/* Only a RUNNING bar animates. A `waiting` run is stopped at this node
-            until a human answers it, and a moving bar would say otherwise. */}
-        <div
-          data-testid="wf-node-progress"
-          className={`h-full ${status === "running" ? "animate-pulse" : ""}`}
-          style={{
-            width: progressFill(status),
-            background: STATUS_COLOR[status],
-          }}
-        />
-      </div>
-      <div className="flex items-center justify-between gap-2 px-3.5 py-1 text-[10px] text-muted-foreground leading-[15px]">
-        {/* Both spans always render (even empty) and the line box is pinned, so a
-            node with nothing to caption keeps the same footer height as one with
-            rounds AND elapsed — the band the layout reserved. */}
-        <span className="min-h-[15px] truncate">{roundsLabel ?? ""}</span>
-        <span className="min-h-[15px] shrink-0 tabular-nums">{elapsed ?? ""}</span>
-      </div>
-    </div>
-  );
-}
-
-/**
- * What an expanded card says where its output WOULD be, when it has none. The
- * card is sized for the output it may yet have (the layout is computed once,
- * before any run state, so it can never reflow mid-run) — leaving that space
- * blank reads as a broken card rather than as a step with nothing to report. A
- * running node is the exception: its output may still be on its way, so it waits
- * quietly rather than claiming there is none.
- */
-function emptySlotLabel(status: WfNodeStatus): string | undefined {
-  switch (status) {
-    case "queued":
-      return "Not run yet";
-    case "succeeded":
-      return "No output";
-    case "failed":
-      return "No error reported";
-    default:
-      return undefined;
-  }
-}
-
-/** The status pill in a card's header — the one place the run state is spelled
- *  out in words. */
-function StatusPill({ status }: { status: WfNodeStatus }) {
-  return (
-    <span
-      className="shrink-0 rounded-full border px-2 py-[1px] font-medium text-[10px]"
-      style={STATUS_PILL[status]}
-    >
-      {STATUS_LABEL[status]}
-    </span>
-  );
 }
 
 // Handles are positioned anchors for edges; we hide the dots so edges appear to

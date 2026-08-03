@@ -14,6 +14,7 @@ import { cn } from "../lib/utils";
 import { useClickOutside } from "../lib/use-click-outside";
 import {
   canonicalModelId,
+  isTextChatModel,
   ModelBrandStack,
   ModelPicker,
   resolveModelBrandIdentity,
@@ -97,6 +98,15 @@ export interface AgentSessionModelControl {
   popular?: ReadonlyArray<string>;
   recents?: ReadonlyArray<string>;
   disabled?: boolean;
+  /**
+   * Restrict the catalog to these architecture modalities (forwarded to
+   * `ModelPicker`'s `modalities`). Supplying this — even `[]` — replaces the
+   * chat surface's default text-chat filter: the caller owns modality
+   * filtering entirely.
+   */
+  modalities?: ReadonlyArray<string>;
+  /** Drop providers from the picker entirely (forwarded to `ModelPicker`). */
+  excludeProviders?: ReadonlyArray<string>;
 }
 
 export interface AgentSessionReasoningControl {
@@ -272,6 +282,7 @@ function InformativeLock({
   lockBody,
   newChatLabel,
   onNewChat,
+  triggerClassName,
 }: {
   type: HarnessType;
   label: string;
@@ -279,6 +290,7 @@ function InformativeLock({
   lockBody?: React.ReactNode;
   newChatLabel?: string;
   onNewChat: () => void;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -324,6 +336,7 @@ function InformativeLock({
           "text-xs font-medium text-foreground shadow-sm transition-colors",
           "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
+          triggerClassName,
         )}
       >
         <HarnessLogo type={type} size={16} />
@@ -431,6 +444,7 @@ function HarnessDropdown({
         lockBody={lockBody}
         newChatLabel={newChatLabel}
         onNewChat={onNewChat}
+        triggerClassName={triggerClassName}
       />
     );
   }
@@ -648,15 +662,26 @@ export function AgentSessionControls({
     if (nextHarness) clampEffort(nextHarness, nextModelId);
   };
 
+  // The chat surface defaults to conversational models — text in, text out.
+  // A raw router catalog carries audio/image/embedding rows a chat composer
+  // can never use; `isTextChatModel` drops those from the catalog's own
+  // architecture fields while staying fail-open for rows with no metadata.
+  // An explicit `modalities` list hands filtering back to the caller, and
+  // non-chat surfaces (`context="all"`) see the full catalog.
+  const chatModels =
+    model && context === "chat" && model.modalities === undefined
+      ? model.models.filter(isTextChatModel)
+      : model?.models;
+
   const visibleModels =
     model && restrictModelsToHarness && harness
-      ? model.models.filter((entry) =>
+      ? (chatModels ?? []).filter((entry) =>
           isModelCompatibleWithHarness(
             harness.value,
             canonicalModelId(entry),
           ),
         )
-      : model?.models;
+      : chatModels;
 
   // Restrict the harness list for chat surfaces to chat-capable backends.
   // An explicit `available` list always wins; otherwise the chat context
@@ -680,6 +705,22 @@ export function AgentSessionControls({
       : collapsed
         ? "w-full"
         : undefined;
+  // Inline hierarchy: the model is the per-turn decision, so its pill keeps
+  // the full bordered primary treatment while the harness + effort triggers
+  // drop to a quiet ghost style beside it (the treatment the combined
+  // layout's summary trigger already uses). Collapsed panels instead
+  // normalize every row — including the model pill's h-9 rounded-full — back
+  // to the shared h-8 rounded-lg row shape so the stack reads as one menu.
+  const secondaryTriggerClass = collapsed
+    ? collapsedTriggerClass
+    : cn(
+        "border-transparent bg-transparent text-muted-foreground shadow-none",
+        "hover:border-transparent hover:bg-muted/50 hover:text-foreground",
+        "data-[state=open]:border-transparent data-[state=open]:bg-muted/50 data-[state=open]:text-foreground",
+      );
+  const modelTriggerClass = collapsed
+    ? cn(collapsedTriggerClass, "h-8 rounded-lg px-2.5 text-xs")
+    : undefined;
   // A floating (non-docked) inline composer pins its menus open downward so a
   // tall menu can't flip up over the heading. Only the inline strip's own nested
   // pickers honor this; the collapsed layouts keep their nested menus adjacent.
@@ -694,7 +735,7 @@ export function AgentSessionControls({
       side={menuSide}
       align={menuAlign}
       avoidCollisions={avoidCollisions}
-      triggerClassName={collapsedTriggerClass}
+      triggerClassName={secondaryTriggerClass}
     />
   );
   // The profile popover is not a Radix menu (its inline author form needs its
@@ -723,6 +764,8 @@ export function AgentSessionControls({
       loading={model.loading}
       popular={model.popular}
       recents={model.recents}
+      modalities={model.modalities}
+      excludeProviders={model.excludeProviders}
       disabled={
         model.disabled ||
         (visibleModels ?? []).length === 0 ||
@@ -730,7 +773,7 @@ export function AgentSessionControls({
       }
       side={collapsed ? undefined : "bottom"}
       avoidCollisions={avoidCollisions}
-      triggerClassName={collapsedTriggerClass}
+      triggerClassName={modelTriggerClass}
     />
   );
   // The selected model's reasoning capability (from the catalog) refines the harness clamp: a model
@@ -757,7 +800,7 @@ export function AgentSessionControls({
       }
       side={collapsed ? undefined : "bottom"}
       avoidCollisions={avoidCollisions}
-      triggerClassName={collapsedTriggerClass}
+      triggerClassName={secondaryTriggerClass}
     />
   );
 

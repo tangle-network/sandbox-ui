@@ -980,12 +980,17 @@ function foldColumns(
  * Folding spends the idle axis instead — the eleven steps that need a 2048px
  * row occupy a 732x439 block, which a 742x480 panel frames nearly full size.
  *
- * Returns null when the graph is NOT a single file (any layer holding more than
- * one node): a fan-out's branches already occupy the cross axis the fold needs,
- * and re-ranking that shape is a different problem from folding a line.
+ * Returns null unless the graph is a plain LINE, on two counts. Any layer
+ * holding more than one node is a fan-out, whose branches already occupy the
+ * cross axis the fold needs. And every edge must join one layer to the next: a
+ * declared topology may name a shortcut past a step, and mirroring only keeps
+ * CONSECUTIVE steps adjacent — a skip that reads as one hop in a straight line
+ * becomes a stroke across the middle of a grid. Re-ranking either shape is a
+ * different problem from folding a line.
  */
 function layoutSerpentine(
   nodes: LayoutNode[],
+  edges: readonly WfEdge[],
   colSep: number,
   laneSep: number,
 ): WfNode[] | null {
@@ -998,6 +1003,14 @@ function layoutSerpentine(
   }
   const ranks = [...byRank.keys()].sort((a, b) => a - b);
   if (ranks.some((r) => byRank.get(r)!.length !== 1)) return null;
+
+  const rankOf = new Map(nodes.map((n) => [n.id, n.rank]));
+  const joinsNextLayer = (e: WfEdge) => {
+    const from = rankOf.get(e.source);
+    const to = rankOf.get(e.target);
+    return from !== undefined && to !== undefined && to === from + 1;
+  };
+  if (!edges.every(joinsNextLayer)) return null;
 
   const ordered = ranks.map((r) => byRank.get(r)![0]);
   const count = ordered.length;
@@ -1415,7 +1428,7 @@ export function buildWorkflowGraph(
   // straight run reserves for it — so a labelled graph keeps its single file.
   const folded =
     options?.wrap && direction === "LR" && !labelled
-      ? layoutSerpentine(logical, rankSep, geo.crossSep)
+      ? layoutSerpentine(logical, edges, rankSep, geo.crossSep)
       : null;
 
   return {

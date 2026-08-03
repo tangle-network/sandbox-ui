@@ -1512,6 +1512,34 @@ do:
     expect(g.nodes.every((n) => n.sourceSide === undefined)).toBe(true);
   });
 
+  it("keeps a declared topology that skips a step in its layered flow", () => {
+    // Mirroring only keeps CONSECUTIVE steps adjacent. A shortcut past a step
+    // reads as one hop in a straight line, but becomes a stroke across the
+    // middle of a grid once the line is folded — so a topology naming one is
+    // left alone however long it is.
+    const yaml = chain(7);
+    const ids = buildWorkflowGraph(yaml, { compact: true }).nodes.map((n) => n.id);
+    const spine = ids.slice(0, -1).map((from, i) => ({ from, to: ids[i + 1] }));
+
+    // The same chain, declared rather than inferred, still folds…
+    const declared = buildWorkflowGraph(yaml, {
+      compact: true,
+      wrap: true,
+      edges: spine,
+    });
+    expect(new Set(declared.nodes.map((n) => n.position.y)).size).toBeGreaterThan(1);
+
+    // …until one edge jumps a layer.
+    const withSkip = buildWorkflowGraph(yaml, {
+      compact: true,
+      wrap: true,
+      edges: [...spine, { from: ids[1], to: ids[4] }],
+    });
+    expect(withSkip.error).toBeNull();
+    expect(new Set(withSkip.nodes.map((n) => n.position.y)).size).toBe(1);
+    expect(withSkip.nodes.every((n) => n.sourceSide === undefined)).toBe(true);
+  });
+
   it("folds only left-to-right graphs", () => {
     const g = buildWorkflowGraph(chain(10), {
       compact: true,

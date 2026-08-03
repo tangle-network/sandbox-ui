@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.95.1
+
+### Dashboard
+
+- **Backend status no longer invents a restart action.** `BackendConfig` now renders Restart only when the host supplies a real `onRestart` operation, so command-based providers can show status and MCP controls without exposing a dead server-era button.
+
 ## 0.95.0
 
 ### Workflows

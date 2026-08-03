@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Bot, Plus, RefreshCw, Trash2, Server, Wrench } from "lucide-react"
+import { Bot, Plus, Trash2, Server, Wrench } from "lucide-react"
 import { cn } from "../lib/utils"
 
 export interface BackendStatusData {
@@ -23,7 +23,8 @@ export interface BackendConfigProps {
   mcpServers: McpServer[]
   onAddMcp: (server: { name: string; command: string; args?: string[] }) => void
   onRemoveMcp: (name: string) => void
-  onRestart: () => void
+  /** Render a restart action only when the host has a real restart operation. */
+  onRestart?: () => void
   loading?: boolean
   className?: string
 }
@@ -73,14 +74,15 @@ export function BackendConfig({
       <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--md3-outline-variant)] bg-surface-container-high flex items-center justify-between">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Agent Status</h4>
-          <button
-            type="button"
-            onClick={onRestart}
-            className="inline-flex items-center gap-1.5 rounded-md bg-surface-container-high px-2.5 py-1 text-xs font-medium text-foreground hover:bg-surface-container-highest transition-colors border border-[var(--md3-outline-variant)]"
-          >
-            <RefreshCw className="h-3 w-3" />
-            Restart
-          </button>
+          {onRestart ? (
+            <button
+              type="button"
+              onClick={onRestart}
+              className="inline-flex items-center gap-1.5 rounded-md bg-surface-container-high px-2.5 py-1 text-xs font-medium text-foreground hover:bg-surface-container-highest transition-colors border border-[var(--md3-outline-variant)]"
+            >
+              Restart
+            </button>
+          ) : null}
         </div>
         <div className="p-4">
           <dl className="grid grid-cols-[100px_1fr] gap-y-3 text-sm">

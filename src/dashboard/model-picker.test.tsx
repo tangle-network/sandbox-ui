@@ -125,8 +125,12 @@ describe("ModelPicker dedup + recommended", () => {
     );
     await user.click(screen.getByRole("button"));
     expect(await screen.findByText("Recommended")).toBeInTheDocument();
-    // The opus seed resolves; it appears in Recommended AND its group.
-    expect(screen.getAllByText("Claude Opus 5").length).toBeGreaterThanOrEqual(2);
+    // The opus seed renders exactly once — lifted into Recommended and
+    // EXCLUDED from its provider group (duplicating curated rows doubled
+    // the weight of exactly the models the section exists to lift out).
+    expect(screen.getAllByText("Claude Opus 5")).toHaveLength(1);
+    // The non-curated row still renders in the grouped list.
+    expect(screen.getAllByText("Obscure")).toHaveLength(1);
   });
 
   it("resolves every seed against a bare-id router catalog (provider in `_provider`)", async () => {
@@ -155,8 +159,9 @@ describe("ModelPicker dedup + recommended", () => {
       "Gemini 3.1 Pro",
       "DeepSeek V4 Flash",
     ]) {
-      // Each seed renders in Recommended AND in its provider group.
-      expect(screen.getAllByText(name).length).toBeGreaterThanOrEqual(2);
+      // Each seed renders exactly once, in Recommended; provider groups
+      // exclude curated rows while browsing.
+      expect(screen.getAllByText(name)).toHaveLength(1);
     }
   });
 
@@ -174,10 +179,31 @@ describe("ModelPicker dedup + recommended", () => {
     );
     await user.click(screen.getByRole("button"));
     expect(await screen.findByText("Recommended")).toBeInTheDocument();
-    // Flagged row is recommended; the opus seed is NOT promoted because an
-    // explicit flag exists.
-    expect(screen.getAllByText("Handpicked").length).toBeGreaterThanOrEqual(2);
+    // Flagged row is recommended (once — groups exclude it); the opus seed
+    // is NOT promoted because an explicit flag exists, so it stays exactly
+    // once in its provider group.
+    expect(screen.getAllByText("Handpicked")).toHaveLength(1);
     expect(screen.getAllByText("Claude Opus 5")).toHaveLength(1);
+  });
+
+  it("search bypasses the curated sections so every match is findable", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={[
+          { id: "anthropic/claude-opus-5", name: "Claude Opus 5", _provider: "anthropic" },
+          { id: "some/obscure-model", name: "Obscure" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    await user.type(screen.getByPlaceholderText("Search models..."), "opus");
+    // Under search the sections collapse and the grouped list carries the
+    // match — the curated exclusion must not hide it.
+    expect(screen.getAllByText("Claude Opus 5")).toHaveLength(1);
+    expect(screen.queryByText("Obscure")).not.toBeInTheDocument();
   });
 
   it("pins the curated seed list to the current frontier set", () => {

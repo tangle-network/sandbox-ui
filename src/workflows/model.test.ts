@@ -1453,3 +1453,161 @@ do:
     expect(cyclePitch).toBeGreaterThan(pitch(buildWorkflowGraph(LABELLED)));
   });
 });
+
+describe("buildWorkflowGraph — folding a long pipeline", () => {
+  const chain = (steps: number) =>
+    `on:\n  github.issues.opened: {}\ndo:\n${Array.from(
+      { length: steps },
+      (_, i) =>
+        `  - agent.run:\n      model: anthropic/claude-sonnet-4-5\n      prompt: Step ${i}.\n`,
+    ).join("")}`;
+
+  /** Distinct y positions, i.e. how many rows the fold produced. */
+  const rowsOf = (yaml: string, wrap: boolean) => {
+    const g = buildWorkflowGraph(yaml, { compact: true, wrap });
+    return new Set(g.nodes.map((n) => n.position.y)).size;
+  };
+
+  it("leaves a short pipeline as the single line it reads best as", () => {
+    // Below the fold trigger a row still frames at a readable size, and one
+    // line states the order for free.
+    expect(rowsOf(chain(3), true)).toBe(1);
+    const g = buildWorkflowGraph(chain(3), { compact: true, wrap: true });
+    // Nothing named its own sides, so the direction still answers for all.
+    expect(g.nodes.every((n) => n.sourceSide === undefined)).toBe(true);
+  });
+
+  it("folds the same graph the same way with and without a run overlay", () => {
+    // Reserving run rows makes a compact node 15px taller, which moves every
+    // row's aspect. The fold trigger has to clear that whole window, or a
+    // graph would re-fold the moment a run started (see WRAP_ASPECT_TRIGGER).
+    for (const steps of [3, 4, 7, 10]) {
+      const asDefinition = buildWorkflowGraph(chain(steps), {
+        compact: true,
+        wrap: true,
+      });
+      const asRun = buildWorkflowGraph(chain(steps), {
+        compact: true,
+        wrap: true,
+        reserveRunState: true,
+      });
+      expect(
+        asDefinition.nodes.map((n) => n.sourceSide ?? "-"),
+        `chain(${steps}) folds differently once a run is in play`,
+      ).toEqual(asRun.nodes.map((n) => n.sourceSide ?? "-"));
+    }
+  });
+
+  it("folds a pipeline that would otherwise run off the panel", () => {
+    expect(rowsOf(chain(7), false)).toBe(1);
+    expect(rowsOf(chain(7), true)).toBe(3);
+    expect(rowsOf(chain(14), true)).toBe(4);
+  });
+
+  it("mirrors alternate rows so consecutive steps stay adjacent", () => {
+    const g = buildWorkflowGraph(chain(7), { compact: true, wrap: true });
+    const rows = [...new Set(g.nodes.map((n) => n.position.y))].sort(
+      (a, b) => a - b,
+    );
+    const xsIn = (row: number) =>
+      g.nodes.filter((n) => n.position.y === row).map((n) => n.position.x);
+    // The graph's own order runs left-to-right on the first row and
+    // right-to-left on the next — a boustrophedon, so no edge ever travels
+    // back across the canvas.
+    const first = xsIn(rows[0]);
+    const second = xsIn(rows[1]);
+    expect([...first].sort((a, b) => a - b)).toEqual(first);
+    expect([...second].sort((a, b) => b - a)).toEqual(second);
+    // Every row change is a straight drop: the last cell of a row sits in the
+    // same column as the first cell of the next.
+    expect(first.at(-1)).toBe(second[0]);
+  });
+
+  it("turns the corner out the side, never across a name", () => {
+    const g = buildWorkflowGraph(chain(7), { compact: true, wrap: true });
+    const byId = new Map(g.nodes.map((n) => [n.id, n]));
+    const rows = [...new Set(g.nodes.map((n) => n.position.y))].sort(
+      (a, b) => a - b,
+    );
+    // Every node leaves the way its row travels and is entered from behind —
+    // the corner included. Nothing leaves downward: the name sits under the
+    // tile in LR, so a bottom exit would have to start below it, leaving the
+    // arrow floating clear of the node it comes from.
+    expect(g.nodes.some((n) => n.sourceSide === "bottom")).toBe(false);
+    expect(g.nodes.some((n) => n.targetSide === "top")).toBe(false);
+    for (const n of g.nodes) {
+      const travelsRight = rows.indexOf(n.position.y) % 2 === 0;
+      expect(n.sourceSide).toBe(travelsRight ? "right" : "left");
+      expect(n.targetSide).toBe(travelsRight ? "left" : "right");
+    }
+    // A turn is therefore same-side into the node directly below it, which is
+    // what the renderer draws as a bracket in the margin beside the column.
+    for (const edge of g.edges) {
+      const from = byId.get(edge.source);
+      const to = byId.get(edge.target);
+      if (!from || !to || from.position.y === to.position.y) continue;
+      expect(from.position.x).toBe(to.position.x);
+      expect(from.sourceSide).toBe(to.targetSide);
+    }
+  });
+
+  it("keeps a fan-out graph in its layered flow", () => {
+    // Branches already occupy the cross axis the fold needs, so a graph with
+    // any fan-out is left alone however long it is.
+    const yaml = `
+on:
+  github.issues.opened: {}
+do:
+  - parallel:
+      branches:
+        - agent.run:
+            model: anthropic/claude-sonnet-4-5
+            prompt: A.
+        - agent.run:
+            model: anthropic/claude-sonnet-4-5
+            prompt: B.
+  - agent.run:
+      model: anthropic/claude-sonnet-4-5
+      prompt: Merge.
+`;
+    const g = buildWorkflowGraph(yaml, { compact: true, wrap: true });
+    expect(g.nodes.every((n) => n.sourceSide === undefined)).toBe(true);
+  });
+
+  it("keeps a declared topology that skips a step in its layered flow", () => {
+    // Mirroring only keeps CONSECUTIVE steps adjacent. A shortcut past a step
+    // reads as one hop in a straight line, but becomes a stroke across the
+    // middle of a grid once the line is folded — so a topology naming one is
+    // left alone however long it is.
+    const yaml = chain(7);
+    const ids = buildWorkflowGraph(yaml, { compact: true }).nodes.map((n) => n.id);
+    const spine = ids.slice(0, -1).map((from, i) => ({ from, to: ids[i + 1] }));
+
+    // The same chain, declared rather than inferred, still folds…
+    const declared = buildWorkflowGraph(yaml, {
+      compact: true,
+      wrap: true,
+      edges: spine,
+    });
+    expect(new Set(declared.nodes.map((n) => n.position.y)).size).toBeGreaterThan(1);
+
+    // …until one edge jumps a layer.
+    const withSkip = buildWorkflowGraph(yaml, {
+      compact: true,
+      wrap: true,
+      edges: [...spine, { from: ids[1], to: ids[4] }],
+    });
+    expect(withSkip.error).toBeNull();
+    expect(new Set(withSkip.nodes.map((n) => n.position.y)).size).toBe(1);
+    expect(withSkip.nodes.every((n) => n.sourceSide === undefined)).toBe(true);
+  });
+
+  it("folds only left-to-right graphs", () => {
+    const g = buildWorkflowGraph(chain(10), {
+      compact: true,
+      wrap: true,
+      direction: "TB",
+    });
+    expect(g.nodes.every((n) => n.sourceSide === undefined)).toBe(true);
+  });
+});

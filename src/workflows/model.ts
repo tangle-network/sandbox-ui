@@ -126,6 +126,10 @@ export interface WfNodeData extends Record<string, unknown> {
   state?: WfNodeState;
 }
 
+/** Which edge of a node box an edge attaches to. Named in plain compass terms
+ *  rather than React Flow's `Position` so the layouter stays free of it. */
+export type WfSide = "left" | "right" | "top" | "bottom";
+
 export interface WfNode {
   id: string;
   position: { x: number; y: number };
@@ -135,6 +139,15 @@ export interface WfNode {
   width: number;
   height: number;
   data: WfNodeData;
+  /**
+   * Where this node's edges attach, when the LAYOUT decides rather than the
+   * flow direction. A straight layer flow has one answer for every node (edges
+   * enter the leading edge and leave the trailing one, per `direction`), so it
+   * sets neither and the renderer derives both. A folded layout does not — a row
+   * that runs right-to-left mirrors them. Absent ⇒ derive from `direction`.
+   */
+  sourceSide?: WfSide;
+  targetSide?: WfSide;
 }
 
 /**
@@ -512,6 +525,13 @@ export interface BuildWorkflowGraphOptions {
   /** Collapse every node to the fixed icon-tile size, and pitch the layers for
    *  it. Defaults to `false` (the full, expanded card). */
   compact?: boolean;
+  /**
+   * Fold a long single-file pipeline into rows instead of one unbounded line,
+   * so it occupies both axes of the panel rather than running off one edge.
+   * Only a straight chain folds — a graph with any fan-out keeps its layered
+   * flow, whose branches need the cross axis. "LR" only. Defaults to `false`.
+   */
+  wrap?: boolean;
   /**
    * The graph's DECLARED topology. Omit — the default — and edges are inferred
    * from `do`-list order: a linear spine, which is exactly right for a workflow
@@ -986,6 +1006,151 @@ interface LayoutNode {
 }
 
 /**
+ * The shape a folded layout aims for: roughly the proportions of the panels
+ * these graphs are shown in (a wide, half-height card). Folding to a target
+ * SHAPE rather than a target width is what keeps the layouter free of the
+ * canvas — it never measures anything, so a resize can never trigger a
+ * relayout, and the framing math still does the fitting.
+ */
+const WRAP_TARGET_ASPECT = 742 / 480;
+
+/**
+ * How many times wider than {@link WRAP_TARGET_ASPECT} a single row must get
+ * before it is worth folding. A short pipeline reads best as what it is — one
+ * line, left to right — and folding three steps into an L buys legibility
+ * nobody needed while making the order something you have to work out. Past
+ * this the line is several panels wide and the trade reverses: at four nodes a
+ * row still frames at a readable size, at five it does not.
+ *
+ * The value has to clear a WINDOW, not just land on the right side of one case:
+ * a compact node is 118px tall as a definition and 133px once run rows are
+ * reserved, which moves a four-node row's aspect between 6.20 and 5.50 and a
+ * five-node row's between 7.80 and 6.92. Anything in (6.20, 6.92) — i.e. a
+ * multiplier in (4.01, 4.48) — folds the same graph the same way whether or not
+ * a run is in play. Sitting at 4.0 does not, and a graph that re-folds the
+ * moment a run starts is worse than one that never folds.
+ */
+const WRAP_ASPECT_TRIGGER = 4.2;
+
+/** The corridor a row change needs. A layer separator is sized for two nodes
+ *  standing side by side; stacked rows need enough air that the return bracket
+ *  reads as a turn rather than a collision. */
+const WRAP_ROW_GAP = 28;
+
+/** How many columns fold `count` equal cells closest to {@link
+ *  WRAP_TARGET_ASPECT}. Compared in LOG space so being twice too wide and half
+ *  too wide are penalised the same — a linear error would always prefer the
+ *  wide side. */
+function foldColumns(
+  count: number,
+  cellW: number,
+  cellH: number,
+  colSep: number,
+  rowSep: number,
+): number {
+  let best = count;
+  let bestError = Number.POSITIVE_INFINITY;
+  for (let cols = 1; cols <= count; cols++) {
+    const rows = Math.ceil(count / cols);
+    const width = cols * cellW + (cols - 1) * colSep;
+    const height = rows * cellH + (rows - 1) * rowSep;
+    const error = Math.abs(Math.log(width / height / WRAP_TARGET_ASPECT));
+    if (error < bestError) {
+      bestError = error;
+      best = cols;
+    }
+  }
+  return best;
+}
+
+/**
+ * Fold a single-file pipeline into ROWS that read boustrophedon — left to
+ * right, then right to left on the row below — so consecutive steps stay
+ * adjacent and no edge ever travels back across the canvas.
+ *
+ * One unbounded row is why a long workflow cannot fit its panel: it grows along
+ * a single axis while the other sits empty, so framing it whole means zooming
+ * until the nodes are specks, and refusing to zoom that far means clipping it.
+ * Folding spends the idle axis instead — the eleven steps that need a 2048px
+ * row occupy a 732x439 block, which a 742x480 panel frames nearly full size.
+ *
+ * Returns null unless the graph is a plain LINE, on two counts. Any layer
+ * holding more than one node is a fan-out, whose branches already occupy the
+ * cross axis the fold needs. And every edge must join one layer to the next: a
+ * declared topology may name a shortcut past a step, and mirroring only keeps
+ * CONSECUTIVE steps adjacent — a skip that reads as one hop in a straight line
+ * becomes a stroke across the middle of a grid. Re-ranking either shape is a
+ * different problem from folding a line.
+ */
+function layoutSerpentine(
+  nodes: LayoutNode[],
+  edges: readonly WfEdge[],
+  colSep: number,
+  laneSep: number,
+): WfNode[] | null {
+  const rowSep = Math.max(laneSep, WRAP_ROW_GAP);
+  const byRank = new Map<number, LayoutNode[]>();
+  for (const n of nodes) {
+    const arr = byRank.get(n.rank);
+    if (arr) arr.push(n);
+    else byRank.set(n.rank, [n]);
+  }
+  const ranks = [...byRank.keys()].sort((a, b) => a - b);
+  if (ranks.some((r) => byRank.get(r)!.length !== 1)) return null;
+
+  const rankOf = new Map(nodes.map((n) => [n.id, n.rank]));
+  const joinsNextLayer = (e: WfEdge) => {
+    const from = rankOf.get(e.source);
+    const to = rankOf.get(e.target);
+    return from !== undefined && to !== undefined && to === from + 1;
+  };
+  if (!edges.every(joinsNextLayer)) return null;
+
+  const ordered = ranks.map((r) => byRank.get(r)![0]);
+  const count = ordered.length;
+  // A uniform cell keeps the fold a true grid: rows line up column-for-column,
+  // so the turn between them is a straight drop rather than a dogleg.
+  const cellW = Math.max(...ordered.map((n) => n.width));
+  const cellH = Math.max(...ordered.map((n) => n.height));
+  // Still a shape a panel can frame — keep the line, which reads its order for
+  // free.
+  const lineAspect = (count * cellW + (count - 1) * colSep) / cellH;
+  if (lineAspect <= WRAP_TARGET_ASPECT * WRAP_ASPECT_TRIGGER) return null;
+
+  const cols = foldColumns(count, cellW, cellH, colSep, rowSep);
+  // Already the best shape available — leave it as the straight line it is.
+  if (cols >= count) return null;
+
+  return ordered.map((node, i) => {
+    const row = Math.floor(i / cols);
+    const indexInRow = i % cols;
+    const leftToRight = row % 2 === 0;
+    // Mirroring odd rows puts the last cell of one row directly above the first
+    // cell of the next, so every row change is a vertical drop in one column.
+    const col = leftToRight ? indexInRow : cols - 1 - indexInRow;
+    return {
+      id: node.id,
+      position: {
+        x: col * (cellW + colSep) + (cellW - node.width) / 2,
+        y: row * (cellH + rowSep) + (cellH - node.height) / 2,
+      },
+      width: node.width,
+      height: node.height,
+      data: node.data,
+      // Every node leaves the way its row travels and is entered from behind —
+      // including the one that turns the corner. Mirroring puts the last cell
+      // of a row directly above the first cell of the next, so a turn is
+      // source-right into target-right (or left into left): the renderer draws
+      // it as a bracket in the margin beside the column. Routing it through the
+      // BOTTOM instead would have to start below the name that sits under the
+      // tile, leaving the arrow floating clear of the node it comes from.
+      targetSide: leftToRight ? ("left" as const) : ("right" as const),
+      sourceSide: leftToRight ? ("right" as const) : ("left" as const),
+    };
+  });
+}
+
+/**
  * Position the logical nodes as a layered flow: advance layers along the MAIN
  * axis (x for "LR", y for "TB") and stack each layer's nodes along the CROSS
  * axis, centered on the spine (cross = 0) so a fan-out fans symmetrically and
@@ -1353,8 +1518,15 @@ export function buildWorkflowGraph(
     ? Math.max(geo.rankSep, EDGE_LABEL_LANE)
     : geo.rankSep;
 
+  // A folded layout turns corners, and a guard chip sits ON the corridor a
+  // straight run reserves for it — so a labelled graph keeps its single file.
+  const folded =
+    options?.wrap && direction === "LR" && !labelled
+      ? layoutSerpentine(logical, edges, rankSep, geo.crossSep)
+      : null;
+
   return {
-    nodes: layoutLayers(logical, direction, rankSep, geo.crossSep),
+    nodes: folded ?? layoutLayers(logical, direction, rankSep, geo.crossSep),
     edges,
     error: null,
   };

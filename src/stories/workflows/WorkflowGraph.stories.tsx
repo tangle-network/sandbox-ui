@@ -432,6 +432,67 @@ const LINEAR_FULL_OUTPUT: Record<string, WfNodeState> = {
 
 // --- Run-state views -------------------------------------------------------
 
+/**
+ * One card per KIND, in one run — the story the per-kind anatomy exists for.
+ *
+ * A graph is laid out once from the YAML, so whatever a card reserves is paid by
+ * every node of its kind whether or not that node fills it. Each kind therefore
+ * gets the anatomy its content actually needs: the agent is answer-first (its
+ * output IS the body, five lines, no caption), the decision keeps the question
+ * it is parked on, and an integration gets a framed response well.
+ *
+ * Read it for the HEIGHTS as much as the contents. If a kind's card grows a band
+ * its reservation in `nodeHeight` does not know about, this is where the bottom
+ * of it disappears under the footer.
+ */
+const CONTROL_FLOW_KINDS: Record<string, WfNodeState> = {
+  trigger: done({ durationMs: undefined, costUsd: undefined }),
+  // An agent at the host's 240-character cap: the case the answer body is sized
+  // for, and the one every one-line fixture leaves untested.
+  a0: done({
+    model: "anthropic/claude-sonnet-5",
+    costUsd: 0.0031,
+    durationMs: 5100,
+    inputTokens: 240,
+    outputTokens: 118,
+    rounds: 4,
+    outputPreview:
+      "Reviewed the diff across 6 files. The retry loop in worker.ts never caps its backoff, so a sustained 500 from the upstream will spin at full rate and starve the queue. Everything else looks correct; the tests cover both the success and failure paths.",
+  }),
+  // Parked on a human. Its description is the QUESTION, and it is the one node
+  // the reader has to act on — so unlike an agent it never trades its text away.
+  a1: waiting(),
+  // A wide object: the branch that overflows first, since its budget is rows
+  // MINUS the truncation marker.
+  a2: done({
+    costUsd: undefined,
+    durationMs: 410,
+    outputPreview:
+      '{"status":200,"id":4821,"url":"https://api.github.com/repos/x/pulls/1/reviews","state":"APPROVED","sha":"9f2c1ab"}',
+  }),
+  // The string a person reads to find out what broke: it must reach them intact
+  // enough to act on, with the rest one click away in the host's node panel.
+  a3: failed({
+    error:
+      "slack.postMessage: channel_not_found (C09XA1B2C3) — the bot is not a member of the channel, or it was archived. Invite the app to the channel and retry.",
+  }),
+};
+
+export const CardAnatomyByKind: Story = {
+  name: "Card anatomy — one per kind",
+  render: () => (
+    <GraphPanel height="h-[34rem]" title="Graph — per-kind cards">
+      <WorkflowGraphLazy
+        yaml={CONTROL_FLOW}
+        variant="full"
+        className="h-full w-full"
+        nodeState={CONTROL_FLOW_KINDS}
+        onNodeClick={() => {}}
+      />
+    </GraphPanel>
+  ),
+};
+
 export const OutputAtFullBudget: Story = {
   name: "Output — at full line budget",
   render: () => (

@@ -34,6 +34,7 @@ import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -44,8 +45,11 @@ import {
 import {
   COMPACT_NODE_SIZE,
   COMPACT_TILE,
+  ACTION_OUTPUT_ROWS,
+  AGENT_BODY_ROWS,
+  isStructuralKind,
   OUTPUT_PREVIEW_CHARS,
-  OUTPUT_ROWS,
+  STRUCTURAL_OUTPUT_ROWS,
   triggerNodeIndex,
   type WfDirection,
   type WfEdgeKind,
@@ -65,18 +69,15 @@ import { classifyOutput, NodeOutputBody } from "./node-output";
 import { shortModel } from "./naming";
 import {
   edgeColor,
+  emptySlotLabel,
   NodeMark,
-  progressFill,
   STATUS_COLOR,
   STATUS_LABEL,
-  STATUS_PILL,
+  StatusFooter,
+  StatusPill,
   statusBorder,
   TONE_ACCENT,
 } from "./node-ui";
-
-/** Track color behind a progress bar — a faint wash of the muted token. */
-const MUTED_TRACK =
-  "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)";
 
 /** How much of the canvas a fit leaves as margin. React Flow reads a numeric
  *  padding as a scale factor, not a fraction — 0.16 fits the graph into 1/1.16
@@ -256,6 +257,19 @@ export const DensityContext = createContext<boolean>(false);
  */
 export const SelectedNodeContext = createContext<string | undefined>(undefined);
 
+/**
+ * Whether the GRAPH is showing a run — read by the node so its card matches what
+ * the layout reserved for it.
+ *
+ * `nodeHeight` reserves the run bands for every action the moment the graph has
+ * any run state, because the layout is computed once and cannot revisit the
+ * decision. A node the host has no entry for would otherwise render its
+ * definition card — identity and nothing else — inside a box sized for a run,
+ * leaving over a hundred pixels of void under it. A run's graph is in run mode
+ * for all of its nodes, or none.
+ */
+export const RunModeContext = createContext<boolean>(false);
+
 /** The selected node's ring. An `outline` rather than a border or a box-shadow
  *  because both of those are already spoken for — the border carries tone and
  *  run status, the shadow carries the running/waiting glow — and an outline
@@ -284,93 +298,6 @@ export function isEditableEdge(edge: {
   data?: { kind?: WfEdgeKind } | undefined;
 }): boolean {
   return edge.data?.kind !== "fork" && triggerNodeIndex(edge.source) === null;
-}
-
-/**
- * The run status FOOTER: a progress bar (queued = near-empty, running = pulsing
- * partial, terminal = full) over a caption row. Pinned to the card's BOTTOM via
- * `mt-auto` so it lands at the same place on every node regardless of how much
- * content sits above it — unlike an inline strip, whose height drifts. The
- * caption reads agent rounds on the left and elapsed on the right; status itself
- * is carried by the bar color + the header pill, so it is NOT restated here. The
- * caption row always renders (even when empty) so the footer band keeps a
- * constant height across nodes.
- */
-function StatusFooter({
-  status,
-  rounds,
-  elapsed,
-}: {
-  status: WfNodeStatus;
-  rounds?: number;
-  elapsed?: string;
-}) {
-  // `!== undefined` (not truthiness) so an explicit `rounds: 0` — a just-started
-  // agent — still renders "0 rounds" rather than being hidden.
-  const roundsLabel =
-    rounds !== undefined
-      ? `${rounds} round${rounds === 1 ? "" : "s"}`
-      : undefined;
-  return (
-    <div className="wf-node-body-in mt-auto border-border border-t">
-      <div
-        className="h-1 w-full overflow-hidden"
-        style={{ background: MUTED_TRACK }}
-      >
-        {/* Only a RUNNING bar animates. A `waiting` run is stopped at this node
-            until a human answers it, and a moving bar would say otherwise. */}
-        <div
-          data-testid="wf-node-progress"
-          className={`h-full ${status === "running" ? "animate-pulse" : ""}`}
-          style={{
-            width: progressFill(status),
-            background: STATUS_COLOR[status],
-          }}
-        />
-      </div>
-      <div className="flex items-center justify-between gap-2 px-3.5 py-1 text-[10px] text-muted-foreground leading-[15px]">
-        {/* Both spans always render (even empty) and the line box is pinned, so a
-            node with nothing to caption keeps the same footer height as one with
-            rounds AND elapsed — the band the layout reserved. */}
-        <span className="min-h-[15px] truncate">{roundsLabel ?? ""}</span>
-        <span className="min-h-[15px] shrink-0 tabular-nums">{elapsed ?? ""}</span>
-      </div>
-    </div>
-  );
-}
-
-/**
- * What an expanded card says where its output WOULD be, when it has none. The
- * card is sized for the output it may yet have (the layout is computed once,
- * before any run state, so it can never reflow mid-run) — leaving that space
- * blank reads as a broken card rather than as a step with nothing to report. A
- * running node is the exception: its output may still be on its way, so it waits
- * quietly rather than claiming there is none.
- */
-function emptySlotLabel(status: WfNodeStatus): string | undefined {
-  switch (status) {
-    case "queued":
-      return "Not run yet";
-    case "succeeded":
-      return "No output";
-    case "failed":
-      return "No error reported";
-    default:
-      return undefined;
-  }
-}
-
-/** The status pill in a card's header — the one place the run state is spelled
- *  out in words. */
-function StatusPill({ status }: { status: WfNodeStatus }) {
-  return (
-    <span
-      className="shrink-0 rounded-full border px-2 py-[1px] font-medium text-[10px]"
-      style={STATUS_PILL[status]}
-    >
-      {STATUS_LABEL[status]}
-    </span>
-  );
 }
 
 // Handles are positioned anchors for edges; we hide the dots so edges appear to
@@ -434,6 +361,7 @@ export function WorkflowNode({
   const state = d.state;
   const direction = useContext(DirectionContext);
   const compact = useContext(DensityContext);
+  const runMode = useContext(RunModeContext);
   const connectable = useContext(ConnectableContext);
   const hostSelection = useContext(SelectedNodeContext);
   // Compared only once the host HAS a selection: `undefined === undefined` would
@@ -455,13 +383,26 @@ export function WorkflowNode({
   // another lab would otherwise sit under its requested lab's logo — an Anthropic
   // mark beside the words "gpt-5.4".
   const markModel = isAgent && state?.model ? state.model : d.model;
-  // Whether this card may render the bands a RUN adds — the metrics line, the
-  // output block, the "nothing to report" line, and the status footer. It mirrors
-  // `nodeHeight` (model.ts), which reserves those rows for an action but NOT for a
-  // trigger: a trigger only fires, so it is spaced by its static height alone.
-  // Render a run band on a trigger and it has nowhere to go — it overflows the box
-  // the layout gave it. The two rules are one rule; keep them in step.
-  const runBands = state !== undefined && d.tone !== "trigger";
+  // Whether this card may render the bands a RUN adds — the output block, the
+  // "nothing to report" line, and the status footer. It mirrors `nodeHeight`
+  // (model.ts), which reserves those rows for an action but NOT for a trigger: a
+  // trigger only fires, so it is spaced by its static height alone. Render a run
+  // band on a trigger and it has nowhere to go — it overflows the box the layout
+  // gave it. The two rules are one rule; keep them in step.
+  //
+  // Keyed on the GRAPH's mode rather than on this node's own state, for the same
+  // reason: the reservation was made for every action the moment the graph had a
+  // run, so a node the host sent no entry for is still a run card — one that has
+  // simply not been reached. Keyed on `state` instead, it rendered its definition
+  // card into a run-sized box and left the difference blank.
+  const runBands = runMode && d.tone !== "trigger";
+  // A node in a run graph that the host sent no entry for has not been reached.
+  // `buildStyledEdges` already resolves it that way — the edge INTO such a node
+  // is drawn in the queued neutral — so the card follows the same rule rather
+  // than inventing a second one, and the card fills the box the run reserved.
+  const runStatus: WfNodeStatus | undefined = runBands
+    ? (state?.status ?? "queued")
+    : state?.status;
   const duration = fmtDuration(state?.durationMs);
   const cost = fmtCost(state?.costUsd);
   // Tokens are an agent.run concern; other kinds never show a token count.
@@ -628,14 +569,19 @@ export function WorkflowNode({
     );
   }
 
-  // EXPANDED: identity (mark + title + subtitle), then what it does, then what it
-  // did — each its own band, in that order, over a bottom-pinned status footer.
-  return (
+  // EXPANDED: the card's anatomy follows what the node IS, because a single
+  // anatomy has to reserve for the worst case and every other node then pays for
+  // it (see nodeHeight). An agent is answer-first; control flow is a chip; a
+  // decision keeps its question; every other action gets a response well. Each
+  // branch's bands must add up to what nodeHeight reserved for that kind — they
+  // are one decision written twice, and model.test.ts asserts the per-kind
+  // arithmetic so the build fails when they drift.
+  const cardShell = (children: ReactNode) => (
     <div
       className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-colors"
       style={{
-        ...(state
-          ? statusBorder(state.status)
+        ...(runStatus
+          ? statusBorder(runStatus)
           : {
               borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
             }),
@@ -643,98 +589,325 @@ export function WorkflowNode({
       }}
     >
       {handles}
-      {/* The content region owns its overflow: each band is `shrink-0`, so a band
-          that renders taller than its reservation (a consumer's font metrics) is
-          CLIPPED here rather than squeezed — a squeezed band cuts a line of text
-          in half, and pushes the pinned footer off the card. Fades in when the
-          density swap lands mid layout-morph; the card's border/surface (the
-          root) stays opaque so the node never blinks out. */}
-      <div className="wf-node-body-in flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2">
-        <div className="flex shrink-0 items-center gap-2.5">
-          <NodeMark
-            kind={d.kind}
-            provider={d.provider}
-            model={markModel}
-            accent={accent}
-            tile={34}
-          />
-          <div className="min-w-0 flex-1">
-            <div
-              className="truncate font-semibold text-[13px] text-foreground leading-tight"
-              title={d.title}
-            >
-              {d.title}
-            </div>
-            {subtitle && (
-              <div
-                className="truncate text-[11px] text-muted-foreground leading-tight"
-                title={subtitle}
-              >
-                {subtitle}
-              </div>
-            )}
-          </div>
-          {state ? (
-            <StatusPill status={state.status} />
-          ) : (
-            d.badge && (
-              <span className="shrink-0 rounded-full border border-border bg-surface-container-high px-2 py-[1px] font-medium text-[10px] text-muted-foreground">
-                {d.badge}
-              </span>
-            )
-          )}
+      {children}
+    </div>
+  );
+
+  // The identity row every card but the agent's keeps: a node you cannot name is
+  // not a node.
+  const identityRow = (
+    <div className="flex shrink-0 items-center gap-2.5">
+      <NodeMark
+        kind={d.kind}
+        provider={d.provider}
+        model={markModel}
+        accent={accent}
+        tile={34}
+      />
+      <div className="min-w-0 flex-1">
+        <div
+          className="truncate font-semibold text-[13px] text-foreground leading-tight"
+          title={d.title}
+        >
+          {d.title}
         </div>
-
-        {/* What the step actually says: the agent's prompt, the notify URL, the
-            events a trigger listens for. Two lines, then it's a click away. */}
-        {d.description && (
-          <p
-            className="mt-2 line-clamp-2 shrink-0 text-[11px] text-muted-foreground leading-snug"
-            title={d.description}
+        {subtitle && (
+          <div
+            className="truncate text-[11px] text-muted-foreground leading-tight"
+            title={subtitle}
           >
-            {d.description}
-          </p>
-        )}
-
-        {/* Run metrics as ONE quiet line, not a row of boxes: cost and tokens are
-            values, and values don't need a container each. Elapsed lives in the
-            footer, beside the progress it belongs to. */}
-        {runBands && (cost || tokens) && (
-          <div className="mt-2 shrink-0 truncate text-[11px] text-muted-foreground tabular-nums">
-            {[cost, tokens].filter(Boolean).join(" · ")}
-          </div>
-        )}
-
-        {/* Content-aware output/error block — JSON renders as key/value, prose as
-            prose. Suppressed for a failure with no error. */}
-        {runBands && runOutput && (
-          <div className="mt-2 min-h-0 shrink-0 rounded-lg border border-border bg-surface-container-high/60 px-2 py-1.5">
-            <div className="mb-1 font-semibold text-[9px] text-muted-foreground uppercase tracking-[0.09em]">
-              {runOutput.label}
-            </div>
-            <NodeOutputBody
-              shape={runOutput.shape}
-              tone={runOutput.tone}
-              rows={OUTPUT_ROWS}
-            />
-          </div>
-        )}
-
-        {/* A card with nothing to report SAYS so, rather than showing a void. */}
-        {runBands && state && !runOutput && emptySlotLabel(state.status) && (
-          <div className="mt-2 flex flex-1 items-center text-[11px] text-muted-foreground italic">
-            {emptySlotLabel(state.status)}
+            {subtitle}
           </div>
         )}
       </div>
-      {runBands && state && (
-        <StatusFooter
-          status={state.status}
-          rounds={isAgent ? state.rounds : undefined}
-          elapsed={duration}
-        />
+      {runStatus ? (
+        <StatusPill status={runStatus} />
+      ) : (
+        d.badge && (
+          <span className="shrink-0 rounded-full border border-border bg-surface-container-high px-2 py-[1px] font-medium text-[10px] text-muted-foreground">
+            {d.badge}
+          </span>
+        )
       )}
     </div>
+  );
+
+  // The run's numbers move INTO the footer caption rather than costing a band of
+  // their own. Dropping the metrics row is what pays for the answer body, and
+  // the caption had room for the values already — so the card gets shorter
+  // without the reader losing what the step spent.
+  const footer = runStatus ? (
+    <StatusFooter
+      status={runStatus}
+      rounds={isAgent ? state?.rounds : undefined}
+      cost={cost}
+      tokens={tokens}
+      elapsed={duration}
+    />
+  ) : null;
+
+  // The description, clamped to the two lines the layout reserves for it.
+  const descriptionBand = (emphasized: boolean) =>
+    d.description ? (
+      <p
+        className={`mt-2 line-clamp-2 shrink-0 text-[11px] leading-snug ${
+          emphasized ? "text-foreground" : "text-muted-foreground"
+        }`}
+        title={d.description}
+      >
+        {d.description}
+      </p>
+    ) : null;
+
+  // What a card says where its output WOULD be, when it has none — a step with
+  // nothing to report SAYS so, rather than showing a void.
+  const emptySlot =
+    runStatus && !runOutput && emptySlotLabel(runStatus) ? (
+      <div className="mt-2 flex flex-1 items-center text-[11px] text-muted-foreground italic">
+        {emptySlotLabel(runStatus)}
+      </div>
+    ) : null;
+
+  // The framed well: a caption over a clamped, content-aware body. For these
+  // kinds the output is an ATTRIBUTE of the step rather than the point of it.
+  // `grow shrink-0`, not `shrink-0`: the well FILLS the space its kind reserved
+  // rather than hugging a one-line body and leaving an orphan gap above the
+  // footer. Most outputs are far shorter than the reservation — the reservation
+  // is sized for the worst case and cannot shrink to the actual one, since the
+  // layout is fixed before any output exists — so a hugging well left the common
+  // card looking half-finished. Growing costs nothing and reads as a panel.
+  // `shrink-0` stays: a squeezed well would cut a line of text in half.
+  const outputWell = (rows: number) =>
+    runOutput ? (
+      <div className="mt-2 min-h-0 grow shrink-0 rounded-lg border border-border bg-surface-container-high/60 px-2 py-1.5">
+        <div className="mb-1 font-semibold text-[9px] text-muted-foreground uppercase tracking-[0.09em]">
+          {runOutput.label}
+        </div>
+        <NodeOutputBody
+          shape={runOutput.shape}
+          tone={runOutput.tone}
+          rows={rows}
+        />
+      </div>
+    ) : (
+      emptySlot
+    );
+
+  const body = (children: ReactNode, justify = "") => (
+    /* The content region owns its overflow: each band is `shrink-0`, so a band
+       that renders taller than its reservation (a consumer's font metrics) is
+       CLIPPED here rather than squeezed — a squeezed band cuts a line of text
+       in half, and pushes the pinned footer off the card. Fades in when the
+       density swap lands mid layout-morph; the card's border/surface (the
+       root) stays opaque so the node never blinks out. */
+    <div
+      className={`wf-node-body-in flex min-h-0 flex-1 flex-col overflow-hidden px-3.5 pt-2.5 pb-2 ${justify}`}
+    >
+      {children}
+    </div>
+  );
+
+  // A definition card, and a trigger in any graph: what the step IS. There is no
+  // run to report, so there are no run bands and no footer.
+  if (!runBands) {
+    return cardShell(body(
+      <>
+        {identityRow}
+        {descriptionBand(false)}
+      </>,
+    ));
+  }
+
+  // A decision asks the reader a question and stops. The question is the card.
+  //
+  // Its identity STACKS rather than sharing one row, which every other kind can
+  // afford to do. "Waiting on you" is the widest pill there is, and beside a
+  // 34px mark it left about 120px of a 292px card for the title — so the one
+  // node the reader has to act on truncated both the question it was asking
+  // ("Approve the rele…") and the options it was offering. Dropping the pill to
+  // sit with the options gives the question the card's full width, and costs
+  // only the few pixels between a one-line header and a two-line one.
+  //
+  // The mark/title/subtitle markup below is deliberately NOT `identityRow`: that
+  // one is a single row and this one stacks, so there is no shared shape to
+  // factor out — only shared pieces. It does mean the two drift if one is
+  // changed alone; keep them in step on mark sizing and title truncation.
+  if (d.kind === "decision") {
+    return cardShell(
+      <>
+        {body(
+          <>
+            <div className="flex shrink-0 items-start gap-2.5">
+              <NodeMark
+                kind={d.kind}
+                provider={d.provider}
+                model={markModel}
+                accent={accent}
+                tile={34}
+              />
+              <div className="min-w-0 flex-1">
+                <div
+                  className="truncate font-semibold text-[13px] text-foreground leading-tight"
+                  title={d.title}
+                >
+                  {d.title}
+                </div>
+                <div className="mt-0.5 flex items-center gap-2">
+                  {subtitle && (
+                    <span
+                      className="truncate text-[11px] text-muted-foreground leading-tight"
+                      title={subtitle}
+                    >
+                      {subtitle}
+                    </span>
+                  )}
+                  {runStatus && (
+                    <span className="ml-auto shrink-0">
+                      <StatusPill status={runStatus} />
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* A decision that FAILED shows why, in the band its question had.
+                The question is moot once the run has stopped on an error —
+                nobody is going to answer it — so the two never compete, and the
+                error needs no reservation of its own. Its two clamped lines are
+                the same two the description band already holds. */}
+            {runOutput && runStatus === "failed" ? (
+              <div className="mt-2 min-h-0 shrink-0">
+                <NodeOutputBody
+                  shape={runOutput.shape}
+                  tone={runOutput.tone}
+                  rows={2}
+                />
+              </div>
+            ) : (
+              descriptionBand(true)
+            )}
+          </>,
+        )}
+        {footer}
+      </>,
+    );
+  }
+
+  // Control flow routes the run. It books no cost and emits no output; a failure
+  // is the only thing it ever has to say, and one line carries it.
+  if (isStructuralKind(d.kind)) {
+    return cardShell(
+      <>
+        {body(
+          <>
+            {identityRow}
+            <div className="mt-1.5 min-h-0 shrink-0">
+              {runOutput && (
+                <NodeOutputBody
+                  shape={runOutput.shape}
+                  tone={runOutput.tone}
+                  rows={STRUCTURAL_OUTPUT_ROWS}
+                />
+              )}
+            </div>
+          </>,
+          // Centered, because the failure slot is empty on every run that does
+          // NOT fail — which is most of them. Reserved space it cannot give back
+          // (the layout is fixed before the run) reads as a gap under a
+          // top-aligned row, and as breathing room around a centered one.
+          "justify-center",
+        )}
+        {footer}
+      </>,
+    );
+  }
+
+  // An agent, answer-first: its output is not an attribute of the node, it is
+  // what the node produced, so it IS the body — no caption, no well, and set in
+  // the foreground rather than the muted token. Identity shrinks to a strip,
+  // because once a node has answered, the answer identifies it better than its
+  // label does.
+  //
+  // The strip still names the agent as well as the model. Dropping the name and
+  // keeping only the model reads fine on one agent and fails on a fan-out: three
+  // branches of the same model rendered three cards all labelled "deepseek-chat",
+  // with nothing to tell them apart.
+  //
+  // And the body falls back to the PROMPT when there is no answer yet. Trading
+  // the prompt away is only right once there is something to trade it for — a
+  // queued branch that shows neither says nothing at all about what it will do.
+  // Both share the one reserved body, so the fallback costs no height.
+  if (isAgent) {
+    const strip = [d.title, subtitle].filter(Boolean).join(" · ");
+    return cardShell(
+      <>
+        {body(
+          <>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <NodeMark
+                kind={d.kind}
+                provider={d.provider}
+                model={markModel}
+                accent={accent}
+                tile={18}
+              />
+              <span
+                className="truncate font-medium text-[11px] text-muted-foreground"
+                title={strip}
+              >
+                {strip}
+              </span>
+              <span className="flex-1" />
+              {runStatus && <StatusPill status={runStatus} />}
+            </div>
+            <div className="mt-2 min-h-0 flex-1 text-foreground leading-snug">
+              {runOutput ? (
+                <NodeOutputBody
+                  shape={runOutput.shape}
+                  tone={runOutput.tone}
+                  rows={AGENT_BODY_ROWS}
+                />
+              ) : runStatus &&
+                runStatus !== "succeeded" &&
+                runStatus !== "failed" &&
+                d.description ? (
+                // What it is ABOUT to do, in the muted token — the answer, when it
+                // arrives, is the thing set in the foreground.
+                //
+                // Only while the node is still going to produce one. A FINISHED
+                // node that produced nothing must say so: showing its prompt
+                // there reads as the result it never returned.
+                <p
+                  className="line-clamp-5 text-[11px] text-muted-foreground leading-snug"
+                  title={d.description}
+                >
+                  {d.description}
+                </p>
+              ) : (
+                runStatus && (
+                  <span className="text-muted-foreground italic">
+                    {emptySlotLabel(runStatus)}
+                  </span>
+                )
+              )}
+            </div>
+          </>,
+        )}
+        {footer}
+      </>,
+    );
+  }
+
+  // Every other action: what it is, then what came back.
+  return cardShell(
+    <>
+      {body(
+        <>
+          {identityRow}
+          {outputWell(ACTION_OUTPUT_ROWS)}
+        </>,
+      )}
+      {footer}
+    </>,
   );
 }
 
@@ -867,11 +1040,15 @@ export interface WorkflowGraphProps {
   /** Flow direction: "LR" (default) reads left-to-right — best for the wide/short
    *  run-detail panel; "TB" is a vertical column. */
   direction?: WfDirection;
-  /** Start collapsed (compact icon tiles) rather than expanded. Defaults to
-   *  `true`: a graph is read structure-first, and the tiles are what make the
-   *  shape of the run legible at a glance — the per-node detail is one density
-   *  toggle (or one node click) away. The full variant exposes the toggle; the
-   *  preview variant is always compact. */
+  /**
+   * Start collapsed (compact icon tiles) rather than expanded.
+   *
+   * Defaults to whether the graph has a RUN: a definition is read
+   * structure-first, so it opens as tiles, while a run is read result-first and
+   * opens as cards — the answers are the reason the reader opened it. Passing
+   * the prop pins the density either way; the full variant still exposes the
+   * toggle, and the preview variant is always compact.
+   */
   defaultCompact?: boolean;
   /** Sizing for the wrapper; the caller controls height. */
   className?: string;
@@ -938,7 +1115,7 @@ export function WorkflowGraph({
   yaml,
   variant = "full",
   direction = "LR",
-  defaultCompact = true,
+  defaultCompact,
   className,
   wrap = false,
   nodeState,
@@ -958,7 +1135,16 @@ export function WorkflowGraph({
   const isPreview = variant === "preview";
   // The proposal-card preview is always compact (a small thumbnail); the full
   // variant defaults per prop and lets the user toggle density.
-  const [userCompact, setUserCompact] = useState(defaultCompact);
+  //
+  // Unpinned, the density follows whether there is a RUN to read. A definition
+  // is structure — the tiles are what make its shape legible at a glance, and
+  // there are no results to show. A run is read for its results, and opening it
+  // as tiles puts every answer behind a toggle the reader has to find first.
+  // Read ONCE, as the initial state: flipping density on a later tick would
+  // yank the canvas out from under someone who had chosen the other one.
+  const [userCompact, setUserCompact] = useState(
+    defaultCompact ?? nodeState === undefined,
+  );
   const compact = isPreview || userCompact;
   // What the nodes RENDER (content + handle anchors). Inside a layout tween it
   // TRAILS `compact` — the target density drives the layout and the camera at
@@ -1283,6 +1469,7 @@ export function WorkflowGraph({
   return (
     <DirectionContext.Provider value={direction}>
       <DensityContext.Provider value={displayCompact}>
+      <RunModeContext.Provider value={hasRunOverlay}>
       <SelectedNodeContext.Provider value={selectedNodeId}>
       <ConnectableContext.Provider value={editable}>
       <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
@@ -1407,6 +1594,7 @@ export function WorkflowGraph({
       </div>
       </ConnectableContext.Provider>
       </SelectedNodeContext.Provider>
+      </RunModeContext.Provider>
       </DensityContext.Provider>
     </DirectionContext.Provider>
   );

@@ -6,7 +6,10 @@ import {
   COMPACT_NODE_SIZE,
   COMPACT_NODE_SIZE_RUN,
   COMPACT_TILE,
-  OUTPUT_ROWS,
+  ACTION_OUTPUT_ROWS,
+  AGENT_BODY_ROWS,
+  OUTPUT_PREVIEW_CHARS,
+  STRUCTURAL_OUTPUT_ROWS,
   TRIGGER_NODE_ID,
   triggerNodeId,
   triggerNodeIndex,
@@ -464,9 +467,10 @@ do:
     expect(centerY(R.trigger)).toBeCloseTo(centerY(R.a0), 1);
   });
 
-  it("reserves the run rows by the documented arithmetic: footer for an action, none for a trigger", () => {
-    // Guards the fixed-layout invariant — the node box must equal the sum of its
-    // reserved rows, so a rendered card can never exceed (and clip within) it.
+  it("reserves each kind's own bands, not one worst case for every node", () => {
+    // Guards the fixed-layout invariant — a node's box must equal the sum of the
+    // bands its card actually renders, so a card can never exceed (and clip
+    // within) the box, and no node reserves a band its kind never draws.
     const yaml = `on:
   schedule:
     cron: "0 0 * * *"
@@ -474,45 +478,75 @@ do:
   - agent.run:
       model: gpt-4o
       prompt: summarize
+  - notify:
+      url: https://example.com/hook
+  - parallel:
+      branches:
+        - notify:
+            url: https://example.com/a
+        - notify:
+            url: https://example.com/b
+  - decision:
+      title: Ship it?
+      prompt: Approve to promote, or hold for a manual check.
+      options: [Approve, Hold]
 `;
     const byId = (g: ReturnType<typeof buildWorkflowGraph>) =>
       Object.fromEntries(g.nodes.map((n) => [n.id, n]));
     const R = byId(buildWorkflowGraph(yaml, { reserveRunState: true }));
+
     // The schedule trigger only fires: chrome(20) + header(34) + its description
-    // (the cron expression, 40). No metrics, no output, no footer.
+    // (the cron expression, 40). No output, no footer — in a run graph either.
     expect(R.trigger.height).toBe(20 + 34 + 40);
-    // A run-state agent adds the metrics line(27), the output block(89), and the
-    // bottom status footer(28) on top of chrome + header + description(prompt).
-    // The 89 holds OUTPUT_ROWS lines of body under the caption; the literal is
-    // spelled out so changing the reservation has to be a deliberate edit here
-    // too — the card clamps to a line count and the layout reserves for exactly
-    // that many, and the two drifting apart is what clips the last line.
-    expect(R.a0.height).toBe(20 + 34 + 40 + 27 + 89 + 28);
+
+    // An AGENT is answer-first: chrome(20) + the slim identity strip(22) + the
+    // answer body(mt-2 8 + 5 x 15.125 = 84) + footer(28). No description band —
+    // the prompt is authoring detail a run's reader did not come for — and no
+    // metrics line.
+    expect(R.a0.height).toBe(20 + 22 + 84 + 28);
+
+    // Every OTHER action: chrome(20) + header(34) + a 3-row well(90) +
+    // footer(28). The well is the body plus its caption, padding, border and the
+    // `mt-2` above it.
+    expect(R.a1.height).toBe(20 + 34 + 90 + 28);
+
+    // CONTROL FLOW routes the run and does no work: chrome(20) + header(34) +
+    // a one-line failure slot(22) + footer(28). It books no cost and emits no
+    // output, so it reserves for neither.
+    expect(R.a2.height).toBe(20 + 34 + 22 + 28);
+
+    // A DECISION shares control flow's tone but keeps its QUESTION, which is
+    // what the reader has to act on: chrome(20) + its STACKED header(45) +
+    // description(40) + footer(28). Keying the split off tone rather than kind
+    // is what would drop it, so this is the assertion that catches that.
+    expect(R.a3.height).toBe(20 + 45 + 40 + 28);
+    expect(R.a3.height).toBeGreaterThan(R.a2.height);
+
+    // The point of the whole exercise: a node that can say nothing reserves less
+    // than one that can say a lot. Before this, every one of them was identical.
+    expect(R.a2.height).toBeLessThan(R.a0.height);
   });
 
-  it("reserves enough output height for every line the card clamps to", () => {
-    // The drift this whole pairing exists to prevent: raise OUTPUT_ROWS without
-    // raising the reservation and the card clamps to a line the box has no room
-    // to draw, so the last line is silently clipped. The story renders the case,
-    // but a story only catches it if someone looks — this fails the build.
+  it("reserves enough height for every line each kind's card clamps to", () => {
+    // The drift this pairing exists to prevent: raise a row count without its
+    // reservation and the card clamps to a line the box has no room to draw, so
+    // the last line is silently clipped. A story renders the case, but a story
+    // only catches it if someone looks — this fails the build.
     //
     // Asserted on the ARITHMETIC, not on rendered pixels: jsdom performs no
     // layout, so `offsetHeight`/`scrollHeight` are 0 there and a height
     // assertion against the DOM would pass no matter how wrong the reservation
-    // got. These per-line figures are the ones measured in the browser and
-    // recorded on OUTPUT_ROW.
+    // got. These per-line figures are the ones measured in the browser.
     //
-    // The JSON branch sets the bound: its rows are 14.4375px with a 2px
-    // `space-y-0.5` between them, which totals higher than prose's solid
+    // The JSON branch sets the bound for a WELL: its rows are 14.4375px with a
+    // 2px `space-y-0.5` between them, which totals higher than prose's solid
     // 15.125px lines from three rows up.
     const WELL_CHROME = 39.5; // mt-2(8) + border(2) + py-1.5(12) + caption+mb-1(17.5)
     const JSON_ROW = 14.4375;
     const JSON_ROW_GAP = 2;
-    const needed =
-      WELL_CHROME + OUTPUT_ROWS * JSON_ROW + (OUTPUT_ROWS - 1) * JSON_ROW_GAP;
+    const wellNeeds = (rows: number) =>
+      WELL_CHROME + rows * JSON_ROW + (rows - 1) * JSON_ROW_GAP;
 
-    // Recover the reservation from the built node rather than exporting it: the
-    // height is the sum of the bands, and every other band is pinned above.
     const yaml = `
 on:
   schedule:
@@ -521,12 +555,35 @@ do:
   - agent.run:
       model: zai/glm-5
       prompt: Generate a fresh motivational quote for the team.
+  - notify:
+      url: https://example.com/hook
 `;
-    const agent = buildWorkflowGraph(yaml, { reserveRunState: true }).nodes.find(
-      (n) => n.id === actionNodeId(0),
-    );
-    const reserved = (agent?.height ?? 0) - (20 + 34 + 40 + 27 + 28);
-    expect(reserved).toBeGreaterThanOrEqual(needed);
+    const nodes = buildWorkflowGraph(yaml, { reserveRunState: true }).nodes;
+    const heightOf = (id: string) => nodes.find((n) => n.id === id)?.height ?? 0;
+
+    // Recover each reservation from the built node rather than exporting it: the
+    // height is the sum of the bands, and every other band is pinned above.
+    //
+    // The AGENT body is prose in the foreground token (15.125px solid lines, the
+    // size NodeOutputBody sets), not a well — no caption, no frame.
+    const agentBody = heightOf(actionNodeId(0)) - (20 + 22 + 28);
+    expect(agentBody).toBeGreaterThanOrEqual(8 + AGENT_BODY_ROWS * 15.125);
+
+    const actionWell = heightOf(actionNodeId(1)) - (20 + 34 + 28);
+    expect(actionWell).toBeGreaterThanOrEqual(wellNeeds(ACTION_OUTPUT_ROWS));
+  });
+
+  it("caps the rows a card clamps to at what the host's preview can fill", () => {
+    // The ceiling nothing here can design around: the host sends at most
+    // OUTPUT_PREVIEW_CHARS characters and a NODE_W-wide card holds roughly 45 a
+    // line, so a card that clamps past that draws BLANK lines — the same defect
+    // as clamping below its reservation, from the other side. Raising a row
+    // count therefore means raising the host's cap first, in the other repo.
+    const CHARS_PER_LINE = 45;
+    const fillable = Math.floor(OUTPUT_PREVIEW_CHARS / CHARS_PER_LINE);
+    expect(AGENT_BODY_ROWS).toBeLessThanOrEqual(fillable);
+    expect(ACTION_OUTPUT_ROWS).toBeLessThanOrEqual(fillable);
+    expect(STRUCTURAL_OUTPUT_ROWS).toBeLessThanOrEqual(fillable);
   });
 
   it("routes a fan-out through fork+join edges and reconverges on the next layer", () => {
@@ -606,11 +663,16 @@ do:
     // The spine stays level: the fan-out node and the reconverging node share a
     // centerline even though the two branches have different heights.
     expect(centerY(byId.a0)).toBeCloseTo(centerY(byId.a1), 0);
-    // The (asymmetric) branch stack is centered on that spine line.
+    // The (asymmetric) branch stack is centered on that spine line — asserted on
+    // the stack's EXTENT (top of the first leaf to the bottom of the last),
+    // which is what `layoutLayers` centers when it starts the cursor at
+    // `-span / 2`. The mean of the leaf centers is a different quantity once the
+    // leaves differ in height: it sits (h0 - h1) / 4 away from the extent's
+    // midpoint, so it only agreed with this while every card was the same size.
     const leaves = [byId["a0-b0"], byId["a0-b1"]];
-    const meanLeafCenter =
-      leaves.reduce((s, n) => s + centerY(n), 0) / leaves.length;
-    expect(meanLeafCenter).toBeCloseTo(centerY(byId.a0), 0);
+    const stackTop = Math.min(...leaves.map((n) => n.position.y));
+    const stackBottom = Math.max(...leaves.map((n) => n.position.y + n.height));
+    expect((stackTop + stackBottom) / 2).toBeCloseTo(centerY(byId.a0), 0);
     // The positive-quadrant shift leaves every node at a non-negative position.
     expect(nodes.every((n) => n.position.x >= 0 && n.position.y >= 0)).toBe(true);
   });

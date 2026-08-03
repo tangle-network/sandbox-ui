@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
   buildWorkflowGraph,
   COMPACT_TILE,
-  OUTPUT_ROWS,
+  ACTION_OUTPUT_ROWS,
   type WfNodeData,
   type WfNodeState,
 } from "./model";
@@ -19,6 +19,7 @@ import {
   DirectionContext,
   fitZoomCeiling,
   isEditableEdge,
+  RunModeContext,
   SelectedNodeContext,
   WorkflowGraph,
   WorkflowNode,
@@ -33,12 +34,31 @@ const BASE: WfNodeData = {
   tone: "action",
 };
 
+/** A non-agent action. An agent's card renders its answer as the card BODY —
+ *  no caption, no frame — so the framed output WELL, and everything about how it
+ *  clamps and labels itself, belongs to these kinds now. */
+const ACTION: WfNodeData = {
+  title: "Notify",
+  kind: "notify",
+  subtitle: "example.com",
+  isRoot: false,
+  tone: "action",
+};
+
 // WorkflowNode renders React Flow <Handle>s, which read the flow store from
 // context — wrap it in a provider so it renders standalone.
-function renderNode(data: WfNodeData) {
+//
+// `RunModeContext` says whether the GRAPH is showing a run, which is what decides
+// whether a card renders its run bands (the graph reserves them for every action
+// the moment it has any run state). Defaulted here to "this node has state",
+// which is the case every test that passes one is describing; a test covering a
+// node the host sent NO entry for in a live run passes it explicitly.
+function renderNode(data: WfNodeData, runMode = data.state !== undefined) {
   return render(
     <ReactFlowProvider>
-      <WorkflowNode {...({ data } as NodeProps<Node<WfNodeData>>)} />
+      <RunModeContext.Provider value={runMode}>
+        <WorkflowNode {...({ data } as NodeProps<Node<WfNodeData>>)} />
+      </RunModeContext.Provider>
     </ReactFlowProvider>,
   );
 }
@@ -177,8 +197,9 @@ describe("WorkflowNode", () => {
       },
     });
     expect(screen.getByText("Running")).toBeTruthy();
-    // The live model names the step (it supersedes the requested one)…
-    expect(screen.getByText("gpt-4o")).toBeTruthy();
+    // The live model names the step (it supersedes the requested one) — beside
+    // the agent's own name, so a fan-out of one model is still tellable apart.
+    expect(screen.getByText("AI Agent · gpt-4o")).toBeTruthy();
     // …and the run's numbers read as ONE line, not a row of boxes.
     expect(screen.getByText("$0.0032")).toBeTruthy();
     expect(screen.getByText("4.2s")).toBeTruthy();
@@ -193,19 +214,197 @@ describe("WorkflowNode", () => {
       subtitle: "claude-sonnet-5",
       state: { status: "running", model: "deepseek/deepseek-chat" },
     });
-    expect(screen.getByText("deepseek-chat")).toBeTruthy();
-    expect(screen.queryByText("claude-sonnet-5")).toBeNull();
+    expect(screen.getByText(/deepseek-chat/)).toBeTruthy();
+    expect(screen.queryByText(/claude-sonnet-5/)).toBeNull();
   });
 
-  it("surfaces the agent round count in the footer, alongside the prompt", () => {
+  it("trades an agent's prompt for its answer once the node has run", () => {
     renderNode({
       ...BASE,
       description: "Review the PR diff",
-      state: { status: "running", model: "glm-5", rounds: 3, durationMs: 8200 },
+      state: {
+        status: "running",
+        model: "glm-5",
+        rounds: 3,
+        durationMs: 8200,
+        outputPreview: "Found an uncapped retry loop in worker.ts",
+      },
     });
-    // Rounds are an agent progress signal; the prompt description is shown too.
+    // Rounds are an agent progress signal, and they ride in the footer caption.
     expect(screen.getByText("3 rounds")).toBeTruthy();
+    // The PROMPT is gone: it is authoring detail, and a reader who opened a run
+    // came for what the agent said, not for what it was asked. The card is sized
+    // for exactly this trade (nodeHeight reserves no description band for an
+    // agent with run state), so rendering it here would overflow the box.
+    expect(screen.queryByText("Review the PR diff")).toBeNull();
+    expect(
+      screen.getByText("Found an uncapped retry loop in worker.ts"),
+    ).toBeTruthy();
+  });
+
+  it("shows an agent's prompt while it has no answer yet, so a queued branch says what it will do", () => {
+    // A fan-out runs the same model on different prompts. Trading the prompt for
+    // the answer is only right once there IS an answer: a queued branch showing
+    // neither rendered as an anonymous card — three of them side by side, all
+    // labelled with the same model and nothing to tell them apart.
+    renderNode({
+      ...BASE,
+      description: "Audit the change for security vulnerabilities.",
+      subtitle: "deepseek-chat",
+      state: { status: "queued" },
+    });
+    expect(
+      screen.getByText("Audit the change for security vulnerabilities."),
+    ).toBeTruthy();
+    // The name rides with the model for the same reason.
+    expect(screen.getByText("AI Agent · deepseek-chat")).toBeTruthy();
+  });
+
+  it("shows a failed decision WHY it failed, in the band its question had", () => {
+    // A decision reserves a header, its question and a footer — and nothing
+    // else. Rendering the error as an extra band would overflow that box, so it
+    // takes the question's place instead: once the run has stopped on an error
+    // nobody is going to answer the question, and the two never compete.
+    renderNode({
+      title: "Ship the release?",
+      kind: "decision",
+      subtitle: "approve / reject",
+      description: "The reviewer flagged two medium-severity findings.",
+      isRoot: false,
+      tone: "structural",
+      state: { status: "failed", error: "decision timed out after 24h" },
+    });
+    expect(screen.getByText("decision timed out after 24h")).toBeTruthy();
+    expect(
+      screen.queryByText("The reviewer flagged two medium-severity findings."),
+    ).toBeNull();
+    // The question is still what a decision shows when it has NOT failed.
+    cleanup();
+    renderNode({
+      title: "Ship the release?",
+      kind: "decision",
+      subtitle: "approve / reject",
+      description: "The reviewer flagged two medium-severity findings.",
+      isRoot: false,
+      tone: "structural",
+      state: { status: "waiting" },
+    });
+    expect(
+      screen.getByText("The reviewer flagged two medium-severity findings."),
+    ).toBeTruthy();
+  });
+
+  it("orders the footer caption most- to least-important, so a squeeze sheds tokens first", () => {
+    // The caption is one truncating span: rounds, cost and tokens joined. Measured
+    // in the browser it does not overflow a 292px card at realistic values — a
+    // 12-round, $12.48, 128000/32000 run renders well inside the 292px card — and
+    // only clips on values far past that (a $1284 node with a million input
+    // tokens). What matters is therefore not WHETHER it can clip but WHAT it
+    // sheds when it does: `truncate` cuts the tail, so this order is what keeps
+    // spend visible and drops the token counts. Reversing it would lose cost first.
+    renderNode({
+      ...BASE,
+      state: {
+        status: "succeeded",
+        rounds: 12,
+        costUsd: 12.4821,
+        inputTokens: 128000,
+        outputTokens: 32000,
+        durationMs: 5_000_000,
+      },
+    });
+    const caption = screen.getByText(/rounds/);
+    expect(caption.textContent).toBe("12 rounds · $12.48 · 128000/32000 tok");
+    expect(caption.className).toContain("truncate");
+  });
+
+  it("renders an agent's answer and its prompt at the SAME type size", () => {
+    // They share one reserved body and stand in for each other, so a difference
+    // in size changes how many lines fit and silently breaks the reservation.
+    // `NodeOutputBody` sets its own 11px, which a container asking for another
+    // size does not override — so the prompt has to match it rather than the
+    // other way round.
+    const { container: answer } = renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: "the answer" },
+    });
+    const { container: prompt } = renderNode({
+      ...BASE,
+      description: "the prompt",
+      state: { status: "queued" },
+    });
+    const size = (c: HTMLElement) =>
+      (c.querySelector("p")?.className ?? "").match(/text-\[\d+px\]/)?.[0];
+    expect(size(answer)).toBe("text-[11px]");
+    expect(size(prompt)).toBe("text-[11px]");
+  });
+
+  it("says a FINISHED agent produced nothing, rather than falling back to its prompt", () => {
+    // The prompt stands in for an answer only while one is still coming. On a
+    // node that has finished, the same text reads as the result it returned.
+    renderNode({
+      ...BASE,
+      description: "Triage the change and decide what review it needs.",
+      state: { status: "succeeded" },
+    });
+    expect(screen.getByText("No output")).toBeTruthy();
+    expect(
+      screen.queryByText("Triage the change and decide what review it needs."),
+    ).toBeNull();
+  });
+
+  it("replaces that prompt with the answer as soon as one arrives", () => {
+    // The counterpart: the fallback must not linger beside the answer, which
+    // would spend the body on the question the reader already had answered.
+    renderNode({
+      ...BASE,
+      description: "Audit the change for security vulnerabilities.",
+      state: { status: "succeeded", outputPreview: "2 high-severity findings." },
+    });
+    expect(screen.getByText("2 high-severity findings.")).toBeTruthy();
+    expect(
+      screen.queryByText("Audit the change for security vulnerabilities."),
+    ).toBeNull();
+  });
+
+  it("renders a run card for a node the host sent no state for, matching what the layout reserved", () => {
+    // `nodeHeight` reserves the run bands for every action the moment the graph
+    // has ANY run state — the layout is computed once and cannot revisit it. A
+    // node missing from `nodeState` (the run has not reached it, and the host
+    // sent no entry) was therefore rendering its definition card into a
+    // run-sized box, leaving over a hundred pixels of void beneath it.
+    const { container } = renderNode({ ...ACTION, description: "post it" }, true);
+    // The footer is the tell: it is a run band, and it is what the box reserved.
+    expect(container.querySelector(":scope > div > .mt-auto")).toBeTruthy();
+  });
+
+  it("renders NO run bands when the graph is not showing a run at all", () => {
+    // The counterpart — a definition graph reserves none of them.
+    const { container } = renderNode({ ...ACTION, description: "post it" }, false);
+    expect(container.querySelector(":scope > div > .mt-auto")).toBeNull();
+    expect(screen.getByText("post it")).toBeTruthy();
+  });
+
+  it("keeps an agent's prompt on a DEFINITION card, which has no answer to show", () => {
+    // The counterpart: with no run state there is nothing to trade the prompt
+    // for, so it stays — and `nodeHeight` reserves the description band for it.
+    renderNode({ ...BASE, description: "Review the PR diff" });
     expect(screen.getByText("Review the PR diff")).toBeTruthy();
+  });
+
+  it("renders an agent's answer as the card BODY, with no caption or well", () => {
+    // Answer-first: the output is not an attribute of the node, it is what the
+    // node produced. A caption over a framed well says the opposite, and costs
+    // the rows that let the answer be five lines instead of three.
+    const { container } = renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: "the whole answer" },
+    });
+    expect(screen.queryByText("Output")).toBeNull();
+    expect(screen.getByText("the whole answer")).toBeTruthy();
+    // Set in the foreground token, not the muted one a well's body uses.
+    const body = screen.getByText("the whole answer");
+    expect(body.className).toContain("text-foreground");
   });
 
   it("renders the singular '1 round'", () => {
@@ -544,7 +743,7 @@ do:
 describe("WorkflowNode — status footer + content-aware output", () => {
   it("renders a JSON output as key/value rows under an OUTPUT label, not one raw blob", () => {
     renderNode({
-      ...BASE,
+      ...ACTION,
       state: { status: "succeeded", outputPreview: '{"status":200,"id":4821}' },
     });
     // The block is labelled…
@@ -559,7 +758,7 @@ describe("WorkflowNode — status footer + content-aware output", () => {
 
   it("labels a failure's error block ERROR and renders the message", () => {
     renderNode({
-      ...BASE,
+      ...ACTION,
       state: { status: "failed", error: "provider 500: timed out" },
     });
     expect(screen.getByText("Error")).toBeTruthy();
@@ -597,29 +796,29 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(screen.getAllByText("Failed")).toHaveLength(1);
   });
 
-  it("keeps a wide JSON output within its line budget (entries + marker <= OUTPUT_ROWS)", () => {
+  it("keeps a wide JSON output within its line budget (entries + marker <= ACTION_OUTPUT_ROWS)", () => {
     // An object with more fields than fit must spend its LAST line on the
-    // truncation marker, so it renders at most OUTPUT_ROWS - 1 key rows. Rows and
+    // truncation marker, so it renders at most ACTION_OUTPUT_ROWS - 1 key rows. Rows and
     // marker together exceeding the budget is what clips the well or pushes it
     // into the footer of the fixed-height card.
     const { container } = renderNode({
-      ...BASE,
+      ...ACTION,
       state: {
         status: "succeeded",
         outputPreview: '{"a":1,"b":2,"c":3,"d":4,"e":5}',
       },
     });
-    // Derived from OUTPUT_ROWS rather than written as a literal, so retuning the
+    // Derived from ACTION_OUTPUT_ROWS rather than written as a literal, so retuning the
     // budget moves this expectation with it instead of failing for the wrong
     // reason — the invariant is "rows + marker fits", not "there are two rows".
-    expect(container.querySelectorAll("dt")).toHaveLength(OUTPUT_ROWS - 1);
+    expect(container.querySelectorAll("dt")).toHaveLength(ACTION_OUTPUT_ROWS - 1);
     expect(screen.getByText("…")).toBeTruthy();
   });
 
   it("constrains a long JSON key so it can't overflow the fixed-width card", () => {
     const key = "aVeryLongUnbrokenKeyThatWouldOverflowTheCard";
     const { container } = renderNode({
-      ...BASE,
+      ...ACTION,
       state: { status: "succeeded", outputPreview: `{"${key}":"v"}` },
     });
     const dt = container.querySelector("dt");
@@ -635,7 +834,7 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     // prose one — not neutral key/value that looks like normal output. The color
     // is the semantic danger TOKEN, so it holds up in light and dark alike.
     const { container } = renderNode({
-      ...BASE,
+      ...ACTION,
       state: { status: "failed", error: '{"message":"timeout","code":504}' },
     });
     expect(screen.getByText("Error")).toBeTruthy();
@@ -696,6 +895,59 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
       <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={3} />,
     );
     expect(textC.querySelector("p")?.className).toContain("line-clamp-3");
+  });
+
+  describe('rows="none" — a container that scrolls or is sized by its content', () => {
+    it("renders prose and code with no clamp class at all", () => {
+      const { container: textC } = render(
+        <NodeOutputBody shape={classifyOutput("a longer prose output")} rows="none" />,
+      );
+      const p = textC.querySelector("p");
+      expect(p?.className).not.toMatch(/line-clamp|truncate/);
+      const { container: codeC } = render(
+        <NodeOutputBody shape={classifyOutput('["a","b","c"]')} rows="none" />,
+      );
+      expect(codeC.querySelector("pre")?.className).not.toMatch(
+        /line-clamp|truncate/,
+      );
+    });
+
+    it("renders EVERY recovered JSON entry, with no row budget to run out of", () => {
+      // Six keys — more than any card's row budget, and exactly the case that
+      // renders as one field and an ellipsis inside a card.
+      const json = '{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6}';
+      const { container } = render(
+        <NodeOutputBody shape={classifyOutput(json)} rows="none" />,
+      );
+      expect(container.querySelectorAll("dt")).toHaveLength(6);
+      // The marker is what `classifyOutput` dropped, and it dropped nothing.
+      expect(container.textContent).not.toContain("…");
+    });
+
+    it("still marks entries the classifier itself capped", () => {
+      // MAX_JSON_ENTRIES is 6, so a seventh key is gone before the body sees it —
+      // unclamped or not, the reader has to be told something was dropped.
+      const json = `{${Array.from({ length: 9 }, (_, i) => `"k${i}":${i}`).join(",")}}`;
+      const { container } = render(
+        <NodeOutputBody shape={classifyOutput(json)} rows="none" />,
+      );
+      expect(container.querySelectorAll("dt")).toHaveLength(6);
+      expect(container.textContent).toContain("…");
+    });
+  });
+
+  // A card that RESERVES n lines and then silently clamps to two shows a short
+  // body in a tall well — the reservation and the render disagree, and nothing
+  // fails. So every budget a card can reserve has to map to its own utility.
+  it.each([4, 5, 6])("honors a %i-row budget rather than falling back to two", (rows) => {
+    const { container: textC } = render(
+      <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={rows} />,
+    );
+    expect(textC.querySelector("p")?.className).toContain(`line-clamp-${rows}`);
+    const { container: codeC } = render(
+      <NodeOutputBody shape={classifyOutput('["a","b","c","d"]')} rows={rows} />,
+    );
+    expect(codeC.querySelector("pre")?.className).toContain(`line-clamp-${rows}`);
   });
 });
 

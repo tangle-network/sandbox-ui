@@ -20,43 +20,43 @@ type Story = StoryObj<typeof ModelPicker>;
 
 const models: ModelInfo[] = [
   {
-    id: "gpt-5.4",
-    name: "GPT-5.4",
+    id: "gpt-5.6-sol",
+    name: "GPT-5.6 Sol",
     _provider: "openai",
     pricing: { prompt: "0.0000025", completion: "0.000015" },
     context_length: 400_000,
     architecture: { modality: "text" },
   },
   {
-    id: "gpt-5.4-mini",
-    name: "GPT-5.4 mini",
+    id: "gpt-5.6-sol-mini",
+    name: "GPT-5.6 Sol mini",
     _provider: "openai",
     pricing: { prompt: "0.00000075", completion: "0.0000045" },
     context_length: 400_000,
     architecture: { modality: "text" },
   },
   {
-    id: "gpt-5.4-pro",
-    name: "GPT-5.4 pro",
+    id: "gpt-5.6-sol-pro",
+    name: "GPT-5.6 Sol pro",
     _provider: "openai",
     pricing: { prompt: "0.00003", completion: "0.00018" },
     context_length: 400_000,
     architecture: { modality: "text" },
   },
   {
-    id: "anthropic/claude-sonnet-4-6",
-    name: "Claude Sonnet 4.6",
+    id: "anthropic/claude-fable-5",
+    name: "Claude Fable 5",
     _provider: "anthropic",
     pricing: { prompt: "0.000003", completion: "0.000015" },
-    context_length: 200_000,
+    context_length: 1_000_000,
     architecture: { modality: "text" },
   },
   {
-    id: "anthropic/claude-sonnet-4-6",
-    name: "Claude Sonnet 4.6 via OpenRouter",
+    id: "anthropic/claude-fable-5",
+    name: "Claude Fable 5 via OpenRouter",
     _provider: "openrouter",
     pricing: { prompt: "0.0000035", completion: "0.0000175" },
-    context_length: 200_000,
+    context_length: 1_000_000,
     architecture: { modality: "text" },
   },
   {
@@ -68,11 +68,11 @@ const models: ModelInfo[] = [
     architecture: { modality: "text->video" },
   },
   {
-    id: "anthropic/claude-opus-4-7",
-    name: "Claude Opus 4.7",
+    id: "anthropic/claude-opus-5",
+    name: "Claude Opus 5",
     _provider: "anthropic",
     pricing: { prompt: "0.000015", completion: "0.000075" },
-    context_length: 200_000,
+    context_length: 1_000_000,
     architecture: { modality: "text" },
   },
   {
@@ -84,8 +84,8 @@ const models: ModelInfo[] = [
     architecture: { modality: "text" },
   },
   {
-    id: "gemini-2.5-pro",
-    name: "Gemini 2.5 Pro",
+    id: "gemini-3.1-pro-preview",
+    name: "Gemini 3.1 Pro",
     _provider: "google",
     pricing: { prompt: "0.00000125", completion: "0.00001" },
     context_length: 2_000_000,
@@ -96,25 +96,25 @@ const models: ModelInfo[] = [
 export const Default: Story = {
   name: "Default (field)",
   render: () => {
-    const [value, setValue] = useState("openai/gpt-5.4");
-    return <ModelPicker value={value} onChange={setValue} models={models} recents={["anthropic/claude-sonnet-4-6"]} />;
+    const [value, setValue] = useState("openai/gpt-5.6-sol");
+    return <ModelPicker value={value} onChange={setValue} models={models} recents={["anthropic/claude-fable-5"]} />;
   },
 };
 
 export const Popular: Story = {
   name: "With popular section",
   render: () => {
-    const [value, setValue] = useState("openai/gpt-5.4");
+    const [value, setValue] = useState("openai/gpt-5.6-sol");
     return (
       <ModelPicker
         value={value}
         onChange={setValue}
         models={models}
         popular={[
-          "openai/gpt-5.4",
-          "anthropic/claude-sonnet-4-6",
-          "anthropic/claude-opus-4-7",
-          "openai/gpt-5.4-mini",
+          "openai/gpt-5.6-sol",
+          "anthropic/claude-fable-5",
+          "anthropic/claude-opus-5",
+          "openai/gpt-5.6-sol-mini",
           "anthropic/claude-haiku-4.5",
         ]}
       />
@@ -132,7 +132,7 @@ export const Pill: Story = {
     ),
   ],
   render: () => {
-    const [value, setValue] = useState("openai/gpt-5.4");
+    const [value, setValue] = useState("openai/gpt-5.6-sol");
     return <ModelPicker variant="pill" value={value} onChange={setValue} models={models} />;
   },
 };
@@ -140,7 +140,7 @@ export const Pill: Story = {
 export const Loading: Story = {
   name: "Loading",
   render: () => {
-    const [value, setValue] = useState("openai/gpt-5.4");
+    const [value, setValue] = useState("openai/gpt-5.6-sol");
     return <ModelPicker value={value} onChange={setValue} models={[]} loading />;
   },
 };
@@ -148,7 +148,7 @@ export const Loading: Story = {
 export const FilteredToText: Story = {
   name: "Text-only modality",
   render: () => {
-    const [value, setValue] = useState("openai/gpt-5.4");
+    const [value, setValue] = useState("openai/gpt-5.6-sol");
     return <ModelPicker value={value} onChange={setValue} models={models} modalities={["text"]} />;
   },
 };

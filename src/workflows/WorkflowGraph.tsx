@@ -764,7 +764,22 @@ export function WorkflowNode({
                 </div>
               </div>
             </div>
-            {descriptionBand(true)}
+            {/* A decision that FAILED shows why, in the band its question had.
+                The question is moot once the run has stopped on an error —
+                nobody is going to answer it — so the two never compete, and the
+                error needs no reservation of its own. Its two clamped lines are
+                the same two the description band already holds. */}
+            {runOutput && runStatus === "failed" ? (
+              <div className="mt-2 min-h-0 shrink-0">
+                <NodeOutputBody
+                  shape={runOutput.shape}
+                  tone={runOutput.tone}
+                  rows={2}
+                />
+              </div>
+            ) : (
+              descriptionBand(true)
+            )}
           </>,
         )}
         {footer}

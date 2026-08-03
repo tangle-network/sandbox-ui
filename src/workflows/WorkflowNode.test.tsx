@@ -260,6 +260,40 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("AI Agent · deepseek-chat")).toBeTruthy();
   });
 
+  it("shows a failed decision WHY it failed, in the band its question had", () => {
+    // A decision reserves a header, its question and a footer — and nothing
+    // else. Rendering the error as an extra band would overflow that box, so it
+    // takes the question's place instead: once the run has stopped on an error
+    // nobody is going to answer the question, and the two never compete.
+    renderNode({
+      title: "Ship the release?",
+      kind: "decision",
+      subtitle: "approve / reject",
+      description: "The reviewer flagged two medium-severity findings.",
+      isRoot: false,
+      tone: "structural",
+      state: { status: "failed", error: "decision timed out after 24h" },
+    });
+    expect(screen.getByText("decision timed out after 24h")).toBeTruthy();
+    expect(
+      screen.queryByText("The reviewer flagged two medium-severity findings."),
+    ).toBeNull();
+    // The question is still what a decision shows when it has NOT failed.
+    cleanup();
+    renderNode({
+      title: "Ship the release?",
+      kind: "decision",
+      subtitle: "approve / reject",
+      description: "The reviewer flagged two medium-severity findings.",
+      isRoot: false,
+      tone: "structural",
+      state: { status: "waiting" },
+    });
+    expect(
+      screen.getByText("The reviewer flagged two medium-severity findings."),
+    ).toBeTruthy();
+  });
+
   it("orders the footer caption most- to least-important, so a squeeze sheds tokens first", () => {
     // The caption is one truncating span: rounds, cost and tokens joined. Measured
     // in the browser it does not overflow a 292px card at realistic values — a

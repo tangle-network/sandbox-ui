@@ -20,26 +20,6 @@ function jsonResponse(payload: unknown, ok = true, status = 200): Response {
   } as unknown as Response;
 }
 
-/**
- * The SSE fetch reads `res.body.getReader()`; an immediately-closing stream
- * ends the read loop cleanly, so the mount effect settles without an error
- * or a 3s reconnect timer left dangling.
- */
-function closedEventStreamResponse(): Response {
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.close();
-    },
-  });
-  return {
-    ok: true,
-    status: 200,
-    statusText: "OK",
-    body,
-    json: async () => ({}),
-  } as unknown as Response;
-}
-
 function methodOf(init?: RequestInit): string {
   return (init?.method ?? "GET").toUpperCase();
 }
@@ -47,6 +27,7 @@ function methodOf(init?: RequestInit): string {
 /** An SSE response the test drives frame by frame. */
 function controllableEventStream() {
   let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let closed = false;
   const encoder = new TextEncoder();
   const body = new ReadableStream<Uint8Array>({
     start(c) {
@@ -61,12 +42,19 @@ function controllableEventStream() {
       body,
       json: async () => ({}),
     } as unknown as Response,
-    emit(type: string, data: unknown) {
+    emit(type: string, data: unknown, id?: string) {
       controller.enqueue(
-        encoder.encode(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`),
+        encoder.encode(
+          `${id ? `id: ${id}\n` : ""}event: ${type}\ndata: ${JSON.stringify(data)}\n\n`,
+        ),
       );
     },
+    push(raw: string) {
+      controller.enqueue(encoder.encode(raw));
+    },
     close() {
+      if (closed) return;
+      closed = true;
       controller.close();
     },
   };
@@ -86,12 +74,14 @@ function historyMessage(
 
 describe("useSessionStream send()", () => {
   let calls: Call[];
+  let stream: ReturnType<typeof controllableEventStream>;
 
   beforeEach(() => {
     calls = [];
+    stream = controllableEventStream();
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       calls.push({ url, init });
-      if (url.includes("/session/events")) return closedEventStreamResponse();
+      if (url.includes("/session/events")) return stream.response;
       if (url.includes("/messages") && methodOf(init) === "POST")
         return jsonResponse({});
       if (url.includes("/messages")) return jsonResponse([]); // GET history
@@ -101,6 +91,7 @@ describe("useSessionStream send()", () => {
   });
 
   afterEach(() => {
+    stream.close();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -164,6 +155,21 @@ describe("useSessionStream send()", () => {
     expect(body.agent).toBe("build");
     expect(body.system).toBe("be terse");
   });
+
+  it("rejects instead of silently discarding a message before chat is ready", async () => {
+    const { result } = renderHook(() =>
+      useSessionStream({
+        apiUrl: "http://sidecar.test",
+        token: null,
+        sessionId: "sess-not-ready",
+      }),
+    );
+
+    await expect(result.current.send("do not lose this")).rejects.toMatchObject({
+      code: "CHAT_NOT_READY",
+    });
+    expect(postTo("sess-not-ready")).toBeUndefined();
+  });
 });
 
 describe("useSessionStream local echo", () => {
@@ -171,17 +177,25 @@ describe("useSessionStream local echo", () => {
   let stream: ReturnType<typeof controllableEventStream>;
   let openStreams: ReturnType<typeof controllableEventStream>[];
   let postFails: boolean;
+  let postErrorPayload: unknown;
   let historyGate: Promise<void> | null;
+  let eventRequestInits: RequestInit[];
+  let eventRequestUrls: string[];
 
   beforeEach(() => {
     history = [];
     postFails = false;
+    postErrorPayload = {};
     historyGate = null;
+    eventRequestInits = [];
+    eventRequestUrls = [];
     openStreams = [];
     stream = controllableEventStream();
 
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.includes("/session/events")) {
+        eventRequestUrls.push(url);
+        eventRequestInits.push(init ?? {});
         // A stream body reads once, so every (re)connect gets a fresh one;
         // `stream` tracks the newest so `emit` targets the live connection,
         // and every one is kept so teardown can close them all.
@@ -191,8 +205,11 @@ describe("useSessionStream local echo", () => {
       }
       if (url.includes("/messages") && methodOf(init) === "POST") {
         return postFails
-          ? jsonResponse({}, false, 500)
-          : jsonResponse({ userMessageId: "msg-user" });
+          ? jsonResponse(postErrorPayload, false, 500)
+          : jsonResponse({
+              info: { id: "execution-1" },
+              userMessageId: "msg-user",
+            });
       }
       if (url.includes("/messages")) {
         if (historyGate) await historyGate;
@@ -312,7 +329,9 @@ describe("useSessionStream local echo", () => {
     postFails = true;
 
     await act(async () => {
-      await result.current.send("never lands");
+      await expect(result.current.send("never lands")).rejects.toMatchObject({
+        code: "HTTP_500",
+      });
     });
 
     expect(userTexts(result.current)).toEqual([]);
@@ -320,7 +339,7 @@ describe("useSessionStream local echo", () => {
     expect(result.current.error).toContain("500");
   });
 
-  it("keeps the live turn streaming when a concurrent send is rejected", async () => {
+  it("rejects a concurrent send before issuing a second request", async () => {
     const { result } = await mounted("sess-concurrent");
 
     await act(async () => {
@@ -328,18 +347,17 @@ describe("useSessionStream local echo", () => {
     });
     expect(result.current.isStreaming).toBe(true);
 
-    // Not every caller gates on `isStreaming` — an in-transcript action button
-    // sends straight through while the first turn is still running.
-    postFails = true;
     await act(async () => {
-      await result.current.send("fires mid-run");
+      await expect(result.current.send("fires mid-run")).rejects.toMatchObject({
+        code: "CHAT_BUSY",
+      });
     });
 
     expect(userTexts(result.current)).toEqual(["the real turn"]);
     expect(result.current.isStreaming).toBe(true);
   });
 
-  it("keeps a detached run streaming when a send with no turn of its own fails", async () => {
+  it("rejects a send while a detached run is streaming", async () => {
     const { result } = await mounted("sess-detached");
 
     // An assistant is already streaming into this session without any echo of
@@ -351,9 +369,10 @@ describe("useSessionStream local echo", () => {
     });
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
 
-    postFails = true;
     await act(async () => {
-      await result.current.send("fires during the detached run");
+      await expect(
+        result.current.send("fires during the detached run"),
+      ).rejects.toMatchObject({ code: "CHAT_BUSY" });
     });
 
     expect(userTexts(result.current)).toEqual([]);
@@ -419,6 +438,318 @@ describe("useSessionStream local echo", () => {
 
     await waitFor(() =>
       expect(userTexts(result.current)).toEqual(["meant for sess-a"]),
+    );
+  });
+
+  it("uses a part's message id when output arrives before message.updated", async () => {
+    const { result } = await mounted("sess-part-first");
+
+    await act(async () => {
+      stream.emit("message.part.updated", {
+        properties: {
+          part: {
+            id: "part-1",
+            messageID: "assistant-1",
+            type: "text",
+            text: "hel",
+          },
+        },
+      });
+    });
+
+    expect(result.current.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "assistant-1", role: "assistant" }),
+      ]),
+    );
+    expect(result.current.partMap["assistant-1"]).toEqual([
+      { type: "text", text: "hel" },
+    ]);
+
+    await act(async () => {
+      stream.emit("message.part.updated", {
+        properties: {
+          part: {
+            id: "part-1",
+            messageID: "assistant-1",
+            type: "text",
+            text: "hello",
+          },
+        },
+      });
+    });
+
+    expect(result.current.partMap["assistant-1"]).toEqual([
+      { type: "text", text: "hello" },
+    ]);
+  });
+
+  it("parses CRLF, multiline data, and chunks split inside an event", async () => {
+    const { result } = await mounted("sess-chunked");
+
+    await act(async () => {
+      stream.push("event: message.part.updated\r\ndata: {\"properties\":{\r\n");
+      stream.push(
+        "data: \"part\":{\"id\":\"part-2\",\"messageID\":\"assistant-2\",\"type\":\"text\",\"text\":\"chunked\"}}}\r\n\r\n",
+      );
+    });
+
+    await waitFor(() =>
+      expect(result.current.partMap["assistant-2"]).toEqual([
+        { type: "text", text: "chunked" },
+      ]),
+    );
+  });
+
+  it("shows a nested session error with its stable code", async () => {
+    const { result } = await mounted("sess-error");
+
+    await act(async () => {
+      stream.emit("session.error", {
+        properties: {
+          error: {
+            code: "MODEL_AUTH_FAILED",
+            message: "The model credential was rejected.",
+          },
+        },
+      });
+    });
+
+    expect(result.current.error).toBe(
+      "The model credential was rejected. (MODEL_AUTH_FAILED)",
+    );
+    expect(result.current.isStreaming).toBe(false);
+  });
+
+  it("reconnects a cleanly closed stream and resumes after its last event id", async () => {
+    const { result } = await mounted("sess-reconnect");
+
+    await act(async () => {
+      stream.emit(
+        "message.updated",
+        { properties: { info: { id: "assistant-3", role: "assistant" } } },
+        "event-42",
+      );
+    });
+    stream.close();
+
+    await waitFor(() => expect(result.current.connected).toBe(false));
+    expect(result.current.error).toContain("Reconnecting");
+    await waitFor(() => expect(openStreams).toHaveLength(2), {
+      timeout: 2500,
+    });
+
+    const reconnectUrl = new URL(eventRequestUrls[1]);
+    expect(reconnectUrl.searchParams.get("executionId")).toBe("assistant-3");
+    expect(reconnectUrl.searchParams.get("since")).toBe("event-42");
+    expect(eventRequestInits[1]?.headers).not.toHaveProperty("Last-Event-ID");
+  });
+
+  it("uses the admission receipt for replay when disconnect happens before output", async () => {
+    const { result } = await mounted("sess-receipt-replay");
+
+    await act(async () => {
+      await result.current.send("start the turn");
+    });
+    stream.close();
+
+    await waitFor(() => expect(openStreams).toHaveLength(2), {
+      timeout: 2500,
+    });
+    const reconnectUrl = new URL(eventRequestUrls[1]);
+    expect(reconnectUrl.searchParams.get("executionId")).toBe("execution-1");
+  });
+
+  it("requests full replay for every active execution after a disconnect", async () => {
+    const { result } = await mounted("sess-multi-replay");
+
+    await act(async () => {
+      stream.emit(
+        "message.part.updated",
+        {
+          properties: {
+            part: {
+              id: "part-a",
+              messageID: "assistant-a",
+              type: "text",
+              text: "first",
+            },
+          },
+        },
+        "event-a",
+      );
+      stream.emit(
+        "message.part.updated",
+        {
+          properties: {
+            part: {
+              id: "part-b",
+              messageID: "assistant-b",
+              type: "text",
+              text: "second",
+            },
+          },
+        },
+        "event-b",
+      );
+    });
+    stream.close();
+
+    await waitFor(() => expect(openStreams).toHaveLength(2), {
+      timeout: 2500,
+    });
+    const reconnectUrl = new URL(eventRequestUrls[1]);
+    expect(reconnectUrl.searchParams.get("executionId")).toBeNull();
+    expect(reconnectUrl.searchParams.get("replayExecutionIds")).toBe(
+      "assistant-a,assistant-b",
+    );
+    expect(reconnectUrl.searchParams.get("since")).toBe("event-b");
+  });
+
+  it("keeps another assistant turn streaming when one execution goes idle", async () => {
+    const { result } = await mounted("sess-overlap");
+
+    await act(async () => {
+      stream.emit("message.part.updated", {
+        properties: {
+          part: {
+            id: "part-a",
+            messageID: "assistant-a",
+            type: "text",
+            text: "first",
+          },
+        },
+      });
+      stream.emit("message.part.updated", {
+        properties: {
+          part: {
+            id: "part-b",
+            messageID: "assistant-b",
+            type: "text",
+            text: "sec",
+          },
+        },
+      });
+    });
+
+    await act(async () => {
+      stream.emit("session.idle", {
+        properties: { executionId: "assistant-a" },
+      });
+    });
+    expect(result.current.isStreaming).toBe(true);
+
+    await act(async () => {
+      stream.emit("message.part.updated", {
+        properties: {
+          part: {
+            id: "part-b",
+            messageID: "assistant-b",
+            type: "text",
+            text: "second",
+          },
+        },
+      });
+    });
+
+    expect(result.current.partMap["assistant-b"]).toEqual([
+      { type: "text", text: "second" },
+    ]);
+    expect(result.current.isStreaming).toBe(true);
+  });
+
+  it("keeps another assistant turn streaming when one execution fails", async () => {
+    const { result } = await mounted("sess-overlap-error");
+
+    await act(async () => {
+      stream.emit("message.part.updated", {
+        properties: {
+          part: {
+            id: "part-a",
+            messageID: "assistant-a",
+            type: "text",
+            text: "first",
+          },
+        },
+      });
+      stream.emit("message.part.updated", {
+        properties: {
+          part: {
+            id: "part-b",
+            messageID: "assistant-b",
+            type: "text",
+            text: "second",
+          },
+        },
+      });
+      stream.emit("session.error", {
+        properties: {
+          executionId: "assistant-a",
+          error: { code: "MODEL_ERROR", message: "First turn failed." },
+        },
+      });
+    });
+
+    expect(result.current.error).toBe("First turn failed. (MODEL_ERROR)");
+    expect(result.current.isStreaming).toBe(true);
+  });
+
+  it("does not terminate concurrent turns on an unattributed error", async () => {
+    const { result } = await mounted("sess-unattributed-error");
+
+    await act(async () => {
+      stream.emit("message.updated", {
+        properties: { info: { id: "assistant-a", role: "assistant" } },
+      });
+      stream.emit("message.updated", {
+        properties: { info: { id: "assistant-b", role: "assistant" } },
+      });
+      stream.emit("session.error", {
+        properties: {
+          error: { code: "UNKNOWN_RUN", message: "A turn failed." },
+        },
+      });
+    });
+
+    expect(result.current.error).toBe("A turn failed. (UNKNOWN_RUN)");
+    expect(result.current.isStreaming).toBe(true);
+  });
+
+  it("removes a local echo once history contains its acknowledged id", async () => {
+    const { result } = await mounted("sess-reconcile");
+
+    await act(async () => {
+      await result.current.send("one copy only");
+    });
+    history = [historyMessage("msg-user", "user", "one copy only")];
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    expect(userTexts(result.current)).toEqual(["one copy only"]);
+    expect(result.current.messages.map((message) => message.id)).toEqual([
+      "msg-user",
+    ]);
+  });
+
+  it("surfaces the API's nested rejection and returns it to the caller", async () => {
+    const { result } = await mounted("sess-api-error");
+    postFails = true;
+    postErrorPayload = {
+      error: {
+        code: "SESSION_CAPACITY_EXHAUSTED",
+        message: "No session slot is available.",
+      },
+    };
+
+    await act(async () => {
+      await expect(result.current.send("hello")).rejects.toMatchObject({
+        code: "SESSION_CAPACITY_EXHAUSTED",
+        status: 500,
+      });
+    });
+    expect(result.current.error).toBe(
+      "No session slot is available. (SESSION_CAPACITY_EXHAUSTED)",
     );
   });
 });

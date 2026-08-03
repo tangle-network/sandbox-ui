@@ -1,4 +1,5 @@
 import type { ReasoningEffort } from '@tangle-network/agent-interface';
+import { createParser } from 'eventsource-parser';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SessionMessage, SessionPart, TextPart, ToolPart, ReasoningPart } from '@tangle-network/ui/types';
 import { encodeTextForWire } from './wire-encoding';
@@ -62,6 +63,20 @@ export interface UseSessionStreamResult {
   connected: boolean;
 }
 
+export class SessionStreamError extends Error {
+  readonly code: string;
+  readonly status?: number;
+
+  constructor(code: string, message: string, status?: number) {
+    super(message);
+    this.name = 'SessionStreamError';
+    this.code = code;
+    this.status = status;
+  }
+}
+
+export const SESSION_STREAM_RECONNECT_DELAY_MS = 1000;
+
 // ---------------------------------------------------------------------------
 // API message shape (what the sidecar returns)
 // ---------------------------------------------------------------------------
@@ -104,6 +119,13 @@ interface ApiMessage {
 interface PendingEcho {
   message: SessionMessage;
   parts: SessionPart[];
+  canonicalMessageId?: string;
+  executionId?: string;
+}
+
+interface SessionPartsState {
+  values: Record<string, SessionPart[]>;
+  sourceIds: Record<string, string[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -148,11 +170,57 @@ function mapApiMessage(msg: ApiMessage, counterRef: { current: number }): { mess
   return { message, parts };
 }
 
+interface ErrorDetails {
+  code?: string;
+  message?: string;
+}
+
+function readErrorDetails(value: unknown): ErrorDetails {
+  if (typeof value === 'string') return { message: value };
+  if (!value || typeof value !== 'object') return {};
+
+  const record = value as Record<string, unknown>;
+  const nested = readErrorDetails(record.error);
+  return {
+    code:
+      (typeof record.code === 'string' ? record.code : undefined)
+      ?? nested.code,
+    message:
+      (typeof record.message === 'string' ? record.message : undefined)
+      ?? nested.message,
+  };
+}
+
+function formatError(details: ErrorDetails, fallback: string): string {
+  const message = details.message ?? fallback;
+  return details.code && !message.includes(details.code)
+    ? `${message} (${details.code})`
+    : message;
+}
+
+async function responseError(res: Response, prefix: string): Promise<SessionStreamError> {
+  let details: ErrorDetails = {};
+  try {
+    details = readErrorDetails(await res.json());
+  } catch {
+    // Some proxies return an empty or non-JSON body. The HTTP status remains
+    // actionable and is never hidden behind a successful-looking result.
+  }
+
+  const code = details.code ?? `HTTP_${res.status}`;
+  const fallback = `${prefix}: HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ''}`;
+  return new SessionStreamError(
+    code,
+    formatError(details, fallback),
+    res.status,
+  );
+}
+
 async function fetchJson<T>(url: string, token: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
   if (init?.body) headers['Content-Type'] = 'application/json';
   const res = await fetch(url, { ...init, headers: { ...headers, ...init?.headers }, credentials: 'include' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+  if (!res.ok) throw await responseError(res, 'Request failed');
   return res.json();
 }
 
@@ -174,14 +242,20 @@ export function useSessionStream({
   enabled = true,
 }: UseSessionStreamOptions): UseSessionStreamResult {
   const [messages, setMessages] = useState<SessionMessage[]>([]);
-  const [partMap, setPartMap] = useState<Record<string, SessionPart[]>>({});
+  const [partsState, setPartsState] = useState<SessionPartsState>({
+    values: {},
+    sourceIds: {},
+  });
+  const partMap = partsState.values;
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const streamingMsgIdRef = useRef<string | null>(null);
+  const activeAssistantMessageIdsRef = useRef<Set<string>>(new Set());
+  const completedExecutionIdsRef = useRef<Set<string>>(new Set());
+  const lastEventIdRef = useRef('');
   const insertionCounterRef = useRef(0);
   const echoCounterRef = useRef(0);
   const pendingEchoesRef = useRef<Map<string, PendingEcho>>(new Map());
@@ -195,6 +269,9 @@ export function useSessionStream({
   // re-applying an echo whose canonical copy is in the history by then.
   useEffect(() => {
     pendingEchoesRef.current.clear();
+    activeAssistantMessageIdsRef.current.clear();
+    completedExecutionIdsRef.current.clear();
+    lastEventIdRef.current = '';
   }, [sessionId]);
 
   // ── Fetch full message history ──────────────────────────────────────
@@ -219,14 +296,27 @@ export function useSessionStream({
       // an in-flight turn's user message may not be in it yet — carry those
       // echoes across so the sender's message does not blink out mid-turn.
       // They are the newest messages by construction, hence appended last.
-      const echoes = [...pendingEchoesRef.current.values()];
+      const canonicalIds = new Set(newMessages.map((message) => message.id));
+      const echoes = [...pendingEchoesRef.current.entries()]
+        .filter(([, echo]) =>
+          !echo.canonicalMessageId || !canonicalIds.has(echo.canonicalMessageId),
+        )
+        .map(([, echo]) => echo);
+
+      for (const [echoId, echo] of pendingEchoesRef.current) {
+        if (echo.canonicalMessageId && canonicalIds.has(echo.canonicalMessageId)) {
+          pendingEchoesRef.current.delete(echoId);
+        }
+      }
 
       setMessages([...newMessages, ...echoes.map((echo) => echo.message)]);
-      setPartMap({
-        ...newPartMap,
-        ...Object.fromEntries(echoes.map((echo) => [echo.message.id, echo.parts])),
+      setPartsState({
+        values: {
+          ...newPartMap,
+          ...Object.fromEntries(echoes.map((echo) => [echo.message.id, echo.parts])),
+        },
+        sourceIds: {},
       });
-      streamingMsgIdRef.current = null;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch messages';
       setError(msg);
@@ -247,14 +337,29 @@ export function useSessionStream({
     abortRef.current = controller;
 
     try {
-      const url = `${apiUrl}/session/events?sessionId=${encodeURIComponent(sessionId)}`;
+      const eventQuery = new URLSearchParams({ sessionId });
+      const activeExecutionIds = [...activeAssistantMessageIdsRef.current];
+      if (activeExecutionIds.length === 1) {
+        eventQuery.set('executionId', activeExecutionIds[0]);
+      } else if (activeExecutionIds.length > 1) {
+        // One EventSource cursor cannot identify a position in multiple
+        // execution buffers. Ask the sidecar to replay every active turn from
+        // its beginning; cumulative message snapshots are folded idempotently.
+        eventQuery.set('replayExecutionIds', activeExecutionIds.join(','));
+      }
+      if (lastEventIdRef.current) {
+        // Query cursors avoid a browser CORS preflight while preserving the
+        // same resume semantics as Last-Event-ID on the sidecar.
+        eventQuery.set('since', lastEventIdRef.current);
+      }
+      const url = `${apiUrl}/session/events?${eventQuery.toString()}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal,
         credentials: 'include',
       });
 
-      if (!res.ok) throw new Error(`SSE connection failed: ${res.status}`);
+      if (!res.ok) throw await responseError(res, 'Live response connection failed');
       setConnected(true);
       setError(null);
 
@@ -262,42 +367,45 @@ export function useSessionStream({
       if (!reader) throw new Error('No response body');
 
       const decoder = new TextDecoder();
-      let buffer = '';
+      let parserFailure: SessionStreamError | null = null;
+      const parser = createParser({
+        onEvent(event) {
+          if (event.id) lastEventIdRef.current = event.id;
+          if (!event.data) return;
+
+          try {
+            const parsed = JSON.parse(event.data) as Record<string, unknown>;
+            handleSSEEventRef.current?.(event.event ?? 'message', parsed);
+          } catch {
+            parserFailure = new SessionStreamError(
+              'INVALID_SESSION_EVENT',
+              'The live response stream sent malformed data.',
+            );
+          }
+        },
+        onError(parseError) {
+          parserFailure = new SessionStreamError(
+            'INVALID_EVENT_STREAM',
+            `The live response stream could not be parsed: ${parseError.message}`,
+          );
+        },
+      });
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const frames = buffer.split('\n\n');
-        buffer = frames.pop() ?? '';
-
-        for (const frame of frames) {
-          if (!frame.trim()) continue;
-
-          let eventType = 'message';
-          const dataLines: string[] = [];
-
-          for (const line of frame.split('\n')) {
-            if (line.startsWith('event:')) {
-              eventType = line.slice(6).trim();
-            } else if (line.startsWith('data:')) {
-              dataLines.push(line.slice(5).trim());
-            }
-          }
-
-          if (dataLines.length === 0) continue;
-
-          let parsed: Record<string, unknown>;
-          try {
-            parsed = JSON.parse(dataLines.join('\n'));
-          } catch {
-            continue;
-          }
-
-          handleSSEEventRef.current?.(eventType, parsed);
-        }
+        parser.feed(decoder.decode(value, { stream: true }));
+        if (parserFailure) throw parserFailure;
       }
+
+      const tail = decoder.decode();
+      if (tail) parser.feed(tail);
+      parser.reset({ consume: true });
+      if (parserFailure) throw parserFailure;
+      throw new SessionStreamError(
+        'SESSION_STREAM_CLOSED',
+        'The live response stream closed before the session ended. Reconnecting…',
+      );
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
       const msg = err instanceof Error ? err.message : 'SSE connection error';
@@ -306,7 +414,10 @@ export function useSessionStream({
 
       // Auto-reconnect
       if (!controller.signal.aborted) {
-        reconnectTimerRef.current = setTimeout(() => connectSSE(), 3000);
+        reconnectTimerRef.current = setTimeout(
+          () => connectSSE(),
+          SESSION_STREAM_RECONNECT_DELAY_MS,
+        );
       }
     }
   }, [apiUrl, token, sessionId, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -320,6 +431,42 @@ export function useSessionStream({
       ?? envelope?.part as Record<string, unknown>
       ?? envelope
       ?? raw;
+    const associatePendingEcho = (executionId: string) => {
+      for (const echo of pendingEchoesRef.current.values()) {
+        if (!echo.executionId) {
+          echo.executionId = executionId;
+          return;
+        }
+      }
+    };
+    const retireExecution = (executionId: string): boolean => {
+      if (!executionId) {
+        const activeExecutionIds = [...activeAssistantMessageIdsRef.current];
+        if (activeExecutionIds.length === 1) {
+          return retireExecution(activeExecutionIds[0]);
+        }
+        if (activeExecutionIds.length > 1) {
+          // An unattributed terminal cannot safely choose which concurrent
+          // turn ended. Keep both live and surface the event error instead of
+          // silently terminating an unrelated response.
+          return true;
+        }
+        pendingEchoesRef.current.clear();
+        return false;
+      }
+
+      completedExecutionIdsRef.current.add(executionId);
+      activeAssistantMessageIdsRef.current.delete(executionId);
+      for (const [echoId, echo] of pendingEchoesRef.current) {
+        if (
+          echo.executionId === executionId
+          || (!echo.executionId && pendingEchoesRef.current.size === 1)
+        ) {
+          pendingEchoesRef.current.delete(echoId);
+        }
+      }
+      return activeAssistantMessageIdsRef.current.size > 0;
+    };
 
     if (type === 'message.updated') {
       // A new or updated message — create/update the message entry
@@ -342,32 +489,62 @@ export function useSessionStream({
       });
 
       if (role === 'assistant') {
-        streamingMsgIdRef.current = id;
-        setIsStreaming(true);
+        associatePendingEcho(id);
+        if (!completedExecutionIdsRef.current.has(id)) {
+          activeAssistantMessageIdsRef.current.add(id);
+          setIsStreaming(true);
+        }
       }
     } else if (type === 'message.part.updated') {
-      // A part within the current streaming message was updated
-      const msgId = streamingMsgIdRef.current;
+      // Part events can arrive before message.updated. Their own message id is
+      // authoritative; relying on a global "current message" silently drops
+      // the first visible output and corrupts overlapping assistant turns.
+      const msgId =
+        (props.messageID as string)
+        ?? (props.messageId as string)
+        ?? '';
       if (!msgId) return;
 
       const partType = (props.type as string) ?? 'text';
-      setIsStreaming(true);
+      const sourcePartId =
+        (props.id as string)
+        ?? `${partType}-${msgId}`;
+      associatePendingEcho(msgId);
+      if (!completedExecutionIdsRef.current.has(msgId)) {
+        activeAssistantMessageIdsRef.current.add(msgId);
+        setIsStreaming(true);
+      }
+      setMessages((prev) => {
+        if (prev.some((message) => message.id === msgId)) return prev;
+        return [
+          ...prev,
+          {
+            id: msgId,
+            role: 'assistant',
+            time: { created: Date.now() },
+            _insertionIndex: insertionCounterRef.current++,
+          },
+        ];
+      });
 
-      setPartMap((prev) => {
-        const existing = prev[msgId] ?? [];
+      setPartsState((prev) => {
+        const existing = prev.values[msgId] ?? [];
+        const sourceIds = prev.sourceIds[msgId] ?? [];
         const updated = [...existing];
+        const updatedSourceIds = [...sourceIds];
+        const knownIndex = sourceIds.indexOf(sourcePartId);
 
         if (partType === 'text') {
           const text = (props.text as string) ?? (props.content as string) ?? '';
-          const idx = updated.findIndex((p) => p.type === 'text');
           const textPart: TextPart = { type: 'text', text };
-          if (idx >= 0) {
-            updated[idx] = textPart;
+          if (knownIndex >= 0) {
+            updated[knownIndex] = textPart;
           } else {
+            updatedSourceIds.push(sourcePartId);
             updated.push(textPart);
           }
         } else if (partType === 'tool') {
-          const toolId = (props.id as string) ?? (props.toolId as string) ?? `tool-${Date.now()}`;
+          const toolId = (props.id as string) ?? (props.toolId as string) ?? sourcePartId;
           const toolName = (props.tool as string) ?? (props.name as string) ?? 'unknown';
           const state = (props.state as ToolPart['state']) ?? { status: 'running' as const };
           const toolPart: ToolPart = {
@@ -383,42 +560,51 @@ export function useSessionStream({
               time: state.time,
             },
           };
-          const idx = updated.findIndex((p) => p.type === 'tool' && (p as ToolPart).id === toolId);
-          if (idx >= 0) {
-            updated[idx] = toolPart;
+          if (knownIndex >= 0) {
+            updated[knownIndex] = toolPart;
           } else {
+            updatedSourceIds.push(sourcePartId);
             updated.push(toolPart);
           }
         } else if (partType === 'reasoning') {
           const text = (props.text as string) ?? '';
-          const idx = updated.findIndex((p) => p.type === 'reasoning');
           const reasoningPart: ReasoningPart = { type: 'reasoning', text };
-          if (idx >= 0) {
-            updated[idx] = reasoningPart;
+          if (knownIndex >= 0) {
+            updated[knownIndex] = reasoningPart;
           } else {
+            updatedSourceIds.push(sourcePartId);
             updated.push(reasoningPart);
           }
+        } else {
+          return prev;
         }
 
-        return { ...prev, [msgId]: updated };
+        return {
+          values: { ...prev.values, [msgId]: updated },
+          sourceIds: { ...prev.sourceIds, [msgId]: updatedSourceIds },
+        };
       });
     } else if (type === 'session.idle') {
-      setIsStreaming(false);
-      streamingMsgIdRef.current = null;
+      const executionId =
+        (props.executionId as string)
+        ?? (props.executionID as string)
+        ?? '';
+      const stillStreaming = retireExecution(executionId);
+      setIsStreaming(stillStreaming);
       // The turn is over, so its messages are in the backend's history now:
       // retire the echoes so the refetch below installs the canonical copies.
       // Retiring before the refetch keeps an echo created while it is in
       // flight (the composer unlocks on this event) out of the retired set.
-      pendingEchoesRef.current.clear();
-      // Refetch to get canonical message state
-      refetch();
+      if (!stillStreaming) refetch();
     } else if (type === 'session.error') {
-      setIsStreaming(false);
-      streamingMsgIdRef.current = null;
-      const errorMsg = (props.error as string) ?? (props.message as string) ?? 'Agent error';
-      setError(errorMsg);
-      pendingEchoesRef.current.clear();
-      refetch();
+      const executionId =
+        (props.executionId as string)
+        ?? (props.executionID as string)
+        ?? '';
+      const stillStreaming = retireExecution(executionId);
+      setIsStreaming(stillStreaming);
+      setError(formatError(readErrorDetails(props), 'Agent response failed'));
+      if (!stillStreaming) refetch();
     }
   }, [refetch]);
 
@@ -438,7 +624,34 @@ export function useSessionStream({
    * canonical message.
    */
   const send = useCallback(async (text: string, options?: SendMessageOptions) => {
-    if (!token || !sessionId || !apiUrl) return;
+    if (!token || !sessionId || !apiUrl || !enabled) {
+      const admissionError = new SessionStreamError(
+        'CHAT_NOT_READY',
+        'Chat is not ready yet. Wait for the session connection and try again.',
+      );
+      setError(admissionError.message);
+      throw admissionError;
+    }
+    if (!connected) {
+      const admissionError = new SessionStreamError(
+        'CHAT_DISCONNECTED',
+        'Chat is reconnecting. Your message was not sent.',
+      );
+      setError(admissionError.message);
+      throw admissionError;
+    }
+    if (
+      pendingEchoesRef.current.size > 0
+      || activeAssistantMessageIdsRef.current.size > 0
+    ) {
+      const admissionError = new SessionStreamError(
+        'CHAT_BUSY',
+        'The agent is still responding. Wait for this turn to finish before sending another message.',
+      );
+      setError(admissionError.message);
+      throw admissionError;
+    }
+    setError(null);
 
     const echoId = `local-echo-${echoCounterRef.current++}`;
     const echo: PendingEcho = {
@@ -452,14 +665,20 @@ export function useSessionStream({
     };
     pendingEchoesRef.current.set(echoId, echo);
     setMessages((prev) => [...prev, echo.message]);
-    setPartMap((prev) => ({ ...prev, [echoId]: echo.parts }));
+    setPartsState((prev) => ({
+      values: { ...prev.values, [echoId]: echo.parts },
+      sourceIds: prev.sourceIds,
+    }));
     // The turn is in flight from the user's point of view the moment they hit
     // send; composers gate their submit on this.
     setIsStreaming(true);
 
     try {
       const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}/messages`;
-      await fetchJson<unknown>(url, token, {
+      const response = await fetchJson<{
+        info?: { id?: string };
+        userMessageId?: string;
+      }>(url, token, {
         method: 'POST',
         body: JSON.stringify({
           // The sidecar base64-decodes every text part at the route boundary;
@@ -473,31 +692,44 @@ export function useSessionStream({
             : {}),
         }),
       });
+      if (response.userMessageId) {
+        const pending = pendingEchoesRef.current.get(echoId);
+        if (pending) pending.canonicalMessageId = response.userMessageId;
+      }
+      const executionId = response.info?.id;
+      if (executionId) {
+        const pending = pendingEchoesRef.current.get(echoId);
+        if (pending) pending.executionId = executionId;
+        if (!completedExecutionIdsRef.current.has(executionId)) {
+          activeAssistantMessageIdsRef.current.add(executionId);
+        }
+      }
     } catch (err) {
       // The turn was never admitted, so no backend copy will arrive to replace
       // the echo: drop it instead of leaving a message the session never saw.
       pendingEchoesRef.current.delete(echoId);
       setMessages((prev) => prev.filter((message) => message.id !== echoId));
-      setPartMap((prev) => {
-        if (!(echoId in prev)) return prev;
-        const next = { ...prev };
-        delete next[echoId];
-        return next;
+      setPartsState((prev) => {
+        if (!(echoId in prev.values)) return prev;
+        const values = { ...prev.values };
+        const sourceIds = { ...prev.sourceIds };
+        delete values[echoId];
+        delete sourceIds[echoId];
+        return { values, sourceIds };
       });
-      // Release the composer only when nothing else is running. Not every
-      // caller gates on `isStreaming` — an in-transcript action button can
-      // send mid-run — so this failure may land under another turn: either a
-      // send whose echo is still pending, or an assistant already streaming
-      // into the session with no echo of its own (a detached run). Clearing
-      // the flag under either would unlock the composer and drop its progress
-      // indicator.
-      if (pendingEchoesRef.current.size === 0 && !streamingMsgIdRef.current) {
+      // Release the composer only when nothing else is running. A detached
+      // turn can still be streaming even though this admission failed.
+      if (
+        pendingEchoesRef.current.size === 0
+        && activeAssistantMessageIdsRef.current.size === 0
+      ) {
         setIsStreaming(false);
       }
       const msg = err instanceof Error ? err.message : 'Failed to send message';
       setError(msg);
+      throw err;
     }
-  }, [apiUrl, token, sessionId]);
+  }, [apiUrl, connected, enabled, token, sessionId]);
 
   // ── Abort ──────────────────────────────────────────────────────────
 

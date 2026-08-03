@@ -780,6 +780,39 @@ do:
     expect(description("")).toBeUndefined();
   });
 
+  it("renders a malformed scope as no scope rather than throwing", () => {
+    // `asRecord` already collapses a null/primitive/array to `{}`, so every one
+    // of these degrades to "no scope" and the rest of the node still renders.
+    // Pinned because the graph is handed YAML mid-edit, where these shapes are
+    // ordinary keystrokes rather than exotic input.
+    const node = (scope: string) =>
+      buildWorkflowGraph(`
+name: malformed
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    actions: [opened]
+${scope}
+do:
+  - notify: { url: "https://example.test/hook" }
+`).nodes.find((n) => n.id === "trigger");
+
+    for (const scope of [
+      '    scope: "repository"',
+      "    scope: null",
+      "    scope: 42",
+      "    scope: [repository]",
+      '    scope:\n      repository: "all"',
+      "    scope:\n      repository: [a, b]",
+      "    scope:\n      repository: null",
+    ]) {
+      expect(() => node(scope)).not.toThrow();
+      // The sub-action narrowing survives; only the scope half is dropped.
+      expect(node(scope)?.data.description).toBe("opened");
+    }
+  });
+
   it("labels a multi-dimension scope in key order, not YAML order", () => {
     // The same logical scope, typed in two different orders. A node label that
     // followed the author's key order would read differently for each — and a

@@ -741,6 +741,45 @@ do:
     ).toBe("repository: 3 selected");
   });
 
+  it("says so when an allowlist names nothing, and stays quiet when a denylist does", () => {
+    const description = (scope: string) =>
+      buildWorkflowGraph(`
+name: edge
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+${scope}
+do:
+  - notify: { url: "https://example.test/hook" }
+`).nodes.find((n) => n.id === "trigger")?.data.description;
+
+    // Fires on nothing — blank here would read as an absent scope, i.e. the
+    // opposite. (Unreachable through the platform compiler, which rejects it,
+    // but this package renders any YAML it is handed.)
+    expect(
+      description(`    scope:
+      repository:
+        default: exclude
+        except: []`),
+    ).toBe("repository: none");
+
+    // Narrows nothing, so there is nothing to say.
+    expect(
+      description(`    scope:
+      repository:
+        default: include
+        except: []`),
+    ).toBeUndefined();
+    expect(
+      description(`    scope:
+      repository:
+        default: include`),
+    ).toBeUndefined();
+    expect(description("    scope: {}")).toBeUndefined();
+    expect(description("")).toBeUndefined();
+  });
+
   it("labels a multi-dimension scope in key order, not YAML order", () => {
     // The same logical scope, typed in two different orders. A node label that
     // followed the author's key order would read differently for each — and a

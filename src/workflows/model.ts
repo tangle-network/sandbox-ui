@@ -947,7 +947,16 @@ function describeScope(scope: unknown): string | undefined {
     const except = Array.isArray(selection.except)
       ? selection.except.filter((entry): entry is string => typeof entry === "string")
       : [];
-    if (except.length === 0) continue;
+    if (except.length === 0) {
+      // An allowlist naming nothing fires on NOTHING. Rendering it blank would
+      // read as an absent scope — "fires on everything" — the exact inverse, so
+      // it is stated. (A denylist excepting nothing genuinely narrows nothing,
+      // and stays blank.) This package renders whatever YAML it is handed —
+      // a half-typed editor buffer, a consumer with its own validation — so it
+      // cannot assume a server rejected the shape before it got here.
+      if (selection.default === "exclude") parts.push(`${dimension}: none`);
+      continue;
+    }
     // Two or fewer are named; past that a bare count would read as an id, so
     // it says what the number counts.
     const named =

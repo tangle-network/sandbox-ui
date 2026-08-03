@@ -500,10 +500,10 @@ do:
     expect(R.trigger.height).toBe(20 + 34 + 40);
 
     // An AGENT is answer-first: chrome(20) + the slim identity strip(22) + the
-    // answer body(mt-2 8 + 5 x 16.5 = 91) + footer(28). No description band —
+    // answer body(mt-2 8 + 5 x 15.125 = 84) + footer(28). No description band —
     // the prompt is authoring detail a run's reader did not come for — and no
     // metrics line.
-    expect(R.a0.height).toBe(20 + 22 + 91 + 28);
+    expect(R.a0.height).toBe(20 + 22 + 84 + 28);
 
     // Every OTHER action: chrome(20) + header(34) + a 3-row well(90) +
     // footer(28). The well is the body plus its caption, padding, border and the
@@ -564,10 +564,10 @@ do:
     // Recover each reservation from the built node rather than exporting it: the
     // height is the sum of the bands, and every other band is pinned above.
     //
-    // The AGENT body is prose in the foreground type (16.5px solid lines), not a
-    // well — no caption and no frame, which is exactly why it holds more.
+    // The AGENT body is prose in the foreground token (15.125px solid lines, the
+    // size NodeOutputBody sets), not a well — no caption, no frame.
     const agentBody = heightOf(actionNodeId(0)) - (20 + 22 + 28);
-    expect(agentBody).toBeGreaterThanOrEqual(8 + AGENT_BODY_ROWS * 16.5);
+    expect(agentBody).toBeGreaterThanOrEqual(8 + AGENT_BODY_ROWS * 15.125);
 
     const actionWell = heightOf(actionNodeId(1)) - (20 + 34 + 28);
     expect(actionWell).toBeGreaterThanOrEqual(wellNeeds(ACTION_OUTPUT_ROWS));

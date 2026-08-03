@@ -377,9 +377,15 @@ function wellRow(rows: number): number {
  * fractional rendered line.
  */
 const SLIM_HEADER_ROW = 22;
-/** Rendered line height of the answer body (`text-[12px] leading-snug`), which
- *  is set larger than a well's because it IS the card's content. */
-const BODY_LINE = 16.5;
+/**
+ * Rendered line height of the answer body.
+ *
+ * The same 11px/15.125px a well's prose body uses, because it IS the same
+ * element: `NodeOutputBody` sets the type size itself, so a container that asks
+ * for another one does not get it. Sizing this band off a font the answer never
+ * renders at reserves for lines that are not there.
+ */
+const BODY_LINE = 15.125;
 /** The answer body: {@link AGENT_BODY_ROWS} lines plus the `mt-2` above it. */
 const AGENT_BODY_ROW = Math.ceil(8 + AGENT_BODY_ROWS * BODY_LINE);
 /** Control flow's one-line failure slot, plus the `mt-1.5` above it. */

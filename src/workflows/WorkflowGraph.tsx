@@ -839,7 +839,7 @@ export function WorkflowNode({
               <span className="flex-1" />
               {runStatus && <StatusPill status={runStatus} />}
             </div>
-            <div className="mt-2 min-h-0 flex-1 text-[12px] text-foreground leading-snug">
+            <div className="mt-2 min-h-0 flex-1 text-foreground leading-snug">
               {runOutput ? (
                 <NodeOutputBody
                   shape={runOutput.shape}
@@ -857,7 +857,7 @@ export function WorkflowNode({
                 // node that produced nothing must say so: showing its prompt
                 // there reads as the result it never returned.
                 <p
-                  className="line-clamp-5 text-[12px] text-muted-foreground"
+                  className="line-clamp-5 text-[11px] text-muted-foreground leading-snug"
                   title={d.description}
                 >
                   {d.description}

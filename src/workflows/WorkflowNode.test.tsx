@@ -260,6 +260,51 @@ describe("WorkflowNode", () => {
     expect(screen.getByText("AI Agent · deepseek-chat")).toBeTruthy();
   });
 
+  it("orders the footer caption most- to least-important, so a squeeze sheds tokens first", () => {
+    // The caption is one truncating span: rounds, cost and tokens joined. Measured
+    // in the browser it does not overflow a 292px card at realistic values — a
+    // 12-round, $12.48, 128000/32000 run renders well inside the 292px card — and
+    // only clips on values far past that (a $1284 node with a million input
+    // tokens). What matters is therefore not WHETHER it can clip but WHAT it
+    // sheds when it does: `truncate` cuts the tail, so this order is what keeps
+    // spend visible and drops the token counts. Reversing it would lose cost first.
+    renderNode({
+      ...BASE,
+      state: {
+        status: "succeeded",
+        rounds: 12,
+        costUsd: 12.4821,
+        inputTokens: 128000,
+        outputTokens: 32000,
+        durationMs: 5_000_000,
+      },
+    });
+    const caption = screen.getByText(/rounds/);
+    expect(caption.textContent).toBe("12 rounds · $12.48 · 128000/32000 tok");
+    expect(caption.className).toContain("truncate");
+  });
+
+  it("renders an agent's answer and its prompt at the SAME type size", () => {
+    // They share one reserved body and stand in for each other, so a difference
+    // in size changes how many lines fit and silently breaks the reservation.
+    // `NodeOutputBody` sets its own 11px, which a container asking for another
+    // size does not override — so the prompt has to match it rather than the
+    // other way round.
+    const { container: answer } = renderNode({
+      ...BASE,
+      state: { status: "succeeded", outputPreview: "the answer" },
+    });
+    const { container: prompt } = renderNode({
+      ...BASE,
+      description: "the prompt",
+      state: { status: "queued" },
+    });
+    const size = (c: HTMLElement) =>
+      (c.querySelector("p")?.className ?? "").match(/text-\[\d+px\]/)?.[0];
+    expect(size(answer)).toBe("text-[11px]");
+    expect(size(prompt)).toBe("text-[11px]");
+  });
+
   it("says a FINISHED agent produced nothing, rather than falling back to its prompt", () => {
     // The prompt stands in for an answer only while one is still coming. On a
     // node that has finished, the same text reads as the result it returned.

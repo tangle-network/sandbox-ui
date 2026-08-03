@@ -785,6 +785,30 @@ do:
       "channel: C123 · repository: all but acme/noisy",
     );
     expect(description(channelFirst)).toBe(description(repositoryFirst));
+
+    // The order is a code-unit comparison, not locale collation: an uppercase
+    // key sorts before every lowercase one under ASCII and AFTER them under a
+    // typical locale, so this pins which rule is in force rather than trusting
+    // the runtime's default.
+    const uppercaseKey = `
+name: multi
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      repository:
+        default: include
+        except: [acme/noisy]
+      Workspace:
+        default: exclude
+        except: [w1]
+do:
+  - notify: { url: "https://example.test/hook" }
+`;
+    expect(description(uppercaseKey)).toBe(
+      "Workspace: w1 · repository: all but acme/noisy",
+    );
   });
 
   it("attaches the raw, untruncated config to action and trigger nodes", () => {

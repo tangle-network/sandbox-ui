@@ -930,12 +930,18 @@ function describeAction(action: unknown): WfNodeData {
  * scope would otherwise label the node differently depending on how its YAML
  * was typed. Sorted here for the same reason the platform sorts keys when it
  * canonicalises a scope — one scope, one rendering.
+ *
+ * Compared by code unit rather than `localeCompare`: a dimension id is a
+ * machine identifier (`repository`, `channel`), not prose to collate for a
+ * reader, and locale-aware ordering would make the rendering depend on the
+ * runtime's locale — reintroducing, per viewer, exactly the instability the
+ * sort exists to remove.
  */
 function describeScope(scope: unknown): string | undefined {
   const rec = asRecord(scope);
   const parts: string[] = [];
   for (const [dimension, raw] of Object.entries(rec).sort(([a], [b]) =>
-    a.localeCompare(b),
+    a < b ? -1 : a > b ? 1 : 0,
   )) {
     const selection = asRecord(raw);
     const except = Array.isArray(selection.except)

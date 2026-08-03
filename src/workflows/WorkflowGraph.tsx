@@ -727,6 +727,11 @@ export function WorkflowNode({
   // ("Approve the rele…") and the options it was offering. Dropping the pill to
   // sit with the options gives the question the card's full width, and costs
   // only the few pixels between a one-line header and a two-line one.
+  //
+  // The mark/title/subtitle markup below is deliberately NOT `identityRow`: that
+  // one is a single row and this one stacks, so there is no shared shape to
+  // factor out — only shared pieces. It does mean the two drift if one is
+  // changed alone; keep them in step on mark sizing and title truncation.
   if (d.kind === "decision") {
     return cardShell(
       <>

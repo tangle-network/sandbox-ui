@@ -195,7 +195,12 @@ export const KIND_ICON: Record<string, LucideIcon> = {
 export function StatusPill({ status }: { status: WfNodeStatus }) {
   return (
     <span
-      className="shrink-0 rounded-full border px-2 py-[1px] font-medium text-[10px]"
+      // `whitespace-nowrap` because the pill states a status in words and the
+      // longest of them is two ("Waiting on you"). Its own `shrink-0` only holds
+      // while it is a direct flex item; nested one level down — in a wrapper that
+      // positions it — the label wraps to three lines and silently triples the
+      // height of whatever row it sits in.
+      className="shrink-0 whitespace-nowrap rounded-full border px-2 py-[1px] font-medium text-[10px]"
       style={STATUS_PILL[status]}
     >
       {STATUS_LABEL[status]}

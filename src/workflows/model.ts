@@ -917,6 +917,36 @@ function describeAction(action: unknown): WfNodeData {
   return Object.keys(config).length > 0 ? { ...base, config } : base;
 }
 
+/**
+ * A trigger's `scope` in a phrase: which of the provider's things it fires on.
+ *
+ * The dimension key is the only name available here (the human label lives in
+ * the provider catalog, server-side), so it is used as written — `repository`,
+ * `channel`. Both directions read as what they mean: a denylist is "all but",
+ * an allowlist names its members when there are few enough to be worth naming.
+ */
+function describeScope(scope: unknown): string | undefined {
+  const rec = asRecord(scope);
+  const parts: string[] = [];
+  for (const [dimension, raw] of Object.entries(rec)) {
+    const selection = asRecord(raw);
+    const except = Array.isArray(selection.except)
+      ? selection.except.filter((entry): entry is string => typeof entry === "string")
+      : [];
+    if (except.length === 0) continue;
+    // Few enough to name, name them; past that a bare count would read as an
+    // id, so it says what the number counts.
+    const named =
+      except.length <= 2 ? except.join(", ") : `${except.length} selected`;
+    parts.push(
+      selection.default === "exclude"
+        ? `${dimension}: ${named}`
+        : `${dimension}: all but ${named}`,
+    );
+  }
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
 /** Describe the `on:` trigger as the spine's root node. */
 function describeTrigger(on: unknown): WfNodeData {
   const rec = asRecord(on);
@@ -929,9 +959,16 @@ function describeTrigger(on: unknown): WfNodeData {
       : [];
     const repo = str(ev.repo);
     // The event the workflow wakes on reads as a sentence — "On pull request" —
-    // with the narrowing (which sub-actions, which repo) as the detail below it.
+    // with the narrowing (which sub-actions, which repositories) as the detail
+    // below it. A `scope` narrows just as much as a `repo` does, so leaving it
+    // out would draw a trigger that fires on two repositories identically to one
+    // that fires on all of them.
     const description = describeText(
-      [actions.length > 0 ? actions.join(", ") : undefined, repo]
+      [
+        actions.length > 0 ? actions.join(", ") : undefined,
+        repo,
+        describeScope(ev.scope),
+      ]
         .filter(Boolean)
         .join(" · "),
     );

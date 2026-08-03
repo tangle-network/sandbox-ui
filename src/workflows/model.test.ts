@@ -702,6 +702,45 @@ do:
     expect(edges.some((e) => e.source === "a0" && e.target === "a1")).toBe(false);
   });
 
+  it("says which of the provider's things a scoped trigger fires on", () => {
+    const denylist = buildWorkflowGraph(`
+name: pr-review
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    actions: [opened]
+    scope:
+      repository:
+        default: include
+        except: [acme/noisy]
+do:
+  - notify: { url: "https://example.test/hook" }
+`);
+    expect(
+      denylist.nodes.find((n) => n.id === "trigger")?.data.description,
+    ).toBe("opened · repository: all but acme/noisy");
+
+    const allowlist = buildWorkflowGraph(`
+name: pr-review
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      repository:
+        default: exclude
+        except: [acme/a, acme/b, acme/c]
+do:
+  - notify: { url: "https://example.test/hook" }
+`);
+    // Past a couple of entries the names stop being readable on a card, so the
+    // count carries the narrowing instead.
+    expect(
+      allowlist.nodes.find((n) => n.id === "trigger")?.data.description,
+    ).toBe("repository: 3 selected");
+  });
+
   it("attaches the raw, untruncated config to action and trigger nodes", () => {
     // A prompt far longer than the card's description clamp — the full-detail
     // `config` must carry it verbatim, never truncated.

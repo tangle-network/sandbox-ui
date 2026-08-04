@@ -752,6 +752,8 @@ export function AgentSessionControls({
       onDelete={profile.onDelete}
       disabled={profile.disabled}
       side={inlineForceDown || collapsed ? "bottom" : "top"}
+      triggerClassName={secondaryTriggerClass}
+      popoverClassName={collapsed ? "w-full" : undefined}
     />
   );
   const modelNode = model && (

@@ -64,13 +64,20 @@ const models: ModelInfo[] = [
   },
 ];
 
+const profiles = [
+  { id: "assistant", name: "Assistant", builtin: true },
+  { id: "reviewer", name: "Reviewer" },
+];
+
 function Controls(props: { layout?: "inline" | "gear" | "combined" }) {
+  const [profile, setProfile] = useState("assistant");
   const [harness, setHarness] = useState<HarnessType>("opencode");
   const [model, setModel] = useState("openai/gpt-5.4");
   const [effort, setEffort] = useState<ReasoningLevel>("medium");
   return (
     <AgentSessionControls
       layout={props.layout ?? "inline"}
+      profile={{ value: profile, onChange: setProfile, profiles }}
       harness={{ value: harness, onChange: setHarness }}
       model={{ value: model, onChange: setModel, models }}
       reasoning={{ value: effort, onChange: setEffort }}

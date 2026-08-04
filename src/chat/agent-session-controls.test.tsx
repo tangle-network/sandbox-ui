@@ -12,6 +12,11 @@ const MODELS = [
   },
 ];
 
+const PROFILES = [
+  { id: "assistant", name: "Assistant", builtin: true },
+  { id: "reviewer", name: "Reviewer" },
+];
+
 describe("AgentSessionControls", () => {
   it("renders nothing when no control is provided", () => {
     const { container } = render(<AgentSessionControls />);
@@ -165,6 +170,48 @@ describe("AgentSessionControls", () => {
       screen.getByRole("button", { name: /reasoning level/i }),
     ).toBeInTheDocument();
   });
+
+  it.each(["gear", "combined"] as const)(
+    "%s layout gives the profile picker a panel-width trigger and popover",
+    async (layout) => {
+      render(
+        <AgentSessionControls
+          layout={layout}
+          profile={{
+            value: "assistant",
+            onChange: () => {},
+            profiles: PROFILES,
+          }}
+          harness={{ value: "opencode", onChange: () => {} }}
+        />,
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /session controls/i }),
+      );
+      const profileTrigger = await screen.findByRole("button", {
+        name: /agent profile/i,
+      });
+      const harnessTrigger = screen.getByRole("button", {
+        name: /agent harness/i,
+      });
+      const sharedClasses =
+        layout === "combined"
+          ? ["w-full", "bg-transparent", "shadow-none"]
+          : ["w-full", "bg-surface-container", "shadow-sm"];
+      expect(profileTrigger).toHaveClass(...sharedClasses);
+      expect(harnessTrigger).toHaveClass(...sharedClasses);
+      expect(profileTrigger.querySelector("svg:last-child")).toHaveClass(
+        "ml-auto",
+        "shrink-0",
+      );
+
+      await userEvent.click(profileTrigger);
+      const popover = screen.getByTestId("agent-profile-popover");
+      expect(popover).toHaveClass("w-full");
+      expect(popover).not.toHaveClass("w-[min(320px,calc(100vw-2rem))]");
+    },
+  );
 
   it("renders trailing content right-aligned", () => {
     render(

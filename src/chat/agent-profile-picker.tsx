@@ -4,6 +4,7 @@ import { Bot, Check, ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
 import { useClickOutside } from "../lib/use-click-outside";
+import { AnchoredPopover } from "./anchored-popover";
 import { InformativeLock } from "./informative-lock";
 
 /**
@@ -108,10 +109,11 @@ export function AgentProfilePicker({
   const [composing, setComposing] = React.useState<AgentProfileOption | "new" | null>(
     null,
   );
+  const popoverRef = React.useRef<HTMLDivElement | null>(null);
   const ref = useClickOutside<HTMLDivElement>(() => {
     setOpen(false);
     setComposing(null);
-  });
+  }, [popoverRef]);
 
   const canAuthor = Boolean(capabilities && (onCreate || onUpdate));
   const builtins = profiles.filter((profile) => profile.builtin);
@@ -181,11 +183,13 @@ export function AgentProfilePicker({
       </button>
 
       {open && !locked && (
-        <div
+        <AnchoredPopover
+          ref={popoverRef}
+          anchorRef={ref}
+          side={side}
           className={cn(
-            "absolute left-0 z-50 w-[min(320px,calc(100vw-2rem))] overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
+            "w-[min(320px,calc(100vw-2rem))] overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
             "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
-            side === "top" ? "bottom-full mb-2" : "top-full mt-2",
             popoverClassName,
           )}
           data-testid="agent-profile-popover"
@@ -232,7 +236,7 @@ export function AgentProfilePicker({
               )}
             </div>
           )}
-        </div>
+        </AnchoredPopover>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { Lock, Plus } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
 import { useClickOutside } from "../lib/use-click-outside";
+import { AnchoredPopover } from "./anchored-popover";
 
 interface InformativeLockProps {
   children: React.ReactNode;
@@ -36,7 +37,8 @@ export function InformativeLock({
 }: InformativeLockProps) {
   const [open, setOpen] = React.useState(false);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
+  const popoverRef = React.useRef<HTMLDivElement | null>(null);
+  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false), [popoverRef]);
 
   const cancelClose = React.useCallback(() => {
     if (closeTimer.current) {
@@ -82,12 +84,22 @@ export function InformativeLock({
       </button>
 
       {open && (
-        <div
+        <AnchoredPopover
+          ref={popoverRef}
+          anchorRef={ref}
+          side={side}
           role="dialog"
+          // Hover-open shell: the portaled panel is outside the trigger's DOM
+          // subtree, so it re-arms the same open/close timers itself to keep
+          // pointer travel between trigger and panel from closing it.
+          onMouseEnter={() => {
+            cancelClose();
+            setOpen(true);
+          }}
+          onMouseLeave={scheduleClose}
           className={cn(
-            "absolute left-0 z-50 w-72 rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-3",
+            "w-72 rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-3",
             "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
-            side === "top" ? "bottom-full mb-2" : "top-full mt-2",
             popoverClassName,
           )}
         >
@@ -111,7 +123,7 @@ export function InformativeLock({
             <Plus className="h-4 w-4" />
             {newChatLabel}
           </button>
-        </div>
+        </AnchoredPopover>
       )}
     </div>
   );

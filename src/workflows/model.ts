@@ -944,8 +944,21 @@ function describeScope(scope: unknown): string | undefined {
     a < b ? -1 : a > b ? 1 : 0,
   )) {
     const selection = asRecord(raw);
+    // Normalised the way the platform normalises a scope before storing it —
+    // trimmed, blanks dropped, duplicates collapsed — so the label describes
+    // what this YAML will actually compile to. Without it the COUNT lies:
+    // `except: [a, a, b]` would read "3 selected" for a selection of two.
+    // (Case-folding is per-dimension and lives in the provider catalog,
+    // server-side, so an exact match is as close as this can get.)
     const except = Array.isArray(selection.except)
-      ? selection.except.filter((entry): entry is string => typeof entry === "string")
+      ? [
+          ...new Set(
+            selection.except
+              .filter((entry): entry is string => typeof entry === "string")
+              .map((entry) => entry.trim())
+              .filter((entry) => entry !== ""),
+          ),
+        ]
       : [];
     if (except.length === 0) {
       // An allowlist naming nothing fires on NOTHING. Rendering it blank would

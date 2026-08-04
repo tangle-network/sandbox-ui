@@ -813,6 +813,40 @@ do:
     }
   });
 
+  it("normalises except entries the way the compiler will", () => {
+    const description = (except: string) =>
+      buildWorkflowGraph(`
+name: hygiene
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      repository:
+        default: include
+        except: ${except}
+do:
+  - notify: { url: "https://example.test/hook" }
+`).nodes.find((n) => n.id === "trigger")?.data.description;
+
+    // A blank entry is dropped rather than rendered as a gap.
+    expect(description('["acme/a", ""]')).toBe("repository: all but acme/a");
+    // Surrounding whitespace never reaches the label.
+    expect(description('[" acme/noisy "]')).toBe(
+      "repository: all but acme/noisy",
+    );
+    // Duplicates collapse — otherwise the COUNT would misreport the selection.
+    expect(description('["acme/a", "acme/a", "acme/b"]')).toBe(
+      "repository: all but acme/a, acme/b",
+    );
+    expect(description('["a", "a", "b", "c"]')).toBe(
+      "repository: all but 3 selected",
+    );
+    // Everything blank is an empty selection, which for a denylist narrows
+    // nothing at all.
+    expect(description('["", "  "]')).toBeUndefined();
+  });
+
   it("labels a multi-dimension scope in key order, not YAML order", () => {
     // The same logical scope, typed in two different orders. A node label that
     // followed the author's key order would read differently for each — and a

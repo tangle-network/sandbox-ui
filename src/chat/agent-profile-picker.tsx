@@ -4,6 +4,7 @@ import { Bot, Check, ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
 import { useClickOutside } from "../lib/use-click-outside";
+import { InformativeLock } from "./informative-lock";
 
 /**
  * An agent profile: a named bundle of toolset + persona layered over the same
@@ -56,6 +57,12 @@ export interface AgentProfilePickerProps {
   onUpdate?: (id: string, draft: AgentProfileDraft) => void | Promise<void>;
   onDelete?: (id: string) => void | Promise<void>;
   disabled?: boolean;
+  /** Keep the pinned profile visible while preventing profile selection. */
+  locked?: boolean;
+  /** Tooltip shown on the locked trigger when no `onNewChat` is provided. */
+  lockReason?: string;
+  /** Offer a fresh chat from the informative lock popover. */
+  onNewChat?: () => void;
   className?: string;
   /** Additional classes for the picker trigger. */
   triggerClassName?: string;
@@ -89,6 +96,9 @@ export function AgentProfilePicker({
   onUpdate,
   onDelete,
   disabled,
+  locked,
+  lockReason,
+  onNewChat,
   className,
   triggerClassName,
   popoverClassName,
@@ -107,6 +117,13 @@ export function AgentProfilePicker({
   const builtins = profiles.filter((profile) => profile.builtin);
   const custom = profiles.filter((profile) => !profile.builtin);
   const selected = profiles.find((profile) => profile.id === value);
+  const selectedName = selected?.name ?? value;
+
+  React.useEffect(() => {
+    if (!locked) return;
+    setOpen(false);
+    setComposing(null);
+  }, [locked]);
 
   function select(id: string) {
     onChange(id);
@@ -119,11 +136,31 @@ export function AgentProfilePicker({
     setComposing(null);
   }
 
+  if (locked && onNewChat) {
+    return (
+      <InformativeLock
+        ariaLabel="Agent profile (locked)"
+        lockTitle={`Profile fixed to ${selectedName} for this conversation.`}
+        lockBody="Conversations stay on one profile."
+        newChatLabel="New chat to switch profile"
+        onNewChat={onNewChat}
+        className={className}
+        triggerClassName={triggerClassName}
+        popoverClassName={popoverClassName}
+        side={side}
+      >
+        <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="max-w-[140px] truncate">{selectedName}</span>
+      </InformativeLock>
+    );
+  }
+
   return (
     <div ref={ref} className={cn("relative inline-flex", className)}>
       <button
         type="button"
-        disabled={disabled}
+        disabled={disabled || locked}
+        title={locked ? lockReason : undefined}
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5",
@@ -137,11 +174,13 @@ export function AgentProfilePicker({
         aria-label="Agent profile"
       >
         <Bot className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="max-w-[140px] truncate">{selected?.name ?? value}</span>
-        <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <span className="max-w-[140px] truncate">{selectedName}</span>
+        {!locked && (
+          <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        )}
       </button>
 
-      {open && (
+      {open && !locked && (
         <div
           className={cn(
             "absolute left-0 z-50 w-[min(320px,calc(100vw-2rem))] overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",

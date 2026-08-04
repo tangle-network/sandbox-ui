@@ -9,6 +9,16 @@
 
 Additive: a trigger with no `scope` is described exactly as before, and no other node changes. A malformed `scope` — a primitive, an array, a null — degrades to no scope rather than throwing, so a half-typed definition still draws.
 
+### Also in this release
+
+Two changes reached `main` without a version bump of their own, so they publish here for the first time: the chat-capable model catalog and primary model pill (#227) and the curated-picker duplication fix (#228). Neither is described above because neither carried a changelog entry; see their pull requests.
+
+## 0.95.1
+
+### Dashboard
+
+- **Backend status no longer invents a restart action.** `BackendConfig` now renders Restart only when the host supplies a real `onRestart` operation, so command-based providers can show status and MCP controls without exposing a dead server-era button.
+
 ## 0.95.0
 
 ### Workflows

@@ -8,6 +8,7 @@ import {
   DEFAULT_FEATURED_MODEL_IDS,
   formatPricing,
   formatContext,
+  isTextChatModel,
   resolveModelBrandIdentity,
   ModelPicker,
   type ModelInfo,
@@ -117,15 +118,51 @@ describe("ModelPicker dedup + recommended", () => {
         value=""
         onChange={() => {}}
         models={[
-          { id: "anthropic/claude-opus-4-8", name: "Claude Opus 4.8", _provider: "anthropic" },
+          { id: "anthropic/claude-opus-5", name: "Claude Opus 5", _provider: "anthropic" },
           { id: "some/obscure-model", name: "Obscure" },
         ]}
       />,
     );
     await user.click(screen.getByRole("button"));
     expect(await screen.findByText("Recommended")).toBeInTheDocument();
-    // The opus seed resolves; it appears in Recommended AND its group.
-    expect(screen.getAllByText("Claude Opus 4.8").length).toBeGreaterThanOrEqual(2);
+    // The opus seed renders exactly once — lifted into Recommended and
+    // EXCLUDED from its provider group (duplicating curated rows doubled
+    // the weight of exactly the models the section exists to lift out).
+    expect(screen.getAllByText("Claude Opus 5")).toHaveLength(1);
+    // The non-curated row still renders in the grouped list.
+    expect(screen.getAllByText("Obscure")).toHaveLength(1);
+  });
+
+  it("resolves every seed against a bare-id router catalog (provider in `_provider`)", async () => {
+    const user = userEvent.setup();
+    // The live router lists these ids WITHOUT a provider prefix; the seed list
+    // must still match them via the dedup key, or Recommended silently thins.
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={[
+          { id: "claude-fable-5", name: "Claude Fable 5", _provider: "anthropic" },
+          { id: "claude-opus-5", name: "Claude Opus 5", _provider: "anthropic" },
+          { id: "gpt-5.6-sol", name: "GPT-5.6 Sol", _provider: "openai" },
+          { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", _provider: "google" },
+          { id: "deepseek-v4-flash", name: "DeepSeek V4 Flash", _provider: "deepseek" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    expect(await screen.findByText("Recommended")).toBeInTheDocument();
+    for (const name of [
+      "Claude Fable 5",
+      "Claude Opus 5",
+      "GPT-5.6 Sol",
+      "Gemini 3.1 Pro",
+      "DeepSeek V4 Flash",
+    ]) {
+      // Each seed renders exactly once, in Recommended; provider groups
+      // exclude curated rows while browsing.
+      expect(screen.getAllByText(name)).toHaveLength(1);
+    }
   });
 
   it("prefers an explicit catalog `featured` flag over the curated fallback", async () => {
@@ -136,20 +173,128 @@ describe("ModelPicker dedup + recommended", () => {
         onChange={() => {}}
         models={[
           { id: "x/handpicked", name: "Handpicked", featured: true },
-          { id: "anthropic/claude-opus-4-8", name: "Claude Opus 4.8", _provider: "anthropic" },
+          { id: "anthropic/claude-opus-5", name: "Claude Opus 5", _provider: "anthropic" },
         ]}
       />,
     );
     await user.click(screen.getByRole("button"));
     expect(await screen.findByText("Recommended")).toBeInTheDocument();
-    // Flagged row is recommended; the opus seed is NOT promoted because an
-    // explicit flag exists.
-    expect(screen.getAllByText("Handpicked").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText("Claude Opus 4.8")).toHaveLength(1);
+    // Flagged row is recommended (once — groups exclude it); the opus seed
+    // is NOT promoted because an explicit flag exists, so it stays exactly
+    // once in its provider group.
+    expect(screen.getAllByText("Handpicked")).toHaveLength(1);
+    expect(screen.getAllByText("Claude Opus 5")).toHaveLength(1);
   });
 
-  it("exposes a non-empty default featured seed list", () => {
-    expect(DEFAULT_FEATURED_MODEL_IDS.length).toBeGreaterThan(0);
+  it("search bypasses the curated sections so every match is findable", async () => {
+    const user = userEvent.setup();
+    render(
+      <ModelPicker
+        value=""
+        onChange={() => {}}
+        models={[
+          { id: "anthropic/claude-opus-5", name: "Claude Opus 5", _provider: "anthropic" },
+          { id: "some/obscure-model", name: "Obscure" },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole("button"));
+    await user.type(screen.getByPlaceholderText("Search models..."), "opus");
+    // Under search the sections collapse and the grouped list carries the
+    // match — the curated exclusion must not hide it.
+    expect(screen.getAllByText("Claude Opus 5")).toHaveLength(1);
+    expect(screen.queryByText("Obscure")).not.toBeInTheDocument();
+  });
+
+  it("pins the curated seed list to the current frontier set", () => {
+    // Verified against the live router catalog (479 models, 2026-08): every id
+    // below resolves to a served row. Update deliberately, not incidentally.
+    expect(DEFAULT_FEATURED_MODEL_IDS).toEqual([
+      "anthropic/claude-fable-5",
+      "anthropic/claude-opus-5",
+      "openai/gpt-5.6-sol",
+      "google/gemini-3.1-pro-preview",
+      "deepseek/deepseek-v4-flash",
+    ]);
+  });
+});
+
+describe("isTextChatModel", () => {
+  it("keeps text-in/text-out rows, including multimodal-input chat models", () => {
+    expect(
+      isTextChatModel({
+        id: "m",
+        architecture: { input_modalities: ["text"], output_modalities: ["text"] },
+      }),
+    ).toBe(true);
+    expect(
+      isTextChatModel({
+        id: "m",
+        architecture: {
+          modality: "text+image+file->text",
+          input_modalities: ["text", "image", "file"],
+          output_modalities: ["text"],
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it("drops embedding, image-gen, tts, and transcription rows", () => {
+    expect(
+      isTextChatModel({
+        id: "text-embedding-3-large",
+        architecture: { modality: "embedding", input_modalities: ["text"], output_modalities: ["embeddings"] },
+      }),
+    ).toBe(false);
+    expect(
+      isTextChatModel({
+        id: "gpt-image-2",
+        architecture: { modality: "image", input_modalities: ["text"], output_modalities: ["image"] },
+      }),
+    ).toBe(false);
+    expect(
+      isTextChatModel({
+        id: "tts-1",
+        architecture: { modality: "audio", input_modalities: ["text"], output_modalities: ["audio"] },
+      }),
+    ).toBe(false);
+    expect(
+      isTextChatModel({
+        id: "whisper-1",
+        architecture: { modality: "audio", input_modalities: ["audio"], output_modalities: ["text"] },
+      }),
+    ).toBe(false);
+  });
+
+  it("falls back to the compact modality string when the arrays are absent", () => {
+    expect(isTextChatModel({ id: "m", architecture: { modality: "text->text" } })).toBe(true);
+    expect(isTextChatModel({ id: "m", architecture: { modality: "text+image->text" } })).toBe(true);
+    expect(isTextChatModel({ id: "m", architecture: { modality: "text->video" } })).toBe(false);
+    expect(isTextChatModel({ id: "m", architecture: { modality: "text" } })).toBe(true);
+    expect(isTextChatModel({ id: "m", architecture: { modality: "multimodal" } })).toBe(true);
+    expect(isTextChatModel({ id: "m", architecture: { modality: "audio" } })).toBe(false);
+  });
+
+  it("fails open when a row carries no modality metadata at all", () => {
+    expect(isTextChatModel({ id: "mystery-model" })).toBe(true);
+    expect(isTextChatModel({ id: "mystery-model", architecture: {} })).toBe(true);
+  });
+});
+
+describe("ModelPicker pill trigger", () => {
+  it("keeps the accessible label and the primary pill treatment", () => {
+    render(
+      <ModelPicker
+        variant="pill"
+        value="openai/gpt-5.6-sol"
+        onChange={() => {}}
+        models={[{ id: "gpt-5.6-sol", name: "GPT-5.6 Sol", _provider: "openai" }]}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: "Model: GPT-5.6 Sol" });
+    expect(trigger.className).toContain("rounded-full");
+    expect(trigger.className).toContain("text-sm");
+    expect(trigger.className).toContain("h-9");
   });
 });
 
@@ -434,9 +579,7 @@ describe("ModelPicker brand identity", () => {
     render(<ModelPicker value="openrouter/anthropic/claude-sonnet-4-6" onChange={() => {}} models={MODELS} />);
     await user.click(screen.getByRole("button"));
 
-    // This model is also recommended (matches a curated seed by dedup key),
-    // so its row renders in both the Recommended section and its provider
-    // group. A router-served model (host ≠ lab) surfaces the host once as a
+    // A router-served model (host ≠ lab) surfaces the host once as a
     // compact "via <host>" tag instead of a redundant "Host → Lab" subtitle.
     expect((await screen.findAllByText(/via\s+OpenRouter/i)).length).toBeGreaterThanOrEqual(1);
   });

@@ -175,6 +175,159 @@ describe("AgentSessionControls", () => {
     );
     expect(screen.getByText("12.4k tokens")).toBeInTheDocument();
   });
+
+  it("inline strip renders the model pill primary and the harness/effort triggers quiet", () => {
+    render(
+      <AgentSessionControls
+        harness={{ value: "opencode", onChange: () => {} }}
+        model={{
+          value: "anthropic/claude-opus-4-8",
+          onChange: () => {},
+          models: MODELS,
+        }}
+        reasoning={{ value: "high", onChange: () => {} }}
+      />,
+    );
+    const modelTrigger = screen
+      .getByText("Claude Opus 4.8")
+      .closest("button") as HTMLButtonElement;
+    // Primary treatment: the reference-design pill.
+    expect(modelTrigger.className).toContain("rounded-full");
+    expect(modelTrigger.className).not.toContain("bg-transparent");
+    // Secondary treatment: harness + effort lose the bordered card fill.
+    for (const name of [/agent harness/i, /reasoning level/i]) {
+      const trigger = screen.getByRole("button", { name });
+      expect(trigger.className).toContain("bg-transparent");
+      expect(trigger.className).toContain("border-transparent");
+    }
+  });
+});
+
+describe("AgentSessionControls — chat-surface modality filtering", () => {
+  const MIXED_CATALOG = [
+    {
+      id: "claude-opus-5",
+      name: "Claude Opus 5",
+      _provider: "anthropic",
+      architecture: {
+        modality: "text+image->text",
+        input_modalities: ["text", "image"],
+        output_modalities: ["text"],
+      },
+    },
+    {
+      id: "text-embedding-3-large",
+      name: "Text Embedding 3 Large",
+      _provider: "openai",
+      architecture: {
+        modality: "embedding",
+        input_modalities: ["text"],
+        output_modalities: ["embeddings"],
+      },
+    },
+    {
+      id: "tts-1-hd",
+      name: "TTS-1 HD",
+      _provider: "openai",
+      architecture: {
+        modality: "audio",
+        input_modalities: ["text"],
+        output_modalities: ["audio"],
+      },
+    },
+    // No architecture metadata at all — must stay visible (fail-open).
+    { id: "mystery-model", name: "Mystery Model" },
+  ];
+
+  const openModelPicker = () =>
+    userEvent.click(screen.getByText("Claude Opus 5"));
+
+  it("drops non-chat catalog rows (embedding, tts) from the chat surface by default", async () => {
+    render(
+      <AgentSessionControls
+        model={{
+          value: "anthropic/claude-opus-5",
+          onChange: () => {},
+          models: MIXED_CATALOG,
+        }}
+      />,
+    );
+    await openModelPicker();
+    expect(await screen.findByPlaceholderText("Search models...")).toBeInTheDocument();
+    expect(screen.queryByText("Text Embedding 3 Large")).not.toBeInTheDocument();
+    expect(screen.queryByText("TTS-1 HD")).not.toBeInTheDocument();
+  });
+
+  it("keeps chat rows and fails open for rows with no modality metadata", async () => {
+    render(
+      <AgentSessionControls
+        model={{
+          value: "anthropic/claude-opus-5",
+          onChange: () => {},
+          models: MIXED_CATALOG,
+        }}
+      />,
+    );
+    await openModelPicker();
+    // The selected chat model appears in the menu (trigger + row), and the
+    // metadata-less row is never silently hidden.
+    expect((await screen.findAllByText("Claude Opus 5")).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Mystery Model")).toBeInTheDocument();
+  });
+
+  it("shows the full catalog on non-chat surfaces (context=\"all\")", async () => {
+    render(
+      <AgentSessionControls
+        context="all"
+        model={{
+          value: "anthropic/claude-opus-5",
+          onChange: () => {},
+          models: MIXED_CATALOG,
+        }}
+      />,
+    );
+    await openModelPicker();
+    expect(await screen.findByText("Text Embedding 3 Large")).toBeInTheDocument();
+    expect(screen.getByText("TTS-1 HD")).toBeInTheDocument();
+  });
+
+  it("an explicit `modalities` list replaces the chat default and is forwarded to the picker", async () => {
+    render(
+      <AgentSessionControls
+        model={{
+          value: "anthropic/claude-opus-5",
+          onChange: () => {},
+          models: MIXED_CATALOG,
+          // ModelPicker's own exact-match filter takes over: only rows whose
+          // compact modality string is exactly "audio" (plus metadata-less
+          // rows, which every layer fails open on) survive.
+          modalities: ["audio"],
+        }}
+      />,
+    );
+    await openModelPicker();
+    expect(await screen.findByText("TTS-1 HD")).toBeInTheDocument();
+    expect(screen.getByText("Mystery Model")).toBeInTheDocument();
+    expect(screen.queryByText("Text Embedding 3 Large")).not.toBeInTheDocument();
+  });
+
+  it("forwards `excludeProviders` to the picker", async () => {
+    render(
+      <AgentSessionControls
+        model={{
+          value: "anthropic/claude-opus-5",
+          onChange: () => {},
+          models: MIXED_CATALOG,
+          excludeProviders: ["anthropic"],
+        }}
+      />,
+    );
+    await openModelPicker();
+    expect(await screen.findByText("Mystery Model")).toBeInTheDocument();
+    // The anthropic row survives the chat filter but is dropped by the
+    // forwarded provider exclusion — only the trigger still names it.
+    expect(screen.getAllByText("Claude Opus 5")).toHaveLength(1);
+  });
 });
 
 describe("AgentSessionControls — harness/model coupling", () => {

@@ -146,12 +146,45 @@ export function dedupeModels(models: ReadonlyArray<ModelInfo>): ModelInfo[] {
  * catalog still gets a curated top section without per-deployment config.
  */
 export const DEFAULT_FEATURED_MODEL_IDS: ReadonlyArray<string> = [
-  "anthropic/claude-opus-4-8",
-  "anthropic/claude-sonnet-4-6",
-  "openai/gpt-5.4",
-  "google/gemini-2.5-pro",
-  "deepseek/deepseek-v3",
+  "anthropic/claude-fable-5",
+  "anthropic/claude-opus-5",
+  "openai/gpt-5.6-sol",
+  "google/gemini-3.1-pro-preview",
+  "deepseek/deepseek-v4-flash",
 ];
+
+/**
+ * True when a catalog row can hold a text conversation — text goes in and
+ * text comes out. Keys on the router's `architecture` fields:
+ * `input_modalities` / `output_modalities` when present, otherwise the
+ * compact `modality` string ("text->text", "text+image->text", or a bare tag
+ * like "text" / "audio" / "multimodal"). A row with no modality metadata at
+ * all is INCLUDED — absence of metadata is not evidence a model can't chat,
+ * and silently hiding a servable model is worse than showing an exotic one.
+ */
+export function isTextChatModel(model: ModelInfo): boolean {
+  const arch = model.architecture;
+  if (!arch) return true;
+  const inputs = arch.input_modalities;
+  const outputs = arch.output_modalities;
+  if (inputs?.length || outputs?.length) {
+    // A missing side stays permissive; only an explicit non-text side excludes.
+    const inOk = !inputs?.length || inputs.includes("text");
+    const outOk = !outputs?.length || outputs.includes("text");
+    return inOk && outOk;
+  }
+  const modality = arch.modality;
+  if (!modality) return true;
+  const arrow = modality.split("->");
+  if (arrow.length === 2) {
+    return (
+      arrow[0].split("+").includes("text") && arrow[1].split("+").includes("text")
+    );
+  }
+  // Bare tag: "text" and the router's catch-all "multimodal" chat; single-purpose
+  // tags ("audio", "image", "embedding") do not.
+  return modality === "text" || modality === "multimodal";
+}
 
 /** Format $/M tokens. Returns null if pricing is missing or zero. */
 export function formatPricing(pricing: ModelInfo["pricing"]): string | null {
@@ -269,16 +302,33 @@ export function ModelPicker({
   // to a single row before any sectioning. Featured rows win the collapse.
   const deduped = React.useMemo(() => dedupeModels(models), [models]);
 
-  // Filter once per (deduped, query, modalities, excludeProviders) change.
-  const filtered = React.useMemo(() => {
+  // Catalog restrictions (provider / modality) apply to EVERY section —
+  // Recommended, Popular, Recent and the grouped list alike — so an excluded
+  // row can't sneak back in through a curated section. Rows with no modality
+  // metadata pass the modality check (fail-open).
+  const passesCatalogFilters = React.useMemo(() => {
     const excluded = new Set((excludeProviders ?? []).map((p) => p.toLowerCase()));
     const allowedModalities = modalities ? new Set(modalities) : null;
-    const q = query.trim().toLowerCase();
-    return deduped.filter((m) => {
+    return (m: ModelInfo) => {
       const provider = (m._provider ?? m.provider ?? "").toLowerCase();
       if (excluded.has(provider)) return false;
       if (allowedModalities && m.architecture?.modality && !allowedModalities.has(m.architecture.modality)) return false;
-      if (!q) return true;
+      return true;
+    };
+  }, [modalities, excludeProviders]);
+
+  /** The selectable universe: deduped rows that pass the catalog filters. */
+  const eligible = React.useMemo(
+    () => deduped.filter(passesCatalogFilters),
+    [deduped, passesCatalogFilters],
+  );
+
+  // Narrow further by the search query.
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return eligible;
+    return eligible.filter((m) => {
+      const provider = (m._provider ?? m.provider ?? "").toLowerCase();
       const id = canonicalModelId(m).toLowerCase();
       const name = (m.name ?? "").toLowerCase();
       const identity = resolveModelBrandIdentity(m);
@@ -290,23 +340,7 @@ export function ModelPicker({
         identity.lab.label.toLowerCase().includes(q)
       );
     });
-  }, [deduped, query, modalities, excludeProviders]);
-
-  // Group filtered models by model family first, then by provider for
-  // unknown labs. This keeps routed Claude/Gemini/Kimi rows where users
-  // expect them while row metadata still shows the hosting provider.
-  const grouped = React.useMemo(() => {
-    const groups = new Map<string, ModelInfo[]>();
-    for (const m of filtered) {
-      const key = modelGroupKey(m);
-      const list = groups.get(key);
-      if (list) list.push(m);
-      else groups.set(key, [m]);
-    }
-    return Array.from(groups.entries())
-      .map(([key, list]) => [key, [...list].sort(compareModelsByDisplayName)] as const)
-      .sort(([a], [b]) => compareModelGroups(a, b));
-  }, [filtered]);
+  }, [eligible, query]);
 
   // Resolve the currently-selected model's display info.
   const current = React.useMemo(
@@ -325,8 +359,9 @@ export function ModelPicker({
     return recents
       .map((id) => lookup.get(id))
       .filter((m): m is ModelInfo => Boolean(m))
+      .filter(passesCatalogFilters)
       .slice(0, 4);
-  }, [recents, models]);
+  }, [recents, models, passesCatalogFilters]);
 
   // Resolve the curated popular list against the loaded catalog. Order
   // is preserved from the caller so they control the row sequence;
@@ -336,26 +371,55 @@ export function ModelPicker({
     const lookup = new Map(models.map((m) => [canonicalModelId(m), m]));
     return popular
       .map((id) => lookup.get(id))
-      .filter((m): m is ModelInfo => Boolean(m));
-  }, [popular, models]);
+      .filter((m): m is ModelInfo => Boolean(m))
+      .filter(passesCatalogFilters);
+  }, [popular, models, passesCatalogFilters]);
 
   // Recommended section. Prefer rows the catalog explicitly flags
   // `featured`; if none are flagged, fall back to the curated seed list
-  // matched by dedup key against the loaded (deduped) catalog. Either way
-  // the rows come from `deduped`, so a selection here is a real catalog row.
+  // matched by dedup key against the loaded catalog. Either way the rows
+  // come from `eligible`, so a selection here is a real catalog row that
+  // also passes the caller's provider/modality restrictions.
   const featuredModels = React.useMemo(() => {
-    const flagged = deduped.filter((m) => m.featured);
+    const flagged = eligible.filter((m) => m.featured);
     if (flagged.length > 0) return flagged;
     const seedKeys = new Set(
       DEFAULT_FEATURED_MODEL_IDS.map((id) => modelDedupKey({ id })),
     );
-    const seeded = deduped.filter((m) => seedKeys.has(modelDedupKey(m)));
+    const seeded = eligible.filter((m) => seedKeys.has(modelDedupKey(m)));
     // Preserve the seed-list order so the recommended row sequence is stable.
     const order = DEFAULT_FEATURED_MODEL_IDS.map((id) => modelDedupKey({ id }));
     return seeded.sort(
       (a, b) => order.indexOf(modelDedupKey(a)) - order.indexOf(modelDedupKey(b)),
     );
-  }, [deduped]);
+  }, [eligible]);
+
+  // Group filtered models by model family first, then by provider for
+  // unknown labs. This keeps routed Claude/Gemini/Kimi rows where users
+  // expect them while row metadata still shows the hosting provider.
+  // Rows already surfaced by a curated section (Recommended/Top/Recent)
+  // are excluded — duplicating them at the head of every provider group
+  // doubled the visual weight of exactly the models the sections exist to
+  // lift out. Search bypasses the sections, so the exclusion only applies
+  // to the browsing view.
+  const grouped = React.useMemo(() => {
+    const curatedKeys = new Set(
+      [...featuredModels, ...popularModels, ...recentIds].map((m) =>
+        modelDedupKey(m),
+      ),
+    );
+    const groups = new Map<string, ModelInfo[]>();
+    for (const m of filtered) {
+      if (!query.trim() && curatedKeys.has(modelDedupKey(m))) continue;
+      const key = modelGroupKey(m);
+      const list = groups.get(key);
+      if (list) list.push(m);
+      else groups.set(key, [m]);
+    }
+    return Array.from(groups.entries())
+      .map(([key, list]) => [key, [...list].sort(compareModelsByDisplayName)] as const)
+      .sort(([a], [b]) => compareModelGroups(a, b));
+  }, [filtered, featuredModels, popularModels, recentIds, query]);
 
   const handleSelect = (id: string) => {
     onChange(id);
@@ -370,8 +434,8 @@ export function ModelPicker({
       aria-label={triggerLabel}
       disabled={disabled}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container",
-        "px-2.5 text-xs font-medium text-foreground shadow-sm",
+        "inline-flex h-9 items-center gap-1.5 rounded-full border border-[var(--md3-outline-variant)] bg-surface-container",
+        "px-3 text-sm font-medium text-foreground shadow-sm",
         "transition-colors duration-[var(--transition-fast)]",
         "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high",
         "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
@@ -384,10 +448,10 @@ export function ModelPicker({
       {currentIdentity ? (
         <ModelBrandStack identity={currentIdentity} size="sm" />
       ) : (
-        <Sparkles className="h-3 w-3 text-muted-foreground" />
+        <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
       )}
-      <span className="truncate max-w-[160px]">{currentLabel || placeholder}</span>
-      <ChevronDown className="ml-auto h-3 w-3 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+      <span className="truncate max-w-[180px]">{currentLabel || placeholder}</span>
+      <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
     </button>
   ) : (
     <button
@@ -509,7 +573,7 @@ export function ModelPicker({
             </div>
 
             <PickerMenuFooter>
-              {filtered.length} of {deduped.length} model{deduped.length === 1 ? "" : "s"}
+              {filtered.length} of {eligible.length} model{eligible.length === 1 ? "" : "s"}
             </PickerMenuFooter>
           </Popover.Content>
         </Popover.Portal>

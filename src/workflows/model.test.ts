@@ -702,6 +702,221 @@ do:
     expect(edges.some((e) => e.source === "a0" && e.target === "a1")).toBe(false);
   });
 
+  it("says which of the provider's things a scoped trigger fires on", () => {
+    const denylist = buildWorkflowGraph(`
+name: pr-review
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    actions: [opened]
+    scope:
+      repository:
+        default: include
+        except: [acme/noisy]
+do:
+  - notify: { url: "https://example.test/hook" }
+`);
+    expect(
+      denylist.nodes.find((n) => n.id === "trigger")?.data.description,
+    ).toBe("opened · repository: all but acme/noisy");
+
+    const allowlist = buildWorkflowGraph(`
+name: pr-review
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      repository:
+        default: exclude
+        except: [acme/a, acme/b, acme/c]
+do:
+  - notify: { url: "https://example.test/hook" }
+`);
+    // Past two entries the names stop being readable on a card, so the count
+    // carries the narrowing instead.
+    expect(
+      allowlist.nodes.find((n) => n.id === "trigger")?.data.description,
+    ).toBe("repository: 3 selected");
+  });
+
+  it("says so when an allowlist names nothing, and stays quiet when a denylist does", () => {
+    const description = (scope: string) =>
+      buildWorkflowGraph(`
+name: edge
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+${scope}
+do:
+  - notify: { url: "https://example.test/hook" }
+`).nodes.find((n) => n.id === "trigger")?.data.description;
+
+    // Fires on nothing — blank here would read as an absent scope, i.e. the
+    // opposite. (Unreachable through the platform compiler, which rejects it,
+    // but this package renders any YAML it is handed.)
+    expect(
+      description(`    scope:
+      repository:
+        default: exclude
+        except: []`),
+    ).toBe("repository: none");
+
+    // Narrows nothing, so there is nothing to say.
+    expect(
+      description(`    scope:
+      repository:
+        default: include
+        except: []`),
+    ).toBeUndefined();
+    expect(
+      description(`    scope:
+      repository:
+        default: include`),
+    ).toBeUndefined();
+    expect(description("    scope: {}")).toBeUndefined();
+    expect(description("")).toBeUndefined();
+  });
+
+  it("renders a malformed scope as no scope rather than throwing", () => {
+    // `asRecord` already collapses a null/primitive/array to `{}`, so every one
+    // of these degrades to "no scope" and the rest of the node still renders.
+    // Pinned because the graph is handed YAML mid-edit, where these shapes are
+    // ordinary keystrokes rather than exotic input.
+    const node = (scope: string) =>
+      buildWorkflowGraph(`
+name: malformed
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    actions: [opened]
+${scope}
+do:
+  - notify: { url: "https://example.test/hook" }
+`).nodes.find((n) => n.id === "trigger");
+
+    for (const scope of [
+      '    scope: "repository"',
+      "    scope: null",
+      "    scope: 42",
+      "    scope: [repository]",
+      '    scope:\n      repository: "all"',
+      "    scope:\n      repository: [a, b]",
+      "    scope:\n      repository: null",
+    ]) {
+      expect(() => node(scope)).not.toThrow();
+      // The sub-action narrowing survives; only the scope half is dropped.
+      expect(node(scope)?.data.description).toBe("opened");
+    }
+  });
+
+  it("normalises except entries the way the compiler will", () => {
+    const description = (except: string) =>
+      buildWorkflowGraph(`
+name: hygiene
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      repository:
+        default: include
+        except: ${except}
+do:
+  - notify: { url: "https://example.test/hook" }
+`).nodes.find((n) => n.id === "trigger")?.data.description;
+
+    // A blank entry is dropped rather than rendered as a gap.
+    expect(description('["acme/a", ""]')).toBe("repository: all but acme/a");
+    // Surrounding whitespace never reaches the label.
+    expect(description('[" acme/noisy "]')).toBe(
+      "repository: all but acme/noisy",
+    );
+    // Duplicates collapse — otherwise the COUNT would misreport the selection.
+    expect(description('["acme/a", "acme/a", "acme/b"]')).toBe(
+      "repository: all but acme/a, acme/b",
+    );
+    expect(description('["a", "a", "b", "c"]')).toBe(
+      "repository: all but 3 selected",
+    );
+    // Everything blank is an empty selection, which for a denylist narrows
+    // nothing at all.
+    expect(description('["", "  "]')).toBeUndefined();
+  });
+
+  it("labels a multi-dimension scope in key order, not YAML order", () => {
+    // The same logical scope, typed in two different orders. A node label that
+    // followed the author's key order would read differently for each — and a
+    // consumer diffing two graphs would see a change where there is none.
+    const description = (yaml: string) =>
+      buildWorkflowGraph(yaml).nodes.find((n) => n.id === "trigger")?.data
+        .description;
+
+    const repositoryFirst = `
+name: multi
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      repository:
+        default: include
+        except: [acme/noisy]
+      channel:
+        default: exclude
+        except: [C123]
+do:
+  - notify: { url: "https://example.test/hook" }
+`;
+    const channelFirst = `
+name: multi
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      channel:
+        default: exclude
+        except: [C123]
+      repository:
+        default: include
+        except: [acme/noisy]
+do:
+  - notify: { url: "https://example.test/hook" }
+`;
+    expect(description(repositoryFirst)).toBe(
+      "channel: C123 · repository: all but acme/noisy",
+    );
+    expect(description(channelFirst)).toBe(description(repositoryFirst));
+
+    // The order is a code-unit comparison, not locale collation: an uppercase
+    // key sorts before every lowercase one under ASCII and AFTER them under a
+    // typical locale, so this pins which rule is in force rather than trusting
+    // the runtime's default.
+    const uppercaseKey = `
+name: multi
+on:
+  provider_event:
+    connection: github
+    event: pull_request
+    scope:
+      repository:
+        default: include
+        except: [acme/noisy]
+      Workspace:
+        default: exclude
+        except: [w1]
+do:
+  - notify: { url: "https://example.test/hook" }
+`;
+    expect(description(uppercaseKey)).toBe(
+      "Workspace: w1 · repository: all but acme/noisy",
+    );
+  });
+
   it("attaches the raw, untruncated config to action and trigger nodes", () => {
     // A prompt far longer than the card's description clamp — the full-detail
     // `config` must carry it verbatim, never truncated.

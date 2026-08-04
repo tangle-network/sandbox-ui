@@ -917,6 +917,72 @@ function describeAction(action: unknown): WfNodeData {
   return Object.keys(config).length > 0 ? { ...base, config } : base;
 }
 
+/**
+ * A trigger's `scope` in a phrase: which of the provider's things it fires on.
+ *
+ * The dimension key is the only name available here (the human label lives in
+ * the provider catalog, server-side), so it is used as written — `repository`,
+ * `channel`. Both directions read as what they mean: a denylist is "all but",
+ * an allowlist names its members when there are few enough to be worth naming.
+ *
+ * Dimensions are read in key order, not in the order the author happened to
+ * write them: `Object.entries` follows insertion order, so the same logical
+ * scope would otherwise label the node differently depending on how its YAML
+ * was typed. Sorted here for the same reason the platform sorts keys when it
+ * canonicalises a scope — one scope, one rendering.
+ *
+ * Compared by code unit rather than `localeCompare`: a dimension id is a
+ * machine identifier (`repository`, `channel`), not prose to collate for a
+ * reader, and locale-aware ordering would make the rendering depend on the
+ * runtime's locale — reintroducing, per viewer, exactly the instability the
+ * sort exists to remove.
+ */
+function describeScope(scope: unknown): string | undefined {
+  const rec = asRecord(scope);
+  const parts: string[] = [];
+  for (const [dimension, raw] of Object.entries(rec).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  )) {
+    const selection = asRecord(raw);
+    // Normalised the way the platform normalises a scope before storing it —
+    // trimmed, blanks dropped, duplicates collapsed — so the label describes
+    // what this YAML will actually compile to. Without it the COUNT lies:
+    // `except: [a, a, b]` would read "3 selected" for a selection of two.
+    // (Case-folding is per-dimension and lives in the provider catalog,
+    // server-side, so an exact match is as close as this can get.)
+    const except = Array.isArray(selection.except)
+      ? [
+          ...new Set(
+            selection.except
+              .filter((entry): entry is string => typeof entry === "string")
+              .map((entry) => entry.trim())
+              .filter((entry) => entry !== ""),
+          ),
+        ]
+      : [];
+    if (except.length === 0) {
+      // An allowlist naming nothing fires on NOTHING. Rendering it blank would
+      // read as an absent scope — "fires on everything" — the exact inverse, so
+      // it is stated. (A denylist excepting nothing genuinely narrows nothing,
+      // and stays blank.) This package renders whatever YAML it is handed —
+      // a half-typed editor buffer, a consumer with its own validation — so it
+      // cannot assume a server rejected the shape before it got here.
+      if (selection.default === "exclude") parts.push(`${dimension}: none`);
+      continue;
+    }
+    // Two or fewer are named; past that a bare count would read as an id, so
+    // it says what the number counts.
+    const named =
+      except.length <= 2 ? except.join(", ") : `${except.length} selected`;
+    parts.push(
+      selection.default === "exclude"
+        ? `${dimension}: ${named}`
+        : `${dimension}: all but ${named}`,
+    );
+  }
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
 /** Describe the `on:` trigger as the spine's root node. */
 function describeTrigger(on: unknown): WfNodeData {
   const rec = asRecord(on);
@@ -929,9 +995,16 @@ function describeTrigger(on: unknown): WfNodeData {
       : [];
     const repo = str(ev.repo);
     // The event the workflow wakes on reads as a sentence — "On pull request" —
-    // with the narrowing (which sub-actions, which repo) as the detail below it.
+    // with the narrowing (which sub-actions, which repositories) as the detail
+    // below it. A `scope` narrows just as much as a `repo` does, so leaving it
+    // out would draw a trigger that fires on two repositories identically to one
+    // that fires on all of them.
     const description = describeText(
-      [actions.length > 0 ? actions.join(", ") : undefined, repo]
+      [
+        actions.length > 0 ? actions.join(", ") : undefined,
+        repo,
+        describeScope(ev.scope),
+      ]
         .filter(Boolean)
         .join(" · "),
     );

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.96.0
+
+### Workflows
+
+- **A trigger node says WHICH of a provider's things it fires on, not only what event wakes it.** A `provider_event` trigger carried its sub-actions and its `repo` into the node's description, so a trigger scoped to two repositories drew identically to one that fires on every repository in the org — the narrowing was invisible on the one node whose whole job is to say what starts a run. The node now reads a `scope` alongside `repo` and states it: `repository: all but acme/noisy` for a denylist, `channel: C123, C456` when few enough entries to be worth naming, `repository: 3 selected` past that, and `repository: none` for an allowlist that names nothing — which fires on nothing, where drawing blank would have read as the exact opposite.
+- **The same scope renders the same string for every reader.** `Object.entries` follows insertion order, so a two-dimension scope described itself differently depending on the order its YAML happened to be typed in; dimensions are now ordered by key. That order is a code-unit comparison rather than `localeCompare`, because a dimension id is a machine identifier and locale-aware collation would have made the label depend on the viewer's runtime locale.
+
+Additive: a trigger with no `scope` is described exactly as before, and no other node changes. A malformed `scope` — a primitive, an array, a null — degrades to no scope rather than throwing, so a half-typed definition still draws.
+
+### Also in this release
+
+Two changes reached `main` without a version bump of their own, so they publish here for the first time: the chat-capable model catalog and primary model pill (#227) and the curated-picker duplication fix (#228). Neither is described above because neither carried a changelog entry; see their pull requests.
+
 ## 0.95.1
 
 ### Dashboard

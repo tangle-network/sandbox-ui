@@ -8,7 +8,7 @@ import {
   reasoningEffortsFor,
 } from "@tangle-network/agent-interface";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, Lock, Plus, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
 import { useClickOutside } from "../lib/use-click-outside";
@@ -42,6 +42,7 @@ import {
   snapHarnessToModel,
   snapModelToHarness,
 } from "./harness-model-compat";
+import { InformativeLock } from "./informative-lock";
 import {
   clampReasoningLevel,
   DEFAULT_REASONING_LEVEL_OPTIONS,
@@ -124,7 +125,7 @@ export interface AgentSessionReasoningControl {
 /**
  * Agent-profile (mode / toolset / persona) selection. Backend-agnostic — it
  * sits beside the model in both router-backed and sandbox-backed modes, so the
- * same session can switch the agent's identity without touching the harness.
+ * profile binding remains independent of harness selection.
  */
 export interface AgentSessionProfileControl {
   value: string;
@@ -136,6 +137,12 @@ export interface AgentSessionProfileControl {
   onUpdate?: (id: string, draft: AgentProfileDraft) => void | Promise<void>;
   onDelete?: (id: string) => void | Promise<void>;
   disabled?: boolean;
+  /** Keep the profile pinned once this conversation has started. */
+  locked?: boolean;
+  /** Tooltip shown on the locked trigger when no `onNewChat` is provided. */
+  lockReason?: string;
+  /** Start a fresh chat where the user can select another profile. */
+  onNewChat?: () => void;
 }
 
 export interface AgentSessionControlsProps {
@@ -269,118 +276,6 @@ function harnessGroup(option: {
  */
 const HARNESS_SEARCH_THRESHOLD = 7;
 
-/**
- * Locked-harness trigger that explains the lock and offers a fork. The harness
- * is bound to its chat session once a conversation has started, so rather than a
- * silent dead control the chip stays visibly locked but reveals — on hover or
- * tap — why it's fixed and a button to start a fresh session on another harness.
- */
-function InformativeLock({
-  type,
-  label,
-  lockTitle,
-  lockBody,
-  newChatLabel,
-  onNewChat,
-  triggerClassName,
-}: {
-  type: HarnessType;
-  label: string;
-  lockTitle?: React.ReactNode;
-  lockBody?: React.ReactNode;
-  newChatLabel?: string;
-  onNewChat: () => void;
-  triggerClassName?: string;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
-
-  const cancelClose = React.useCallback(() => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  }, []);
-  const scheduleClose = React.useCallback(() => {
-    cancelClose();
-    closeTimer.current = setTimeout(() => setOpen(false), 150);
-  }, [cancelClose]);
-  React.useEffect(() => cancelClose, [cancelClose]);
-
-  return (
-    <div
-      ref={ref}
-      className="relative inline-flex"
-      onMouseEnter={() => {
-        cancelClose();
-        setOpen(true);
-      }}
-      onMouseLeave={scheduleClose}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") setOpen(false);
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        data-state={open ? "open" : "closed"}
-        aria-label="Agent harness (locked)"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        className={cn(
-          // Dimmed to read as locked (the harness is bound to this session),
-          // matching the disabled model picker — the logo stays so the chip is
-          // still recognizably this harness; the popover explains the lock.
-          "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5 opacity-60",
-          "text-xs font-medium text-foreground shadow-sm transition-colors",
-          "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
-          triggerClassName,
-        )}
-      >
-        <HarnessLogo type={type} size={16} />
-        <span>{label}</span>
-      </button>
-
-      {open && (
-        <div
-          role="dialog"
-          className={cn(
-            "absolute bottom-full left-0 z-50 mb-2 w-72 rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-3",
-            "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
-          )}
-        >
-          <p className="flex items-start gap-2 text-sm font-medium text-foreground">
-            <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <span>
-              {lockTitle ?? `Agent fixed to ${label} for this conversation.`}
-            </span>
-          </p>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            {lockBody ?? "Conversations stay on one agent."}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              onNewChat();
-            }}
-            className={cn(
-              "mt-3 flex w-full items-center justify-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium text-foreground",
-              "bg-primary/10 ring-1 ring-inset ring-primary/25 transition-colors",
-              "hover:bg-primary/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-            )}
-          >
-            <Plus className="h-4 w-4" />
-            {newChatLabel ?? "New chat to switch agent"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function HarnessDropdown({
   value,
   onChange,
@@ -436,16 +331,19 @@ function HarnessDropdown({
   // A locked harness with a fork action becomes the informative-lock chip;
   // without one it falls back to the bare inert trigger below.
   if (locked && onNewChat) {
+    const label = selected?.label ?? value;
     return (
       <InformativeLock
-        type={value}
-        label={selected?.label ?? value}
-        lockTitle={lockTitle}
-        lockBody={lockBody}
-        newChatLabel={newChatLabel}
+        ariaLabel="Agent harness (locked)"
+        lockTitle={lockTitle ?? `Agent fixed to ${label} for this conversation.`}
+        lockBody={lockBody ?? "Conversations stay on one agent."}
+        newChatLabel={newChatLabel ?? "New chat to switch agent"}
         onNewChat={onNewChat}
         triggerClassName={triggerClassName}
-      />
+      >
+        <HarnessLogo type={value} size={16} />
+        <span>{label}</span>
+      </InformativeLock>
     );
   }
 
@@ -751,6 +649,9 @@ export function AgentSessionControls({
       onUpdate={profile.onUpdate}
       onDelete={profile.onDelete}
       disabled={profile.disabled}
+      locked={profile.locked}
+      lockReason={profile.lockReason}
+      onNewChat={profile.onNewChat}
       side={inlineForceDown || collapsed ? "bottom" : "top"}
       triggerClassName={secondaryTriggerClass}
       popoverClassName={collapsed ? "w-full" : undefined}

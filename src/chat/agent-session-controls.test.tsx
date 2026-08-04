@@ -223,6 +223,42 @@ describe("AgentSessionControls", () => {
     expect(screen.getByText("12.4k tokens")).toBeInTheDocument();
   });
 
+  it("threads profile lock actions through to the profile picker", async () => {
+    const onNewChat = vi.fn();
+    render(
+      <AgentSessionControls
+        layout="gear"
+        profile={{
+          value: "studio",
+          onChange: () => {},
+          profiles: [
+            { id: "studio", name: "Studio", builtin: true },
+            { id: "assistant", name: "Assistant", builtin: true },
+          ],
+          locked: true,
+          onNewChat,
+        }}
+      />,
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /session controls/i }),
+    );
+    const trigger = screen.getByRole("button", {
+      name: "Agent profile (locked)",
+    });
+    expect(trigger).toHaveClass("w-full");
+    await userEvent.click(
+      trigger,
+    );
+    expect(screen.queryByText("Assistant")).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toHaveClass("w-full");
+    await userEvent.click(
+      screen.getByRole("button", { name: "New chat to switch profile" }),
+    );
+    expect(onNewChat).toHaveBeenCalledTimes(1);
+  });
+
   it("inline strip renders the model pill primary and the harness/effort triggers quiet", () => {
     render(
       <AgentSessionControls

@@ -57,6 +57,10 @@ export interface AgentProfilePickerProps {
   onDelete?: (id: string) => void | Promise<void>;
   disabled?: boolean;
   className?: string;
+  /** Additional classes for the picker trigger. */
+  triggerClassName?: string;
+  /** Additional classes for the profile popover. */
+  popoverClassName?: string;
   /** Side the menu opens toward. Defaults to up (composer-anchored). */
   side?: "top" | "bottom";
 }
@@ -86,6 +90,8 @@ export function AgentProfilePicker({
   onDelete,
   disabled,
   className,
+  triggerClassName,
+  popoverClassName,
   side = "top",
 }: AgentProfilePickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -125,22 +131,25 @@ export function AgentProfilePicker({
           "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
           "disabled:cursor-not-allowed disabled:opacity-60",
+          triggerClassName,
         )}
         data-state={open ? "open" : "closed"}
         aria-label="Agent profile"
       >
         <Bot className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="max-w-[140px] truncate">{selected?.name ?? value}</span>
-        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        <ChevronDown className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       </button>
 
       {open && (
         <div
           className={cn(
-            "absolute left-0 z-50 w-[320px] overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
+            "absolute left-0 z-50 w-[min(320px,calc(100vw-2rem))] overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
             "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
             side === "top" ? "bottom-full mb-2" : "top-full mt-2",
+            popoverClassName,
           )}
+          data-testid="agent-profile-popover"
         >
           {composing ? (
             <ProfileForm

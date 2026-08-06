@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.98.0
+
+### Chat / Dashboard
+
+- **Breaking — the legacy model pickers are removed, one release after their deprecation (#234).** `dashboard/ModelPicker` is gone along with its types (`ModelPickerProps`, `ModelPickerVariant`) and picker helpers (`modelDedupKey`, `dedupeModels`, `DEFAULT_FEATURED_MODEL_IDS`, `formatPricing`, `formatContext`, `isTextChatModel`), and so is `chat/AgentSessionControls` with its types (`AgentSessionControlsProps`, `AgentSessionHarnessControl`, `AgentSessionModelControl`, `AgentSessionProfileControl`, `AgentSessionReasoningControl`): the canonical model/effort/harness pickers are `ModelPicker`, `EffortPicker`, and `AgentSessionControls` from `@tangle-network/agent-app/web-react`. The chat entry keeps re-exporting the canonical harness↔model policy (`modelProvider`, `snapHarnessToModel`) straight from `@tangle-network/agent-interface`; the UI-only adapters over it (`isModelCompatibleWithHarness`, `snapModelToHarness`) went with the pickers. `ModelInfo`, `canonicalModelId`, and the model brand marks (`ModelBrandStack`, `modelBrandFor`) are unaffected and still come from `dashboard`.
+- **Breaking — `AgentComposer` no longer renders a default control strip.** The `harness`, `profile`, `model`, `reasoning`, and `context` props are removed and `controls` is now required, so the pickers a composer shows are an explicit decision made by the app:
+
+  ```tsx
+  // Before — the composer rendered the legacy strip from control objects:
+  <AgentComposer value={v} onChange={setV} onSubmit={send} model={model} reasoning={reasoning} />
+
+  // After — pass the canonical strip (or your own composition) explicitly:
+  import { AgentSessionControls } from "@tangle-network/agent-app/web-react";
+  <AgentComposer value={v} onChange={setV} onSubmit={send} controls={<AgentSessionControls ... />} />
+  ```
+
+  Pass `controls={null}` for a bare composer with no pickers.
+
+## 0.97.0
+
+### Chat
+
+- **The profile picker and informative-lock popovers portal out of the composer strip (#233).** Both rendered their panels as inline absolute elements; standalone in a composer control strip — the profile pill's new home — that strip is an `overflow-auto` scroll container, so the panel was clipped to the strip's row and lost hit-testing to overlapping siblings: visually missing and unclickable. `AnchoredPopover` now portals the panel to `document.body` with viewport-fixed coordinates tracked from the trigger on scroll/resize, outside-click handling covers portaled nodes via `useClickOutside` extras, the informative-lock hover timers re-arm from the portaled panel, and pointer events are re-enabled inline because an open Radix layer disables them on `document.body`.
+
 ## 0.96.0
 
 ### Workflows

@@ -6,7 +6,7 @@ import * as workflows from "./index"
  * renders resolve a model's brand mark themselves (node-ui.tsx). A host labelling a
  * node OUTSIDE the canvas — a side panel, a run row — needs the same two symbols, and
  * the only other entry that publishes them is `dashboard`, which carries the whole
- * model-picker/widget surface behind it: reaching for them there costs a consumer
+ * widget surface behind it: reaching for them there costs a consumer
  * kilobytes of gzipped JS for a glyph. Keeping them on this entry is therefore a
  * contract, not a convenience, and this asserts it stays one.
  */

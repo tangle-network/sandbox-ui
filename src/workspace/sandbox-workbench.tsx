@@ -80,7 +80,7 @@ export interface SandboxWorkbenchSessionProps extends Omit<ChatContainerProps, "
   /**
    * Controls rendered as a strip attached beneath the chat composer —
    * harness/model/effort pickers, token meters, etc. Use
-   * `AgentSessionControls` from `@tangle-network/sandbox-ui/chat` for the
+   * `AgentSessionControls` from `@tangle-network/agent-app/web-react` for the
    * standard set.
    */
   composerControls?: ReactNode;

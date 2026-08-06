@@ -6,15 +6,27 @@ import type { ModelInfo } from "../../dashboard/model-picker";
 import type { ReasoningLevel } from "../../chat/reasoning-level-picker";
 
 /**
- * The composer control every sandbox-backed product renders (tax, gtm, legal all
- * import `AgentSessionControls` from `@tangle-network/sandbox-ui/chat`). These
- * stories exist so the harness menu and the model menu can be screenshotted side
- * by side — they are one family and must read as one family.
+ * LEGACY. The composer control every sandbox-backed product renders (tax, gtm,
+ * legal all import `AgentSessionControls` from `@tangle-network/sandbox-ui/chat`).
+ * Deprecated in favor of `AgentSessionControls` from
+ * `@tangle-network/agent-app/web-react`; these stories remain only to document
+ * the frozen legacy design until removal at the next major. They exist so the
+ * harness menu and the model menu can be screenshotted side by side — they are
+ * one family and must read as one family.
  */
 const meta: Meta<typeof AgentSessionControls> = {
-  title: "Chat/AgentSessionControls",
+  title: "Legacy/Chat/AgentSessionControls",
   component: AgentSessionControls,
-  parameters: { layout: "centered", backgrounds: { default: "dark" } },
+  parameters: {
+    layout: "centered",
+    backgrounds: { default: "dark" },
+    docs: {
+      description: {
+        component:
+          "DEPRECATED legacy control strip. Use `AgentSessionControls` from `@tangle-network/agent-app/web-react` — the canonical model/effort/harness pickers live in agent-app. This implementation is frozen and will be removed at sandbox-ui's next major. See UI-DIRECTION.md › UI Chrome Ownership.",
+      },
+    },
+  },
   decorators: [
     (Story) => (
       <div className="flex min-h-[560px] w-[720px] items-end rounded-xl bg-muted p-6">

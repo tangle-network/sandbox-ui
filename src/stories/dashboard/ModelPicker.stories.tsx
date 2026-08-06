@@ -3,9 +3,18 @@ import { useState } from "react";
 import { ModelPicker, type ModelInfo } from "../../dashboard/model-picker";
 
 const meta: Meta<typeof ModelPicker> = {
-  title: "Dashboard/ModelPicker",
+  title: "Legacy/Dashboard/ModelPicker",
   component: ModelPicker,
-  parameters: { layout: "centered", backgrounds: { default: "dark" } },
+  parameters: {
+    layout: "centered",
+    backgrounds: { default: "dark" },
+    docs: {
+      description: {
+        component:
+          "DEPRECATED legacy picker. Use `ModelPicker` from `@tangle-network/agent-app/web-react` — the canonical model/effort/harness pickers live in agent-app. This implementation is frozen and will be removed at sandbox-ui's next major. See UI-DIRECTION.md › UI Chrome Ownership.",
+      },
+    },
+  },
   decorators: [
     (Story) => (
       <div className="w-[420px] p-6 rounded-xl bg-muted">

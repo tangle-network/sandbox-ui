@@ -21,9 +21,9 @@ export interface BackendSelectorProps {
   onChange: (selected: string) => void;
   /**
    * Trigger appearance. "pill" (default) = compact inline pill — logo + short
-   * label only. "field" = full-width form
-   * field with a label above. Either way the long descriptor lives only as
-   * subtext inside the open dropdown, never on the closed trigger.
+   * label only. "field" = full-width form field with a label above. Either
+   * way the long descriptor lives only as subtext inside the open dropdown,
+   * never on the closed trigger.
    */
   variant?: BackendSelectorVariant;
   label?: string;

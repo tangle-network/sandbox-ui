@@ -48,7 +48,7 @@ export interface HarnessLogoProps {
 }
 
 /**
- * Brand chip for a harness, matching {@link BrandLogo}'s render contract in
+ * Brand chip for a harness, matching `BrandLogo`'s render contract in
  * `lib/model-brand`: a rounded `bg-background ring-1 ring-border` chip wrapping
  * either a foreground-filled CSS-mask of the brand SVG or a lucide fallback
  * glyph. Keeps harness pills visually consistent with model pills.

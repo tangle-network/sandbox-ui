@@ -6,8 +6,9 @@
  *
  * Kept as a LEAF (no picker UI, no radix, no lucide) so a surface that only
  * draws the glyph — a workflow node, a run header — pulls in the marks and the
- * brand table, not any picker chrome. The `dashboard` entry re-exports the
- * public names from here, so this module stays internal.
+ * brand table, not any picker chrome. The `dashboard`, `workflows`, and
+ * `pages` entries re-export the public names from here, so this module stays
+ * internal.
  */
 
 import type { ReasoningEffort } from "@tangle-network/agent-interface";

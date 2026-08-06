@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { snapHarnessToModel } from "./harness-model-compat";
+import * as agentInterface from "@tangle-network/agent-interface";
+import { modelProvider, snapHarnessToModel } from "./harness-model-compat";
+
+describe("re-exports", () => {
+  it("publishes the canonical agent-interface bindings, not local copies", () => {
+    expect(modelProvider).toBe(agentInterface.modelProvider);
+    expect(snapHarnessToModel).toBe(agentInterface.snapHarnessToModel);
+  });
+});
 
 describe("snapHarnessToModel", () => {
   it("picking an Anthropic model under codex switches to claude-code", () => {

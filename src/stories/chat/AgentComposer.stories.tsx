@@ -80,6 +80,7 @@ function DemoControls() {
         value={reasoning}
         onChange={setReasoning}
         options={DEFAULT_REASONING_LEVEL_OPTIONS}
+        side="top"
       />
     </>
   );
@@ -307,7 +308,12 @@ export const ProfileAuthoring: Story = {
     const [profile, setProfile] = useState("build");
 
     const create = (draft: AgentProfileDraft) => {
-      const id = draft.name.toLowerCase().replace(/\s+/g, "-");
+      const slug = draft.name.toLowerCase().replace(/\s+/g, "-");
+      // A repeated name slugifies to an existing id — suffix it so the
+      // picker's list keys stay unique.
+      const id = profiles.some((p) => p.id === slug)
+        ? `${slug}-${Date.now()}`
+        : slug;
       setProfiles((prev) => [...prev, { ...draft, id }]);
       setProfile(id);
     };

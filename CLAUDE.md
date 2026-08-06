@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 The single most important architectural fact: **this package is a thin bridge over `@tangle-network/ui`.** Generic, sandbox-agnostic surfaces (primitives, chat, run, openui, files, editor, markdown, auth, utils, hooks, sdk-hooks, stores, tool-previews) now *live in* `@tangle-network/ui` and are **re-exported** from here through shim subpaths. Only sandbox-coupled surfaces are authored in this repo:
 
 - `src/workspace` — `SandboxWorkbench`, `WorkspaceLayout`, directory/runtime/terminal panes, status bar, task board, approval queue
-- `src/dashboard` — `DashboardLayout`, sidebar rail, billing, usage charts, harness/model pickers, git/info panels
+- `src/dashboard` — `DashboardLayout`, sidebar rail, billing, usage charts, harness picker, git/info panels. **The model picker is legacy:** `dashboard/ModelPicker` and `chat/AgentSessionControls` are deprecated and frozen (removed at the next major) — the canonical model/effort/harness pickers are `ModelPicker` / `EffortPicker` / `AgentSessionControls` from `@tangle-network/agent-app/web-react`. See UI-DIRECTION.md › UI Chrome Ownership.
 - `src/integrations` — provider connection tiles + hooks
 - `src/workflows` — `WorkflowGraph` (xyflow-based, lazy-loaded)
 - `src/pages` — pre-built billing/pricing/profiles/secrets/provisioning pages

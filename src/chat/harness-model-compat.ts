@@ -15,6 +15,12 @@ import { canonicalModelId, type ModelInfo } from "../dashboard/model-picker";
  * re-exports the canonical helpers and maps the picker's catalog shape
  * (`ModelInfo[]`) down to the canonical ids the snap functions rank over, so
  * the pickers never hand-roll a divergent copy of the policy.
+ *
+ * @deprecated The pickers this module adapts the policy for are legacy: use
+ * ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react.
+ * The adapters below are frozen and will be removed at sandbox-ui's next major.
+ * (The re-exported policy helpers stay canonical — they come from
+ * agent-interface itself.)
  */
 
 export { modelProvider, snapHarnessToModel } from "@tangle-network/agent-interface";
@@ -23,6 +29,8 @@ export { modelProvider, snapHarnessToModel } from "@tangle-network/agent-interfa
  * Whether `harness` can run `modelId`. Router-backed harnesses, and provider-less
  * sentinel ids (like "default" or an empty selection — "the session's own
  * configuration"), are compatible with everything.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
  */
 export function isModelCompatibleWithHarness(
   harness: HarnessType,
@@ -37,6 +45,8 @@ export function isModelCompatibleWithHarness(
  * highest version within a pattern). Adapts the picker's `ModelInfo[]` to the
  * canonical id list `agent-interface` ranks over; when the catalog holds nothing
  * compatible the original id is returned unchanged.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
  */
 export function snapModelToHarness(
   harness: HarnessType,

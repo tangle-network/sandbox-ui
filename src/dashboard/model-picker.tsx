@@ -43,8 +43,14 @@ export {
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+/**
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export type ModelPickerVariant = "field" | "pill";
 
+/**
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export interface ModelPickerProps {
   /** Canonical model id (provider-prefixed, e.g. "openai/gpt-5.4"). */
   value: string;
@@ -102,6 +108,8 @@ export interface ModelPickerProps {
  * (inferred via {@link resolveModelBrandIdentity}, which already maps
  * `gpt-5.4` → openai, `kimi-k2` → moonshot, etc.) plus the final id segment,
  * so a model collapses to one identity regardless of which host serves it.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
  */
 export function modelDedupKey(model: ModelInfo): string {
   const canonical = canonicalModelId(model).toLowerCase();
@@ -119,6 +127,8 @@ export function modelDedupKey(model: ModelInfo): string {
  * row beats a non-featured one, otherwise the first occurrence is kept (so
  * caller-controlled catalog order still decides ties). Input order is
  * preserved for the surviving rows.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
  */
 export function dedupeModels(models: ReadonlyArray<ModelInfo>): ModelInfo[] {
   const byKey = new Map<string, number>();
@@ -144,6 +154,8 @@ export function dedupeModels(models: ReadonlyArray<ModelInfo>): ModelInfo[] {
  * by {@link modelDedupKey} against the loaded catalog. Used only when no
  * catalog row carries an explicit `featured` flag, so a standard router
  * catalog still gets a curated top section without per-deployment config.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
  */
 export const DEFAULT_FEATURED_MODEL_IDS: ReadonlyArray<string> = [
   "anthropic/claude-fable-5",
@@ -161,6 +173,8 @@ export const DEFAULT_FEATURED_MODEL_IDS: ReadonlyArray<string> = [
  * like "text" / "audio" / "multimodal"). A row with no modality metadata at
  * all is INCLUDED — absence of metadata is not evidence a model can't chat,
  * and silently hiding a servable model is worse than showing an exotic one.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
  */
 export function isTextChatModel(model: ModelInfo): boolean {
   const arch = model.architecture;
@@ -186,7 +200,11 @@ export function isTextChatModel(model: ModelInfo): boolean {
   return modality === "text" || modality === "multimodal";
 }
 
-/** Format $/M tokens. Returns null if pricing is missing or zero. */
+/**
+ * Format $/M tokens. Returns null if pricing is missing or zero.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export function formatPricing(pricing: ModelInfo["pricing"]): string | null {
   const prompt = Number(pricing?.prompt ?? 0);
   const completion = Number(pricing?.completion ?? 0);
@@ -200,7 +218,11 @@ export function formatPricing(pricing: ModelInfo["pricing"]): string | null {
   return `${fmt(prompt)} / ${fmt(completion)} per 1M`;
 }
 
-/** Format context length compactly (e.g. 200_000 → "200k"). */
+/**
+ * Format context length compactly (e.g. 200_000 → "200k").
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export function formatContext(ctx: number | undefined): string | null {
   if (!ctx) return null;
   if (ctx >= 1_000_000) return `${(ctx / 1_000_000).toFixed(1)}M ctx`;
@@ -245,6 +267,8 @@ function compareModelsByDisplayName(a: ModelInfo, b: ModelInfo): number {
  * (e.g. "Anthropic: Claude 3 Haiku" → "Claude 3 Haiku"). Names without such a
  * prefix ("Gemini 2.5 Pro", "Claude Opus 4.8") are returned unchanged, so the
  * router's inconsistent naming can't produce a wrong result.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
  */
 export function stripBrandPrefix(
   name: string,
@@ -267,6 +291,9 @@ export function stripBrandPrefix(
 
 // ── Component ──────────────────────────────────────────────────────────────
 
+/**
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export function ModelPicker({
   value,
   onChange,

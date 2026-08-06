@@ -59,6 +59,9 @@ import {
   type AgentProfileOption,
 } from "./agent-profile-picker";
 
+/**
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export interface AgentSessionHarnessControl {
   value: HarnessType;
   onChange: (next: HarnessType) => void;
@@ -89,6 +92,9 @@ export interface AgentSessionHarnessControl {
   newChatLabel?: string;
 }
 
+/**
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export interface AgentSessionModelControl {
   /** Canonical model id (provider-prefixed, e.g. "anthropic/claude-opus-4-8"). */
   value: string;
@@ -110,6 +116,9 @@ export interface AgentSessionModelControl {
   excludeProviders?: ReadonlyArray<string>;
 }
 
+/**
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export interface AgentSessionReasoningControl {
   value: ReasoningLevel;
   onChange: (value: ReasoningLevel) => void;
@@ -126,6 +135,8 @@ export interface AgentSessionReasoningControl {
  * Agent-profile (mode / toolset / persona) selection. Backend-agnostic — it
  * sits beside the model in both router-backed and sandbox-backed modes, so the
  * profile binding remains independent of harness selection.
+ *
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
  */
 export interface AgentSessionProfileControl {
   value: string;
@@ -145,6 +156,9 @@ export interface AgentSessionProfileControl {
   onNewChat?: () => void;
 }
 
+/**
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ */
 export interface AgentSessionControlsProps {
   /**
    * Harness (agent backend) selection. Switching harness usually means
@@ -471,6 +485,8 @@ function modelReasoningCapability(
 }
 
 /**
+ * @deprecated Use ModelPicker / AgentSessionControls from @tangle-network/agent-app/web-react. This implementation is frozen and will be removed at sandbox-ui's next major.
+ *
  * Compact control strip for an agent chat composer: harness, model, and
  * thinking-effort pickers in one row. Every section is optional and only
  * renders when its control object is provided — never show a dead control.

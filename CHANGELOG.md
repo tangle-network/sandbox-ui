@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.98.0
+
+### Chat / Dashboard
+
+- **Breaking — the legacy model pickers are removed, one release after their deprecation (#234).** `dashboard/ModelPicker` is gone along with its picker helpers (`modelDedupKey`, `dedupeModels`, `DEFAULT_FEATURED_MODEL_IDS`, `formatPricing`, `formatContext`, `isTextChatModel`), and so is `chat/AgentSessionControls` with its `AgentSession*Control` types: the canonical model/effort/harness pickers are `ModelPicker`, `EffortPicker`, and `AgentSessionControls` from `@tangle-network/agent-app/web-react`. The chat entry keeps re-exporting the canonical harness↔model policy (`modelProvider`, `snapHarnessToModel`) straight from `@tangle-network/agent-interface`; the UI-only adapters over it (`isModelCompatibleWithHarness`, `snapModelToHarness`) went with the pickers. `ModelInfo`, `canonicalModelId`, and the model brand marks (`ModelBrandStack`, `modelBrandFor`) are unaffected and still come from `dashboard`.
+- **Breaking — `AgentComposer` no longer renders a default control strip.** The `harness`, `profile`, `model`, `reasoning`, and `context` props are removed and `controls` is now required, so the pickers a composer shows are an explicit decision made by the app:
+
+  ```tsx
+  // Before — the composer rendered the legacy strip from control objects:
+  <AgentComposer value={v} onChange={setV} onSubmit={send} model={model} reasoning={reasoning} />
+
+  // After — pass the canonical strip (or your own composition) explicitly:
+  import { AgentSessionControls } from "@tangle-network/agent-app/web-react";
+  <AgentComposer value={v} onChange={setV} onSubmit={send} controls={<AgentSessionControls ... />} />
+  ```
+
+  Pass `controls={null}` for a bare composer with no pickers.
+
 ## 0.96.0
 
 ### Workflows

@@ -6,7 +6,7 @@
  *
  * Kept as a LEAF (no picker UI, no radix, no lucide) so a surface that only
  * draws the glyph — a workflow node, a run header — pulls in the marks and the
- * brand table, not the whole model picker. `model-picker.tsx` re-exports the
+ * brand table, not any picker chrome. The `dashboard` entry re-exports the
  * public names from here, so this module stays internal.
  */
 
@@ -84,10 +84,8 @@ export interface ModelInfo {
     labUrl?: string;
   };
   /**
-   * Marks a model as recommended. When any catalog row carries this flag the
-   * picker surfaces those rows in a "Recommended" section at the top. When no
-   * row is flagged the picker falls back to {@link DEFAULT_FEATURED_MODEL_IDS}
-   * (matched by dedup key) so the section is never empty for a router catalog.
+   * Marks a model as recommended. When any catalog row carries this flag a
+   * picker can surface those rows in a "Recommended" section at the top.
    */
   featured?: boolean;
   /**

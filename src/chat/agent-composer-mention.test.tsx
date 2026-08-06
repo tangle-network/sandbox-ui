@@ -42,6 +42,7 @@ async function renderMentionComposer(
         onChange={setValue}
         onSubmit={onSubmit}
         mention={mentionProp()}
+        controls={null}
         {...props}
       />
     );
@@ -140,6 +141,7 @@ describe("AgentComposer — mention path", () => {
           onChange={setValue}
           onSubmit={onSubmit}
           mention={mentionProp({ onMentionsChange })}
+          controls={null}
         />
       );
     };
@@ -184,6 +186,7 @@ describe("AgentComposer — mention path", () => {
           onChange={setValue}
           onSubmit={() => {}}
           mention={mentionProp({ onMentionsChange, fetchItems })}
+          controls={null}
         />
       );
     };

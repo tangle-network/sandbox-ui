@@ -16,13 +16,6 @@ import {
   validateComposerFiles,
   type ComposerFileRejection,
 } from "./attachment-validation";
-import {
-  AgentSessionControls,
-  type AgentSessionHarnessControl,
-  type AgentSessionModelControl,
-  type AgentSessionProfileControl,
-  type AgentSessionReasoningControl,
-} from "./agent-session-controls";
 
 const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
   "image/png": "png",
@@ -122,23 +115,13 @@ export interface AgentComposerProps {
   /** Stop the in-flight turn. With `busy`, replaces send with a Stop button. */
   onCancel?: () => void;
   /**
-   * Agent backend. Present → sandbox-backed (the harness pill shows and snaps
-   * with the model); omitted → router-backed (no harness, just model/effort).
+   * The composer's control strip (profile · harness · model · effort pickers,
+   * token meters, …), rendered in the bottom row. Required — the legacy
+   * built-in strip was removed with the legacy pickers: pass
+   * `AgentSessionControls` from `@tangle-network/agent-app/web-react` (or your
+   * own composition), or `null` for a bare composer.
    */
-  harness?: AgentSessionHarnessControl;
-  /** Agent profile (mode / toolset / persona) — universal across both modes. */
-  profile?: AgentSessionProfileControl;
-  model?: AgentSessionModelControl;
-  reasoning?: AgentSessionReasoningControl;
-  /** Forwarded to the control strip (chat hides shell-only harnesses). */
-  context?: "chat" | "all";
-  /**
-   * Override the built-in control strip with custom controls. When set, the
-   * `harness`/`profile`/`model`/`reasoning` props are ignored and this node is
-   * rendered in the control row instead — for apps that compose their own
-   * pickers. Omit to use the canonical strip.
-   */
-  controls?: React.ReactNode;
+  controls: React.ReactNode;
   /** Extra content left of the send button (token meter, cost, status). */
   trailing?: React.ReactNode;
 
@@ -211,18 +194,16 @@ export interface AgentComposerProps {
 /**
  * The canonical agent chat input: one rounded surface holding an auto-growing
  * textarea and a bottom row that runs left → right — attach buttons, the
- * embedded control strip (profile · harness · model · effort), trailing slot,
- * and the send button on the far right. The strip's pickers
- * snap the harness↔model pair automatically; which controls appear is driven
- * purely by which control objects are passed, so the same component is the
- * router-backed composer (no harness) and the sandbox-backed one (with harness).
+ * control strip (supplied via the required `controls` prop), trailing slot,
+ * and the send button on the far right. The strip is explicit: the canonical
+ * pickers are `ModelPicker` / `EffortPicker` / `AgentSessionControls` from
+ * `@tangle-network/agent-app/web-react` — this component only owns the slot.
  *
  * Opt-in extras make it the superset of every app's hand-rolled composer:
  * file/folder attachments with drag-and-drop + chips + clipboard paste
  * (`onAttach` also gates pasting files onto the textarea, auto-naming
  * generic clipboard image blobs `pasted-image-<n>.<ext>`), a streaming Stop
- * button (`busy` + `onCancel`), a `controls` override slot for bespoke
- * picker rows, and a Cmd/Ctrl+L focus shortcut.
+ * button (`busy` + `onCancel`), and a Cmd/Ctrl+L focus shortcut.
  */
 export function AgentComposer({
   value,
@@ -232,11 +213,6 @@ export function AgentComposer({
   disabled,
   busy,
   onCancel,
-  harness,
-  profile,
-  model,
-  reasoning,
-  context = "chat",
   controls,
   trailing,
   onAttach,
@@ -634,15 +610,7 @@ export function AgentComposer({
               right-alignment, so a desktop composer with room to spare lays out
               exactly as before. */}
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {controls ?? (
-              <AgentSessionControls
-                context={context}
-                harness={harness}
-                profile={profile}
-                model={model}
-                reasoning={reasoning}
-              />
-            )}
+            {controls}
             {trailing && (
               <div className="ml-auto flex shrink-0 items-center gap-2">
                 {trailing}

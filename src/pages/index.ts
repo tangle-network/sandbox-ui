@@ -1,7 +1,7 @@
 export { AuthPage, type AuthPageProps, type SocialProvider } from "./auth-page";
 export { BillingPage, type BillingPageProps, type BillingPageData, type ProductVariant } from "./billing-page";
 export { ProvisioningWizard, resolveEnvironment, type ProvisioningWizardProps, type ProvisioningConfig, type EnvironmentOption, type EnvironmentEntry, type StartupScriptEntry, type ResourceLimits, type PricingRates, type PlanTierInfo, type SshAccessConfig, type SshKeyOption } from "./provisioning-wizard";
-export { type ModelInfo } from "../dashboard/model-picker";
+export { type ModelInfo } from "../lib/model-brand";
 export { StandalonePricingPage, type StandalonePricingPageProps } from "./pricing-page";
 export { type PricingTier } from "../dashboard/pricing-page";
 export {

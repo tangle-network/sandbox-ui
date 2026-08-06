@@ -32,15 +32,6 @@ export {
 } from "./reasoning-level-picker";
 
 export {
-  AgentSessionControls,
-  type AgentSessionControlsProps,
-  type AgentSessionHarnessControl,
-  type AgentSessionModelControl,
-  type AgentSessionProfileControl,
-  type AgentSessionReasoningControl,
-} from "./agent-session-controls";
-
-export {
   AgentComposer,
   type AgentComposerMention,
   type AgentComposerProps,
@@ -66,10 +57,8 @@ export {
 } from "./agent-profile-picker";
 
 export {
-  isModelCompatibleWithHarness,
   modelProvider,
   snapHarnessToModel,
-  snapModelToHarness,
 } from "./harness-model-compat";
 
 export {

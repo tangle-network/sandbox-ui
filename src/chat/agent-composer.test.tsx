@@ -13,6 +13,7 @@ describe("AgentComposer — clipboard paste", () => {
     const onAttach = vi.fn();
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={() => {}}
@@ -38,6 +39,7 @@ describe("AgentComposer — clipboard paste", () => {
       const [value, setValue] = useState("");
       return (
         <AgentComposer
+          controls={null}
           value={value}
           onChange={setValue}
           onSubmit={() => {}}
@@ -55,7 +57,7 @@ describe("AgentComposer — clipboard paste", () => {
   });
 
   it("does nothing when onAttach is not provided", () => {
-    render(<AgentComposer value="" onChange={() => {}} onSubmit={() => {}} />);
+    render(<AgentComposer controls={null} value="" onChange={() => {}} onSubmit={() => {}} />);
     const textarea = screen.getByRole("textbox", { name: /message input/i });
     const dt = new DataTransfer();
     dt.items.add(makeImageFile());
@@ -70,6 +72,7 @@ describe("AgentComposer — accept enforcement", () => {
     const onRejectFiles = vi.fn();
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={() => {}}
@@ -98,6 +101,7 @@ describe("AgentComposer — accept enforcement", () => {
     const onRejectFiles = vi.fn();
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={() => {}}
@@ -125,6 +129,7 @@ describe("AgentComposer — accept enforcement", () => {
     const onRejectFiles = vi.fn();
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={() => {}}
@@ -157,6 +162,7 @@ describe("AgentComposer — thumbnails", () => {
     ];
     const { container } = render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={() => {}}
@@ -185,6 +191,7 @@ describe("AgentComposer — error + retry", () => {
   it("renders the errorMessage on an error chip", () => {
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={() => {}}
@@ -200,6 +207,7 @@ describe("AgentComposer — error + retry", () => {
     const user = userEvent.setup();
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={() => {}}
@@ -215,6 +223,7 @@ describe("AgentComposer — error + retry", () => {
   it("does not render a retry button when onRetryFile is absent", () => {
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={() => {}}
@@ -234,6 +243,7 @@ describe("AgentComposer — canSubmitWhileBusy", () => {
     const user = userEvent.setup();
     render(
       <AgentComposer
+        controls={null}
         value="hello"
         onChange={() => {}}
         onSubmit={onSubmit}
@@ -252,6 +262,7 @@ describe("AgentComposer — canSubmitWhileBusy", () => {
     const user = userEvent.setup();
     render(
       <AgentComposer
+        controls={null}
         value="hello"
         onChange={() => {}}
         onSubmit={onSubmit}
@@ -275,6 +286,7 @@ describe("AgentComposer — canSubmitAttachmentsOnly", () => {
     const user = userEvent.setup();
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={onSubmit}
@@ -294,6 +306,7 @@ describe("AgentComposer — canSubmitAttachmentsOnly", () => {
     const user = userEvent.setup();
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={onSubmit}
@@ -312,6 +325,7 @@ describe("AgentComposer — canSubmitAttachmentsOnly", () => {
     const user = userEvent.setup();
     render(
       <AgentComposer
+        controls={null}
         value=""
         onChange={() => {}}
         onSubmit={onSubmit}

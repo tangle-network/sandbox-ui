@@ -2,15 +2,16 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import {
   AgentComposer,
+  AgentProfilePicker,
   type AgentProfileCapability,
   type AgentProfileDraft,
   type AgentProfileOption,
   type ComposerFile,
   DEFAULT_REASONING_LEVEL_OPTIONS,
   type MentionItem,
+  ReasoningLevelPicker,
   type ReasoningLevel,
 } from "../../chat";
-import type { HarnessType, ModelInfo } from "../../dashboard";
 
 const meta: Meta<typeof AgentComposer> = {
   title: "Chat/AgentComposer",
@@ -31,59 +32,6 @@ const meta: Meta<typeof AgentComposer> = {
 
 export default meta;
 type Story = StoryObj<typeof AgentComposer>;
-
-const MODELS: ModelInfo[] = [
-  {
-    id: "anthropic/claude-opus-4-8",
-    name: "Claude Opus 4.8",
-    _provider: "anthropic",
-    pricing: { prompt: "0.000015", completion: "0.000075" },
-    context_length: 200_000,
-    architecture: { modality: "text" },
-    featured: true,
-  },
-  {
-    id: "anthropic/claude-sonnet-4-6",
-    name: "Claude Sonnet 4.6",
-    _provider: "anthropic",
-    pricing: { prompt: "0.000003", completion: "0.000015" },
-    context_length: 200_000,
-    architecture: { modality: "text" },
-  },
-  {
-    id: "openai/gpt-5.4",
-    name: "GPT-5.4",
-    _provider: "openai",
-    pricing: { prompt: "0.00001", completion: "0.00003" },
-    context_length: 400_000,
-    architecture: { modality: "text" },
-    featured: true,
-  },
-  {
-    id: "openai/gpt-5.4-codex",
-    name: "GPT-5.4 Codex",
-    _provider: "openai",
-    pricing: { prompt: "0.00001", completion: "0.00003" },
-    context_length: 400_000,
-    architecture: { modality: "text" },
-  },
-  {
-    id: "google/gemini-2.5-pro",
-    name: "Gemini 2.5 Pro",
-    _provider: "google",
-    pricing: { prompt: "0.00000125", completion: "0.00001" },
-    context_length: 1_000_000,
-    architecture: { modality: "text" },
-  },
-  {
-    id: "moonshot/kimi-k2",
-    name: "Kimi K2",
-    _provider: "moonshot",
-    pricing: { prompt: "0.0000006", completion: "0.0000025" },
-    context_length: 200_000,
-    architecture: { modality: "text" },
-  },
-];
 
 const PROFILES: AgentProfileOption[] = [
   {
@@ -113,55 +61,59 @@ const CAPABILITIES: AgentProfileCapability[] = [
   { id: "deploy", label: "Deploy", description: "Ship a private model endpoint." },
 ];
 
-/** Sandbox-backed: harness pill present; harness↔model snap together. */
-export const SandboxBacked: Story = {
-  name: "Sandbox-backed (harness · model · effort)",
+/**
+ * The composer's control strip is explicit: the canonical strip is
+ * `AgentSessionControls` from `@tangle-network/agent-app/web-react`; these
+ * stories compose the standalone pickers this package still ships.
+ */
+function DemoControls() {
+  const [profile, setProfile] = useState("build");
+  const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
+  return (
+    <>
+      <AgentProfilePicker
+        value={profile}
+        onChange={setProfile}
+        profiles={PROFILES}
+      />
+      <ReasoningLevelPicker
+        value={reasoning}
+        onChange={setReasoning}
+        options={DEFAULT_REASONING_LEVEL_OPTIONS}
+      />
+    </>
+  );
+}
+
+/** Controls supplied via the `controls` slot: agent profile + effort pickers. */
+export const WithAgentControls: Story = {
+  name: "Agent controls (profile · effort)",
   render: () => {
     const [value, setValue] = useState("");
-    const [harness, setHarness] = useState<HarnessType>("claude-code");
-    const [model, setModel] = useState("anthropic/claude-opus-4-8");
-    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
-    const [profile, setProfile] = useState("build");
     return (
       <AgentComposer
         value={value}
         onChange={setValue}
         onSubmit={() => setValue("")}
         placeholder="Analyze the ingestion pipeline and fix the retry logic."
-        harness={{ value: harness, onChange: setHarness }}
-        profile={{ value: profile, onChange: setProfile, profiles: PROFILES }}
-        model={{ value: model, onChange: setModel, models: MODELS }}
-        reasoning={{
-          value: reasoning,
-          onChange: setReasoning,
-          options: DEFAULT_REASONING_LEVEL_OPTIONS,
-        }}
+        controls={<DemoControls />}
       />
     );
   },
 };
 
-/** Router-backed: no harness — model + effort + a universal agent profile. */
-export const RouterBacked: Story = {
-  name: "Router-backed (model · effort · agent)",
+/** A bare composer: `controls={null}` renders no strip at all. */
+export const Bare: Story = {
+  name: "Bare (no controls)",
   render: () => {
     const [value, setValue] = useState("");
-    const [model, setModel] = useState("openai/gpt-5.4");
-    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
-    const [profile, setProfile] = useState("chat");
     return (
       <AgentComposer
         value={value}
         onChange={setValue}
         onSubmit={() => setValue("")}
         placeholder="Ask anything…"
-        profile={{ value: profile, onChange: setProfile, profiles: PROFILES }}
-        model={{ value: model, onChange: setModel, models: MODELS }}
-        reasoning={{
-          value: reasoning,
-          onChange: setReasoning,
-          options: DEFAULT_REASONING_LEVEL_OPTIONS,
-        }}
+        controls={null}
       />
     );
   },
@@ -172,8 +124,6 @@ export const WithAttachmentsAndStreaming: Story = {
   name: "Attachments + streaming (Stop)",
   render: () => {
     const [value, setValue] = useState("Summarize the attached spec.");
-    const [model, setModel] = useState("anthropic/claude-opus-4-8");
-    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
     const [busy, setBusy] = useState(true);
     const [files, setFiles] = useState<ComposerFile[]>([
       { id: "1", name: "design-spec.pdf", kind: "file", status: "ready" },
@@ -203,12 +153,7 @@ export const WithAttachmentsAndStreaming: Story = {
         onAttachFolder={() => {}}
         attachments={files}
         onRemoveFile={(id) => setFiles((f) => f.filter((x) => x.id !== id))}
-        model={{ value: model, onChange: setModel, models: MODELS }}
-        reasoning={{
-          value: reasoning,
-          onChange: setReasoning,
-          options: DEFAULT_REASONING_LEVEL_OPTIONS,
-        }}
+        controls={<DemoControls />}
       />
     );
   },
@@ -227,8 +172,6 @@ export const WithThumbnails: Story = {
   name: "Attachments with thumbnails",
   render: () => {
     const [value, setValue] = useState("");
-    const [model, setModel] = useState("anthropic/claude-opus-4-8");
-    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
     const [files, setFiles] = useState<ComposerFile[]>([
       {
         id: "1",
@@ -255,12 +198,7 @@ export const WithThumbnails: Story = {
         onAttach={() => {}}
         attachments={files}
         onRemoveFile={(id) => setFiles((f) => f.filter((x) => x.id !== id))}
-        model={{ value: model, onChange: setModel, models: MODELS }}
-        reasoning={{
-          value: reasoning,
-          onChange: setReasoning,
-          options: DEFAULT_REASONING_LEVEL_OPTIONS,
-        }}
+        controls={null}
       />
     );
   },
@@ -271,8 +209,6 @@ export const WithErrorAndRetry: Story = {
   name: "Attachment error + retry",
   render: () => {
     const [value, setValue] = useState("");
-    const [model, setModel] = useState("anthropic/claude-opus-4-8");
-    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
     const [files, setFiles] = useState<ComposerFile[]>([
       { id: "1", name: "design-spec.pdf", kind: "file", status: "ready" },
       {
@@ -301,12 +237,7 @@ export const WithErrorAndRetry: Story = {
             ),
           )
         }
-        model={{ value: model, onChange: setModel, models: MODELS }}
-        reasoning={{
-          value: reasoning,
-          onChange: setReasoning,
-          options: DEFAULT_REASONING_LEVEL_OPTIONS,
-        }}
+        controls={null}
       />
     );
   },
@@ -341,8 +272,6 @@ export const WithMentions: Story = {
   name: "Mentions (@-file picker)",
   render: () => {
     const [value, setValue] = useState("");
-    const [model, setModel] = useState("anthropic/claude-opus-4-8");
-    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
     const [mentioned, setMentioned] = useState<MentionItem[]>([]);
     return (
       <div className="flex flex-col gap-2">
@@ -359,12 +288,7 @@ export const WithMentions: Story = {
             // instead of targeting it by its ARIA attributes.
             popoverClassName: "border-primary/40",
           }}
-          model={{ value: model, onChange: setModel, models: MODELS }}
-          reasoning={{
-            value: reasoning,
-            onChange: setReasoning,
-            options: DEFAULT_REASONING_LEVEL_OPTIONS,
-          }}
+          controls={null}
         />
         <p className="px-1 text-muted-foreground text-xs">
           Referenced: {mentioned.map((m) => m.id).join(", ") || "none"}
@@ -376,11 +300,9 @@ export const WithMentions: Story = {
 
 /** Profile authoring: a capability catalog + write callbacks enable New/edit. */
 export const ProfileAuthoring: Story = {
-  name: "Router-backed + agent authoring",
+  name: "Agent authoring in the controls slot",
   render: () => {
     const [value, setValue] = useState("");
-    const [model, setModel] = useState("anthropic/claude-sonnet-4-6");
-    const [reasoning, setReasoning] = useState<ReasoningLevel>("auto");
     const [profiles, setProfiles] = useState<AgentProfileOption[]>(PROFILES);
     const [profile, setProfile] = useState("build");
 
@@ -400,21 +322,17 @@ export const ProfileAuthoring: Story = {
         onChange={setValue}
         onSubmit={() => setValue("")}
         placeholder="Ask your agent…"
-        profile={{
-          value: profile,
-          onChange: setProfile,
-          profiles,
-          capabilities: CAPABILITIES,
-          onCreate: create,
-          onUpdate: update,
-          onDelete: remove,
-        }}
-        model={{ value: model, onChange: setModel, models: MODELS }}
-        reasoning={{
-          value: reasoning,
-          onChange: setReasoning,
-          options: DEFAULT_REASONING_LEVEL_OPTIONS,
-        }}
+        controls={
+          <AgentProfilePicker
+            value={profile}
+            onChange={setProfile}
+            profiles={profiles}
+            capabilities={CAPABILITIES}
+            onCreate={create}
+            onUpdate={update}
+            onDelete={remove}
+          />
+        }
       />
     );
   },

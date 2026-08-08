@@ -20,13 +20,109 @@
  * rather than reaching into brand for a second stylesheet. */
 @import "@tangle-network/brand/styles/named-themes.css";
 
-@import "tailwindcss";
+/* `source(none)` turns OFF Tailwind's automatic content detection, so the
+ * `@source` globs below are the whole of what this bundle is compiled from.
+ *
+ * Automatic detection walks the project root for anything not gitignored, which
+ * here means the bundle also absorbed every class-shaped string in `scripts/`,
+ * `docs/`, `.storybook/` and `CHANGELOG.md`. Those are not shipped components,
+ * so the rules were dead weight — and worse, they made the build unfalsifiable:
+ * `scripts/validate-built-css.mjs` lists the text-ramp utilities it verifies as
+ * literal strings, detection scanned that file, and the utilities it was
+ * checking for were emitted BY the check. Every assertion passed, measuring
+ * nothing. A gate whose own source satisfies it is not a gate. */
+@import "tailwindcss" source(none);
+
+/* `--text-dim` — corrected against the surface ladder THIS package ships.
+ *
+ * `--text-dim` is the quietest text tier: an Input/Textarea hint, a StatCard
+ * subtitle, a TerminalLine timestamp. `@tangle-network/ui` 11.2.4 moved those
+ * three off alpha-faded foregrounds (`text-muted-foreground/70`, `opacity-70`)
+ * and onto this solid token, which is the right call — a translucent foreground
+ * renders as its colour composited over whatever plane is behind it, so one
+ * class measured a different ratio on a card than on the canvas.
+ *
+ * But a solid token is only correct if its VALUE was tuned against the ladder it
+ * lands on, and it was not. brand 1.3.0 re-tuned the pair together: its ladder
+ * lightened (L2 card #191826 -> #2d2e43) and `--text-dim` lightened with it
+ * (#6b6b73 -> #9299ab), which measures 4.65:1 there. This package resolves brand
+ * 1.1.0, whose ladder is the DARKER one, and pairs it with 1.1.0's `--text-dim`
+ * — a pair that has never cleared AA against itself. Measured in Chromium
+ * against the built stylesheet (`scripts/text-dim-contrast.mjs`):
+ *
+ *   dark  #6b6b73 -> 3.73:1 on the canvas, 3.31:1 on a card, 2.65:1 on L4
+ *   light #8e8e98 -> 2.79:1 on the canvas, 3.24:1 on a card
+ *
+ * Every one of those is below the 4.5:1 WCAG AA floor for body text, and the
+ * dark input hint is the position that regressed a live product: 4.63:1 under
+ * the old alpha class, 3.73:1 under this token.
+ *
+ * Taking brand 1.3.0's VALUE without its LADDER does not work — #9299ab is
+ * tuned for a plane four steps lighter than the one here. Taking the whole of
+ * brand 1.3.0 does work, and is the real end state, but it re-skins every
+ * surface in every consuming product and is a deliberate visual change rather
+ * than a contrast fix. So the token is corrected here, for the ladder actually
+ * shipped, and `scripts/text-dim-contrast.test.mjs` holds it to AA against
+ * every plane this package paints content on.
+ *
+ * This is the one place this package overrides a brand token, and it is meant
+ * to be temporary: the gate ALSO asserts brand's own value still fails, so the
+ * day this package resolves a brand whose pair is self-consistent, the test
+ * goes red and names this block as the thing to delete.
+ *
+ * `:not([data-theme])` keeps the correction off brand's NAMED themes. Each of
+ * those re-declares the ladder and `--text-dim` together as its own matched
+ * pair, at the same specificity as `:root` — without the guard, source order
+ * alone would hand every named theme the neutral value on its own surfaces.
+ * Dark is declared before light so light still wins when both could match,
+ * which is the order brand's own two blocks rely on. */
+:root:not([data-theme]),
+[data-sandbox-ui]:not([data-theme]),
+[data-theme="dark"],
+.dark:not([data-theme]) {
+  --text-dim: #92929a;
+}
+
+[data-sandbox-theme="vault"]:not([data-theme]),
+[data-theme="light"],
+.light:not([data-theme]) {
+  --text-dim: #6b6b75;
+}
 
 /* Scan sandbox-ui and forwarded UI component sources so exported components ship their needed utilities. */
 @source "../../src/**/*.tsx";
 @source "../../src/**/*.ts";
 @source "../../node_modules/@tangle-network/ui/src/**/*.tsx";
 @source "../../node_modules/@tangle-network/ui/src/**/*.ts";
+
+/* The text ramp, emitted unconditionally.
+ *
+ * Everything above is a SCAN: Tailwind emits a utility only if it found that
+ * exact string in a scanned file, and the `@tangle-network/ui` glob scans
+ * whatever version happens to be installed HERE, at build time. A consumer
+ * installs its own `@tangle-network/ui` and can perfectly well resolve a newer
+ * one than this package was built against — the peer range permits it — and
+ * every utility that version introduced is then missing from the precompiled
+ * bundle.
+ *
+ * That is not hypothetical. `@tangle-network/ui` 11.2.4 restyled the
+ * Input/Textarea hint, the StatCard subtitle and the TerminalLine timestamp onto
+ * `text-[var(--text-dim)]`; this package resolved 11.2.0; `dist/globals.css`
+ * emitted no rule for it. Apps that run their own Tailwind/UnoCSS scan over
+ * `@tangle-network/ui` were fine. Apps on the precompiled bundle (physim,
+ * blueprint-agent) rendered those three at inherited body colour — 15-17:1,
+ * indistinguishable from body copy. A contrast audit cannot see it, because
+ * nothing is under-contrast; the tier is simply gone.
+ *
+ * A scan cannot fix that, because the missing string is by definition one this
+ * build never saw. So the four text tiers are declared inline: they are the
+ * brand text ramp, they are a closed set, and each one's absence degrades
+ * silently to the inherited colour rather than to something visibly wrong.
+ * Pinned by `scripts/text-dim-contrast.test.mjs`. */
+@source inline("text-[var(--text-primary)]");
+@source inline("text-[var(--text-secondary)]");
+@source inline("text-[var(--text-muted)]");
+@source inline("text-[var(--text-dim)]");
 
 /* Tailwind v4 utility generation for the design tokens. globals.css imports the
  * brand CSS variables (tokens.css) but Tailwind v4 only emits `bg-*`/`text-*`/

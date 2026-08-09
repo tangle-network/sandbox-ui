@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.99.1
+
+### Dependencies
+
+- **Sandbox UI accepts Agent Interface 0.46.**
+  The development build and packed-consumer check now run against 0.46.1, while the separate lower-bound check continues to prove 0.36.0.
+
 ## 0.99.0
 
 ### Theming

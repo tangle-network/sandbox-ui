@@ -9,6 +9,11 @@ export {
   type UseIntegrationsOptions,
   type UseIntegrationsResult,
 } from "./use-integrations";
+export {
+  ProviderIcon,
+  providerLogoCandidates,
+  type ProviderIconProps,
+} from "./provider-logo";
 export type {
   IntegrationConnection,
   IntegrationConnector,

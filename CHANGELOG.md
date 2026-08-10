@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.99.2
+
+### Added
+
+- **`ProviderIcon` + `providerLogoCandidates` are exported from the `integrations` entry.** The integrations panel's brand-mark renderer (iconUrl → svgl → CDN → simple-icons → deterministic theme-safe monogram) was built and tested but never exported, so consumers' integration rows fell back to model-provider logos or blank tiles. No behavior change to existing exports.
+
 ## 0.99.1
 
 ### Dependencies

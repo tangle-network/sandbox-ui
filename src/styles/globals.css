@@ -234,6 +234,15 @@
    * twice. */
   --arrive-distance: 8px;
   --stream-blur: 4px;
+  /* Period of the `.agent-shimmer` sweep. Deliberately NOT named
+   * `--duration-*`: that prefix is the collapsible ladder, and the
+   * reduced-motion block sets every member of it to 1ms at `:root`. A custom
+   * property collapsed at the root cannot be excluded per element, so naming
+   * this one `--duration-shimmer` would freeze the sweep for the very users the
+   * `data-motion="essential"` exemption exists to keep informed. The sweep is a
+   * looping SIGNAL, not a transition, so it sits with the other non-collapsible
+   * motion constants above. */
+  --shimmer-period: 1400ms;
 }
 
 /* `@pierre/trees` (RichFileTree) is CSS-var driven and ships LIGHT defaults with
@@ -506,6 +515,13 @@
     animation: shimmer 1.1s linear infinite;
   }
 
+  /* Silenced outright rather than floored, and kept that way: this is shipped
+     behaviour of a published class. It is also the correct default under the
+     rule stated with the reduced-motion block below — a bare class carries no
+     claim about whether the thing it labels is still working. A caller that
+     needs the sweep to survive the preference uses `.agent-shimmer` on an
+     element that declares `data-motion="essential"`, which is where that claim
+     can actually be made. */
   @media (prefers-reduced-motion: reduce) {
     .shimmer-text {
       animation: none;
@@ -537,14 +553,28 @@
     }
   }
 
-  /* Quiet enter for optimistically-inserted list rows. Retained as the older
-     name for this package's one arrival — it now plays `agent-arrive` on the
-     duration tokens instead of a hardcoded 0.18s, so a second entrance animation
-     cannot drift away from the canonical one and the class reaches the
-     reduced-motion collapse like everything else. New code writes
-     `.agent-arrive` (and `--stagger-index` for a list). */
+  /* Quiet enter for optimistically-inserted list rows.
+     PUBLISHED CLASS — FROZEN TIMING. Ships in `dist/globals.css`, so consumers
+     time their own list insertions against these exact 180ms and this exact
+     4px travel DOWNWARD from above. Retiming it to the 600ms `agent-arrive`
+     entrance is a 3.3x slowdown and a reversed travel direction in every app
+     that already uses it, delivered as a patch with no call site to change; the
+     motion vocabulary is not worth that. It stays as shipped.
+
+     `--motion-arrive` is not read here for the same reason: a retune of the
+     token ladder must not reach a class whose timing is the contract. Reduced
+     motion still covers it — the universal floor below collapses any animation
+     on an element that has not declared itself essential, token or not.
+
+     New code writes `.agent-arrive` (plus `--stagger-index` for a list), which
+     is the vocabulary the rail and the session list ride. */
   .animate-row-in {
-    animation: agent-arrive var(--motion-arrive) both;
+    animation: row-in 0.18s ease-out;
+  }
+
+  @keyframes row-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   /* Pulse ring animation */
@@ -678,9 +708,14 @@
 }
 
 /* The waiting label. `background-clip: text` over a moving gradient, so the
-   shimmer runs THROUGH the glyphs rather than behind them. Every element that
-   wears it also declares `data-motion="essential"`: it is the only signal that
-   work is still in flight. */
+   shimmer runs THROUGH the glyphs rather than behind them.
+
+   The class alone is decorative and IS silenced by the reduced-motion floor.
+   It becomes essential only where the element also declares
+   `data-motion="essential"`, which is the caller's assertion that this
+   particular label's agent is still working. Class-level exemption would be
+   wrong: the same sweep is used as a plain skeleton treatment, and a rule
+   cannot tell the two apart. @see the reduced-motion block below. */
 .agent-shimmer {
   background: linear-gradient(
     90deg,
@@ -692,7 +727,7 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  animation: agent-shimmer 1.4s linear infinite;
+  animation: agent-shimmer var(--shimmer-period) linear infinite;
 }
 
 /* Height-auto disclosure without measuring anything in JavaScript. The row
@@ -734,13 +769,37 @@
  * any component that awaits one to unmount or advance a state machine hangs
  * forever. 1ms is imperceptible AND still fires.
  *
- * Motion that genuinely carries meaning — a spinner, a live-status pulse, the
- * shimmer on a label whose agent is still working — opts out by declaring
- * `data-motion="essential"`; the exclusion covers that element and its subtree,
+ * THE RULE, so the next element is classified the same way this one was:
+ *
+ *   Motion is ESSENTIAL when it is the only evidence that something is
+ *   happening RIGHT NOW — an operation in flight, a resource actively running.
+ *   Freeze it and "working" becomes indistinguishable from "stuck", which is
+ *   information removed. Everything else is DECORATIVE and is silenced.
+ *
+ * Two consequences make it decidable rather than a matter of taste:
+ *
+ *  - A static label beside the motion does NOT make an in-flight indicator
+ *    decorative. "Loading processes…" stays on screen whether the fetch is
+ *    alive or hung; only the spinner separates those.
+ *  - A state that is NOT in flight is carried by its label, its colour and its
+ *    shape, so motion on it is emphasis. The `animate-ping` beside "Error
+ *    fetching logs" says nothing the sentence does not, and it is silenced.
+ *    Skeleton placeholders are the same case: a frozen skeleton still reads as
+ *    a placeholder, because the shape is the message.
+ *
+ * The exemption is declared PER ELEMENT with `data-motion="essential"`, never on
+ * a class. `.agent-shimmer` is the reason: the identical sweep marks a session
+ * whose agent is mid-turn and dresses a plain skeleton, and only the caller
+ * knows which one it built. The exclusion covers the element and its subtree,
  * and `:where()` keeps the selector at zero specificity so a consumer's own rule
  * can still win. Reduced motion is not a design preference to be overridden, it
  * is a request from the person using the product; the only defensible exemption
  * is motion whose absence removes information.
+ *
+ * Note the asymmetry with the `:root` block: a duration collapsed there reaches
+ * every element, `data-motion` included, because a custom property cannot be
+ * un-inherited. That is why an essential animation's period is not a
+ * `--duration-*` token — @see `--shimmer-period`.
  */
 @media (prefers-reduced-motion: reduce) {
   :root {

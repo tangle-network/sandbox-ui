@@ -1,5 +1,7 @@
+import type { CSSProperties } from "react"
 import { describe, it, expect, vi, afterEach } from "vitest"
 import { act, render, screen, fireEvent } from "@testing-library/react"
+import { RailButton } from "./app-sidebar"
 import { SidebarLayout, type SidebarLayoutNavItem } from "./sidebar-layout"
 
 function Icon() {
@@ -16,6 +18,10 @@ const HARDCODED_TIMING = /\bduration-\d|\bease-(in|out|linear|in-out)\b/
 
 afterEach(() => {
   vi.useRealTimers()
+  // The rail's collapsed state persists to localStorage, which jsdom shares
+  // across every test in the file. Without this, a test that toggles the rail
+  // silently decides what `defaultRailCollapsed` means for the tests after it.
+  localStorage.clear()
 })
 
 describe("rail motion — arrival", () => {
@@ -36,6 +42,45 @@ describe("rail motion — arrival", () => {
       expect(item.className).toMatch(/\bagent-arrive\b/)
       expect(item.style.getPropertyValue("--stagger-index")).toBe(String(index))
     })
+  })
+
+  it("keeps --stagger-index when the asChild child brings its own style", () => {
+    render(
+      <RailButton
+        icon={Icon}
+        label="Home"
+        showLabel
+        asChild
+        style={{ "--stagger-index": 4 } as CSSProperties}
+      >
+        <a href="/home" style={{ color: "red" }} />
+      </RailButton>,
+    )
+    const link = document.querySelector('a[href="/home"]') as HTMLElement
+    // The layout owns the arrival; a consumer style merged over it would drop
+    // the variable silently and flatten the whole rail's entrance to one flash.
+    expect(link.style.getPropertyValue("--stagger-index")).toBe("4")
+    expect(link.style.color).toBe("red")
+  })
+
+  it("does not re-run the entrance when the rail collapses or expands", () => {
+    render(
+      <SidebarLayout railLabels navItems={[navItem("home"), navItem("files")]}>
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    const rail = document.querySelector("nav") as HTMLElement
+    const before = rail.querySelector('a[href="/home"]')
+
+    // A rail toggle moves nothing off screen, so nothing may arrive. The
+    // browser replays a CSS animation when the element is REBUILT, so element
+    // identity across the toggle is the whole property: same node, no replay.
+    fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }))
+    const collapsed = document.querySelector('nav a[href="/home"]')
+    expect(collapsed).toBe(before)
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand sidebar" }))
+    expect(document.querySelector('nav a[href="/home"]')).toBe(before)
   })
 
   it("gives session rows in a rail disclosure the same entrance the rail itself uses", () => {
@@ -91,6 +136,22 @@ describe("rail motion — disclosure", () => {
     expect(region.getAttribute("data-open")).toBe("false")
     expect(region.className).not.toMatch(/max-h-/)
     expect(region.firstElementChild?.className ?? "").not.toMatch(/max-h-/)
+  })
+
+  it("gives the clipped child no padding, so a closed disclosure is 0px", () => {
+    render(
+      <SidebarLayout railLabels navItems={[expandable]}>
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    const region = document.querySelector(".agent-disclose") as HTMLElement
+    const clipped = region.firstElementChild as HTMLElement
+    // `.agent-disclose > *` is the element the 0fr row sizes to 0. A border-box
+    // height of 0 still floors at padding + border, so padding HERE survives
+    // the collapse: `pt-0.5` leaves a closed disclosure 2px tall. Spacing lives
+    // one level in, where the clip hides it.
+    expect(clipped.className).not.toMatch(/\bp[trblxyse]?-/)
+    expect((clipped.firstElementChild as HTMLElement).className).toMatch(/\bpt-0\.5\b/)
   })
 
   it("keeps the collapsed region out of the tab order and the a11y tree", () => {

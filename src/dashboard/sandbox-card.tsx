@@ -234,9 +234,13 @@ export function SandboxCard({
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--md3-outline-variant)] bg-surface-container-high px-2 py-0.5 text-[11px] font-medium text-foreground">
             <span className="relative flex h-1.5 w-1.5">
               {isRunning && (
+                // The ping renders only while the sandbox IS running, so it is
+                // live state, not decoration — the same call SandboxTable makes
+                // for its running/provisioning dot.
                 <span
                   className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
                   style={{ backgroundColor: status.color }}
+                  data-motion="essential"
                 />
               )}
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: status.color }} />

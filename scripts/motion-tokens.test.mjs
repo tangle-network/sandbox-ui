@@ -170,6 +170,45 @@ describe("motion tokens", () => {
   });
 });
 
+describe("motion tokens — the essential-signal period", () => {
+  const SHIMMER_RULE = BASE_CSS.match(/^\.agent-shimmer\s*\{[^}]*\}/m)?.[0] ?? "";
+
+  it("times the shimmer from a token, not a literal", () => {
+    // The block it lives in states that every duration is a token. A literal
+    // here is the one animation nobody can retune from the token layer.
+    expect(SHIMMER_RULE).toContain("var(--shimmer-period)");
+    expect(SHIMMER_RULE.match(/animation:[^;]*/)?.[0] ?? "").not.toMatch(/\d+(\.\d+)?m?s\b/);
+  });
+
+  it("keeps that period OUT of the collapsible ladder", () => {
+    // Named `--duration-shimmer` it would be collapsed to 1ms at `:root`, and a
+    // custom property collapsed at the root cannot be un-inherited by
+    // `data-motion="essential"` — the sweep would freeze for exactly the users
+    // the exemption exists to keep informed.
+    expect(DECLARED.get("--shimmer-period")).toBe("1400ms");
+    expect(COLLAPSED.has("--shimmer-period")).toBe(false);
+  });
+});
+
+describe("motion tokens — published classes keep their shipped timing", () => {
+  /**
+   * `.animate-row-in` ships in `dist/globals.css`, so a consumer's list
+   * insertion is timed against it. Retiming it to the 600ms entrance is a 3.3x
+   * slowdown and a reversed travel direction delivered with no call site to
+   * change. Pinned here so the next retune of the token ladder cannot reach it
+   * by accident.
+   */
+  it("keeps .animate-row-in at 0.18s ease-out", () => {
+    const rule = BASE_CSS.match(/\.animate-row-in\s*\{[^}]*\}/)?.[0] ?? "";
+    expect(rule).toContain("animation: row-in 0.18s ease-out");
+  });
+
+  it("keeps row-in travelling DOWN from 4px above", () => {
+    const keyframes = block(BASE_CSS, BASE_CSS.indexOf("@keyframes row-in"));
+    expect(keyframes).toContain("translateY(-4px)");
+  });
+});
+
 describe("motion tokens — no literal timings in the rail and session chrome", () => {
   /** The surfaces this package choreographs. */
   const CHOREOGRAPHED = [

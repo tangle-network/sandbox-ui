@@ -44,7 +44,9 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
   if (loading || !config) {
     return (
       <div className={cn("rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center", className)}>
-        <Network className="mx-auto h-6 w-6 text-muted-foreground animate-pulse mb-2" />
+        {/* The pulse is the fetch's only liveness signal — the sentence below it
+            reads the same whether the request is in flight or hung. */}
+        <Network className="mx-auto h-6 w-6 text-muted-foreground animate-pulse mb-2" data-motion="essential" />
         <p className="text-sm text-muted-foreground">Loading network configuration...</p>
       </div>
     )

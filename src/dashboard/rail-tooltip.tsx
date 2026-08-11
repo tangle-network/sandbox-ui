@@ -31,6 +31,13 @@ export interface RailTooltipProps {
  * short delay, and `pointer-events-none` so it never interferes with the
  * trigger. Hidden from the a11y tree (`aria-hidden`) since the trigger already
  * carries an accessible name.
+ *
+ * `disabled` suppresses the tooltip but NOT the wrapper. Returning a fragment
+ * instead changes the rendered element type, and React reconciles by type: the
+ * trigger inside would be torn down and rebuilt every time the rail toggles
+ * between icon-only and labeled. A rebuilt element replays its CSS entrance, so
+ * the whole nav would re-stagger on a collapse that moved nothing off screen.
+ * One element type, both states.
  */
 export function RailTooltip({ label, children, disabled, className }: RailTooltipProps) {
   const ref = React.useRef<HTMLSpanElement>(null)
@@ -39,9 +46,13 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
 
   React.useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
-  if (disabled) return <>{children}</>
+  // A tooltip left open when the rail expands has nothing to anchor to.
+  React.useEffect(() => {
+    if (disabled) setCoords(null)
+  }, [disabled])
 
   const open = () => {
+    if (disabled) return
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
       const el = ref.current
@@ -58,14 +69,17 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
   return (
     <span
       ref={ref}
-      className={cn("relative flex", className)}
+      // `shrink-0` because the wrapper now stands between the rail's scrolling
+      // flex column and a trigger that carries `shrink-0` itself; without it the
+      // wrapper absorbs the squeeze the trigger refuses and the row overflows.
+      className={cn("relative flex shrink-0", className)}
       onMouseEnter={open}
       onMouseLeave={close}
       onFocusCapture={open}
       onBlurCapture={close}
     >
       {children}
-      {coords !== null && typeof document !== "undefined" &&
+      {!disabled && coords !== null && typeof document !== "undefined" &&
         createPortal(
           // Two elements, because the centering transform and the entrance
           // transform cannot share one: `.agent-pop-in` fills forwards to

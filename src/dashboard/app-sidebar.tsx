@@ -548,7 +548,12 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
       {
         className: cn(classes, child.props.className),
         "aria-label": child.props["aria-label"] ?? label,
-        style: { ...style, ...child.props.style },
+        // The layout's `style` wins the merge, not the child's. It is where
+        // `--stagger-index` arrives, and a child that happened to carry a
+        // `style` of its own would otherwise drop the variable silently and
+        // collapse the whole rail's entrance to one flash — a defect with no
+        // error and no visible cause.
+        style: { ...child.props.style, ...style },
       },
       content,
     )
@@ -1106,12 +1111,16 @@ export function RailExpandable({
       </div>
 
       {/* The disclosure's row travels 0fr -> 1fr, so it opens to the height its
-          sub-items actually have — the single child is clipped by the
-          `.agent-disclose > *` rule while it travels and needs no class here.
-          Padding rather than margin on that child so the gap above the list
-          collapses WITH the row instead of surviving at zero height. */}
+          sub-items actually have. The clipped child — the one `.agent-disclose > *`
+          gives `min-height: 0; overflow: hidden` — must carry NO padding of its
+          own: a grid row of 0fr sets its height to 0, and a border-box height of
+          0 still floors at padding + border, so `pt-0.5` there leaves a closed
+          disclosure 2px tall. All spacing lives on the element inside it, which
+          the clip actually hides. */}
       <div ref={discloseRef} id={discloseId} className="agent-disclose" data-open={open ? "true" : "false"}>
-        <div className="flex flex-col gap-0.5 pl-3 pt-0.5">{everOpened ? list : null}</div>
+        <div>
+          <div className="flex flex-col gap-0.5 pl-3 pt-0.5">{everOpened ? list : null}</div>
+        </div>
       </div>
     </div>
   )

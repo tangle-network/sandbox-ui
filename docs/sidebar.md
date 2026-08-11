@@ -229,6 +229,7 @@ What the rail does with them:
 
 - **Nav items arrive staggered.** Each item carries `.agent-arrive` and `style={{ "--stagger-index": i }}`, so the rail unfolds top-down instead of appearing all at once. Both shells (`SidebarLayout`, `DashboardLayout`) render it the same way, and `SessionSidebar` rows use the identical entrance.
   The entrance runs on MOUNT only. Collapsing or expanding the rail moves nothing off screen, so it must not replay; `RailTooltip` therefore renders the same wrapper element whether or not the tooltip is enabled, because a changed element type makes React rebuild the trigger and a rebuilt element replays its CSS animation.
+  That wrapper surviving the toggle also means its unmount cleanup never runs, so `RailTooltip` cancels a pending open the moment it is disabled — otherwise the tooltip armed a fraction of a second earlier fires anyway, and appears unbidden at a stale position the next time the trigger is tooltipped again.
 - **The disclosure animates its real height.** `RailExpandable`'s inline accordion is a `.agent-disclose` grid whose row travels `0fr → 1fr` — no `max-height` guess, so a list of 3 sessions and a list of 30 both open correctly. Its sub-items mount on first open and stay mounted (a list that unmounts has no height to collapse); while closed the region is `inert`, so clipped links are neither tabbable nor announced.
   The element `.agent-disclose > *` clips carries no padding of its own: a 0fr row sets its height to 0, and a border-box height of 0 still floors at padding + border, so padding there leaves a closed disclosure visibly tall. Spacing goes one level further in.
 - **Hover and active states read a token.** Every transition in the rail is `duration-[var(--duration-fast)] ease-[var(--ease-standard)]` (the `MOTION_CONTROL` constant in `src/lib/motion.ts`). The rail's own collapse and the content margin that follows it share `--duration-slow`, because two tiers there means the page visibly lags the edge it is attached to.
@@ -245,6 +246,10 @@ A static label beside the motion does not make an in-flight indicator decorative
 
 Essential is declared **per element** (`data-motion="essential"`), never on a class — the exact same `.agent-shimmer` sweep marks a session whose agent is mid-turn and dresses a plain skeleton, and only the caller knows which one it built.
 
+The floor covers `::before` and `::after` as well as elements. A bare `*` matches no pseudo-element, and `.pulse-ring::before` ran its 2s ring straight through the preference until the selector said so.
+
+**Scope of the table below.** It is every animated surface this package authors in `src/`, plus every animation class it publishes in `dist/globals.css`. It does not cover a consuming app's own motion or `@tangle-network/ui`'s — those are reached by the universal floor, not enumerated here. Values are measured in Chromium against the built stylesheet, in both modes.
+
 What a reduced-motion user sees:
 
 | Indicator | Where | Classification | Under reduced motion |
@@ -260,10 +265,17 @@ What a reduced-motion user sees:
 | Nav item and session-row entrance | rail, `SessionSidebar` | decorative | appears immediately, no travel, no stagger |
 | Tooltip and flyout pop-in | `RailTooltip`, `RailFlyout` | decorative | appears immediately |
 | Rail collapse, drawer, content margin | `Sidebar`, `SidebarContent` | decorative | jumps to its new width |
+| Status-bar entrance | `ClusterStatusBar` | decorative | appears immediately |
+| Dropdown and popover open / close | `BackendSelector`, `ReasoningLevelPicker` | decorative | appears immediately |
+| Panel and wizard step fades | `StartupScriptsPage`, `ProvisioningWizard` | decorative | appears immediately |
+| Node body swap on a density change | `WorkflowGraph`, `node-ui` | decorative | frozen (`animation: none`) |
 | Hover / focus / active colour changes | everywhere | decorative | instant |
 | Skeleton placeholders | `GitPanel`, `IntegrationsPanel`, provisioning wizard | decorative | frozen — the shape is the message |
 | Header pulse, error-dot ping | `SystemLogs` | decorative | frozen — the sentence beside it is the message |
 | `.shimmer-text` | published class, no internal caller | decorative | frozen (`animation: none`) |
+| `.shimmer`, `.animate-row-in`, `.pulse-ring`, `.terminal-cursor`, `.status-dot-creating` | published classes, no internal caller | decorative | one 1ms pass, then still |
+
+`ClusterStatusBar` writes `animate-in slide-in-from-bottom`, but the precompiled bundle emits no rule for `slide-in-from-bottom`: this build is Tailwind v4 CSS-first with no `@config`, so the `tailwindcss-animate` plugin in `tailwind.config.cjs` never runs. The bar fades in place from this package's own `.animate-in`. An app that runs its own scan with that plugin gets the slide as well; both are decorative and both are floored.
 
 ## Constants
 

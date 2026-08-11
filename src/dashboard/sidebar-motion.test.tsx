@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react"
 import { describe, it, expect, vi, afterEach } from "vitest"
 import { act, render, screen, fireEvent } from "@testing-library/react"
-import { RailButton } from "./app-sidebar"
+import { RailButton, RailFlyout } from "./app-sidebar"
 import { SidebarLayout, type SidebarLayoutNavItem } from "./sidebar-layout"
 
 function Icon() {
@@ -269,6 +269,37 @@ describe("rail motion — floating surfaces", () => {
     // a line low.
     expect(tip.style.transform).toBe("")
     expect((tip.parentElement as HTMLElement).style.transform).toBe("translateY(-50%)")
+  })
+
+  it("kills a pending tooltip when the trigger stops being tooltipped", () => {
+    vi.useFakeTimers()
+    render(
+      <RailFlyout icon={Icon} label="Studio">
+        <a href="/studio/runs">Runs</a>
+      </RailFlyout>,
+    )
+    const trigger = screen.getByRole("button", { name: "Studio" })
+    const wrapper = trigger.parentElement as HTMLElement
+
+    // Hover arms the 250ms open, then the user clicks inside that window — the
+    // flyout opens and `disabled` goes true, which suppresses the tooltip.
+    fireEvent.mouseOver(wrapper)
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    fireEvent.click(trigger)
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+    expect(document.querySelector('[role="tooltip"]')).toBeNull()
+
+    // Closing the flyout re-enables the tooltip. The wrapper never unmounted
+    // across either toggle, so nothing but the `disabled` effect can have
+    // cancelled the armed timer — if it did not, the tooltip it queued arrives
+    // here, on a trigger the pointer only ever passed over.
+    fireEvent.keyDown(document, { key: "Escape" })
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(document.querySelector('[role="tooltip"]')).toBeNull()
   })
 
   it("pops the collapsed-rail flyout in rather than snapping it open", () => {

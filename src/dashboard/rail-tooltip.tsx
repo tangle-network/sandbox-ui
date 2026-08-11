@@ -46,9 +46,21 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
 
   React.useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
-  // A tooltip left open when the rail expands has nothing to anchor to.
+  // A tooltip left open when the rail expands has nothing to anchor to, and a
+  // pending open must die with it. Clearing `coords` alone is not enough: the
+  // wrapper stays mounted across the toggle (that is the whole point of the
+  // one-element-type rule above), so the unmount cleanup never runs and a timer
+  // armed a moment before `disabled` went true still fires. It then writes
+  // coordinates for a control that is no longer tooltipped — invisible while
+  // `disabled` holds, and a tooltip that appears unbidden, at a stale position,
+  // the moment `disabled` goes false again.
   React.useEffect(() => {
-    if (disabled) setCoords(null)
+    if (!disabled) return
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+    setCoords(null)
   }, [disabled])
 
   const open = () => {

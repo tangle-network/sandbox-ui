@@ -149,6 +149,16 @@ describe("motion tokens", () => {
     expect(REDUCED_MOTION_BLOCK).toContain("transition-duration: 1ms !important");
   });
 
+  it("floors pseudo-elements too, which `*` alone does not reach", () => {
+    // `*` matches elements, never `::before`/`::after`. Chromium measured
+    // `.pulse-ring::before` running its 2s ring infinitely under
+    // `prefers-reduced-motion` while every element around it was floored, and a
+    // consuming app's decorative pseudo-element had the same free pass.
+    const guard = '*:where(:not([data-motion="essential"], [data-motion="essential"] *))';
+    expect(REDUCED_MOTION_BLOCK).toContain(`${guard}::before`);
+    expect(REDUCED_MOTION_BLOCK).toContain(`${guard}::after`);
+  });
+
   it("ships the entrance primitives the rail and session chrome ride on", () => {
     for (const rule of [
       "@keyframes agent-arrive",

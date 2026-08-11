@@ -617,9 +617,18 @@
  * Unlayered on purpose. Tailwind's own utilities live in its `utilities` layer,
  * and unlayered rules beat every layer, so `.agent-disclose`'s grid rows and
  * `.agent-arrive`'s animation cannot be knocked out by a utility that happens to
- * sort later. Every duration below is a TOKEN, which is what lets the
- * reduced-motion block underneath cover all of them without a second media
- * query per component.
+ * sort later.
+ *
+ * Every duration below is a TOKEN, so no class here carries a media query of its
+ * own. They are not all reached by the SAME rule, and the difference is
+ * deliberate. The entrance classes read the `--duration-*` ladder (through the
+ * `--motion-*` pairs) and `--stagger-step`, which the reduced-motion block
+ * collapses at `:root`: that reaches every element, unconditionally.
+ * `.agent-shimmer` reads `--shimmer-period`, which is deliberately NOT in that
+ * ladder, because a value collapsed at the root cannot be un-inherited by the
+ * elements that declare `data-motion="essential"` and whose sweep is the only
+ * evidence their agent is still working. Everywhere else, that sweep is silenced
+ * by the universal floor in the same block. @see `--shimmer-period`.
  *
  * Same names, same keyframes, same values as `@tangle-network/agent-app`'s
  * `theme/tokens.css` — @see the token block at the top of this file for why they
@@ -814,7 +823,16 @@
     --stagger-step: 0ms;
   }
 
-  *:where(:not([data-motion="essential"], [data-motion="essential"] *)) {
+  /* `::before` and `::after` are listed because `*` matches elements only, and
+     an animation declared on a pseudo-element is therefore invisible to the
+     floor. `.pulse-ring::before` in this very file drew its 2s ring infinitely
+     under the preference — measured in Chromium against the built stylesheet —
+     while every element around it was collapsed to 1ms. The exemption still
+     applies: a pseudo-element of an essential element, or of a descendant of
+     one, is not floored. */
+  *:where(:not([data-motion="essential"], [data-motion="essential"] *)),
+  *:where(:not([data-motion="essential"], [data-motion="essential"] *))::before,
+  *:where(:not([data-motion="essential"], [data-motion="essential"] *))::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;

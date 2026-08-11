@@ -45,7 +45,7 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
     <div className={cn("space-y-4", className)}>
       {loading ? (
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
-          <Activity className="mx-auto h-6 w-6 text-muted-foreground animate-spin mb-2" />
+          <Activity className="mx-auto h-6 w-6 text-muted-foreground animate-spin mb-2" data-motion="essential" />
           <p className="text-sm text-muted-foreground">Loading processes...</p>
         </div>
       ) : processes.length > 0 ? (

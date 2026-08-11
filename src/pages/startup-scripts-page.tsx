@@ -939,7 +939,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" data-motion="essential" />
           </div>
         ) : scripts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "../lib/utils"
+import { MOTION_CONTROL, MOTION_TRAVEL } from "../lib/motion"
 import { useBrandThemeSync } from "./use-brand-theme-sync"
 import {
   Sidebar,
@@ -274,6 +275,11 @@ function SidebarLayoutInner({
    * drawer. Sharing the renderer is the point: a product adds a destination to
    * `navItems` and it appears on both, so a phone can never silently lose a
    * door the desktop has.
+   *
+   * Every item arrives on the shared entrance, staggered by its position: the
+   * rail reads as a list unfolding top-down rather than a block of icons
+   * appearing at once. `--stagger-index` is capped inside `.agent-arrive`, so a
+   * long nav does not open with a cascade.
    */
   function renderNavItems({
     showLabels,
@@ -282,7 +288,8 @@ function SidebarLayoutInner({
     showLabels: boolean
     onNavigate?: () => void
   }) {
-    return navItems.map((item) => {
+    return navItems.map((item, index) => {
+      const arrival = { className: "agent-arrive", style: { "--stagger-index": index } as React.CSSProperties }
       if (item.expandable) {
         return (
           <RailExpandable
@@ -299,6 +306,7 @@ function SidebarLayoutInner({
             defaultOpen={item.defaultOpen}
             onNavigate={onNavigate}
             LinkComponent={LinkComponent}
+            {...arrival}
           />
         )
       }
@@ -312,6 +320,7 @@ function SidebarLayoutInner({
             title={item.label}
             showLabel={showLabels}
             isActive={activeId === item.id || item.flyoutItems.some((f) => activeSet.has(f.id))}
+            {...arrival}
           >
             {item.flyoutItems.map((f) => {
               const FIcon = f.icon
@@ -325,6 +334,7 @@ function SidebarLayoutInner({
                   {...(f.prefetch !== undefined ? { prefetch: f.prefetch } : {})}
                   className={cn(
                     "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",
+                    MOTION_CONTROL,
                     active
                       ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
                       : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-[var(--accent-text)]",
@@ -350,9 +360,10 @@ function SidebarLayoutInner({
             onNavigate?.()
           }}
           showLabel={showLabels}
+          {...arrival}
         />
       ) : (
-        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild>
+        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild {...arrival}>
           <Link
             href={item.href}
             to={item.href}
@@ -436,7 +447,7 @@ function SidebarLayoutInner({
               aria-controls="sidebar-mobile-nav"
               aria-haspopup="dialog"
               onClick={() => setMobileNavOpen(true)}
-              className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground"
+              className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
             >
               <MenuIcon className="size-5" />
             </button>
@@ -602,7 +613,10 @@ function MobileNavDrawer({
         aria-modal="true"
         aria-label="Navigation"
         style={{ width: SIDEBAR_MOBILE_WIDTH }}
-        className="absolute inset-y-0 left-0 flex max-w-[85vw] flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low shadow-xl"
+        // The drawer arrives on the shared entrance rather than snapping into
+        // place; its nav items then arrive staggered inside it, so the surface
+        // and its contents read as one movement instead of two events.
+        className="agent-arrive absolute inset-y-0 left-0 flex max-w-[85vw] flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low shadow-xl"
       >
         <div className="flex h-14 shrink-0 items-center gap-1 border-b border-[var(--md3-outline-variant)] px-2">
           <div className="flex min-w-0 flex-1 items-center">{header}</div>
@@ -610,7 +624,7 @@ function MobileNavDrawer({
             type="button"
             aria-label="Close navigation"
             onClick={onClose}
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground"
+            className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
           >
             <CloseIcon className="size-5" />
           </button>

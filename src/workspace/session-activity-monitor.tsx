@@ -22,7 +22,10 @@ function SessionStatusDot({ session }: { session: ActiveSessionRecord }) {
     return <AlertCircle className="h-3 w-3 text-[var(--surface-danger-text)]" />;
   }
   if (session.status === "running") {
-    return <LoaderCircle className="h-3 w-3 animate-spin text-primary" />;
+    // The spinner IS the "this session is mid-turn" signal, so it opts out of
+    // the reduced-motion floor — silencing it would remove the information,
+    // not just the movement.
+    return <LoaderCircle className="h-3 w-3 animate-spin text-primary" data-motion="essential" />;
   }
   if (session.status === "attention-needed") {
     return <Activity className="h-3 w-3 text-[var(--surface-warning-text)]" />;

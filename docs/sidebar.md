@@ -210,6 +210,29 @@ Avatar button in the rail that opens a dropdown with user info, settings, and lo
 | `onSettingsClick` | `() => void` | Settings handler |
 | `children` | `ReactNode` | Extra `DropdownMenuItem` elements |
 
+## Motion
+
+The rail speaks the same motion vocabulary as `@tangle-network/agent-app` — same token names, same values, declared in `src/styles/globals.css` and shipped in `dist/globals.css`.
+A product that loads both stylesheets gets one answer, not two.
+
+| Token | Value | What it times |
+|---|---|---|
+| `--duration-instant` | 90ms | a control acknowledging a pointer |
+| `--duration-fast` | 150ms | a control already on screen changing state |
+| `--duration-base` | 240ms | a surface arriving or leaving |
+| `--duration-slow` | 360ms | a full-height surface travelling |
+| `--duration-arrive` | 600ms | a row or card that was not there a moment ago |
+| `--stagger-step` | 50ms | delay per item in a staggered group (capped at 8 items) |
+
+What the rail does with them:
+
+- **Nav items arrive staggered.** Each item carries `.agent-arrive` and `style={{ "--stagger-index": i }}`, so the rail unfolds top-down instead of appearing all at once. Both shells (`SidebarLayout`, `DashboardLayout`) render it the same way, and `SessionSidebar` rows use the identical entrance.
+- **The disclosure animates its real height.** `RailExpandable`'s inline accordion is a `.agent-disclose` grid whose row travels `0fr → 1fr` — no `max-height` guess, so a list of 3 sessions and a list of 30 both open correctly. Its sub-items mount on first open and stay mounted (a list that unmounts has no height to collapse); while closed the region is `inert`, so clipped links are neither tabbable nor announced.
+- **Hover and active states read a token.** Every transition in the rail is `duration-[var(--duration-fast)] ease-[var(--ease-standard)]` (the `MOTION_CONTROL` constant in `src/lib/motion.ts`). The rail's own collapse and the content margin that follows it share `--duration-slow`, because two tiers there means the page visibly lags the edge it is attached to.
+- **Reduced motion collapses every duration to 1ms** — 1ms, not 0, because a zero-duration transition fires no `transitionend` and anything sequencing on one hangs. Motion that carries meaning (a sub-item whose agent is still responding, a live status dot, a spinner) declares `data-motion="essential"` and keeps moving; decorative motion must not.
+
+Adding a timing to this area? Use a token. `scripts/motion-tokens.test.mjs` fails the build on a literal `ms`, a `duration-<number>`, or a duration that has no reduced-motion collapse.
+
 ## Constants
 
 ```ts

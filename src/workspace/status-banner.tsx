@@ -40,7 +40,12 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
         className,
       )}
     >
-      <Icon className={cn("h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")} />
+      {/* While provisioning/connecting the spin is the only thing saying the
+          work is still in flight, so it stays under reduced motion. */}
+      <Icon
+        className={cn("h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")}
+        {...(isAnimated ? { "data-motion": "essential" } : {})}
+      />
       <span className="font-medium text-foreground">{message}</span>
       {detail && (
         <span className="font-mono text-xs text-muted-foreground tabular-nums">{detail}</span>

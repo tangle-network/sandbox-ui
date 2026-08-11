@@ -64,7 +64,7 @@ export function VideoPreview({ content, brand, onRenderRequest, isRendering, cla
         >
           {isRendering ? (
             <Fragment>
-              <Loader2 size={14} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" data-motion="essential" />
               Rendering…
             </Fragment>
           ) : (

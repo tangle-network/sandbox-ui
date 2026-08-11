@@ -253,6 +253,7 @@ export function StatusFooter({
         <div
           data-testid="wf-node-progress"
           className={`h-full ${status === "running" ? "animate-pulse" : ""}`}
+          {...(status === "running" ? { "data-motion": "essential" } : {})}
           style={{
             width: progressFill(status),
             background: STATUS_COLOR[status],

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { cn } from "../lib/utils"
+import { MOTION_CONTROL, MOTION_SURFACE, MOTION_TRAVEL } from "../lib/motion"
 import { Avatar, AvatarFallback, AvatarImage } from "@tangle-network/ui/primitives"
 import {
   DropdownMenu,
@@ -148,6 +149,7 @@ export function RailThemeToggle({ className }: { className?: string }) {
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className={cn(
         "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+        MOTION_CONTROL,
         "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         className,
@@ -200,6 +202,7 @@ export function RailCollapseToggle({ collapsed, showLabel, onToggle, className }
         aria-pressed={collapsed}
         className={cn(
           "flex shrink-0 items-center rounded-md text-muted-foreground transition-colors",
+          MOTION_CONTROL,
           showLabel ? "h-9 w-full justify-start gap-2.5 px-2.5" : "h-9 w-9 justify-center",
           "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
@@ -252,6 +255,7 @@ function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: bool
       title={label}
       className={cn(
         "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+        MOTION_CONTROL,
         "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
         className,
@@ -279,7 +283,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
         href={brandHref}
         to={brandHref}
         aria-label="Home"
-        className="flex items-center justify-center rounded-md p-1 transition-colors hover:bg-[var(--accent-surface-soft)]"
+        className={cn("flex items-center justify-center rounded-md p-1 transition-colors hover:bg-[var(--accent-surface-soft)]", MOTION_CONTROL)}
       >
         {brand}
       </Link>
@@ -303,12 +307,12 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
               onClick={onToggle}
               aria-label="Expand sidebar"
               aria-pressed={true}
-              className="group/brand relative flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className={cn("group/brand relative flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring", MOTION_CONTROL)}
             >
-              <span className="flex items-center justify-center transition-opacity duration-150 group-hover/brand:opacity-0">
+              <span className={cn("flex items-center justify-center transition-opacity group-hover/brand:opacity-0", MOTION_CONTROL)}>
                 {brand}
               </span>
-              <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-foreground opacity-0 transition-opacity duration-150 group-hover/brand:opacity-100">
+              <span className={cn("pointer-events-none absolute inset-0 flex items-center justify-center text-foreground opacity-0 transition-opacity group-hover/brand:opacity-100", MOTION_CONTROL)}>
                 <PanelLeft className="h-[18px] w-[18px]" />
               </span>
             </button>
@@ -344,7 +348,11 @@ export function Sidebar({ children, className, style }: SidebarProps) {
     <div
       data-sidebar="true"
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex bg-surface-container-low border-r border-[var(--md3-outline-variant)] transition-[transform,width] duration-200 ease-in-out",
+        "fixed inset-y-0 left-0 z-40 flex bg-surface-container-low border-r border-[var(--md3-outline-variant)] transition-[transform,width]",
+        // The rail is a full-height surface travelling — the slow tier. It and
+        // SidebarContent's margin MUST read the same token or the page content
+        // visibly lags the edge it is supposed to be attached to.
+        MOTION_TRAVEL,
         hidden && "-translate-x-full",
         className,
       )}
@@ -488,11 +496,18 @@ export interface RailButtonProps {
    * Defaults to `"normal"`.
    */
   variant?: "normal" | "primary"
+  /**
+   * Inline style for the rendered row. Layouts use it to set `--stagger-index`
+   * so a rail of nav items arrives as a sequence rather than a flash; the
+   * variable has to land on the animated element itself, which is this one.
+   */
+  style?: React.CSSProperties
 }
 
-export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children, variant = "normal" }: RailButtonProps) {
+export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children, variant = "normal", style }: RailButtonProps) {
   const classes = cn(
-    "relative flex shrink-0 items-center justify-center rounded-md transition-colors duration-150",
+    "relative flex shrink-0 items-center justify-center rounded-md transition-colors",
+    MOTION_CONTROL,
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
     // Quiet press feedback via color only — no scale on the full-width row.
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
@@ -530,7 +545,11 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
     const child = children as React.ReactElement<any>
     const merged = React.cloneElement(
       child,
-      { className: cn(classes, child.props.className), "aria-label": child.props["aria-label"] ?? label },
+      {
+        className: cn(classes, child.props.className),
+        "aria-label": child.props["aria-label"] ?? label,
+        style: { ...style, ...child.props.style },
+      },
       content,
     )
     return (
@@ -542,7 +561,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
 
   return (
     <RailTooltip label={label} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
-      <button type="button" onClick={onClick} aria-label={label} className={classes}>
+      <button type="button" onClick={onClick} aria-label={label} className={classes} style={style}>
         {content}
       </button>
     </RailTooltip>
@@ -565,6 +584,8 @@ export interface RailFlyoutProps {
   /** Flyout body — the sub-surfaces revealed when the item is opened. */
   children: React.ReactNode
   className?: string
+  /** @see {@link RailButtonProps.style} — carries `--stagger-index` in a rail. */
+  style?: React.CSSProperties
 }
 
 /**
@@ -582,6 +603,7 @@ export function RailFlyout({
   title,
   children,
   className,
+  style,
 }: RailFlyoutProps) {
   const [open, setOpen] = React.useState(false)
   const ref = React.useRef<HTMLDivElement>(null)
@@ -604,7 +626,8 @@ export function RailFlyout({
 
   const active = isActive || open
   const triggerClasses = cn(
-    "relative flex shrink-0 items-center rounded-md transition-colors duration-150",
+    "relative flex shrink-0 items-center rounded-md transition-colors",
+    MOTION_CONTROL,
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
     active
@@ -614,7 +637,7 @@ export function RailFlyout({
   )
 
   return (
-    <div ref={ref} className={cn("relative", showLabel && "w-full")}>
+    <div ref={ref} className={cn("relative", showLabel && "w-full")} style={style}>
       <RailTooltip label={label} disabled={showLabel || open} className={showLabel ? "w-full" : undefined}>
       <button
         type="button"
@@ -629,7 +652,8 @@ export function RailFlyout({
         {showLabel && (
           <ChevronRightIcon
             className={cn(
-              "ml-auto h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200",
+              "ml-auto h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform",
+              MOTION_CONTROL,
               open && "rotate-180",
             )}
           />
@@ -649,6 +673,9 @@ export function RailFlyout({
           }}
           className={cn(
             "absolute left-full top-0 z-50 ml-2 min-w-[12rem] p-1.5",
+            // A flyout appears in place beside its trigger; it did not travel
+            // from anywhere, so it scales up rather than sliding.
+            "agent-pop-in",
             RAIL_FLOATING_SURFACE,
           )}
         >
@@ -729,6 +756,8 @@ export interface RailExpandableProps {
   // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
   LinkComponent?: React.ComponentType<any>
   className?: string
+  /** @see {@link RailButtonProps.style} — carries `--stagger-index` in a rail. */
+  style?: React.CSSProperties
 }
 
 // Shared lazy-load: fixed `subItems` resolve immediately; `loadSubItems` fires
@@ -795,12 +824,33 @@ export function RailExpandable({
   onNavigate,
   LinkComponent,
   className,
+  style,
 }: RailExpandableProps) {
   const Link = LinkComponent ?? DefaultLink
   const [open, setOpen] = React.useState(defaultOpen ?? false)
   const { items, loading, ensureLoaded } = useExpandableItems(subItems, loadSubItems)
   // Start-open consumers still need lazy sub-items loaded without a manual toggle.
   React.useEffect(() => { if (defaultOpen) ensureLoaded() }, [defaultOpen, ensureLoaded])
+  // The accordion's disclosure animates its real height (grid-template-rows
+  // 0fr -> 1fr), which needs its content MOUNTED to collapse against — a list
+  // that unmounts on close snaps shut, and a max-height guess is either a clip
+  // or an ease toward a number an unknown number of sessions never reaches. So
+  // the content mounts on first open and stays. Two consequences handled below:
+  // it must not exist before that first open (a rail that ships every session's
+  // link in the DOM on page load is a different component), and while closed it
+  // must be `inert` — clipped links are still tabbable and still announced.
+  const [everOpened, setEverOpened] = React.useState(defaultOpen ?? false)
+  const discloseRef = React.useRef<HTMLDivElement>(null)
+  const discloseId = React.useId()
+  React.useEffect(() => {
+    const el = discloseRef.current
+    if (!el) return
+    // Set through the DOM rather than as a JSX prop: React 18 treats `inert` as
+    // an unknown string attribute and React 19 as a boolean one, so there is no
+    // single prop value that is correct in both, and this package supports both.
+    if (open) el.removeAttribute("inert")
+    else el.setAttribute("inert", "")
+  }, [open])
   const activeSet = React.useMemo(() => new Set(activeSubIds ?? []), [activeSubIds])
   // Collapsed-rail flyout is portaled to <body> (it must escape the rail's
   // scroll-overflow clipping), so it's positioned from the trigger's rect and
@@ -822,6 +872,7 @@ export function RailExpandable({
         {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
         className={cn(
           "flex min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
+          MOTION_CONTROL,
           active
             ? "h-7 bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
             : item.emphasis
@@ -836,10 +887,19 @@ export function RailExpandable({
         <span
           className={cn(
             "min-w-0 flex-1 truncate",
-            item.isLoading && "shimmer-text",
+            item.isLoading && "agent-shimmer",
             item.unread && !active && "font-medium text-foreground",
           )}
-          {...(item.isLoading ? { role: "status", "aria-label": "Agent responding" } : {})}
+          {...(item.isLoading
+            ? {
+                role: "status",
+                "aria-label": "Agent responding",
+                // The sweep through the glyphs is the ONLY thing separating "this
+                // agent is still working" from "this row is stale", so it opts out
+                // of the reduced-motion floor. Decorative motion must not.
+                "data-motion": "essential",
+              }
+            : {})}
         >
           {item.label}
         </span>
@@ -859,7 +919,10 @@ export function RailExpandable({
             <button
               type="button"
               aria-label="Chat actions"
-              className="absolute right-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--accent-surface-soft)] text-muted-foreground opacity-0 transition hover:text-foreground focus-visible:opacity-100 group-hover/sub:opacity-100 data-[state=open]:bg-[var(--accent-surface-strong)] data-[state=open]:opacity-100"
+              className={cn(
+                "absolute right-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--accent-surface-soft)] text-muted-foreground opacity-0 transition hover:text-foreground focus-visible:opacity-100 group-hover/sub:opacity-100 data-[state=open]:bg-[var(--accent-surface-strong)] data-[state=open]:opacity-100",
+                MOTION_CONTROL,
+              )}
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
             </button>
@@ -893,7 +956,8 @@ export function RailExpandable({
   // ---- Collapsed (icon-only) rail: hover-triggered right flyout (portaled) ----
   if (!showLabel) {
     const triggerClasses = cn(
-      "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors duration-150",
+      "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
+      MOTION_CONTROL,
       "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
       isActive || open
         ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
@@ -932,6 +996,7 @@ export function RailExpandable({
       <div
         ref={triggerRef}
         className={cn("relative", className)}
+        style={style}
         onMouseEnter={openFlyout}
         onMouseLeave={scheduleClose}
         onFocusCapture={openFlyout}
@@ -961,7 +1026,7 @@ export function RailExpandable({
               onMouseEnter={cancelClose}
               onMouseLeave={scheduleClose}
               onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
-              className={cn("z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
+              className={cn("agent-pop-in z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
             >
               <p className="shrink-0 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
                 {label}
@@ -978,16 +1043,20 @@ export function RailExpandable({
   const toggle = () => {
     setOpen((v) => {
       const next = !v
-      if (next) ensureLoaded()
+      if (next) {
+        ensureLoaded()
+        setEverOpened(true)
+      }
       return next
     })
   }
 
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn("w-full", className)} style={style}>
       <div
         className={cn(
-          "group/exp relative flex h-9 w-full items-center rounded-md transition-colors duration-150",
+          "group/exp relative flex h-9 w-full items-center rounded-md transition-colors",
+          MOTION_CONTROL,
           isActive
             ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
             : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
@@ -999,15 +1068,17 @@ export function RailExpandable({
           type="button"
           onClick={toggle}
           aria-expanded={open}
+          aria-controls={discloseId}
           aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
           className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <Icon
-            className="h-[17px] w-[17px] shrink-0 opacity-100 transition-opacity duration-150 group-hover/exp:opacity-0"
+            className={cn("h-[17px] w-[17px] shrink-0 opacity-100 transition-opacity group-hover/exp:opacity-0", MOTION_CONTROL)}
           />
           <ChevronRightIcon
             className={cn(
-              "absolute h-4 w-4 opacity-0 transition-all duration-150 group-hover/exp:opacity-100",
+              "absolute h-4 w-4 opacity-0 transition-all group-hover/exp:opacity-100",
+              MOTION_CONTROL,
               open && "rotate-90",
             )}
           />
@@ -1034,9 +1105,14 @@ export function RailExpandable({
         )}
       </div>
 
-      {open && (
-        <div className="mt-0.5 flex flex-col gap-0.5 pl-3">{list}</div>
-      )}
+      {/* The disclosure's row travels 0fr -> 1fr, so it opens to the height its
+          sub-items actually have — the single child is clipped by the
+          `.agent-disclose > *` rule while it travels and needs no class here.
+          Padding rather than margin on that child so the gap above the list
+          collapses WITH the row instead of surviving at zero height. */}
+      <div ref={discloseRef} id={discloseId} className="agent-disclose" data-open={open ? "true" : "false"}>
+        <div className="flex flex-col gap-0.5 pl-3 pt-0.5">{everOpened ? list : null}</div>
+      </div>
     </div>
   )
 }
@@ -1053,9 +1129,11 @@ export interface RailModeButtonProps {
   className?: string
   /** Show label text next to icon (for mobile drawer) */
   showLabel?: boolean
+  /** @see {@link RailButtonProps.style} — carries `--stagger-index` in a rail. */
+  style?: React.CSSProperties
 }
 
-export function RailModeButton({ mode, icon, label, badge, className, showLabel }: RailModeButtonProps) {
+export function RailModeButton({ mode, icon, label, badge, className, showLabel, style }: RailModeButtonProps) {
   const { panelOpen, mode: currentMode, switchMode } = useSidebar()
   return (
     <RailButton
@@ -1066,6 +1144,7 @@ export function RailModeButton({ mode, icon, label, badge, className, showLabel 
       onClick={() => switchMode(mode)}
       className={className}
       showLabel={showLabel}
+      style={style}
     />
   )
 }
@@ -1085,7 +1164,8 @@ export function SidebarPanel({ children, className }: SidebarPanelProps) {
   return (
     <div
       className={cn(
-        "transition-[opacity] duration-150 h-full overflow-hidden border-l border-[var(--md3-outline-variant)] bg-surface-container-low",
+        "transition-[opacity] h-full overflow-hidden border-l border-[var(--md3-outline-variant)] bg-surface-container-low",
+        MOTION_SURFACE,
         panelOpen ? "w-[268px] opacity-100" : "w-0 opacity-0 pointer-events-none",
         className,
       )}
@@ -1152,7 +1232,9 @@ export function SidebarContent({ children, className }: SidebarContentProps) {
   return (
     <main
       className={cn(
-        "min-h-screen transition-[margin-left] duration-200 ease-in-out lg:ml-[var(--sb-content-margin,0px)]",
+        "min-h-screen transition-[margin-left] lg:ml-[var(--sb-content-margin,0px)]",
+        // Same tier as the rail it is keeping pace with — @see Sidebar.
+        MOTION_TRAVEL,
         className,
       )}
       style={{ "--sb-content-margin": `${contentMargin}px` } as React.CSSProperties}
@@ -1283,6 +1365,7 @@ export function ProfileAvatar({
           type="button"
           className={cn(
             "flex items-center rounded-lg transition-colors hover:bg-[var(--accent-surface-soft)]",
+            MOTION_CONTROL,
             "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
             showDetails ? "w-full gap-2.5 px-3 py-2 text-left" : "justify-center w-12 h-12",
             className,

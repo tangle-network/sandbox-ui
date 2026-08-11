@@ -67,16 +67,27 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
       {children}
       {coords !== null && typeof document !== "undefined" &&
         createPortal(
+          // Two elements, because the centering transform and the entrance
+          // transform cannot share one: `.agent-pop-in` fills forwards to
+          // `transform: none`, which would eat the `translateY(-50%)` and leave
+          // every tooltip half a line low. The outer span owns the position, the
+          // inner one owns the motion.
           <span
-            role="tooltip"
-            aria-hidden="true"
             style={{ position: "fixed", top: coords.top, left: coords.left, transform: "translateY(-50%)" }}
-            className={cn(
-              "pointer-events-none z-[70] whitespace-nowrap px-2 py-1 text-xs font-medium text-popover-foreground",
-              RAIL_FLOATING_SURFACE,
-            )}
+            className="pointer-events-none z-[70]"
           >
-            {label}
+            <span
+              role="tooltip"
+              aria-hidden="true"
+              className={cn(
+                // Appears in place beside the trigger after the open delay, so
+                // it scales up rather than travelling — @see .agent-pop-in.
+                "agent-pop-in block whitespace-nowrap px-2 py-1 text-xs font-medium text-popover-foreground",
+                RAIL_FLOATING_SURFACE,
+              )}
+            >
+              {label}
+            </span>
           </span>,
           document.body,
         )}

@@ -169,6 +169,7 @@ export function VariantList({
               <Badge className={`shrink-0 ${status.bg} ${status.border} ${status.color}`}>
                 <StatusIcon
                   className={`mr-1 h-3 w-3 ${status.animate ? "animate-spin" : ""}`}
+                  {...(status.animate ? { "data-motion": "essential" } : {})}
                 />
                 {status.label}
               </Badge>

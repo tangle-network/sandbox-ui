@@ -67,15 +67,17 @@ const ratioOn = (surface, tokens) =>
 describe("--text-dim contrast against the surfaces this package ships", () => {
   for (const theme of THEMES) {
     it(`clears AA on every gated ${theme} plane`, () => {
-      const failures = GATED.map((surface) => ({
-        surface: surface.key,
-        ratio: Number(ratioOn(surface, SHIPPED[theme]).toFixed(2)),
-      })).filter(({ ratio }) => ratio < AA_NORMAL);
+      const failures = GATED
+        .map((surface) => ({
+          surface: surface.key,
+          ratio: Number(ratioOn(surface, SHIPPED[theme]).toFixed(2)),
+        }))
+        .filter(({ ratio }) => ratio < AA_NORMAL);
 
       expect(
         failures,
         `--text-dim (${SHIPPED[theme].get("--text-dim")}) is below ${AA_NORMAL}:1 on ${theme} plane(s) a shipped component renders it on. ` +
-          `Re-derive it with \`node scripts/text-dim-contrast.mjs --${theme} '#rrggbb'\` and correct the override in src/styles/globals.css.`,
+          `Re-derive it with \`node scripts/text-dim-contrast.mjs --${theme} '#rrggbb'\` and correct the value in brand's tokens.css.`,
       ).toEqual([]);
     });
   }
@@ -119,46 +121,21 @@ describe("--text-dim contrast against the surfaces this package ships", () => {
     }
   });
 
-  it("still needs the override — delete it when brand's own pair clears AA", () => {
-    // This is the retirement condition, asserted rather than written in a
-    // comment nobody re-reads. The override in src/styles/globals.css exists
-    // ONLY because brand's `--text-dim` does not clear AA against the ladder
-    // brand ships in the version this package resolves. brand 1.3.0 already
-    // moved the ladder and the token together as a matched pair; the day this
-    // package resolves a brand whose own pair passes, this test goes red and
-    // the fix is to delete the override, not to loosen this assertion.
-    const brandFailures = THEMES.flatMap((theme) =>
-      GATED.map((surface) => ratioOn(surface, BRAND_ONLY[theme])).filter(
-        (ratio) => ratio < AA_NORMAL,
-      ),
-    );
+  it("ships brand's value unmodified", () => {
+    // The token and the surface ladder it is scored against have to come from
+    // one place. A local override decouples them: the ladder keeps arriving
+    // from brand while the text tier stops tracking it, so the next ladder
+    // change moves every ratio here and nothing says so. This asserts the
+    // decoupling cannot come back — the value a consumer resolves is the value
+    // brand declares, in both themes.
     expect(
-      brandFailures.length,
-      "brand's own --text-dim now clears AA on every gated plane — remove the override block from src/styles/globals.css and this test.",
-    ).toBeGreaterThan(0);
-  });
-
-  it("leaves brand's named themes on their own matched pair", () => {
-    // Each named theme re-declares the surface ladder AND --text-dim together,
-    // at the same specificity as `:root`. Source order alone would hand every
-    // one of them this package's neutral value on their own surfaces, so the
-    // override is guarded with `:not([data-theme])`. Assert the guard is on
-    // every selector that could otherwise reach a named theme.
-    const override = globalsCss.slice(globalsCss.indexOf("--text-dim: #"));
-    const selectors = globalsCss
-      .slice(0, globalsCss.indexOf("--text-dim: #"))
-      .split("\n")
-      .filter((line) => /^\s*(:root|\[data-|\.(dark|light))/.test(line));
-    expect(selectors.length).toBeGreaterThan(0);
-    for (const selector of selectors) {
-      // `[data-theme="dark"]` / `[data-theme="light"]` are exact-value
-      // selectors, so they can never match a named theme and need no guard.
-      if (/\[data-theme="(dark|light)"\]/.test(selector)) continue;
-      expect(
-        selector,
-        `${selector.trim()} can match a named theme — add :not([data-theme])`,
-      ).toMatch(/:not\(\[data-theme\]\)/);
+      globalsCss,
+      "src/styles/globals.css declares --text-dim — correct the value in brand's tokens.css instead",
+    ).not.toMatch(/--text-dim\s*:/);
+    for (const theme of THEMES) {
+      expect(SHIPPED[theme].get("--text-dim")).toBe(
+        BRAND_ONLY[theme].get("--text-dim"),
+      );
     }
-    expect(override).toBeTruthy();
   });
 });

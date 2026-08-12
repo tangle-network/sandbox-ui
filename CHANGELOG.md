@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.100.1
+
+### Dependencies
+
+- **Sandbox UI accepts Agent Interface 0.47.**
+  The peer range upper bound moves to `<0.48.0`.
+  This package reads four symbols from that peer — `ReasoningEffort`, `HarnessType`, `harnessTypeSchema` and `reasoningLadder` — and re-exports two more (`modelProvider`, `snapHarnessToModel`).
+  0.47.0 changes none of them: it adds `agentProfileJsonSchema` and rewrites doc comments on `AgentProfile.harness`.
+  The floor stays at 0.36.0 because no 0.47 surface is used.
+  The development build and the packed-consumer check now run against 0.47.0, while the separate lower-bound check continues to prove 0.36.0.
+
+  This unblocks a peer-consistent install for any consumer that pairs this package with `agent-runtime` or `agent-knowledge`, which both require `>=0.47.0 <0.48.0`.
+
 ## 0.99.2
 
 ### Added

@@ -212,7 +212,7 @@ export function AddSshKeyDialog({
             disabled={isSaving}
             className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 active:scale-[0.97]"
           >
-            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin" data-motion="essential" />}
             {isSaving ? "Saving..." : "Add key"}
           </button>
         </DialogFooter>

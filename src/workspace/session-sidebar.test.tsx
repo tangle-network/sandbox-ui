@@ -88,6 +88,49 @@ describe("SessionSidebar — optimistic items", () => {
   });
 });
 
+describe("SessionSidebar — motion", () => {
+  it("staggers session rows by position instead of flashing the list in", () => {
+    const { container } = render(<SessionSidebar title="Chats" items={baseItems} />);
+    const rows = [...container.querySelectorAll("li")];
+    expect(rows.length).toBe(2);
+    rows.forEach((row, index) => {
+      // One arrival for the whole package: the same class the rail's nav items
+      // ride, indexed so the list unfolds rather than appearing at once.
+      expect(row.className).toMatch(/\bagent-arrive\b/);
+      expect(row.style.getPropertyValue("--stagger-index")).toBe(String(index));
+    });
+  });
+
+  it("marks a running session's shimmer essential and leaves a resting row alone", () => {
+    const { getByText } = render(
+      <SessionSidebar
+        title="Chats"
+        items={[
+          { id: "t1", title: "Working thread", status: "running" },
+          { id: "t2", title: "Resting thread" },
+        ]}
+      />,
+    );
+    const working = getByText("Working thread");
+    // The sweep is the only thing in the list saying an agent is mid-turn, so
+    // reduced motion must not silence it.
+    expect(working.className).toMatch(/\bagent-shimmer\b/);
+    expect(working).toHaveAttribute("data-motion", "essential");
+
+    const resting = getByText("Resting thread");
+    expect(resting.className).not.toMatch(/\bagent-shimmer\b/);
+    expect(resting).not.toHaveAttribute("data-motion");
+  });
+
+  it("keeps the session title as the row's accessible name while it shimmers", () => {
+    // A status label here would REPLACE the title in the row's accessible name.
+    const { getByRole } = render(
+      <SessionSidebar title="Chats" items={[{ id: "t1", title: "Working thread", status: "running" }]} />,
+    );
+    expect(getByRole("button", { name: /Working thread/ })).toBeInTheDocument();
+  });
+});
+
 describe("SessionSidebar — header alignment", () => {
   // SidebarLayout pins the rail header and the view header to h-14 "for
   // cross-view alignment". The panel header has to agree or the workspace shows

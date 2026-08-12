@@ -162,6 +162,89 @@
   --color-surface-container-highest: var(--md3-surface-container-highest);
 }
 
+/* ── Motion ────────────────────────────────────────────────────────────────
+ *
+ * `@tangle-network/brand` ships exactly one motion token (`--transition-default:
+ * 0.16s ease`) and no curves, so every animated surface in this package picked
+ * its own number: `duration-150` on a rail button, `duration-200` on the rail
+ * itself, `0.18s ease-out` on a session row, Tailwind's implicit default
+ * everywhere a bare `transition-colors` was written. Nothing was wrong;
+ * nothing was decidable either, and none of it was reachable by a reduced-motion
+ * preference.
+ *
+ * These are the SAME names and the SAME values `@tangle-network/agent-app`
+ * declares in its own `theme/tokens.css` (0.45.46+), deliberately duplicated
+ * rather than imported: sandbox-ui does not depend on agent-app, and a product
+ * that loads both stylesheets must not get two different answers for
+ * `--duration-base`. Identical declarations are order-independent; divergent
+ * ones are a coin flip decided by import order. If agent-app retunes the
+ * ladder, retune it here in the same change.
+ *
+ * They live in `globals.css` and not in `dist/tokens.css` because that file is
+ * a byte-for-byte copy of brand's (see scripts/copy-styles.mjs) — the tokens
+ * that are ours to declare belong in the one stylesheet this package authors,
+ * next to the utilities that consume them.
+ *
+ *   instant  a control acknowledging a pointer (hover/active colour)
+ *   fast     a state change on a control already on screen
+ *   base     a surface arriving or leaving (popover, panel, disclosure)
+ *   slow     a full-height surface travelling (drawer, sheet, the rail)
+ *
+ * Curves: entrances decelerate hard and land softly; state changes decelerate
+ * normally; exits ACCELERATE away, because a user who dismissed something is
+ * done with it and should not wait for it to glide out. */
+:root {
+  --duration-instant: 90ms;
+  --duration-fast: 150ms;
+  --duration-base: 240ms;
+  --duration-slow: 360ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-entrance: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  /* Drop-in duration+easing pairs: `transition: background-color var(--motion-control)`. */
+  --motion-control: var(--duration-fast) var(--ease-standard);
+  --motion-surface: var(--duration-base) var(--ease-entrance);
+  --motion-dismiss: var(--duration-instant) var(--ease-exit);
+
+  /* Entrance choreography. The durations above answer "how fast does an
+   * existing thing change"; these answer "how does a thing that was not there
+   * ARRIVE" — a nav rail unfolding, a session appearing in the list, a
+   * disclosure revealing its sub-items.
+   *
+   * `--motion-stream` is longer than `base` on purpose: streamed text arrives
+   * continuously, so each chunk overlaps its neighbours and a fast curve makes
+   * the paragraph flicker. `--motion-arrive` is the row/card entrance and is
+   * meant to be staggered by index (see `--stagger-step`). */
+  --duration-stream: 420ms;
+  --duration-arrive: 600ms;
+  --ease-expo: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-stream: var(--duration-stream) var(--ease-expo);
+  --motion-arrive: var(--duration-arrive) var(--ease-expo);
+  /* Per-item delay in a staggered group. 5 items = 200ms tail, which stays
+   * under the 250ms an interface can add before it reads as latency. */
+  --stagger-step: 50ms;
+  /* Position in a staggered group, overridden PER ELEMENT by the caller. It is
+   * declared here with a zero default rather than read through a `var()`
+   * fallback so the file never references a token it does not define — an
+   * undefined `var()` resolves to nothing and paints silently, which is the
+   * failure the token contract exists to catch. */
+  --stagger-index: 0;
+  /* How far an arriving surface travels, and how far a streamed chunk resolves
+   * from. Both are small: motion that announces itself is motion you notice
+   * twice. */
+  --arrive-distance: 8px;
+  --stream-blur: 4px;
+  /* Period of the `.agent-shimmer` sweep. Deliberately NOT named
+   * `--duration-*`: that prefix is the collapsible ladder, and the
+   * reduced-motion block sets every member of it to 1ms at `:root`. A custom
+   * property collapsed at the root cannot be excluded per element, so naming
+   * this one `--duration-shimmer` would freeze the sweep for the very users the
+   * `data-motion="essential"` exemption exists to keep informed. The sweep is a
+   * looping SIGNAL, not a transition, so it sits with the other non-collapsible
+   * motion constants above. */
+  --shimmer-period: 1400ms;
+}
+
 /* `@pierre/trees` (RichFileTree) is CSS-var driven and ships LIGHT defaults with
  * no dark switching — `--trees-bg: var(--trees-bg-override, <light>)`. Without the
  * `*-override` vars it paints a near-white `#f8f8f8` container even inside a dark
@@ -432,6 +515,13 @@
     animation: shimmer 1.1s linear infinite;
   }
 
+  /* Silenced outright rather than floored, and kept that way: this is shipped
+     behaviour of a published class. It is also the correct default under the
+     rule stated with the reduced-motion block below — a bare class carries no
+     claim about whether the thing it labels is still working. A caller that
+     needs the sweep to survive the preference uses `.agent-shimmer` on an
+     element that declares `data-motion="essential"`, which is where that claim
+     can actually be made. */
   @media (prefers-reduced-motion: reduce) {
     .shimmer-text {
       animation: none;
@@ -463,7 +553,21 @@
     }
   }
 
-  /* Quiet enter for optimistically-inserted list rows. */
+  /* Quiet enter for optimistically-inserted list rows.
+     PUBLISHED CLASS — FROZEN TIMING. Ships in `dist/globals.css`, so consumers
+     time their own list insertions against these exact 180ms and this exact
+     4px travel DOWNWARD from above. Retiming it to the 600ms `agent-arrive`
+     entrance is a 3.3x slowdown and a reversed travel direction in every app
+     that already uses it, delivered as a patch with no call site to change; the
+     motion vocabulary is not worth that. It stays as shipped.
+
+     `--motion-arrive` is not read here for the same reason: a retune of the
+     token ladder must not reach a class whose timing is the contract. Reduced
+     motion still covers it — the universal floor below collapses any animation
+     on an element that has not declared itself essential, token or not.
+
+     New code writes `.agent-arrive` (plus `--stagger-index` for a list), which
+     is the vocabulary the rail and the session list ride. */
   .animate-row-in {
     animation: row-in 0.18s ease-out;
   }
@@ -504,6 +608,238 @@
   @keyframes status-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.35; }
+  }
+}
+
+/**
+ * Entrance choreography — the keyframes and the classes that ride them.
+ *
+ * Unlayered on purpose. Tailwind's own utilities live in its `utilities` layer,
+ * and unlayered rules beat every layer, so `.agent-disclose`'s grid rows and
+ * `.agent-arrive`'s animation cannot be knocked out by a utility that happens to
+ * sort later.
+ *
+ * Every duration below is a TOKEN, so no class here carries a media query of its
+ * own. They are not all reached by the SAME rule, and the difference is
+ * deliberate. The entrance classes read the `--duration-*` ladder (through the
+ * `--motion-*` pairs) and `--stagger-step`, which the reduced-motion block
+ * collapses at `:root`: that reaches every element, unconditionally.
+ * `.agent-shimmer` reads `--shimmer-period`, which is deliberately NOT in that
+ * ladder, because a value collapsed at the root cannot be un-inherited by the
+ * elements that declare `data-motion="essential"` and whose sweep is the only
+ * evidence their agent is still working. Everywhere else, that sweep is silenced
+ * by the universal floor in the same block. @see `--shimmer-period`.
+ *
+ * Same names, same keyframes, same values as `@tangle-network/agent-app`'s
+ * `theme/tokens.css` — @see the token block at the top of this file for why they
+ * are duplicated rather than imported.
+ */
+
+/* Streamed text: each chunk resolves out of a small blur instead of popping in. */
+@keyframes agent-stream-in {
+  from {
+    opacity: 0;
+    filter: blur(var(--stream-blur));
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+/* A row, card or chip that was not there a moment ago. Travels a short distance
+   so the eye is told WHERE it came from. */
+@keyframes agent-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--arrive-distance));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* A control appearing in place — a chip, a badge, a rail tooltip, a flyout. No
+   travel, because it did not come from anywhere. */
+@keyframes agent-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The insertion caret at the end of streaming text. A hard step blink, not a
+   fade: a caret that eases is a caret that reads as a loading placeholder. */
+@keyframes agent-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* A label that is WAITING. The sweep is what separates "the agent is working"
+   from "the interface is stuck": a static label cannot tell you which. */
+@keyframes agent-shimmer {
+  from {
+    background-position: 150% center;
+  }
+  to {
+    background-position: -50% center;
+  }
+}
+
+.agent-stream-in {
+  animation: agent-stream-in var(--motion-stream) both;
+}
+
+.agent-arrive {
+  animation: agent-arrive var(--motion-arrive) both;
+}
+
+.agent-pop-in {
+  animation: agent-pop-in var(--motion-control) both;
+}
+
+/* Stagger by index: set `--stagger-index` and a group arrives as a sequence
+   rather than as a flash. Capped at 8 so a 200-session list does not open with a
+   10-second cascade — past the cap every row shares the last delay. */
+.agent-arrive {
+  animation-delay: calc(min(var(--stagger-index), 8) * var(--stagger-step));
+}
+
+/* The waiting label. `background-clip: text` over a moving gradient, so the
+   shimmer runs THROUGH the glyphs rather than behind them.
+
+   The class alone is decorative and IS silenced by the reduced-motion floor.
+   It becomes essential only where the element also declares
+   `data-motion="essential"`, which is the caller's assertion that this
+   particular label's agent is still working. Class-level exemption would be
+   wrong: the same sweep is used as a plain skeleton treatment, and a rule
+   cannot tell the two apart. @see the reduced-motion block below. */
+.agent-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted-foreground)) 0%,
+    hsl(var(--foreground)) 45%,
+    hsl(var(--muted-foreground)) 60%
+  );
+  background-size: 250% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: agent-shimmer var(--shimmer-period) linear infinite;
+}
+
+/* Height-auto disclosure without measuring anything in JavaScript. The row
+   animates between 0fr and 1fr; the single child needs `min-height: 0` and
+   `overflow: hidden` to be clipped while it travels — it needs no class of its
+   own. A max-height guess is the usual alternative and it either clips tall
+   content or eases against a number the content never reaches, which for a nav
+   disclosure holding an unknown number of sessions is both. */
+.agent-disclose {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--motion-surface), opacity var(--motion-control);
+  opacity: 0;
+}
+
+.agent-disclose > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.agent-disclose[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+/**
+ * Reduced motion, at the token layer and at the floor.
+ *
+ * Two rules, because they cover two different populations. Collapsing the
+ * duration TOKENS is what makes motion built on this system honour the
+ * preference for free — a component that wrote `var(--motion-surface)` or
+ * `duration-[var(--duration-fast)]` needs no media query of its own, and gets no
+ * chance to forget one. The universal rule under it is the floor for everything
+ * that predates the tokens: this package still carries transitions on Tailwind's
+ * implicit duration, and a consuming app carries its own. Neither reads a token,
+ * so neither would be reached.
+ *
+ * 1ms rather than 0: a zero-duration transition fires no `transitionend`, and
+ * any component that awaits one to unmount or advance a state machine hangs
+ * forever. 1ms is imperceptible AND still fires.
+ *
+ * THE RULE, so the next element is classified the same way this one was:
+ *
+ *   Motion is ESSENTIAL when it is the only evidence that something is
+ *   happening RIGHT NOW — an operation in flight, a resource actively running.
+ *   Freeze it and "working" becomes indistinguishable from "stuck", which is
+ *   information removed. Everything else is DECORATIVE and is silenced.
+ *
+ * Two consequences make it decidable rather than a matter of taste:
+ *
+ *  - A static label beside the motion does NOT make an in-flight indicator
+ *    decorative. "Loading processes…" stays on screen whether the fetch is
+ *    alive or hung; only the spinner separates those.
+ *  - A state that is NOT in flight is carried by its label, its colour and its
+ *    shape, so motion on it is emphasis. The `animate-ping` beside "Error
+ *    fetching logs" says nothing the sentence does not, and it is silenced.
+ *    Skeleton placeholders are the same case: a frozen skeleton still reads as
+ *    a placeholder, because the shape is the message.
+ *
+ * The exemption is declared PER ELEMENT with `data-motion="essential"`, never on
+ * a class. `.agent-shimmer` is the reason: the identical sweep marks a session
+ * whose agent is mid-turn and dresses a plain skeleton, and only the caller
+ * knows which one it built. The exclusion covers the element and its subtree,
+ * and `:where()` keeps the selector at zero specificity so a consumer's own rule
+ * can still win. Reduced motion is not a design preference to be overridden, it
+ * is a request from the person using the product; the only defensible exemption
+ * is motion whose absence removes information.
+ *
+ * Note the asymmetry with the `:root` block: a duration collapsed there reaches
+ * every element, `data-motion` included, because a custom property cannot be
+ * un-inherited. That is why an essential animation's period is not a
+ * `--duration-*` token — @see `--shimmer-period`.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 1ms;
+    --duration-fast: 1ms;
+    --duration-base: 1ms;
+    --duration-slow: 1ms;
+    --duration-stream: 1ms;
+    --duration-arrive: 1ms;
+    /* The stagger is a delay, not a duration, and a collapsed animation with a
+       live delay still arrives as a visible cascade. */
+    --stagger-step: 0ms;
+  }
+
+  /* `::before` and `::after` are listed because `*` matches elements only, and
+     an animation declared on a pseudo-element is therefore invisible to the
+     floor. `.pulse-ring::before` in this very file drew its 2s ring infinitely
+     under the preference — measured in Chromium against the built stylesheet —
+     while every element around it was collapsed to 1ms. The exemption still
+     applies: a pseudo-element of an essential element, or of a descendant of
+     one, is not floored. */
+  *:where(:not([data-motion="essential"], [data-motion="essential"] *)),
+  *:where(:not([data-motion="essential"], [data-motion="essential"] *))::before,
+  *:where(:not([data-motion="essential"], [data-motion="essential"] *))::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+
+  html {
+    scroll-behavior: auto !important;
   }
 }
 

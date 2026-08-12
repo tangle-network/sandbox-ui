@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Plus, Bell } from "lucide-react"
 import { cn } from "../lib/utils"
+import { MOTION_CONTROL, MOTION_TRAVEL } from "../lib/motion"
 import { useBrandThemeSync } from "./use-brand-theme-sync"
 import { Logo } from "../primitives"
 import {
@@ -284,6 +285,9 @@ function DashboardLayoutInner({
               const isMode = modeSet.has(item.id)
               const prevIsMode = i > 0 && modeSet.has(navItems[i - 1].id)
               const showSep = i > 0 && isMode && !prevIsMode
+              // Same staggered entrance the SidebarLayout rail uses — one nav
+              // grammar across both shells, indexed by position in the list.
+              const arrival = { className: "agent-arrive", style: { "--stagger-index": i } as React.CSSProperties }
 
               return (
                 <React.Fragment key={item.id}>
@@ -299,6 +303,7 @@ function DashboardLayoutInner({
                       label={item.label}
                       badge={item.badge}
                       showLabel={showLabels}
+                      {...arrival}
                     />
                   ) : (
                     <RailButton
@@ -307,6 +312,7 @@ function DashboardLayoutInner({
                       isActive={activeNavId === item.id}
                       showLabel={showLabels}
                       asChild
+                      {...arrival}
                     >
                       <Link href={item.href} to={item.href} />
                     </RailButton>
@@ -420,7 +426,13 @@ function DashboardLayoutInner({
     <div className={cn("min-h-screen bg-surface text-foreground", className)}>
       {/* Top nav bar */}
       <nav
-        className="fixed top-0 z-50 bg-surface-container-low border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width] duration-200 ease-in-out"
+        // Left/width are driven by the rail's collapse, so this bar travels on
+        // the rail's tier — anything faster and the top bar arrives before the
+        // edge it is measured from.
+        className={cn(
+          "fixed top-0 z-50 bg-surface-container-low border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width]",
+          MOTION_TRAVEL,
+        )}
         style={{
           left: hidden ? 0 : contentMargin,
           width: hidden ? "100%" : `calc(100% - ${contentMargin}px)`,
@@ -430,7 +442,7 @@ function DashboardLayoutInner({
           {/* Mobile-only brand — the desktop sidebar rail carries the logo
               on lg+, but on mobile the rail is hidden behind the drawer and
               the top bar otherwise contained only a bell + hamburger. */}
-          <Link href={logoHref} to={logoHref} className="lg:hidden flex items-center p-1 rounded-md hover:bg-surface-container-high transition-colors">
+          <Link href={logoHref} to={logoHref} className={cn("lg:hidden flex items-center p-1 rounded-md hover:bg-surface-container-high transition-colors", MOTION_CONTROL)}>
             <Logo variant={variant} size="sm" iconOnly />
           </Link>
           {topBarLeading}
@@ -442,7 +454,8 @@ function DashboardLayoutInner({
                   href={link.href}
                   to={link.href}
                   className={cn(
-                    "transition-all duration-300 px-2 py-1 rounded",
+                    "transition-all px-2 py-1 rounded",
+                    MOTION_CONTROL,
                     activeTopNavHref === link.href
                       ? "text-foreground border-b-2 border-primary pb-1"
                       : "text-muted-foreground hover:text-foreground hover:bg-surface-container-high",
@@ -459,7 +472,7 @@ function DashboardLayoutInner({
             <button
               type="button"
               onClick={onNewSandbox}
-              className="hidden md:flex items-center gap-2 bg-[var(--btn-primary-bg)] border border-[var(--border-accent)] text-[var(--btn-primary-text)] px-4 py-2 rounded-lg font-bold hover:bg-[var(--btn-primary-hover)] transition-all active:scale-95 text-xs"
+              className={cn("hidden md:flex items-center gap-2 bg-[var(--btn-primary-bg)] border border-[var(--border-accent)] text-[var(--btn-primary-text)] px-4 py-2 rounded-lg font-bold hover:bg-[var(--btn-primary-hover)] transition-all active:scale-95 text-xs", MOTION_CONTROL)}
             >
               <Plus className="h-3.5 w-3.5" />
               New Sandbox
@@ -468,7 +481,7 @@ function DashboardLayoutInner({
           <div className="relative" ref={notifRef}>
             <button
               type="button"
-              className="relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-surface-container-high"
+              className={cn("relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-surface-container-high", MOTION_CONTROL)}
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               aria-label="Notifications"
               aria-expanded={notificationsOpen}
@@ -506,6 +519,7 @@ function DashboardLayoutInner({
                         type="button"
                         className={cn(
                           "w-full text-left px-4 py-3 border-b border-[var(--md3-outline-variant)] last:border-0 transition-colors",
+                          MOTION_CONTROL,
                           n.read ? "cursor-default" : "bg-primary/5 hover:bg-white/5"
                         )}
                         onClick={() => { if (!n.read) notifData.onMarkRead?.(n.id); }}
@@ -548,7 +562,8 @@ function DashboardLayoutInner({
           is open we extend by the panel width so both sit side-by-side. */}
       <aside
         className={cn(
-          "fixed top-14 bottom-0 left-0 z-30 flex bg-surface-container-low transition-transform duration-200 lg:hidden",
+          "fixed top-14 bottom-0 left-0 z-30 flex bg-surface-container-low transition-transform lg:hidden",
+          MOTION_TRAVEL,
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
         style={{

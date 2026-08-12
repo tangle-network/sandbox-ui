@@ -204,6 +204,11 @@ describe("SidebarLayout — expandable nav item", () => {
     ...overrides,
   })
 
+  // Still true after the disclosure moved onto `.agent-disclose` (a grid whose
+  // row travels 0fr -> 1fr): the region is mounted from the start so it has a
+  // height to collapse against, but its CONTENT is gated on the first open, so
+  // a page load still ships no session links. Once opened they stay mounted and
+  // go `inert` on close — asserted in sidebar-motion.test.tsx.
   it("hides fixed sub-items until the disclosure is clicked", () => {
     render(
       <SidebarLayout railLabels navItems={[expandableNav({ subItems })]}>

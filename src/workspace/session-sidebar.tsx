@@ -1,6 +1,7 @@
-import { type ReactNode, type Ref, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, type Ref, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { ArrowLeft, FolderTree, GripVertical, MessageSquareText, Plus, Search, Settings, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
+import { MOTION_CONTROL } from "../lib/motion";
 import { Badge } from "@tangle-network/ui/primitives";
 import { useNavbarSessions, type ActiveSessionRecord, type ActiveSessionStatus, type SessionProjectKey } from "@tangle-network/ui/stores";
 import {
@@ -323,7 +324,7 @@ export function SessionSidebar({
                 type="button"
                 onClick={onCreate}
                 title={createLabel}
-                className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground"
+                className={cn("flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -343,7 +344,7 @@ export function SessionSidebar({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
-                className="h-8 w-full rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] bg-surface-container-lowest pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:border-[var(--border-accent)] focus-visible:bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]"
+                className={cn("h-8 w-full rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] bg-surface-container-lowest pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:border-[var(--border-accent)] focus-visible:bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]", MOTION_CONTROL)}
               />
             </div>
           )}
@@ -359,6 +360,7 @@ export function SessionSidebar({
                     onClick={() => setActiveFilterId(filter.id)}
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
+                      MOTION_CONTROL,
                       isSelected
                         ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary"
                         : "border-[var(--md3-outline-variant)] text-muted-foreground hover:text-foreground",
@@ -383,20 +385,30 @@ export function SessionSidebar({
           </div>
         ) : (
           <ul className="space-y-px">
-            {visibleItems.map((item) => {
+            {visibleItems.map((item, index) => {
               const session = sessionsById.get(item.id) ?? null;
               const isActive = currentItemId === item.id;
               const status = session?.status ?? item.status;
+              // A running session is one whose agent is mid-turn. The sweep
+              // through its title is the only thing in the list that says so —
+              // a static row cannot distinguish "working" from "finished an
+              // hour ago" — so it opts out of the reduced-motion floor.
+              const isWorking = status === "running";
               const visibleBadges = [
                 ...(item.isPinned ? [{ id: `${item.id}-pinned`, label: "Pinned", tone: "neutral" as const }] : []),
                 ...(item.badges ?? []),
               ];
 
               return (
-                <li key={item.id} className="animate-row-in">
+                <li
+                  key={item.id}
+                  className="agent-arrive"
+                  style={{ "--stagger-index": index } as CSSProperties}
+                >
                   <div
                     className={cn(
                       "group relative flex items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 transition-colors",
+                      MOTION_CONTROL,
                       isActive
                         ? "bg-accent font-medium text-foreground"
                         : "text-muted-foreground hover:bg-accent/30",
@@ -416,10 +428,18 @@ export function SessionSidebar({
                     >
                       <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusDot(status))} />
                       <div className="min-w-0 flex-1">
-                        <div className={cn(
-                          "truncate text-sm font-medium",
-                          isActive && "text-foreground",
-                        )}>
+                        <div
+                          className={cn(
+                            "truncate text-sm font-medium",
+                            isActive && "text-foreground",
+                            isWorking && "agent-shimmer",
+                          )}
+                          // No `aria-label` beside it: the label would replace
+                          // the session title in the row's accessible name, and
+                          // trading the only piece of information a screen
+                          // reader has for a status word is not an upgrade.
+                          {...(isWorking ? { "data-motion": "essential" } : {})}
+                        >
                           {item.title}
                         </div>
                         {item.subtitle && (
@@ -447,7 +467,7 @@ export function SessionSidebar({
                       )}
                       {renderItemActions ? (
                         <div
-                          className="opacity-0 transition-opacity group-hover:opacity-100"
+                          className={cn("opacity-0 transition-opacity group-hover:opacity-100", MOTION_CONTROL)}
                           onClick={(event) => event.stopPropagation()}
                         >
                           {renderItemActions(item, { session, isActive })}
@@ -486,7 +506,7 @@ export function SessionSidebar({
                     }
                     navigateToHref(link.href);
                   }}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/30 hover:text-foreground"
+                  className={cn("flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/30 hover:text-foreground", MOTION_CONTROL)}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{link.label}</span>
@@ -500,7 +520,7 @@ export function SessionSidebar({
       {/* Resize handle */}
       {resizable && (
         <div
-          className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-surface-soft)] active:bg-[var(--border-accent)] transition-colors"
+          className={cn("absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-surface-soft)] active:bg-[var(--border-accent)] transition-colors", MOTION_CONTROL)}
           onPointerDown={resize.onPointerDown}
           onPointerMove={resize.onPointerMove}
           onPointerUp={resize.onPointerUp}

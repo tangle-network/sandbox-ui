@@ -441,7 +441,7 @@ export function AgentComposer({
                     </span>
                   )}
                   {file.status === "uploading" && (
-                    <Loader2 className="size-3 animate-spin" />
+                    <Loader2 className="size-3 animate-spin" data-motion="essential" />
                   )}
                   {isError && file.errorMessage && (
                     <span className="max-w-[150px] truncate text-[var(--status-error,#ff4d6d)]/80">
@@ -643,7 +643,7 @@ export function AgentComposer({
               )}
             >
               {busy ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" data-motion="essential" />
               ) : (
                 <ArrowUp className="size-4" />
               )}

@@ -93,7 +93,8 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
 
       {loading ? (
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
-          <Camera className="mx-auto h-6 w-6 text-muted-foreground animate-pulse mb-2" />
+          {/* Liveness of the in-flight load, not decoration — @see ProcessList. */}
+          <Camera className="mx-auto h-6 w-6 text-muted-foreground animate-pulse mb-2" data-motion="essential" />
           <p className="text-sm text-muted-foreground">Loading snapshots...</p>
         </div>
       ) : snapshots.length > 0 ? (

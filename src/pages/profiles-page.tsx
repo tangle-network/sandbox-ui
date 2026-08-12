@@ -214,7 +214,7 @@ export function ProfilesPage({
       {/* Loading state */}
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" data-motion="essential" />
         </div>
       )}
 
@@ -685,7 +685,7 @@ function ProfileFormDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={saving || !formData.name}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" data-motion="essential" />}
               {isEditing ? "Save Changes" : "Create Profile"}
             </Button>
           </DialogFooter>
@@ -764,7 +764,7 @@ function DeleteProfileDialog({
             onClick={handleDelete}
             disabled={deleting}
           >
-            {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" data-motion="essential" />}
             Delete Profile
           </Button>
         </DialogFooter>

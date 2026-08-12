@@ -48,7 +48,9 @@ export function ClusterStatusBar({ items, latency, className }: ClusterStatusBar
             <span aria-hidden className="h-5 w-px shrink-0 bg-border" />
             <div className="flex shrink-0 items-center gap-2">
               <span className="relative flex h-2.5 w-2.5 items-center justify-center">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                {/* The ping is what says the latency figure beside it is being
+                    refreshed rather than frozen at its last value. */}
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" data-motion="essential" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
               </span>
               <span className="font-mono text-xs font-bold text-green-400">{latency}</span>

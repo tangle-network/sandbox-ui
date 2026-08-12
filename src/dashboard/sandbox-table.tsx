@@ -195,7 +195,12 @@ export function SandboxTable({
                   >
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <span className={cn("flex h-2.5 w-2.5 rounded-full", sc.dot)} />
+                        {/* The pulse on a running/provisioning dot is the live-state
+                            signal, not decoration — it stays under reduced motion. */}
+                        <span
+                          className={cn("flex h-2.5 w-2.5 rounded-full", sc.dot)}
+                          {...(sc.dot.includes("animate-") ? { "data-motion": "essential" } : {})}
+                        />
                         <span className={cn("text-xs font-bold uppercase tracking-wide", sc.text)}>
                           {sb.status.charAt(0).toUpperCase() + sb.status.slice(1)}
                         </span>
@@ -249,7 +254,7 @@ export function SandboxTable({
                         </div>
                       ) : isProvisioning ? (
                         <div className="flex items-center gap-2 text-primary italic text-[10px] font-bold">
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" data-motion="essential" />
                           {sb.provisioningMessage ?? "Allocating nodes..."}
                         </div>
                       ) : isHibernating ? (

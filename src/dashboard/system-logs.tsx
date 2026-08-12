@@ -91,10 +91,15 @@ export function SystemLogsViewer({ apiUrl, token, className }: SystemLogsViewerP
     <div className={cn("flex flex-col h-full bg-surface-dim text-foreground font-mono text-sm leading-relaxed overflow-hidden rounded-lg border border-[var(--md3-outline-variant)]", className)}>
       <div className="flex-none flex items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-high backdrop-blur-md px-4 py-2">
         <div className="flex items-center gap-2">
+           {/* Decorative: it pulses at the same rate whether or not lines are
+               arriving, so it reports nothing. No `data-motion` — it is silenced
+               under reduced motion. */}
            <Terminal className="h-4 w-4 text-primary animate-pulse" />
            <span className="font-bold text-xs uppercase tracking-widest text-muted-foreground">System Traces</span>
         </div>
         <div className="flex items-center gap-3">
+          {/* Also decorative: an error is a settled state, and the sentence next
+              to the dot already names it. Nothing is in flight to signal. */}
           {error && <span className="text-destructive text-xs flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-destructive animate-ping"></span> Error fetching logs</span>}
           <button
             onClick={() => {

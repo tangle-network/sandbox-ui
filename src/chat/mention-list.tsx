@@ -93,7 +93,7 @@ export const MentionList = React.forwardRef<MentionListHandle, MentionListProps>
       >
         {loading && (
           <div className="flex items-center gap-2 px-2.5 py-2 text-muted-foreground text-sm">
-            <Loader2 className="size-3.5 animate-spin" />
+            <Loader2 className="size-3.5 animate-spin" data-motion="essential" />
             Searching…
           </div>
         )}

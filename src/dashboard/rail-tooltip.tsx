@@ -31,6 +31,13 @@ export interface RailTooltipProps {
  * short delay, and `pointer-events-none` so it never interferes with the
  * trigger. Hidden from the a11y tree (`aria-hidden`) since the trigger already
  * carries an accessible name.
+ *
+ * `disabled` suppresses the tooltip but NOT the wrapper. Returning a fragment
+ * instead changes the rendered element type, and React reconciles by type: the
+ * trigger inside would be torn down and rebuilt every time the rail toggles
+ * between icon-only and labeled. A rebuilt element replays its CSS entrance, so
+ * the whole nav would re-stagger on a collapse that moved nothing off screen.
+ * One element type, both states.
  */
 export function RailTooltip({ label, children, disabled, className }: RailTooltipProps) {
   const ref = React.useRef<HTMLSpanElement>(null)
@@ -39,9 +46,25 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
 
   React.useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
-  if (disabled) return <>{children}</>
+  // A tooltip left open when the rail expands has nothing to anchor to, and a
+  // pending open must die with it. Clearing `coords` alone is not enough: the
+  // wrapper stays mounted across the toggle (that is the whole point of the
+  // one-element-type rule above), so the unmount cleanup never runs and a timer
+  // armed a moment before `disabled` went true still fires. It then writes
+  // coordinates for a control that is no longer tooltipped — invisible while
+  // `disabled` holds, and a tooltip that appears unbidden, at a stale position,
+  // the moment `disabled` goes false again.
+  React.useEffect(() => {
+    if (!disabled) return
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+    setCoords(null)
+  }, [disabled])
 
   const open = () => {
+    if (disabled) return
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
       const el = ref.current
@@ -58,25 +81,39 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
   return (
     <span
       ref={ref}
-      className={cn("relative flex", className)}
+      // `shrink-0` because the wrapper now stands between the rail's scrolling
+      // flex column and a trigger that carries `shrink-0` itself; without it the
+      // wrapper absorbs the squeeze the trigger refuses and the row overflows.
+      className={cn("relative flex shrink-0", className)}
       onMouseEnter={open}
       onMouseLeave={close}
       onFocusCapture={open}
       onBlurCapture={close}
     >
       {children}
-      {coords !== null && typeof document !== "undefined" &&
+      {!disabled && coords !== null && typeof document !== "undefined" &&
         createPortal(
+          // Two elements, because the centering transform and the entrance
+          // transform cannot share one: `.agent-pop-in` fills forwards to
+          // `transform: none`, which would eat the `translateY(-50%)` and leave
+          // every tooltip half a line low. The outer span owns the position, the
+          // inner one owns the motion.
           <span
-            role="tooltip"
-            aria-hidden="true"
             style={{ position: "fixed", top: coords.top, left: coords.left, transform: "translateY(-50%)" }}
-            className={cn(
-              "pointer-events-none z-[70] whitespace-nowrap px-2 py-1 text-xs font-medium text-popover-foreground",
-              RAIL_FLOATING_SURFACE,
-            )}
+            className="pointer-events-none z-[70]"
           >
-            {label}
+            <span
+              role="tooltip"
+              aria-hidden="true"
+              className={cn(
+                // Appears in place beside the trigger after the open delay, so
+                // it scales up rather than travelling — @see .agent-pop-in.
+                "agent-pop-in block whitespace-nowrap px-2 py-1 text-xs font-medium text-popover-foreground",
+                RAIL_FLOATING_SURFACE,
+              )}
+            >
+              {label}
+            </span>
           </span>,
           document.body,
         )}

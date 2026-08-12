@@ -530,6 +530,7 @@ export function WorkflowNode({
               className={`-right-1 -top-1 absolute h-2.5 w-2.5 rounded-full border-2 ${
                 state.status === "running" ? "animate-pulse" : ""
               }`}
+              {...(state.status === "running" ? { "data-motion": "essential" } : {})}
               style={{
                 background: STATUS_COLOR[state.status],
                 borderColor: "hsl(var(--card))",

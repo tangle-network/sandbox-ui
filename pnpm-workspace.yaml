@@ -12,3 +12,4 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - '@tangle-network/agent-interface@0.46.1'
+  - '@tangle-network/brand@1.4.0'

@@ -150,13 +150,16 @@ describe("--accent-text is an INK tier, on the planes this package renders it", 
   // text falls back to the inherited colour, which is the same low-contrast
   // state the class was written to fix. So resolution is asserted before the
   // ratio, in both themes.
-  const CARD = DIM_SURFACES.find((s) => s.key === "card (L2)");
-
-  it("finds the card plane to score against", () => {
-    // Without this, renaming the surface would leave the assertions below
-    // scoring against `undefined` and reading as a pass.
-    expect(CARD, "no 'card (L2)' surface in DIM_SURFACES").toBeDefined();
-  });
+  // Resolved here so a rename fails with the reason. `resolveSurface` on a
+  // missing surface throws `Cannot read properties of undefined (reading
+  // 'token')`, which names neither the surface nor the gate that wanted it.
+  const CARD_KEY = "card (L2)";
+  const CARD = DIM_SURFACES.find((s) => s.key === CARD_KEY);
+  if (!CARD) {
+    throw new Error(
+      `no "${CARD_KEY}" surface in DIM_SURFACES — the --accent-text gate scores against it`,
+    );
+  }
 
   for (const theme of THEMES) {
     it(`resolves to a complete colour in ${theme}`, () => {

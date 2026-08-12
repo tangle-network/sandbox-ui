@@ -140,6 +140,49 @@ describe("--text-dim contrast against the surfaces this package ships", () => {
   });
 });
 
+describe("every token this package force-emits a utility for resolves", () => {
+  // `@source inline(...)` exists for classes a CONSUMER writes and this package
+  // does not, so nothing here renders them and no other test can notice when one
+  // stops resolving. The degradation is silent by construction: the utility is
+  // still emitted, the `var()` resolves to nothing, and the declaration is
+  // dropped — a status bar goes transparent, a text tier falls back to body
+  // colour. Nothing measures as under-contrast, because nothing is there.
+  //
+  // Read from the directives rather than a hand-written list, so an entry added
+  // for a token that does not exist fails on the entry, not years later in a
+  // consuming app.
+  const INLINED = [
+    ...globalsCss.matchAll(/@source\s+inline\("([^"]+)"\)/g),
+  ].flatMap(([, utility]) => {
+    const token = utility.match(/var\((--[a-z0-9-]+)\)/)?.[1];
+    return token ? [{ utility, token }] : [];
+  });
+
+  it("finds the inline directives to check", () => {
+    // A directive syntax change that this pattern misses would empty the loop
+    // below and read as a pass.
+    expect(INLINED.length).toBeGreaterThanOrEqual(9);
+  });
+
+  for (const theme of THEMES) {
+    it(`resolves every inlined token in ${theme}`, () => {
+      const unresolved = INLINED.filter(({ token }) => {
+        try {
+          resolveColor(token, SHIPPED[theme]);
+          return false;
+        } catch {
+          return true;
+        }
+      }).map(({ utility, token }) => `${utility} -> ${token}`);
+
+      expect(
+        unresolved,
+        `these utilities are emitted for consumers but their tokens resolve to nothing in ${theme}, so the class silently does nothing`,
+      ).toEqual([]);
+    });
+  }
+});
+
 describe("--accent-text is an INK tier, on the planes this package renders it", () => {
   // The connector catalog's action is accent-coloured text on a card. It has to
   // use the ink tier rather than `--primary`, which is a FILL: primary carries

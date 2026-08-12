@@ -139,3 +139,56 @@ describe("--text-dim contrast against the surfaces this package ships", () => {
     }
   });
 });
+
+describe("--accent-text is an INK tier, on the planes this package renders it", () => {
+  // The connector catalog's action is accent-coloured text on a card. It has to
+  // use the ink tier rather than `--primary`, which is a FILL: primary carries
+  // white on a solid button and measures 1.79:1 as text on the dark card.
+  //
+  // The failure mode this guards is silent. A `text-[var(--accent-text)]` whose
+  // token does not resolve is not an error — the declaration is dropped and the
+  // text falls back to the inherited colour, which is the same low-contrast
+  // state the class was written to fix. So resolution is asserted before the
+  // ratio, in both themes.
+  const CARD = DIM_SURFACES.find((s) => s.key === "card (L2)");
+
+  it("finds the card plane to score against", () => {
+    // Without this, renaming the surface would leave the assertions below
+    // scoring against `undefined` and reading as a pass.
+    expect(CARD, "no 'card (L2)' surface in DIM_SURFACES").toBeDefined();
+  });
+
+  for (const theme of THEMES) {
+    it(`resolves to a complete colour in ${theme}`, () => {
+      expect(
+        () => resolveColor("--accent-text", SHIPPED[theme]),
+        `--accent-text does not resolve in ${theme} — a dropped declaration leaves the action at the inherited colour`,
+      ).not.toThrow();
+    });
+
+    it(`clears AA on the ${theme} card`, () => {
+      const ratio = Number(
+        contrast(
+          resolveColor("--accent-text", SHIPPED[theme]),
+          resolveSurface(CARD, SHIPPED[theme]),
+        ).toFixed(2),
+      );
+      expect(
+        ratio,
+        `--accent-text (${SHIPPED[theme].get("--accent-text")}) is ${ratio}:1 on the ${theme} card, below ${AA_NORMAL}:1`,
+      ).toBeGreaterThanOrEqual(AA_NORMAL);
+    });
+  }
+
+  it("is not the primary FILL token in either theme", () => {
+    // The two are different roles and must not converge: if --accent-text ever
+    // resolves to --primary, this file stops guarding anything and the catalog
+    // action is back to 1.79:1 with every test still green.
+    for (const theme of THEMES) {
+      expect(
+        resolveColor("--accent-text", SHIPPED[theme]),
+        `--accent-text equals --primary in ${theme}: the ink tier has collapsed onto the fill`,
+      ).not.toEqual(resolveColor("--primary", SHIPPED[theme]));
+    }
+  });
+});

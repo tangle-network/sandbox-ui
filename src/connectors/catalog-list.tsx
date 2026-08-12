@@ -220,7 +220,10 @@ export function ConnectorCatalogList({
               <button
                 type="button"
                 onClick={() => onRequestIntegration(search.trim())}
-                className="text-primary text-sm transition-colors hover:underline"
+                // `--accent-text`, not `--primary`: the brand indigo is a FILL
+                // colour (it carries white on a button). As text it measures
+                // 1.79:1 on the dark card — far under the 4.5:1 body floor.
+                className="text-[var(--accent-text)] text-sm transition-colors hover:underline"
               >
                 Request an integration
               </button>

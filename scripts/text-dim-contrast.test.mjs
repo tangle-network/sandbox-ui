@@ -67,15 +67,17 @@ const ratioOn = (surface, tokens) =>
 describe("--text-dim contrast against the surfaces this package ships", () => {
   for (const theme of THEMES) {
     it(`clears AA on every gated ${theme} plane`, () => {
-      const failures = GATED.map((surface) => ({
-        surface: surface.key,
-        ratio: Number(ratioOn(surface, SHIPPED[theme]).toFixed(2)),
-      })).filter(({ ratio }) => ratio < AA_NORMAL);
+      const failures = GATED
+        .map((surface) => ({
+          surface: surface.key,
+          ratio: Number(ratioOn(surface, SHIPPED[theme]).toFixed(2)),
+        }))
+        .filter(({ ratio }) => ratio < AA_NORMAL);
 
       expect(
         failures,
         `--text-dim (${SHIPPED[theme].get("--text-dim")}) is below ${AA_NORMAL}:1 on ${theme} plane(s) a shipped component renders it on. ` +
-          `Re-derive it with \`node scripts/text-dim-contrast.mjs --${theme} '#rrggbb'\` and correct the override in src/styles/globals.css.`,
+          `Re-derive it with \`node scripts/text-dim-contrast.mjs --${theme} '#rrggbb'\` and correct the value in brand's tokens.css.`,
       ).toEqual([]);
     });
   }
@@ -119,46 +121,120 @@ describe("--text-dim contrast against the surfaces this package ships", () => {
     }
   });
 
-  it("still needs the override — delete it when brand's own pair clears AA", () => {
-    // This is the retirement condition, asserted rather than written in a
-    // comment nobody re-reads. The override in src/styles/globals.css exists
-    // ONLY because brand's `--text-dim` does not clear AA against the ladder
-    // brand ships in the version this package resolves. brand 1.3.0 already
-    // moved the ladder and the token together as a matched pair; the day this
-    // package resolves a brand whose own pair passes, this test goes red and
-    // the fix is to delete the override, not to loosen this assertion.
-    const brandFailures = THEMES.flatMap((theme) =>
-      GATED.map((surface) => ratioOn(surface, BRAND_ONLY[theme])).filter(
-        (ratio) => ratio < AA_NORMAL,
-      ),
-    );
+  it("ships brand's value unmodified", () => {
+    // The token and the surface ladder it is scored against have to come from
+    // one place. A local override decouples them: the ladder keeps arriving
+    // from brand while the text tier stops tracking it, so the next ladder
+    // change moves every ratio here and nothing says so. This asserts the
+    // decoupling cannot come back — the value a consumer resolves is the value
+    // brand declares, in both themes.
     expect(
-      brandFailures.length,
-      "brand's own --text-dim now clears AA on every gated plane — remove the override block from src/styles/globals.css and this test.",
-    ).toBeGreaterThan(0);
+      globalsCss,
+      "src/styles/globals.css declares --text-dim — correct the value in brand's tokens.css instead",
+    ).not.toMatch(/--text-dim\s*:/);
+    for (const theme of THEMES) {
+      expect(SHIPPED[theme].get("--text-dim")).toBe(
+        BRAND_ONLY[theme].get("--text-dim"),
+      );
+    }
+  });
+});
+
+describe("every token this package force-emits a utility for resolves", () => {
+  // `@source inline(...)` exists for classes a CONSUMER writes and this package
+  // does not, so nothing here renders them and no other test can notice when one
+  // stops resolving. The degradation is silent by construction: the utility is
+  // still emitted, the `var()` resolves to nothing, and the declaration is
+  // dropped — a status bar goes transparent, a text tier falls back to body
+  // colour. Nothing measures as under-contrast, because nothing is there.
+  //
+  // Read from the directives rather than a hand-written list, so an entry added
+  // for a token that does not exist fails on the entry, not years later in a
+  // consuming app.
+  const INLINED = [
+    ...globalsCss.matchAll(/@source\s+inline\("([^"]+)"\)/g),
+  ].flatMap(([, utility]) => {
+    const token = utility.match(/var\((--[a-z0-9-]+)\)/)?.[1];
+    return token ? [{ utility, token }] : [];
   });
 
-  it("leaves brand's named themes on their own matched pair", () => {
-    // Each named theme re-declares the surface ladder AND --text-dim together,
-    // at the same specificity as `:root`. Source order alone would hand every
-    // one of them this package's neutral value on their own surfaces, so the
-    // override is guarded with `:not([data-theme])`. Assert the guard is on
-    // every selector that could otherwise reach a named theme.
-    const override = globalsCss.slice(globalsCss.indexOf("--text-dim: #"));
-    const selectors = globalsCss
-      .slice(0, globalsCss.indexOf("--text-dim: #"))
-      .split("\n")
-      .filter((line) => /^\s*(:root|\[data-|\.(dark|light))/.test(line));
-    expect(selectors.length).toBeGreaterThan(0);
-    for (const selector of selectors) {
-      // `[data-theme="dark"]` / `[data-theme="light"]` are exact-value
-      // selectors, so they can never match a named theme and need no guard.
-      if (/\[data-theme="(dark|light)"\]/.test(selector)) continue;
+  it("finds the inline directives to check", () => {
+    // A directive syntax change that this pattern misses would empty the loop
+    // below and read as a pass.
+    expect(INLINED.length).toBeGreaterThanOrEqual(9);
+  });
+
+  for (const theme of THEMES) {
+    it(`resolves every inlined token in ${theme}`, () => {
+      const unresolved = INLINED.filter(({ token }) => {
+        try {
+          resolveColor(token, SHIPPED[theme]);
+          return false;
+        } catch {
+          return true;
+        }
+      }).map(({ utility, token }) => `${utility} -> ${token}`);
+
       expect(
-        selector,
-        `${selector.trim()} can match a named theme — add :not([data-theme])`,
-      ).toMatch(/:not\(\[data-theme\]\)/);
+        unresolved,
+        `these utilities are emitted for consumers but their tokens resolve to nothing in ${theme}, so the class silently does nothing`,
+      ).toEqual([]);
+    });
+  }
+});
+
+describe("--accent-text is an INK tier, on the planes this package renders it", () => {
+  // The connector catalog's action is accent-coloured text on a card. It has to
+  // use the ink tier rather than `--primary`, which is a FILL: primary carries
+  // white on a solid button and measures 1.79:1 as text on the dark card.
+  //
+  // The failure mode this guards is silent. A `text-[var(--accent-text)]` whose
+  // token does not resolve is not an error — the declaration is dropped and the
+  // text falls back to the inherited colour, which is the same low-contrast
+  // state the class was written to fix. So resolution is asserted before the
+  // ratio, in both themes.
+  // Resolved here so a rename fails with the reason. `resolveSurface` on a
+  // missing surface throws `Cannot read properties of undefined (reading
+  // 'token')`, which names neither the surface nor the gate that wanted it.
+  const CARD_KEY = "card (L2)";
+  const CARD = DIM_SURFACES.find((s) => s.key === CARD_KEY);
+  if (!CARD) {
+    throw new Error(
+      `no "${CARD_KEY}" surface in DIM_SURFACES — the --accent-text gate scores against it`,
+    );
+  }
+
+  for (const theme of THEMES) {
+    it(`resolves to a complete colour in ${theme}`, () => {
+      expect(
+        () => resolveColor("--accent-text", SHIPPED[theme]),
+        `--accent-text does not resolve in ${theme} — a dropped declaration leaves the action at the inherited colour`,
+      ).not.toThrow();
+    });
+
+    it(`clears AA on the ${theme} card`, () => {
+      const ratio = Number(
+        contrast(
+          resolveColor("--accent-text", SHIPPED[theme]),
+          resolveSurface(CARD, SHIPPED[theme]),
+        ).toFixed(2),
+      );
+      expect(
+        ratio,
+        `--accent-text (${SHIPPED[theme].get("--accent-text")}) is ${ratio}:1 on the ${theme} card, below ${AA_NORMAL}:1`,
+      ).toBeGreaterThanOrEqual(AA_NORMAL);
+    });
+  }
+
+  it("is not the primary FILL token in either theme", () => {
+    // The two are different roles and must not converge: if --accent-text ever
+    // resolves to --primary, this file stops guarding anything and the catalog
+    // action is back to 1.79:1 with every test still green.
+    for (const theme of THEMES) {
+      expect(
+        resolveColor("--accent-text", SHIPPED[theme]),
+        `--accent-text equals --primary in ${theme}: the ink tier has collapsed onto the fill`,
+      ).not.toEqual(resolveColor("--primary", SHIPPED[theme]));
     }
-    expect(override).toBeTruthy();
   });
 });

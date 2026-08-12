@@ -75,7 +75,13 @@
  * build never saw. So the four text tiers are declared inline: they are the
  * brand text ramp, they are a closed set, and each one's absence degrades
  * silently to the inherited colour rather than to something visibly wrong.
- * Pinned by `scripts/text-dim-contrast.test.mjs`. */
+ * Pinned by `scripts/text-dim-contrast.test.mjs`.
+ *
+ * The test for belonging here is who WRITES the class, not which token it
+ * names: a class a consumer writes and this package does not. Anything this
+ * package's own components write is already covered by the `@source` globs
+ * above and needs no entry — `text-[var(--accent-text)]` in the connector
+ * catalog, for one, which the scan sees and emits. */
 @source inline("text-[var(--text-primary)]");
 @source inline("text-[var(--text-secondary)]");
 @source inline("text-[var(--text-muted)]");

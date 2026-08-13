@@ -189,7 +189,7 @@ describe("a name served locally while ui exports it too is documented", () => {
 const ROOT_OMISSIONS: Readonly<Record<string, string>> = {
   TerminalInput: "clashes with workspace's own terminal types; re-exported as TerminalDisplayInput",
   TerminalCursor: "clashes with workspace's own terminal types; re-exported as TerminalDisplayCursor",
-  ConnectionState: "the editor's collaboration-state type is the canonical ConnectionState at root",
+  ConnectionState: "the editor declares one too, so neither takes the root name; each stays reachable from its subpath",
   RedactedDocSegment: "redaction has no consumer here and ui publishes it only from its root",
   RedactedDocument: "redaction has no consumer here and ui publishes it only from its root",
   RedactedDocumentData: "redaction has no consumer here and ui publishes it only from its root",

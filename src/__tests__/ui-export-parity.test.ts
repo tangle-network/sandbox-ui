@@ -108,40 +108,71 @@ function shimExports(entry: string, seen = new Set<string>()): Map<string, "loca
   return found;
 }
 
-/** The ui `.d.ts` behind a subpath, or null when ui does not publish one. */
-function uiTypesFor(subpath: string): string | null {
-  try {
-    const js = require_.resolve(subpath === "." ? "@tangle-network/ui" : `@tangle-network/ui/${subpath}`);
-    const dts = js.replace(/\.js$/, ".d.ts");
-    return existsSync(dts) ? dts : null;
-  } catch {
-    return null;
+const manifest = (dir: string) => JSON.parse(readFileSync(resolvePath(dir, "package.json"), "utf8"));
+
+/**
+ * ui's installed root, walked up from a resolved entry.
+ *
+ * The path is found rather than assumed because pnpm resolves the dependency
+ * into a content-addressed store and the nesting depth is not fixed.
+ */
+const uiRoot = (() => {
+  let dir = dirname(require_.resolve("@tangle-network/ui"));
+  for (let depth = 0; depth < 6; depth += 1) {
+    if (existsSync(resolvePath(dir, "package.json")) && manifest(dir).name === "@tangle-network/ui") return dir;
+    dir = dirname(dir);
   }
+  throw new Error("cannot locate the installed @tangle-network/ui root");
+})();
+
+const uiExports = (manifest(uiRoot).exports ?? {}) as Record<string, { types?: string } | string>;
+
+/**
+ * The `.d.ts` ui declares for a subpath, read from the `types` condition of its
+ * exports map.
+ *
+ * The map is what a TypeScript consumer follows, so it is the authority on
+ * where the declarations are. Deriving the path from the resolved `.js` instead
+ * would encode this bundler's habit of emitting siblings, and would quietly
+ * resolve to nothing the day that changes.
+ */
+function uiTypesFor(subpath: string): string | null {
+  const entry = uiExports[subpath === "." ? "." : `./${subpath}`];
+  const types = typeof entry === "string" ? undefined : entry?.types;
+  if (!types) return null;
+  const declarations = resolvePath(uiRoot, types);
+  return existsSync(declarations) ? declarations : null;
 }
 
 /**
  * The subpaths where this package mirrors ui one-to-one, discovered from the
- * manifest rather than listed here so a new shim is covered the day it ships.
- * A subpath qualifies when both sides publish it under the same name.
+ * two manifests rather than listed here so a new shim is covered the day it
+ * ships. A subpath qualifies when both sides publish it under the same name.
+ *
+ * Membership deliberately does NOT depend on the declarations resolving. A
+ * subpath that qualifies but whose types cannot be found fails its own test
+ * below, so coverage can never shrink quietly — dropping it from this list
+ * instead would let a resolution change hide real drift behind a suite that
+ * still reports all-green.
  */
-const mirrored = Object.keys(
-  (JSON.parse(readFileSync(resolvePath(packageRoot, "package.json"), "utf8")).exports ?? {}) as Record<string, unknown>,
-)
+const mirrored = Object.keys((manifest(packageRoot).exports ?? {}) as Record<string, unknown>)
   .filter((key) => key.startsWith("./") && !key.endsWith(".css"))
   .map((key) => key.slice(2))
-  .filter((sub) => uiTypesFor(sub) && existsSync(resolvePath(packageRoot, "src", sub, "index.ts")))
+  .filter((sub) => uiExports[`./${sub}`] && existsSync(resolvePath(packageRoot, "src", sub, "index.ts")))
   .sort();
 
 describe("every @tangle-network/ui export stays reachable through the shims", () => {
   it("discovers the mirrored subpaths", () => {
-    // A manifest rename or a resolution failure would empty this list and make
-    // every assertion below pass by having nothing to check.
+    // A manifest rename would empty this list and make every assertion below
+    // pass by having nothing to check.
     expect(mirrored.length).toBeGreaterThan(8);
   });
 
   for (const sub of mirrored) {
     it(`${sub} re-exports all of ui/${sub}`, () => {
-      const upstream = declaredExports(uiTypesFor(sub) as string);
+      const declarations = uiTypesFor(sub);
+      expect(declarations, `ui publishes ./${sub} but its types did not resolve`).not.toBeNull();
+      const upstream = declaredExports(declarations as string);
       // Guards the .d.ts parse the same way: a bundler output change that
       // stopped matching would otherwise read as "nothing is missing".
       expect(upstream.size).toBeGreaterThan(3);
@@ -169,7 +200,9 @@ const INTENDED_SHADOWS: Readonly<Record<string, readonly string[]>> = {
 describe("a name served locally while ui exports it too is documented", () => {
   for (const sub of mirrored) {
     it(`${sub} shadows only what is pinned`, () => {
-      const upstream = declaredExports(uiTypesFor(sub) as string);
+      const declarations = uiTypesFor(sub);
+      expect(declarations, `ui publishes ./${sub} but its types did not resolve`).not.toBeNull();
+      const upstream = declaredExports(declarations as string);
       const shim = shimExports(resolvePath(packageRoot, "src", sub, "index.ts"));
       const shadows = [...shim]
         .filter(([name, origin]) => origin === "local" && upstream.has(name))
@@ -199,7 +232,9 @@ const ROOT_OMISSIONS: Readonly<Record<string, string>> = {
 
 describe("the root entry omits only what it means to omit", () => {
   it("omits exactly the pinned set", () => {
-    const upstream = declaredExports(uiTypesFor(".") as string);
+    const declarations = uiTypesFor(".");
+    expect(declarations, "ui's root types did not resolve").not.toBeNull();
+    const upstream = declaredExports(declarations as string);
     expect(upstream.size).toBeGreaterThan(100);
     const shim = shimExports(resolvePath(packageRoot, "src", "index.ts"));
     const missing = [...upstream].filter((name) => !shim.has(name)).sort();

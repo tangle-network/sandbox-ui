@@ -142,12 +142,19 @@ export * from "./run";
 // --- Tool Previews ---
 export {
   CommandPreview,
+  type CommandPreviewProps,
   WriteFilePreview,
+  type WriteFilePreviewProps,
   GrepResultsPreview,
+  type GrepResultsPreviewProps,
   GlobResultsPreview,
+  type GlobResultsPreviewProps,
   WebSearchPreview,
+  type WebSearchPreviewProps,
   QuestionPreview,
+  type QuestionPreviewProps,
   DiffPreview,
+  type DiffPreviewProps,
 } from "@tangle-network/ui/tool-previews";
 
 // --- Files ---

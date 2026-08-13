@@ -1,6 +1,7 @@
 export {
   ExpandedToolDetail,
   type ExpandedToolDetailProps,
+  type FeedSegment,
   InlineThinkingItem,
   type InlineThinkingItemProps,
   InlineToolItem,
@@ -8,4 +9,10 @@ export {
   LiveDuration,
   RunGroup,
   type RunGroupProps,
+  type ToolCallData,
+  ToolCallFeed,
+  type ToolCallFeedProps,
+  type ToolCallStatus,
+  type ToolCallType,
+  parseToolEvent,
 } from "@tangle-network/ui/run";

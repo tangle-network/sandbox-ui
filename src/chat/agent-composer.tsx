@@ -98,6 +98,15 @@ export interface ComposerFile {
   errorMessage?: string;
 }
 
+/** Context the agent will see alongside the next message. */
+export interface ComposerContextItem {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  /** Omit to render a non-removable chip. */
+  onRemove?: () => void;
+}
+
 export interface AgentComposerProps {
   /** Composer text (controlled). */
   value: string;
@@ -124,6 +133,9 @@ export interface AgentComposerProps {
   controls: React.ReactNode;
   /** Extra content left of the send button (token meter, cost, status). */
   trailing?: React.ReactNode;
+
+  /** Context the agent will see alongside the next message. */
+  contextItems?: ReadonlyArray<ComposerContextItem>;
 
   /**
    * Attachments are opt-in: pass `onAttach` to show the attach button, accept
@@ -215,6 +227,7 @@ export function AgentComposer({
   onCancel,
   controls,
   trailing,
+  contextItems = [],
   onAttach,
   onAttachFolder,
   attachments = [],
@@ -406,6 +419,37 @@ export function AgentComposer({
           disabled && "opacity-60",
         )}
       >
+        {contextItems.length > 0 && (
+          <div
+            aria-label="Message context"
+            className="flex min-w-0 flex-wrap gap-1.5"
+          >
+            {contextItems.map((item) => (
+              <span
+                key={item.id}
+                className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-primary text-xs"
+              >
+                {item.icon && (
+                  <span className="shrink-0" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                )}
+                <span className="min-w-0 truncate">{item.label}</span>
+                {item.onRemove && (
+                  <button
+                    type="button"
+                    aria-label={`Remove context ${item.label}`}
+                    onClick={item.onRemove}
+                    className="shrink-0 rounded p-0.5 text-primary/70 transition-colors hover:text-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
+
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {[...folderChips, ...fileChips].map((file) => {

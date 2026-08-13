@@ -160,6 +160,44 @@ export const WithAttachmentsAndStreaming: Story = {
   },
 };
 
+/** Context chips identify per-message context without looking like uploads. */
+export const WithContextItems: Story = {
+  name: "Context items (narrow rail)",
+  render: () => {
+    const [value, setValue] = useState("");
+    const [contextItems, setContextItems] = useState([
+      { id: "open-file", label: "icp.md", removable: true },
+      {
+        id: "selection",
+        label: "docs/research/a-very-long-open-document-name-that-truncates.md",
+        removable: false,
+      },
+    ]);
+    return (
+      <div className="w-[360px] max-w-full">
+        <AgentComposer
+          value={value}
+          onChange={setValue}
+          onSubmit={() => setValue("")}
+          placeholder="Ask about the open file…"
+          contextItems={contextItems.map((item) => ({
+            id: item.id,
+            label: item.label,
+            icon: <span>#</span>,
+            onRemove: item.removable
+              ? () =>
+                  setContextItems((current) =>
+                    current.filter((candidate) => candidate.id !== item.id),
+                  )
+              : undefined,
+          }))}
+          controls={null}
+        />
+      </div>
+    );
+  },
+};
+
 // A tiny inline SVG data URI stands in for a real object URL from
 // `URL.createObjectURL` — no network fetch, works offline in Storybook.
 function thumbnailDataUri(fill: string): string {

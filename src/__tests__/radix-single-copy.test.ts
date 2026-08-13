@@ -72,12 +72,21 @@ const duplicated = [...versions]
   .map(([name, set]) => `${name}: ${[...set].sort().join(", ")}`)
   .sort();
 
+/**
+ * A floor, not the real count: the lockfile resolves 38 `@radix-ui/*` packages
+ * as this is written, and the two direct dependencies pull the rest in
+ * transitively, so the number moves whenever Radix reorganises its internals.
+ * Half of today's count leaves room for that while still catching the case
+ * this guards — a parse that matched almost nothing.
+ */
+const MINIMUM_RADIX_PACKAGES = 20;
+
 describe("the Radix stack resolves to one copy of each package", () => {
   it("finds the Radix packages to check", () => {
     // A lockfile format change that stopped matching would otherwise report
     // "no duplicates" from an empty set — the strongest possible pass from the
     // weakest possible parse.
-    expect(versions.size).toBeGreaterThan(20);
+    expect(versions.size).toBeGreaterThan(MINIMUM_RADIX_PACKAGES);
   });
 
   it("no @radix-ui package resolves to more than one version", () => {

@@ -2,6 +2,8 @@
 // (sandbox-branded with optional "Sandbox" suffix), so brand's Logo / TangleKnot
 // / LogoProps are intentionally not re-exported from this subpath.
 export {
+  ArtifactPane,
+  type ArtifactPaneProps,
   Avatar,
   AvatarFallback,
   AvatarImage,

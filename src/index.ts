@@ -142,12 +142,19 @@ export * from "./run";
 // --- Tool Previews ---
 export {
   CommandPreview,
+  type CommandPreviewProps,
   WriteFilePreview,
+  type WriteFilePreviewProps,
   GrepResultsPreview,
+  type GrepResultsPreviewProps,
   GlobResultsPreview,
+  type GlobResultsPreviewProps,
   WebSearchPreview,
+  type WebSearchPreviewProps,
   QuestionPreview,
+  type QuestionPreviewProps,
   DiffPreview,
+  type DiffPreviewProps,
 } from "@tangle-network/ui/tool-previews";
 
 // --- Files ---
@@ -162,8 +169,9 @@ export * from "./auth";
 // --- Markdown ---
 export { Markdown, type MarkdownProps } from "@tangle-network/ui/markdown";
 
-// --- Hooks (named — excludes `ConnectionState` to keep the editor's
-//     collaboration-state type as the canonical `ConnectionState` at root) ---
+// --- Hooks (named — excludes `ConnectionState`. The editor declares a
+//     `ConnectionState` of its own, so neither type takes the root name and
+//     each stays reachable from its subpath) ---
 export {
   useAuth,
   createAuthFetcher,

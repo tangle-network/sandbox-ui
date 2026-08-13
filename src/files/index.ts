@@ -1,6 +1,7 @@
 export {
   FileArtifactPane,
   type FileArtifactPaneProps,
+  type FileFormat,
   type FileNode,
   FilePreview,
   type FilePreviewProps,
@@ -15,5 +16,10 @@ export {
   type RichFileTreeGitStatus,
   type RichFileTreeProps,
   type RichFileTreeThemeVars,
+  detectFileFormat,
+  fileExtension,
   filterFileTree,
+  getCodeLanguage,
+  getFormatLabel,
+  getSyntaxLanguage,
 } from "@tangle-network/ui/files";

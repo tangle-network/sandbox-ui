@@ -2,7 +2,11 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { AgentComposer, type ComposerFile } from "./agent-composer";
+import {
+  AgentComposer,
+  type ComposerContextItem,
+  type ComposerFile,
+} from "./agent-composer";
 
 function makeImageFile(name = "image.png", type = "image/png"): File {
   return new File([new Uint8Array(10)], name, { type });
@@ -174,6 +178,111 @@ describe("AgentComposer — thumbnails", () => {
     // tree, so query the DOM directly rather than via role.
     const img = container.querySelector("img");
     expect(img).toHaveAttribute("src", "data:image/png;base64,AAAA");
+  });
+});
+
+describe("AgentComposer — context items", () => {
+  it("renders context chips separately from attachment chips", () => {
+    render(
+      <AgentComposer
+        controls={null}
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        contextItems={[{ id: "context-1", label: "Open document" }]}
+        attachments={[
+          { id: "file-1", name: "upload.pdf", kind: "file", status: "ready" },
+        ]}
+      />,
+    );
+
+    const contextRow = screen.getByLabelText("Message context");
+    expect(contextRow).toHaveTextContent("Open document");
+    expect(screen.getByText("Open document").parentElement).toHaveClass(
+      "border-primary/30",
+      "bg-primary/10",
+      "text-primary",
+    );
+    expect(screen.getByText("upload.pdf").parentElement).toHaveClass(
+      "bg-surface-container",
+      "text-foreground",
+    );
+  });
+
+  it("calls the matching item's onRemove callback", async () => {
+    const firstRemove = vi.fn();
+    const secondRemove = vi.fn();
+    const user = userEvent.setup();
+    const contextItems: ComposerContextItem[] = [
+      { id: "first", label: "First context", onRemove: firstRemove },
+      { id: "second", label: "Second context", onRemove: secondRemove },
+    ];
+    render(
+      <AgentComposer
+        controls={null}
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        contextItems={contextItems}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove context Second context" }),
+    );
+    expect(firstRemove).not.toHaveBeenCalled();
+    expect(secondRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits the row when empty and the remove affordance when not provided", () => {
+    const { rerender } = render(
+      <AgentComposer
+        controls={null}
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        contextItems={[]}
+      />,
+    );
+    expect(screen.queryByLabelText("Message context")).not.toBeInTheDocument();
+
+    rerender(
+      <AgentComposer
+        controls={null}
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        contextItems={[{ id: "fixed", label: "Pinned context" }]}
+      />,
+    );
+    expect(screen.getByLabelText("Message context")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /remove context/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("constrains long context labels so they truncate at narrow widths", () => {
+    render(
+      <div style={{ width: 360 }}>
+        <AgentComposer
+          controls={null}
+          value=""
+          onChange={() => {}}
+          onSubmit={() => {}}
+          contextItems={[
+            {
+              id: "long",
+              label: "A very long open document path that must stay inside the composer",
+              onRemove: () => {},
+            },
+          ]}
+        />
+      </div>,
+    );
+
+    const label = screen.getByText(/A very long open document path/);
+    expect(label).toHaveClass("min-w-0", "truncate");
+    expect(label.parentElement).toHaveClass("min-w-0", "max-w-full");
   });
 });
 

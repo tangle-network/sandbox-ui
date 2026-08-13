@@ -43,10 +43,20 @@ const lockfilePath = (() => {
 
 const lockfile = readFileSync(lockfilePath, "utf8");
 
-/** `@radix-ui/react-x@1.2.3` occurrences, collected per package. */
+/**
+ * `@radix-ui/react-x@1.2.3` occurrences, collected per package.
+ *
+ * The version is matched as semver exactly rather than as "everything up to a
+ * delimiter". A lockfile decorates a version with the peers it resolved
+ * against, today in parentheses, and a looser pattern that swallowed part of
+ * that decoration would read one version as two spellings and report a
+ * duplicate that does not exist. A gate that cries wolf gets ignored, so the
+ * grammar is pinned to what a version actually is.
+ */
 function resolvedVersions(source: string): Map<string, Set<string>> {
   const found = new Map<string, Set<string>>();
-  for (const match of source.matchAll(/(@radix-ui\/[a-z-]+)@(\d+\.\d+\.\d+[^\s'"(:]*)/g)) {
+  const entry = /(@radix-ui\/[a-z-]+)@(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/g;
+  for (const match of source.matchAll(entry)) {
     const name = match[1] as string;
     const version = match[2] as string;
     const versions = found.get(name) ?? new Set<string>();

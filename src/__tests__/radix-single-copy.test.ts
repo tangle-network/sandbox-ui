@@ -22,15 +22,26 @@
  * installs that no longer resolve.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const lockfile = readFileSync(
-  resolvePath(dirname(fileURLToPath(import.meta.url)), "..", "..", "pnpm-lock.yaml"),
-  "utf8",
-);
+/**
+ * The lockfile, found by walking up rather than by counting `..` segments, so
+ * moving this file to another depth does not quietly point it at nothing.
+ */
+const lockfilePath = (() => {
+  let dir = dirname(fileURLToPath(import.meta.url));
+  for (let depth = 0; depth < 6; depth += 1) {
+    const candidate = resolvePath(dir, "pnpm-lock.yaml");
+    if (existsSync(candidate)) return candidate;
+    dir = dirname(dir);
+  }
+  throw new Error("cannot locate pnpm-lock.yaml above this test");
+})();
+
+const lockfile = readFileSync(lockfilePath, "utf8");
 
 /** `@radix-ui/react-x@1.2.3` occurrences, collected per package. */
 function resolvedVersions(source: string): Map<string, Set<string>> {

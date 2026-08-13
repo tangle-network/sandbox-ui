@@ -24,7 +24,7 @@
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, resolve as resolvePath } from "node:path";
+import { dirname, relative, resolve as resolvePath } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -34,6 +34,17 @@ const packageRoot = resolvePath(dirname(fileURLToPath(import.meta.url)), "..", "
 /** Strip comments so a name mentioned in prose is never read as an export. */
 const stripComments = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
+
+/**
+ * Whether a clause names an importable export.
+ *
+ * `default` passes an identifier test but is not reachable by name, so a
+ * `export { default }` would otherwise enter the set as a member no shim can
+ * possibly provide.
+ */
+function isExportedName(name: string | undefined): name is string {
+  return !!name && name !== "default" && /^[A-Za-z_$][\w$]*$/.test(name);
+}
 
 /**
  * The names a built `.d.ts` entry exports.
@@ -48,7 +59,7 @@ function declaredExports(dtsPath: string): Set<string> {
   for (const match of source.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}/g)) {
     for (const clause of (match[1] as string).split(",")) {
       const name = clause.replace(/^\s*type\s+/, "").split(" as ").pop()?.trim();
-      if (name && /^[A-Za-z_$][\w$]*$/.test(name)) names.add(name);
+      if (isExportedName(name)) names.add(name);
     }
   }
   const declaration =
@@ -82,18 +93,32 @@ function shimExports(entry: string, seen = new Set<string>()): Map<string, "loca
   seen.add(entry);
   const source = stripComments(readFileSync(entry, "utf8"));
 
-  for (const match of source.matchAll(/export\s+\*\s+from\s+['"]([^'"]+)['"]/g)) {
-    const spec = match[1] as string;
-    if (!spec.startsWith(".")) continue;
+  const star = /export\s+\*\s+(?:as\s+([A-Za-z_$][\w$]*)\s+)?from\s+['"]([^'"]+)['"]/g;
+  for (const match of source.matchAll(star)) {
+    const alias = match[1];
+    const spec = match[2] as string;
+    const origin = spec.startsWith(".") ? "local" : "package";
+    // `export * as Foo` publishes one namespace object named Foo, rather than
+    // spreading the target's names into this module.
+    if (alias) {
+      found.set(alias, origin);
+      continue;
+    }
+    if (origin === "package") continue;
     const target = resolveRelative(spec, entry);
-    if (target) for (const [name, origin] of shimExports(target, seen)) if (!found.has(name)) found.set(name, origin);
+    // Silence here would drop every name behind the specifier and read as
+    // "nothing is missing" — the same way an unresolved `.d.ts` once did.
+    if (!target) {
+      throw new Error(`${relative(packageRoot, entry)} re-exports "${spec}", which resolves to no source file`);
+    }
+    for (const [name, nameOrigin] of shimExports(target, seen)) if (!found.has(name)) found.set(name, nameOrigin);
   }
 
   for (const match of source.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g)) {
     const origin = (match[2] as string).startsWith(".") ? "local" : "package";
     for (const clause of (match[1] as string).split(",")) {
       const name = clause.replace(/^\s*type\s+/, "").split(" as ").pop()?.trim();
-      if (!name || !/^[A-Za-z_$][\w$]*$/.test(name)) continue;
+      if (!isExportedName(name)) continue;
       // Local wins: a name this package also serves itself is a shadow no
       // matter which line came first, and reading it as forwarded would hide
       // exactly the divergence the shadow suite exists to surface.
@@ -126,6 +151,16 @@ const uiRoot = (() => {
 })();
 
 const uiExports = (manifest(uiRoot).exports ?? {}) as Record<string, { types?: string } | string>;
+
+/**
+ * Named in every failure message so a mismatch reads as "against which ui?".
+ *
+ * The version is reported, never asserted. Pinning it would turn a correct
+ * upgrade — one that bumps ui and updates the shims together — into a failure,
+ * which is the opposite of what this suite is for. The lockfile is what holds
+ * the version steady; this only makes the measured one visible.
+ */
+const uiVersion = manifest(uiRoot).version as string;
 
 /**
  * The `.d.ts` ui declares for a subpath, read from the `types` condition of its
@@ -177,7 +212,10 @@ describe("every @tangle-network/ui export stays reachable through the shims", ()
       // stopped matching would otherwise read as "nothing is missing".
       expect(upstream.size).toBeGreaterThan(3);
       const shim = shimExports(resolvePath(packageRoot, "src", sub, "index.ts"));
-      expect([...upstream].filter((name) => !shim.has(name)).sort()).toEqual([]);
+      expect(
+        [...upstream].filter((name) => !shim.has(name)).sort(),
+        `missing from ./${sub}, measured against @tangle-network/ui ${uiVersion}`,
+      ).toEqual([]);
     });
   }
 });
@@ -208,7 +246,9 @@ describe("a name served locally while ui exports it too is documented", () => {
         .filter(([name, origin]) => origin === "local" && upstream.has(name))
         .map(([name]) => name)
         .sort();
-      expect(shadows).toEqual([...(INTENDED_SHADOWS[sub] ?? [])].sort());
+      expect(shadows, `shadows in ./${sub}, measured against @tangle-network/ui ${uiVersion}`).toEqual(
+        [...(INTENDED_SHADOWS[sub] ?? [])].sort(),
+      );
     });
   }
 });
@@ -238,6 +278,8 @@ describe("the root entry omits only what it means to omit", () => {
     expect(upstream.size).toBeGreaterThan(100);
     const shim = shimExports(resolvePath(packageRoot, "src", "index.ts"));
     const missing = [...upstream].filter((name) => !shim.has(name)).sort();
-    expect(missing).toEqual(Object.keys(ROOT_OMISSIONS).sort());
+    expect(missing, `root omissions, measured against @tangle-network/ui ${uiVersion}`).toEqual(
+      Object.keys(ROOT_OMISSIONS).sort(),
+    );
   });
 });

@@ -30,8 +30,12 @@ import { describe, expect, it } from "vitest";
 /**
  * The lockfile, found by walking up rather than by counting `..` segments, so
  * moving this file to another depth does not quietly point it at nothing.
+ *
+ * The project pins pnpm in `packageManager`, so the filename is the one this
+ * repo will have; a different package manager would need a different invariant
+ * anyway, since this asserts something about how pnpm resolved the tree.
  */
-const lockfilePath = (() => {
+function findLockfile(): string {
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let depth = 0; depth < 6; depth += 1) {
     const candidate = resolvePath(dir, "pnpm-lock.yaml");
@@ -39,9 +43,7 @@ const lockfilePath = (() => {
     dir = dirname(dir);
   }
   throw new Error("cannot locate pnpm-lock.yaml above this test");
-})();
-
-const lockfile = readFileSync(lockfilePath, "utf8");
+}
 
 /**
  * `@radix-ui/react-x@1.2.3` occurrences, collected per package.
@@ -55,7 +57,7 @@ const lockfile = readFileSync(lockfilePath, "utf8");
  */
 function resolvedVersions(source: string): Map<string, Set<string>> {
   const found = new Map<string, Set<string>>();
-  const entry = /(@radix-ui\/[a-z-]+)@(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/g;
+  const entry = /(@radix-ui\/[A-Za-z0-9._-]+)@(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)/g;
   for (const match of source.matchAll(entry)) {
     const name = match[1] as string;
     const version = match[2] as string;
@@ -66,11 +68,12 @@ function resolvedVersions(source: string): Map<string, Set<string>> {
   return found;
 }
 
-const versions = resolvedVersions(lockfile);
-const duplicated = [...versions]
-  .filter(([, set]) => set.size > 1)
-  .map(([name, set]) => `${name}: ${[...set].sort().join(", ")}`)
-  .sort();
+/**
+ * Read inside the tests rather than at module scope. A top-level read turns a
+ * missing or unreadable lockfile into a loader crash, which vitest reports as a
+ * file that would not import — not as an assertion anyone can act on.
+ */
+const analyse = () => resolvedVersions(readFileSync(findLockfile(), "utf8"));
 
 /**
  * A floor, not the real count: the lockfile resolves 38 `@radix-ui/*` packages
@@ -86,10 +89,14 @@ describe("the Radix stack resolves to one copy of each package", () => {
     // A lockfile format change that stopped matching would otherwise report
     // "no duplicates" from an empty set — the strongest possible pass from the
     // weakest possible parse.
-    expect(versions.size).toBeGreaterThan(MINIMUM_RADIX_PACKAGES);
+    expect(analyse().size).toBeGreaterThan(MINIMUM_RADIX_PACKAGES);
   });
 
   it("no @radix-ui package resolves to more than one version", () => {
+    const duplicated = [...analyse()]
+      .filter(([, set]) => set.size > 1)
+      .map(([name, set]) => `${name}: ${[...set].sort().join(", ")}`)
+      .sort();
     expect(duplicated).toEqual([]);
   });
 });

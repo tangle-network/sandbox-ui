@@ -40,7 +40,11 @@ function imageExtension(file: File): string {
 }
 
 /** A selectable item in the `@`-mention popover. Generic — file semantics live
- * in the consuming app, not here. */
+ * in the consuming app, not here.
+ *
+ * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
+ * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
+ * is frozen and will be removed at sandbox-ui's next breaking release. */
 export interface MentionItem {
   id: string;
   label: string;
@@ -52,6 +56,10 @@ export interface MentionItem {
  * Opt-in `@`-mention support. Present ⇒ the composer swaps its textarea for a
  * TipTap rich input that renders mentions as atomic pills; absent ⇒ exactly
  * today's plain-textarea behavior. Data-agnostic: the app supplies items.
+ *
+ * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
+ * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
+ * is frozen and will be removed at sandbox-ui's next breaking release.
  */
 export interface AgentComposerMention {
   /** The character that opens the popover. Default "@". */
@@ -79,7 +87,11 @@ export interface AgentComposerMention {
  */
 const MentionEditor = React.lazy(() => import("./mention-editor"));
 
-/** A staged attachment shown as a chip above the input. */
+/** A staged attachment shown as a chip above the input.
+ *
+ * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
+ * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
+ * is frozen and will be removed at sandbox-ui's next breaking release. */
 export interface ComposerFile {
   id: string;
   name: string;
@@ -98,7 +110,11 @@ export interface ComposerFile {
   errorMessage?: string;
 }
 
-/** Context the agent will see alongside the next message. */
+/** Context the agent will see alongside the next message.
+ *
+ * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
+ * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
+ * is frozen and will be removed at sandbox-ui's next breaking release. */
 export interface ComposerContextItem {
   id: string;
   label: string;
@@ -107,6 +123,13 @@ export interface ComposerContextItem {
   onRemove?: () => void;
 }
 
+/**
+ * Props of the legacy {@link AgentComposer}.
+ *
+ * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
+ * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
+ * is frozen and will be removed at sandbox-ui's next breaking release.
+ */
 export interface AgentComposerProps {
   /** Composer text (controlled). */
   value: string;
@@ -204,6 +227,12 @@ export interface AgentComposerProps {
 }
 
 /**
+ * @deprecated Use `ChatComposer` from `@tangle-network/agent-app/web-react` —
+ * the canonical composer (superset: attachments lifecycle, send-failure
+ * recovery, seeds, quiet/labeled controls, floating elevation, and the
+ * circular icon send via `sendVariant="icon"`). This slot-shell is frozen and
+ * will be removed at sandbox-ui's next breaking release.
+ *
  * The canonical agent chat input: one rounded surface holding an auto-growing
  * textarea and a bottom row that runs left → right — attach buttons, the
  * control strip (supplied via the required `controls` prop), trailing slot,

@@ -14,9 +14,18 @@ import {
 } from "../../chat";
 
 const meta: Meta<typeof AgentComposer> = {
-  title: "Chat/AgentComposer",
+  title: "Legacy/Chat/AgentComposer",
   component: AgentComposer,
-  parameters: { layout: "fullscreen", backgrounds: { default: "dark" } },
+  parameters: {
+    layout: "fullscreen",
+    backgrounds: { default: "dark" },
+    docs: {
+      description: {
+        component:
+          "LEGACY — use `ChatComposer` from `@tangle-network/agent-app/web-react` (canonical composer: attachments lifecycle, failure recovery, seeds, floating, circular icon send). Frozen; removed at the next breaking release.",
+      },
+    },
+  },
   decorators: [
     (Story) => (
       // Docked at the bottom of a tall dark canvas, like a real chat — so the

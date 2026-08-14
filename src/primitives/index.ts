@@ -122,7 +122,6 @@ export { Logo, TangleKnot, type LogoProps } from "./logo";
 export {
   Heading,
   type HeadingProps,
-  type HeadingRole,
   type HeadingVariant,
   PageHeader,
   type PageHeaderProps,

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.103.0
+
+### Breaking — `HeadingRole` is removed
+
+- The `HeadingRole` type alias is gone. It carried an `@deprecated` tag
+  naming `HeadingVariant` as its replacement, and aliased that type with
+  no difference in meaning.
+- Replace `HeadingRole` with `HeadingVariant`. The union members are
+  unchanged: `display`, `hero`, `page`, `section`, `subsection`,
+  `eyebrow`.
+
 ## 0.100.1
 
 ### Dependencies

@@ -78,8 +78,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0(react@19.2.8)
       '@tangle-network/ui':
-        specifier: ^11.2.0
-        version: 11.2.0(44e35973fe815e6843e3ebf4c5f48dd6)
+        specifier: ^11.5.0
+        version: 11.5.0(2eb2c57397abc49a9a7e2dd3d4894744)
       '@tanstack/react-query':
         specifier: ^5.101.4
         version: 5.101.4(react@19.2.8)
@@ -1722,29 +1722,26 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/ui@11.2.0':
-    resolution: {integrity: sha512-L/RKsF4aUxNxWkudteGAXb5ITwKP2CjcxajXusFBgg9GUYB4YqM/7pOA+pG6sGWnLr7IK0jstgcxJ0wQ2f3AGA==}
+  '@tangle-network/ui@11.5.0':
+    resolution: {integrity: sha512-WMg/7p2WTZVVSiHpARt8yAkSNgkcpQvc8HoXMK/jq1bLuPgu7Aei9nWTwYyeJaSYf7YThfx6r2X2FtGlbN9HZQ==}
     peerDependencies:
-      '@hocuspocus/provider': '*'
-      '@nanostores/react': '*'
-      '@tangle-network/brand': ^1.0.0
-      '@tanstack/react-query': '*'
-      '@tiptap/core': '*'
-      '@tiptap/extension-collaboration': '*'
-      '@tiptap/extension-collaboration-caret': '*'
-      '@tiptap/react': '*'
-      '@tiptap/starter-kit': '*'
-      nanostores: '*'
+      '@hocuspocus/provider': '>=2.15.0 <5.0.0'
+      '@nanostores/react': '>=0.8.4 <2.0.0'
+      '@tangle-network/brand': ^1.5.0
+      '@tiptap/core': '>=3.20.4 <4.0.0'
+      '@tiptap/extension-collaboration': '>=3.20.4 <4.0.0'
+      '@tiptap/extension-collaboration-caret': '>=3.7.0 <4.0.0'
+      '@tiptap/react': '>=3.20.4 <4.0.0'
+      '@tiptap/starter-kit': '>=3.20.4 <4.0.0'
+      nanostores: '>=0.11.3 <2.0.0'
       react: ^18 || ^19
       react-dom: ^18 || ^19
-      react-router: ^7
-      yjs: '*'
+      react-router: ^7 || ^8
+      yjs: ^13.6.0
     peerDependenciesMeta:
       '@hocuspocus/provider':
         optional: true
       '@nanostores/react':
-        optional: true
-      '@tanstack/react-query':
         optional: true
       '@tiptap/core':
         optional: true
@@ -5171,7 +5168,7 @@ snapshots:
     optionalDependencies:
       react: 19.2.8
 
-  '@tangle-network/ui@11.2.0(44e35973fe815e6843e3ebf4c5f48dd6)':
+  '@tangle-network/ui@11.5.0(2eb2c57397abc49a9a7e2dd3d4894744)':
     dependencies:
       '@pierre/trees': 1.0.0-beta.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@radix-ui/react-avatar': 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -5202,7 +5199,6 @@ snapshots:
     optionalDependencies:
       '@hocuspocus/provider': 4.4.0(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31)
       '@nanostores/react': 1.1.0(nanostores@1.4.1)(react@19.2.8)
-      '@tanstack/react-query': 5.101.4(react@19.2.8)
       '@tiptap/core': 3.28.0(@tiptap/pm@3.28.0)
       '@tiptap/extension-collaboration': 3.28.0(@tiptap/core@3.28.0(@tiptap/pm@3.28.0))(@tiptap/pm@3.28.0)(@tiptap/y-tiptap@3.0.7(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-view@1.42.1)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31))(yjs@13.6.31)
       '@tiptap/extension-collaboration-caret': 3.28.0(@tiptap/core@3.28.0(@tiptap/pm@3.28.0))(@tiptap/pm@3.28.0)(@tiptap/y-tiptap@3.0.7(prosemirror-model@1.25.11)(prosemirror-state@1.4.4)(prosemirror-view@1.42.1)(y-protocols@1.0.7(yjs@13.6.31))(yjs@13.6.31))
@@ -5537,7 +5533,7 @@ snapshots:
 
   '@types/estree-jsx@1.0.5':
     dependencies:
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
 
   '@types/estree@1.0.8': {}
 
@@ -6054,7 +6050,7 @@ snapshots:
 
   hast-util-to-jsx-runtime@2.3.6:
     dependencies:
-      '@types/estree': 1.0.8
+      '@types/estree': 1.0.9
       '@types/hast': 3.0.4
       '@types/unist': 3.0.3
       comma-separated-tokens: 2.0.3

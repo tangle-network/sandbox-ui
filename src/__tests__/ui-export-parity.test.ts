@@ -223,16 +223,24 @@ describe("every @tangle-network/ui export stays reachable through the shims", ()
 /**
  * A name this package serves from its own file while ui exports the same name
  * is a silent divergence: it type-checks, it resolves, and a consumer gets a
- * different component from the one the upstream docs describe. The three below
- * are intended — the sandbox wordmark is not ui's — so they are pinned rather
- * than forbidden, and anything joining them has to be justified here.
+ * different component from the one the upstream docs describe. The five below
+ * are intended, so they are pinned rather than forbidden, and anything joining
+ * them has to be justified here.
  *
- * ui 11.3.0 adds `PageHeader`, which `src/primitives` also serves from
- * `./heading`. Upgrading will red this and force that collision to be settled
- * deliberately instead of resolving by whichever line was written last.
+ * `Logo`, `LogoProps` and `TangleKnot` are the sandbox wordmark, which is not
+ * ui's.
+ *
+ * `PageHeader` and `PageHeaderProps` are a name collision rather than a brand
+ * one: ui grew its own `PageHeader` in 11.3.0, and the two take different props
+ * — this one has `eyebrow`, `action` and `titleAs`, ui's has `actions`, `meta`,
+ * `titleId` and `level`. Forwarding to ui's would therefore break every caller
+ * of this one rather than merely change it. Nothing reaches ui's `PageHeader`
+ * through this package today (the apps that want it import
+ * `@tangle-network/ui/primitives` directly), so the shadow costs no one access
+ * while the two are reconciled.
  */
 const INTENDED_SHADOWS: Readonly<Record<string, readonly string[]>> = {
-  primitives: ["Logo", "LogoProps", "TangleKnot"],
+  primitives: ["Logo", "LogoProps", "PageHeader", "PageHeaderProps", "TangleKnot"],
 };
 
 describe("a name served locally while ui exports it too is documented", () => {
@@ -263,11 +271,13 @@ const ROOT_OMISSIONS: Readonly<Record<string, string>> = {
   TerminalInput: "clashes with workspace's own terminal types; re-exported as TerminalDisplayInput",
   TerminalCursor: "clashes with workspace's own terminal types; re-exported as TerminalDisplayCursor",
   ConnectionState: "the editor declares one too, so neither takes the root name; each stays reachable from its subpath",
-  RedactedDocSegment: "redaction has no consumer here and ui publishes it only from its root",
-  RedactedDocument: "redaction has no consumer here and ui publishes it only from its root",
-  RedactedDocumentData: "redaction has no consumer here and ui publishes it only from its root",
-  RedactedDocumentProps: "redaction has no consumer here and ui publishes it only from its root",
-  RevealResult: "redaction has no consumer here and ui publishes it only from its root",
+  PageHeader: "root carries no heading primitive at all — its own Heading and SectionTitle are absent here too",
+  PageHeaderProps: "root carries no heading primitive at all — its own Heading and SectionTitle are absent here too",
+  RedactedDocSegment: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
+  RedactedDocument: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
+  RedactedDocumentData: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
+  RedactedDocumentProps: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
+  RevealResult: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
 };
 
 describe("the root entry omits only what it means to omit", () => {

@@ -25,6 +25,42 @@
   exports map. Each subpath must name one file, so that a source file
   rename stays internal and cannot break a deep import.
 
+## 0.102.0
+
+### Exports
+
+- **The root, `./primitives`, and `./run` entry points re-export more
+  `@tangle-network/ui` names.** (#248)
+
+### Dependencies
+
+- **The `@tangle-network/ui` peer floor moves to `^11.5.0`.**
+  Install `@tangle-network/ui` 11.5.0 or later. (#248)
+
+## 0.101.2
+
+### Dependencies
+
+- **The Radix stack resolves to one copy of each package.**
+  A test guards the single-copy result. (#247)
+
+## 0.101.1
+
+### Exports
+
+- **The entry points re-export the `@tangle-network/ui` names that the
+  local shims had dropped.** A parity test guards the surface. (#246)
+
+## 0.101.0
+
+### Added
+
+- **The chat composer shows context chips.** (#244)
+
+### Dependencies
+
+- **The token bundle builds against `@tangle-network/brand` 1.5.** (#243)
+
 ## 0.100.1
 
 ### Dependencies

@@ -11,6 +11,17 @@
   unchanged: `display`, `hero`, `page`, `section`, `subsection`,
   `eyebrow`.
 
+### Internal — one source file is renamed
+
+- `src/pages/pricing-page.tsx` becomes `src/pages/standalone-pricing-page.tsx`,
+  so its name matches the `StandalonePricingPage` it exports and stops
+  colliding with `src/dashboard/pricing-page.tsx`, a different component.
+- No published path changes. The exports map declares no pattern entries,
+  so `@tangle-network/sandbox-ui/pages/pricing-page` was never resolvable,
+  and `files` ships `dist` only, so `src` never reached consumers. The
+  `./pages` entry point still exports `StandalonePricingPage` and
+  `StandalonePricingPageProps` under those names.
+
 ## 0.100.1
 
 ### Dependencies

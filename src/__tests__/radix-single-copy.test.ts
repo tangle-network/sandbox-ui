@@ -84,12 +84,34 @@ const analyse = () => resolvedVersions(readFileSync(findLockfile(), "utf8"));
  */
 const MINIMUM_RADIX_PACKAGES = 20;
 
+/** The `@radix-ui/*` packages this package depends on by name. */
+function declaredRadixDependencies(): string[] {
+  const manifest = JSON.parse(
+    readFileSync(resolvePath(dirname(findLockfile()), "package.json"), "utf8"),
+  ) as { dependencies?: Record<string, string> };
+  return Object.keys(manifest.dependencies ?? {})
+    .filter((name) => name.startsWith("@radix-ui/"))
+    .sort();
+}
+
 describe("the Radix stack resolves to one copy of each package", () => {
   it("finds the Radix packages to check", () => {
     // A lockfile format change that stopped matching would otherwise report
     // "no duplicates" from an empty set — the strongest possible pass from the
     // weakest possible parse.
     expect(analyse().size).toBeGreaterThan(MINIMUM_RADIX_PACKAGES);
+  });
+
+  it("finds every Radix package this one depends on by name", () => {
+    // The count floor above only catches a parse that broke for everything. A
+    // format change that stopped matching some spellings would slip past it,
+    // and could hide a duplicate among exactly the entries it stopped reading.
+    // These names come from the manifest rather than from the parse, so they
+    // are the one part of the expectation the lockfile cannot quietly rewrite.
+    const parsed = analyse();
+    const declared = declaredRadixDependencies();
+    expect(declared.length).toBeGreaterThan(0);
+    expect(declared.filter((name) => !parsed.has(name))).toEqual([]);
   });
 
   it("no @radix-ui package resolves to more than one version", () => {

@@ -30,9 +30,6 @@ export type HeadingVariant =
   | "subsection" // sub-section heading (h3)
   | "eyebrow"; // uppercase label above a title
 
-/** @deprecated Renamed to {@link HeadingVariant}; kept as an alias. */
-export type HeadingRole = HeadingVariant;
-
 const VARIANT_CLASS: Record<HeadingVariant, string> = {
   display:
     "font-display font-bold text-foreground text-[length:var(--font-size-display,3rem)] leading-[var(--line-height-display,1.05)] tracking-[var(--tracking-tight,-0.02em)]",

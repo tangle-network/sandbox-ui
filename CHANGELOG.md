@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.103.0
+
+### Breaking — `HeadingRole` is removed
+
+- The `HeadingRole` type alias is gone. It carried an `@deprecated` tag
+  naming `HeadingVariant` as its replacement, and aliased that type with
+  no difference in meaning.
+- Replace `HeadingRole` with `HeadingVariant`. The union members are
+  unchanged: `display`, `hero`, `page`, `section`, `subsection`,
+  `eyebrow`.
+
+### Internal — one source file is renamed
+
+- `src/pages/pricing-page.tsx` becomes `src/pages/standalone-pricing-page.tsx`,
+  so its name matches the `StandalonePricingPage` it exports and stops
+  colliding with `src/dashboard/pricing-page.tsx`, a different component.
+- No published path changes. The exports map declares no pattern entries,
+  so `@tangle-network/sandbox-ui/pages/pricing-page` was never resolvable,
+  and `files` ships `dist` only, so `src` never reached consumers. The
+  `./pages` entry point still exports `StandalonePricingPage` and
+  `StandalonePricingPageProps` under those names.
+- The package smoke test now rejects a pattern subpath in the packed
+  exports map. Each subpath must name one file, so that a source file
+  rename stays internal and cannot break a deep import.
+
+## 0.102.0
+
+### Exports
+
+- **The root, `./primitives`, and `./run` entry points re-export more
+  `@tangle-network/ui` names.** (#248)
+
+### Dependencies
+
+- **The `@tangle-network/ui` peer floor moves to `^11.5.0`.**
+  Install `@tangle-network/ui` 11.5.0 or later. (#248)
+
+## 0.101.2
+
+### Dependencies
+
+- **The Radix stack resolves to one copy of each package.**
+  A test guards the single-copy result. (#247)
+
+## 0.101.1
+
+### Exports
+
+- **The entry points re-export the `@tangle-network/ui` names that the
+  local shims had dropped.** A parity test guards the surface. (#246)
+
+## 0.101.0
+
+### Added
+
+- **The chat composer shows context chips.** (#244)
+
+### Dependencies
+
+- **The token bundle builds against `@tangle-network/brand` 1.5.** (#243)
+
 ## 0.100.1
 
 ### Dependencies

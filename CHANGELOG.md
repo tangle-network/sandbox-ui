@@ -21,6 +21,9 @@
   and `files` ships `dist` only, so `src` never reached consumers. The
   `./pages` entry point still exports `StandalonePricingPage` and
   `StandalonePricingPageProps` under those names.
+- The package smoke test now rejects a pattern subpath in the packed
+  exports map. Each subpath must name one file, so that a source file
+  rename stays internal and cannot break a deep import.
 
 ## 0.100.1
 

@@ -78,6 +78,16 @@ try {
   ) {
     throw new Error("packed package.json must contain name, version, and exports");
   }
+  const patternSubpaths = Object.keys(manifest.exports).filter((subpath) =>
+    subpath.includes("*"),
+  );
+  if (patternSubpaths.length > 0) {
+    throw new Error(
+      `packed exports map declares pattern subpaths: ${patternSubpaths.join(", ")}. ` +
+        "Each subpath must name one file, so that a source file rename stays internal " +
+        "and cannot break a deep import.",
+    );
+  }
   if (
     manifest.peerDependencies?.["@tangle-network/agent-interface"] !==
     expectedAgentInterfaceRange

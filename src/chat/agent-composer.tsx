@@ -228,9 +228,14 @@ export interface AgentComposerProps {
 
 /**
  * @deprecated Use `ChatComposer` from `@tangle-network/agent-app/web-react` —
- * the canonical composer (superset: attachments lifecycle, send-failure
- * recovery, seeds, quiet/labeled controls, floating elevation, and the
- * circular icon send via `sendVariant="icon"`). This slot-shell is frozen and
+ * the canonical composer. It adds send-failure recovery, seeds, control
+ * placement, floating elevation, and the circular icon send via
+ * `sendVariant="icon"`. Plan a port, not a rename: 14 of the 28 props here
+ * have no same-named counterpart there, among them `contextItems`, `mention`,
+ * `trailing`, `maxHeight`, `minRows`, and `autoFocus`. The control model also
+ * differs — this component requires `value` and `onChange` and calls
+ * `onSubmit` with no arguments, while `ChatComposer` can own its draft and
+ * gives the message to a refusable `onSend`. This slot-shell is frozen and
  * will be removed at sandbox-ui's next breaking release.
  *
  * The canonical agent chat input: one rounded surface holding an auto-growing

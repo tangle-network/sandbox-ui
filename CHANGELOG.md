@@ -11,6 +11,27 @@
   unchanged: `display`, `hero`, `page`, `section`, `subsection`,
   `eyebrow`.
 
+### Deprecated — the `AgentComposer` API is frozen
+
+- `AgentComposer` and its composer-only helpers carry an `@deprecated` tag.
+  Use `ChatComposer` from `@tangle-network/agent-app/web-react`, which is the
+  canonical composer. It adds send-failure recovery, seeds, control
+  placement, floating elevation, and the circular icon send through
+  `sendVariant="icon"`.
+- Plan the move as a port, not a rename. 14 of the 28 props on
+  `AgentComposerProps` have no same-named counterpart on `ChatComposerProps`,
+  among them `contextItems`, `mention`, `trailing`, `maxHeight`, `minRows`,
+  and `autoFocus`. The control model also differs. `AgentComposer` requires
+  `value` and `onChange`, and calls `onSubmit` with no arguments.
+  `ChatComposer` can own its draft, and gives the message to `onSend`, which
+  can refuse a send.
+- The frozen exports on `./chat` are `AgentComposer`, `AgentComposerProps`,
+  `AgentComposerMention`, `MentionItem`, `ComposerFile`, `ComposerContextItem`,
+  `ComposerFileValidationConfig`, `ComposerFileRejection`, `isAcceptedType`,
+  `validateComposerFiles`, and `MENTION_PILL_CLASS`.
+- Every one of them still works in this release. The next breaking release
+  removes them.
+
 ### Internal — one source file is renamed
 
 - `src/pages/pricing-page.tsx` becomes `src/pages/standalone-pricing-page.tsx`,

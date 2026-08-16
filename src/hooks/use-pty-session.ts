@@ -71,15 +71,15 @@ function createEmptyBatch(): PendingBatch {
 // ---------------------------------------------------------------------------
 
 /**
- * Time we wait for `new WebSocket(...)` to reach OPEN before falling
- * back to the HTTP+SSE transport. The cold terminal-WS upgrade can
- * traverse several proxy hops (browser → app worker → sandbox edge →
- * orchestrator dial → host-agent → sidecar) and take a few seconds to
- * establish; the budget must cover that so the direct WS path — the
- * only one that sends `init` — wins instead of dropping through to the
- * fallback dial on a cold connect.
+ * Time we wait for the terminal WebSocket to reach server-confirmed READY
+ * before falling back to the HTTP+SSE transport. The cold terminal-WS
+ * upgrade can traverse several proxy hops (browser → app worker → sandbox
+ * edge → orchestrator dial → host-agent → sidecar) and take a few seconds
+ * to establish; the budget must cover the full OPEN → init → ready exchange
+ * so the direct WS path wins instead of dropping through to the fallback
+ * dial on a cold connect.
  */
-const WS_OPEN_TIMEOUT_MS = 10000;
+const WS_READY_TIMEOUT_MS = 10000;
 
 /** Convert an http(s) base URL into the matching ws(s) URL. */
 function toWsUrl(apiUrl: string, sessionId: string): string | null {
@@ -175,8 +175,9 @@ function createTerminalConnectionId(): string {
  *      - Server → client: BINARY frames carrying PTY output; TEXT frames
  *        carrying lifecycle/control messages.
  *      - Client → server: TEXT frames carrying JSON input/resize messages.
- *   2. If direct WS does not reach OPEN within WS_OPEN_TIMEOUT_MS, or it
- *      errors before opening, fall back to the older terminal contract:
+ *   2. If direct WS does not reach server `ready` within
+ *      WS_READY_TIMEOUT_MS, or it errors before ready, fall back to the older
+ *      terminal contract:
  *      - POST /terminals creates the session.
  *      - GET /terminals/:id/ws tries the older WS transport.
  *      - GET /terminals/:id/stream (SSE for output)
@@ -228,6 +229,10 @@ export function usePtySession({
   const reconnectRef = useRef<(() => void) | null>(null);
   const shouldDeleteSessionRef = useRef(false);
   const transportReadyRef = useRef(false);
+  // A protocol violation must not fall through to a different transport or
+  // start an automatic reconnect loop. The caller can explicitly reconnect
+  // after the server and client protocol versions have been reconciled.
+  const protocolFailureRef = useRef(false);
   const colsRef = useRef(DEFAULT_TERMINAL_COLS);
   const rowsRef = useRef(DEFAULT_TERMINAL_ROWS);
 
@@ -360,11 +365,11 @@ export function usePtySession({
 
   // -- Try WebSocket transport ------------------------------------------------
   //
-  // Resolves with `true` if the WS reaches OPEN and is now driving
-  // input/output for the session, or `false` if the WS could not be
-  // constructed, errored before opening, or did not open before
-  // WS_OPEN_TIMEOUT_MS elapsed. The caller falls back to SSE+POST when
-  // this returns `false`.
+  // Resolves with `true` only after the server sends `ready` and the WS is
+  // driving input/output for the session, or `false` if the WS could not be
+  // constructed, failed before ready, or did not become ready before
+  // WS_READY_TIMEOUT_MS elapsed. The caller falls back to SSE+POST when
+  // this returns `false`, unless the server reported a protocol failure.
 
   const connectWs = useCallback((
     sessionId: string,
@@ -414,16 +419,30 @@ export function usePtySession({
       };
 
       const handshakeTimer = setTimeout(() => {
-        if (opened) return;
-        // The WS never reached OPEN. Kill the socket so it doesn't
-        // race the SSE fallback later, then surrender.
+        // The WS did not complete the full OPEN → init → ready handshake.
+        // Kill the socket so it cannot race the SSE fallback, then surrender.
         try {
           ws.close();
         } catch {
           // already gone
         }
         settle(false);
-      }, WS_OPEN_TIMEOUT_MS);
+      }, WS_READY_TIMEOUT_MS);
+
+      const failProtocol = (message: string) => {
+        protocolFailureRef.current = true;
+        transportReadyRef.current = false;
+        if (wsRef.current === ws) wsRef.current = null;
+        setIsConnected(false);
+        setError(message);
+        rejectPendingInput(message);
+        try {
+          ws.close();
+        } catch {
+          // already gone
+        }
+        settle(false);
+      };
 
       ws.onopen = () => {
         opened = true;
@@ -475,12 +494,8 @@ export function usePtySession({
             return;
           }
         }
+        if (protocolFailureRef.current) return;
         wsRef.current = ws;
-        transportReadyRef.current = true;
-        setIsConnected(true);
-        setError(null);
-        retryCountRef.current = 0;
-        settle(true);
       };
 
       ws.onmessage = (ev) => {
@@ -503,20 +518,56 @@ export function usePtySession({
         }
         if (typeof data === 'string') {
           try {
-            const event = JSON.parse(text);
-            if (event?.type === 'ready') {
-              return;
-            }
-            if (event?.type === 'error') {
-              const message = typeof event.message === 'string'
-                ? event.message
-                : 'Terminal WebSocket error';
-              setError(message);
-              return;
-            }
-            if (event?.type === 'exit') {
-              setIsConnected(false);
-              return;
+            const event: unknown = JSON.parse(text);
+            if (
+              event !== null &&
+              typeof event === 'object' &&
+              !Array.isArray(event)
+            ) {
+              const controlFrame = event as {
+                type?: unknown;
+                message?: unknown;
+              };
+
+              switch (controlFrame.type) {
+                case 'ready':
+                  // OPEN only proves that the socket exists. The server's
+                  // ready frame proves that init was accepted and the PTY is
+                  // attached. Input remains queued until this point.
+                  transportReadyRef.current = true;
+                  setIsConnected(true);
+                  setError(null);
+                  retryCountRef.current = 0;
+                  settle(true);
+                  return;
+                case 'error': {
+                  const message = typeof controlFrame.message === 'string'
+                    ? controlFrame.message
+                    : 'Terminal WebSocket error';
+                  if (!transportReadyRef.current) {
+                    failProtocol(message);
+                  } else {
+                    setError(message);
+                  }
+                  return;
+                }
+                case 'exit':
+                  transportReadyRef.current = false;
+                  setIsConnected(false);
+                  return;
+                case 'rec':
+                case 'rec.done':
+                  // Recording tee frames belong to the platform capture
+                  // consumer, not the terminal renderer.
+                  return;
+                default: {
+                  const frameType = typeof controlFrame.type === 'string'
+                    ? controlFrame.type
+                    : '<missing type>';
+                  failProtocol(`Unknown terminal control frame: ${frameType}`);
+                  return;
+                }
+              }
             }
           } catch {
             // Not a lifecycle/control JSON frame; forward as PTY output.
@@ -549,12 +600,19 @@ export function usePtySession({
         // state — opening a duplicate SSE stream against the new
         // session and flickering isConnected.
         const wasActive = wsRef.current === ws;
+        const wasReady = wasActive && transportReadyRef.current;
         if (wasActive) {
           wsRef.current = null;
           transportReadyRef.current = false;
         }
         if (!opened) {
           // Never reached OPEN — surrender so the caller falls back.
+          settle(false);
+          return;
+        }
+        if (!wasReady) {
+          // The socket opened but the server closed it before acknowledging
+          // init. This is still a failed handshake, not a mid-session loss.
           settle(false);
           return;
         }
@@ -566,7 +624,11 @@ export function usePtySession({
         // through the same SSE retry policy as the HTTP path — but
         // only if this WS was still the active transport, otherwise
         // we're an orphan from a torn-down connect cycle.
-        if (!wasActive || !mountedRef.current) return;
+        if (
+          protocolFailureRef.current ||
+          !wasActive ||
+          !mountedRef.current
+        ) return;
         setIsConnected(false);
         if (sessionIdRef.current) {
           retryTimerRef.current = setTimeout(() => {
@@ -581,7 +643,7 @@ export function usePtySession({
         }
       };
     });
-  }, [apiUrl]);
+  }, [apiUrl, rejectPendingInput]);
 
   // -- Connect SSE stream to an existing terminal session --------------------
 
@@ -703,6 +765,7 @@ export function usePtySession({
   const connect = useCallback(async () => {
     cleanup();
     const myGen = ++connectGenRef.current;
+    protocolFailureRef.current = false;
     retryCountRef.current = 0;
     setError(null);
 
@@ -727,6 +790,7 @@ export function usePtySession({
 
       const directWsOk = await connectWs(connectionId, { initOnOpen: true });
       if (!mountedRef.current || connectGenRef.current !== myGen) return;
+      if (protocolFailureRef.current) return;
 
       ensureDrainRunningRef.current?.();
 
@@ -794,6 +858,7 @@ export function usePtySession({
       // that's already been DELETEd, opening an SSE stream that briefly
       // competes with the new transport.
       if (!mountedRef.current || connectGenRef.current !== myGen) return;
+      if (protocolFailureRef.current) return;
 
       // Flush any keystrokes that arrived between mount and now. They
       // were accepted into `pendingBatchRef` but the drain loop exited
@@ -998,6 +1063,10 @@ export function usePtySession({
       // network traffic) and avoid churning the queue.
       if (command.length === 0) {
         resolve();
+        return;
+      }
+      if (protocolFailureRef.current) {
+        reject(new Error('Terminal protocol failure'));
         return;
       }
       pendingBatchRef.current.data += command;

@@ -814,6 +814,13 @@ describe("usePtySession WebSocket transport", () => {
     return { ...wsStub, stray, fetchMock }
   }
 
+  function openAndReady(handle: FakeWsHandle) {
+    act(() => {
+      handle.open()
+      handle.pushMessage(JSON.stringify({ type: "ready" }))
+    })
+  }
+
   async function mountAndOpenWs(apiUrl = API_URL) {
     const harness = installWsHarness()
     const onData = vi.fn()
@@ -822,10 +829,8 @@ describe("usePtySession WebSocket transport", () => {
     )
     // Wait for the hook's `connect()` to construct the WebSocket.
     await waitFor(() => expect(harness.handles).toHaveLength(1))
-    // Drive the open event the hook is waiting on.
-    act(() => {
-      harness.handles[0].open()
-    })
+    // Drive the socket open and the server ready acknowledgement.
+    openAndReady(harness.handles[0])
     expect(harness.handles[0].sentText).toEqual([
       JSON.stringify({ type: "init", cols: 80, rows: 24 }),
     ])
@@ -867,6 +872,55 @@ describe("usePtySession WebSocket transport", () => {
     expect(atob(standard)).toBe(fixtureValue)
   })
 
+  it("does not report connected or send queued input until the server sends ready", async () => {
+    const harness = installWsHarness()
+    const hook = renderHook(() =>
+      usePtySession({
+        apiUrl: API_URL,
+        token: fixtureValue,
+        onData: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    act(() => harness.handles[0].open())
+
+    expect(hook.result.current.isConnected).toBe(false)
+    expect(harness.handles[0].sentText).toEqual([
+      JSON.stringify({ type: "init", cols: 80, rows: 24 }),
+    ])
+
+    let inputSettled = false
+    let inputPromise!: Promise<void>
+    act(() => {
+      inputPromise = hook.result.current.sendCommand("before-ready").then(() => {
+        inputSettled = true
+      })
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(inputSettled).toBe(false)
+    expect(harness.handles[0].sentText).not.toContain(
+      JSON.stringify({ type: "input", data: "before-ready" }),
+    )
+
+    act(() => {
+      harness.handles[0].pushMessage(JSON.stringify({ type: "ready" }))
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+    await act(async () => {
+      await inputPromise
+    })
+
+    expect(inputSettled).toBe(true)
+    expect(harness.handles[0].sentText).toContain(
+      JSON.stringify({ type: "input", data: "before-ready" }),
+    )
+    hook.unmount()
+  })
+
   it("sends the exact interactive identity on every WebSocket init", async () => {
     const harness = installWsHarness()
     const hook = renderHook(() =>
@@ -881,7 +935,7 @@ describe("usePtySession WebSocket transport", () => {
     )
 
     await waitFor(() => expect(harness.handles).toHaveLength(1))
-    act(() => harness.handles[0].open())
+    openAndReady(harness.handles[0])
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
     expect(JSON.parse(harness.handles[0].sentText[0])).toEqual({
       type: "init",
@@ -978,7 +1032,7 @@ describe("usePtySession WebSocket transport", () => {
     expect(new URL(harness.handles[0].url).pathname).toBe(
       `/terminals/${CONNECTION_ID}/ws`,
     )
-    act(() => harness.handles[0].open())
+    openAndReady(harness.handles[0])
     await waitFor(() => expect(first.result.current.isConnected).toBe(true))
     first.unmount()
 
@@ -997,7 +1051,7 @@ describe("usePtySession WebSocket transport", () => {
     expect(new URL(harness.handles[1].url).pathname).toBe(
       `/terminals/${CONNECTION_ID}/ws`,
     )
-    act(() => harness.handles[1].open())
+    openAndReady(harness.handles[1])
     second.unmount()
   })
 
@@ -1022,7 +1076,7 @@ describe("usePtySession WebSocket transport", () => {
     )
 
     await waitFor(() => expect(harness.handles).toHaveLength(1))
-    act(() => harness.handles[0].open())
+    openAndReady(harness.handles[0])
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
 
     // A freshly minted token must not open a new socket or reconnect.
@@ -1095,6 +1149,43 @@ describe("usePtySession WebSocket transport", () => {
     expect(onData).toHaveBeenCalledTimes(2)
     expect(onData).toHaveBeenNthCalledWith(1, "hello\r\n")
     expect(onData).toHaveBeenNthCalledWith(2, "\x1b[31mred\x1b[0m")
+  })
+
+  it("consumes recording control frames without rendering them", async () => {
+    const { handles, onData } = await mountAndOpenWs()
+
+    act(() => {
+      handles[0].pushMessage(
+        JSON.stringify({ type: "rec", sequence: 1, data: "capture" }),
+      )
+      handles[0].pushMessage(
+        JSON.stringify({ type: "rec.done", sequence: 1 }),
+      )
+    })
+
+    expect(onData).not.toHaveBeenCalled()
+  })
+
+  it("fails closed on unknown control frames instead of rendering them", async () => {
+    const { handles, hook, onData, stray } = await mountAndOpenWs()
+
+    act(() => {
+      handles[0].pushMessage(
+        JSON.stringify({ type: "future-control", payload: "must-not-render" }),
+      )
+    })
+
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(false))
+    expect(hook.result.current.error).toBe(
+      "Unknown terminal control frame: future-control",
+    )
+    expect(onData).not.toHaveBeenCalled()
+    expect(stray).toEqual([])
+    expect(handles).toHaveLength(1)
+    await expect(hook.result.current.sendCommand("after-failure")).rejects.toThrow(
+      "Terminal protocol failure",
+    )
+    hook.unmount()
   })
 
   it("decodes ArrayBuffer frames as UTF-8 and forwards to onData", async () => {
@@ -1198,11 +1289,9 @@ describe("usePtySession WebSocket transport", () => {
       usePtySession({ apiUrl: API_URL, token: fixtureValue, onData: vi.fn() }),
     )
 
-    // Drive the WS handshake to OPEN.
+    // Drive the WS handshake through OPEN and server READY.
     await waitFor(() => expect(wsStub.handles).toHaveLength(1))
-    act(() => {
-      wsStub.handles[0].open()
-    })
+    openAndReady(wsStub.handles[0])
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
     expect(stray).toEqual([])
 
@@ -1224,9 +1313,7 @@ describe("usePtySession WebSocket transport", () => {
       },
       { timeout: 3000 },
     )
-    act(() => {
-      wsStub.handles[1].open()
-    })
+    openAndReady(wsStub.handles[1])
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
 
     // Subsequent input must travel over the new WebSocket, not be
@@ -1411,6 +1498,9 @@ describe("usePtySession WebSocket transport", () => {
     act(() => {
       instances[0].readyState = 1
       instances[0].onopen?.({} as Event)
+      instances[0].onmessage?.({
+        data: JSON.stringify({ type: "ready" }),
+      } as MessageEvent)
     })
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
 
@@ -1424,6 +1514,9 @@ describe("usePtySession WebSocket transport", () => {
     act(() => {
       instances[1].readyState = 1
       instances[1].onopen?.({} as Event)
+      instances[1].onmessage?.({
+        data: JSON.stringify({ type: "ready" }),
+      } as MessageEvent)
     })
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
 
@@ -1559,6 +1652,9 @@ describe("usePtySession WebSocket transport", () => {
     act(() => {
       instances[1].readyState = 1
       instances[1].onopen?.({} as Event)
+      instances[1].onmessage?.({
+        data: JSON.stringify({ type: "ready" }),
+      } as MessageEvent)
     })
     await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
 

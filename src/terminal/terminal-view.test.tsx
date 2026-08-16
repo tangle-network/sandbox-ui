@@ -195,6 +195,30 @@ describe("TerminalView — connectionId passthrough", () => {
       expect.objectContaining({ connectionId: "terminal-xyz" }),
     )
   })
+
+  it("forwards the exact interactive identity into usePtySession", () => {
+    const control = {
+      refDigest: "sha256:interactive-ref",
+      generation: 1,
+      leaseId: "lease-1",
+      holderId: "browser-1",
+      expiresAt: "2026-08-16T12:00:00.000Z",
+    } as const
+    render(
+      <TerminalView
+        apiUrl="https://test.local"
+        token="t"
+        incarnationId="incarnation-1"
+        control={control}
+      />,
+    )
+    expect(m.usePtySessionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        incarnationId: "incarnation-1",
+        control,
+      }),
+    )
+  })
 })
 
 describe("TerminalView — font size", () => {

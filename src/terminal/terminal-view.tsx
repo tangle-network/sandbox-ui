@@ -1,4 +1,5 @@
 import "@xterm/xterm/css/xterm.css";
+import type { AgentInteractiveSessionControlClaim } from "@tangle-network/agent-interface";
 import { useEffect, useRef, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
@@ -71,6 +72,10 @@ export interface TerminalViewProps {
    * session per mount.
    */
   connectionId?: string;
+  /** Exact incarnation issued for an interactive agent session. */
+  incarnationId?: string;
+  /** Write claim for the exact interactive agent session. */
+  control?: AgentInteractiveSessionControlClaim;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,6 +119,8 @@ export default function TerminalView({
   subtitle = "Connected to PTY session",
   isActive = true,
   connectionId,
+  incarnationId,
+  control,
   fontSize = 13,
 }: TerminalViewProps) {
   const resolvedTheme = useMemo(
@@ -166,6 +173,8 @@ export default function TerminalView({
     token,
     onData,
     connectionId,
+    incarnationId,
+    control,
   });
 
   // Initialize xterm

@@ -767,6 +767,14 @@ describe("usePtySession input serialization", () => {
  * endpoint must honor.
  */
 describe("usePtySession WebSocket transport", () => {
+  const INTERACTIVE_CONTROL = {
+    refDigest: "sha256:interactive-ref",
+    generation: 1,
+    leaseId: "lease-1",
+    holderId: "browser-1",
+    expiresAt: "2026-08-16T12:00:00.000Z",
+  } as const
+
   beforeEach(() => {
     vi.useRealTimers()
   })
@@ -857,6 +865,88 @@ describe("usePtySession WebSocket transport", () => {
     const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4)
     const standard = padded.replace(/-/g, "+").replace(/_/g, "/")
     expect(atob(standard)).toBe(fixtureValue)
+  })
+
+  it("sends the exact interactive identity on every WebSocket init", async () => {
+    const harness = installWsHarness()
+    const hook = renderHook(() =>
+      usePtySession({
+        apiUrl: API_URL,
+        token: fixtureValue,
+        onData: vi.fn(),
+        connectionId: "interactive-session",
+        incarnationId: "incarnation-1",
+        control: INTERACTIVE_CONTROL,
+      }),
+    )
+
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    act(() => harness.handles[0].open())
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+    expect(JSON.parse(harness.handles[0].sentText[0])).toEqual({
+      type: "init",
+      incarnationId: "incarnation-1",
+      control: INTERACTIVE_CONTROL,
+      cols: 80,
+      rows: 24,
+    })
+    expect(harness.stray).toEqual([])
+
+    hook.unmount()
+  })
+
+  it("fails closed when an interactive identity is incomplete", async () => {
+    const harness = installWsHarness()
+    const hook = renderHook(() =>
+      usePtySession({
+        apiUrl: API_URL,
+        token: fixtureValue,
+        onData: vi.fn(),
+        connectionId: "interactive-session",
+        incarnationId: "incarnation-1",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(hook.result.current.error).toBe(
+        "Interactive terminal identity is incomplete",
+      ),
+    )
+    expect(harness.handles).toHaveLength(0)
+    expect(harness.stray).toEqual([])
+
+    hook.unmount()
+  })
+
+  it("fails closed when the sidecar rejects a stale interactive identity", async () => {
+    const harness = installWsHarness()
+    const hook = renderHook(() =>
+      usePtySession({
+        apiUrl: API_URL,
+        token: fixtureValue,
+        onData: vi.fn(),
+        connectionId: "interactive-session",
+        incarnationId: "stale-incarnation",
+        control: INTERACTIVE_CONTROL,
+      }),
+    )
+
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    act(() => {
+      harness.handles[0].open()
+      harness.handles[0].pushMessage(
+        JSON.stringify({
+          type: "error",
+          message: "Interactive session identity is stale",
+        }),
+      )
+      harness.handles[0].close(1008)
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(false))
+    expect(hook.result.current.error).toContain("identity is stale")
+    expect(harness.stray).toEqual([])
+
+    hook.unmount()
   })
 
   it("constructs a same-origin WebSocket when apiUrl is relative", async () => {

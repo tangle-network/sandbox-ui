@@ -11,6 +11,4 @@ allowBuilds:
   esbuild: true
 
 minimumReleaseAgeExclude:
-  - '@tangle-network/agent-interface@0.47.0 || 0.53.0 || 0.54.0 || 0.55.0'
-  - '@tangle-network/brand@1.5.0'
-  - '@tangle-network/ui@11.5.0'
+  - '@tangle-network/*'

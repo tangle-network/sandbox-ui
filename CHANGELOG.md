@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.104.0
+
+### Peer range — declare agent-interface as a caret range
+
+- The `@tangle-network/agent-interface` peer moves from `>=0.36.0 <0.54.0` to
+  `^1.0.0`.
+- Interface 1.0.0 publishes the surface of 0.56.0 unchanged and states a
+  compatibility promise: a minor is additive, a patch is a fix, and only a
+  major removes or narrows. A caret range reads that promise, so a later
+  additive minor needs no release here.
+- This is a minor bump, not a patch, because the range narrows: an app still
+  holding an interface below 1.0.0 stays on 0.103.1.
+- The packed smoke guard asserts the declared range and the resolved version
+  apart, and the release-age exclusion names the scope instead of literal
+  versions that go stale on every release.
+
 ## 0.103.1
 
 ### Peer range — accept agent-interface up to 0.53

@@ -1,3 +1,4 @@
+import type { AgentInteractiveSessionControlClaim } from '@tangle-network/agent-interface';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -19,6 +20,13 @@ export interface UsePtySessionOptions {
    * so the session does not survive a remount.
    */
   connectionId?: string;
+  /**
+   * Exact incarnation issued for an interactive agent session. When present,
+   * it must be sent with `control` on every WebSocket init frame.
+   */
+  incarnationId?: string;
+  /** Write claim for the exact interactive agent session. */
+  control?: AgentInteractiveSessionControlClaim;
 }
 
 export interface UsePtySessionReturn {
@@ -181,7 +189,14 @@ function createTerminalConnectionId(): string {
  * preserved as a fallback so the hook keeps working against
  * deployments that have not yet shipped the WS endpoint.
  */
-export function usePtySession({ apiUrl, token, onData, connectionId: providedConnectionId }: UsePtySessionOptions): UsePtySessionReturn {
+export function usePtySession({
+  apiUrl,
+  token,
+  onData,
+  connectionId: providedConnectionId,
+  incarnationId,
+  control,
+}: UsePtySessionOptions): UsePtySessionReturn {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -204,6 +219,11 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
   // periodic refresh) does not re-run the connect effect and tear down
   // a live/connecting socket. The token only matters at handshake time.
   const tokenRef = useRef(token);
+  const incarnationIdRef = useRef(incarnationId);
+  const controlRef = useRef(control);
+  const exactAttachRequiredRef = useRef(
+    incarnationId !== undefined || control !== undefined,
+  );
   const connectStreamRef = useRef<((sessionId: string) => Promise<void>) | null>(null);
   const reconnectRef = useRef<(() => void) | null>(null);
   const shouldDeleteSessionRef = useRef(false);
@@ -426,8 +446,22 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
         pendingWsRef.current = null;
         if (options.initOnOpen) {
           try {
+            const initIncarnationId = incarnationIdRef.current;
+            const initControl = controlRef.current;
+            if (
+              exactAttachRequiredRef.current &&
+              (!initIncarnationId || !initControl)
+            ) {
+              throw new Error(
+                'Interactive terminal identity is incomplete',
+              );
+            }
             ws.send(JSON.stringify({
               type: 'init',
+              ...(initIncarnationId !== undefined
+                ? { incarnationId: initIncarnationId }
+                : {}),
+              ...(initControl !== undefined ? { control: initControl } : {}),
               cols: colsRef.current,
               rows: rowsRef.current,
             }));
@@ -552,6 +586,11 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
   // -- Connect SSE stream to an existing terminal session --------------------
 
   const connectStream = useCallback(async (sessionId: string) => {
+    if (exactAttachRequiredRef.current) {
+      throw new Error(
+        'Interactive terminal requires an exact WebSocket attachment',
+      );
+    }
     abortStream();
     setError(null);
 
@@ -653,6 +692,10 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
 
   onDataRef.current = onData;
   tokenRef.current = token;
+  incarnationIdRef.current = incarnationId;
+  controlRef.current = control;
+  exactAttachRequiredRef.current =
+    incarnationId !== undefined || control !== undefined;
   connectStreamRef.current = connectStream;
 
   // -- Full connect: create terminal + open transport ------------------------
@@ -662,6 +705,14 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
     const myGen = ++connectGenRef.current;
     retryCountRef.current = 0;
     setError(null);
+
+    if (
+      exactAttachRequiredRef.current &&
+      (!incarnationIdRef.current || !controlRef.current)
+    ) {
+      setError('Interactive terminal identity is incomplete');
+      return;
+    }
 
     try {
       // Reuse the caller-supplied stable id when present so the sidecar
@@ -681,6 +732,12 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
 
       if (directWsOk) {
         return;
+      }
+
+      if (exactAttachRequiredRef.current) {
+        throw new Error(
+          'Interactive terminal WebSocket attach failed; exact identity was not accepted',
+        );
       }
 
       sessionIdRef.current = null;
@@ -786,6 +843,12 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
       }
     }
 
+    if (exactAttachRequiredRef.current) {
+      throw new Error(
+        'Interactive terminal is not attached with its exact identity',
+      );
+    }
+
     try {
       const res = await fetch(`${apiUrl}/terminals/${sid}`, {
         method: 'PATCH',
@@ -842,6 +905,17 @@ export function usePtySession({ apiUrl, token, onData, connectionId: providedCon
           for (const w of batch.waiters) w.resolve();
         } catch (err) {
           for (const w of batch.waiters) w.reject(err);
+        }
+        continue;
+      }
+
+      if (exactAttachRequiredRef.current) {
+        for (const w of batch.waiters) {
+          w.reject(
+            new Error(
+              'Interactive terminal is not attached with its exact identity',
+            ),
+          );
         }
         continue;
       }

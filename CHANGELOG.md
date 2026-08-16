@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.104.1
+
+### Terminal attach identity
+
+- Terminal clients now send the exact session incarnation and control proof with each WebSocket attach.
+- The terminal rejects missing identity before it opens a connection.
+- Control proofs remain in the WebSocket message body and never enter a URL.
+
 ## 0.104.0
 
 ### Peer range — declare agent-interface as a caret range

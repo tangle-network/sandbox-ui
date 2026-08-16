@@ -25,9 +25,9 @@ const mentionRuntimeDependencies = [
   "@tiptap/starter-kit",
   "@tiptap/suggestion",
 ];
-const expectedAgentInterfaceRange = ">=0.36.0 <0.48.0";
+const expectedAgentInterfaceRange = ">=0.36.0 <0.54.0";
 const expectedAgentInterfaceVersion =
-  process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "0.47.0";
+  process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "0.53.0";
 
 function packedManifest(tarballPath) {
   return JSON.parse(

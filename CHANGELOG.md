@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.103.1
+
+### Peer range — accept agent-interface up to 0.53
+
+- The `@tangle-network/agent-interface` peer range widens from
+  `>=0.36.0 <0.48.0` to `>=0.36.0 <0.54.0`.
+- The package consumes one interface symbol, the `ReasoningEffort` type,
+  and its declaration is identical in 0.47.0 and 0.53.0.
+- agent-knowledge 8.x requires interface `>=0.53.0`, so the old cap made
+  no published set installable for an app that carries sandbox-ui and
+  agent-knowledge together.
+
 ## 0.103.0
 
 ### Breaking — `HeadingRole` is removed

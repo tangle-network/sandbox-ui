@@ -42,9 +42,9 @@ function imageExtension(file: File): string {
 /** A selectable item in the `@`-mention popover. Generic — file semantics live
  * in the consuming app, not here.
  *
- * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
- * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
- * is frozen and will be removed at sandbox-ui's next breaking release. */
+ * Part of the {@link AgentComposer} API. `ChatComposer` in
+ * `@tangle-network/agent-app/web-react` has no equivalent — see
+ * {@link AgentComposer} for which composer fits a surface. */
 export interface MentionItem {
   id: string;
   label: string;
@@ -57,9 +57,9 @@ export interface MentionItem {
  * TipTap rich input that renders mentions as atomic pills; absent ⇒ exactly
  * today's plain-textarea behavior. Data-agnostic: the app supplies items.
  *
- * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
- * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
- * is frozen and will be removed at sandbox-ui's next breaking release.
+ * Part of the {@link AgentComposer} API. `ChatComposer` in
+ * `@tangle-network/agent-app/web-react` has no equivalent — see
+ * {@link AgentComposer} for which composer fits a surface.
  */
 export interface AgentComposerMention {
   /** The character that opens the popover. Default "@". */
@@ -89,9 +89,9 @@ const MentionEditor = React.lazy(() => import("./mention-editor"));
 
 /** A staged attachment shown as a chip above the input.
  *
- * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
- * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
- * is frozen and will be removed at sandbox-ui's next breaking release. */
+ * Part of the {@link AgentComposer} API. `ChatComposer` in
+ * `@tangle-network/agent-app/web-react` has no equivalent — see
+ * {@link AgentComposer} for which composer fits a surface. */
 export interface ComposerFile {
   id: string;
   name: string;
@@ -112,9 +112,9 @@ export interface ComposerFile {
 
 /** Context the agent will see alongside the next message.
  *
- * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
- * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
- * is frozen and will be removed at sandbox-ui's next breaking release. */
+ * Part of the {@link AgentComposer} API. `ChatComposer` in
+ * `@tangle-network/agent-app/web-react` has no equivalent — see
+ * {@link AgentComposer} for which composer fits a surface. */
 export interface ComposerContextItem {
   id: string;
   label: string;
@@ -124,11 +124,11 @@ export interface ComposerContextItem {
 }
 
 /**
- * Props of the legacy {@link AgentComposer}.
+ * Props of {@link AgentComposer}.
  *
- * @deprecated Part of the legacy AgentComposer API. Use ChatComposer from
- * `@tangle-network/agent-app/web-react` — the canonical composer. AgentComposer
- * is frozen and will be removed at sandbox-ui's next breaking release.
+ * Part of the {@link AgentComposer} API. `ChatComposer` in
+ * `@tangle-network/agent-app/web-react` has no equivalent — see
+ * {@link AgentComposer} for which composer fits a surface.
  */
 export interface AgentComposerProps {
   /** Composer text (controlled). */
@@ -227,25 +227,35 @@ export interface AgentComposerProps {
 }
 
 /**
- * @deprecated Use `ChatComposer` from `@tangle-network/agent-app/web-react` —
- * the canonical composer. It adds send-failure recovery, seeds, control
- * placement, floating elevation, and the circular icon send via
- * `sendVariant="icon"`. Plan a port, not a rename: 14 of the 28 props here
- * have no same-named counterpart there, among them `contextItems`, `mention`,
- * `trailing`, `maxHeight`, `minRows`, and `autoFocus`. The control model also
- * differs — this component requires `value` and `onChange` and calls
- * `onSubmit` with no arguments, while `ChatComposer` can own its draft and
- * gives the message to a refusable `onSend`. This slot-shell is frozen and
- * will be removed at sandbox-ui's next breaking release.
+ * Sibling of `ChatComposer` in `@tangle-network/agent-app/web-react`, not a
+ * predecessor of it. The two composers cover different jobs, and neither is a
+ * superset of the other, so pick by the features a surface needs.
  *
- * The canonical agent chat input: one rounded surface holding an auto-growing
+ * Reach for `AgentComposer` when the surface needs `@`-mentions (`mention`,
+ * backed by a lazily loaded rich-text input that renders mention pills),
+ * `contextItems`, or the full attachment lifecycle — `attachments` plus
+ * `onRejectFiles` and `onRetryFile`. It also owns `autoFocus`,
+ * `canSubmitAttachmentsOnly`, `trailing`, `maxHeight`, and `minRows`.
+ *
+ * Reach for `ChatComposer` when the surface is a plain send box. It owns
+ * send-failure recovery (`onSendFailed`, `sendFailureMessage`), one-shot
+ * prefill (`seed`), `controlsPlacement`, `floating`, `sendVariant`,
+ * parts-aware sends (`onSendParts`), and an uncontrolled mode
+ * (`initialValue`) — none of which exist here.
+ *
+ * Moving between them is a port, not a rename: the control models differ. This
+ * component requires `value` and `onChange` and calls `onSubmit` with no
+ * arguments, while `ChatComposer` can own its draft and hands the message to a
+ * refusable `onSend`.
+ *
+ * The input itself: one rounded surface holding an auto-growing
  * textarea and a bottom row that runs left → right — attach buttons, the
  * control strip (supplied via the required `controls` prop), trailing slot,
  * and the send button on the far right. The strip is explicit: the canonical
  * pickers are `ModelPicker` / `EffortPicker` / `AgentSessionControls` from
  * `@tangle-network/agent-app/web-react` — this component only owns the slot.
  *
- * Opt-in extras make it the superset of every app's hand-rolled composer:
+ * Opt-in extras cover what apps otherwise hand-roll:
  * file/folder attachments with drag-and-drop + chips + clipboard paste
  * (`onAttach` also gates pasting files onto the textarea, auto-naming
  * generic clipboard image blobs `pasted-image-<n>.<ext>`), a streaming Stop

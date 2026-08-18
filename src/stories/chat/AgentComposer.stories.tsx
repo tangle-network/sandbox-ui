@@ -22,7 +22,7 @@ const meta: Meta<typeof AgentComposer> = {
     docs: {
       description: {
         component:
-          "LEGACY — use `ChatComposer` from `@tangle-network/agent-app/web-react` (canonical composer: attachments lifecycle, failure recovery, seeds, floating, circular icon send). Frozen; removed at the next breaking release.",
+          "The mention and attachment-rich composer. Reach for it when a surface needs `@`-mentions, context items, or attachment reject/retry. For a plain send box with send-failure recovery, seeds and `sendVariant`, use `ChatComposer` from `@tangle-network/agent-app/web-react` — the two are siblings, and neither is a superset of the other.",
       },
     },
   },

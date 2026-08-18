@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.105.0
+
+### The `AgentComposer` deprecation is withdrawn
+
+- `AgentComposer` and its composer-only helpers no longer carry an
+  `@deprecated` tag, and nothing is scheduled for removal. 0.103.0 deprecated
+  them on the grounds that `ChatComposer` in
+  `@tangle-network/agent-app/web-react` was the canonical composer. That was
+  wrong: the two composers cover different jobs and neither is a superset of
+  the other, so the removal it announced could not be delivered without
+  dropping features that consumers depend on.
+- `AgentComposer` owns `@`-mentions (`mention`, and the rich-text input behind
+  it), `contextItems`, and the full attachment lifecycle — `attachments` with
+  `onRejectFiles` and `onRetryFile` — plus `autoFocus`,
+  `canSubmitAttachmentsOnly`, `trailing`, `maxHeight`, and `minRows`.
+  `ChatComposer` has no equivalent for any of them.
+- `ChatComposer` owns send-failure recovery (`onSendFailed`,
+  `sendFailureMessage`), one-shot prefill (`seed`), `controlsPlacement`,
+  `floating`, `sendVariant`, parts-aware sends (`onSendParts`), and an
+  uncontrolled mode (`initialValue`). `AgentComposer` has no equivalent for
+  any of them.
+- Pick by feature. A surface that needs mentions, context items, or attachment
+  reject/retry takes `AgentComposer`; a plain send box takes `ChatComposer`.
+  Moving between them stays a port rather than a rename, because the control
+  models differ: `AgentComposer` requires `value` and `onChange` and calls
+  `onSubmit` with no arguments, while `ChatComposer` can own its draft and
+  hands the message to a refusable `onSend`.
+- The exports this affects on `./chat` are `AgentComposer`,
+  `AgentComposerProps`, `AgentComposerMention`, `MentionItem`, `ComposerFile`,
+  `ComposerContextItem`, `ComposerFileValidationConfig`,
+  `ComposerFileRejection`, `isAcceptedType`, `validateComposerFiles`, and
+  `MENTION_PILL_CLASS`. No runtime behaviour changes in this release.
+
 ## 0.104.1
 
 ### Terminal attach identity

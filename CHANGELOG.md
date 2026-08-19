@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.105.1
+
+### Terminal readiness protocol
+
+- The terminal reports a connection only after the server accepts its initialization and sends `ready`.
+- Input remains queued until that acknowledgement arrives.
+- Recording control frames no longer enter terminal output.
+- Unknown control frames close the connection instead of rendering untrusted protocol data.
+
 ## 0.105.0
 
 ### The `AgentComposer` deprecation is withdrawn

@@ -162,6 +162,24 @@ function createTerminalConnectionId(): string {
   return `terminal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
+function interactiveIdentityKey(
+  incarnationId: string | undefined,
+  control: AgentInteractiveSessionControlClaim | undefined,
+): string {
+  if (incarnationId === undefined && control === undefined) return 'plain';
+  if (incarnationId === undefined || control === undefined) {
+    return `incomplete:${incarnationId ?? ''}`;
+  }
+  return [
+    incarnationId,
+    control.refDigest,
+    String(control.generation),
+    control.leaseId,
+    control.holderId,
+    control.expiresAt,
+  ].join('\0');
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -409,6 +427,9 @@ export function usePtySession({
       // the new WS's pending entry.
       pendingWsRef.current = ws;
 
+      const isCurrentSocket = () =>
+        wsRef.current === ws || pendingWsRef.current === ws;
+
       let opened = false;
       let settled = false;
       const settle = (ok: boolean) => {
@@ -499,7 +520,7 @@ export function usePtySession({
       };
 
       ws.onmessage = (ev) => {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || !isCurrentSocket()) return;
         const data = ev.data;
         let text: string;
         if (typeof data === 'string') {
@@ -512,7 +533,7 @@ export function usePtySession({
           // Blob (older runtimes that didn't honor binaryType). Defer to
           // a microtask read; xterm tolerates the small extra delay.
           (data as Blob).text().then((t) => {
-            if (mountedRef.current) onDataRef.current(t);
+            if (mountedRef.current && isCurrentSocket()) onDataRef.current(t);
           }).catch(() => {});
           return;
         }
@@ -759,6 +780,7 @@ export function usePtySession({
   exactAttachRequiredRef.current =
     incarnationId !== undefined || control !== undefined;
   connectStreamRef.current = connectStream;
+  const exactIdentityKey = interactiveIdentityKey(incarnationId, control);
 
   // -- Full connect: create terminal + open transport ------------------------
 
@@ -884,7 +906,14 @@ export function usePtySession({
         setIsConnected(false);
       }
     }
-  }, [apiUrl, providedConnectionId, cleanup, connectWs, connectStream]);
+  }, [
+    apiUrl,
+    providedConnectionId,
+    cleanup,
+    connectWs,
+    connectStream,
+    exactIdentityKey,
+  ]);
   reconnectRef.current = connect;
 
   // -- Resize terminal -------------------------------------------------------

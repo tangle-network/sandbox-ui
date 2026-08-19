@@ -1,3 +1,4 @@
+import type { AgentInteractiveSessionControlClaim } from "@tangle-network/agent-interface"
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { renderHook, act, waitFor } from "@testing-library/react"
 import { usePtySession } from "./use-pty-session"
@@ -110,6 +111,8 @@ function installFailFastWebSocketStub() {
  */
 interface FakeWsHandle {
   url: string
+  /** Current socket state. */
+  readonly readyState: number
   /** Subprotocols the hook offered (the bearer-auth subprotocol lives here). */
   protocols: string[]
   /** Frames sent by the hook as text (control messages). */
@@ -128,13 +131,17 @@ interface FakeWsHandle {
   pushBlob: (data: Blob) => void
   /** Drive the close event. */
   close: (code?: number) => void
+  /** Emit a delayed close event without changing the socket state. */
+  emitClose: (code?: number) => void
 }
 
 /**
  * Openable WebSocket stub: tests drive the open / message / close
  * events explicitly. Used by the WS-transport tests below.
  */
-function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
+function installOpeningWebSocketStub(
+  options: { emitCloseOnClose?: boolean } = {},
+): { handles: FakeWsHandle[] } {
   const handles: FakeWsHandle[] = []
   class OpeningWebSocket {
     static CONNECTING = 0
@@ -161,6 +168,9 @@ function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
       const self = this
       handles.push({
         url,
+        get readyState() {
+          return self.readyState
+        },
         protocols: protocolList,
         sentText: this.sentText,
         sentBinary: this.sentBinary,
@@ -180,13 +190,18 @@ function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
         pushBlob(data: Blob) {
           self.onmessage?.({ data } as MessageEvent)
         },
-        close(code = 1000) {
-          self.readyState = 3
+        emitClose(code = 1000) {
           self.onclose?.({
             code,
             reason: "",
-            wasClean: true,
+            wasClean: code === 1000,
           } as unknown as CloseEvent)
+        },
+        close(code = 1000) {
+          self.readyState = 3
+          if (options.emitCloseOnClose !== false) {
+            this.emitClose(code)
+          }
         },
       })
     }
@@ -204,11 +219,13 @@ function installOpeningWebSocketStub(): { handles: FakeWsHandle[] } {
     close() {
       if (this.readyState === 3) return
       this.readyState = 3
-      this.onclose?.({
-        code: 1000,
-        reason: "",
-        wasClean: true,
-      } as unknown as CloseEvent)
+      if (options.emitCloseOnClose !== false) {
+        this.onclose?.({
+          code: 1000,
+          reason: "",
+          wasClean: true,
+        } as unknown as CloseEvent)
+      }
     }
   }
   vi.stubGlobal("WebSocket", OpeningWebSocket)
@@ -790,8 +807,8 @@ describe("usePtySession WebSocket transport", () => {
    * as a contract violation — when the WS is open the hook MUST NOT
    * fall back to the HTTP path.
    */
-  function installWsHarness() {
-    const wsStub = installOpeningWebSocketStub()
+  function installWsHarness(options: { emitCloseOnClose?: boolean } = {}) {
+    const wsStub = installOpeningWebSocketStub(options)
     const stray: FetchCall[] = []
 
     const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
@@ -945,6 +962,143 @@ describe("usePtySession WebSocket transport", () => {
       rows: 24,
     })
     expect(harness.stray).toEqual([])
+
+    hook.unmount()
+  })
+
+  it("reconnects the exact socket when the control generation changes", async () => {
+    const harness = installWsHarness()
+    const hook = renderHook(
+      ({ control }: { control: AgentInteractiveSessionControlClaim }) =>
+        usePtySession({
+          apiUrl: API_URL,
+          token: fixtureValue,
+          onData: vi.fn(),
+          connectionId: "interactive-session",
+          incarnationId: "incarnation-1",
+          control,
+        }),
+      {
+        initialProps: {
+          control: INTERACTIVE_CONTROL as AgentInteractiveSessionControlClaim,
+        },
+      },
+    )
+
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    openAndReady(harness.handles[0])
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+
+    const rotated = {
+      ...INTERACTIVE_CONTROL,
+      generation: 2,
+      leaseId: "lease-2",
+    } as const
+    act(() => hook.rerender({ control: rotated }))
+
+    await waitFor(() => expect(harness.handles).toHaveLength(2))
+    expect(harness.handles[0].readyState).toBe(3)
+    openAndReady(harness.handles[1])
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+    expect(JSON.parse(harness.handles[1].sentText[0])).toMatchObject({
+      type: "init",
+      incarnationId: "incarnation-1",
+      control: rotated,
+    })
+
+    hook.unmount()
+  })
+
+  it("ignores late events from the old exact socket after a delayed close", async () => {
+    const harness = installWsHarness({ emitCloseOnClose: false })
+    const onData = vi.fn()
+    const hook = renderHook(
+      ({ control }: { control: AgentInteractiveSessionControlClaim }) =>
+        usePtySession({
+          apiUrl: API_URL,
+          token: fixtureValue,
+          onData,
+          connectionId: "interactive-session",
+          incarnationId: "incarnation-1",
+          control,
+        }),
+      {
+        initialProps: {
+          control: INTERACTIVE_CONTROL as AgentInteractiveSessionControlClaim,
+        },
+      },
+    )
+
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    openAndReady(harness.handles[0])
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+
+    let resolveStaleBlob!: (value: string) => void
+    const staleBlob = {
+      text: () => new Promise<string>((resolve) => {
+        resolveStaleBlob = resolve
+      }),
+    } as unknown as Blob
+    act(() => harness.handles[0].pushBlob(staleBlob))
+
+    const rotated = {
+      ...INTERACTIVE_CONTROL,
+      generation: 2,
+      leaseId: "lease-2",
+    } as const
+    act(() => hook.rerender({ control: rotated }))
+    await waitFor(() => expect(harness.handles).toHaveLength(2))
+
+    let queuedInputResolved = false
+
+    // Queue input while B is still connecting. The command must wait for
+    // B's ready frame and then use B, without opening a retry socket.
+    let queuedInput!: Promise<void>
+    act(() => {
+      queuedInput = hook.result.current.sendCommand("queued-on-b").then(() => {
+        queuedInputResolved = true
+      })
+    })
+    await Promise.resolve()
+    expect(queuedInputResolved).toBe(false)
+    expect(harness.handles[1].sentText).toEqual([])
+
+    openAndReady(harness.handles[1])
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+    await waitFor(() => expect(queuedInputResolved).toBe(true))
+    await expect(queuedInput).resolves.toBeUndefined()
+    expect(harness.handles[1].sentText).toContain(
+      JSON.stringify({ type: "input", data: "queued-on-b" }),
+    )
+
+    // Browser close delivery can lag behind the replacement connection.
+    // Fire the old socket's close first, then deliver every late frame and
+    // finish the deferred Blob decode after B is already the active socket.
+    harness.handles[0].emitClose(1006)
+    act(() => {
+      harness.handles[0].pushMessage("stale-output")
+      harness.handles[0].pushMessage(JSON.stringify({ type: "ready" }))
+      harness.handles[0].pushMessage(
+        JSON.stringify({ type: "error", message: "stale-error" }),
+      )
+      harness.handles[0].pushMessage(JSON.stringify({ type: "exit" }))
+      harness.handles[0].pushBlob(staleBlob)
+      resolveStaleBlob("stale-blob-output")
+    })
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(hook.result.current.isConnected).toBe(true)
+    expect(hook.result.current.error).toBeNull()
+    expect(onData).not.toHaveBeenCalled()
+
+    // A's delayed close must not schedule a duplicate reconnect after the
+    // one-second retry window, and B must remain the only replacement.
+    await new Promise((resolve) => setTimeout(resolve, 1100))
+    expect(harness.handles).toHaveLength(2)
+    expect(hook.result.current.isConnected).toBe(true)
 
     hook.unmount()
   })

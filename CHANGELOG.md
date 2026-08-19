@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.105.2
+
+### Exact terminal control rotation
+
+- An exact terminal reconnects when its incarnation or control claim changes.
+- Late frames from a replaced socket cannot alter the replacement connection or output.
+- Queued input waits for the replacement server to accept the new control claim.
+
 ## 0.105.1
 
 ### Terminal readiness protocol

@@ -314,7 +314,7 @@ const HANDLE_CLASS = "!h-2 !w-2 !min-w-0 !border-0 !bg-transparent opacity-0";
  *  live-browser hit-test (`elementFromPoint` returned the card at every pixel
  *  of the handle; the identical drag landed once the handle was raised).
  *  jsdom cannot catch a stacking regression, which is why the class is pinned
- *  by name in WorkflowGraphEditing.test.tsx. */
+ *  by name in WorkflowNode.test.tsx. */
 const HANDLE_CONNECTABLE_CLASS =
   "!z-10 !h-2.5 !w-2.5 !min-w-0 !rounded-full !border !border-border !bg-muted-foreground/70 opacity-100 transition-opacity hover:!bg-primary";
 

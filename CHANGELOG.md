@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.105.3
+
+### Connectable handles are draggable
+
+- A connectable handle stacks above the node card. The card painted over
+  the handle, so a connection drag could not start in a real browser.
+- Read-only anchors keep their stacking. They are invisible and must not
+  intercept node clicks.
+
 ## 0.105.2
 
 ### Exact terminal control rotation

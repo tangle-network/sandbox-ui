@@ -306,9 +306,17 @@ const HANDLE_CLASS = "!h-2 !w-2 !min-w-0 !border-0 !bg-transparent opacity-0";
 
 /** On an EDITABLE canvas the handle stops being a hidden anchor and becomes the
  *  thing you drag. Drawn as a small ring in the muted token so it reads as an
- *  affordance without competing with the node's own mark or status border. */
+ *  affordance without competing with the node's own mark or status border.
+ *
+ *  `!z-10` is load-bearing, not styling: the handle straddles the node card's
+ *  edge, and without it the card paints OVER the handle — every pointer event
+ *  lands on the card, so a connection drag can never start. Verified with a
+ *  live-browser hit-test (`elementFromPoint` returned the card at every pixel
+ *  of the handle; the identical drag landed once the handle was raised).
+ *  jsdom cannot catch a stacking regression, which is why the class is pinned
+ *  by name in WorkflowNode.test.tsx. */
 const HANDLE_CONNECTABLE_CLASS =
-  "!h-2.5 !w-2.5 !min-w-0 !rounded-full !border !border-border !bg-muted-foreground/70 opacity-100 transition-opacity hover:!bg-primary";
+  "!z-10 !h-2.5 !w-2.5 !min-w-0 !rounded-full !border !border-border !bg-muted-foreground/70 opacity-100 transition-opacity hover:!bg-primary";
 
 /**
  * Where a compact node's edges attach. The compact BOX spans the icon tile AND

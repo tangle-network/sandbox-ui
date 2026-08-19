@@ -1128,4 +1128,16 @@ describe("WorkflowNode connection handles", () => {
     expect(found.every((h) => h.className.includes("opacity-0"))).toBe(false);
     expect(found.every((h) => h.className.includes("opacity-100"))).toBe(true);
   });
+
+  it("stacks a connectable handle above the node card, so it is draggable at all", () => {
+    // The handle straddles the card's edge. Without an explicit z-index the
+    // card paints over it and every pointerdown lands on the card — the
+    // connect gesture can then never START, which no jsdom event test can
+    // catch (verified in a live browser: `elementFromPoint` returned the card
+    // at every pixel of the handle, and the identical drag landed once the
+    // handle was raised). This pins the class by name because the defect is a
+    // stacking fact jsdom cannot observe.
+    const found = handles(renderAt(true).container);
+    expect(found.every((h) => h.className.includes("!z-10"))).toBe(true);
+  });
 });

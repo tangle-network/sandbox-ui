@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.107.0
+
+### Breaking — `AgentComposer` is removed, one release after its deprecation (#263)
+
+- `AgentComposer` is gone, along with its whole mention and attachment
+  stack: the component and its types (`AgentComposerProps`,
+  `AgentComposerMention`, `MentionItem`, `ComposerFile`,
+  `ComposerContextItem`), the mention modules behind it (`mention-editor`,
+  `mention-list`, `mention-serialize`), `MENTION_PILL_CLASS`, and the
+  attachment helpers (`isAcceptedType`, `validateComposerFiles`,
+  `ComposerFileRejection`, `ComposerFileValidationConfig`). sandbox-ui now
+  ships no composer.
+- Use `ChatComposer` from `@tangle-network/agent-app/web-react` (≥0.46),
+  which is a strict superset. The move is four prop renames — `onChange` →
+  `onValueChange`, `onSubmit()` → `onSend(message)`, `busy` → `isStreaming`,
+  `attachments` → `pendingFiles` — and every other prop carries across
+  unchanged. Add `sendVariant="icon"` and `focusShortcut={false}` for this
+  component's exact chrome. The replacements for the helpers are
+  `ComposerMentionProp` (the `mention` contract), the same-named
+  `MentionItem`, `ComposerFile`, `ComposerContextItem`,
+  `ComposerFileRejection` and `MENTION_PILL_CLASS`, and
+  `isAcceptedFileType` / `filterAcceptedFiles` for accept checks — size and
+  count limits live in the staging queue (`useComposerAttachments`) there.
+
+  ```tsx
+  // Before — sandbox-ui's composer:
+  import { AgentComposer } from "@tangle-network/sandbox-ui/chat";
+  <AgentComposer value={v} onChange={setV} onSubmit={send} busy={busy} attachments={files} controls={<Controls />} />
+
+  // After — agent-app's, with the four renames:
+  import { ChatComposer } from "@tangle-network/agent-app/web-react";
+  <ChatComposer value={v} onValueChange={setV} onSend={send} isStreaming={busy} pendingFiles={files} controls={<Controls />} sendVariant="icon" />
+  ```
+
+- **`@tiptap/extension-mention` and `@tiptap/suggestion` leave
+  `dependencies`.** They backed the mention editor and nothing else, so
+  every consumer stops installing them. `@tiptap/core`, `@tiptap/react`,
+  and `@tiptap/starter-kit` stay: the `./editor` entry re-exports
+  `TiptapEditor` and `DocumentEditorPane` from `@tangle-network/ui/editor`,
+  which needs them at runtime. The collaborative-editor tiptap entries in
+  `peerDependencies` are a separate contract and are unchanged.
+- Nothing else on `./chat` moves. `ReasoningLevelPicker` and its types,
+  `AgentProfilePicker` and its types, `ArtifactAgentDock`, the timeline and
+  message components, and the harness↔model policy re-exports are all
+  unaffected.
+
 ## 0.106.0
 
 ### `AgentComposer` is deprecated again — this time against a true superset

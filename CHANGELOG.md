@@ -38,6 +38,17 @@
   replays, so a credential rejected while the stream was down reaches the
   client through session status or not at all. The transcript already heals
   across an outage; the notice did not.
+- Only the newest status read for a session can apply. Reading on every attach
+  means two reads can be in flight at once, and the frame counter cannot order
+  them because only frames write it, so without this the last response to
+  arrive won whatever its snapshot's age. A slow healthy read landing after a
+  degraded one deleted the notice with nothing left to correct it.
+- A turn ending re-reads status, but only on a stream that carries an execution
+  cursor. The sidecar sends no `hub.*` frame at all on such a stream, so the
+  attach read is the only delivery path there and it happens once. An ordinary
+  stream is left alone: it gets the frames live, and re-reading would put the
+  notice back on the "cleared by the next successful turn" footing that keeping
+  it out of `error` exists to avoid.
 - `SessionDegradation` is exported from the package root. It is the type a
   caller has to name to hold the value or thread it through a prop.
 
@@ -45,10 +56,17 @@
   less than was asked for. It uses the brand's `--surface-warning-*` triple:
   `warning` is not registered in this package's `@theme`, so `bg-warning` and
   friends emit no rule at all.
-- `StatusBanner` announces itself. Every variant is mounted after first paint,
-  so a screen reader was told nothing when one appeared. The wrapper is a live
-  region now: assertive for `error`, polite for the rest, which covers the
-  existing variants as well as the new one.
+- `StatusBanner` carries a live region: assertive for `error`, polite for the
+  rest, covering the existing variants as well as the new one. The region wraps
+  the text only. Both roles are implicitly atomic, so a Dismiss button inside
+  one is read out as part of the message with its button semantics stripped,
+  and focus never moves to a live region.
+- Worth knowing before relying on it: a caller mounts this component when the
+  state changes, so the region enters the accessibility tree in the same
+  mutation as its text. That is the case `alert` gets special handling for and
+  `status` does not, so the polite variants are not guaranteed to be spoken.
+  Announcing them reliably needs a region that is already mounted and empty,
+  which is a change to what a caller renders.
 
 Requires a sidecar that stamps `hub.connections.degraded` with `sessionId` and
 serves `hubConnectionsDegraded` from session status

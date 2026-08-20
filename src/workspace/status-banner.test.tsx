@@ -48,12 +48,23 @@ describe("StatusBanner announcement", () => {
     expect(getByRole("status")).toHaveTextContent("hub-unauthenticated");
   });
 
-  it("keeps the dismiss control out of the announcement's way", () => {
+  it("keeps the dismiss control out of the announcement", () => {
+    // Both roles carry an implicit `aria-atomic="true"`, so the region is
+    // announced as ONE unit. A button inside it is read out as part of the
+    // message with its button semantics stripped, and focus never moves to a
+    // live region, so there is no way to act on what was just announced.
     const onDismiss = vi.fn();
     const { getByRole } = render(
       <StatusBanner type="warning" message="Degraded" onDismiss={onDismiss} />,
     );
-    getByRole("button", { name: "Dismiss" }).click();
+
+    const region = getByRole("status");
+    const dismiss = getByRole("button", { name: "Dismiss" });
+
+    expect(region).not.toHaveTextContent("Dismiss");
+    expect(region.contains(dismiss)).toBe(false);
+
+    dismiss.click();
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });

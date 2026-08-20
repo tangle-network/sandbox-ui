@@ -379,11 +379,22 @@ export function useSessionStream({
   // which describes an older moment — must not overwrite it. Counted per
   // session so an unrelated session degrading cannot suppress this one's seed.
   const hubFrameEpochRef = useRef<Map<string, number>>(new Map());
+  // Counts status reads ISSUED per session. The frame epoch above cannot order
+  // two seeds against each other, because only frames write it: with the seed
+  // on every attach, a reconnect can issue a read while the previous one is
+  // still in flight, and `fetchJson` carries no abort signal so the SSE abort
+  // does not cancel it. Without this the LAST response to arrive wins whatever
+  // its snapshot's age, and a stale healthy read deletes a notice a newer read
+  // just raised.
+  const seedGenerationRef = useRef<Map<string, number>>(new Map());
+  // True while the live connection carries an `executionId`/`replayExecutionIds`
+  // cursor. The sidecar's system-event listener returns early on such a stream,
+  // so it delivers NO `hub.*` frame for that connection's whole life.
+  const executionScopedStreamRef = useRef(false);
   const insertionCounterRef = useRef(0);
   const echoCounterRef = useRef(0);
   const pendingEchoesRef = useRef<Map<string, PendingEcho>>(new Map());
   const handleSSEEventRef = useRef<((type: string, raw: Record<string, unknown>) => void) | null>(null);
-  const seedDegradationRef = useRef<(() => void) | null>(null);
 
   // ── Echo lifetime ───────────────────────────────────────────────────
 
@@ -472,6 +483,8 @@ export function useSessionStream({
   const seedDegradation = useCallback(async () => {
     if (!token || !sessionId || !apiUrl) return;
     const epochAtRequest = hubFrameEpochRef.current.get(sessionId) ?? 0;
+    const generation = (seedGenerationRef.current.get(sessionId) ?? 0) + 1;
+    seedGenerationRef.current.set(sessionId, generation);
     let seeded: SessionDegradation | null;
     try {
       const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}`;
@@ -494,10 +507,12 @@ export function useSessionStream({
     // response does, so applying the seed would either resurrect a notice the
     // sidecar just retired or erase one it just raised.
     if ((hubFrameEpochRef.current.get(sessionId) ?? 0) !== epochAtRequest) return;
+    // A later read for this session was issued while this one was in flight.
+    // That one asked the sidecar a newer question, so this answer is stale no
+    // matter which order the two responses happened to arrive in.
+    if (seedGenerationRef.current.get(sessionId) !== generation) return;
     setDegradationBySession((prev) => withDegradation(prev, sessionId, seeded));
   }, [apiUrl, token, sessionId]);
-
-  seedDegradationRef.current = seedDegradation;
 
   // ── SSE connection ──────────────────────────────────────────────────
 
@@ -515,6 +530,7 @@ export function useSessionStream({
     try {
       const eventQuery = new URLSearchParams({ sessionId });
       const activeExecutionIds = [...activeAssistantMessageIdsRef.current];
+      executionScopedStreamRef.current = activeExecutionIds.length > 0;
       if (activeExecutionIds.length === 1) {
         eventQuery.set('executionId', activeExecutionIds[0]);
       } else if (activeExecutionIds.length > 1) {
@@ -543,10 +559,12 @@ export function useSessionStream({
       // The bus is live-only, so a credential rejected while the stream was
       // down is on session status and NOWHERE else — the transcript heals
       // across an outage through `replayExecutionIds`/`since` above, and
-      // without this the notice would be the one thing that does not. Seeding
-      // here rather than alongside `refetch()` also means one call site, so a
-      // mount cannot issue the read twice.
-      void seedDegradationRef.current?.();
+      // without this the notice would be the one thing that does not. Called
+      // directly rather than through a ref: `seedDegradation`'s deps are a
+      // strict subset of this callback's, so the binding is always the one for
+      // THIS attach's session. A ref holds the NEWEST callback instead, which
+      // lets an attach for one session issue the read for another.
+      void seedDegradation();
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
@@ -780,7 +798,24 @@ export function useSessionStream({
       // retire the echoes so the refetch below installs the canonical copies.
       // Retiring before the refetch keeps an echo created while it is in
       // flight (the composer unlocks on this event) out of the retired set.
-      if (!stillStreaming) refetch();
+      //
+      // On an execution-scoped stream the attach seed is the ONLY way a
+      // degradation can arrive, and it reads once — if the spawn records after
+      // that read, nothing else on that connection will ever say so. A turn
+      // ending is the moment a spawn has definitely happened, so ask again.
+      //
+      // Deliberately NOT done for an ordinary stream. Those receive `hub.*`
+      // live, so a re-read there would buy nothing and would cost the notice:
+      // a status read that comes back healthy retires it, which would put the
+      // notice back on exactly the "cleared by the next successful turn"
+      // footing that keeping it out of `error` exists to avoid.
+      //
+      // Safe as a second call site only because the seed generation discards
+      // whichever read is superseded.
+      if (!stillStreaming) {
+        refetch();
+        if (executionScopedStreamRef.current) void seedDegradation();
+      }
     } else if (type === 'hub.connections.degraded') {
       // The session started with NO Hub integrations because the sandbox's Hub
       // credential was rejected. It is NOT a turn failure — the agent runs and
@@ -820,10 +855,12 @@ export function useSessionStream({
       setError(formatError(readErrorDetails(props), 'Agent response failed'));
       if (!stillStreaming) refetch();
     }
-  // No `sessionId` dependency: every branch that needs a session now takes it
-  // from the frame. The handler is session-agnostic by construction, which is
-  // what makes a system-broadcast frame safe to process on any stream.
-  }, [refetch]);
+  // The `hub.*` branches take their session from the FRAME, never from props,
+  // which is what makes a system-broadcast frame safe to process on whichever
+  // stream it lands on. The turn-lifecycle branches are the opposite and always
+  // were: `refetch` and `seedDegradation` both act on the session being viewed,
+  // which is the session a filtered `session.idle` can only have come from.
+  }, [refetch, seedDegradation]);
 
   handleSSEEventRef.current = handleSSEEvent;
 

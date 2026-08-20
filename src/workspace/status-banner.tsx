@@ -53,11 +53,17 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
   // drops — so without a live region a screen reader is told nothing at all.
   // `alert` interrupts, which is right for a failure and wrong for a session
   // that still runs, so only `error` gets it.
+  //
+  // Known limit: the region enters the accessibility tree in the SAME mutation
+  // as its text, because the caller mounts this component conditionally. That
+  // is the case `alert` gets special insertion handling for and `status` does
+  // not, so the polite variants are not guaranteed to be spoken. Announcing
+  // them reliably needs a region that is already mounted and empty, which is a
+  // change to what a caller renders, not to this component.
   const role = type === "error" ? "alert" : "status";
 
   return (
     <div
-      role={role}
       className={cn(
         "flex items-center gap-2.5 px-4 py-2 border-b font-sans text-sm",
         style.bg,
@@ -65,16 +71,23 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
         className,
       )}
     >
-      {/* While provisioning/connecting the spin is the only thing saying the
-          work is still in flight, so it stays under reduced motion. */}
-      <Icon
-        className={cn("h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")}
-        {...(isAnimated ? { "data-motion": "essential" } : {})}
-      />
-      <span className="font-medium text-foreground">{message}</span>
-      {detail && (
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">{detail}</span>
-      )}
+      {/* The live region wraps the text and NOTHING interactive. Both `alert`
+          and `status` carry an implicit `aria-atomic="true"`, so the region is
+          announced as one unit — a Dismiss button inside it gets read out as
+          part of the message, stripped of its button semantics and with no way
+          to reach it, since focus never moves to a live region. */}
+      <div role={role} className="flex min-w-0 items-center gap-2.5">
+        {/* While provisioning/connecting the spin is the only thing saying the
+            work is still in flight, so it stays under reduced motion. */}
+        <Icon
+          className={cn("h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")}
+          {...(isAnimated ? { "data-motion": "essential" } : {})}
+        />
+        <span className="font-medium text-foreground">{message}</span>
+        {detail && (
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">{detail}</span>
+        )}
+      </div>
       {onDismiss && (
         <button
           onClick={onDismiss}

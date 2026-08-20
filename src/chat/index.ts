@@ -32,24 +32,6 @@ export {
 } from "./reasoning-level-picker";
 
 export {
-  AgentComposer,
-  type AgentComposerMention,
-  type AgentComposerProps,
-  type ComposerContextItem,
-  type ComposerFile,
-  type MentionItem,
-} from "./agent-composer";
-
-export { MENTION_PILL_CLASS } from "./mention-pill";
-
-export {
-  isAcceptedType,
-  validateComposerFiles,
-  type ComposerFileRejection,
-  type ComposerFileValidationConfig,
-} from "./attachment-validation";
-
-export {
   AgentProfilePicker,
   type AgentProfileCapability,
   type AgentProfileDraft,

@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.106.0
+
+### `AgentComposer` is deprecated again — this time against a true superset
+
+- `AgentComposer` and its composer-only helpers carry `@deprecated` tags
+  once more, on the same 11 exports 0.105.0 withdrew them from. 0.105.0's
+  reason no longer holds: since agent-app 0.46, `ChatComposer` in
+  `@tangle-network/agent-app/web-react` is a strict superset — it absorbed
+  `mention` (as `ComposerMentionProp`), `contextItems`, the full attachment
+  lifecycle (`pendingFiles` with `previewUrl` thumbnails, `onRejectFiles`,
+  `onRetryFile`, clipboard paste), `autoFocus`, `canSubmitAttachmentsOnly`,
+  `canSubmitWhileBusy`, `trailing`, `maxHeight`, and `minRows`.
+- Migration is four prop renames — `onChange` → `onValueChange`,
+  `onSubmit()` → `onSend(message)`, `busy` → `isStreaming`, `attachments` →
+  `pendingFiles` — and every other prop carries across unchanged. The last
+  consumers moved in agent-app#462 and gtm-agent#941, so `AgentComposer` now
+  renders nowhere outside this package's own Storybook story.
+- The deprecated exports on `./chat` are `AgentComposer`,
+  `AgentComposerProps`, `AgentComposerMention`, `MentionItem`,
+  `ComposerFile`, `ComposerContextItem`, `ComposerFileValidationConfig`,
+  `ComposerFileRejection`, `isAcceptedType`, `validateComposerFiles`, and
+  `MENTION_PILL_CLASS`. Each tag names its agent-app replacement. Removal
+  lands at the next breaking release; no runtime behaviour changes in this
+  release.
+
 ## 0.105.3
 
 ### Connectable handles are draggable

@@ -59,8 +59,15 @@ export interface SessionDegradation {
   readonly reason: string;
   /** Operator/user-facing sentence, authored by the sidecar. */
   readonly message: string;
-  /** How many connections the session asked for and did not get. */
-  readonly connectionCount: number;
+  /**
+   * What the session asked for, NOT how much it lost.
+   *
+   * There is deliberately no count of missing integrations: the sidecar reaches
+   * this state only for an attach-all request, and the call that would
+   * enumerate the tenant's connections is the one that failed authentication.
+   * Any number rendered here would be fabricated.
+   */
+  readonly requestShape: string;
 }
 
 export interface UseSessionStreamResult {
@@ -81,13 +88,18 @@ export interface UseSessionStreamResult {
   /** Whether the SSE connection is active. */
   connected: boolean;
   /**
-   * Sandbox-level degradations observed on this stream, or `null`.
+   * The degradation currently reported for THIS session, or `null`.
    *
    * Today the only one is a Hub credential the sandbox could not present, which
    * leaves the agent with an EMPTY toolbelt while the session otherwise runs
    * normally. Without surfacing it, that state is indistinguishable to the user
    * from having connected no integrations at all — so a caller that renders a
    * transcript should render this too.
+   *
+   * Seeded from session status rather than derived from the live stream alone:
+   * the sidecar's bus never replays, so a reload — or attaching a beat after
+   * spawn — would otherwise show a normal-looking session with no tools and no
+   * explanation. Live frames update it, and a recovered credential clears it.
    */
   degradation: SessionDegradation | null;
 }
@@ -253,6 +265,60 @@ async function fetchJson<T>(url: string, token: string, init?: RequestInit): Pro
   return res.json();
 }
 
+/**
+ * Parse the `hubConnectionsDegraded` field of a session status response.
+ *
+ * Returns `null` for an absent field — the normal, healthy case — and also for
+ * a malformed one. A partially-understood degradation is worse than none: it
+ * would render a warning whose text the caller cannot vouch for.
+ */
+function readDegradation(raw: unknown): SessionDegradation | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  if (typeof record.message !== 'string') return null;
+  return {
+    kind: 'hub-connections',
+    reason: typeof record.reason === 'string' ? record.reason : 'unknown',
+    message: record.message,
+    requestShape: typeof record.requestShape === 'string' ? record.requestShape : 'unknown',
+  };
+}
+
+/** Record that a live Hub frame has been applied for `sessionId`. */
+function bumpHubFrameEpoch(epochs: Map<string, number>, sessionId: string): void {
+  epochs.set(sessionId, (epochs.get(sessionId) ?? 0) + 1);
+}
+
+/**
+ * Set or clear one session's entry, returning the SAME map when nothing changes.
+ *
+ * Identity stability matters: this map is read during render, so a new
+ * reference on every no-op frame would re-render every consumer of the hook for
+ * a session whose state did not move.
+ */
+function withDegradation(
+  prev: ReadonlyMap<string, SessionDegradation>,
+  sessionId: string,
+  value: SessionDegradation | null,
+): ReadonlyMap<string, SessionDegradation> {
+  const current = prev.get(sessionId) ?? null;
+  if (value === null) {
+    if (current === null) return prev;
+    const next = new Map(prev);
+    next.delete(sessionId);
+    return next;
+  }
+  if (
+    current &&
+    current.reason === value.reason &&
+    current.message === value.message &&
+    current.requestShape === value.requestShape
+  ) {
+    return prev;
+  }
+  return new Map(prev).set(sessionId, value);
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -279,23 +345,27 @@ export function useSessionStream({
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
-  // Stamped with the session it was reported for, and read back only when that
-  // matches the session being rendered. Clearing it in an effect instead would
-  // commit one frame of the PREVIOUS session's degradation against the new one
-  // — briefly accusing a healthy session of having no integrations — because a
-  // passive effect runs after that render is already on screen.
-  const [degradationState, setDegradationState] = useState<{
-    sessionId: string;
-    value: SessionDegradation;
-  } | null>(null);
-  const degradation =
-    degradationState?.sessionId === sessionId ? degradationState.value : null;
+  // Keyed by session, not a single slot. Two sessions on the same container can
+  // both be degraded — one slot would erase the first while its toolbelt is
+  // still empty — and reading by key rather than clearing in an effect avoids
+  // committing one frame of the previous session's warning against the new one,
+  // which a passive effect could only do after that render was on screen.
+  const [degradationBySession, setDegradationBySession] = useState<
+    ReadonlyMap<string, SessionDegradation>
+  >(() => new Map());
+  const degradation = degradationBySession.get(sessionId) ?? null;
 
   const abortRef = useRef<AbortController | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeAssistantMessageIdsRef = useRef<Set<string>>(new Set());
   const completedExecutionIdsRef = useRef<Set<string>>(new Set());
   const lastEventIdRef = useRef('');
+  // Per-session count of live `hub.connections.*` frames. The status seed reads
+  // its session's count before it fetches and again when it resolves; if it
+  // moved, a live frame landed while the request was in flight and the seed —
+  // which describes an older moment — must not overwrite it. Counted per
+  // session so an unrelated session degrading cannot suppress this one's seed.
+  const hubFrameEpochRef = useRef<Map<string, number>>(new Map());
   const insertionCounterRef = useRef(0);
   const echoCounterRef = useRef(0);
   const pendingEchoesRef = useRef<Map<string, PendingEcho>>(new Map());
@@ -312,13 +382,13 @@ export function useSessionStream({
     activeAssistantMessageIdsRef.current.clear();
     completedExecutionIdsRef.current.clear();
     lastEventIdRef.current = '';
-    // Deliberately NOT clearing the degradation here. The stamp above already
-    // keeps it out of another session, and a passive effect could only clear it
-    // AFTER the new session's first render was committed — one frame of the
-    // previous session's warning shown against the new one. Retaining it also
-    // means switching back to a degraded session restores its notice, which is
-    // right: that session's toolbelt is still empty, and the event that said so
-    // was emitted once, at spawn.
+    // Deliberately NOT clearing the degradation map here. It is keyed by
+    // session, so another session's entry is already unreachable from this
+    // render; and a passive effect could only clear it AFTER the new session's
+    // first render was committed — one frame of the previous session's warning
+    // shown against the new one. Keeping the entries also means switching back
+    // to a session that is still degraded shows its notice again without
+    // waiting for a refetch.
   }, [sessionId]);
 
   // ── Fetch full message history ──────────────────────────────────────
@@ -368,6 +438,39 @@ export function useSessionStream({
       const msg = err instanceof Error ? err.message : 'Failed to fetch messages';
       setError(msg);
     }
+  }, [apiUrl, token, sessionId]);
+
+  // ── Degradation seed ────────────────────────────────────────────────
+
+  /**
+   * Read the session's degradation back from session status.
+   *
+   * The sidecar's event bus is live-only and never replays, so the
+   * `hub.connections.degraded` frame is gone for a client that reloads or
+   * attaches after spawn — while the toolbelt stays empty. Status is the
+   * durable half of the same state, and it is also what retires the notice
+   * after a credential refresh.
+   *
+   * Failures are swallowed: this is supplementary information, and surfacing a
+   * status fetch error as a session error would be worse than not showing the
+   * notice. `refetch` already reports a broken session gateway.
+   */
+  const seedDegradation = useCallback(async () => {
+    if (!token || !sessionId || !apiUrl) return;
+    const epochAtRequest = hubFrameEpochRef.current.get(sessionId) ?? 0;
+    let seeded: SessionDegradation | null;
+    try {
+      const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}`;
+      const status = await fetchJson<{ hubConnectionsDegraded?: unknown }>(url, token);
+      seeded = readDegradation(status.hubConnectionsDegraded);
+    } catch {
+      return;
+    }
+    // A live frame overtook the request. It describes a later moment than this
+    // response does, so applying the seed would either resurrect a notice the
+    // sidecar just retired or erase one it just raised.
+    if ((hubFrameEpochRef.current.get(sessionId) ?? 0) !== epochAtRequest) return;
+    setDegradationBySession((prev) => withDegradation(prev, sessionId, seeded));
   }, [apiUrl, token, sessionId]);
 
   // ── SSE connection ──────────────────────────────────────────────────
@@ -648,24 +751,34 @@ export function useSessionStream({
       // credential was rejected. It is NOT a turn failure — the agent runs and
       // answers, just without the tenant's tools — so it must not go through
       // `setError`, which the next successful turn would clear.
-      setDegradationState({
-        // The session this handler was built for. A frame arriving late on a
-        // replaced stream therefore stamps the OLD session and can never be
-        // read back against the new one.
-        sessionId,
-        value: {
-          kind: 'hub-connections',
-          reason: typeof props.reason === 'string' ? props.reason : 'unknown',
-          message:
-            typeof props.message === 'string'
-              ? props.message
-              : 'This session started with no Hub integrations attached.',
-          connectionCount:
-            typeof props.connectionCount === 'number'
-              ? props.connectionCount
-              : 0,
-        },
-      });
+      //
+      // `hub.*` is a SYSTEM prefix on the sidecar: this frame is forwarded to
+      // every session-filtered stream on the container, so the session it
+      // arrived on says nothing about which session degraded. Attribution has
+      // to come from the payload, and a frame that carries no session — an
+      // older sidecar — is dropped rather than guessed at.
+      const framedSessionId = typeof props.sessionId === 'string' ? props.sessionId : null;
+      if (!framedSessionId) return;
+      bumpHubFrameEpoch(hubFrameEpochRef.current, framedSessionId);
+      const value: SessionDegradation = {
+        kind: 'hub-connections',
+        reason: typeof props.reason === 'string' ? props.reason : 'unknown',
+        message:
+          typeof props.message === 'string'
+            ? props.message
+            : 'This session started with no Hub integrations attached.',
+        requestShape:
+          typeof props.requestShape === 'string' ? props.requestShape : 'unknown',
+      };
+      setDegradationBySession((prev) => withDegradation(prev, framedSessionId, value));
+    } else if (type === 'hub.connections.restored') {
+      // The credential came back and a later spawn attached a full toolbelt.
+      // Without this the notice is an edge with no opposite edge: a false "your
+      // tools are missing" would stand until the page was reloaded.
+      const framedSessionId = typeof props.sessionId === 'string' ? props.sessionId : null;
+      if (!framedSessionId) return;
+      bumpHubFrameEpoch(hubFrameEpochRef.current, framedSessionId);
+      setDegradationBySession((prev) => withDegradation(prev, framedSessionId, null));
     } else if (type === 'session.error') {
       const executionId =
         (props.executionId as string)
@@ -676,7 +789,10 @@ export function useSessionStream({
       setError(formatError(readErrorDetails(props), 'Agent response failed'));
       if (!stillStreaming) refetch();
     }
-  }, [refetch, sessionId]);
+  // No `sessionId` dependency: every branch that needs a session now takes it
+  // from the frame. The handler is session-agnostic by construction, which is
+  // what makes a system-broadcast frame safe to process on any stream.
+  }, [refetch]);
 
   handleSSEEventRef.current = handleSSEEvent;
 
@@ -819,13 +935,14 @@ export function useSessionStream({
   useEffect(() => {
     if (!enabled || !token || !sessionId) return;
     refetch();
+    seedDegradation();
     connectSSE();
     return () => {
       abortRef.current?.abort();
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       setConnected(false);
     };
-  }, [enabled, token, sessionId, refetch, connectSSE]);
+  }, [enabled, token, sessionId, refetch, seedDegradation, connectSSE]);
 
   return {
     messages,

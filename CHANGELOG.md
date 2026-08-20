@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.106.0
+## 0.107.0
 
 ### A session reports a Hub credential it could not present
 
@@ -11,12 +11,36 @@
 - It is reported separately from `error`, not through it. The session runs and
   answers normally; routing it through `error` would clear the notice on the
   next successful turn while the tools stayed gone.
-- A degradation never crosses a session change. It is stamped with the session
-  that reported it and read back only for that session, so a healthy session is
-  never accused of a missing toolbelt — not even for one committed frame, which
-  is what clearing it in an effect would have allowed.
-- Switching back to a degraded session restores its notice. That session's
-  toolbelt is still empty, and the event that said so is emitted once, at spawn.
+- The notice is session state, seeded from session status, not a one-shot
+  broadcast. The sidecar's event bus never replays, so a reload — or attaching a
+  beat after spawn — would otherwise leave a session with an empty toolbelt and
+  no explanation.
+- A degradation belongs to the session named in the payload, not the stream it
+  arrived on. The sidecar classes `hub.*` as a system event and delivers it to
+  every session-filtered stream on the container, so a frame that names no
+  session is ignored rather than attributed to whoever received it.
+- Degradations are keyed by session, so two degraded sessions coexist and each
+  keeps its own notice.
+- A recovered credential retires the notice. `hub.connections.restored` clears
+  the named session, and a healthy session status clears it on the next mount.
+- `degradation.requestShape` replaces `connectionCount`. There is no count of
+  lost integrations: the sidecar reaches this state only for an attach-all
+  request, and enumerating the tenant's connections is the call that failed
+  authentication, so any number would be fabricated.
+
+Requires a sidecar that stamps `hub.connections.degraded` with `sessionId` and
+serves `hubConnectionsDegraded` from session status
+([agent-dev-container#6045](https://github.com/tangle-network/agent-dev-container/pull/6045)).
+Against an older sidecar the hook reports no degradation rather than a guessed
+one.
+
+#### Correction to the 0.106.0 draft of this entry
+
+An earlier draft of this entry claimed that "switching back to a degraded
+session restores its notice" followed from a single stamped slot. It did not:
+one slot holds one session, so a second session degrading erased the first
+permanently while its toolbelt was still empty. Keying by session is what makes
+the claim true.
 
 ## 0.105.3
 

@@ -760,18 +760,31 @@ describe("useSessionStream local echo", () => {
  * integrations I have") is satisfied by nothing. The session then runs and
  * answers normally, so the only thing distinguishing it from a tenant who
  * connected nothing is this notice.
+ *
+ * The notice is SESSION STATE, not a one-shot broadcast. The sidecar emits
+ * `hub.connections.degraded` under a `hub.` prefix, which it treats as a SYSTEM
+ * event and forwards to every session-filtered stream on the container — so the
+ * stream a frame arrives on says nothing about which session degraded, and
+ * attribution has to come from the payload. And the bus never replays, so the
+ * durable copy on session status is what survives a reload.
  */
 describe("useSessionStream degradation", () => {
+  const VIEWED = "sess-viewed";
+  const OTHER = "sess-other";
+
   let stream: ReturnType<typeof controllableEventStream>;
+  /** Body served by `GET /session/sessions/:id` — the durable degradation. */
+  let sessionStatus: Record<string, unknown>;
 
   beforeEach(() => {
     stream = controllableEventStream();
+    sessionStatus = {};
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.includes("/session/events")) return stream.response;
       if (url.includes("/messages") && methodOf(init) === "POST")
         return jsonResponse({});
       if (url.includes("/messages")) return jsonResponse([]);
-      return jsonResponse({});
+      return jsonResponse(sessionStatus);
     });
     vi.stubGlobal("fetch", fetchMock);
   });
@@ -782,59 +795,122 @@ describe("useSessionStream degradation", () => {
     vi.restoreAllMocks();
   });
 
-  const degradedEvent = {
-    type: "hub.connections.degraded",
-    properties: {
-      reason: "hub-unauthenticated",
-      message:
-        "Hub rejected this sandbox's credential and it could not be refreshed; the session started with no Hub integrations attached",
-      connectionCount: 3,
-      timestamp: 0,
-    },
-  };
+  const MESSAGE =
+    "Hub rejected this sandbox's credential and it could not be refreshed; the session started with no Hub integrations attached";
+
+  function degradedEvent(sessionId: string | undefined) {
+    return {
+      type: "hub.connections.degraded",
+      properties: {
+        ...(sessionId === undefined ? {} : { sessionId }),
+        reason: "hub-unauthenticated",
+        message: MESSAGE,
+        requestShape: "attach-all",
+        timestamp: 0,
+      },
+    };
+  }
+
+  function restoredEvent(sessionId: string) {
+    return {
+      type: "hub.connections.restored",
+      properties: { sessionId, timestamp: 0 },
+    };
+  }
+
+  /**
+   * Emit `frames`, then a sentinel the hook definitely reports on, and wait for
+   * the sentinel to land.
+   *
+   * Asserting that a frame was IGNORED needs a positive edge to wait on.
+   * Waiting for `isStreaming` to be false proves nothing — it is already false
+   * before the stream has been read at all, so the assertion runs against a
+   * hook that has seen no frames and passes for the wrong reason.
+   */
+  async function emitThenSettle(
+    result: { current: { error: string | null } },
+    ...frames: { type: string }[]
+  ) {
+    act(() => {
+      for (const frame of frames) stream.emit(frame.type, frame);
+    });
+    act(() => {
+      stream.emit("session.error", {
+        type: "session.error",
+        properties: { message: "sentinel" },
+      });
+    });
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+  }
+
+  function mount(sessionId = VIEWED) {
+    return renderHook(
+      ({ sessionId: id }: { sessionId: string }) =>
+        useSessionStream({
+          apiUrl: "http://sidecar.test",
+          token: "tok",
+          sessionId: id,
+        }),
+      { initialProps: { sessionId } },
+    );
+  }
 
   it("surfaces a rejected Hub credential as a degradation", async () => {
-    const { result } = renderHook(() =>
-      useSessionStream({
-        apiUrl: "http://sidecar.test",
-        token: "tok",
-        sessionId: "sess-degraded",
-      }),
-    );
+    const { result } = mount();
     await waitFor(() => expect(result.current.connected).toBe(true));
     expect(result.current.degradation).toBeNull();
 
     act(() => {
-      stream.emit("hub.connections.degraded", degradedEvent);
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
     });
 
     await waitFor(() =>
       expect(result.current.degradation).toMatchObject({
         kind: "hub-connections",
         reason: "hub-unauthenticated",
-        connectionCount: 3,
+        requestShape: "attach-all",
       }),
     );
     expect(result.current.degradation?.message).toContain(
       "no Hub integrations attached",
     );
+    // No count of lost integrations, ever. The producer reaches this branch
+    // only for attach-all, and enumerating the tenant's connections is the
+    // call that just failed authentication — any number here is fabricated.
+    expect(result.current.degradation).not.toHaveProperty("connectionCount");
+  });
+
+  it("ignores a frame reporting a different session", async () => {
+    // `hub.*` is a system prefix: this frame is delivered to EVERY
+    // session-filtered stream on the container. An interactive spawn degrading
+    // must not accuse a chat session whose own toolbelt attached fine.
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    await emitThenSettle(result, degradedEvent(OTHER));
+    expect(result.current.degradation).toBeNull();
+  });
+
+  it("ignores a frame that names no session at all", async () => {
+    // An older sidecar emits no `sessionId`. Guessing would mean stamping the
+    // stream it arrived on, which is delivery-time attribution — the exact
+    // defect this field exists to remove. Showing nothing is the safe read.
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    await emitThenSettle(result, degradedEvent(undefined));
+    expect(result.current.degradation).toBeNull();
   });
 
   it("does not report it as a turn error", async () => {
     // `error` is cleared by the next successful turn; the missing toolbelt is
     // not. Routing this through `error` would make it blink out on the user's
     // next message while the tools stayed gone.
-    const { result } = renderHook(() =>
-      useSessionStream({
-        apiUrl: "http://sidecar.test",
-        token: "tok",
-        sessionId: "sess-degraded-2",
-      }),
-    );
+    const { result } = mount();
     await waitFor(() => expect(result.current.connected).toBe(true));
 
     act(() => {
-      stream.emit("hub.connections.degraded", degradedEvent);
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
     });
 
     await waitFor(() => expect(result.current.degradation).not.toBeNull());
@@ -842,17 +918,11 @@ describe("useSessionStream degradation", () => {
   });
 
   it("survives a turn completing, because the toolbelt is still empty", async () => {
-    const { result } = renderHook(() =>
-      useSessionStream({
-        apiUrl: "http://sidecar.test",
-        token: "tok",
-        sessionId: "sess-degraded-3",
-      }),
-    );
+    const { result } = mount();
     await waitFor(() => expect(result.current.connected).toBe(true));
 
     act(() => {
-      stream.emit("hub.connections.degraded", degradedEvent);
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
     });
     await waitFor(() => expect(result.current.degradation).not.toBeNull());
 
@@ -867,59 +937,142 @@ describe("useSessionStream degradation", () => {
     expect(result.current.degradation).not.toBeNull();
   });
 
-  it("never reads back a degradation stamped for another session", async () => {
-    // The stamp, not the reset, is what enforces the boundary. Clearing in an
-    // effect would commit one frame of session A's warning against session B —
-    // a passive effect runs only after that render is already on screen.
-    const { result, rerender } = renderHook(
-      ({ sessionId }: { sessionId: string }) =>
-        useSessionStream({
-          apiUrl: "http://sidecar.test",
-          token: "tok",
-          sessionId,
-        }),
-      { initialProps: { sessionId: "sess-stamped-a" } },
-    );
+  it("keeps two degraded sessions apart", async () => {
+    // A single slot would erase the first session here while its toolbelt was
+    // still empty, and switching back would show nothing.
+    const { result, rerender } = mount(VIEWED);
     await waitFor(() => expect(result.current.connected).toBe(true));
 
     act(() => {
-      stream.emit("hub.connections.degraded", degradedEvent);
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
+      stream.emit("hub.connections.degraded", degradedEvent(OTHER));
     });
     await waitFor(() => expect(result.current.degradation).not.toBeNull());
 
     // Read synchronously, with no waitFor: the boundary must hold on the very
-    // first render of the new session, not once an effect has caught up.
-    rerender({ sessionId: "sess-stamped-b" });
-    expect(result.current.degradation).toBeNull();
-
-    // Back on the degraded session its notice returns — that session's toolbelt
-    // is still empty, and the event that said so was emitted once, at spawn.
-    rerender({ sessionId: "sess-stamped-a" });
+    // first render of the other session, not once an effect has caught up.
+    rerender({ sessionId: OTHER });
+    expect(result.current.degradation).toMatchObject({
+      kind: "hub-connections",
+    });
+    rerender({ sessionId: VIEWED });
     expect(result.current.degradation).toMatchObject({
       kind: "hub-connections",
     });
   });
 
-  it("does not show one session's degradation while rendering another", async () => {
-    const { result, rerender } = renderHook(
-      ({ sessionId }: { sessionId: string }) =>
-        useSessionStream({
-          apiUrl: "http://sidecar.test",
-          token: "tok",
-          sessionId,
-        }),
-      { initialProps: { sessionId: "sess-a" } },
-    );
+  it("does not show a degraded session's notice while rendering a healthy one", async () => {
+    const { result, rerender } = mount(VIEWED);
     await waitFor(() => expect(result.current.connected).toBe(true));
 
     act(() => {
-      stream.emit("hub.connections.degraded", degradedEvent);
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
     });
     await waitFor(() => expect(result.current.degradation).not.toBeNull());
 
     // Accusing a healthy session of a missing toolbelt is its own bug, and it
     // must not happen even for a single committed frame.
-    rerender({ sessionId: "sess-b" });
+    rerender({ sessionId: OTHER });
     expect(result.current.degradation).toBeNull();
+  });
+
+  it("seeds the notice from session status, so a reload does not lose it", async () => {
+    // The bus is live-only and never replays. Without this seed, a browser
+    // reload — or connecting a beat after spawn, which is live given that a
+    // history read itself starts a backend — leaves the user with an empty
+    // toolbelt and no explanation.
+    sessionStatus = {
+      hubConnectionsDegraded: {
+        reason: "hub-unauthenticated",
+        message: MESSAGE,
+        requestShape: "attach-all",
+        degradedAt: "2026-08-20T09:00:00.000Z",
+      },
+    };
+
+    const { result } = mount();
+
+    await waitFor(() =>
+      expect(result.current.degradation).toMatchObject({
+        kind: "hub-connections",
+        reason: "hub-unauthenticated",
+        requestShape: "attach-all",
+      }),
+    );
+  });
+
+  it("shows nothing when status reports a healthy session", async () => {
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    expect(result.current.degradation).toBeNull();
+  });
+
+  it("does not let a stale healthy status erase a live degradation", async () => {
+    // The status request and the SSE frame race on every mount. The response
+    // describes the moment the request was served; if a degraded frame lands
+    // while it is in flight, applying the older answer would erase a notice the
+    // sidecar had just raised — and the toolbelt would still be empty.
+    let releaseStatus!: () => void;
+    const statusGate = new Promise<void>((resolve) => {
+      releaseStatus = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.includes("/session/events")) return stream.response;
+        if (url.includes("/messages") && methodOf(init) === "POST")
+          return jsonResponse({});
+        if (url.includes("/messages")) return jsonResponse([]);
+        await statusGate;
+        return jsonResponse({});
+      }),
+    );
+
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
+    });
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+
+    await act(async () => {
+      releaseStatus();
+      await statusGate;
+    });
+
+    expect(result.current.degradation).not.toBeNull();
+  });
+
+  it("retires the notice when the credential comes back", async () => {
+    // The whole point of the sandbox's credential refresh is that the 401 is
+    // transient. A notice with no opposite edge would leave a false "your tools
+    // are missing" standing until the page was reloaded.
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
+    });
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+
+    act(() => {
+      stream.emit("hub.connections.restored", restoredEvent(VIEWED));
+    });
+
+    await waitFor(() => expect(result.current.degradation).toBeNull());
+  });
+
+  it("does not retire another session's notice", async () => {
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
+    });
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+
+    await emitThenSettle(result, restoredEvent(OTHER));
+    expect(result.current.degradation).not.toBeNull();
   });
 });

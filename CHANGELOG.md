@@ -74,14 +74,39 @@ serves `hubConnectionsDegraded` from session status
 Against an older sidecar the hook reports no degradation rather than a guessed
 one.
 
-#### Correction to an unpublished draft
+#### Correction to an earlier draft
 
-Version 0.106.0 was drafted on this work and never published, so nothing here
-supersedes a released version. That draft of this entry claimed that "switching
-back to a degraded session restores its notice" followed from a single stamped
-slot. It did not: one slot holds one session, so a second session degrading
-erased the first permanently while its toolbelt was still empty. Keying by
-session is what makes the claim true.
+While this entry was being written it claimed that "switching back to a degraded
+session restores its notice" followed from a single stamped slot. It did not:
+one slot holds one session, so a second session degrading erased the first
+permanently while its toolbelt was still empty. Keying by session is what makes
+the claim true. The draft carrying that claim was never released, and no version
+below is the one it was drafted as.
+
+## 0.106.0
+
+### `AgentComposer` is deprecated again — this time against a true superset
+
+- `AgentComposer` and its composer-only helpers carry `@deprecated` tags
+  once more, on the same 11 exports 0.105.0 withdrew them from. 0.105.0's
+  reason no longer holds: since agent-app 0.46, `ChatComposer` in
+  `@tangle-network/agent-app/web-react` is a strict superset — it absorbed
+  `mention` (as `ComposerMentionProp`), `contextItems`, the full attachment
+  lifecycle (`pendingFiles` with `previewUrl` thumbnails, `onRejectFiles`,
+  `onRetryFile`, clipboard paste), `autoFocus`, `canSubmitAttachmentsOnly`,
+  `canSubmitWhileBusy`, `trailing`, `maxHeight`, and `minRows`.
+- Migration is four prop renames — `onChange` → `onValueChange`,
+  `onSubmit()` → `onSend(message)`, `busy` → `isStreaming`, `attachments` →
+  `pendingFiles` — and every other prop carries across unchanged. The last
+  consumers moved in agent-app#462 and gtm-agent#941, so `AgentComposer` now
+  renders nowhere outside this package's own Storybook story.
+- The deprecated exports on `./chat` are `AgentComposer`,
+  `AgentComposerProps`, `AgentComposerMention`, `MentionItem`,
+  `ComposerFile`, `ComposerContextItem`, `ComposerFileValidationConfig`,
+  `ComposerFileRejection`, `isAcceptedType`, `validateComposerFiles`, and
+  `MENTION_PILL_CLASS`. Each tag names its agent-app replacement. Removal
+  lands at the next breaking release; no runtime behaviour changes in this
+  release.
 
 ## 0.105.3
 

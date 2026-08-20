@@ -9,9 +9,11 @@ import { cn } from "../lib/utils";
  * importing it never pulls the lazily-loaded editor chunk into a consumer's
  * bundle.
  *
- * Mention-pill contract of {@link AgentComposer}'s mention feature.
- * `ChatComposer` in `@tangle-network/agent-app/web-react` has no mention
- * support, so it has no equivalent.
+ * @deprecated Mention-pill contract of the legacy AgentComposer mention
+ * feature. Import `MENTION_PILL_CLASS` from
+ * `@tangle-network/agent-app/web-react` (agent-app ≥0.46) — `ChatComposer`
+ * owns the mention stack now. AgentComposer is frozen and will be removed at
+ * sandbox-ui's next breaking release.
  */
 export const MENTION_PILL_CLASS = cn(
   "rounded-md bg-primary/10 px-1 py-0.5 font-medium text-primary",

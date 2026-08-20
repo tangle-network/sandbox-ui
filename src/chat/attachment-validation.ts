@@ -3,9 +3,11 @@ import { formatBytes } from "../utils";
 /**
  * Limits applied when staging files onto a composer.
  *
- * Serves {@link AgentComposer}'s attachment lifecycle. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` stages files without a validation or
- * retry step, so it has no equivalent.
+ * @deprecated Composer-only helper of the legacy AgentComposer. agent-app
+ * (≥0.46) splits this job: accept filtering lives in `filterAcceptedFiles`
+ * from `@tangle-network/agent-app/web-react`, and size/count limits belong to
+ * the staging queue (`useComposerAttachments`). AgentComposer is frozen and
+ * will be removed at sandbox-ui's next breaking release.
  */
 export interface ComposerFileValidationConfig {
   /** Reject any single file larger than this. */
@@ -24,9 +26,11 @@ export interface ComposerFileValidationConfig {
 
 /** A file that failed validation, paired with a human-readable reason.
  *
- * Serves {@link AgentComposer}'s attachment lifecycle. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` stages files without a validation or
- * retry step, so it has no equivalent. */
+ * @deprecated Composer-only helper of the legacy AgentComposer. Import
+ * `ComposerFileRejection` from `@tangle-network/agent-app/web-react`
+ * (agent-app ≥0.46) — the same shape, reported by `ChatComposer`'s
+ * `onRejectFiles`. AgentComposer is frozen and will be removed at sandbox-ui's
+ * next breaking release. */
 export interface ComposerFileRejection {
   file: File;
   reason: string;
@@ -37,9 +41,10 @@ export interface ComposerFileRejection {
  * grammar as the native `<input accept>` attribute. An undefined or empty
  * `accept` accepts everything.
  *
- * Serves {@link AgentComposer}'s attachment lifecycle. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` stages files without a validation or
- * retry step, so it has no equivalent.
+ * @deprecated Composer-only helper of the legacy AgentComposer. Use
+ * `isAcceptedFileType` from `@tangle-network/agent-app/web-react`
+ * (agent-app ≥0.46) — the same `accept` grammar. AgentComposer is frozen and
+ * will be removed at sandbox-ui's next breaking release.
  */
 export function isAcceptedType(file: File, accept?: string): boolean {
   if (!accept || accept.trim().length === 0) return true;
@@ -73,9 +78,11 @@ export function isAcceptedType(file: File, accept?: string): boolean {
  * file and the limit it broke. Pure data in, pure data out — no throwing,
  * no console noise, so callers decide how to surface rejections.
  *
- * Serves {@link AgentComposer}'s attachment lifecycle. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` stages files without a validation or
- * retry step, so it has no equivalent.
+ * @deprecated Composer-only helper of the legacy AgentComposer. Use
+ * `filterAcceptedFiles` from `@tangle-network/agent-app/web-react`
+ * (agent-app ≥0.46) for accept filtering; size and count limits belong to the
+ * staging queue (`useComposerAttachments`). AgentComposer is frozen and will
+ * be removed at sandbox-ui's next breaking release.
  */
 export function validateComposerFiles(
   files: File[] | FileList,

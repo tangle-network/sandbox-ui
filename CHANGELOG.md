@@ -28,6 +28,11 @@
   request, and enumerating the tenant's connections is the call that failed
   authentication, so any number would be fabricated.
 
+- `StatusBanner` gains a `warning` type, for a surface that still works with
+  less than was asked for. It uses the brand's `--surface-warning-*` triple:
+  `warning` is not registered in this package's `@theme`, so `bg-warning` and
+  friends emit no rule at all.
+
 Requires a sidecar that stamps `hub.connections.degraded` with `sessionId` and
 serves `hubConnectionsDegraded` from session status
 ([agent-dev-container#6045](https://github.com/tangle-network/agent-dev-container/pull/6045)).

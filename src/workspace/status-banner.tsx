@@ -2,10 +2,16 @@
  * StatusBanner — full-width notification banner for connection/provisioning states.
  */
 
-import { Loader2, AlertCircle, CheckCircle, Wifi, WifiOff } from "lucide-react";
+import { Loader2, AlertCircle, AlertTriangle, CheckCircle, Wifi, WifiOff } from "lucide-react";
 import { cn } from "../lib/utils";
 
-export type BannerType = "provisioning" | "connecting" | "error" | "success" | "info";
+export type BannerType =
+  | "provisioning"
+  | "connecting"
+  | "error"
+  | "warning"
+  | "success"
+  | "info";
 
 export interface StatusBannerProps {
   type: BannerType;
@@ -22,6 +28,18 @@ const BANNER_STYLES: Record<
   provisioning: { bg: "bg-primary/5", border: "border-primary/20", text: "text-primary", icon: Loader2 },
   connecting: { bg: "bg-[var(--code-number)]/5", border: "border-[var(--code-number)]/20", text: "text-[var(--code-number)]", icon: Wifi },
   error: { bg: "bg-[var(--code-error)]/5", border: "border-[var(--code-error)]/20", text: "text-[var(--code-error)]", icon: AlertCircle },
+  // Degraded, not broken: the thing still works, with less than was asked for.
+  // `error` would overstate it and `info` would understate it, and a notice
+  // styled as neither gets read as neither. Uses the brand's theme-reactive
+  // `--surface-warning-*` triple rather than a `warning` color utility —
+  // `warning` is not registered in this package's `@theme`, so `bg-warning`
+  // and friends emit no rule at all.
+  warning: {
+    bg: "bg-[var(--surface-warning-bg)]",
+    border: "border-[var(--surface-warning-border)]",
+    text: "text-[var(--surface-warning-text)]",
+    icon: AlertTriangle,
+  },
   success: { bg: "bg-[var(--code-success)]/5", border: "border-[var(--code-success)]/20", text: "text-[var(--code-success)]", icon: CheckCircle },
   info: { bg: "bg-surface-container-high", border: "border-[var(--md3-outline-variant)]", text: "text-muted-foreground", icon: AlertCircle },
 };

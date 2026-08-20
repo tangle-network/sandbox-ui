@@ -45,6 +45,10 @@
   less than was asked for. It uses the brand's `--surface-warning-*` triple:
   `warning` is not registered in this package's `@theme`, so `bg-warning` and
   friends emit no rule at all.
+- `StatusBanner` announces itself. Every variant is mounted after first paint,
+  so a screen reader was told nothing when one appeared. The wrapper is a live
+  region now: assertive for `error`, polite for the rest, which covers the
+  existing variants as well as the new one.
 
 Requires a sidecar that stamps `hub.connections.degraded` with `sessionId` and
 serves `hubConnectionsDegraded` from session status
@@ -52,13 +56,14 @@ serves `hubConnectionsDegraded` from session status
 Against an older sidecar the hook reports no degradation rather than a guessed
 one.
 
-#### Correction to the 0.106.0 draft of this entry
+#### Correction to an unpublished draft
 
-An earlier draft of this entry claimed that "switching back to a degraded
-session restores its notice" followed from a single stamped slot. It did not:
-one slot holds one session, so a second session degrading erased the first
-permanently while its toolbelt was still empty. Keying by session is what makes
-the claim true.
+Version 0.106.0 was drafted on this work and never published, so nothing here
+supersedes a released version. That draft of this entry claimed that "switching
+back to a degraded session restores its notice" followed from a single stamped
+slot. It did not: one slot holds one session, so a second session degrading
+erased the first permanently while its toolbelt was still empty. Keying by
+session is what makes the claim true.
 
 ## 0.105.3
 

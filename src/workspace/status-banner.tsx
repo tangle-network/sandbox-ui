@@ -48,9 +48,16 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
   const style = BANNER_STYLES[type];
   const Icon = style.icon;
   const isAnimated = type === "provisioning" || type === "connecting";
+  // Every variant is inserted after first paint — a degradation arrives on a
+  // live frame or an async status read, provisioning resolves, a connection
+  // drops — so without a live region a screen reader is told nothing at all.
+  // `alert` interrupts, which is right for a failure and wrong for a session
+  // that still runs, so only `error` gets it.
+  const role = type === "error" ? "alert" : "status";
 
   return (
     <div
+      role={role}
       className={cn(
         "flex items-center gap-2.5 px-4 py-2 border-b font-sans text-sm",
         style.bg,

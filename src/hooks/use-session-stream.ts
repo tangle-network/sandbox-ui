@@ -266,11 +266,24 @@ async function fetchJson<T>(url: string, token: string, init?: RequestInit): Pro
 }
 
 /**
- * Parse the `hubConnectionsDegraded` field of a session status response.
+ * Parse a Hub degradation payload.
  *
- * Returns `null` for an absent field — the normal, healthy case — and also for
- * a malformed one. A partially-understood degradation is worse than none: it
- * would render a warning whose text the caller cannot vouch for.
+ * ONE rule for both halves of the same state: the `hubConnectionsDegraded`
+ * field of a session status response, and the properties of a live
+ * `hub.connections.degraded` frame. A live notice and the one that survives a
+ * reload describe the same thing, so a payload either path rejects must be one
+ * the other rejects too — otherwise a status read parses to `null` and erases
+ * a notice the frame just raised.
+ *
+ * `message` is required. It is the only field a user reads, the producer's
+ * schema makes it mandatory, and inventing prose for a payload that omits it
+ * would assert a cause the sidecar never gave: `reason` is a free string, so a
+ * generic "started with no integrations attached" can contradict it. A
+ * partially-understood degradation is worse than none.
+ *
+ * Returns `null` for anything unreadable. What that MEANS is the caller's to
+ * decide — an absent status field is health, an unreadable one is no evidence
+ * either way.
  */
 function readDegradation(raw: unknown): SessionDegradation | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -370,6 +383,7 @@ export function useSessionStream({
   const echoCounterRef = useRef(0);
   const pendingEchoesRef = useRef<Map<string, PendingEcho>>(new Map());
   const handleSSEEventRef = useRef<((type: string, raw: Record<string, unknown>) => void) | null>(null);
+  const seedDegradationRef = useRef<(() => void) | null>(null);
 
   // ── Echo lifetime ───────────────────────────────────────────────────
 
@@ -462,7 +476,17 @@ export function useSessionStream({
     try {
       const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}`;
       const status = await fetchJson<{ hubConnectionsDegraded?: unknown }>(url, token);
-      seeded = readDegradation(status.hubConnectionsDegraded);
+      const field = status.hubConnectionsDegraded;
+      if (field === undefined || field === null) {
+        // The sidecar answered and named no degradation. That is health, and it
+        // is what retires the notice after a credential refresh.
+        seeded = null;
+      } else {
+        seeded = readDegradation(field);
+        // Present, and unreadable. Not evidence of health — no evidence at all,
+        // so it must not delete a notice a live frame raised.
+        if (!seeded) return;
+      }
     } catch {
       return;
     }
@@ -472,6 +496,8 @@ export function useSessionStream({
     if ((hubFrameEpochRef.current.get(sessionId) ?? 0) !== epochAtRequest) return;
     setDegradationBySession((prev) => withDegradation(prev, sessionId, seeded));
   }, [apiUrl, token, sessionId]);
+
+  seedDegradationRef.current = seedDegradation;
 
   // ── SSE connection ──────────────────────────────────────────────────
 
@@ -512,6 +538,15 @@ export function useSessionStream({
       if (!res.ok) throw await responseError(res, 'Live response connection failed');
       setConnected(true);
       setError(null);
+
+      // Re-read the durable degradation on every attach, not once on mount.
+      // The bus is live-only, so a credential rejected while the stream was
+      // down is on session status and NOWHERE else — the transcript heals
+      // across an outage through `replayExecutionIds`/`since` above, and
+      // without this the notice would be the one thing that does not. Seeding
+      // here rather than alongside `refetch()` also means one call site, so a
+      // mount cannot issue the read twice.
+      void seedDegradationRef.current?.();
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
@@ -759,17 +794,13 @@ export function useSessionStream({
       // older sidecar — is dropped rather than guessed at.
       const framedSessionId = typeof props.sessionId === 'string' ? props.sessionId : null;
       if (!framedSessionId) return;
+      // Read by the same rule as session status, so the two paths cannot
+      // disagree about what a degradation is. An unreadable frame is dropped
+      // WITHOUT bumping the epoch: it names no moment worth preferring over the
+      // durable copy a seed is about to deliver.
+      const value = readDegradation(props);
+      if (!value) return;
       bumpHubFrameEpoch(hubFrameEpochRef.current, framedSessionId);
-      const value: SessionDegradation = {
-        kind: 'hub-connections',
-        reason: typeof props.reason === 'string' ? props.reason : 'unknown',
-        message:
-          typeof props.message === 'string'
-            ? props.message
-            : 'This session started with no Hub integrations attached.',
-        requestShape:
-          typeof props.requestShape === 'string' ? props.requestShape : 'unknown',
-      };
       setDegradationBySession((prev) => withDegradation(prev, framedSessionId, value));
     } else if (type === 'hub.connections.restored') {
       // The credential came back and a later spawn attached a full toolbelt.
@@ -935,14 +966,13 @@ export function useSessionStream({
   useEffect(() => {
     if (!enabled || !token || !sessionId) return;
     refetch();
-    seedDegradation();
     connectSSE();
     return () => {
       abortRef.current?.abort();
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       setConnected(false);
     };
-  }, [enabled, token, sessionId, refetch, seedDegradation, connectSSE]);
+  }, [enabled, token, sessionId, refetch, connectSSE]);
 
   return {
     messages,

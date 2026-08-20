@@ -22,11 +22,24 @@
 - Degradations are keyed by session, so two degraded sessions coexist and each
   keeps its own notice.
 - A recovered credential retires the notice. `hub.connections.restored` clears
-  the named session, and a healthy session status clears it on the next mount.
+  the named session, and a session status that names no degradation clears it
+  on the next attach.
 - `degradation.requestShape` replaces `connectionCount`. There is no count of
   lost integrations: the sidecar reaches this state only for an attach-all
   request, and enumerating the tenant's connections is the call that failed
   authentication, so any number would be fabricated.
+- Both halves of the state are read by one rule. A payload with no `message` is
+  rejected on the live path and the durable one alike. The frame handler used
+  to invent a message the status parser refused, so a reload, or a switch away
+  and back, deleted a notice the frame had just raised.
+- A degradation field that is present but unreadable is not read as health. It
+  is no evidence either way, so it leaves a live notice standing.
+- The durable copy is re-read on every attach, not once on mount. The bus never
+  replays, so a credential rejected while the stream was down reaches the
+  client through session status or not at all. The transcript already heals
+  across an outage; the notice did not.
+- `SessionDegradation` is exported from the package root. It is the type a
+  caller has to name to hold the value or thread it through a prop.
 
 - `StatusBanner` gains a `warning` type, for a surface that still works with
   less than was asked for. It uses the brand's `--surface-warning-*` triple:

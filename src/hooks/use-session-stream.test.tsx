@@ -773,24 +773,37 @@ describe("useSessionStream degradation", () => {
   const OTHER = "sess-other";
 
   let stream: ReturnType<typeof controllableEventStream>;
+  let openStreams: ReturnType<typeof controllableEventStream>[];
   /** Body served by `GET /session/sessions/:id` — the durable degradation. */
   let sessionStatus: Record<string, unknown>;
+  /** Every session id a status read was issued for, in order. */
+  let statusReads: string[];
 
   beforeEach(() => {
+    openStreams = [];
     stream = controllableEventStream();
+    openStreams.push(stream);
     sessionStatus = {};
+    statusReads = [];
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes("/session/events")) return stream.response;
+      if (url.includes("/session/events")) {
+        // A stream body reads once, so every (re)connect needs a fresh one;
+        // `stream` tracks the newest so `emit` targets the live connection.
+        stream = controllableEventStream();
+        openStreams.push(stream);
+        return stream.response;
+      }
       if (url.includes("/messages") && methodOf(init) === "POST")
         return jsonResponse({});
       if (url.includes("/messages")) return jsonResponse([]);
+      statusReads.push(url.slice(url.lastIndexOf("/") + 1));
       return jsonResponse(sessionStatus);
     });
     vi.stubGlobal("fetch", fetchMock);
   });
 
   afterEach(() => {
-    stream.close();
+    for (const open of openStreams) open.close();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -829,7 +842,7 @@ describe("useSessionStream degradation", () => {
    */
   async function emitThenSettle(
     result: { current: { error: string | null } },
-    ...frames: { type: string }[]
+    ...frames: { type: string; properties?: Record<string, unknown> }[]
   ) {
     act(() => {
       for (const frame of frames) stream.emit(frame.type, frame);
@@ -1061,6 +1074,173 @@ describe("useSessionStream degradation", () => {
     });
 
     await waitFor(() => expect(result.current.degradation).toBeNull());
+  });
+
+  /**
+   * Let a status response that has ALREADY been observed as issued finish
+   * applying. A real timer tick, so the whole chain behind it — body read,
+   * epoch check, state update — is done, which a microtask flush would not
+   * guarantee.
+   */
+  async function settleStatus() {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+  }
+
+  it("reads session status once for a connect", async () => {
+    // The seed has one call site. Adding a second — a mount effect beside the
+    // connect handler — doubles the read on every mount.
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    await settleStatus();
+    expect(statusReads).toEqual([VIEWED]);
+  });
+
+  it("ignores a degraded frame that carries no message", async () => {
+    // Session status is parsed by the same rule, and rejects this payload. A
+    // fallback message here and a rejection there is what lets a status read
+    // erase a notice the frame raised.
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    const { message: _omitted, ...withoutMessage } = degradedEvent(VIEWED).properties;
+    await emitThenSettle(result, {
+      type: "hub.connections.degraded",
+      properties: withoutMessage,
+    });
+
+    expect(result.current.degradation).toBeNull();
+  });
+
+  it("clears the notice when a re-read reports the session healthy", async () => {
+    // The retiring half of the seed, and the control for the test below: it is
+    // what proves that switching away and back really does re-read status and
+    // apply what it says within these waits.
+    const { result, rerender } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
+    });
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+
+    rerender({ sessionId: OTHER });
+    await waitFor(() => expect(result.current.degradation).toBeNull());
+    rerender({ sessionId: VIEWED });
+
+    await waitFor(() => expect(result.current.degradation).toBeNull());
+  });
+
+  it("does not let an unreadable status erase a live notice", async () => {
+    // A degradation field the client cannot parse is not evidence of health,
+    // it is no evidence at all. Reading it as "not degraded" deletes a notice
+    // the sidecar just raised while the toolbelt is still empty.
+    const { result, rerender } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent(VIEWED));
+    });
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+
+    sessionStatus = { hubConnectionsDegraded: { reason: "hub-unauthenticated" } };
+
+    rerender({ sessionId: OTHER });
+    await waitFor(() => expect(result.current.degradation).toBeNull());
+    rerender({ sessionId: VIEWED });
+
+    await waitFor(() =>
+      expect(statusReads.filter((id) => id === VIEWED)).toHaveLength(2),
+    );
+    await settleStatus();
+    expect(result.current.degradation).toMatchObject({
+      reason: "hub-unauthenticated",
+      message: MESSAGE,
+    });
+  });
+
+  it("does not let an unreadable frame discard the status read it raced", async () => {
+    // An unreadable frame names no moment, so it cannot be preferred over the
+    // durable copy already in flight. Counting it as a live edge loses BOTH:
+    // the frame says nothing and the status read is dropped as stale.
+    let releaseStatus!: () => void;
+    const statusGate = new Promise<void>((resolve) => {
+      releaseStatus = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.includes("/session/events")) {
+          stream = controllableEventStream();
+          openStreams.push(stream);
+          return stream.response;
+        }
+        if (url.includes("/messages") && methodOf(init) === "POST")
+          return jsonResponse({});
+        if (url.includes("/messages")) return jsonResponse([]);
+        await statusGate;
+        return jsonResponse({
+          hubConnectionsDegraded: {
+            reason: "hub-unauthenticated",
+            message: MESSAGE,
+            requestShape: "attach-all",
+          },
+        });
+      }),
+    );
+
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    const { message: _omitted, ...withoutMessage } = degradedEvent(VIEWED).properties;
+    await emitThenSettle(result, {
+      type: "hub.connections.degraded",
+      properties: withoutMessage,
+    });
+
+    await act(async () => {
+      releaseStatus();
+      await statusGate;
+    });
+
+    await waitFor(() =>
+      expect(result.current.degradation).toMatchObject({
+        reason: "hub-unauthenticated",
+        message: MESSAGE,
+      }),
+    );
+  });
+
+  it("learns a degradation raised while the stream was down", async () => {
+    // The bus never replays, so a credential rejected during an outage reaches
+    // this client through session status or not at all. Reconnecting without
+    // re-reading leaves an empty toolbelt with no explanation until reload.
+    const { result } = mount();
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    await settleStatus();
+    expect(result.current.degradation).toBeNull();
+
+    sessionStatus = {
+      hubConnectionsDegraded: {
+        reason: "hub-unauthenticated",
+        message: MESSAGE,
+        requestShape: "attach-all",
+        degradedAt: "2026-08-20T09:00:00.000Z",
+      },
+    };
+    stream.close();
+    await waitFor(() => expect(result.current.connected).toBe(false));
+
+    await waitFor(
+      () =>
+        expect(result.current.degradation).toMatchObject({
+          kind: "hub-connections",
+          reason: "hub-unauthenticated",
+          requestShape: "attach-all",
+        }),
+      { timeout: 2500 },
+    );
   });
 
   it("does not retire another session's notice", async () => {

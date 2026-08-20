@@ -232,6 +232,7 @@ export {
   type UseSandboxMetricsOptions,
   type UseSandboxMetricsResult,
   useSessionStream,
+  type SessionDegradation,
   type SessionInfo,
   type UseSessionStreamOptions,
   type UseSessionStreamResult,

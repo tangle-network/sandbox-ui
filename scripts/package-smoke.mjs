@@ -18,13 +18,6 @@ const workdir = mkdtempSync(join(tmpdir(), "sandbox-ui-package-smoke-"));
 const packDir = join(workdir, "pack");
 const consumerDir = join(workdir, "consumer");
 
-const mentionRuntimeDependencies = [
-  "@tiptap/core",
-  "@tiptap/extension-mention",
-  "@tiptap/react",
-  "@tiptap/starter-kit",
-  "@tiptap/suggestion",
-];
 const expectedAgentInterfaceRange = "^1.0.0";
 const expectedAgentInterfaceVersion =
   process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "1.0.0";
@@ -179,12 +172,6 @@ try {
       throw new Error(`agent-interface accepted removed harness alias ${removedAlias}`);
     }
   }
-  for (const dependency of mentionRuntimeDependencies) {
-    consumerRequire.resolve(dependency);
-    if (!manifest.dependencies?.[dependency]) {
-      throw new Error(`packed manifest is missing runtime dependency ${dependency}`);
-    }
-  }
 
   const jsSpecifiers = [];
   const cssSpecifiers = [];
@@ -210,17 +197,15 @@ try {
 ${cssImports.join("\n")}
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { AgentComposer } from "@tangle-network/sandbox-ui/chat";
+import { ReasoningLevelPicker } from "@tangle-network/sandbox-ui/chat";
 
 document.documentElement.dataset.sandboxUiExportCount = String(
   [${publicEntries}].reduce((count, entry) => count + Object.keys(entry).length, 0),
 );
 createRoot(document.getElementById("root")).render(
-  React.createElement(AgentComposer, {
-    value: "",
+  React.createElement(ReasoningLevelPicker, {
+    value: "auto",
     onChange() {},
-    onSubmit() {},
-    mention: { fetchItems: async () => [] },
   }),
 );
 `,

@@ -32,7 +32,7 @@ The wrong center of gravity is:
 
 UI chrome ownership (picker canon): Model/effort/harness picking has exactly one canonical implementation: `ModelPicker`, `EffortPicker`, and `AgentSessionControls` from `@tangle-network/agent-app/web-react`. sandbox-ui's legacy `dashboard/ModelPicker` and `chat/AgentSessionControls` were removed in this release; use `ModelPicker` / `EffortPicker` / `AgentSessionControls` from `@tangle-network/agent-app/web-react`. Boundary: sandbox-ui owns rendering primitives (terminal, code surface, session chrome primitives); agent-app owns composed, seam-driven app-shell surfaces (transcript, composer controls, pickers, assistant).  If you are about to add a picker/menu/control to sandbox-ui, stop — it belongs in agent-app.
 
-Composer canon: the canonical composer is `ChatComposer` from `@tangle-network/agent-app/web-react` (attachments lifecycle, send-failure recovery, seeds, quiet/labeled controls, floating elevation, circular icon send via `sendVariant="icon"`). sandbox-ui's `chat/AgentComposer` (slot shell) is legacy — deprecated, frozen, removed at the next breaking release.
+Composer canon: the canonical composer is `ChatComposer` from `@tangle-network/agent-app/web-react` (mentions, context items, the attachments lifecycle, send-failure recovery, seeds, quiet/labeled controls, floating elevation, circular icon send via `sendVariant="icon"`). sandbox-ui's `chat/AgentComposer` and its mention/attachment helpers were removed in this release; there is no composer in sandbox-ui.
 
 ## What To Learn From Open WebUI
 

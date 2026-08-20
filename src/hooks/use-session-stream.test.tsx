@@ -753,3 +753,140 @@ describe("useSessionStream local echo", () => {
     );
   });
 });
+
+/**
+ * A sandbox whose Hub credential is rejected starts its session with an EMPTY
+ * toolbelt instead of failing: an attach-all request ("give me whatever
+ * integrations I have") is satisfied by nothing. The session then runs and
+ * answers normally, so the only thing distinguishing it from a tenant who
+ * connected nothing is this notice.
+ */
+describe("useSessionStream degradation", () => {
+  let stream: ReturnType<typeof controllableEventStream>;
+
+  beforeEach(() => {
+    stream = controllableEventStream();
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.includes("/session/events")) return stream.response;
+      if (url.includes("/messages") && methodOf(init) === "POST")
+        return jsonResponse({});
+      if (url.includes("/messages")) return jsonResponse([]);
+      return jsonResponse({});
+    });
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    stream.close();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const degradedEvent = {
+    type: "hub.connections.degraded",
+    properties: {
+      reason: "hub-unauthenticated",
+      message:
+        "Hub rejected this sandbox's credential and it could not be refreshed; the session started with no Hub integrations attached",
+      connectionCount: 3,
+      timestamp: 0,
+    },
+  };
+
+  it("surfaces a rejected Hub credential as a degradation", async () => {
+    const { result } = renderHook(() =>
+      useSessionStream({
+        apiUrl: "http://sidecar.test",
+        token: "tok",
+        sessionId: "sess-degraded",
+      }),
+    );
+    await waitFor(() => expect(result.current.connected).toBe(true));
+    expect(result.current.degradation).toBeNull();
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent);
+    });
+
+    await waitFor(() =>
+      expect(result.current.degradation).toMatchObject({
+        kind: "hub-connections",
+        reason: "hub-unauthenticated",
+        connectionCount: 3,
+      }),
+    );
+    expect(result.current.degradation?.message).toContain(
+      "no Hub integrations attached",
+    );
+  });
+
+  it("does not report it as a turn error", async () => {
+    // `error` is cleared by the next successful turn; the missing toolbelt is
+    // not. Routing this through `error` would make it blink out on the user's
+    // next message while the tools stayed gone.
+    const { result } = renderHook(() =>
+      useSessionStream({
+        apiUrl: "http://sidecar.test",
+        token: "tok",
+        sessionId: "sess-degraded-2",
+      }),
+    );
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent);
+    });
+
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+    expect(result.current.error).toBeNull();
+  });
+
+  it("survives a turn completing, because the toolbelt is still empty", async () => {
+    const { result } = renderHook(() =>
+      useSessionStream({
+        apiUrl: "http://sidecar.test",
+        token: "tok",
+        sessionId: "sess-degraded-3",
+      }),
+    );
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent);
+    });
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+
+    act(() => {
+      stream.emit("session.idle", {
+        type: "session.idle",
+        properties: { executionId: "exec-1" },
+      });
+    });
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+    expect(result.current.degradation).not.toBeNull();
+  });
+
+  it("does not carry a degradation to a different session", async () => {
+    const { result, rerender } = renderHook(
+      ({ sessionId }: { sessionId: string }) =>
+        useSessionStream({
+          apiUrl: "http://sidecar.test",
+          token: "tok",
+          sessionId,
+        }),
+      { initialProps: { sessionId: "sess-a" } },
+    );
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent);
+    });
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+
+    rerender({ sessionId: "sess-b" });
+
+    // Accusing a healthy session of a missing toolbelt is its own bug.
+    await waitFor(() => expect(result.current.degradation).toBeNull());
+  });
+});

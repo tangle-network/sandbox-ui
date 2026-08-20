@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.106.0
+
+### A session reports a Hub credential it could not present
+
+- `useSessionStream` exposes `degradation`. A sandbox whose Hub credential is
+  rejected starts its session with an EMPTY toolbelt rather than failing, so
+  without this the state is indistinguishable from a tenant who connected no
+  integrations at all.
+- It is reported separately from `error`, not through it. The session runs and
+  answers normally; routing it through `error` would clear the notice on the
+  next successful turn while the tools stayed gone.
+- A degradation never crosses a session change. Carrying one would accuse a
+  healthy session of a missing toolbelt.
+
 ## 0.105.3
 
 ### Connectable handles are draggable

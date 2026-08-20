@@ -44,6 +44,25 @@ export interface SendMessageOptions {
   reasoningEffort?: ReasoningEffort;
 }
 
+/**
+ * A sandbox-level condition that degrades the session without ending it.
+ *
+ * Distinct from `error`, which reports a turn that failed: the session here is
+ * running and will answer, it is just missing something the caller asked for.
+ * Reported separately so it is not cleared by the next successful turn — the
+ * condition outlives the turn that revealed it.
+ */
+export interface SessionDegradation {
+  /** Which capability is degraded. A union so this can grow without a break. */
+  readonly kind: 'hub-connections';
+  /** Machine-readable cause. */
+  readonly reason: string;
+  /** Operator/user-facing sentence, authored by the sidecar. */
+  readonly message: string;
+  /** How many connections the session asked for and did not get. */
+  readonly connectionCount: number;
+}
+
 export interface UseSessionStreamResult {
   /** All messages in the session (fetched + streaming). */
   messages: SessionMessage[];
@@ -61,6 +80,16 @@ export interface UseSessionStreamResult {
   error: string | null;
   /** Whether the SSE connection is active. */
   connected: boolean;
+  /**
+   * Sandbox-level degradations observed on this stream, or `null`.
+   *
+   * Today the only one is a Hub credential the sandbox could not present, which
+   * leaves the agent with an EMPTY toolbelt while the session otherwise runs
+   * normally. Without surfacing it, that state is indistinguishable to the user
+   * from having connected no integrations at all — so a caller that renders a
+   * transcript should render this too.
+   */
+  degradation: SessionDegradation | null;
 }
 
 export class SessionStreamError extends Error {
@@ -250,6 +279,7 @@ export function useSessionStream({
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [degradation, setDegradation] = useState<SessionDegradation | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -272,6 +302,9 @@ export function useSessionStream({
     activeAssistantMessageIdsRef.current.clear();
     completedExecutionIdsRef.current.clear();
     lastEventIdRef.current = '';
+    // A degradation belongs to the session that reported it. Carrying one
+    // across would accuse a healthy session of a missing toolbelt.
+    setDegradation(null);
   }, [sessionId]);
 
   // ── Fetch full message history ──────────────────────────────────────
@@ -596,6 +629,21 @@ export function useSessionStream({
       // Retiring before the refetch keeps an echo created while it is in
       // flight (the composer unlocks on this event) out of the retired set.
       if (!stillStreaming) refetch();
+    } else if (type === 'hub.connections.degraded') {
+      // The session started with NO Hub integrations because the sandbox's Hub
+      // credential was rejected. It is NOT a turn failure — the agent runs and
+      // answers, just without the tenant's tools — so it must not go through
+      // `setError`, which the next successful turn would clear.
+      setDegradation({
+        kind: 'hub-connections',
+        reason: typeof props.reason === 'string' ? props.reason : 'unknown',
+        message:
+          typeof props.message === 'string'
+            ? props.message
+            : 'This session started with no Hub integrations attached.',
+        connectionCount:
+          typeof props.connectionCount === 'number' ? props.connectionCount : 0,
+      });
     } else if (type === 'session.error') {
       const executionId =
         (props.executionId as string)
@@ -757,5 +805,15 @@ export function useSessionStream({
     };
   }, [enabled, token, sessionId, refetch, connectSSE]);
 
-  return { messages, partMap, isStreaming, send, abort, refetch, error, connected };
+  return {
+    messages,
+    partMap,
+    isStreaming,
+    send,
+    abort,
+    refetch,
+    error,
+    connected,
+    degradation,
+  };
 }

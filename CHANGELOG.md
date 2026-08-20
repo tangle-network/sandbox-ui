@@ -29,9 +29,9 @@
   import { AgentComposer } from "@tangle-network/sandbox-ui/chat";
   <AgentComposer value={v} onChange={setV} onSubmit={send} busy={busy} attachments={files} controls={<Controls />} />
 
-  // After — agent-app's, with the four renames:
+  // After — agent-app's, with the four renames and this component's chrome:
   import { ChatComposer } from "@tangle-network/agent-app/web-react";
-  <ChatComposer value={v} onValueChange={setV} onSend={send} isStreaming={busy} pendingFiles={files} controls={<Controls />} sendVariant="icon" />
+  <ChatComposer value={v} onValueChange={setV} onSend={send} isStreaming={busy} pendingFiles={files} controls={<Controls />} sendVariant="icon" focusShortcut={false} />
   ```
 
 - **`@tiptap/extension-mention` and `@tiptap/suggestion` leave

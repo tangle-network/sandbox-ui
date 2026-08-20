@@ -11,8 +11,12 @@
 - It is reported separately from `error`, not through it. The session runs and
   answers normally; routing it through `error` would clear the notice on the
   next successful turn while the tools stayed gone.
-- A degradation never crosses a session change. Carrying one would accuse a
-  healthy session of a missing toolbelt.
+- A degradation never crosses a session change. It is stamped with the session
+  that reported it and read back only for that session, so a healthy session is
+  never accused of a missing toolbelt — not even for one committed frame, which
+  is what clearing it in an effect would have allowed.
+- Switching back to a degraded session restores its notice. That session's
+  toolbelt is still empty, and the event that said so is emitted once, at spawn.
 
 ## 0.105.3
 

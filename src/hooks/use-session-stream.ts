@@ -279,7 +279,17 @@ export function useSessionStream({
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
-  const [degradation, setDegradation] = useState<SessionDegradation | null>(null);
+  // Stamped with the session it was reported for, and read back only when that
+  // matches the session being rendered. Clearing it in an effect instead would
+  // commit one frame of the PREVIOUS session's degradation against the new one
+  // — briefly accusing a healthy session of having no integrations — because a
+  // passive effect runs after that render is already on screen.
+  const [degradationState, setDegradationState] = useState<{
+    sessionId: string;
+    value: SessionDegradation;
+  } | null>(null);
+  const degradation =
+    degradationState?.sessionId === sessionId ? degradationState.value : null;
 
   const abortRef = useRef<AbortController | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -302,9 +312,13 @@ export function useSessionStream({
     activeAssistantMessageIdsRef.current.clear();
     completedExecutionIdsRef.current.clear();
     lastEventIdRef.current = '';
-    // A degradation belongs to the session that reported it. Carrying one
-    // across would accuse a healthy session of a missing toolbelt.
-    setDegradation(null);
+    // Deliberately NOT clearing the degradation here. The stamp above already
+    // keeps it out of another session, and a passive effect could only clear it
+    // AFTER the new session's first render was committed — one frame of the
+    // previous session's warning shown against the new one. Retaining it also
+    // means switching back to a degraded session restores its notice, which is
+    // right: that session's toolbelt is still empty, and the event that said so
+    // was emitted once, at spawn.
   }, [sessionId]);
 
   // ── Fetch full message history ──────────────────────────────────────
@@ -634,15 +648,23 @@ export function useSessionStream({
       // credential was rejected. It is NOT a turn failure — the agent runs and
       // answers, just without the tenant's tools — so it must not go through
       // `setError`, which the next successful turn would clear.
-      setDegradation({
-        kind: 'hub-connections',
-        reason: typeof props.reason === 'string' ? props.reason : 'unknown',
-        message:
-          typeof props.message === 'string'
-            ? props.message
-            : 'This session started with no Hub integrations attached.',
-        connectionCount:
-          typeof props.connectionCount === 'number' ? props.connectionCount : 0,
+      setDegradationState({
+        // The session this handler was built for. A frame arriving late on a
+        // replaced stream therefore stamps the OLD session and can never be
+        // read back against the new one.
+        sessionId,
+        value: {
+          kind: 'hub-connections',
+          reason: typeof props.reason === 'string' ? props.reason : 'unknown',
+          message:
+            typeof props.message === 'string'
+              ? props.message
+              : 'This session started with no Hub integrations attached.',
+          connectionCount:
+            typeof props.connectionCount === 'number'
+              ? props.connectionCount
+              : 0,
+        },
       });
     } else if (type === 'session.error') {
       const executionId =
@@ -654,7 +676,7 @@ export function useSessionStream({
       setError(formatError(readErrorDetails(props), 'Agent response failed'));
       if (!stillStreaming) refetch();
     }
-  }, [refetch]);
+  }, [refetch, sessionId]);
 
   handleSSEEventRef.current = handleSSEEvent;
 

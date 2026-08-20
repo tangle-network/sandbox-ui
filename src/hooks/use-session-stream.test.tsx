@@ -867,7 +867,40 @@ describe("useSessionStream degradation", () => {
     expect(result.current.degradation).not.toBeNull();
   });
 
-  it("does not carry a degradation to a different session", async () => {
+  it("never reads back a degradation stamped for another session", async () => {
+    // The stamp, not the reset, is what enforces the boundary. Clearing in an
+    // effect would commit one frame of session A's warning against session B —
+    // a passive effect runs only after that render is already on screen.
+    const { result, rerender } = renderHook(
+      ({ sessionId }: { sessionId: string }) =>
+        useSessionStream({
+          apiUrl: "http://sidecar.test",
+          token: "tok",
+          sessionId,
+        }),
+      { initialProps: { sessionId: "sess-stamped-a" } },
+    );
+    await waitFor(() => expect(result.current.connected).toBe(true));
+
+    act(() => {
+      stream.emit("hub.connections.degraded", degradedEvent);
+    });
+    await waitFor(() => expect(result.current.degradation).not.toBeNull());
+
+    // Read synchronously, with no waitFor: the boundary must hold on the very
+    // first render of the new session, not once an effect has caught up.
+    rerender({ sessionId: "sess-stamped-b" });
+    expect(result.current.degradation).toBeNull();
+
+    // Back on the degraded session its notice returns — that session's toolbelt
+    // is still empty, and the event that said so was emitted once, at spawn.
+    rerender({ sessionId: "sess-stamped-a" });
+    expect(result.current.degradation).toMatchObject({
+      kind: "hub-connections",
+    });
+  });
+
+  it("does not show one session's degradation while rendering another", async () => {
     const { result, rerender } = renderHook(
       ({ sessionId }: { sessionId: string }) =>
         useSessionStream({
@@ -884,9 +917,9 @@ describe("useSessionStream degradation", () => {
     });
     await waitFor(() => expect(result.current.degradation).not.toBeNull());
 
+    // Accusing a healthy session of a missing toolbelt is its own bug, and it
+    // must not happen even for a single committed frame.
     rerender({ sessionId: "sess-b" });
-
-    // Accusing a healthy session of a missing toolbelt is its own bug.
-    await waitFor(() => expect(result.current.degradation).toBeNull());
+    expect(result.current.degradation).toBeNull();
   });
 });

@@ -42,9 +42,10 @@ function imageExtension(file: File): string {
 /** A selectable item in the `@`-mention popover. Generic — file semantics live
  * in the consuming app, not here.
  *
- * Part of the {@link AgentComposer} API. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` has no equivalent — see
- * {@link AgentComposer} for which composer fits a surface. */
+ * @deprecated Part of the legacy AgentComposer API. Import `MentionItem` from
+ * `@tangle-network/agent-app/web-react` (agent-app ≥0.46) — the same contract,
+ * now owned by the package that defines it. AgentComposer is frozen and will
+ * be removed at sandbox-ui's next breaking release. */
 export interface MentionItem {
   id: string;
   label: string;
@@ -57,9 +58,10 @@ export interface MentionItem {
  * TipTap rich input that renders mentions as atomic pills; absent ⇒ exactly
  * today's plain-textarea behavior. Data-agnostic: the app supplies items.
  *
- * Part of the {@link AgentComposer} API. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` has no equivalent — see
- * {@link AgentComposer} for which composer fits a surface.
+ * @deprecated Part of the legacy AgentComposer API. `ComposerMentionProp` in
+ * `@tangle-network/agent-app/web-react` (agent-app ≥0.46) is the same contract
+ * on `ChatComposer`'s `mention` prop. AgentComposer is frozen and will be
+ * removed at sandbox-ui's next breaking release.
  */
 export interface AgentComposerMention {
   /** The character that opens the popover. Default "@". */
@@ -89,9 +91,10 @@ const MentionEditor = React.lazy(() => import("./mention-editor"));
 
 /** A staged attachment shown as a chip above the input.
  *
- * Part of the {@link AgentComposer} API. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` has no equivalent — see
- * {@link AgentComposer} for which composer fits a surface. */
+ * @deprecated Part of the legacy AgentComposer API. Import `ComposerFile` from
+ * `@tangle-network/agent-app/web-react` (agent-app ≥0.46) — the same shape,
+ * consumed by `ChatComposer`'s `pendingFiles`. AgentComposer is frozen and
+ * will be removed at sandbox-ui's next breaking release. */
 export interface ComposerFile {
   id: string;
   name: string;
@@ -112,9 +115,11 @@ export interface ComposerFile {
 
 /** Context the agent will see alongside the next message.
  *
- * Part of the {@link AgentComposer} API. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` has no equivalent — see
- * {@link AgentComposer} for which composer fits a surface. */
+ * @deprecated Part of the legacy AgentComposer API. Import
+ * `ComposerContextItem` from `@tangle-network/agent-app/web-react`
+ * (agent-app ≥0.46) — the same shape, consumed by `ChatComposer`'s
+ * `contextItems`. AgentComposer is frozen and will be removed at sandbox-ui's
+ * next breaking release. */
 export interface ComposerContextItem {
   id: string;
   label: string;
@@ -124,11 +129,12 @@ export interface ComposerContextItem {
 }
 
 /**
- * Props of {@link AgentComposer}.
+ * Props of the legacy {@link AgentComposer}.
  *
- * Part of the {@link AgentComposer} API. `ChatComposer` in
- * `@tangle-network/agent-app/web-react` has no equivalent — see
- * {@link AgentComposer} for which composer fits a surface.
+ * @deprecated Part of the legacy AgentComposer API. `ChatComposerProps` in
+ * `@tangle-network/agent-app/web-react` (agent-app ≥0.46) covers every prop
+ * here — see {@link AgentComposer} for the four renames. AgentComposer is
+ * frozen and will be removed at sandbox-ui's next breaking release.
  */
 export interface AgentComposerProps {
   /** Composer text (controlled). */
@@ -227,26 +233,19 @@ export interface AgentComposerProps {
 }
 
 /**
- * Sibling of `ChatComposer` in `@tangle-network/agent-app/web-react`, not a
- * predecessor of it. The two composers cover different jobs, and neither is a
- * superset of the other, so pick by the features a surface needs.
- *
- * Reach for `AgentComposer` when the surface needs `@`-mentions (`mention`,
- * backed by a lazily loaded rich-text input that renders mention pills),
- * `contextItems`, or the full attachment lifecycle — `attachments` plus
- * `onRejectFiles` and `onRetryFile`. It also owns `autoFocus`,
- * `canSubmitAttachmentsOnly`, `trailing`, `maxHeight`, and `minRows`.
- *
- * Reach for `ChatComposer` when the surface is a plain send box. It owns
- * send-failure recovery (`onSendFailed`, `sendFailureMessage`), one-shot
- * prefill (`seed`), `controlsPlacement`, `floating`, `sendVariant`,
- * parts-aware sends (`onSendParts`), and an uncontrolled mode
- * (`initialValue`) — none of which exist here.
- *
- * Moving between them is a port, not a rename: the control models differ. This
- * component requires `value` and `onChange` and calls `onSubmit` with no
- * arguments, while `ChatComposer` can own its draft and hands the message to a
- * refusable `onSend`.
+ * @deprecated Use `ChatComposer` from `@tangle-network/agent-app/web-react` —
+ * since agent-app 0.46 it is a strict superset of this component. Everything
+ * that once lived only here now lives there: `mention` (the same
+ * `ComposerMentionProp` contract), `contextItems`, the full attachment
+ * lifecycle (`pendingFiles` with `previewUrl` thumbnails, `onRejectFiles`,
+ * `onRetryFile`, clipboard paste with `pasted-image-<n>.<ext>` naming),
+ * `autoFocus`, `canSubmitAttachmentsOnly`, `canSubmitWhileBusy`, `trailing`,
+ * `maxHeight`, and `minRows`. Migration is four prop renames — `onChange` →
+ * `onValueChange`, `onSubmit()` → `onSend(message)`, `busy` → `isStreaming`,
+ * `attachments` → `pendingFiles`; every other prop carries across unchanged.
+ * Add `sendVariant="icon"` and `focusShortcut={false}` where a surface wants
+ * this component's exact chrome. AgentComposer is frozen and will be removed
+ * at sandbox-ui's next breaking release.
  *
  * The input itself: one rounded surface holding an auto-growing
  * textarea and a bottom row that runs left → right — attach buttons, the

@@ -22,7 +22,7 @@ const meta: Meta<typeof AgentComposer> = {
     docs: {
       description: {
         component:
-          "The mention and attachment-rich composer. Reach for it when a surface needs `@`-mentions, context items, or attachment reject/retry. For a plain send box with send-failure recovery, seeds and `sendVariant`, use `ChatComposer` from `@tangle-network/agent-app/web-react` — the two are siblings, and neither is a superset of the other.",
+          "LEGACY — use `ChatComposer` from `@tangle-network/agent-app/web-react`. Since agent-app 0.46 it is a strict superset: mentions, context items, and the full attachment lifecycle all moved there, and migration is four prop renames (`onChange`→`onValueChange`, `onSubmit`→`onSend`, `busy`→`isStreaming`, `attachments`→`pendingFiles`). Frozen; removed at the next breaking release.",
       },
     },
   },

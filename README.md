@@ -16,8 +16,8 @@ React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a
 npm install @tangle-network/sandbox-ui
 ```
 
-**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0`, `@tangle-network/brand ^1.1.0`, and `@tangle-network/ui ^11.0.0`.
-Optional peers are required only by the subpaths that use them; see [package.json](./package.json).
+**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0`, `@tangle-network/brand ^1.5.0`, and `@tangle-network/ui ^11.6.0`.
+Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which.
 
 ## Usage
 

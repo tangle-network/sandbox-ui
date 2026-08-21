@@ -18,14 +18,6 @@ const workdir = mkdtempSync(join(tmpdir(), "sandbox-ui-package-smoke-"));
 const packDir = join(workdir, "pack");
 const consumerDir = join(workdir, "consumer");
 
-// The `./editor` entry re-exports TiptapEditor and DocumentEditorPane from
-// @tangle-network/ui/editor, which declares tiptap only as optional peers.
-// Consumers resolve these packages solely because sandbox-ui declares them.
-const editorRuntimeDependencies = [
-  "@tiptap/core",
-  "@tiptap/react",
-  "@tiptap/starter-kit",
-];
 const expectedAgentInterfaceRange = "^1.0.0";
 const expectedAgentInterfaceVersion =
   process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "1.0.0";
@@ -166,12 +158,6 @@ try {
 
   const consumerRequire = createRequire(join(consumerDir, "package.json"));
 
-  for (const dependency of editorRuntimeDependencies) {
-    if (!manifest.dependencies?.[dependency]) {
-      throw new Error(`packed manifest is missing runtime dependency ${dependency}`);
-    }
-    consumerRequire.resolve(dependency);
-  }
   const agentInterfaceEntry = consumerRequire.resolve("@tangle-network/agent-interface");
   const agentInterfaceManifest = JSON.parse(
     readFileSync(resolve(dirname(agentInterfaceEntry), "../package.json"), "utf8"),

@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.109.0
+
+### The `./editor` tiptap packages become optional peers
+
+- **`@tiptap/core`, `@tiptap/react` and `@tiptap/starter-kit` leave
+  `dependencies`.** They move to `peerDependencies` with
+  `peerDependenciesMeta.optional`, beside `@hocuspocus/provider`, `yjs` and
+  the two collaboration extensions. A consumer that renders no editor now
+  installs none of them.
+- They were runtime dependencies to make `@tangle-network/ui/editor` resolve.
+  That entry declares tiptap as optional peers, and reached them through
+  static imports. A bundler resolves an uninstalled optional peer to a stub
+  that exports only a default, so the named imports failed the build of every
+  consumer without tiptap. Carrying the packages here hid that failure by
+  installing them for everybody.
+- `@tangle-network/ui` 11.6.0 reaches every editor peer through a dynamic
+  `import()`, so the workaround is no longer needed. The peer range moves to
+  `^11.6.0`, which this release requires.
+- **A consumer that renders an editor must install the peers itself.**
+  `DocumentEditorPane` in preview mode needs none. Its local mode needs
+  `@tiptap/react` and `@tiptap/starter-kit`. `EditorProvider` and the
+  collaboration hooks need `@hocuspocus/provider` and `yjs`. The collaborative
+  `TiptapEditor` needs all of those, plus both collaboration extensions. The
+  `@tangle-network/ui` README holds the table this list follows. A missing
+  peer now throws while React renders, so wrap the editors in an error
+  boundary.
+- **`pnpm test:package` proves the omission rather than assuming it.** The
+  smoke installed every optional peer, so no run exercised the direction the
+  optional flag promises. `PACKAGE_OMIT_OPTIONAL_PEERS` names the peers to
+  leave uninstalled. The script rejects a name the packed manifest does not
+  declare optional, fails when npm installs an omitted peer through another
+  dependency, and reads the emitted chunks to name the peers the bundle
+  stubbed. An installed peer that stubbed is a resolution failure, and an omit
+  run that stubbed nothing means the build never reached the peers.
+  `test:package` now runs a second consumer build without the seven editor
+  peers.
+
 ## 0.108.0
 
 ### A session reports a Hub credential it could not present

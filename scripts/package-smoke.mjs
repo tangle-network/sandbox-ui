@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdtempSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -17,6 +18,16 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workdir = mkdtempSync(join(tmpdir(), "sandbox-ui-package-smoke-"));
 const packDir = join(workdir, "pack");
 const consumerDir = join(workdir, "consumer");
+const consumerDistDir = join(consumerDir, "dist");
+
+// Vite 8.1.5 resolves an optional peer that is not installed to a stub module
+// whose body throws this text. The stub decision reads the peerDependenciesMeta
+// of the nearest package.json above the IMPORTING file, so an import inside
+// @tangle-network/ui is governed by that package's manifest, not this one.
+// A Vite upgrade that rewords the throw must update this marker; the
+// `stubbedPeers.size === 0` guard below turns a stale marker into a failing run
+// rather than a silent pass.
+const stubMarker = (name) => `Could not resolve "${name}"`;
 
 const expectedAgentInterfaceRange = "^1.0.0";
 const expectedAgentInterfaceVersion =
@@ -90,9 +101,45 @@ try {
     );
   }
 
-  const optionalPeers = Object.entries(manifest.peerDependenciesMeta ?? {})
+  const invalidOptionalPeers = Object.keys(manifest.peerDependenciesMeta ?? {}).filter(
+    (name) => !manifest.peerDependencies?.[name],
+  );
+  if (invalidOptionalPeers.length > 0) {
+    throw new Error(
+      `optional peer metadata is missing peer declarations: ${invalidOptionalPeers.join(", ")}`,
+    );
+  }
+
+  const declaredOptionalPeers = Object.entries(manifest.peerDependenciesMeta ?? {})
     .filter(([, metadata]) => metadata?.optional === true)
-    .map(([name]) => {
+    .map(([name]) => name);
+
+  // The peers to leave uninstalled. An optional peer only earns the name when a
+  // consumer without it still builds, so this run proves the promise the
+  // manifest makes. `test:package` runs the script once with every optional
+  // peer installed and once without the editor's peers.
+  const omittedOptionalPeers = JSON.parse(
+    process.env.PACKAGE_OMIT_OPTIONAL_PEERS ?? "[]",
+  );
+  if (
+    !Array.isArray(omittedOptionalPeers) ||
+    omittedOptionalPeers.some((name) => typeof name !== "string")
+  ) {
+    throw new Error("PACKAGE_OMIT_OPTIONAL_PEERS must be a JSON array of package names");
+  }
+  const notOptionalOmissions = omittedOptionalPeers.filter(
+    (name) => !declaredOptionalPeers.includes(name),
+  );
+  if (notOptionalOmissions.length > 0) {
+    throw new Error(
+      "cannot omit peers that the packed manifest does not declare optional: " +
+        notOptionalOmissions.join(", "),
+    );
+  }
+
+  const optionalPeers = declaredOptionalPeers
+    .filter((name) => !omittedOptionalPeers.includes(name))
+    .map((name) => {
       const version = manifest.devDependencies?.[name] ?? manifest.peerDependencies?.[name];
       return version ? `${name}@${version}` : name;
     });
@@ -121,6 +168,17 @@ try {
     ],
     { cwd: consumerDir, stdio: "inherit" },
   );
+
+  // Smoke the gauge: a peer that npm still installs through another dependency
+  // would make this run a false green.
+  const leakedOmissions = omittedOptionalPeers.filter((name) =>
+    existsSync(join(consumerDir, "node_modules", ...name.split("/"))),
+  );
+  if (leakedOmissions.length > 0) {
+    throw new Error(
+      `omitted optional peers reached the consumer anyway: ${leakedOmissions.join(", ")}`,
+    );
+  }
 
   const packageDirectory = join(
     consumerDir,
@@ -217,12 +275,55 @@ createRoot(document.getElementById("root")).render(
     logLevel: "error",
     build: {
       emptyOutDir: true,
-      outDir: join(consumerDir, "dist"),
+      outDir: consumerDistDir,
     },
   });
 
+  // A dynamic import of an uninstalled optional peer builds green: the peer
+  // becomes its own chunk that throws when it loads. That is the wanted
+  // behaviour, and it also means a green build no longer proves that an
+  // INSTALLED peer resolved. Read the emitted chunks and say which peers the
+  // bundle stubbed.
+  const stubbedPeers = new Set();
+  for (const entry of readdirSync(consumerDistDir, {
+    recursive: true,
+    withFileTypes: true,
+  })) {
+    if (!entry.isFile() || !entry.name.endsWith(".js")) continue;
+    const code = readFileSync(join(entry.parentPath, entry.name), "utf8");
+    for (const name of declaredOptionalPeers) {
+      if (code.includes(stubMarker(name))) stubbedPeers.add(name);
+    }
+  }
+
+  const unresolvedInstalledPeers = declaredOptionalPeers.filter(
+    (name) => !omittedOptionalPeers.includes(name) && stubbedPeers.has(name),
+  );
+  if (unresolvedInstalledPeers.length > 0) {
+    throw new Error(
+      `installed optional peers did not resolve in the consumer: ${unresolvedInstalledPeers.join(", ")}`,
+    );
+  }
+
+  // Not every omitted peer leaves a stub — a peer this package reaches only
+  // through types never reaches the bundle at all. One stub is enough to prove
+  // the run exercised the uninstalled path, and it pins the marker string the
+  // check above reads.
+  if (omittedOptionalPeers.length > 0 && stubbedPeers.size === 0) {
+    throw new Error(
+      "no omitted optional peer was stubbed; either the build never reached " +
+        `${omittedOptionalPeers.join(", ")}, or Vite reworded the stub this script reads. ` +
+        "The marker was read from Vite 8.1.5 — compare it against the Vite now installed " +
+        "and update stubMarker() in this file.",
+    );
+  }
+
+  const omissionNote =
+    omittedOptionalPeers.length > 0
+      ? ` without ${omittedOptionalPeers.join(", ")}`
+      : "";
   console.log(
-    `Packed ${manifest.name}@${manifest.version} passed a clean consumer build across ${jsSpecifiers.length} JS and ${cssSpecifiers.length} CSS exports`,
+    `Packed ${manifest.name}@${manifest.version} passed a clean consumer build across ${jsSpecifiers.length} JS and ${cssSpecifiers.length} CSS exports${omissionNote}`,
   );
 } finally {
   rmSync(workdir, { force: true, recursive: true });

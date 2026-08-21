@@ -170,13 +170,27 @@ try {
   );
 
   // Smoke the gauge: a peer that npm still installs through another dependency
-  // would make this run a false green.
-  const leakedOmissions = omittedOptionalPeers.filter((name) =>
-    existsSync(join(consumerDir, "node_modules", ...name.split("/"))),
-  );
-  if (leakedOmissions.length > 0) {
+  // would make this run a false green. npm hoists to the top level, but a
+  // version conflict nests the install under its dependent, so read every
+  // node_modules directory rather than the consumer's own.
+  const leakedOmissions = new Set();
+  if (omittedOptionalPeers.length > 0) {
+    for (const entry of readdirSync(consumerDir, {
+      recursive: true,
+      withFileTypes: true,
+    })) {
+      if (!entry.isDirectory() || entry.name !== "node_modules") continue;
+      const nodeModulesDirectory = join(entry.parentPath, entry.name);
+      for (const name of omittedOptionalPeers) {
+        if (existsSync(join(nodeModulesDirectory, ...name.split("/")))) {
+          leakedOmissions.add(name);
+        }
+      }
+    }
+  }
+  if (leakedOmissions.size > 0) {
     throw new Error(
-      `omitted optional peers reached the consumer anyway: ${leakedOmissions.join(", ")}`,
+      `omitted optional peers reached the consumer anyway: ${[...leakedOmissions].join(", ")}`,
     );
   }
 

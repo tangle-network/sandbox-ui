@@ -18,12 +18,13 @@ const workdir = mkdtempSync(join(tmpdir(), "sandbox-ui-package-smoke-"));
 const packDir = join(workdir, "pack");
 const consumerDir = join(workdir, "consumer");
 
-const mentionRuntimeDependencies = [
+// The `./editor` entry re-exports TiptapEditor and DocumentEditorPane from
+// @tangle-network/ui/editor, which declares tiptap only as optional peers.
+// Consumers resolve these packages solely because sandbox-ui declares them.
+const editorRuntimeDependencies = [
   "@tiptap/core",
-  "@tiptap/extension-mention",
   "@tiptap/react",
   "@tiptap/starter-kit",
-  "@tiptap/suggestion",
 ];
 const expectedAgentInterfaceRange = "^1.0.0";
 const expectedAgentInterfaceVersion =
@@ -164,6 +165,13 @@ try {
   }
 
   const consumerRequire = createRequire(join(consumerDir, "package.json"));
+
+  for (const dependency of editorRuntimeDependencies) {
+    if (!manifest.dependencies?.[dependency]) {
+      throw new Error(`packed manifest is missing runtime dependency ${dependency}`);
+    }
+    consumerRequire.resolve(dependency);
+  }
   const agentInterfaceEntry = consumerRequire.resolve("@tangle-network/agent-interface");
   const agentInterfaceManifest = JSON.parse(
     readFileSync(resolve(dirname(agentInterfaceEntry), "../package.json"), "utf8"),
@@ -177,12 +185,6 @@ try {
   for (const removedAlias of ["claude", "claudish", "kimi"]) {
     if (harnessTypeSchema.safeParse(removedAlias).success) {
       throw new Error(`agent-interface accepted removed harness alias ${removedAlias}`);
-    }
-  }
-  for (const dependency of mentionRuntimeDependencies) {
-    consumerRequire.resolve(dependency);
-    if (!manifest.dependencies?.[dependency]) {
-      throw new Error(`packed manifest is missing runtime dependency ${dependency}`);
     }
   }
 
@@ -210,17 +212,15 @@ try {
 ${cssImports.join("\n")}
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { AgentComposer } from "@tangle-network/sandbox-ui/chat";
+import { ReasoningLevelPicker } from "@tangle-network/sandbox-ui/chat";
 
 document.documentElement.dataset.sandboxUiExportCount = String(
   [${publicEntries}].reduce((count, entry) => count + Object.keys(entry).length, 0),
 );
 createRoot(document.getElementById("root")).render(
-  React.createElement(AgentComposer, {
-    value: "",
+  React.createElement(ReasoningLevelPicker, {
+    value: "auto",
     onChange() {},
-    onSubmit() {},
-    mention: { fetchItems: async () => [] },
   }),
 );
 `,

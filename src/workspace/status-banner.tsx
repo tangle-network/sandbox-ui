@@ -2,10 +2,16 @@
  * StatusBanner — full-width notification banner for connection/provisioning states.
  */
 
-import { Loader2, AlertCircle, CheckCircle, Wifi, WifiOff } from "lucide-react";
+import { Loader2, AlertCircle, AlertTriangle, CheckCircle, Wifi, WifiOff } from "lucide-react";
 import { cn } from "../lib/utils";
 
-export type BannerType = "provisioning" | "connecting" | "error" | "success" | "info";
+export type BannerType =
+  | "provisioning"
+  | "connecting"
+  | "error"
+  | "warning"
+  | "success"
+  | "info";
 
 export interface StatusBannerProps {
   type: BannerType;
@@ -22,6 +28,18 @@ const BANNER_STYLES: Record<
   provisioning: { bg: "bg-primary/5", border: "border-primary/20", text: "text-primary", icon: Loader2 },
   connecting: { bg: "bg-[var(--code-number)]/5", border: "border-[var(--code-number)]/20", text: "text-[var(--code-number)]", icon: Wifi },
   error: { bg: "bg-[var(--code-error)]/5", border: "border-[var(--code-error)]/20", text: "text-[var(--code-error)]", icon: AlertCircle },
+  // Degraded, not broken: the thing still works, with less than was asked for.
+  // `error` would overstate it and `info` would understate it, and a notice
+  // styled as neither gets read as neither. Uses the brand's theme-reactive
+  // `--surface-warning-*` triple rather than a `warning` color utility —
+  // `warning` is not registered in this package's `@theme`, so `bg-warning`
+  // and friends emit no rule at all.
+  warning: {
+    bg: "bg-[var(--surface-warning-bg)]",
+    border: "border-[var(--surface-warning-border)]",
+    text: "text-[var(--surface-warning-text)]",
+    icon: AlertTriangle,
+  },
   success: { bg: "bg-[var(--code-success)]/5", border: "border-[var(--code-success)]/20", text: "text-[var(--code-success)]", icon: CheckCircle },
   info: { bg: "bg-surface-container-high", border: "border-[var(--md3-outline-variant)]", text: "text-muted-foreground", icon: AlertCircle },
 };
@@ -30,6 +48,19 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
   const style = BANNER_STYLES[type];
   const Icon = style.icon;
   const isAnimated = type === "provisioning" || type === "connecting";
+  // Every variant is inserted after first paint — a degradation arrives on a
+  // live frame or an async status read, provisioning resolves, a connection
+  // drops — so without a live region a screen reader is told nothing at all.
+  // `alert` interrupts, which is right for a failure and wrong for a session
+  // that still runs, so only `error` gets it.
+  //
+  // Known limit: the region enters the accessibility tree in the SAME mutation
+  // as its text, because the caller mounts this component conditionally. That
+  // is the case `alert` gets special insertion handling for and `status` does
+  // not, so the polite variants are not guaranteed to be spoken. Announcing
+  // them reliably needs a region that is already mounted and empty, which is a
+  // change to what a caller renders, not to this component.
+  const role = type === "error" ? "alert" : "status";
 
   return (
     <div
@@ -40,16 +71,23 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
         className,
       )}
     >
-      {/* While provisioning/connecting the spin is the only thing saying the
-          work is still in flight, so it stays under reduced motion. */}
-      <Icon
-        className={cn("h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")}
-        {...(isAnimated ? { "data-motion": "essential" } : {})}
-      />
-      <span className="font-medium text-foreground">{message}</span>
-      {detail && (
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">{detail}</span>
-      )}
+      {/* The live region wraps the text and NOTHING interactive. Both `alert`
+          and `status` carry an implicit `aria-atomic="true"`, so the region is
+          announced as one unit — a Dismiss button inside it gets read out as
+          part of the message, stripped of its button semantics and with no way
+          to reach it, since focus never moves to a live region. */}
+      <div role={role} className="flex min-w-0 items-center gap-2.5">
+        {/* While provisioning/connecting the spin is the only thing saying the
+            work is still in flight, so it stays under reduced motion. */}
+        <Icon
+          className={cn("h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")}
+          {...(isAnimated ? { "data-motion": "essential" } : {})}
+        />
+        <span className="font-medium text-foreground">{message}</span>
+        {detail && (
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">{detail}</span>
+        )}
+      </div>
       {onDismiss && (
         <button
           onClick={onDismiss}

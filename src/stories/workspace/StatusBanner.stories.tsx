@@ -114,6 +114,7 @@ export const AllTypes: Story = {
       <StatusBanner type="provisioning" message="Provisioning sandbox environment…" detail="This usually takes 10–30 seconds" />
       <StatusBanner type="connecting" message="Connecting to agent runtime" detail="WebSocket handshake in progress" />
       <StatusBanner type="error" message="Connection failed" detail="ECONNREFUSED — agent container unreachable" />
+      <StatusBanner type="warning" message="No Hub integrations attached" detail="The sandbox could not present its Hub credential" />
       <StatusBanner type="success" message="Sandbox environment ready" detail="Connected via WebSocket" />
       <StatusBanner type="info" message="Your session will pause after 30 minutes of inactivity" />
     </div>

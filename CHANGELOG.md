@@ -1,5 +1,88 @@
 # Changelog
 
+## 0.108.0
+
+### A session reports a Hub credential it could not present
+
+- `useSessionStream` exposes `degradation`. A sandbox whose Hub credential is
+  rejected starts its session with an EMPTY toolbelt rather than failing, so
+  without this the state is indistinguishable from a tenant who connected no
+  integrations at all.
+- It is reported separately from `error`, not through it. The session runs and
+  answers normally; routing it through `error` would clear the notice on the
+  next successful turn while the tools stayed gone.
+- The notice is session state, seeded from session status, not a one-shot
+  broadcast. The sidecar's event bus never replays, so a reload — or attaching a
+  beat after spawn — would otherwise leave a session with an empty toolbelt and
+  no explanation.
+- A degradation belongs to the session named in the payload, not the stream it
+  arrived on. The sidecar classes `hub.*` as a system event and delivers it to
+  every session-filtered stream on the container, so a frame that names no
+  session is ignored rather than attributed to whoever received it.
+- Degradations are keyed by session, so two degraded sessions coexist and each
+  keeps its own notice.
+- A recovered credential retires the notice. `hub.connections.restored` clears
+  the named session, and a session status that names no degradation clears it
+  on the next attach.
+- `degradation.requestShape` replaces `connectionCount`. There is no count of
+  lost integrations: the sidecar reaches this state only for an attach-all
+  request, and enumerating the tenant's connections is the call that failed
+  authentication, so any number would be fabricated.
+- Both halves of the state are read by one rule. A payload with no `message` is
+  rejected on the live path and the durable one alike. The frame handler used
+  to invent a message the status parser refused, so a reload, or a switch away
+  and back, deleted a notice the frame had just raised.
+- A degradation field that is present but unreadable is not read as health. It
+  is no evidence either way, so it leaves a live notice standing.
+- The durable copy is re-read on every attach, not once on mount. The bus never
+  replays, so a credential rejected while the stream was down reaches the
+  client through session status or not at all. The transcript already heals
+  across an outage; the notice did not.
+- Only the newest status read for a session can apply. Reading on every attach
+  means two reads can be in flight at once, and the frame counter cannot order
+  them because only frames write it, so without this the last response to
+  arrive won whatever its snapshot's age. A slow healthy read landing after a
+  degraded one deleted the notice with nothing left to correct it.
+- A turn ending re-reads status, but only on a stream that carries an execution
+  cursor. The sidecar sends no `hub.*` frame at all on such a stream, so the
+  attach read is the only delivery path there and it happens once. An ordinary
+  stream is left alone: it gets the frames live, and re-reading would put the
+  notice back on the "cleared by the next successful turn" footing that keeping
+  it out of `error` exists to avoid.
+- `SessionDegradation` is exported from the package root. It is the type a
+  caller has to name to hold the value or thread it through a prop.
+
+- `StatusBanner` gains a `warning` type, for a surface that still works with
+  less than was asked for. It uses the brand's `--surface-warning-*` triple:
+  `warning` is not registered in this package's `@theme`, so `bg-warning` and
+  friends emit no rule at all.
+- `StatusBanner` carries a live region: assertive for `error`, polite for the
+  rest, covering the existing variants as well as the new one. The region wraps
+  the text only. Both roles are implicitly atomic, so a Dismiss button inside
+  one is read out as part of the message with its button semantics stripped,
+  and focus never moves to a live region.
+- Worth knowing before relying on it: a caller mounts this component when the
+  state changes, so the region enters the accessibility tree in the same
+  mutation as its text. That is the case `alert` gets special handling for and
+  `status` does not, so the polite variants are not guaranteed to be spoken.
+  Announcing them reliably needs a region that is already mounted and empty,
+  which is a change to what a caller renders.
+
+Requires a sidecar that stamps `hub.connections.degraded` with `sessionId` and
+serves `hubConnectionsDegraded` from session status
+([agent-dev-container#6045](https://github.com/tangle-network/agent-dev-container/pull/6045)).
+Against an older sidecar the hook reports no degradation rather than a guessed
+one.
+
+#### Correction to an earlier draft
+
+While this entry was being written it claimed that "switching back to a degraded
+session restores its notice" followed from a single stamped slot. It did not:
+one slot holds one session, so a second session degrading erased the first
+permanently while its toolbelt was still empty. Keying by session is what makes
+the claim true. The draft carrying that claim was never released, and no version
+below is the one it was drafted as.
+
 ## 0.107.0
 
 ### Breaking — `AgentComposer` is removed, one release after its deprecation (#263)

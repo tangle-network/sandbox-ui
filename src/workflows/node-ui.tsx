@@ -237,14 +237,34 @@ export function problemTitle(problems: readonly WfProblem[]): string {
 }
 
 /**
+ * Every message on one anchor, as the text a reader who cannot hover receives.
+ * The visible mark has room for a glyph and a count, so the messages themselves
+ * would otherwise live only in a `title` — which a pointer opens and a keyboard,
+ * a screen reader and a touch device do not. Rendering them visually hidden puts
+ * the same words in the accessibility tree, where they become the mark's own
+ * accessible name.
+ */
+export function ProblemMessages({ problems }: { problems: readonly WfProblem[] }) {
+  return (
+    <span className="sr-only">
+      {problems.length === 1
+        ? problems[0].message
+        : `${problems.length} problems: ${problemTitle(problems).replace(/\n/g, ". ")}`}
+    </span>
+  );
+}
+
+/**
  * The mark a node wears when the draft it is drawn from has a problem on it: a
  * warning glyph, with a count once there is more than one. It is a READOUT, not
  * a control — the node's own click already opens whatever the host shows for it,
  * and a second target inside the card would compete with that.
  *
- * `title` carries every message, which is what makes the marker worth more than
- * the border tint alone: the canvas says WHICH step is broken at a glance and
- * WHY on hover, without the reader going to the problem list to find out.
+ * It carries every message twice over: on `title`, where a pointer finds it, and
+ * as visually hidden text, which is what the accessibility tree reads. That is
+ * what makes the mark worth more than the border tint — the canvas says WHICH
+ * step is broken at a glance and WHY without a trip to the problem list, however
+ * the reader is driving it.
  */
 export function ProblemMarker({
   problems,
@@ -255,21 +275,17 @@ export function ProblemMarker({
   severity: WfProblemSeverity;
   className?: string;
 }) {
-  const label =
-    problems.length === 1
-      ? problems[0].message
-      : `${problems.length} problems`;
   return (
     <span
       data-testid="wf-node-problem"
       data-severity={severity}
       title={problemTitle(problems)}
-      aria-label={label}
       className={`flex shrink-0 items-center gap-0.5 rounded-full border px-1 py-[1px] font-medium text-[10px] leading-none ${className}`}
       style={PROBLEM_SURFACE[severity]}
     >
       <AlertTriangle size={9} aria-hidden />
-      {problems.length > 1 && <span>{problems.length}</span>}
+      {problems.length > 1 && <span aria-hidden>{problems.length}</span>}
+      <ProblemMessages problems={problems} />
     </span>
   );
 }

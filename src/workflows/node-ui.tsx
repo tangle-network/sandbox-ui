@@ -255,7 +255,11 @@ const SEVERITY_WORD: Record<WfProblemSeverity, string> = {
  * text to be non-empty, and "this step has an error" is still worth saying.
  */
 function problemSentence(problem: WfProblem): string {
-  const message = problem.message
+  // Typed as a string, but the package is consumed from JavaScript too, and one
+  // malformed entry must not take the whole canvas down with it — the
+  // severity-only reading below is already the right answer for no message.
+  const raw = typeof problem.message === "string" ? problem.message : "";
+  const message = raw
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)

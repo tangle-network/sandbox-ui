@@ -174,6 +174,17 @@ describe("a node carrying authoring problems", () => {
     expect(container.textContent).toBe("");
   });
 
+  it("survives a message that is not a string at all", () => {
+    // The type says string; the package is consumed from JavaScript too, and one
+    // malformed entry must not take the whole canvas down with it.
+    renderNode({
+      problems: [
+        { anchor: "node", node: actionNodeId(0), severity: "error" } as never,
+      ],
+    });
+    expect(screen.getByTestId("wf-node-problem").title).toBe("Error");
+  });
+
   it("names a problem by its severity when the host sent no message", () => {
     renderNode({ problems: [problem(actionNodeId(0), "error", "   ")] });
     expect(screen.getByTestId("wf-node-problem").title).toBe("Error");

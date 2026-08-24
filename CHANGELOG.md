@@ -36,14 +36,22 @@
   spans more than one layer had its control both buried and inert. The guard and
   cycle chips deliberately stay pointer-transparent: raised over a card, one that
   took pointer events would swallow clicks meant for the node beneath it.
-- A drop is only an add when the pointer was released ON the canvas. React Flow
-  listens for the pointer-up on the document, so letting go anywhere on the page
-  ends the drag — and pulling away from the graph is exactly how a gesture is
-  abandoned. A release outside the graph's frame, or on the zoom controls or the
-  panel drawn over it, no longer adds a step.
-- The insert control is nudged clear of any card its edge's midpoint lands on.
-  The reserved corridor only widens the gap between ADJACENT layers, so an edge
-  spanning more than one had its control sitting on an unrelated node.
+- A drop is only an add when the pointer was released on the empty canvas, which
+  is identified POSITIVELY — the element under the pointer has to be React Flow's
+  own pane. React Flow ends a connection drag on a document-level pointer-up, so
+  letting go anywhere reaches the callback, and `toNode` is resolved from a
+  handle within the connection radius rather than from the node under the
+  pointer: releasing in the middle of a card reported no target and added a step.
+  So did releasing on an edge, on the zoom controls, on the panel, or off the
+  graph entirely. Identifying the pane cannot miss a layer the way a list of
+  things to exclude can, and it fails closed.
+- A cluster that takes the pointer is nudged clear of any card its edge's
+  midpoint lands on — the insert control, and a problem chip whose tooltip is the
+  only place its messages are written. The reserved corridor only widens the gap
+  between ADJACENT layers, so an edge spanning more than one had its control
+  sitting on, and swallowing clicks for, an unrelated node. The test is sized to
+  the control's own footprint, not to its centre point. A guard or cycle chip
+  lets clicks through and stays where it is.
 - Every problem message reaches the accessibility tree, not only a `title`
   tooltip. A mark carrying more than one problem showed "N problems" as its whole
   accessible name, so a keyboard, screen-reader or touch user could see that a

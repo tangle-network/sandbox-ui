@@ -30,6 +30,7 @@ vi.mock("@xyflow/react", async (importOriginal) => {
 const { MarkerType, Position, ReactFlowProvider } = await import(
   "@xyflow/react"
 );
+const { ProblemMessages } = await import("./node-ui");
 const {
   decorateAuthoringEdges,
   DensityContext,
@@ -163,6 +164,31 @@ describe("a node carrying authoring problems", () => {
       expect(text).not.toContain("?.");
       expect(text).not.toContain("!.");
     }
+  });
+
+  it("renders nothing rather than throwing when handed no problems at all", () => {
+    // `reduce` with no seed throws on an empty list. Production never gets here
+    // (an empty set has no severity, so no mark is drawn), but the component's
+    // own signature accepts one and a throw during render is not a contract.
+    const { container } = render(<ProblemMessages problems={[]} />);
+    expect(container.textContent).toBe("");
+  });
+
+  it("names a problem by its severity when the host sent no message", () => {
+    renderNode({ problems: [problem(actionNodeId(0), "error", "   ")] });
+    expect(screen.getByTestId("wf-node-problem").title).toBe("Error");
+  });
+
+  it("keeps a message's own spacing, rewriting only its line breaks", () => {
+    // A diagnostic can be quoting source, and the host's problem list shows the
+    // same text — so the canvas alters what breaks the one-line reading, and
+    // nothing else.
+    renderNode({
+      problems: [problem(actionNodeId(0), "error", "expected  two spaces\n  and a second line")],
+    });
+    expect(screen.getByTestId("wf-node-problem").title).toBe(
+      "Error: expected  two spaces and a second line",
+    );
   });
 
   it("passes a host's message through verbatim, punctuation and all", () => {

@@ -243,24 +243,37 @@ const SEVERITY_WORD: Record<WfProblemSeverity, string> = {
  * carrying an error and a warning together would otherwise offer no way to tell
  * which of the two is the one blocking the compile.
  *
- * The message is collapsed to a single line so a newline inside a host's text
- * cannot break the one-problem-per-line reading below. It is otherwise passed
- * through VERBATIM: a diagnostic can be about the very punctuation that trimming
- * would remove ("unexpected ;"), and the canvas must say what the host's own
- * problem list says. Joining handles the separators instead — see
- * {@link joinSentences}.
+ * NEWLINES are the only thing rewritten: each line is trimmed and the lines are
+ * run together, so a multi-line host message cannot break the one-problem-per-
+ * line reading below. Everything else survives — including internal spacing and
+ * the trailing punctuation a diagnostic may be ABOUT ("unexpected ;") — because
+ * the canvas has to say what the host's own problem list says. Separators are
+ * handled at the join instead ({@link joinSentences}).
+ *
+ * A problem with no message at all is named by its severity alone, rather than
+ * by a colon with nothing after it: nothing in {@link WfProblem} requires the
+ * text to be non-empty, and "this step has an error" is still worth saying.
  */
 function problemSentence(problem: WfProblem): string {
-  const message = problem.message.replace(/\s+/g, " ").trim();
-  return `${SEVERITY_WORD[problem.severity]}: ${message}`;
+  const message = problem.message
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(" ");
+  const word = SEVERITY_WORD[problem.severity];
+  return message ? `${word}: ${message}` : word;
 }
 
 /** Run sentences together for a listener, adding a full stop only where the text
  *  does not already end in one — so "Why?" is followed by a space rather than
- *  "Why?.", and a message ending in a semicolon keeps it. */
+ *  "Why?.", and a message ending in a semicolon keeps it. Empty in, empty out:
+ *  `reduce` with no seed throws on an empty list, and this is reachable from any
+ *  caller holding an empty problem set. */
 function joinSentences(parts: readonly string[]): string {
-  return parts.reduce((joined, part) =>
-    `${joined}${/[.!?;,]$/.test(joined) ? "" : "."} ${part}`,
+  return parts.reduce(
+    (joined, part) =>
+      joined ? `${joined}${/[.!?;,]$/.test(joined) ? "" : "."} ${part}` : part,
+    "",
   );
 }
 
@@ -280,6 +293,9 @@ export function problemTitle(problems: readonly WfProblem[]): string {
  * accessible name.
  */
 export function ProblemMessages({ problems }: { problems: readonly WfProblem[] }) {
+  // Nothing to announce, and no element to announce it in. Counting first would
+  // otherwise read "0 problems." to somebody standing on a healthy step.
+  if (problems.length === 0) return null;
   return (
     <span className="sr-only">
       {problems.length === 1

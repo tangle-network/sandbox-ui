@@ -309,3 +309,77 @@ export function worstSeverity(
   if (!problems || problems.length === 0) return null;
   return problems.some((p) => p.severity === "error") ? "error" : "warning";
 }
+
+/** A laid-out node's box in flow coordinates. */
+export interface NodeBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** How far past a node's edge a control's centre must sit to clear the card. */
+const INSERT_CLEARANCE = 16;
+/**
+ * How far a control may be nudged before the nudge is abandoned. A control
+ * dragged far from the edge it belongs to is worse than one overlapping a card,
+ * and the raised label layer keeps an overlapping one usable.
+ */
+const INSERT_MAX_NUDGE = 120;
+
+/**
+ * The CROSS-axis shift that moves a point off whatever node boxes it lands in,
+ * or 0 when it is already clear (or cannot be cleared within the bound).
+ *
+ * An edge spanning more than one layer runs THROUGH the layer it skips, so its
+ * midpoint — where a control would otherwise sit — is inside an unrelated card.
+ * The reserved corridor only ever clears an adjacent-layer edge, because that is
+ * the only gap the layout can widen. Nudging along the cross axis keeps the
+ * control beside its own edge and off the card it was covering.
+ *
+ * Both directions are walked, so a stack of cards in the skipped layer is
+ * escaped rather than jumped into; the smaller shift wins, and a point that
+ * cannot be cleared inside {@link INSERT_MAX_NUDGE} keeps its place.
+ */
+export function clearOfNodeBoxes(
+  point: { x: number; y: number },
+  boxes: readonly NodeBox[],
+  direction: WfDirection,
+): number {
+  const isLR = direction === "LR";
+  const base = isLR ? point.y : point.x;
+  const main = isLR ? point.x : point.y;
+  // Only the boxes the point could ever be inside — those it already overlaps on
+  // the axis the flow advances along.
+  const column = boxes.filter((b) => {
+    const lo = isLR ? b.x : b.y;
+    const size = isLR ? b.width : b.height;
+    return main >= lo && main <= lo + size;
+  });
+  if (column.length === 0) return 0;
+
+  const walk = (sign: 1 | -1): number | null => {
+    let at = base;
+    // Bounded because each step leaves the box it hit; the bound is the guard
+    // against a pathological stack rather than the normal exit.
+    for (let step = 0; step < 8; step += 1) {
+      const hit = column.find((b) => {
+        const lo = isLR ? b.y : b.x;
+        const size = isLR ? b.height : b.width;
+        return at >= lo && at <= lo + size;
+      });
+      if (!hit) return at - base;
+      const lo = isLR ? hit.y : hit.x;
+      const size = isLR ? hit.height : hit.width;
+      at = sign > 0 ? lo + size + INSERT_CLEARANCE : lo - INSERT_CLEARANCE;
+      if (Math.abs(at - base) > INSERT_MAX_NUDGE) return null;
+    }
+    return null;
+  };
+
+  const up = walk(-1);
+  const down = walk(1);
+  if (up === null) return down ?? 0;
+  if (down === null) return up;
+  return Math.abs(up) <= Math.abs(down) ? up : down;
+}

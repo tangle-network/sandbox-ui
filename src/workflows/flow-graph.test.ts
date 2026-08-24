@@ -2,6 +2,7 @@ import { Position, type Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 import {
   buildFlowGraph,
+  clearOfNodeBoxes,
   indexProblems,
   mergeRunState,
   sameRunState,
@@ -391,5 +392,60 @@ describe("reserveEdgeInsert", () => {
     expect(
       layerGap({ compact: true, reserveEdgeInsert: true }),
     ).toBeGreaterThanOrEqual(44);
+  });
+});
+
+describe("clearOfNodeBoxes", () => {
+  // A layer of two stacked cards, as the layouter pitches them: same x band,
+  // separated on the cross axis.
+  const upper = { x: 300, y: 100, width: 292, height: 80 };
+  const lower = { x: 300, y: 200, width: 292, height: 80 };
+
+  it("leaves a point that is already clear where it is", () => {
+    // The common case: an adjacent-layer edge, whose midpoint sits in the
+    // corridor the layout reserved for it.
+    expect(clearOfNodeBoxes({ x: 250, y: 140 }, [upper, lower], "LR")).toBe(0);
+  });
+
+  it("moves a point off the card it landed inside, the short way", () => {
+    // Nearer the box's top edge, so it leaves upwards.
+    const up = clearOfNodeBoxes({ x: 400, y: 115 }, [upper], "LR");
+    expect(up).toBeLessThan(0);
+    expect(115 + up).toBeLessThan(upper.y);
+    // Nearer the bottom edge, so it leaves downwards.
+    const down = clearOfNodeBoxes({ x: 400, y: 170 }, [upper], "LR");
+    expect(down).toBeGreaterThan(0);
+    expect(170 + down).toBeGreaterThan(upper.y + upper.height);
+  });
+
+  it("escapes a STACK rather than stepping into the next card", () => {
+    // Deep inside the upper card, with the lower one just below: walking down
+    // must clear both, not stop between them where the second box begins.
+    const offset = clearOfNodeBoxes({ x: 400, y: 175 }, [upper, lower], "LR");
+    const landed = 175 + offset;
+    for (const box of [upper, lower]) {
+      const inside = landed >= box.y && landed <= box.y + box.height;
+      expect(inside).toBe(false);
+    }
+  });
+
+  it("ignores boxes the point never crosses on the flow axis", () => {
+    // Same cross-axis band, a different layer: not in the way at all.
+    expect(clearOfNodeBoxes({ x: 50, y: 140 }, [upper], "LR")).toBe(0);
+  });
+
+  it("clears along the other axis for a top-to-bottom flow", () => {
+    const box = { x: 100, y: 300, width: 80, height: 292 };
+    const offset = clearOfNodeBoxes({ x: 115, y: 400 }, [box], "TB");
+    expect(offset).toBeLessThan(0);
+    expect(115 + offset).toBeLessThan(box.x);
+  });
+
+  it("gives up rather than dragging a control far from its own edge", () => {
+    // A box taller than the nudge budget either way: moving the control clear
+    // would put it somewhere that no longer reads as belonging to this edge, so
+    // it keeps its place and stays usable through the raised label layer.
+    const wall = { x: 300, y: 0, width: 292, height: 600 };
+    expect(clearOfNodeBoxes({ x: 400, y: 300 }, [wall], "LR")).toBe(0);
   });
 });

@@ -499,23 +499,34 @@ describe("clearOfNodeBoxes", () => {
     }
   });
 
-  it("keeps its place when a deep layer cannot be escaped inside the budget", () => {
-    // Buried in the middle of a tall stack, every way out costs more than a
-    // control may be moved. Giving up is the documented answer — a control
-    // flung that far no longer reads as belonging to its edge, and the raised
-    // label layer keeps an overlapping one clickable. This is the LIMIT that
-    // decides such a case; the walk never runs long enough for a step count to
-    // be what stops it.
+  it("keeps its place when it would have to cross a whole fan-out to get out", () => {
+    // Buried in the middle of a deep stack, every way out crosses card after
+    // card. Giving up is the answer there — a control that far from its own edge
+    // no longer reads as belonging to it, and the raised label layer keeps an
+    // overlapping one clickable.
     const stack = deepStack(40, 24);
     const buried = { x: 400, y: stack[20].y + 10 };
     expect(clearOfNodeBoxes(buried, stack, "LR", CONTROL)).toBe(0);
   });
 
-  it("gives up rather than dragging a control far from its own edge", () => {
-    // A box taller than the nudge budget either way: moving the control clear
-    // would put it somewhere that no longer reads as belonging to this edge, so
-    // it keeps its place and stays usable through the raised label layer.
-    const wall = { x: 300, y: 0, width: 292, height: 600 };
-    expect(clearOfNodeBoxes({ x: 400, y: 300 }, [wall], "LR", CONTROL)).toBe(0);
+  it("clears a REAL node in either orientation, whatever that costs", () => {
+    // The layouter emits 292-wide cards. In "TB" that width is the cross axis,
+    // so moving a control off the card it sits on costs over 160 units against
+    // the same node's ~50 in "LR" — which is why the bound counts cards rather
+    // than distance. Both must clear, and a chip's greater extent must not be
+    // what tips it over.
+    const node = { x: 100, y: 300, width: 292, height: 80 };
+    const centre = { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+    for (const half of [CONTROL, CHIP]) {
+      const tb = clearOfNodeBoxes(centre, [node], "TB", half);
+      expect(tb).not.toBe(0);
+      const landedX = centre.x + tb;
+      expect(landedX >= node.x && landedX <= node.x + node.width).toBe(false);
+
+      const lr = clearOfNodeBoxes(centre, [node], "LR", half);
+      expect(lr).not.toBe(0);
+      const landedY = centre.y + lr;
+      expect(landedY >= node.y && landedY <= node.y + node.height).toBe(false);
+    }
   });
 });

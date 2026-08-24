@@ -54,8 +54,11 @@
   only place its messages are written. The reserved corridor only widens the gap
   between ADJACENT layers, so an edge spanning more than one had its control
   sitting on, and swallowing clicks for, an unrelated node. The test is sized to
-  the control's own footprint, not to its centre point. A guard or cycle chip
-  lets clicks through and stays where it is.
+  the control's own footprint, not to its centre point, and how far it may move
+  is counted in CARDS rather than pixels — a 292-unit node costs over 160 to
+  clear in "TB" against about 50 in "LR", so any fixed distance either fails to
+  clear one standard card or means nothing. A guard or cycle chip lets clicks
+  through and stays where it is.
 - Every problem message reaches the accessibility tree, not only a `title`
   tooltip. A mark carrying more than one problem showed "N problems" as its whole
   accessible name, so a screen-reader user could hear that a step was broken and

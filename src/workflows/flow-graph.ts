@@ -307,7 +307,11 @@ export function worstSeverity(
   problems: readonly WfProblem[] | undefined,
 ): WfProblem["severity"] | null {
   if (!problems || problems.length === 0) return null;
-  return problems.some((p) => p.severity === "error") ? "error" : "warning";
+  // Read as "warning only if EVERY entry is one", so a severity this library has
+  // no word for ranks as an error rather than being quietly downgraded — the
+  // same way it is named. Understating something that might be blocking is the
+  // worse of the two ways to be wrong about a malformed entry.
+  return problems.every((p) => p.severity === "warning") ? "warning" : "error";
 }
 
 /** A laid-out node's box in flow coordinates. */
@@ -349,11 +353,21 @@ export interface ClusterHalfSize {
   height: number;
 }
 /**
- * How far a control may be nudged before the nudge is abandoned. A control
- * dragged far from the edge it belongs to is worse than one overlapping a card,
- * and the raised label layer keeps an overlapping one usable.
+ * How many cards a cluster may step past before the nudge is abandoned.
+ *
+ * A BOX COUNT rather than a distance, because what has to be cleared scales with
+ * the layout: a node is 292 units across, so in "TB" — where that width is the
+ * cross axis — moving a control off the card it sits on costs over 160, while
+ * the same node in "LR" costs about 50. Any fixed distance is therefore either
+ * too small to clear one standard card in one orientation, or too loose to mean
+ * anything in the other. Counting cards says what was actually meant: clearing
+ * the card you are on is the whole point, the next one is its neighbour in a
+ * stacked layer and is cheap, and past that the cluster is crossing a dense
+ * fan-out and would end up nowhere near the edge it belongs to — where leaving
+ * it overlapping, still clickable through the raised label layer, is the better
+ * of two bad answers.
  */
-const INSERT_MAX_NUDGE = 120;
+const INSERT_MAX_CARDS_CROSSED = 2;
 
 /**
  * The CROSS-axis shift that moves a point off whatever node boxes it lands in,
@@ -395,25 +409,23 @@ export function clearOfNodeBoxes(
 
   const walk = (sign: 1 | -1): number | null => {
     let at = base;
-    // Each step clears the box it hit and cannot return to it, so the candidates
-    // themselves bound the walk: one pass per box, plus the step that finds
-    // nothing left. Bounding it by a FIXED count instead would silently give up
-    // on a layer holding more cards than that — a `parallel` fanning out nine
-    // ways stacks nine boxes — and leave the control on a card.
-    for (let step = 0; step <= column.length; step += 1) {
+    // One iteration per card it may cross, plus the step that finds nothing left
+    // to cross. Each step clears the box it hit and cannot return to it, so the
+    // walk always terminates well inside this.
+    for (let crossed = 0; crossed <= INSERT_MAX_CARDS_CROSSED; crossed += 1) {
       const hit = column.find((b) => {
         const lo = (isLR ? b.y : b.x) - padCross;
         const size = (isLR ? b.height : b.width) + padCross * 2;
         return at >= lo && at <= lo + size;
       });
       if (!hit) return at - base;
+      if (crossed === INSERT_MAX_CARDS_CROSSED) return null;
       const lo = isLR ? hit.y : hit.x;
       const size = isLR ? hit.height : hit.width;
       at =
         sign > 0
           ? lo + size + padCross + INSERT_CLEARANCE
           : lo - padCross - INSERT_CLEARANCE;
-      if (Math.abs(at - base) > INSERT_MAX_NUDGE) return null;
     }
     return null;
   };

@@ -987,6 +987,25 @@ function EditableHarness() {
           onNodeClick={(nodeId) => note(`select ${nodeId}`)}
         />
       </GraphPanel>
+      {/* The same editor turned on its side. "TB" makes a node's 292-unit WIDTH
+          the axis a cluster has to clear, which costs three times what the same
+          card costs lying down — so this is where the collision nudge is
+          actually put to work. */}
+      <GraphPanel title="Graph — editable, top-to-bottom" height="h-[26rem]">
+        <WorkflowGraphLazy
+          yaml={GRAPH_BODY}
+          edges={EDITABLE_EDGES}
+          variant="full"
+          direction="TB"
+          defaultCompact={false}
+          className="h-full w-full"
+          problems={EDITABLE_PROBLEMS}
+          onEdgeConnect={(source, target) => note(`connect ${source} → ${target}`)}
+          onEdgeInsert={(source, target) => note(`insert between ${source} and ${target}`)}
+          onNodeInsert={(nodeId, side) => note(`add step ${side} ${nodeId}`)}
+          onNodeClick={(nodeId) => note(`select ${nodeId}`)}
+        />
+      </GraphPanel>
       <div
         data-testid="gesture-log"
         className="rounded-lg border border-border bg-card p-3 font-mono text-text-muted text-xs"

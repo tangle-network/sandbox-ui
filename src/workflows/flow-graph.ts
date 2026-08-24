@@ -290,11 +290,27 @@ export function indexProblems(
 ): ProblemIndex {
   const byNode = new Map<string, WfProblem[]>();
   const byEdge = new Map<string, WfProblem[]>();
+  const named = (value: unknown): value is string =>
+    typeof value === "string" && value !== "";
   for (const problem of problems ?? []) {
-    const [into, key] =
+    // Anything that does not name what it is anchored to is dropped rather than
+    // filed. Falling through to the edge branch would key a malformed entry
+    // under "undefined->undefined" and pile every other one on top of it — a row
+    // nothing ever looks up, carrying problems that then reach no reader at all.
+    // The rest of this module already survives a malformed entry; so does this.
+    const into =
       problem.anchor === "node"
-        ? ([byNode, problem.node] as const)
-        : ([byEdge, wfEdgeId(problem.from, problem.to)] as const);
+        ? named(problem.node)
+          ? byNode
+          : null
+        : problem.anchor === "edge" && named(problem.from) && named(problem.to)
+          ? byEdge
+          : null;
+    if (!into) continue;
+    const key =
+      problem.anchor === "node"
+        ? problem.node
+        : wfEdgeId(problem.from, problem.to);
     const at = into.get(key);
     if (at) at.push(problem);
     else into.set(key, [problem]);

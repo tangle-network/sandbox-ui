@@ -357,6 +357,22 @@ describe("authoring problems", () => {
     expect(byEdge.get("a0->a1")).toHaveLength(1);
   });
 
+  it("drops an entry that does not say what it is anchored to", () => {
+    // A malformed entry used to fall through to the edge branch and land under
+    // "undefined->undefined", where every other malformed one piled on top of
+    // it — a key nothing looks up, so those problems reached no reader at all.
+    const { byNode, byEdge } = indexProblems([
+      { severity: "error", message: "no anchor" } as never,
+      { anchor: "node", severity: "error", message: "no node" } as never,
+      { anchor: "node", node: "", severity: "error", message: "empty node" } as never,
+      { anchor: "edge", from: "a0", severity: "error", message: "no to" } as never,
+      nodeProblem("a0", "error", "a real one"),
+    ]);
+    expect([...byEdge.keys()]).toEqual([]);
+    expect([...byNode.keys()]).toEqual(["a0"]);
+    expect(byNode.get("a0")).toHaveLength(1);
+  });
+
   it("indexes an anchor the graph has no slot for rather than throwing", () => {
     // A draft is edited between the validation that produced a problem and the
     // graph drawn from it, so a stale anchor is normal traffic. It simply never

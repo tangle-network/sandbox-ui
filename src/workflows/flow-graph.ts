@@ -318,8 +318,16 @@ export interface NodeBox {
   height: number;
 }
 
-/** How far past a node's edge a control's centre must sit to clear the card. */
-const INSERT_CLEARANCE = 16;
+/** How far past a node's edge a control's own EDGE must sit to clear the card. */
+const INSERT_CLEARANCE = 8;
+/**
+ * Half the widest thing a cluster puts on the line, in flow units. The label
+ * layer lives inside the zoomed viewport, so a 20px control is 20 units at every
+ * zoom — but the point being tested is the cluster's CENTRE, and a centre just
+ * outside a card still leaves half the control inside it. Boxes are inflated by
+ * this before the test so the whole control clears, not just its midpoint.
+ */
+const CLUSTER_HALF_EXTENT = 12;
 /**
  * How far a control may be nudged before the nudge is abandoned. A control
  * dragged far from the edge it belongs to is worse than one overlapping a card,
@@ -349,11 +357,14 @@ export function clearOfNodeBoxes(
   const isLR = direction === "LR";
   const base = isLR ? point.y : point.x;
   const main = isLR ? point.x : point.y;
+  const pad = CLUSTER_HALF_EXTENT;
   // Only the boxes the point could ever be inside — those it already overlaps on
-  // the axis the flow advances along.
+  // the axis the flow advances along. Inflated, like the cross-axis test below,
+  // so a control whose centre sits beside a card but whose body laps over it is
+  // still treated as covered.
   const column = boxes.filter((b) => {
-    const lo = isLR ? b.x : b.y;
-    const size = isLR ? b.width : b.height;
+    const lo = (isLR ? b.x : b.y) - pad;
+    const size = (isLR ? b.width : b.height) + pad * 2;
     return main >= lo && main <= lo + size;
   });
   if (column.length === 0) return 0;
@@ -364,14 +375,17 @@ export function clearOfNodeBoxes(
     // against a pathological stack rather than the normal exit.
     for (let step = 0; step < 8; step += 1) {
       const hit = column.find((b) => {
-        const lo = isLR ? b.y : b.x;
-        const size = isLR ? b.height : b.width;
+        const lo = (isLR ? b.y : b.x) - pad;
+        const size = (isLR ? b.height : b.width) + pad * 2;
         return at >= lo && at <= lo + size;
       });
       if (!hit) return at - base;
       const lo = isLR ? hit.y : hit.x;
       const size = isLR ? hit.height : hit.width;
-      at = sign > 0 ? lo + size + INSERT_CLEARANCE : lo - INSERT_CLEARANCE;
+      at =
+        sign > 0
+          ? lo + size + pad + INSERT_CLEARANCE
+          : lo - pad - INSERT_CLEARANCE;
       if (Math.abs(at - base) > INSERT_MAX_NUDGE) return null;
     }
     return null;

@@ -441,6 +441,21 @@ describe("clearOfNodeBoxes", () => {
     expect(115 + offset).toBeLessThan(box.x);
   });
 
+  it("clears the control's whole footprint, not just its centre point", () => {
+    // A centre a few units outside the card is NOT clear: the control is a 20px
+    // square in flow units at every zoom, so half of it is still over the card.
+    const justOutside = upper.y - 4;
+    const offset = clearOfNodeBoxes({ x: 400, y: justOutside }, [upper], "LR");
+    expect(offset).not.toBe(0);
+    expect(justOutside + offset).toBeLessThan(upper.y - 12);
+  });
+
+  it("still leaves a control with real clearance alone", () => {
+    // Far enough out that the whole control is off the card — no nudge, or the
+    // control would drift away from its own edge for no reason.
+    expect(clearOfNodeBoxes({ x: 400, y: upper.y - 40 }, [upper], "LR")).toBe(0);
+  });
+
   it("gives up rather than dragging a control far from its own edge", () => {
     // A box taller than the nudge budget either way: moving the control clear
     // would put it somewhere that no longer reads as belonging to this edge, so

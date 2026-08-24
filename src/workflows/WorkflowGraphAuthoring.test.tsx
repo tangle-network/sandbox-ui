@@ -111,7 +111,7 @@ describe("a node carrying authoring problems", () => {
       expect(mark.dataset.severity).toBe("error");
       // The message on `title` is what makes the mark worth more than a tint:
       // the canvas answers "why" without a trip to the list below it.
-      expect(mark.title).toBe("url is required");
+      expect(mark.title).toBe("Error: url is required");
     }
   });
 
@@ -125,7 +125,43 @@ describe("a node carrying authoring problems", () => {
     const mark = screen.getByTestId("wf-node-problem");
     expect(mark.dataset.severity).toBe("error");
     expect(mark.textContent).toContain("2");
-    expect(mark.title).toBe("no timeout set\nurl is required");
+    expect(mark.title).toBe("Warning: no timeout set\nError: url is required");
+  });
+
+  it("says which of a mixed set is the error and which is the warning", () => {
+    // The mark carries ONE aggregate severity, as a colour and a glyph — neither
+    // of which a screen reader receives. Without the words, an anchor holding an
+    // error and a warning gives no way to tell which one blocks the compile.
+    renderNode({
+      problems: [
+        problem(actionNodeId(0), "warning", "no timeout set"),
+        problem(actionNodeId(0), "error", "url is required"),
+      ],
+    });
+    const text = screen.getByTestId("wf-node-problem").textContent ?? "";
+    expect(text).toContain("Warning: no timeout set");
+    expect(text).toContain("Error: url is required");
+  });
+
+  it("joins messages without doubling the punctuation they already carry", () => {
+    renderNode({
+      problems: [
+        problem(actionNodeId(0), "error", "url is required."),
+        problem(actionNodeId(0), "warning", "no timeout set"),
+      ],
+    });
+    const text = screen.getByTestId("wf-node-problem").textContent ?? "";
+    expect(text).toContain("Error: url is required. Warning:");
+    expect(text).not.toContain("..");
+  });
+
+  it("keeps a host's multi-line message on one line per problem", () => {
+    renderNode({
+      problems: [problem(actionNodeId(0), "error", "line one\nline two")],
+    });
+    expect(screen.getByTestId("wf-node-problem").title).toBe(
+      "Error: line one line two",
+    );
   });
 
   it("puts every message in the accessibility tree, not only a tooltip", () => {
@@ -150,7 +186,7 @@ describe("a node carrying authoring problems", () => {
       problems: [problem(actionNodeId(0), "error", "url is required")],
     });
     expect(screen.getByTestId("wf-node-problem").textContent).toBe(
-      "url is required",
+      "Error: url is required",
     );
   });
 
@@ -375,7 +411,7 @@ describe("an edge's authoring furniture", () => {
     const chip = screen.getByTestId("wf-edge-problem");
     expect(chip.dataset.severity).toBe("error");
     expect(chip.querySelector("[aria-hidden]")?.textContent).toBe("2 problems");
-    expect(chip.title).toBe("first\nsecond");
+    expect(chip.title).toBe("Warning: first\nError: second");
   });
 
   it("nudges the control off a card its midpoint lands on", () => {

@@ -229,11 +229,34 @@ export function problemBorder(severity: WfProblemSeverity): {
   };
 }
 
+/** How each severity is named where a colour cannot be seen. */
+const SEVERITY_WORD: Record<WfProblemSeverity, string> = {
+  error: "Error",
+  warning: "Warning",
+};
+
+/**
+ * One problem as a reader receives it: WHICH KIND it is, then what it says.
+ *
+ * The kind has to be in the words. A mark shows one aggregate severity — as a
+ * colour and a glyph, neither of which a screen reader receives — so an anchor
+ * carrying an error and a warning together would otherwise offer no way to tell
+ * which of the two is the one blocking the compile.
+ *
+ * The message is normalized to a single line with no trailing punctuation, so
+ * that joining several never doubles a separator ("end.. ") and a newline inside
+ * a host's message never breaks the one-per-line reading below.
+ */
+function problemSentence(problem: WfProblem): string {
+  const message = problem.message.replace(/\s+/g, " ").trim().replace(/[.;,]+$/, "");
+  return `${SEVERITY_WORD[problem.severity]}: ${message}`;
+}
+
 /** Every problem on one anchor, as the tooltip text a marker hangs on. One per
  *  line, so a step with three faults lists three rather than concatenating them
  *  into a sentence nobody can parse. */
 export function problemTitle(problems: readonly WfProblem[]): string {
-  return problems.map((problem) => problem.message).join("\n");
+  return problems.map(problemSentence).join("\n");
 }
 
 /**
@@ -248,8 +271,8 @@ export function ProblemMessages({ problems }: { problems: readonly WfProblem[] }
   return (
     <span className="sr-only">
       {problems.length === 1
-        ? problems[0].message
-        : `${problems.length} problems: ${problemTitle(problems).replace(/\n/g, ". ")}`}
+        ? problemSentence(problems[0])
+        : `${problems.length} problems. ${problems.map(problemSentence).join(". ")}`}
     </span>
   );
 }

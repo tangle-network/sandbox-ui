@@ -555,6 +555,37 @@ describe("an edge's authoring furniture", () => {
     expect(Number(shifted?.[1])).not.toBe(0);
   });
 
+  it("gives up its pointer events when it cannot be moved off a card", () => {
+    // Walled in on both sides, the cluster has nowhere to go. It stays visible
+    // and pressable through the raised layer, but it must stop being what the
+    // covered node's clicks land on — losing one edge's control costs less than
+    // losing a step.
+    // A dense fan-out: cards stacked contiguously either side of the edge's
+    // midpoint, so every way out crosses more of them than a cluster may.
+    const walls = Array.from({ length: 12 }, (_, i) => ({
+      id: `n${i}`,
+      position: { x: 0, y: -240 + i * 40 },
+      width: 100,
+      height: 40,
+    }));
+    const { container } = renderEdge({
+      data: {
+        kind: "spine",
+        insertable: true,
+        problems: [
+          { anchor: "edge", from: actionNodeId(0), to: actionNodeId(1), severity: "error", message: "bad" },
+        ],
+      },
+      onInsert: vi.fn(),
+      nodes: walls,
+    });
+    expect(container.querySelector<HTMLElement>(".nodrag.nopan")?.style.transform)
+      .toContain("translate(50px, 0px)");
+    for (const id of ["wf-edge-insert", "wf-edge-problem"]) {
+      expect(screen.getByTestId(id).className).not.toContain("pointer-events-auto");
+    }
+  });
+
   it("leaves a pointer-transparent cluster where it is", () => {
     // A guard chip is a readout that lets clicks through, so it costs nothing
     // over a card — and moving every annotation would scatter a dense graph.

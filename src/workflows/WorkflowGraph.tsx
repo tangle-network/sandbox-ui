@@ -59,6 +59,7 @@ import {
   type WfNodeState,
   type WfNodeStatus,
   type WfProblem,
+  worstSeverity,
 } from "./model";
 import {
   buildFlowGraph,
@@ -69,7 +70,6 @@ import {
   type NodeBox,
   WF_EDGE_TYPE,
   type WfFlowEdge,
-  worstSeverity,
 } from "./flow-graph";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 import { classifyOutput, NodeOutputBody } from "./node-output";
@@ -621,7 +621,6 @@ export function WorkflowNode({
           {problems && problemSeverity && (
             <ProblemMarker
               problems={problems}
-              severity={problemSeverity}
               className="-left-1.5 -top-1.5 absolute"
             />
           )}
@@ -735,7 +734,7 @@ export function WorkflowNode({
         )}
       </div>
       {problems && problemSeverity && (
-        <ProblemMarker problems={problems} severity={problemSeverity} />
+        <ProblemMarker problems={problems} />
       )}
       {runStatus ? (
         <StatusPill status={runStatus} />
@@ -1148,7 +1147,7 @@ export function WfEdgeRenderer({
   // node beneath it. A guard or cycle chip is pointer-transparent and reads
   // fine over a card, so a cluster carrying only those keeps its place rather
   // than scattering a dense graph's annotations off their own edges.
-  const clearance =
+  const cleared =
     offersInsert || problemSeverity
       ? clearOfNodeBoxes(
           { x: labelX, y: labelY },
@@ -1160,6 +1159,13 @@ export function WfEdgeRenderer({
           problemSeverity ? CLUSTER_HALF_SIZE.chip : CLUSTER_HALF_SIZE.control,
         )
       : 0;
+  const clearance = cleared ?? 0;
+  // Nowhere to move it to. It stays on the card, where the raised label layer
+  // still makes it visible and pressable — but it gives up its pointer events,
+  // because a control that has to sit on a node must not also be what that
+  // node's clicks land on. Losing one edge's tooltip or "+" costs less than
+  // losing a step.
+  const stealsPointer = cleared === null;
   // The clearance runs along the CROSS axis — the one the layers stack on.
   const isLR = direction === "LR";
   const clusterX = labelX + (isLR ? 0 : clearance);
@@ -1197,7 +1203,7 @@ export function WfEdgeRenderer({
               data-testid="wf-edge-problem"
               data-severity={problemSeverity}
               title={problemTitle(problems)}
-              className={`${EDGE_CHIP_CLASS} pointer-events-auto max-w-40 truncate`}
+              className={`${EDGE_CHIP_CLASS} max-w-40 truncate ${stealsPointer ? "" : "pointer-events-auto"}`}
               style={PROBLEM_SURFACE[problemSeverity]}
             >
               {/* The visible text is bounded by the corridor the chip sits in, so
@@ -1240,7 +1246,7 @@ export function WfEdgeRenderer({
               data-testid="wf-edge-insert"
               title="Insert a step here"
               aria-label="Insert a step here"
-              className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm backdrop-blur transition hover:border-primary hover:text-primary"
+              className={`flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm backdrop-blur transition hover:border-primary hover:text-primary ${stealsPointer ? "" : "pointer-events-auto"}`}
               // The label layer is a PORTAL, and a React synthetic event bubbles
               // through the component tree rather than the DOM one — so this
               // press reaches the edge wrapper that carries `onEdgeClick`, and

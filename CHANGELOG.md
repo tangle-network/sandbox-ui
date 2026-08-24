@@ -58,7 +58,10 @@
   is counted in CARDS rather than pixels — a 292-unit node costs over 160 to
   clear in "TB" against about 50 in "LR", so any fixed distance either fails to
   clear one standard card or means nothing. A guard or cycle chip lets clicks
-  through and stays where it is.
+  through and stays where it is. Where there is nowhere to move to — a dense
+  fan-out stacked either side of the edge — the cluster keeps its place and gives
+  up its pointer events instead, because furniture that has to sit on a card must
+  not also be what that card's clicks land on.
 - Every problem message reaches the accessibility tree, not only a `title`
   tooltip. A mark carrying more than one problem showed "N problems" as its whole
   accessible name, so a screen-reader user could hear that a step was broken and

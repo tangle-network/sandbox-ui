@@ -16,6 +16,7 @@ import {
   type WfProblem,
   type WfSide,
   wfEdgeId,
+  worstSeverity,
 } from "./model";
 
 /**
@@ -301,19 +302,6 @@ export function indexProblems(
   return { byNode, byEdge };
 }
 
-/** The loudest severity in a set — one error among warnings makes the whole
- *  anchor read as an error. Null for an empty set, so a caller can skip. */
-export function worstSeverity(
-  problems: readonly WfProblem[] | undefined,
-): WfProblem["severity"] | null {
-  if (!problems || problems.length === 0) return null;
-  // Read as "warning only if EVERY entry is one", so a severity this library has
-  // no word for ranks as an error rather than being quietly downgraded — the
-  // same way it is named. Understating something that might be blocking is the
-  // worse of the two ways to be wrong about a malformed entry.
-  return problems.every((p) => p.severity === "warning") ? "warning" : "error";
-}
-
 /** A laid-out node's box in flow coordinates. */
 export interface NodeBox {
   x: number;
@@ -341,10 +329,16 @@ const INSERT_CLEARANCE = 8;
  * clear the cards.
  */
 export const CLUSTER_HALF_SIZE = {
-  /** The insert control alone. */
+  /** The insert control alone: a 20-unit square. */
   control: { width: 10, height: 10 },
-  /** A problem chip, with or without the control stacked under it. */
-  chip: { width: 80, height: 19 },
+  /**
+   * A problem chip — and, since the two stack in one column, the chip WITH the
+   * control under it, which is the taller of the two and so the one the bound
+   * has to cover. Measured on the rendered page at 160 x 38.5 flow units (the
+   * chip's `max-w-40` cap, over chip + gap + control), and rounded outward: a
+   * bound that understates is a bound that lets the cluster lap over a card.
+   */
+  chip: { width: 80, height: 20 },
 } as const;
 
 /** Half a cluster's extent along each axis. */
@@ -381,14 +375,15 @@ const INSERT_MAX_CARDS_CROSSED = 2;
  *
  * Both directions are walked, so a stack of cards in the skipped layer is
  * escaped rather than jumped into; the smaller shift wins, and a point that
- * cannot be cleared inside {@link INSERT_MAX_NUDGE} keeps its place.
+ * cannot be cleared inside {@link INSERT_MAX_CARDS_CROSSED} keeps its place, and
+ * says so by answering null rather than an offset.
  */
 export function clearOfNodeBoxes(
   point: { x: number; y: number },
   boxes: readonly NodeBox[],
   direction: WfDirection,
   half: ClusterHalfSize,
-): number {
+): number | null {
   const isLR = direction === "LR";
   const base = isLR ? point.y : point.x;
   const main = isLR ? point.x : point.y;
@@ -432,7 +427,11 @@ export function clearOfNodeBoxes(
 
   const up = walk(-1);
   const down = walk(1);
-  if (up === null) return down ?? 0;
+  // Null, not zero. Zero means "already clear"; a caller has to be able to tell
+  // that from "still on a card, and I could not move it off" — because a cluster
+  // that stays on a card must at least stop taking that card's clicks.
+  if (up === null && down === null) return null;
+  if (up === null) return down;
   if (down === null) return up;
   return Math.abs(up) <= Math.abs(down) ? up : down;
 }

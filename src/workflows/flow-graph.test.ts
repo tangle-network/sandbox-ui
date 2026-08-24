@@ -8,7 +8,6 @@ import {
   mergeRunState,
   sameRunState,
   WF_EDGE_TYPE,
-  worstSeverity,
 } from "./flow-graph";
 import {
   actionNodeId,
@@ -16,6 +15,7 @@ import {
   type WfNodeState,
   type WfProblemSeverity,
   wfEdgeId,
+  worstSeverity,
 } from "./model";
 
 const YAML = `
@@ -414,18 +414,18 @@ describe("clearOfNodeBoxes", () => {
     // Nearer the box's top edge, so it leaves upwards.
     const up = clearOfNodeBoxes({ x: 400, y: 115 }, [upper], "LR", CONTROL);
     expect(up).toBeLessThan(0);
-    expect(115 + up).toBeLessThan(upper.y);
+    expect(115 + (up ?? 0)).toBeLessThan(upper.y);
     // Nearer the bottom edge, so it leaves downwards.
     const down = clearOfNodeBoxes({ x: 400, y: 170 }, [upper], "LR", CONTROL);
     expect(down).toBeGreaterThan(0);
-    expect(170 + down).toBeGreaterThan(upper.y + upper.height);
+    expect(170 + (down ?? 0)).toBeGreaterThan(upper.y + upper.height);
   });
 
   it("escapes a STACK rather than stepping into the next card", () => {
     // Deep inside the upper card, with the lower one just below: walking down
     // must clear both, not stop between them where the second box begins.
     const offset = clearOfNodeBoxes({ x: 400, y: 175 }, [upper, lower], "LR", CONTROL);
-    const landed = 175 + offset;
+    const landed = 175 + (offset ?? 0);
     for (const box of [upper, lower]) {
       const inside = landed >= box.y && landed <= box.y + box.height;
       expect(inside).toBe(false);
@@ -441,7 +441,7 @@ describe("clearOfNodeBoxes", () => {
     const box = { x: 100, y: 300, width: 80, height: 292 };
     const offset = clearOfNodeBoxes({ x: 115, y: 400 }, [box], "TB", CONTROL);
     expect(offset).toBeLessThan(0);
-    expect(115 + offset).toBeLessThan(box.x);
+    expect(115 + (offset ?? 0)).toBeLessThan(box.x);
   });
 
   it("clears the control's whole footprint, not just its centre point", () => {
@@ -450,13 +450,22 @@ describe("clearOfNodeBoxes", () => {
     const justOutside = upper.y - 4;
     const offset = clearOfNodeBoxes({ x: 400, y: justOutside }, [upper], "LR", CONTROL);
     expect(offset).not.toBe(0);
-    expect(justOutside + offset).toBeLessThan(upper.y - 12);
+    expect(justOutside + (offset ?? 0)).toBeLessThan(upper.y - 12);
   });
 
   it("still leaves a control with real clearance alone", () => {
     // Far enough out that the whole control is off the card — no nudge, or the
     // control would drift away from its own edge for no reason.
     expect(clearOfNodeBoxes({ x: 400, y: upper.y - 40 }, [upper], "LR", CONTROL)).toBe(0);
+  });
+
+  it("clears a CHIP by its own HEIGHT too, which the control's does not cover", () => {
+    // A chip and the control stack in one column, so the cluster is taller than
+    // either — 38.5 units measured on the page. This card sits in the band that
+    // the taller cluster laps into and the control alone does not.
+    const justAbove = { x: 0, y: 15, width: 100, height: 40 };
+    expect(clearOfNodeBoxes({ x: 50, y: 0 }, [justAbove], "LR", CONTROL)).toBe(0);
+    expect(clearOfNodeBoxes({ x: 50, y: 0 }, [justAbove], "LR", CHIP)).not.toBe(0);
   });
 
   it("clears a CHIP by its own width, which the control's size does not cover", () => {
@@ -492,8 +501,8 @@ describe("clearOfNodeBoxes", () => {
     const stack = deepStack(12, 24);
     const nearTheEdge = { x: 400, y: stack[1].y + 10 };
     const offset = clearOfNodeBoxes(nearTheEdge, stack, "LR", CONTROL);
-    expect(offset).not.toBe(0);
-    const landed = nearTheEdge.y + offset;
+    expect(offset).not.toBeNull();
+    const landed = nearTheEdge.y + (offset ?? 0);
     for (const box of stack) {
       expect(landed >= box.y && landed <= box.y + box.height).toBe(false);
     }
@@ -506,7 +515,9 @@ describe("clearOfNodeBoxes", () => {
     // overlapping one clickable.
     const stack = deepStack(40, 24);
     const buried = { x: 400, y: stack[20].y + 10 };
-    expect(clearOfNodeBoxes(buried, stack, "LR", CONTROL)).toBe(0);
+    // Null, not zero — the caller has to be able to tell "already clear" from
+    // "still on a card", because only the second has to give up its pointer.
+    expect(clearOfNodeBoxes(buried, stack, "LR", CONTROL)).toBeNull();
   });
 
   it("clears a REAL node in either orientation, whatever that costs", () => {
@@ -519,13 +530,13 @@ describe("clearOfNodeBoxes", () => {
     const centre = { x: node.x + node.width / 2, y: node.y + node.height / 2 };
     for (const half of [CONTROL, CHIP]) {
       const tb = clearOfNodeBoxes(centre, [node], "TB", half);
-      expect(tb).not.toBe(0);
-      const landedX = centre.x + tb;
+      expect(tb).not.toBeNull();
+      const landedX = centre.x + (tb ?? 0);
       expect(landedX >= node.x && landedX <= node.x + node.width).toBe(false);
 
       const lr = clearOfNodeBoxes(centre, [node], "LR", half);
-      expect(lr).not.toBe(0);
-      const landedY = centre.y + lr;
+      expect(lr).not.toBeNull();
+      const landedY = centre.y + (lr ?? 0);
       expect(landedY >= node.y && landedY <= node.y + node.height).toBe(false);
     }
   });

@@ -35,11 +35,12 @@ import {
 } from "lucide-react";
 import { ProviderIcon } from "../integrations/provider-logo";
 import { ModelBrandStack, modelBrandFor } from "../lib/model-brand";
-import type {
-  WfNodeStatus,
-  WfNodeTone,
-  WfProblem,
-  WfProblemSeverity,
+import {
+  type WfNodeStatus,
+  type WfNodeTone,
+  type WfProblem,
+  type WfProblemSeverity,
+  worstSeverity,
 } from "./model";
 import { providerLabel } from "./provider-label";
 
@@ -327,13 +328,15 @@ export function ProblemMessages({ problems }: { problems: readonly WfProblem[] }
  */
 export function ProblemMarker({
   problems,
-  severity,
   className = "",
 }: {
   problems: readonly WfProblem[];
-  severity: WfProblemSeverity;
   className?: string;
 }) {
+  // Derived here rather than taken as a prop: the two are one fact, and a caller
+  // free to pass a warning alongside an error-carrying list is a caller free to
+  // paint a blocking problem in the colour of a harmless one.
+  const severity = worstSeverity(problems) ?? "error";
   return (
     <span
       data-testid="wf-node-problem"

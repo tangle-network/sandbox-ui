@@ -13,6 +13,7 @@ import {
   EdgeLabelRenderer,
   type EdgeProps,
   type FinalConnectionState,
+  type InternalNode,
   getSmoothStepPath,
   getViewportForBounds,
   Handle,
@@ -26,6 +27,7 @@ import {
   type Rect,
   useEdgesState,
   useNodesState,
+  useStore,
   type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -62,8 +64,10 @@ import {
 } from "./model";
 import {
   buildFlowGraph,
+  clearOfNodeBoxes,
   indexProblems,
   mergeRunState,
+  type NodeBox,
   WF_EDGE_TYPE,
   type WfFlowEdge,
   worstSeverity,
@@ -77,6 +81,7 @@ import {
   NodeMark,
   problemBorder,
   ProblemMarker,
+  ProblemMessages,
   PROBLEM_SURFACE,
   problemTitle,
   STATUS_COLOR,
@@ -1016,6 +1021,57 @@ export function WorkflowNode({
   );
 }
 
+/** Where a connection drag was let go, in viewport coordinates. A touch reports
+ *  its position on `changedTouches` — `touches` is empty by the time the last
+ *  finger lifts. Null when the event carries no position at all. */
+function releasePoint(
+  event: MouseEvent | TouchEvent | null | undefined,
+): { x: number; y: number } | null {
+  if (!event) return null;
+  const touch = "changedTouches" in event ? event.changedTouches[0] : null;
+  const source = touch ?? ("clientX" in event ? event : null);
+  return source ? { x: source.clientX, y: source.clientY } : null;
+}
+
+/** Canvas furniture that sits OVER the canvas without being part of it — the
+ *  zoom controls, the density/trigger panel, a minimap. Letting go on one of
+ *  these is a pointer landing on a control, never a request for a step. */
+const CANVAS_CHROME_SELECTOR =
+  ".react-flow__panel, .react-flow__controls, .react-flow__minimap";
+
+/** Whether a release at this point counts as "on the empty canvas": inside the
+ *  graph's own frame, and not on the chrome drawn over it. */
+function releasedOnCanvas(
+  at: { x: number; y: number },
+  frame: HTMLElement | null,
+): boolean {
+  if (!frame) return false;
+  const box = frame.getBoundingClientRect();
+  const inside =
+    at.x >= box.left && at.x <= box.right && at.y >= box.top && at.y <= box.bottom;
+  if (!inside) return false;
+  const under =
+    typeof document === "undefined" ? null : document.elementFromPoint(at.x, at.y);
+  return !under?.closest(CANVAS_CHROME_SELECTOR);
+}
+
+/** The laid-out node boxes, in the flow coordinates an edge's own label point is
+ *  expressed in. A node React Flow has not MEASURED yet is skipped — `measured`
+ *  is filled from the real DOM, so before the first measurement pass there is no
+ *  box to avoid and the control simply keeps its place. */
+function nodeBoxesFrom(
+  nodeLookup: ReadonlyMap<string, InternalNode>,
+): NodeBox[] {
+  const boxes: NodeBox[] = [];
+  for (const node of nodeLookup.values()) {
+    const { width, height } = node.measured;
+    if (!width || !height) continue;
+    const { x, y } = node.internals.positionAbsolute;
+    boxes.push({ x, y, width, height });
+  }
+  return boxes;
+}
+
 /** Chip styling shared by the guard summary and the cycle badge, so an edge's
  *  two possible annotations read as one pair rather than two designs. */
 const EDGE_CHIP_CLASS =
@@ -1065,6 +1121,26 @@ export function WfEdgeRenderer({
   // the two are set together, and requiring both keeps a stale decoration from
   // drawing a button that does nothing.
   const offersInsert = data?.insertable === true && insertStep !== null;
+  // The laid-out boxes, read straight from React Flow's own lookup so the
+  // clearance below is measured against what is actually on screen. The map is
+  // mutated in place, so this subscription costs no extra renders — the nudge
+  // recomputes on the renders the endpoints moving already cause.
+  const nodeLookup = useStore((store) => store.nodeLookup);
+  const direction = useContext(DirectionContext);
+  // Only a cluster carrying the CONTROL moves. A chip is a readout — it reads
+  // fine over a card — so a chip-only cluster keeps its place rather than
+  // scattering a dense graph's annotations off their own edges.
+  const clearance = offersInsert
+    ? clearOfNodeBoxes(
+        { x: labelX, y: labelY },
+        nodeBoxesFrom(nodeLookup),
+        direction,
+      )
+    : 0;
+  // The clearance runs along the CROSS axis — the one the layers stack on.
+  const isLR = direction === "LR";
+  const clusterX = labelX + (isLR ? 0 : clearance);
+  const clusterY = labelY + (isLR ? clearance : 0);
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
@@ -1090,7 +1166,7 @@ export function WfEdgeRenderer({
           className="nodrag nopan absolute flex flex-col items-center gap-0.5"
           style={{
             zIndex: 1,
-            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            transform: `translate(-50%, -50%) translate(${clusterX}px, ${clusterY}px)`,
           }}
         >
           {problems && problemSeverity && (
@@ -1101,7 +1177,15 @@ export function WfEdgeRenderer({
               className={`${EDGE_CHIP_CLASS} pointer-events-auto max-w-40 truncate`}
               style={PROBLEM_SURFACE[problemSeverity]}
             >
-              {problems.length === 1 ? problems[0].message : `${problems.length} problems`}
+              {/* The visible text is bounded by the corridor the chip sits in, so
+                  a second problem collapses to a count. Every message still
+                  reaches a reader who cannot hover, through the hidden text. */}
+              <span aria-hidden>
+                {problems.length === 1
+                  ? problems[0].message
+                  : `${problems.length} problems`}
+              </span>
+              <ProblemMessages problems={problems} />
             </span>
           )}
           {whenLabel && (
@@ -1358,6 +1442,13 @@ export interface WorkflowGraphProps {
    * The `on:` list gains an entry. Drawn as a canvas control rather than a
    * per-node one, because the workflow that most needs it is the one with NO
    * trigger — which has no trigger node to hang a "+" on.
+   *
+   * Offered whenever it is supplied, including on a definition that ALREADY has
+   * a trigger: `on:` is a list with OR semantics, and a second subscription is a
+   * normal thing to want. Whether THIS workflow may take another one is a
+   * question about the definition's schema and the provider behind it, which
+   * this library does not model — a host that must cap the list withholds the
+   * callback.
    */
   onTriggerAdd?: () => void;
   /** Remove the `on:` entry a trigger node stands for — the one node deletion
@@ -1734,26 +1825,37 @@ export function WorkflowGraph({
   );
 
   /**
-   * A connection dragged from a handle and released over EMPTY canvas: the
+   * A connection dragged from a handle and released over EMPTY CANVAS: the
    * "and then what?" gesture, reported as the node it left and which end of it.
    *
-   * React Flow fires this at the end of EVERY connection drag, including one
-   * that landed on a handle (which has already been reported through
-   * `onConnect`) — so a drop is only an add when nothing was under the pointer.
-   * `toNode` is set whenever the release was over a node at all, not merely over
-   * one of its handles, which is what keeps a near-miss from silently becoming
-   * an add somewhere else on the canvas.
+   * Three things have to be true, and each rules out a different non-gesture:
+   *
+   *  - Nothing was under the pointer (`toNode`/`toHandle`). React Flow ends
+   *    EVERY connection drag through this callback, including one that landed on
+   *    a handle and already went out through `onConnect`. `toNode` is set for a
+   *    release anywhere over a node, not merely over its handles, so a near-miss
+   *    aimed at a card never becomes an add somewhere else.
+   *  - The release was inside the CANVAS. React Flow listens for the pointer-up
+   *    on the document, so letting go anywhere on the page ends the drag — and
+   *    pulling away from the graph is exactly how someone abandons one. Without
+   *    this, dropping outside the canvas silently added a step.
+   *  - The release was not on the canvas's own chrome. The zoom controls and the
+   *    panel sit over the canvas but are not part of it, and letting go on a
+   *    button is not a request for a step.
+   *
+   * The gesture also needs both of its own ends: a drag that reports no node or
+   * no handle it started from names nothing to insert beside.
    */
   const handleConnectEnd = useCallback(
-    (_event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+    (event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
       if (!insertAtNode) return;
       if (state.toNode || state.toHandle) return;
       const from = state.fromNode;
-      if (!from) return;
-      insertAtNode(
-        from.id,
-        state.fromHandle?.type === "target" ? "before" : "after",
-      );
+      const fromHandle = state.fromHandle;
+      if (!from || !fromHandle) return;
+      const at = releasePoint(event);
+      if (!at || !releasedOnCanvas(at, wrapperRef.current)) return;
+      insertAtNode(from.id, fromHandle.type === "target" ? "before" : "after");
     },
     [insertAtNode],
   );

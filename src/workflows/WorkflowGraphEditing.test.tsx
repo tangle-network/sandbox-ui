@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * The EDITING wiring: which React Flow gestures the graph arms, and which edges
@@ -38,6 +38,39 @@ type FlowProps = {
 
 let flowProps: FlowProps = {};
 
+/** The graph's frame, as the browser would report it. jsdom measures nothing, so
+ *  a release-position gate has no box to test against until one is supplied. */
+const FRAME = { left: 100, top: 100, right: 900, bottom: 500 };
+/** What sits under the pointer at release. `null` is empty canvas. */
+let elementAtPoint: Element | null = null;
+
+function stubCanvasGeometry() {
+  Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
+    configurable: true,
+    value(this: HTMLElement) {
+      return this.classList.contains("wf-graph")
+        ? {
+            ...FRAME,
+            width: FRAME.right - FRAME.left,
+            height: FRAME.bottom - FRAME.top,
+            x: FRAME.left,
+            y: FRAME.top,
+            toJSON: () => ({}),
+          }
+        : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) };
+    },
+  });
+  document.elementFromPoint = () => elementAtPoint;
+}
+
+/** A pointer release at a viewport position, shaped as React Flow delivers it. */
+function releaseAt(x: number, y: number): MouseEvent {
+  return new MouseEvent("mouseup", { clientX: x, clientY: y });
+}
+
+/** Somewhere inside the frame with nothing under it. */
+const ON_CANVAS = releaseAt(400, 300);
+
 vi.mock("@xyflow/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@xyflow/react")>();
   return {
@@ -51,6 +84,11 @@ vi.mock("@xyflow/react", async (importOriginal) => {
 
 const { WorkflowGraph } = await import("./WorkflowGraph");
 const { actionNodeId, TRIGGER_NODE_ID } = await import("./model");
+
+beforeEach(() => {
+  stubCanvasGeometry();
+  elementAtPoint = null;
+});
 
 afterEach(() => {
   cleanup();
@@ -277,7 +315,7 @@ describe("WorkflowGraph add-step gestures", () => {
       />,
     );
     // Released over nothing, from the outbound handle: the new step FOLLOWS.
-    flowProps.onConnectEnd?.(null, {
+    flowProps.onConnectEnd?.(ON_CANVAS, {
       fromNode: { id: actionNodeId(1) },
       fromHandle: { type: "source" },
       toNode: null,
@@ -286,13 +324,86 @@ describe("WorkflowGraph add-step gestures", () => {
     expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
     // From the inbound handle it PRECEDES — which is the only way to add a step
     // at the very start, since the trigger edge offers no insert.
-    flowProps.onConnectEnd?.(null, {
+    flowProps.onConnectEnd?.(ON_CANVAS, {
       fromNode: { id: actionNodeId(0) },
       fromHandle: { type: "target" },
       toNode: null,
       toHandle: null,
     });
     expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(0), "before");
+  });
+
+  it("never reads an ABANDONED drag as an add", () => {
+    // React Flow ends the drag on a document-level pointer-up, so letting go
+    // anywhere on the page reaches this callback — and pulling away from the
+    // graph is exactly how someone abandons a gesture they thought better of.
+    // Reproduced in a browser before the gate existed: releasing outside the
+    // graph, on the zoom controls and on the panel each added a step.
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    const drag = { fromNode: { id: actionNodeId(1) }, fromHandle: { type: "source" }, toNode: null, toHandle: null };
+
+    // Let go past every side of the frame.
+    for (const [x, y] of [[400, 40], [400, 560], [40, 300], [960, 300]]) {
+      flowProps.onConnectEnd?.(releaseAt(x, y), drag);
+    }
+    expect(onNodeInsert).not.toHaveBeenCalled();
+
+    // Let go on the canvas's own furniture — inside the frame, but on a control.
+    const panel = document.createElement("div");
+    panel.className = "react-flow__panel";
+    const button = document.createElement("button");
+    panel.appendChild(button);
+    elementAtPoint = button;
+    flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    expect(onNodeInsert).not.toHaveBeenCalled();
+
+    const controls = document.createElement("div");
+    controls.className = "react-flow__controls";
+    elementAtPoint = controls;
+    flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    expect(onNodeInsert).not.toHaveBeenCalled();
+
+    // The same drag, let go on the canvas itself, still adds — so the gate is
+    // rejecting the release POSITION and not the gesture.
+    elementAtPoint = null;
+    flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
+  });
+
+  it("needs both ends of the drag before it names an add", () => {
+    // A release that reports no node, or no handle it left from, names nothing
+    // to insert beside — and defaulting a missing handle to "after" would put a
+    // step on the wrong side of the one node it did name.
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    flowProps.onConnectEnd?.(ON_CANVAS, {
+      fromNode: null,
+      fromHandle: null,
+      toNode: null,
+      toHandle: null,
+    });
+    flowProps.onConnectEnd?.(ON_CANVAS, {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: null,
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).not.toHaveBeenCalled();
   });
 
   it("never reads a completed connection as an add", () => {
@@ -308,7 +419,7 @@ describe("WorkflowGraph add-step gestures", () => {
         onNodeInsert={onNodeInsert}
       />,
     );
-    flowProps.onConnectEnd?.(null, {
+    flowProps.onConnectEnd?.(ON_CANVAS, {
       fromNode: { id: actionNodeId(0) },
       fromHandle: { type: "source" },
       toNode: { id: actionNodeId(1) },
@@ -316,17 +427,10 @@ describe("WorkflowGraph add-step gestures", () => {
     });
     // Released over a node's BODY, short of its handle: still not an add — the
     // user was aiming at that node, not at the canvas behind it.
-    flowProps.onConnectEnd?.(null, {
+    flowProps.onConnectEnd?.(ON_CANVAS, {
       fromNode: { id: actionNodeId(0) },
       fromHandle: { type: "source" },
       toNode: { id: actionNodeId(1) },
-      toHandle: null,
-    });
-    // A drag that began nowhere resolvable is not an add either.
-    flowProps.onConnectEnd?.(null, {
-      fromNode: null,
-      fromHandle: null,
-      toNode: null,
       toHandle: null,
     });
     expect(onNodeInsert).not.toHaveBeenCalled();

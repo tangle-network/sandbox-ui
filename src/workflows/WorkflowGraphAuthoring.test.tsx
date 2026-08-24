@@ -127,6 +127,32 @@ describe("a node carrying authoring problems", () => {
     expect(mark.title).toBe("no timeout set\nurl is required");
   });
 
+  it("puts every message in the accessibility tree, not only a tooltip", () => {
+    // `title` opens for a pointer and for nobody else. A mark whose accessible
+    // name is "2 problems" tells a keyboard, screen-reader or touch user that a
+    // step is broken and never why — so the messages are rendered, hidden.
+    renderNode({
+      problems: [
+        problem(actionNodeId(0), "warning", "no timeout set"),
+        problem(actionNodeId(0), "error", "url is required"),
+      ],
+    });
+    const name = screen.getByTestId("wf-node-problem").textContent ?? "";
+    expect(name).toContain("no timeout set");
+    expect(name).toContain("url is required");
+    // The count is decoration beside the words, so it must not be read out too.
+    expect(screen.getByText("2").getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("reads a single problem as its own message", () => {
+    renderNode({
+      problems: [problem(actionNodeId(0), "error", "url is required")],
+    });
+    expect(screen.getByTestId("wf-node-problem").textContent).toBe(
+      "url is required",
+    );
+  });
+
   it("shows nothing on a node with no problem of its own", () => {
     renderNode({ problems: [problem(actionNodeId(1), "error", "elsewhere")] });
     expect(screen.queryByTestId("wf-node-problem")).toBeNull();
@@ -207,13 +233,25 @@ function renderEdge({
   data,
   onInsert = null,
   onEdgeClick,
+  nodes = [],
 }: {
   data: Record<string, unknown>;
   onInsert?: ((source: string, target: string) => void) | null;
   onEdgeClick?: () => void;
+  /** Laid-out cards the edge has to route around. The renderer reads them from
+   *  React Flow's own store, so they are seeded through the provider. */
+  nodes?: { id: string; position: { x: number; y: number }; width: number; height: number }[];
 }) {
   return render(
-    <ReactFlowProvider>
+    <ReactFlowProvider
+      initialNodes={nodes.map((n) => ({
+        ...n,
+        data: {},
+        // React Flow fills `measured` from the real DOM; the renderer reads it
+        // rather than the declared width/height, so the fixture states it.
+        measured: { width: n.width, height: n.height },
+      }))}
+    >
       <EdgeInsertContext.Provider value={onInsert}>
         <div onClick={onEdgeClick}>
           <WfEdgeRenderer
@@ -292,7 +330,22 @@ describe("an edge's authoring furniture", () => {
     });
     const chip = screen.getByTestId("wf-edge-problem");
     expect(chip.dataset.severity).toBe("error");
-    expect(chip.textContent).toBe("a1 cannot depend on a0");
+    expect(chip.textContent).toContain("a1 cannot depend on a0");
+  });
+
+  it("puts an edge's every message in the accessibility tree too", () => {
+    renderEdge({
+      data: {
+        kind: "spine",
+        problems: [
+          { anchor: "edge", from: actionNodeId(0), to: actionNodeId(1), severity: "warning", message: "first" },
+          { anchor: "edge", from: actionNodeId(0), to: actionNodeId(1), severity: "error", message: "second" },
+        ],
+      },
+    });
+    const chip = screen.getByTestId("wf-edge-problem");
+    expect(chip.textContent).toContain("first");
+    expect(chip.textContent).toContain("second");
   });
 
   it("summarizes several, keeping each message readable on hover", () => {
@@ -319,8 +372,45 @@ describe("an edge's authoring furniture", () => {
     });
     const chip = screen.getByTestId("wf-edge-problem");
     expect(chip.dataset.severity).toBe("error");
-    expect(chip.textContent).toBe("2 problems");
+    expect(chip.querySelector("[aria-hidden]")?.textContent).toBe("2 problems");
     expect(chip.title).toBe("first\nsecond");
+  });
+
+  it("nudges the control off a card its midpoint lands on", () => {
+    // This edge's midpoint is (50, 0) — inside the card below, which is what an
+    // edge SPANNING a layer does: it runs through the layer it skips, so the
+    // reserved corridor (which only widens the gap between adjacent layers)
+    // cannot clear it. Without the nudge the control sits on an unrelated node.
+    const covering = {
+      id: "a1",
+      position: { x: 0, y: -40 },
+      width: 100,
+      height: 80,
+    };
+    const { container } = renderEdge({
+      data: { kind: "spine", insertable: true },
+      onInsert: vi.fn(),
+      nodes: [covering],
+    });
+    const cluster = container.querySelector<HTMLElement>(".nodrag.nopan");
+    // Shifted off the card along the CROSS axis, so it stays beside its own edge.
+    const shifted = /translate\(50px, (-?\d+(?:\.\d+)?)px\)/.exec(
+      cluster?.style.transform ?? "",
+    );
+    expect(shifted).not.toBeNull();
+    const y = Number(shifted?.[1]);
+    const inside = y >= covering.position.y && y <= covering.position.y + covering.height;
+    expect(inside).toBe(false);
+  });
+
+  it("leaves the control on the line when nothing is in the way", () => {
+    const { container } = renderEdge({
+      data: { kind: "spine", insertable: true },
+      onInsert: vi.fn(),
+    });
+    expect(
+      container.querySelector<HTMLElement>(".nodrag.nopan")?.style.transform,
+    ).toContain("translate(50px, 0px)");
   });
 
   it("lifts its cluster past the nodes, so a long edge's control is pressable", () => {

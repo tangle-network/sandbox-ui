@@ -528,13 +528,20 @@ export function WorkflowNode({
         data-testid="wf-trigger-delete"
         title="Remove this trigger"
         aria-label="Remove this trigger"
-        className="nodrag nopan flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition hover:border-[var(--surface-danger-border)] hover:text-[var(--surface-danger-text)]"
+        // 24x24 is the smallest target the accessibility guidance accepts, and
+        // this one REMOVES a trigger — the costliest thing on the card to hit by
+        // accident and the worst to miss. The visible ring stays 16px: the extra
+        // 4px on each side is transparent padding, so the corner mark is no
+        // bigger while the thing a finger has to land on is.
+        className="nodrag nopan -m-1 flex h-6 w-6 shrink-0 items-center justify-center p-1 text-muted-foreground transition hover:text-[var(--surface-danger-text)]"
         onClick={(event) => {
           event.stopPropagation();
           removeTrigger(id);
         }}
       >
-        <X size={10} aria-hidden />
+        <span className="flex h-4 w-4 items-center justify-center rounded-full border border-border bg-card shadow-sm">
+          <X size={10} aria-hidden />
+        </span>
       </button>
     ) : null;
 
@@ -576,6 +583,7 @@ export function WorkflowNode({
       >
         {handles}
         <span
+          data-testid="wf-node-card"
           className="relative flex items-center justify-center rounded-xl border bg-card shadow-sm transition-colors"
           style={{
             width: COMPACT_TILE,
@@ -681,6 +689,7 @@ export function WorkflowNode({
   // arithmetic so the build fails when they drift.
   const cardShell = (children: ReactNode) => (
     <div
+      data-testid="wf-node-card"
       className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-colors"
       style={{
         ...(runStatus

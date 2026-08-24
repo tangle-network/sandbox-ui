@@ -144,15 +144,36 @@ describe("a node carrying authoring problems", () => {
   });
 
   it("joins messages without doubling the punctuation they already carry", () => {
+    // Every terminator a host might end on, run together for a listener.
+    for (const [ending, first] of [
+      [".", "url is required."],
+      ["?", "did you mean `url`?"],
+      ["!", "this cannot run!"],
+    ] as const) {
+      cleanup();
+      renderNode({
+        problems: [
+          problem(actionNodeId(0), "error", first),
+          problem(actionNodeId(0), "warning", "no timeout set"),
+        ],
+      });
+      const text = screen.getByTestId("wf-node-problem").textContent ?? "";
+      expect(text).toContain(`${ending} Warning: no timeout set`);
+      expect(text).not.toContain("..");
+      expect(text).not.toContain("?.");
+      expect(text).not.toContain("!.");
+    }
+  });
+
+  it("passes a host's message through verbatim, punctuation and all", () => {
+    // A diagnostic can be ABOUT the character that trimming would remove, and
+    // the canvas has to say what the host's own problem list says.
     renderNode({
-      problems: [
-        problem(actionNodeId(0), "error", "url is required."),
-        problem(actionNodeId(0), "warning", "no timeout set"),
-      ],
+      problems: [problem(actionNodeId(0), "error", "unexpected ;")],
     });
-    const text = screen.getByTestId("wf-node-problem").textContent ?? "";
-    expect(text).toContain("Error: url is required. Warning:");
-    expect(text).not.toContain("..");
+    expect(screen.getByTestId("wf-node-problem").title).toBe(
+      "Error: unexpected ;",
+    );
   });
 
   it("keeps a host's multi-line message on one line per problem", () => {
@@ -199,7 +220,7 @@ describe("a node carrying authoring problems", () => {
     const { container } = renderNode({
       problems: [problem(actionNodeId(0), "error", "url is required")],
     });
-    const card = container.querySelector<HTMLElement>(".rounded-xl");
+    const card = container.querySelector<HTMLElement>('[data-testid="wf-node-card"]');
     expect(card?.style.borderColor).toBe("var(--surface-danger-text)");
   });
 
@@ -212,7 +233,7 @@ describe("a node carrying authoring problems", () => {
       runMode: true,
       problems: [problem(actionNodeId(0), "warning", "no timeout set")],
     });
-    const card = container.querySelector<HTMLElement>(".rounded-xl");
+    const card = container.querySelector<HTMLElement>('[data-testid="wf-node-card"]');
     expect(card?.style.borderColor).toBe("var(--surface-danger-text)");
     expect(card?.style.boxShadow).toContain("35%");
   });
@@ -234,6 +255,20 @@ describe("the trigger's remove control", () => {
   it("is never drawn on a step, which is a list edit rather than a gesture", () => {
     renderNode({ onTriggerDelete: vi.fn() });
     expect(screen.queryByTestId("wf-trigger-delete")).toBeNull();
+  });
+
+  it("gives the remove control a target big enough to hit on purpose", () => {
+    // It removes a trigger, so it is the costliest control on the card to hit by
+    // accident and the worst to miss. 24x24 is the accessibility floor; the
+    // visible ring stays small, and the difference is transparent padding.
+    renderNode({
+      id: TRIGGER_NODE_ID,
+      data: TRIGGER,
+      onTriggerDelete: vi.fn(),
+    });
+    const button = screen.getByTestId("wf-trigger-delete");
+    expect(button.className).toContain("h-6");
+    expect(button.className).toContain("w-6");
   });
 
   it("reports the trigger node it stands for without also opening it", () => {

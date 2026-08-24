@@ -33,7 +33,8 @@ type FlowProps = {
     id: string;
     type?: string;
     deletable?: boolean;
-    data?: { kind?: string; insertable?: boolean };
+    style?: { stroke?: string };
+    data?: { kind?: string; insertable?: boolean; problems?: unknown[] };
   }[];
 };
 
@@ -59,6 +60,10 @@ function surface(className: string): Element {
 
 /** The empty canvas: React Flow's own pane. */
 const PANE = surface("react-flow__pane draggable");
+
+/** jsdom's own `elementFromPoint`, put back after each test so a later one that
+ *  wants real hit-testing is not silently answered by this stub. */
+const realElementFromPoint = document.elementFromPoint;
 
 function stubHitTesting() {
   document.elementFromPoint = () => elementAtPoint;
@@ -102,6 +107,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  document.elementFromPoint = realElementFromPoint;
+  elementAtPoint = null;
   flowProps = {};
   observedBoxes = [];
 });
@@ -308,6 +315,35 @@ describe("WorkflowGraph add-step gestures", () => {
     expect(observedBoxes.length).toBe(flowProps.nodes?.length);
     expect(observedBoxes.length).toBeGreaterThan(0);
     expect(observedBoxes.every((b) => b.width > 0 && b.height > 0)).toBe(true);
+  });
+
+  it("lets a run keep its edge colour when the host also supplies problems", () => {
+    // The graph decides this, not the styling pass on its own: a canvas showing
+    // a run must not have its live colouring overwritten by an authoring
+    // problem, which is the same precedence the node card applies.
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        nodeState={{ [actionNodeId(1)]: { status: "running" } }}
+        problems={[
+          {
+            anchor: "edge",
+            from: actionNodeId(0),
+            to: actionNodeId(1),
+            severity: "error",
+            message: "bad",
+          },
+        ]}
+        onEdgeConnect={vi.fn()}
+      />,
+    );
+    const edge = flowProps.edges?.find(
+      (x) => x.id === `${actionNodeId(0)}->${actionNodeId(1)}`,
+    );
+    expect(edge?.style?.stroke).toBe("hsl(var(--primary))");
+    // The problem is still stated, just not by recolouring the line.
+    expect(edge?.data?.problems).toHaveLength(1);
   });
 
   it("offers the insert control on exactly the edges the host may change", () => {

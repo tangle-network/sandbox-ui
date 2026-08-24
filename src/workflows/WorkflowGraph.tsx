@@ -63,6 +63,7 @@ import {
 import {
   buildFlowGraph,
   clearOfNodeBoxes,
+  CLUSTER_HALF_SIZE,
   indexProblems,
   mergeRunState,
   type NodeBox,
@@ -1130,7 +1131,15 @@ export function WfEdgeRenderer({
   // than scattering a dense graph's annotations off their own edges.
   const clearance =
     offersInsert || problemSeverity
-      ? clearOfNodeBoxes({ x: labelX, y: labelY }, nodeBoxes, direction)
+      ? clearOfNodeBoxes(
+          { x: labelX, y: labelY },
+          nodeBoxes,
+          direction,
+          // A chip is far wider than the control, and in "TB" that width is what
+          // has to clear the cards — so the cluster is measured by what it
+          // actually carries rather than by its tallest member.
+          problemSeverity ? CLUSTER_HALF_SIZE.chip : CLUSTER_HALF_SIZE.control,
+        )
       : 0;
   // The clearance runs along the CROSS axis — the one the layers stack on.
   const isLR = direction === "LR";
@@ -1282,9 +1291,10 @@ export function buildStyledEdges(
  *
  * A problem also RECOLOURS the edge, from the same table the node it points at
  * is tinted from, because a chip alone is unreadable at the zoom a whole
- * pipeline is viewed at. It overrides the run colour by design: a graph is
- * either being authored or being watched, and the one edge where both could
- * meet should say the definition is broken.
+ * pipeline is viewed at — but only while the graph is NOT showing a run.
+ * A run's colour is the more urgent reading of the same line and wins, exactly
+ * as a node's run border wins over its problem border; the chip still renders,
+ * so nothing is lost on the one edge that could carry both.
  *
  * `insertable` is a predicate rather than a flag so this pass never has to
  * re-derive which edges are the host's to change — {@link isEditableEdge}
@@ -1294,6 +1304,7 @@ export function decorateAuthoringEdges(
   edges: WfFlowEdge[],
   byEdge: ReadonlyMap<string, readonly WfProblem[]>,
   insertable: (edge: WfFlowEdge) => boolean,
+  hasRunOverlay: boolean,
 ): WfFlowEdge[] {
   if (byEdge.size === 0 && !edges.some(insertable)) return edges;
   return edges.map((e) => {
@@ -1301,7 +1312,8 @@ export function decorateAuthoringEdges(
     const severity = worstSeverity(problems);
     const offersInsert = insertable(e);
     if (!severity && !offersInsert) return e;
-    const stroke = severity ? PROBLEM_SURFACE[severity].color : undefined;
+    const stroke =
+      severity && !hasRunOverlay ? PROBLEM_SURFACE[severity].color : undefined;
     return {
       ...e,
       type: WF_EDGE_TYPE,
@@ -1459,8 +1471,15 @@ export interface WorkflowGraphProps {
    *
    * A problem tints the node's border in either density, and states itself on a
    * mark in the card's identity row (a corner of the compact tile). A graph
-   * showing a RUN is not an authoring surface — its cards state the run instead,
-   * and only the border tint carries a problem there.
+   * showing a RUN is not an authoring surface — its cards and edges state the
+   * run instead, which takes precedence over a problem's colour on both, and the
+   * problem's mark and chip still render beside it.
+   *
+   * What the canvas gives is a LOCATOR: which step or dependency is at fault,
+   * with the messages on the mark's `title` and in the accessibility tree. It is
+   * deliberately not a reader for them — at the zoom a whole pipeline is viewed
+   * at, a panel of message text on the canvas is unreadable, and the host
+   * already owns the problem list that the messages are read and acted on in.
    *
    * Immutability contract, as for `edges`: the index is memoized on this array's
    * reference, so pass a stable one.
@@ -1597,6 +1616,7 @@ export function WorkflowGraph({
       run,
       problemIndex.byEdge,
       (edge) => insertArmed && isEditableEdge(edge),
+      hasRunOverlay,
     );
     // `deletable` is React Flow's own gate on the Delete key. A read-only canvas
     // says so on the elements themselves rather than resting on `deleteKeyCode`
@@ -1615,6 +1635,7 @@ export function WorkflowGraph({
     editable,
     problemIndex,
     insertArmed,
+    hasRunOverlay,
   ]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);

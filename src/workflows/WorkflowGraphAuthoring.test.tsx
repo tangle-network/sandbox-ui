@@ -440,6 +440,31 @@ describe("an edge's authoring furniture", () => {
     ).toContain("translate(50px, 0px)");
   });
 
+  it("sizes the cluster by what it carries, not by its smallest member", () => {
+    // This card sits 20 units off the label point on the flow axis: clear of a
+    // 20px control, well inside a chip that truncates at 160. Sized as if it
+    // were the control, the chip would be left lapping over the card.
+    const nearby = { id: "a1", position: { x: 70, y: -40 }, width: 100, height: 80 };
+    const shift = (data: Record<string, unknown>) => {
+      const { container } = renderEdge({ data, onInsert: vi.fn(), nodes: [nearby] });
+      const m = /translate\(50px, (-?\d+(?:\.\d+)?)px\)/.exec(
+        container.querySelector<HTMLElement>(".nodrag.nopan")?.style.transform ?? "",
+      );
+      cleanup();
+      return Number(m?.[1]);
+    };
+    expect(shift({ kind: "spine", insertable: true })).toBe(0);
+    expect(
+      shift({
+        kind: "spine",
+        insertable: true,
+        problems: [
+          { anchor: "edge", from: actionNodeId(0), to: actionNodeId(1), severity: "error", message: "bad" },
+        ],
+      }),
+    ).not.toBe(0);
+  });
+
   it("leaves the control on the line when nothing is in the way", () => {
     const { container } = renderEdge({
       data: { kind: "spine", insertable: true },
@@ -511,7 +536,7 @@ describe("decorateAuthoringEdges", () => {
     const edges = [styled("a0->a1", "a0", "a1")];
     // Identity, not equality: a fresh array per render would re-seed React Flow's
     // edge state on every tick that touches this memo.
-    expect(decorateAuthoringEdges(edges, new Map(), none)).toBe(edges);
+    expect(decorateAuthoringEdges(edges, new Map(), none, false)).toBe(edges);
   });
 
   it("moves an edge onto the decorating renderer once it carries a problem", () => {
@@ -522,6 +547,7 @@ describe("decorateAuthoringEdges", () => {
         { anchor: "edge", from: "a0", to: "a1", severity: "error", message: "bad" },
       ]).byEdge,
       none,
+      false,
     );
     expect(decorated.type).toBe(WF_EDGE_TYPE);
     expect(decorated.data?.problems).toHaveLength(1);
@@ -540,6 +566,7 @@ describe("decorateAuthoringEdges", () => {
         { anchor: "edge", from: "a0", to: "a1", severity: "warning", message: "hm" },
       ]).byEdge,
       none,
+      false,
     );
     expect(decorated.style?.stroke).toBe("var(--surface-warning-text)");
   });
@@ -549,6 +576,7 @@ describe("decorateAuthoringEdges", () => {
       [styled("a0->a1", "a0", "a1"), styled("a1->a1-b0", "a1", "a1-b0")],
       new Map(),
       (e) => e.id === "a0->a1",
+      false,
     );
     expect(spine.data?.insertable).toBe(true);
     expect(spine.type).toBe(WF_EDGE_TYPE);
@@ -558,7 +586,10 @@ describe("decorateAuthoringEdges", () => {
     expect(fork.type).toBe("smoothstep");
   });
 
-  it("lets a problem's colour win over the run colour on the same edge", () => {
+  it("lets a RUN keep the colour of its own line, and still says what is wrong", () => {
+    // The same precedence the node card uses, where a run border wins over a
+    // problem border. A host showing both would otherwise lose which edge is
+    // running — so the run keeps the line and the problem keeps the chip.
     const running = styled("a0->a1", "a0", "a1");
     running.style = { stroke: "hsl(var(--primary))" };
     const [decorated] = decorateAuthoringEdges(
@@ -567,6 +598,21 @@ describe("decorateAuthoringEdges", () => {
         { anchor: "edge", from: "a0", to: "a1", severity: "error", message: "bad" },
       ]).byEdge,
       none,
+      true,
+    );
+    expect(decorated.style?.stroke).toBe("hsl(var(--primary))");
+    expect(decorated.data?.problems).toHaveLength(1);
+    expect(decorated.type).toBe(WF_EDGE_TYPE);
+  });
+
+  it("colours the line from the problem when there is no run to speak for it", () => {
+    const [decorated] = decorateAuthoringEdges(
+      [styled("a0->a1", "a0", "a1")],
+      indexProblems([
+        { anchor: "edge", from: "a0", to: "a1", severity: "error", message: "bad" },
+      ]).byEdge,
+      none,
+      false,
     );
     expect(decorated.style?.stroke).toBe("var(--surface-danger-text)");
   });

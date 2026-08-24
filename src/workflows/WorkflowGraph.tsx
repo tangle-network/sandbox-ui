@@ -1490,6 +1490,14 @@ export interface WorkflowGraphProps {
    * at, a panel of message text on the canvas is unreadable, and the host
    * already owns the problem list that the messages are read and acted on in.
    *
+   * Pairing contract: anchors are positional node ids, so a problem list must be
+   * derived from the SAME definition passed as `yaml`. Hand over a list computed
+   * against an older draft and an id that still exists may now name a different
+   * step, which puts the diagnostic on an innocent one — the graph cannot tell
+   * the two apart, any more than it can for a run's `nodeState`. A host that
+   * validates asynchronously therefore holds each result against the text it was
+   * computed from, and passes neither until they agree.
+   *
    * Immutability contract, as for `edges`: the index is memoized on this array's
    * reference, so pass a stable one.
    */

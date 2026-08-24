@@ -28,6 +28,7 @@ type FlowProps = {
     edge: { source: string; target: string; data?: unknown },
   ) => void;
   onConnectEnd?: (e: unknown, state: unknown) => void;
+  nodes?: { id: string }[];
   edges?: {
     id: string;
     type?: string;
@@ -38,28 +39,28 @@ type FlowProps = {
 
 let flowProps: FlowProps = {};
 
-/** The graph's frame, as the browser would report it. jsdom measures nothing, so
- *  a release-position gate has no box to test against until one is supplied. */
-const FRAME = { left: 100, top: 100, right: 900, bottom: 500 };
-/** What sits under the pointer at release. `null` is empty canvas. */
+/** Rendered INSIDE the graph's providers by the React Flow stub, so a test can
+ *  read what the component actually hands down to its nodes and edges. */
+let Probe: () => null = () => null;
+
+/**
+ * What the browser reports under the pointer at release. jsdom hit-tests
+ * nothing, so the gate has no answer until one is supplied — and since the gate
+ * identifies the pane POSITIVELY, the element it returns is the whole test.
+ */
 let elementAtPoint: Element | null = null;
 
-function stubCanvasGeometry() {
-  Object.defineProperty(HTMLElement.prototype, "getBoundingClientRect", {
-    configurable: true,
-    value(this: HTMLElement) {
-      return this.classList.contains("wf-graph")
-        ? {
-            ...FRAME,
-            width: FRAME.right - FRAME.left,
-            height: FRAME.bottom - FRAME.top,
-            x: FRAME.left,
-            y: FRAME.top,
-            toJSON: () => ({}),
-          }
-        : { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) };
-    },
-  });
+/** An element of the given class, as React Flow would render it. */
+function surface(className: string): Element {
+  const el = document.createElement("div");
+  el.className = className;
+  return el;
+}
+
+/** The empty canvas: React Flow's own pane. */
+const PANE = surface("react-flow__pane draggable");
+
+function stubHitTesting() {
   document.elementFromPoint = () => elementAtPoint;
 }
 
@@ -68,7 +69,6 @@ function releaseAt(x: number, y: number): MouseEvent {
   return new MouseEvent("mouseup", { clientX: x, clientY: y });
 }
 
-/** Somewhere inside the frame with nothing under it. */
 const ON_CANVAS = releaseAt(400, 300);
 
 vi.mock("@xyflow/react", async (importOriginal) => {
@@ -77,22 +77,33 @@ vi.mock("@xyflow/react", async (importOriginal) => {
     ...actual,
     ReactFlow: (props: FlowProps) => {
       flowProps = props;
-      return <div data-testid="flow" />;
+      return <Probe />;
     },
   };
 });
 
-const { WorkflowGraph } = await import("./WorkflowGraph");
+const { NodeBoxesContext, WorkflowGraph } = await import("./WorkflowGraph");
 const { actionNodeId, TRIGGER_NODE_ID } = await import("./model");
+const { useContext } = await import("react");
+type NodeBox = import("./flow-graph").NodeBox;
+
+let observedBoxes: readonly NodeBox[] = [];
+Probe = () => {
+  // biome-ignore lint/correctness/useHookAtTopLevel: this component IS the hook's caller
+  observedBoxes = useContext(NodeBoxesContext);
+  return null;
+};
 
 beforeEach(() => {
-  stubCanvasGeometry();
-  elementAtPoint = null;
+  stubHitTesting();
+  // Default to the empty canvas, which is what the add gesture needs.
+  elementAtPoint = PANE;
 });
 
 afterEach(() => {
   cleanup();
   flowProps = {};
+  observedBoxes = [];
 });
 
 const YAML = `
@@ -281,6 +292,24 @@ describe("WorkflowGraph add-step gestures", () => {
     expect(flowProps.edges?.some((e) => e.data?.insertable)).toBe(false);
   });
 
+  it("hands its edges the laid-out boxes they have to route around", () => {
+    // The clearance an edge applies is only as good as the geometry it is given.
+    // These come from the LAYOUT, whose dimensions are authoritative, rather than
+    // from React Flow's node store — a map mutated in place, whose identity never
+    // changes and so would never notify the edge that a box had moved.
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onEdgeInsert={vi.fn()}
+      />,
+    );
+    expect(observedBoxes.length).toBe(flowProps.nodes?.length);
+    expect(observedBoxes.length).toBeGreaterThan(0);
+    expect(observedBoxes.every((b) => b.width > 0 && b.height > 0)).toBe(true);
+  });
+
   it("offers the insert control on exactly the edges the host may change", () => {
     render(
       <WorkflowGraph
@@ -333,12 +362,13 @@ describe("WorkflowGraph add-step gestures", () => {
     expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(0), "before");
   });
 
-  it("never reads an ABANDONED drag as an add", () => {
+  it("adds only when the release landed on the canvas itself", () => {
     // React Flow ends the drag on a document-level pointer-up, so letting go
-    // anywhere on the page reaches this callback — and pulling away from the
-    // graph is exactly how someone abandons a gesture they thought better of.
-    // Reproduced in a browser before the gate existed: releasing outside the
-    // graph, on the zoom controls and on the panel each added a step.
+    // ANYWHERE reaches this callback. Every one of these was reproduced in a
+    // browser adding a step before the gate existed — including the release in
+    // the middle of a card, which reports no target at all because React Flow
+    // resolves `toNode` from a handle within its connection radius, not from
+    // the node under the pointer.
     const onNodeInsert = vi.fn();
     render(
       <WorkflowGraph
@@ -348,32 +378,34 @@ describe("WorkflowGraph add-step gestures", () => {
         onNodeInsert={onNodeInsert}
       />,
     );
-    const drag = { fromNode: { id: actionNodeId(1) }, fromHandle: { type: "source" }, toNode: null, toHandle: null };
+    const drag = {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: { type: "source" },
+      toNode: null,
+      toHandle: null,
+    };
 
-    // Let go past every side of the frame.
-    for (const [x, y] of [[400, 40], [400, 560], [40, 300], [960, 300]]) {
-      flowProps.onConnectEnd?.(releaseAt(x, y), drag);
+    const nodeBody = surface("truncate font-semibold");
+    surface("react-flow__node").appendChild(nodeBody);
+    const panelButton = document.createElement("button");
+    surface("react-flow__panel").appendChild(panelButton);
+
+    for (const target of [
+      null, // off the graph entirely — the page, not the pane
+      nodeBody, // the middle of a card, where no handle is in range
+      surface("react-flow__edge"), // a line between two steps
+      surface("react-flow__controls"), // the zoom buttons
+      panelButton, // the density / add-trigger panel
+      surface("react-flow__edgelabel-renderer"), // an edge's own furniture
+    ]) {
+      elementAtPoint = target;
+      flowProps.onConnectEnd?.(ON_CANVAS, drag);
     }
     expect(onNodeInsert).not.toHaveBeenCalled();
 
-    // Let go on the canvas's own furniture — inside the frame, but on a control.
-    const panel = document.createElement("div");
-    panel.className = "react-flow__panel";
-    const button = document.createElement("button");
-    panel.appendChild(button);
-    elementAtPoint = button;
-    flowProps.onConnectEnd?.(ON_CANVAS, drag);
-    expect(onNodeInsert).not.toHaveBeenCalled();
-
-    const controls = document.createElement("div");
-    controls.className = "react-flow__controls";
-    elementAtPoint = controls;
-    flowProps.onConnectEnd?.(ON_CANVAS, drag);
-    expect(onNodeInsert).not.toHaveBeenCalled();
-
-    // The same drag, let go on the canvas itself, still adds — so the gate is
-    // rejecting the release POSITION and not the gesture.
-    elementAtPoint = null;
+    // The same drag, let go on the pane, still adds — so the gate rejects the
+    // release POSITION and not the gesture.
+    elementAtPoint = PANE;
     flowProps.onConnectEnd?.(ON_CANVAS, drag);
     expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
   });

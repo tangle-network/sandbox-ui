@@ -34,6 +34,7 @@ const {
   decorateAuthoringEdges,
   DensityContext,
   EdgeInsertContext,
+  NodeBoxesContext,
   NodeProblemsContext,
   RunModeContext,
   TriggerDeleteContext,
@@ -243,15 +244,15 @@ function renderEdge({
   nodes?: { id: string; position: { x: number; y: number }; width: number; height: number }[];
 }) {
   return render(
-    <ReactFlowProvider
-      initialNodes={nodes.map((n) => ({
-        ...n,
-        data: {},
-        // React Flow fills `measured` from the real DOM; the renderer reads it
-        // rather than the declared width/height, so the fixture states it.
-        measured: { width: n.width, height: n.height },
-      }))}
-    >
+    <ReactFlowProvider>
+      <NodeBoxesContext.Provider
+        value={nodes.map((n) => ({
+          x: n.position.x,
+          y: n.position.y,
+          width: n.width,
+          height: n.height,
+        }))}
+      >
       <EdgeInsertContext.Provider value={onInsert}>
         <div onClick={onEdgeClick}>
           <WfEdgeRenderer
@@ -270,6 +271,7 @@ function renderEdge({
           />
         </div>
       </EdgeInsertContext.Provider>
+      </NodeBoxesContext.Provider>
     </ReactFlowProvider>,
   );
 }
@@ -401,6 +403,41 @@ describe("an edge's authoring furniture", () => {
     const y = Number(shifted?.[1]);
     const inside = y >= covering.position.y && y <= covering.position.y + covering.height;
     expect(inside).toBe(false);
+  });
+
+  it("moves a problem chip off a card as well, since its tooltip takes the pointer", () => {
+    // The chip opts into pointer events so its messages are reachable, which
+    // means that over a card it also swallows clicks meant for the node. A
+    // problems-only edge gets no wider corridor either — the problems change on
+    // every keystroke of an invalid draft, and reserving a lane for them would
+    // relayout the canvas while the author types.
+    const covering = { id: "a1", position: { x: 0, y: -40 }, width: 100, height: 80 };
+    const { container } = renderEdge({
+      data: {
+        kind: "spine",
+        problems: [
+          { anchor: "edge", from: actionNodeId(0), to: actionNodeId(1), severity: "error", message: "bad" },
+        ],
+      },
+      nodes: [covering],
+    });
+    const shifted = /translate\(50px, (-?\d+(?:\.\d+)?)px\)/.exec(
+      container.querySelector<HTMLElement>(".nodrag.nopan")?.style.transform ?? "",
+    );
+    expect(Number(shifted?.[1])).not.toBe(0);
+  });
+
+  it("leaves a pointer-transparent cluster where it is", () => {
+    // A guard chip is a readout that lets clicks through, so it costs nothing
+    // over a card — and moving every annotation would scatter a dense graph.
+    const covering = { id: "a1", position: { x: 0, y: -40 }, width: 100, height: 80 };
+    const { container } = renderEdge({
+      data: { kind: "spine", whenLabel: "risk == high" },
+      nodes: [covering],
+    });
+    expect(
+      container.querySelector<HTMLElement>(".nodrag.nopan")?.style.transform,
+    ).toContain("translate(50px, 0px)");
   });
 
   it("leaves the control on the line when nothing is in the way", () => {

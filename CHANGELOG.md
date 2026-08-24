@@ -44,7 +44,11 @@
   pointer: releasing in the middle of a card reported no target and added a step.
   So did releasing on an edge, on the zoom controls, on the panel, or off the
   graph entirely. Identifying the pane cannot miss a layer the way a list of
-  things to exclude can, and it fails closed.
+  things to exclude can, and it fails closed. The pane also has to be THIS
+  graph's: React Flow completes a connection from a document-level pointer-up, so
+  a drag begun in one canvas is still live over every other one on the page, and
+  a release over a neighbour would otherwise add a step to the draft the drag
+  started in.
 - A cluster that takes the pointer is nudged clear of any card its edge's
   midpoint lands on — the insert control, and a problem chip whose tooltip is the
   only place its messages are written. The reserved corridor only widens the gap

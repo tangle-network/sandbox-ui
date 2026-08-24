@@ -1047,7 +1047,7 @@ function releasePoint(
 const CANVAS_SURFACE_SELECTOR = ".react-flow__pane, .react-flow__background";
 
 /**
- * Whether a release at this point landed on the empty canvas.
+ * Whether a release at this point landed on THIS graph's empty canvas.
  *
  * Identified POSITIVELY — the element under the pointer must BE the pane — and
  * not by listing what to exclude. A blacklist has to enumerate every layer that
@@ -1057,13 +1057,23 @@ const CANVAS_SURFACE_SELECTOR = ".react-flow__pane, .react-flow__background";
  * one, and it fails CLOSED: an environment with no hit-testing adds nothing
  * rather than adding something wrong.
  *
- * This also carries the frame check on its own, since a release off the graph
- * lands on the page rather than the pane.
+ * The pane also has to be OURS. React Flow completes a connection from a
+ * document-level pointer-up, so a drag begun in one graph is still live over
+ * every other graph on the page — a proposal preview beside an editor, a gallery
+ * of them — and a bare "is this a pane" would let a release over a NEIGHBOUR add
+ * a step to the draft the drag started in. Containment settles it, and carries
+ * the frame check with it: a release off the graph lands on the page rather than
+ * on anything this frame holds.
  */
-function releasedOnCanvas(at: { x: number; y: number }): boolean {
+function releasedOnCanvas(
+  at: { x: number; y: number },
+  frame: HTMLElement | null,
+): boolean {
+  if (!frame) return false;
   const under =
     typeof document === "undefined" ? null : document.elementFromPoint(at.x, at.y);
-  return under?.matches(CANVAS_SURFACE_SELECTOR) === true;
+  if (!under?.matches(CANVAS_SURFACE_SELECTOR)) return false;
+  return frame.contains(under);
 }
 
 /**
@@ -1880,7 +1890,8 @@ export function WorkflowGraph({
    *  - Nothing was under the pointer (`toNode`/`toHandle`). React Flow ends
    *    EVERY connection drag through this callback, including one that landed on
    *    a handle and already went out through `onConnect`.
-   *  - The release landed on the empty canvas — the PANE, positively identified.
+   *  - The release landed on THIS graph's empty canvas — its own pane,
+   *    positively identified.
    *    This is what rules out everything the first test does not: React Flow
    *    sets `toNode` only when a handle was found within its connection radius,
    *    so letting go in the middle of a wide card reports no target at all, and
@@ -1901,7 +1912,7 @@ export function WorkflowGraph({
       const fromHandle = state.fromHandle;
       if (!from || !fromHandle) return;
       const at = releasePoint(event);
-      if (!at || !releasedOnCanvas(at)) return;
+      if (!at || !releasedOnCanvas(at, wrapperRef.current)) return;
       insertAtNode(from.id, fromHandle.type === "target" ? "before" : "after");
     },
     [insertAtNode],

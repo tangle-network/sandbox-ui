@@ -58,8 +58,9 @@ function surface(className: string): Element {
   return el;
 }
 
-/** The empty canvas: React Flow's own pane. */
-const PANE = surface("react-flow__pane draggable");
+/** A pane belonging to some OTHER graph on the page — detached from the frame
+ *  under test, exactly as a neighbouring canvas's would be. */
+const FOREIGN_PANE = surface("react-flow__pane draggable");
 
 /** jsdom's own `elementFromPoint`, put back after each test so a later one that
  *  wants real hit-testing is not silently answered by this stub. */
@@ -89,6 +90,9 @@ vi.mock("@xyflow/react", async (importOriginal) => {
       return (
         <actual.ReactFlowProvider>
           <Probe />
+          {/* The canvas surface React Flow would draw, inside this graph's own
+              frame — which is what makes "is this pane mine" testable. */}
+          <div className="react-flow__pane" data-testid="pane" />
           {props.children}
         </actual.ReactFlowProvider>
       );
@@ -110,9 +114,13 @@ Probe = () => {
 
 beforeEach(() => {
   stubHitTesting();
-  // Default to the empty canvas, which is what the add gesture needs.
-  elementAtPoint = PANE;
+  elementAtPoint = null;
 });
+
+/** This graph's own pane, as rendered — the surface a drop has to land on. */
+function ownPane(): Element {
+  return screen.getByTestId("pane");
+}
 
 afterEach(() => {
   cleanup();
@@ -413,6 +421,7 @@ describe("WorkflowGraph add-step gestures", () => {
         onNodeInsert={onNodeInsert}
       />,
     );
+    elementAtPoint = ownPane();
     // Released over nothing, from the outbound handle: the new step FOLLOWS.
     flowProps.onConnectEnd?.(ON_CANVAS, {
       fromNode: { id: actionNodeId(1) },
@@ -455,6 +464,7 @@ describe("WorkflowGraph add-step gestures", () => {
       toHandle: null,
     };
 
+    elementAtPoint = ownPane();
     const nodeBody = surface("truncate font-semibold");
     surface("react-flow__node").appendChild(nodeBody);
     const panelButton = document.createElement("button");
@@ -462,6 +472,7 @@ describe("WorkflowGraph add-step gestures", () => {
 
     for (const target of [
       null, // off the graph entirely — the page, not the pane
+      FOREIGN_PANE, // another graph's canvas, which this drag must not edit
       nodeBody, // the middle of a card, where no handle is in range
       surface("react-flow__edge"), // a line between two steps
       surface("react-flow__controls"), // the zoom buttons
@@ -475,9 +486,65 @@ describe("WorkflowGraph add-step gestures", () => {
 
     // The same drag, let go on the pane, still adds — so the gate rejects the
     // release POSITION and not the gesture.
-    elementAtPoint = PANE;
+    elementAtPoint = ownPane();
     flowProps.onConnectEnd?.(ON_CANVAS, drag);
     expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
+  });
+
+  it("adds from a touch drop, not only a mouse one", () => {
+    // A touch reports its position on `changedTouches` — `touches` is empty by
+    // the time the last finger lifts — so a gate reading `clientX` off the event
+    // would drop every touch gesture on the floor.
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    elementAtPoint = ownPane();
+    const touchRelease = {
+      changedTouches: [{ clientX: 400, clientY: 300 }],
+      touches: [],
+    } as unknown as TouchEvent;
+    flowProps.onConnectEnd?.(touchRelease, {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: { type: "source" },
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
+  });
+
+  it("never lets a drag in one graph edit the draft of another", () => {
+    // React Flow completes a connection from a document-level pointer-up, so a
+    // drag begun here is still live over every other canvas on the page. A gate
+    // that only asked "is this a pane" would let a release over a NEIGHBOUR add
+    // a step to this graph's draft.
+    const mine = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={mine}
+      />,
+    );
+    const drag = {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: { type: "source" },
+      toNode: null,
+      toHandle: null,
+    };
+    elementAtPoint = FOREIGN_PANE;
+    flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    expect(mine).not.toHaveBeenCalled();
+
+    elementAtPoint = ownPane();
+    flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    expect(mine).toHaveBeenCalledTimes(1);
   });
 
   it("needs both ends of the drag before it names an add", () => {
@@ -493,6 +560,7 @@ describe("WorkflowGraph add-step gestures", () => {
         onNodeInsert={onNodeInsert}
       />,
     );
+    elementAtPoint = ownPane();
     flowProps.onConnectEnd?.(ON_CANVAS, {
       fromNode: null,
       fromHandle: null,

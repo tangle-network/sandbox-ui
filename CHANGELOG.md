@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.110.0
+
+### The workflow canvas gains its authoring gestures
+
+- **Add a step ON an edge.** `onEdgeInsert` draws a "+" at each editable edge's
+  midpoint and reports the pair it sits between. The layout reserves the
+  corridor for it (`reserveEdgeInsert`), because a compact graph pitches its
+  layers at 20px — the whole button — so drawing one without the lane puts it
+  on top of the cards either side. Offered on exactly the edges `onEdgeDelete`
+  and `onEdgeClick` are: a fan-out or trigger edge is a row no definition has.
+- **Add a step by dropping a connection on empty canvas.** `onNodeInsert`
+  reports the node the drag left and which handle it left from — `"after"` for
+  the outbound one, `"before"` for the inbound one, which is how a step is added
+  at the very start. React Flow ends every connection drag through the same
+  callback, so a drop that landed on a node is never reported as an add.
+- **The trigger gains add and remove.** `onTriggerAdd` draws a control in the
+  canvas chrome rather than on a node, because the workflow that most needs it
+  has no trigger node to hang one on. `onTriggerDelete` draws a "×" on each
+  trigger card and reports its node id; read the `on:` position back with
+  `triggerNodeIndex`. A trigger is the one node with a delete gesture — every
+  other node is a `do` entry, whose removal is a list edit.
+- **Authoring problems anchor to the node or edge that carries them.** The new
+  `problems` prop takes `WfProblem[]`, each anchored to a node id or an edge's
+  endpoints, with a severity and a message written for a reader. A node tints
+  its border and wears a mark carrying every message; an edge recolours and
+  states its problem on a chip. It is a channel separate from `nodeState` on
+  purpose: run state is what a node DID, and folding the two together would
+  render an unsaved compile error as a failed run.
+- `onEdgeConnect` remains the ONE prop that turns the canvas into an editor.
+  Every new callback refines that editor and is inert without it.
+- The edge chips opt back into pointer events. React Flow's label layer is
+  `pointer-events: none`, so the guard and cycle chips never opened the tooltip
+  their `title` was written for.
+
 ## 0.109.0
 
 ### The `./editor` tiptap packages become optional peers

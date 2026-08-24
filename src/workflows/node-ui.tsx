@@ -264,7 +264,11 @@ function problemSentence(problem: WfProblem): string {
     .map((line) => line.trim())
     .filter(Boolean)
     .join(" ");
-  const word = SEVERITY_WORD[problem.severity];
+  // A JS host can send a severity this table has no word for. Reading it out as
+  // "undefined" helps nobody, and understating it as a warning is the wrong way
+  // to be wrong about something that might be blocking — so an unrecognised
+  // severity is named, and ranked, as an error.
+  const word = SEVERITY_WORD[problem.severity] ?? SEVERITY_WORD.error;
   return message ? `${word}: ${message}` : word;
 }
 

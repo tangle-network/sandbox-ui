@@ -174,6 +174,26 @@ describe("a node carrying authoring problems", () => {
     expect(container.textContent).toBe("");
   });
 
+  it("names an unrecognised severity as an error rather than 'undefined'", () => {
+    // A JS host can send a severity this library has no word for. Reading it out
+    // as the literal word "undefined" helps nobody, and colouring it as a
+    // warning understates something that might be blocking — so the word and the
+    // aggregate ranking agree on treating it as an error.
+    renderNode({
+      problems: [
+        {
+          anchor: "node",
+          node: actionNodeId(0),
+          severity: "catastrophe",
+          message: "the roof is on fire",
+        } as never,
+      ],
+    });
+    const mark = screen.getByTestId("wf-node-problem");
+    expect(mark.title).toBe("Error: the roof is on fire");
+    expect(mark.dataset.severity).toBe("error");
+  });
+
   it("survives a message that is not a string at all", () => {
     // The type says string; the package is consumed from JavaScript too, and one
     // malformed entry must not take the whole canvas down with it.

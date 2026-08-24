@@ -268,10 +268,18 @@ export type WfProblemSeverity = "error" | "warning";
  * renders graphs and never interprets a compiler's output. Anchors are node ids
  * from THIS graph, so name them with the exported id helpers (`actionNodeId`,
  * `branchNodeId`, `TRIGGER_NODE_ID`); an edge is named by its endpoints, the
- * same way {@link WfEdgeSpec} names one. A problem naming a node or an edge the
- * graph has no slot for is simply not drawn — an authoring surface reports
- * against a draft that is still moving, and a stale anchor must never blank the
- * canvas the way a stale declared edge does.
+ * same way {@link WfEdgeSpec} names one.
+ *
+ * An anchor the graph has no slot for is simply not drawn — an authoring surface
+ * reports against a draft that is still moving, and a stale anchor must never
+ * blank the canvas the way a stale declared edge does. That is the ONLY safety
+ * this gives, and it is worth being exact about what it leaves out: these ids are
+ * POSITIONAL, so an insert, delete or reorder does not retire `a1` — it makes
+ * `a1` a different step. A problem computed against an earlier draft therefore
+ * survives the check and lands on whichever step now holds its position. Nothing
+ * here can tell the two apart, which is why the pairing contract on
+ * `WorkflowGraphProps.problems` is a contract and not a suggestion: a list must
+ * be handed over with the definition it was computed from.
  */
 export type WfProblem =
   | {
@@ -289,6 +297,19 @@ export type WfProblem =
       severity: WfProblemSeverity;
       message: string;
     };
+
+/** The loudest severity in a set — one error among warnings makes the whole
+ *  anchor read as an error. Null for an empty set, so a caller can skip. */
+export function worstSeverity(
+  problems: readonly WfProblem[] | undefined,
+): WfProblem["severity"] | null {
+  if (!problems || problems.length === 0) return null;
+  // Read as "warning only if EVERY entry is one", so a severity this library has
+  // no word for ranks as an error rather than being quietly downgraded — the
+  // same way it is named. Understating something that might be blocking is the
+  // worse of the two ways to be wrong about a malformed entry.
+  return problems.every((p) => p.severity === "warning") ? "warning" : "error";
+}
 
 export interface WfGraph {
   nodes: WfNode[];

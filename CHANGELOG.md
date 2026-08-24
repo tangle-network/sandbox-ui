@@ -30,9 +30,24 @@
   render an unsaved compile error as a failed run.
 - `onEdgeConnect` remains the ONE prop that turns the canvas into an editor.
   Every new callback refines that editor and is inert without it.
-- The edge chips opt back into pointer events. React Flow's label layer is
-  `pointer-events: none`, so the guard and cycle chips never opened the tooltip
-  their `title` was written for.
+- The problem chip and the insert control opt back into pointer events, and the
+  label cluster is lifted over the nodes. React Flow's label layer is
+  `pointer-events: none` and is painted UNDER the node layer, so an edge that
+  spans more than one layer had its control both buried and inert. The guard and
+  cycle chips deliberately stay pointer-transparent: raised over a card, one that
+  took pointer events would swallow clicks meant for the node beneath it.
+- A drop is only an add when the pointer was released ON the canvas. React Flow
+  listens for the pointer-up on the document, so letting go anywhere on the page
+  ends the drag — and pulling away from the graph is exactly how a gesture is
+  abandoned. A release outside the graph's frame, or on the zoom controls or the
+  panel drawn over it, no longer adds a step.
+- The insert control is nudged clear of any card its edge's midpoint lands on.
+  The reserved corridor only widens the gap between ADJACENT layers, so an edge
+  spanning more than one had its control sitting on an unrelated node.
+- Every problem message reaches the accessibility tree, not only a `title`
+  tooltip. A mark carrying more than one problem showed "N problems" as its whole
+  accessible name, so a keyboard, screen-reader or touch user could see that a
+  step was broken and never find out why.
 
 ## 0.109.0
 

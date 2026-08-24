@@ -30,7 +30,7 @@ vi.mock("@xyflow/react", async (importOriginal) => {
 const { MarkerType, Position, ReactFlowProvider } = await import(
   "@xyflow/react"
 );
-const { ProblemMessages } = await import("./node-ui");
+const { problemBorder, ProblemMessages } = await import("./node-ui");
 const {
   decorateAuthoringEdges,
   DensityContext,
@@ -94,6 +94,11 @@ function renderNode({
   );
 }
 
+/** The hover tooltip, read from the aria-hidden visual half that carries it. */
+function tooltipOf(el: HTMLElement): string | null {
+  return el.querySelector("[aria-hidden][title]")?.getAttribute("title") ?? null;
+}
+
 const problem = (
   node: string,
   severity: "error" | "warning",
@@ -112,7 +117,7 @@ describe("a node carrying authoring problems", () => {
       expect(mark.dataset.severity).toBe("error");
       // The message on `title` is what makes the mark worth more than a tint:
       // the canvas answers "why" without a trip to the list below it.
-      expect(mark.title).toBe("Error: url is required");
+      expect(tooltipOf(mark)).toBe("Error: url is required");
     }
   });
 
@@ -126,7 +131,7 @@ describe("a node carrying authoring problems", () => {
     const mark = screen.getByTestId("wf-node-problem");
     expect(mark.dataset.severity).toBe("error");
     expect(mark.textContent).toContain("2");
-    expect(mark.title).toBe("Warning: no timeout set\nError: url is required");
+    expect(tooltipOf(mark)).toBe("Warning: no timeout set\nError: url is required");
   });
 
   it("says which of a mixed set is the error and which is the warning", () => {
@@ -190,8 +195,32 @@ describe("a node carrying authoring problems", () => {
       ],
     });
     const mark = screen.getByTestId("wf-node-problem");
-    expect(mark.title).toBe("Error: the roof is on fire");
+    expect(tooltipOf(mark)).toBe("Error: the roof is on fire");
     expect(mark.dataset.severity).toBe("error");
+  });
+
+  it("announces each message once, with the tooltip out of the way", () => {
+    // `title` on the marker itself becomes its accessible DESCRIPTION once the
+    // hidden text supplies its name, and most screen readers read a description
+    // after the name — so the messages would be heard twice. The tooltip lives
+    // on the visual half instead, which is hidden from the tree.
+    renderNode({
+      problems: [problem(actionNodeId(0), "error", "url is required")],
+    });
+    const mark = screen.getByTestId("wf-node-problem");
+    expect(mark.getAttribute("title")).toBeNull();
+    expect(tooltipOf(mark)).toBe("Error: url is required");
+    expect(mark.textContent).toBe("Error: url is required");
+  });
+
+  it("draws a severity it has no colours for rather than throwing", () => {
+    // `problemSentence` and `worstSeverity` already survive a malformed entry;
+    // the colour lookup has to as well, or one bad problem takes the render with
+    // it through the exported border helper.
+    expect(() => problemBorder("catastrophe" as never)).not.toThrow();
+    expect(problemBorder("catastrophe" as never).borderColor).toBe(
+      problemBorder("error").borderColor,
+    );
   });
 
   it("survives a message that is not a string at all", () => {
@@ -202,12 +231,12 @@ describe("a node carrying authoring problems", () => {
         { anchor: "node", node: actionNodeId(0), severity: "error" } as never,
       ],
     });
-    expect(screen.getByTestId("wf-node-problem").title).toBe("Error");
+    expect(tooltipOf(screen.getByTestId("wf-node-problem"))).toBe("Error");
   });
 
   it("names a problem by its severity when the host sent no message", () => {
     renderNode({ problems: [problem(actionNodeId(0), "error", "   ")] });
-    expect(screen.getByTestId("wf-node-problem").title).toBe("Error");
+    expect(tooltipOf(screen.getByTestId("wf-node-problem"))).toBe("Error");
   });
 
   it("keeps a message's own spacing, rewriting only its line breaks", () => {
@@ -217,7 +246,7 @@ describe("a node carrying authoring problems", () => {
     renderNode({
       problems: [problem(actionNodeId(0), "error", "expected  two spaces\n  and a second line")],
     });
-    expect(screen.getByTestId("wf-node-problem").title).toBe(
+    expect(tooltipOf(screen.getByTestId("wf-node-problem"))).toBe(
       "Error: expected  two spaces and a second line",
     );
   });
@@ -228,7 +257,7 @@ describe("a node carrying authoring problems", () => {
     renderNode({
       problems: [problem(actionNodeId(0), "error", "unexpected ;")],
     });
-    expect(screen.getByTestId("wf-node-problem").title).toBe(
+    expect(tooltipOf(screen.getByTestId("wf-node-problem"))).toBe(
       "Error: unexpected ;",
     );
   });
@@ -237,7 +266,7 @@ describe("a node carrying authoring problems", () => {
     renderNode({
       problems: [problem(actionNodeId(0), "error", "line one\nline two")],
     });
-    expect(screen.getByTestId("wf-node-problem").title).toBe(
+    expect(tooltipOf(screen.getByTestId("wf-node-problem"))).toBe(
       "Error: line one line two",
     );
   });
@@ -255,8 +284,9 @@ describe("a node carrying authoring problems", () => {
     const name = screen.getByTestId("wf-node-problem").textContent ?? "";
     expect(name).toContain("no timeout set");
     expect(name).toContain("url is required");
-    // The count is decoration beside the words, so it must not be read out too.
-    expect(screen.getByText("2").getAttribute("aria-hidden")).toBe("true");
+    // The count is decoration beside the words, so it must not be read out too —
+    // it sits inside the marker's aria-hidden visual half.
+    expect(screen.getByText("2").closest("[aria-hidden]")).not.toBeNull();
   });
 
   it("reads a single problem as its own message", () => {
@@ -503,7 +533,7 @@ describe("an edge's authoring furniture", () => {
     const chip = screen.getByTestId("wf-edge-problem");
     expect(chip.dataset.severity).toBe("error");
     expect(chip.querySelector("[aria-hidden]")?.textContent).toBe("2 problems");
-    expect(chip.title).toBe("Warning: first\nError: second");
+    expect(tooltipOf(chip)).toBe("Warning: first\nError: second");
   });
 
   it("nudges the control off a card its midpoint lands on", () => {

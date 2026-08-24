@@ -200,7 +200,7 @@ export const KIND_ICON: Record<string, LucideIcon> = {
 /** An authoring problem's colours — the same semantic surface trio the run
  *  statuses use, so a broken step and a failed one are recognisably the same
  *  family of "something is wrong here" without being the same signal. */
-export const PROBLEM_SURFACE: Record<
+const PROBLEM_SURFACE_BY_SEVERITY: Record<
   WfProblemSeverity,
   { background: string; color: string; borderColor: string }
 > = {
@@ -216,6 +216,18 @@ export const PROBLEM_SURFACE: Record<
   },
 };
 
+/**
+ * The colours a severity is drawn in. A lookup rather than the table itself, so
+ * a severity this library has no entry for cannot throw its way out of a render
+ * — the same resilience `problemSentence` and `worstSeverity` already give it,
+ * and for the same reason: the package is consumed from JavaScript, and one
+ * malformed problem must not take the canvas down. An unrecognised severity is
+ * drawn as an error, matching how it is named and ranked.
+ */
+export function problemSurface(severity: WfProblemSeverity) {
+  return PROBLEM_SURFACE_BY_SEVERITY[severity] ?? PROBLEM_SURFACE_BY_SEVERITY.error;
+}
+
 /** A node's border once it carries an authoring problem. Applied only where the
  *  node has no RUN status to state — a run's border is the more urgent reading
  *  of the same edge of the same box, and a definition being edited has no run. */
@@ -223,7 +235,7 @@ export function problemBorder(severity: WfProblemSeverity): {
   borderColor: string;
   boxShadow: string;
 } {
-  const color = PROBLEM_SURFACE[severity].color;
+  const color = problemSurface(severity).color;
   return {
     borderColor: color,
     boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 35%, transparent)`,
@@ -341,12 +353,19 @@ export function ProblemMarker({
     <span
       data-testid="wf-node-problem"
       data-severity={severity}
-      title={problemTitle(problems)}
       className={`flex shrink-0 items-center gap-0.5 rounded-full border px-1 py-[1px] font-medium text-[10px] leading-none ${className}`}
-      style={PROBLEM_SURFACE[severity]}
+      style={problemSurface(severity)}
     >
-      <AlertTriangle size={9} aria-hidden />
-      {problems.length > 1 && <span aria-hidden>{problems.length}</span>}
+      {/* The tooltip hangs on the VISIBLE part, which is hidden from the
+          accessibility tree. `title` on the marker itself would become its
+          accessible DESCRIPTION once the text below supplies its name, and most
+          screen readers read a description after the name — so every message
+          would be announced twice. A pointer still gets the tooltip; the tree
+          gets the text once. */}
+      <span aria-hidden className="flex items-center gap-0.5" title={problemTitle(problems)}>
+        <AlertTriangle size={9} />
+        {problems.length > 1 && <span>{problems.length}</span>}
+      </span>
       <ProblemMessages problems={problems} />
     </span>
   );

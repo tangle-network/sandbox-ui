@@ -81,7 +81,7 @@ import {
   problemBorder,
   ProblemMarker,
   ProblemMessages,
-  PROBLEM_SURFACE,
+  problemSurface,
   problemTitle,
   STATUS_COLOR,
   STATUS_LABEL,
@@ -1202,14 +1202,14 @@ export function WfEdgeRenderer({
             <span
               data-testid="wf-edge-problem"
               data-severity={problemSeverity}
-              title={problemTitle(problems)}
               className={`${EDGE_CHIP_CLASS} max-w-40 truncate ${stealsPointer ? "" : "pointer-events-auto"}`}
-              style={PROBLEM_SURFACE[problemSeverity]}
+              style={problemSurface(problemSeverity)}
             >
               {/* The visible text is bounded by the corridor the chip sits in, so
-                  a second problem collapses to a count. Every message still
-                  reaches a reader who cannot hover, through the hidden text. */}
-              <span aria-hidden>
+                  a second problem collapses to a count — and it carries the
+                  tooltip while staying out of the accessibility tree, so the
+                  messages below are announced once rather than twice. */}
+              <span aria-hidden title={problemTitle(problems)}>
                 {problems.length === 1
                   ? problems[0].message
                   : `${problems.length} problems`}
@@ -1338,7 +1338,7 @@ export function decorateAuthoringEdges(
     const offersInsert = insertable(e);
     if (!severity && !offersInsert) return e;
     const stroke =
-      severity && !hasRunOverlay ? PROBLEM_SURFACE[severity].color : undefined;
+      severity && !hasRunOverlay ? problemSurface(severity).color : undefined;
     return {
       ...e,
       type: WF_EDGE_TYPE,

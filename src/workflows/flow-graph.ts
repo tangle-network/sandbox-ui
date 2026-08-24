@@ -318,16 +318,36 @@ export interface NodeBox {
   height: number;
 }
 
-/** How far past a node's edge a control's own EDGE must sit to clear the card. */
+/** How far past a node's edge a cluster's own EDGE must sit to clear the card. */
 const INSERT_CLEARANCE = 8;
+
 /**
- * Half the widest thing a cluster puts on the line, in flow units. The label
- * layer lives inside the zoomed viewport, so a 20px control is 20 units at every
- * zoom — but the point being tested is the cluster's CENTRE, and a centre just
- * outside a card still leaves half the control inside it. Boxes are inflated by
- * this before the test so the whole control clears, not just its midpoint.
+ * Half the box a cluster occupies, in flow units, by what it carries.
+ *
+ * The label layer lives inside the zoomed viewport, so a 20px control is 20
+ * units at every zoom and these numbers hold at any scale. They are bounds
+ * rather than measurements: the control is a fixed 20px square, and the chip
+ * TRUNCATES at Tailwind's `max-w-40`, so 160 is the widest it can ever render.
+ * Nothing here has to be measured, which is what keeps the placement
+ * collision-free by construction rather than by a measure-then-reflow pass.
+ *
+ * Both axes are given because the cluster is not square and the flow direction
+ * decides which of them is the cross axis: a chip is wide and short, so in "LR"
+ * its width spans the corridor while in "TB" that same width is what has to
+ * clear the cards.
  */
-const CLUSTER_HALF_EXTENT = 12;
+export const CLUSTER_HALF_SIZE = {
+  /** The insert control alone. */
+  control: { width: 10, height: 10 },
+  /** A problem chip, with or without the control stacked under it. */
+  chip: { width: 80, height: 19 },
+} as const;
+
+/** Half a cluster's extent along each axis. */
+export interface ClusterHalfSize {
+  width: number;
+  height: number;
+}
 /**
  * How far a control may be nudged before the nudge is abandoned. A control
  * dragged far from the edge it belongs to is worse than one overlapping a card,
@@ -353,18 +373,22 @@ export function clearOfNodeBoxes(
   point: { x: number; y: number },
   boxes: readonly NodeBox[],
   direction: WfDirection,
+  half: ClusterHalfSize,
 ): number {
   const isLR = direction === "LR";
   const base = isLR ? point.y : point.x;
   const main = isLR ? point.x : point.y;
-  const pad = CLUSTER_HALF_EXTENT;
+  // The cluster's own half-extent ALONG each axis, which is what turns "is this
+  // point inside a card" into "does any of this cluster lap over one".
+  const padMain = isLR ? half.width : half.height;
+  const padCross = isLR ? half.height : half.width;
   // Only the boxes the point could ever be inside — those it already overlaps on
   // the axis the flow advances along. Inflated, like the cross-axis test below,
   // so a control whose centre sits beside a card but whose body laps over it is
   // still treated as covered.
   const column = boxes.filter((b) => {
-    const lo = (isLR ? b.x : b.y) - pad;
-    const size = (isLR ? b.width : b.height) + pad * 2;
+    const lo = (isLR ? b.x : b.y) - padMain;
+    const size = (isLR ? b.width : b.height) + padMain * 2;
     return main >= lo && main <= lo + size;
   });
   if (column.length === 0) return 0;
@@ -375,8 +399,8 @@ export function clearOfNodeBoxes(
     // against a pathological stack rather than the normal exit.
     for (let step = 0; step < 8; step += 1) {
       const hit = column.find((b) => {
-        const lo = (isLR ? b.y : b.x) - pad;
-        const size = (isLR ? b.height : b.width) + pad * 2;
+        const lo = (isLR ? b.y : b.x) - padCross;
+        const size = (isLR ? b.height : b.width) + padCross * 2;
         return at >= lo && at <= lo + size;
       });
       if (!hit) return at - base;
@@ -384,8 +408,8 @@ export function clearOfNodeBoxes(
       const size = isLR ? hit.height : hit.width;
       at =
         sign > 0
-          ? lo + size + pad + INSERT_CLEARANCE
-          : lo - pad - INSERT_CLEARANCE;
+          ? lo + size + padCross + INSERT_CLEARANCE
+          : lo - padCross - INSERT_CLEARANCE;
       if (Math.abs(at - base) > INSERT_MAX_NUDGE) return null;
     }
     return null;

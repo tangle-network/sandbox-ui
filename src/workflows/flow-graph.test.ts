@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildFlowGraph,
   clearOfNodeBoxes,
+  CLUSTER_HALF_SIZE,
   indexProblems,
   mergeRunState,
   sameRunState,
@@ -396,6 +397,8 @@ describe("reserveEdgeInsert", () => {
 });
 
 describe("clearOfNodeBoxes", () => {
+  const CONTROL = CLUSTER_HALF_SIZE.control;
+  const CHIP = CLUSTER_HALF_SIZE.chip;
   // A layer of two stacked cards, as the layouter pitches them: same x band,
   // separated on the cross axis.
   const upper = { x: 300, y: 100, width: 292, height: 80 };
@@ -404,16 +407,16 @@ describe("clearOfNodeBoxes", () => {
   it("leaves a point that is already clear where it is", () => {
     // The common case: an adjacent-layer edge, whose midpoint sits in the
     // corridor the layout reserved for it.
-    expect(clearOfNodeBoxes({ x: 250, y: 140 }, [upper, lower], "LR")).toBe(0);
+    expect(clearOfNodeBoxes({ x: 250, y: 140 }, [upper, lower], "LR", CONTROL)).toBe(0);
   });
 
   it("moves a point off the card it landed inside, the short way", () => {
     // Nearer the box's top edge, so it leaves upwards.
-    const up = clearOfNodeBoxes({ x: 400, y: 115 }, [upper], "LR");
+    const up = clearOfNodeBoxes({ x: 400, y: 115 }, [upper], "LR", CONTROL);
     expect(up).toBeLessThan(0);
     expect(115 + up).toBeLessThan(upper.y);
     // Nearer the bottom edge, so it leaves downwards.
-    const down = clearOfNodeBoxes({ x: 400, y: 170 }, [upper], "LR");
+    const down = clearOfNodeBoxes({ x: 400, y: 170 }, [upper], "LR", CONTROL);
     expect(down).toBeGreaterThan(0);
     expect(170 + down).toBeGreaterThan(upper.y + upper.height);
   });
@@ -421,7 +424,7 @@ describe("clearOfNodeBoxes", () => {
   it("escapes a STACK rather than stepping into the next card", () => {
     // Deep inside the upper card, with the lower one just below: walking down
     // must clear both, not stop between them where the second box begins.
-    const offset = clearOfNodeBoxes({ x: 400, y: 175 }, [upper, lower], "LR");
+    const offset = clearOfNodeBoxes({ x: 400, y: 175 }, [upper, lower], "LR", CONTROL);
     const landed = 175 + offset;
     for (const box of [upper, lower]) {
       const inside = landed >= box.y && landed <= box.y + box.height;
@@ -431,12 +434,12 @@ describe("clearOfNodeBoxes", () => {
 
   it("ignores boxes the point never crosses on the flow axis", () => {
     // Same cross-axis band, a different layer: not in the way at all.
-    expect(clearOfNodeBoxes({ x: 50, y: 140 }, [upper], "LR")).toBe(0);
+    expect(clearOfNodeBoxes({ x: 50, y: 140 }, [upper], "LR", CONTROL)).toBe(0);
   });
 
   it("clears along the other axis for a top-to-bottom flow", () => {
     const box = { x: 100, y: 300, width: 80, height: 292 };
-    const offset = clearOfNodeBoxes({ x: 115, y: 400 }, [box], "TB");
+    const offset = clearOfNodeBoxes({ x: 115, y: 400 }, [box], "TB", CONTROL);
     expect(offset).toBeLessThan(0);
     expect(115 + offset).toBeLessThan(box.x);
   });
@@ -445,7 +448,7 @@ describe("clearOfNodeBoxes", () => {
     // A centre a few units outside the card is NOT clear: the control is a 20px
     // square in flow units at every zoom, so half of it is still over the card.
     const justOutside = upper.y - 4;
-    const offset = clearOfNodeBoxes({ x: 400, y: justOutside }, [upper], "LR");
+    const offset = clearOfNodeBoxes({ x: 400, y: justOutside }, [upper], "LR", CONTROL);
     expect(offset).not.toBe(0);
     expect(justOutside + offset).toBeLessThan(upper.y - 12);
   });
@@ -453,7 +456,26 @@ describe("clearOfNodeBoxes", () => {
   it("still leaves a control with real clearance alone", () => {
     // Far enough out that the whole control is off the card — no nudge, or the
     // control would drift away from its own edge for no reason.
-    expect(clearOfNodeBoxes({ x: 400, y: upper.y - 40 }, [upper], "LR")).toBe(0);
+    expect(clearOfNodeBoxes({ x: 400, y: upper.y - 40 }, [upper], "LR", CONTROL)).toBe(0);
+  });
+
+  it("clears a CHIP by its own width, which the control's size does not cover", () => {
+    // A problem chip truncates at `max-w-40` — 160 units, eight times the
+    // control — so a cluster carrying one laps over the cards either side of a
+    // corridor the control would have fitted in. It takes the pointer, so over
+    // a card it swallows that node's clicks.
+    const corridorCentre = { x: upper.x - 22, y: upper.y + 20 };
+    expect(clearOfNodeBoxes(corridorCentre, [upper], "LR", CONTROL)).toBe(0);
+    expect(clearOfNodeBoxes(corridorCentre, [upper], "LR", CHIP)).not.toBe(0);
+  });
+
+  it("reads a chip's width as the CROSS extent in a top-to-bottom flow", () => {
+    // Same chip, same card, rotated layout: the width that spanned the corridor
+    // in "LR" is now the axis that has to clear the card.
+    const tall = { x: 100, y: 300, width: 80, height: 292 };
+    const beside = { x: tall.x - 30, y: 400 };
+    expect(clearOfNodeBoxes(beside, [tall], "TB", CONTROL)).toBe(0);
+    expect(clearOfNodeBoxes(beside, [tall], "TB", CHIP)).not.toBe(0);
   });
 
   it("gives up rather than dragging a control far from its own edge", () => {
@@ -461,6 +483,6 @@ describe("clearOfNodeBoxes", () => {
     // would put it somewhere that no longer reads as belonging to this edge, so
     // it keeps its place and stays usable through the raised label layer.
     const wall = { x: 300, y: 0, width: 292, height: 600 };
-    expect(clearOfNodeBoxes({ x: 400, y: 300 }, [wall], "LR")).toBe(0);
+    expect(clearOfNodeBoxes({ x: 400, y: 300 }, [wall], "LR", CONTROL)).toBe(0);
   });
 });

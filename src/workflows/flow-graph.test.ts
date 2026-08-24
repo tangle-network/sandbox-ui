@@ -478,6 +478,39 @@ describe("clearOfNodeBoxes", () => {
     expect(clearOfNodeBoxes(beside, [tall], "TB", CHIP)).not.toBe(0);
   });
 
+  /** A `parallel` fanning out this many ways stacks that many boxes in one
+   *  layer, so the walk has to cope with a column far deeper than two. */
+  const deepStack = (count: number, height: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      x: 300,
+      y: 100 + i * height,
+      width: 292,
+      height,
+    }));
+
+  it("escapes a deep layer when the way out is within reach", () => {
+    const stack = deepStack(12, 24);
+    const nearTheEdge = { x: 400, y: stack[1].y + 10 };
+    const offset = clearOfNodeBoxes(nearTheEdge, stack, "LR", CONTROL);
+    expect(offset).not.toBe(0);
+    const landed = nearTheEdge.y + offset;
+    for (const box of stack) {
+      expect(landed >= box.y && landed <= box.y + box.height).toBe(false);
+    }
+  });
+
+  it("keeps its place when a deep layer cannot be escaped inside the budget", () => {
+    // Buried in the middle of a tall stack, every way out costs more than a
+    // control may be moved. Giving up is the documented answer — a control
+    // flung that far no longer reads as belonging to its edge, and the raised
+    // label layer keeps an overlapping one clickable. This is the LIMIT that
+    // decides such a case; the walk never runs long enough for a step count to
+    // be what stops it.
+    const stack = deepStack(40, 24);
+    const buried = { x: 400, y: stack[20].y + 10 };
+    expect(clearOfNodeBoxes(buried, stack, "LR", CONTROL)).toBe(0);
+  });
+
   it("gives up rather than dragging a control far from its own edge", () => {
     // A box taller than the nudge budget either way: moving the control clear
     // would put it somewhere that no longer reads as belonging to this edge, so

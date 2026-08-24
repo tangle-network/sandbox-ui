@@ -395,9 +395,12 @@ export function clearOfNodeBoxes(
 
   const walk = (sign: 1 | -1): number | null => {
     let at = base;
-    // Bounded because each step leaves the box it hit; the bound is the guard
-    // against a pathological stack rather than the normal exit.
-    for (let step = 0; step < 8; step += 1) {
+    // Each step clears the box it hit and cannot return to it, so the candidates
+    // themselves bound the walk: one pass per box, plus the step that finds
+    // nothing left. Bounding it by a FIXED count instead would silently give up
+    // on a layer holding more cards than that — a `parallel` fanning out nine
+    // ways stacks nine boxes — and leave the control on a card.
+    for (let step = 0; step <= column.length; step += 1) {
       const hit = column.find((b) => {
         const lo = (isLR ? b.y : b.x) - padCross;
         const size = (isLR ? b.height : b.width) + padCross * 2;

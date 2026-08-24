@@ -243,13 +243,25 @@ const SEVERITY_WORD: Record<WfProblemSeverity, string> = {
  * carrying an error and a warning together would otherwise offer no way to tell
  * which of the two is the one blocking the compile.
  *
- * The message is normalized to a single line with no trailing punctuation, so
- * that joining several never doubles a separator ("end.. ") and a newline inside
- * a host's message never breaks the one-per-line reading below.
+ * The message is collapsed to a single line so a newline inside a host's text
+ * cannot break the one-problem-per-line reading below. It is otherwise passed
+ * through VERBATIM: a diagnostic can be about the very punctuation that trimming
+ * would remove ("unexpected ;"), and the canvas must say what the host's own
+ * problem list says. Joining handles the separators instead — see
+ * {@link joinSentences}.
  */
 function problemSentence(problem: WfProblem): string {
-  const message = problem.message.replace(/\s+/g, " ").trim().replace(/[.;,]+$/, "");
+  const message = problem.message.replace(/\s+/g, " ").trim();
   return `${SEVERITY_WORD[problem.severity]}: ${message}`;
+}
+
+/** Run sentences together for a listener, adding a full stop only where the text
+ *  does not already end in one — so "Why?" is followed by a space rather than
+ *  "Why?.", and a message ending in a semicolon keeps it. */
+function joinSentences(parts: readonly string[]): string {
+  return parts.reduce((joined, part) =>
+    `${joined}${/[.!?;,]$/.test(joined) ? "" : "."} ${part}`,
+  );
 }
 
 /** Every problem on one anchor, as the tooltip text a marker hangs on. One per
@@ -272,7 +284,7 @@ export function ProblemMessages({ problems }: { problems: readonly WfProblem[] }
     <span className="sr-only">
       {problems.length === 1
         ? problemSentence(problems[0])
-        : `${problems.length} problems. ${problems.map(problemSentence).join(". ")}`}
+        : `${problems.length} problems. ${joinSentences(problems.map(problemSentence))}`}
     </span>
   );
 }

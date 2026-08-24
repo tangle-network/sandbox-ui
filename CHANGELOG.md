@@ -54,8 +54,10 @@
   lets clicks through and stays where it is.
 - Every problem message reaches the accessibility tree, not only a `title`
   tooltip. A mark carrying more than one problem showed "N problems" as its whole
-  accessible name, so a keyboard, screen-reader or touch user could see that a
-  step was broken and never find out why.
+  accessible name, so a screen-reader user could hear that a step was broken and
+  never hear why. The mark on the canvas stays a LOCATOR — it says which step or
+  dependency is at fault, and the host's own problem list is where the full text
+  is read and acted on.
 
 ## 0.109.0
 

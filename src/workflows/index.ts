@@ -27,6 +27,8 @@ export {
   type WfNodeState,
   type WfNodeStatus,
   type WfNodeTone,
+  type WfProblem,
+  type WfProblemSeverity,
 } from "./model";
 // Only the LAZY wrapper is exported as a value: it defers the `@xyflow/react`
 // import (and its CSS) to render time, so importing this entry — e.g. for the

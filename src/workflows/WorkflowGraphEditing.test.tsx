@@ -27,7 +27,13 @@ type FlowProps = {
     e: unknown,
     edge: { source: string; target: string; data?: unknown },
   ) => void;
-  edges?: { id: string; deletable?: boolean; data?: { kind?: string } }[];
+  onConnectEnd?: (e: unknown, state: unknown) => void;
+  edges?: {
+    id: string;
+    type?: string;
+    deletable?: boolean;
+    data?: { kind?: string; insertable?: boolean };
+  }[];
 };
 
 let flowProps: FlowProps = {};
@@ -98,6 +104,7 @@ describe("WorkflowGraph editing gates", () => {
     expect(flowProps.onConnect).toBeUndefined();
     expect(flowProps.onEdgesDelete).toBeUndefined();
     expect(flowProps.onEdgeClick).toBeUndefined();
+    expect(flowProps.onConnectEnd).toBeUndefined();
   });
 
   it("arms the edge gestures once onEdgeConnect is supplied", () => {
@@ -209,5 +216,119 @@ describe("WorkflowGraph edge gestures reach the host only for declared edges", (
       actionNodeId(0),
       actionNodeId(1),
     );
+  });
+});
+
+/**
+ * The Phase-4 authoring gestures at the FLOW level: which of them the component
+ * arms, and on which edges. What each one renders is covered next door in
+ * WorkflowGraphAuthoring.test.tsx, against the real node and edge components.
+ */
+describe("WorkflowGraph add-step gestures", () => {
+  it("stays inert without onEdgeConnect — the one prop that makes an editor", () => {
+    // Every other editing callback REFINES an editor. A canvas that cannot
+    // accept a connection must not draw an add control either, or the user is
+    // offered a step it has nowhere to attach.
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeInsert={vi.fn()}
+        onNodeInsert={vi.fn()}
+        onTriggerAdd={vi.fn()}
+        onTriggerDelete={vi.fn()}
+      />,
+    );
+    expect(flowProps.onConnectEnd).toBeUndefined();
+    expect(flowProps.edges?.some((e) => e.data?.insertable)).toBe(false);
+  });
+
+  it("offers the insert control on exactly the edges the host may change", () => {
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onEdgeInsert={vi.fn()}
+      />,
+    );
+    const byId = new Map(flowProps.edges?.map((e) => [e.id, e]) ?? []);
+    const declared = byId.get(`${actionNodeId(0)}->${actionNodeId(1)}`);
+    expect(declared?.data?.insertable).toBe(true);
+    // Both of these are edges no definition has a row for: one is the fan-out a
+    // structural step's own config produces, the other is what "nothing points
+    // at this node" renders as. Inserting BETWEEN either pair names nothing.
+    expect(
+      byId.get(`${TRIGGER_NODE_ID}->${actionNodeId(0)}`)?.data?.insertable,
+    ).toBeUndefined();
+    expect(
+      byId.get(`${actionNodeId(2)}->${actionNodeId(2)}-b0`)?.data?.insertable,
+    ).toBeUndefined();
+  });
+
+  it("reports a drop on empty canvas as an add beside the node it left", () => {
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    // Released over nothing, from the outbound handle: the new step FOLLOWS.
+    flowProps.onConnectEnd?.(null, {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: { type: "source" },
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
+    // From the inbound handle it PRECEDES — which is the only way to add a step
+    // at the very start, since the trigger edge offers no insert.
+    flowProps.onConnectEnd?.(null, {
+      fromNode: { id: actionNodeId(0) },
+      fromHandle: { type: "target" },
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(0), "before");
+  });
+
+  it("never reads a completed connection as an add", () => {
+    // React Flow fires onConnectEnd at the end of EVERY connection drag,
+    // including the ones that landed on a handle and already went out through
+    // onConnect. Reporting those too would add a step for every edge drawn.
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    flowProps.onConnectEnd?.(null, {
+      fromNode: { id: actionNodeId(0) },
+      fromHandle: { type: "source" },
+      toNode: { id: actionNodeId(1) },
+      toHandle: { type: "target" },
+    });
+    // Released over a node's BODY, short of its handle: still not an add — the
+    // user was aiming at that node, not at the canvas behind it.
+    flowProps.onConnectEnd?.(null, {
+      fromNode: { id: actionNodeId(0) },
+      fromHandle: { type: "source" },
+      toNode: { id: actionNodeId(1) },
+      toHandle: null,
+    });
+    // A drag that began nowhere resolvable is not an add either.
+    flowProps.onConnectEnd?.(null, {
+      fromNode: null,
+      fromHandle: null,
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).not.toHaveBeenCalled();
   });
 });

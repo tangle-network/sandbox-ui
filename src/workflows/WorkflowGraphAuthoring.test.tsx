@@ -1,0 +1,446 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * What the AUTHORING decorations actually render — the problem marks a node and
+ * an edge wear, the insert control an edge draws, and the trigger's own remove
+ * control — against the real node and edge components.
+ *
+ * Which gestures the canvas arms, and on which edges, is the flow-level concern
+ * next door in WorkflowGraphEditing.test.tsx.
+ *
+ * Only two React Flow pieces are stubbed. `EdgeLabelRenderer` portals into a
+ * container the measured canvas owns, so outside a live canvas it renders
+ * NOTHING — and everything an edge says lives inside it. `BaseEdge` draws an
+ * SVG path that needs the same canvas. The node's own `Handle`s are left real,
+ * reading the store from `ReactFlowProvider` as they do elsewhere in this suite.
+ */
+vi.mock("@xyflow/react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@xyflow/react")>();
+  return {
+    ...actual,
+    EdgeLabelRenderer: ({ children }: { children: React.ReactNode }) => (
+      <div data-testid="edge-labels">{children}</div>
+    ),
+    BaseEdge: () => <path data-testid="edge-path" />,
+  };
+});
+
+const { MarkerType, Position, ReactFlowProvider } = await import(
+  "@xyflow/react"
+);
+const {
+  decorateAuthoringEdges,
+  DensityContext,
+  EdgeInsertContext,
+  NodeProblemsContext,
+  RunModeContext,
+  TriggerDeleteContext,
+  WfEdgeRenderer,
+  WorkflowNode,
+} = await import("./WorkflowGraph");
+const { indexProblems, WF_EDGE_TYPE } = await import("./flow-graph");
+const { actionNodeId, TRIGGER_NODE_ID } = await import("./model");
+type WfFlowEdge = import("./flow-graph").WfFlowEdge;
+type WorkflowNodeProps = Parameters<typeof WorkflowNode>[0];
+
+afterEach(cleanup);
+
+const ACTION = {
+  title: "Notify",
+  kind: "notify",
+  subtitle: "example.com",
+  isRoot: false,
+  tone: "action",
+} as const;
+
+const TRIGGER = {
+  title: "Webhook",
+  kind: "webhook",
+  isRoot: true,
+  tone: "trigger",
+} as const;
+
+function renderNode({
+  id = actionNodeId(0),
+  data = ACTION,
+  problems = [],
+  onTriggerDelete = null,
+  compact = false,
+  runMode = false,
+}: {
+  id?: string;
+  data?: Record<string, unknown>;
+  problems?: Parameters<typeof indexProblems>[0];
+  onTriggerDelete?: ((nodeId: string) => void) | null;
+  compact?: boolean;
+  runMode?: boolean;
+} = {}) {
+  return render(
+    <ReactFlowProvider>
+      <RunModeContext.Provider value={runMode}>
+        <DensityContext.Provider value={compact}>
+          <NodeProblemsContext.Provider value={indexProblems(problems).byNode}>
+            <TriggerDeleteContext.Provider value={onTriggerDelete}>
+              <WorkflowNode {...({ id, data } as WorkflowNodeProps)} />
+            </TriggerDeleteContext.Provider>
+          </NodeProblemsContext.Provider>
+        </DensityContext.Provider>
+      </RunModeContext.Provider>
+    </ReactFlowProvider>,
+  );
+}
+
+const problem = (
+  node: string,
+  severity: "error" | "warning",
+  message: string,
+) => ({ anchor: "node", node, severity, message }) as const;
+
+describe("a node carrying authoring problems", () => {
+  it("says WHICH step is broken and WHY, in both densities", () => {
+    for (const compact of [false, true]) {
+      cleanup();
+      renderNode({
+        problems: [problem(actionNodeId(0), "error", "url is required")],
+        compact,
+      });
+      const mark = screen.getByTestId("wf-node-problem");
+      expect(mark.dataset.severity).toBe("error");
+      // The message on `title` is what makes the mark worth more than a tint:
+      // the canvas answers "why" without a trip to the list below it.
+      expect(mark.title).toBe("url is required");
+    }
+  });
+
+  it("counts them, and reads one error among warnings as an error", () => {
+    renderNode({
+      problems: [
+        problem(actionNodeId(0), "warning", "no timeout set"),
+        problem(actionNodeId(0), "error", "url is required"),
+      ],
+    });
+    const mark = screen.getByTestId("wf-node-problem");
+    expect(mark.dataset.severity).toBe("error");
+    expect(mark.textContent).toContain("2");
+    expect(mark.title).toBe("no timeout set\nurl is required");
+  });
+
+  it("shows nothing on a node with no problem of its own", () => {
+    renderNode({ problems: [problem(actionNodeId(1), "error", "elsewhere")] });
+    expect(screen.queryByTestId("wf-node-problem")).toBeNull();
+  });
+
+  it("tints the card border, so a broken step is findable without hovering", () => {
+    const { container } = renderNode({
+      problems: [problem(actionNodeId(0), "error", "url is required")],
+    });
+    const card = container.querySelector<HTMLElement>(".rounded-xl");
+    expect(card?.style.borderColor).toBe("var(--surface-danger-text)");
+  });
+
+  it("lets a RUN status keep the border it owns", () => {
+    // A run's border is the more urgent reading of the same edge of the same
+    // box. The two only meet if a host draws a run graph with authoring
+    // problems on it, and the run must win there.
+    const { container } = renderNode({
+      data: { ...ACTION, state: { status: "failed" } },
+      runMode: true,
+      problems: [problem(actionNodeId(0), "warning", "no timeout set")],
+    });
+    const card = container.querySelector<HTMLElement>(".rounded-xl");
+    expect(card?.style.borderColor).toBe("var(--surface-danger-text)");
+    expect(card?.style.boxShadow).toContain("35%");
+  });
+});
+
+describe("the trigger's remove control", () => {
+  it("is drawn on a trigger, and only when the host offers one", () => {
+    renderNode({ id: TRIGGER_NODE_ID, data: TRIGGER });
+    expect(screen.queryByTestId("wf-trigger-delete")).toBeNull();
+    cleanup();
+    renderNode({
+      id: TRIGGER_NODE_ID,
+      data: TRIGGER,
+      onTriggerDelete: vi.fn(),
+    });
+    expect(screen.getByTestId("wf-trigger-delete")).toBeTruthy();
+  });
+
+  it("is never drawn on a step, which is a list edit rather than a gesture", () => {
+    renderNode({ onTriggerDelete: vi.fn() });
+    expect(screen.queryByTestId("wf-trigger-delete")).toBeNull();
+  });
+
+  it("reports the trigger node it stands for without also opening it", () => {
+    const onTriggerDelete = vi.fn();
+    const onNodeClick = vi.fn();
+    render(
+      <ReactFlowProvider>
+        <NodeProblemsContext.Provider value={new Map()}>
+          <TriggerDeleteContext.Provider value={onTriggerDelete}>
+            {/* React Flow hangs `onNodeClick` on the wrapper it puts around a
+                node, so a control inside the card fires BOTH unless the click
+                is stopped — removing a trigger must not also select it. */}
+            <div onClick={onNodeClick}>
+              <WorkflowNode
+                {...({
+                  id: "trigger:1",
+                  data: TRIGGER,
+                } as WorkflowNodeProps)}
+              />
+            </div>
+          </TriggerDeleteContext.Provider>
+        </NodeProblemsContext.Provider>
+      </ReactFlowProvider>,
+    );
+    fireEvent.click(screen.getByTestId("wf-trigger-delete"));
+    expect(onTriggerDelete).toHaveBeenCalledWith("trigger:1");
+    expect(onNodeClick).not.toHaveBeenCalled();
+  });
+});
+
+/** The edge, inside the wrapper React Flow hangs `onEdgeClick` on — which is
+ *  what a press inside the label PORTAL reaches through the component tree. */
+function renderEdge({
+  data,
+  onInsert = null,
+  onEdgeClick,
+}: {
+  data: Record<string, unknown>;
+  onInsert?: ((source: string, target: string) => void) | null;
+  onEdgeClick?: () => void;
+}) {
+  return render(
+    <ReactFlowProvider>
+      <EdgeInsertContext.Provider value={onInsert}>
+        <div onClick={onEdgeClick}>
+          <WfEdgeRenderer
+            {...({
+              id: `${actionNodeId(0)}->${actionNodeId(1)}`,
+              source: actionNodeId(0),
+              target: actionNodeId(1),
+              sourceX: 0,
+              sourceY: 0,
+              targetX: 100,
+              targetY: 0,
+              sourcePosition: Position.Right,
+              targetPosition: Position.Left,
+              data,
+            } as Parameters<typeof WfEdgeRenderer>[0])}
+          />
+        </div>
+      </EdgeInsertContext.Provider>
+    </ReactFlowProvider>,
+  );
+}
+
+describe("an edge's authoring furniture", () => {
+  it("draws nothing extra on a plain edge", () => {
+    renderEdge({ data: { kind: "spine" } });
+    expect(screen.queryByTestId("wf-edge-insert")).toBeNull();
+    expect(screen.queryByTestId("wf-edge-problem")).toBeNull();
+  });
+
+  it("offers the insert control, naming the pair it sits between", () => {
+    const onInsert = vi.fn();
+    renderEdge({ data: { kind: "spine", insertable: true }, onInsert });
+    fireEvent.click(screen.getByTestId("wf-edge-insert"));
+    expect(onInsert).toHaveBeenCalledWith(actionNodeId(0), actionNodeId(1));
+  });
+
+  it("inserts without also asking to edit the edge's guard", () => {
+    // The label layer is a PORTAL: a React synthetic event bubbles through the
+    // COMPONENT tree, not the DOM one, so the press reaches the edge wrapper
+    // React Flow hangs `onEdgeClick` on. Unstopped, one press both inserted a
+    // step and opened the guard editor.
+    const onEdgeClick = vi.fn();
+    const onInsert = vi.fn();
+    renderEdge({
+      data: { kind: "spine", insertable: true },
+      onInsert,
+      onEdgeClick,
+    });
+    fireEvent.click(screen.getByTestId("wf-edge-insert"));
+    expect(onInsert).toHaveBeenCalledTimes(1);
+    expect(onEdgeClick).not.toHaveBeenCalled();
+  });
+
+  it("draws no control when the decoration outlives its handler", () => {
+    // The two are set together by the component. Requiring both means a stale
+    // edge — one styled on a previous tick — can never draw a button that does
+    // nothing when pressed.
+    renderEdge({ data: { kind: "spine", insertable: true }, onInsert: null });
+    expect(screen.queryByTestId("wf-edge-insert")).toBeNull();
+  });
+
+  it("states the problem on the edge, with every message on the chip", () => {
+    renderEdge({
+      data: {
+        kind: "spine",
+        problems: [
+          {
+            anchor: "edge",
+            from: actionNodeId(0),
+            to: actionNodeId(1),
+            severity: "error",
+            message: "a1 cannot depend on a0",
+          },
+        ],
+      },
+    });
+    const chip = screen.getByTestId("wf-edge-problem");
+    expect(chip.dataset.severity).toBe("error");
+    expect(chip.textContent).toBe("a1 cannot depend on a0");
+  });
+
+  it("summarizes several, keeping each message readable on hover", () => {
+    renderEdge({
+      data: {
+        kind: "spine",
+        problems: [
+          {
+            anchor: "edge",
+            from: actionNodeId(0),
+            to: actionNodeId(1),
+            severity: "warning",
+            message: "first",
+          },
+          {
+            anchor: "edge",
+            from: actionNodeId(0),
+            to: actionNodeId(1),
+            severity: "error",
+            message: "second",
+          },
+        ],
+      },
+    });
+    const chip = screen.getByTestId("wf-edge-problem");
+    expect(chip.dataset.severity).toBe("error");
+    expect(chip.textContent).toBe("2 problems");
+    expect(chip.title).toBe("first\nsecond");
+  });
+
+  it("lifts its cluster past the nodes, so a long edge's control is pressable", () => {
+    // Pinned by value, because jsdom has no layout and cannot catch a stacking
+    // regression — the same reason the connectable handle's `!z-10` is pinned by
+    // name in WorkflowNode.test.tsx. React Flow lays the label layer out BEFORE
+    // the node layer at the same painting level, so without this a node covers
+    // whatever a label puts under it: an edge spanning more than one layer has
+    // its midpoint inside the layer it skips, i.e. on a card. Verified with a
+    // live-browser hit-test.
+    const { container } = renderEdge({
+      data: { kind: "spine", insertable: true },
+      onInsert: vi.fn(),
+    });
+    const cluster = container.querySelector<HTMLElement>(".nodrag.nopan");
+    expect(cluster?.style.zIndex).toBe("1");
+  });
+
+  it("keeps what must be hovered or pressed reachable through the label layer", () => {
+    // React Flow's label layer is `pointer-events: none`, so anything meant to
+    // be hovered or pressed has to opt back in — without it the tooltip never
+    // opens and the button never receives a click. Only these two do: the
+    // cluster is raised over the nodes, so a chip that opted in would swallow
+    // clicks meant for whatever card it lands on.
+    renderEdge({
+      data: {
+        kind: "spine",
+        insertable: true,
+        whenLabel: "risk == high",
+        problems: [
+          {
+            anchor: "edge",
+            from: actionNodeId(0),
+            to: actionNodeId(1),
+            severity: "error",
+            message: "bad",
+          },
+        ],
+      },
+      onInsert: vi.fn(),
+    });
+    for (const id of ["wf-edge-insert", "wf-edge-problem"]) {
+      expect(screen.getByTestId(id).className).toContain("pointer-events-auto");
+    }
+  });
+});
+
+describe("decorateAuthoringEdges", () => {
+  const styled = (id: string, source: string, target: string): WfFlowEdge => ({
+    id,
+    source,
+    target,
+    type: "smoothstep",
+    data: { kind: "spine" },
+    style: { stroke: "hsl(var(--muted-foreground))", strokeWidth: 1.75 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: "hsl(var(--muted-foreground))" },
+  });
+  const none = () => false;
+
+  it("returns the same edges when there is nothing to decorate", () => {
+    const edges = [styled("a0->a1", "a0", "a1")];
+    // Identity, not equality: a fresh array per render would re-seed React Flow's
+    // edge state on every tick that touches this memo.
+    expect(decorateAuthoringEdges(edges, new Map(), none)).toBe(edges);
+  });
+
+  it("moves an edge onto the decorating renderer once it carries a problem", () => {
+    const edge = styled("a0->a1", "a0", "a1");
+    const [decorated] = decorateAuthoringEdges(
+      [edge],
+      indexProblems([
+        { anchor: "edge", from: "a0", to: "a1", severity: "error", message: "bad" },
+      ]).byEdge,
+      none,
+    );
+    expect(decorated.type).toBe(WF_EDGE_TYPE);
+    expect(decorated.data?.problems).toHaveLength(1);
+    // Recoloured, because a chip alone is unreadable at the zoom a whole
+    // pipeline is read at.
+    expect(decorated.style?.stroke).toBe("var(--surface-danger-text)");
+    expect(decorated.markerEnd).toMatchObject({ color: "var(--surface-danger-text)" });
+    // The unrelated styling it arrived with survives.
+    expect(decorated.style?.strokeWidth).toBe(1.75);
+  });
+
+  it("colours a warning apart from an error", () => {
+    const [decorated] = decorateAuthoringEdges(
+      [styled("a0->a1", "a0", "a1")],
+      indexProblems([
+        { anchor: "edge", from: "a0", to: "a1", severity: "warning", message: "hm" },
+      ]).byEdge,
+      none,
+    );
+    expect(decorated.style?.stroke).toBe("var(--surface-warning-text)");
+  });
+
+  it("marks only the edges the predicate accepts as insertable", () => {
+    const [spine, fork] = decorateAuthoringEdges(
+      [styled("a0->a1", "a0", "a1"), styled("a1->a1-b0", "a1", "a1-b0")],
+      new Map(),
+      (e) => e.id === "a0->a1",
+    );
+    expect(spine.data?.insertable).toBe(true);
+    expect(spine.type).toBe(WF_EDGE_TYPE);
+    // An edge the host cannot insert on keeps the built-in renderer, so it
+    // cannot draw the control at all.
+    expect(fork.data?.insertable).toBeUndefined();
+    expect(fork.type).toBe("smoothstep");
+  });
+
+  it("lets a problem's colour win over the run colour on the same edge", () => {
+    const running = styled("a0->a1", "a0", "a1");
+    running.style = { stroke: "hsl(var(--primary))" };
+    const [decorated] = decorateAuthoringEdges(
+      [running],
+      indexProblems([
+        { anchor: "edge", from: "a0", to: "a1", severity: "error", message: "bad" },
+      ]).byEdge,
+      none,
+    );
+    expect(decorated.style?.stroke).toBe("var(--surface-danger-text)");
+  });
+});

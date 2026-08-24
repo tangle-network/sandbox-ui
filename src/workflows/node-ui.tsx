@@ -16,6 +16,7 @@
  */
 
 import {
+  AlertTriangle,
   Bell,
   Box,
   Cable,
@@ -34,7 +35,12 @@ import {
 } from "lucide-react";
 import { ProviderIcon } from "../integrations/provider-logo";
 import { ModelBrandStack, modelBrandFor } from "../lib/model-brand";
-import type { WfNodeStatus, WfNodeTone } from "./model";
+import type {
+  WfNodeStatus,
+  WfNodeTone,
+  WfProblem,
+  WfProblemSeverity,
+} from "./model";
 import { providerLabel } from "./provider-label";
 
 /** Track color behind a progress bar — a faint wash of the muted token. */
@@ -189,6 +195,84 @@ export const KIND_ICON: Record<string, LucideIcon> = {
   "script.run": Code,
   "trace.analyze": ScanSearch,
 };
+
+/** An authoring problem's colours — the same semantic surface trio the run
+ *  statuses use, so a broken step and a failed one are recognisably the same
+ *  family of "something is wrong here" without being the same signal. */
+export const PROBLEM_SURFACE: Record<
+  WfProblemSeverity,
+  { background: string; color: string; borderColor: string }
+> = {
+  error: {
+    background: "var(--surface-danger-bg)",
+    color: "var(--surface-danger-text)",
+    borderColor: "var(--surface-danger-border)",
+  },
+  warning: {
+    background: "var(--surface-warning-bg)",
+    color: "var(--surface-warning-text)",
+    borderColor: "var(--surface-warning-border)",
+  },
+};
+
+/** A node's border once it carries an authoring problem. Applied only where the
+ *  node has no RUN status to state — a run's border is the more urgent reading
+ *  of the same edge of the same box, and a definition being edited has no run. */
+export function problemBorder(severity: WfProblemSeverity): {
+  borderColor: string;
+  boxShadow: string;
+} {
+  const color = PROBLEM_SURFACE[severity].color;
+  return {
+    borderColor: color,
+    boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 35%, transparent)`,
+  };
+}
+
+/** Every problem on one anchor, as the tooltip text a marker hangs on. One per
+ *  line, so a step with three faults lists three rather than concatenating them
+ *  into a sentence nobody can parse. */
+export function problemTitle(problems: readonly WfProblem[]): string {
+  return problems.map((problem) => problem.message).join("\n");
+}
+
+/**
+ * The mark a node wears when the draft it is drawn from has a problem on it: a
+ * warning glyph, with a count once there is more than one. It is a READOUT, not
+ * a control — the node's own click already opens whatever the host shows for it,
+ * and a second target inside the card would compete with that.
+ *
+ * `title` carries every message, which is what makes the marker worth more than
+ * the border tint alone: the canvas says WHICH step is broken at a glance and
+ * WHY on hover, without the reader going to the problem list to find out.
+ */
+export function ProblemMarker({
+  problems,
+  severity,
+  className = "",
+}: {
+  problems: readonly WfProblem[];
+  severity: WfProblemSeverity;
+  className?: string;
+}) {
+  const label =
+    problems.length === 1
+      ? problems[0].message
+      : `${problems.length} problems`;
+  return (
+    <span
+      data-testid="wf-node-problem"
+      data-severity={severity}
+      title={problemTitle(problems)}
+      aria-label={label}
+      className={`flex shrink-0 items-center gap-0.5 rounded-full border px-1 py-[1px] font-medium text-[10px] leading-none ${className}`}
+      style={PROBLEM_SURFACE[severity]}
+    >
+      <AlertTriangle size={9} aria-hidden />
+      {problems.length > 1 && <span>{problems.length}</span>}
+    </span>
+  );
+}
 
 /** The status pill in a card's header — the one place the run state is spelled
  *  out in words. */

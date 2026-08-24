@@ -13,7 +13,9 @@ import {
   type WfEdgeSpec,
   type WfNodeData,
   type WfNodeState,
+  type WfProblem,
   type WfSide,
+  wfEdgeId,
 } from "./model";
 
 /**
@@ -30,6 +32,11 @@ export interface WfFlowEdgeData extends Record<string, unknown> {
   /** Per-node visit budget, rendered beside a back edge so the loop states its
    *  own bound. Merged in at style time by the component that knows it. */
   maxNodeVisits?: number;
+  /** The AUTHORING problems anchored to this edge, already written for a reader.
+   *  Folded on by the styling pass; absent on a run graph. */
+  problems?: readonly WfProblem[];
+  /** This edge offers the "insert a step here" control at its midpoint. */
+  insertable?: boolean;
 }
 
 export type WfFlowEdge = Edge<WfFlowEdgeData>;
@@ -77,6 +84,9 @@ export interface BuildFlowGraphOptions {
   /** Declared topology, replacing the inferred positional spine. Passed
    *  straight through to `buildWorkflowGraph` — see {@link WfEdgeSpec}. */
   edges?: readonly WfEdgeSpec[];
+  /** Reserve the layer gap an edge's insert control needs. Passed straight
+   *  through to `buildWorkflowGraph`. */
+  reserveEdgeInsert?: boolean;
 }
 
 /** A bare run-state map (`buildFlowGraph(yaml, { a0: { status: "running" } })`),
@@ -91,6 +101,34 @@ function isNodeStateMap(arg: object): arg is Record<string, WfNodeState> {
     )
   );
 }
+
+/**
+ * Every key {@link BuildFlowGraphOptions} declares. An options object is
+ * recognized by carrying one of them, so a key missing here makes the whole
+ * object fall through to the run-state test below — which it fails, silently
+ * losing ALL of its options rather than the one that was forgotten.
+ *
+ * The completeness assertion under it turns that into a BUILD error: adding an
+ * option without adding it here stops compiling, rather than shipping a graph
+ * that quietly ignores the caller. Written as a tuple whose membership the
+ * option keys must be assignable to.
+ */
+const FLOW_GRAPH_OPTION_KEYS = [
+  "nodeState",
+  "direction",
+  "compact",
+  "wrap",
+  "edges",
+  "reserveEdgeInsert",
+] as const;
+
+type ListedOptionKey = (typeof FLOW_GRAPH_OPTION_KEYS)[number];
+// `never` — and so a type error on the assignment — the moment an option key is
+// not in the list above.
+const _everyOptionKeyIsListed: keyof BuildFlowGraphOptions extends ListedOptionKey
+  ? true
+  : never = true;
+void _everyOptionKeyIsListed;
 
 /**
  * Accept either an options object or a bare `nodeState` map as the second arg, so
@@ -109,17 +147,7 @@ function normalizeFlowGraphOptions(
   arg: BuildFlowGraphOptions | Record<string, WfNodeState> | undefined,
 ): BuildFlowGraphOptions {
   if (!arg) return {};
-  // Every option key must be listed here. One that is missing makes an options
-  // object fall through to the run-state test below, which it fails — so the
-  // call silently loses ALL of its options rather than the one that was
-  // forgotten. Adding an option to BuildFlowGraphOptions means adding it here.
-  if (
-    "nodeState" in arg ||
-    "direction" in arg ||
-    "compact" in arg ||
-    "wrap" in arg ||
-    "edges" in arg
-  ) {
+  if (FLOW_GRAPH_OPTION_KEYS.some((key) => key in arg)) {
     return arg as BuildFlowGraphOptions;
   }
   return isNodeStateMap(arg) ? { nodeState: arg } : {};
@@ -148,6 +176,7 @@ export function buildFlowGraph(
     compact,
     ...(options.wrap ? { wrap: true } : {}),
     ...(options.edges ? { edges: options.edges } : {}),
+    ...(options.reserveEdgeInsert ? { reserveEdgeInsert: true } : {}),
   });
   const isLR = direction === "LR";
   const sourcePosition = isLR ? Position.Right : Position.Bottom;
@@ -240,4 +269,43 @@ export function mergeRunState(
       ? n
       : { ...n, data: nextData };
   });
+}
+
+/**
+ * The authoring problems a graph was handed, indexed by what they are anchored
+ * to. Built once per problem list rather than scanned per node/edge, and built
+ * even for an anchor the graph has no slot for — a draft the author is still
+ * typing legitimately produces a problem naming a step that has just been
+ * renamed away, and the lookup simply never asks for it.
+ */
+export interface ProblemIndex {
+  byNode: ReadonlyMap<string, readonly WfProblem[]>;
+  byEdge: ReadonlyMap<string, readonly WfProblem[]>;
+}
+
+/** Group problems by node id and by edge id (see {@link wfEdgeId}). */
+export function indexProblems(
+  problems: readonly WfProblem[] | undefined,
+): ProblemIndex {
+  const byNode = new Map<string, WfProblem[]>();
+  const byEdge = new Map<string, WfProblem[]>();
+  for (const problem of problems ?? []) {
+    const [into, key] =
+      problem.anchor === "node"
+        ? ([byNode, problem.node] as const)
+        : ([byEdge, wfEdgeId(problem.from, problem.to)] as const);
+    const at = into.get(key);
+    if (at) at.push(problem);
+    else into.set(key, [problem]);
+  }
+  return { byNode, byEdge };
+}
+
+/** The loudest severity in a set — one error among warnings makes the whole
+ *  anchor read as an error. Null for an empty set, so a caller can skip. */
+export function worstSeverity(
+  problems: readonly WfProblem[] | undefined,
+): WfProblem["severity"] | null {
+  if (!problems || problems.length === 0) return null;
+  return problems.some((p) => p.severity === "error") ? "error" : "warning";
 }

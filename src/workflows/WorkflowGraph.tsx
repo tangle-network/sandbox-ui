@@ -12,6 +12,7 @@ import {
   Controls,
   EdgeLabelRenderer,
   type EdgeProps,
+  type FinalConnectionState,
   getSmoothStepPath,
   getViewportForBounds,
   Handle,
@@ -28,7 +29,7 @@ import {
   type Viewport,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, Plus, X } from "lucide-react";
 import {
   createContext,
   type CSSProperties,
@@ -57,12 +58,15 @@ import {
   type WfNodeData,
   type WfNodeState,
   type WfNodeStatus,
+  type WfProblem,
 } from "./model";
 import {
   buildFlowGraph,
+  indexProblems,
   mergeRunState,
   WF_EDGE_TYPE,
   type WfFlowEdge,
+  worstSeverity,
 } from "./flow-graph";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 import { classifyOutput, NodeOutputBody } from "./node-output";
@@ -71,6 +75,10 @@ import {
   edgeColor,
   emptySlotLabel,
   NodeMark,
+  problemBorder,
+  ProblemMarker,
+  PROBLEM_SURFACE,
+  problemTitle,
   STATUS_COLOR,
   STATUS_LABEL,
   StatusFooter,
@@ -286,6 +294,37 @@ const SELECTION_OUTLINE: CSSProperties = {
 export const ConnectableContext = createContext<boolean>(false);
 
 /**
+ * The AUTHORING problems anchored to each node, keyed by node id — read by the
+ * node so its card can say it is the broken one.
+ *
+ * Delivered as CONTEXT rather than merged onto node data, unlike run state,
+ * because the two arrive on different clocks. Run state ticks against a fixed
+ * definition, so merging it into `data` costs nothing; a problem list changes
+ * with the DRAFT, and merging it would put the problems into the memo the
+ * layout is keyed on — relaying out the whole canvas on every keystroke of an
+ * invalid draft.
+ */
+export const NodeProblemsContext = createContext<
+  ReadonlyMap<string, readonly WfProblem[]>
+>(new Map());
+
+/** Removing the trigger this node stands for, when the host offers it. Null ⇒
+ *  no control is drawn. A trigger is the one node with a delete gesture on the
+ *  canvas: every other node is a `do` entry, whose removal is a list edit (see
+ *  `deletable: false` in flow-graph.ts), while an `on:` entry has no list of its
+ *  own to be edited in. */
+export const TriggerDeleteContext = createContext<
+  ((nodeId: string) => void) | null
+>(null);
+
+/** Inserting a step ON an edge, from the control the edge draws at its midpoint.
+ *  Reaches the edge renderer as context because React Flow edge `data` is
+ *  serialisable payload, not a place to hang a host callback. */
+export const EdgeInsertContext = createContext<
+  ((sourceId: string, targetId: string) => void) | null
+>(null);
+
+/**
  * Whether an edge is the HOST's to change. Only a declared edge is: a fork edge
  * is fan-out structure derived from a structural action's own config, and an
  * edge out of a trigger is what "nothing points at this node" renders as.
@@ -372,6 +411,13 @@ export function WorkflowNode({
   const runMode = useContext(RunModeContext);
   const connectable = useContext(ConnectableContext);
   const hostSelection = useContext(SelectedNodeContext);
+  // What the DRAFT says is wrong with this step, and — for a trigger — the
+  // host's offer to remove it. Both are authoring concerns: absent on every
+  // read-only and run graph, where the contexts hold their defaults.
+  const problems = useContext(NodeProblemsContext).get(id);
+  const problemSeverity = worstSeverity(problems);
+  const removeTrigger = useContext(TriggerDeleteContext);
+  const isTrigger = triggerNodeIndex(id) !== null;
   // Compared only once the host HAS a selection: `undefined === undefined` would
   // otherwise ring a node whose id is also unset, so "nothing is selected" would
   // render as "this one is".
@@ -464,6 +510,30 @@ export function WorkflowNode({
       : { shape, tone: source.tone, label: source.label };
   })();
 
+  /**
+   * Remove this trigger. Two escapes, because the control sits INSIDE a node and
+   * both of the node's own gestures would otherwise fire with it: `nodrag nopan`
+   * is React Flow's own opt-out, so pressing the button never starts a node drag
+   * or a canvas pan, and the click is stopped from bubbling to the wrapper that
+   * carries `onNodeClick` — removing a trigger must not also open it.
+   */
+  const triggerDeleteButton =
+    isTrigger && removeTrigger ? (
+      <button
+        type="button"
+        data-testid="wf-trigger-delete"
+        title="Remove this trigger"
+        aria-label="Remove this trigger"
+        className="nodrag nopan flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition hover:border-[var(--surface-danger-border)] hover:text-[var(--surface-danger-text)]"
+        onClick={(event) => {
+          event.stopPropagation();
+          removeTrigger(id);
+        }}
+      >
+        <X size={10} aria-hidden />
+      </button>
+    ) : null;
+
   const handleClass = connectable ? HANDLE_CONNECTABLE_CLASS : HANDLE_CLASS;
   const handles = (
     <>
@@ -508,9 +578,11 @@ export function WorkflowNode({
             height: COMPACT_TILE,
             ...(state
               ? statusBorder(state.status)
-              : {
-                  borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
-                }),
+              : problemSeverity
+                ? problemBorder(problemSeverity)
+                : {
+                    borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
+                  }),
             // The TILE is the compact node (the name beside it is unboxed), so
             // the selection ring belongs to it and not to the wider box.
             ...(selected ? SELECTION_OUTLINE : {}),
@@ -528,6 +600,24 @@ export function WorkflowNode({
               tile={Math.round(COMPACT_TILE * 0.62)}
             />
           </span>
+          {/* The tile's corners carry the authoring marks: the problem on the
+              leading one, the trigger's own remove control on the trailing one.
+              The trailing corner is shared with the fan-out badge and the run
+              dot, and neither can meet a trigger — only a `parallel` is badged,
+              and a canvas offering the control is a definition being edited
+              rather than a run. */}
+          {problems && problemSeverity && (
+            <ProblemMarker
+              problems={problems}
+              severity={problemSeverity}
+              className="-left-1.5 -top-1.5 absolute"
+            />
+          )}
+          {triggerDeleteButton && (
+            <span className="-right-1.5 -top-1.5 absolute">
+              {triggerDeleteButton}
+            </span>
+          )}
           {d.badge && !state && (
             <span className="-right-1.5 -top-1.5 absolute rounded-full border border-border bg-card px-1.5 py-[1px] font-medium text-[10px] text-muted-foreground">
               {d.badge}
@@ -591,9 +681,11 @@ export function WorkflowNode({
       style={{
         ...(runStatus
           ? statusBorder(runStatus)
-          : {
-              borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
-            }),
+          : problemSeverity
+            ? problemBorder(problemSeverity)
+            : {
+                borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
+              }),
         ...(selected ? SELECTION_OUTLINE : {}),
       }}
     >
@@ -629,6 +721,9 @@ export function WorkflowNode({
           </div>
         )}
       </div>
+      {problems && problemSeverity && (
+        <ProblemMarker problems={problems} severity={problemSeverity} />
+      )}
       {runStatus ? (
         <StatusPill status={runStatus} />
       ) : (
@@ -638,6 +733,7 @@ export function WorkflowNode({
           </span>
         )
       )}
+      {triggerDeleteButton}
     </div>
   );
 
@@ -926,17 +1022,19 @@ const EDGE_CHIP_CLASS =
   "rounded-full border border-border bg-card/90 px-1.5 py-[1px] text-[10px] leading-tight backdrop-blur";
 
 /**
- * An edge with something to say: a guard summary, a cycle marker, or both. Only
- * a declared topology produces either, so everything else stays on React Flow's
- * built-in `smoothstep` renderer and is unaffected by this component's
- * existence.
+ * An edge with something to say: a guard summary, a cycle marker, an authoring
+ * problem, or the insert control an EDITING canvas draws on it. An edge with
+ * none of those stays on React Flow's built-in `smoothstep` renderer and is
+ * unaffected by this component's existence.
  *
  * The guard chip is truncated with its full text on `title`: a summary is
  * usually a few words, but it is host-supplied and nothing bounds it, and an
  * unbounded label on an edge overlaps the nodes either side of it.
  */
-function WfEdgeRenderer({
+export function WfEdgeRenderer({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -947,6 +1045,7 @@ function WfEdgeRenderer({
   markerEnd,
   style,
 }: EdgeProps<WfFlowEdge>) {
+  const insertStep = useContext(EdgeInsertContext);
   // The same path shape the built-in edges draw, so a decorated edge and a
   // plain one in the same graph are the same line with different furniture.
   const [path, labelX, labelY] = getSmoothStepPath({
@@ -960,6 +1059,12 @@ function WfEdgeRenderer({
   const backEdge = data?.backEdge === true;
   const whenLabel = data?.whenLabel;
   const visits = data?.maxNodeVisits;
+  const problems = data?.problems;
+  const problemSeverity = worstSeverity(problems);
+  // Armed only when the edge was marked insertable AND a handler is in context:
+  // the two are set together, and requiring both keeps a stale decoration from
+  // drawing a button that does nothing.
+  const offersInsert = data?.insertable === true && insertStep !== null;
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
@@ -967,13 +1072,38 @@ function WfEdgeRenderer({
         {/* `nodrag nopan` so dragging a label pans nothing and drags nothing —
             the chips are readouts, not handles. They STACK rather than sit side
             by side: the corridor the layout reserves (EDGE_LABEL_LANE) is sized
-            for one chip, and a guarded cycle carries two. */}
+            for one chip, and a guarded cycle carries two.
+
+            `zIndex` is load-bearing, not styling. React Flow lays the label
+            layer out BEFORE the node layer in tree order, and both sit at
+            z-index auto/0 inside the viewport's stacking context — so a node
+            paints over anything a label puts under it. An edge that spans more
+            than ONE layer has its midpoint inside the layer it skips, i.e.
+            squarely on a card: the reserved corridor only ever clears an
+            adjacent-layer edge. That leaves the chip unreadable and, worse, the
+            insert control unclickable. A positive z-index lifts this cluster
+            past every node, since neither React Flow layer opens a stacking
+            context of its own. Verified with a live-browser hit-test:
+            `elementFromPoint` returned the intervening node's card at the
+            control's own centre until this was set. */}
         <div
           className="nodrag nopan absolute flex flex-col items-center gap-0.5"
           style={{
+            zIndex: 1,
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
           }}
         >
+          {problems && problemSeverity && (
+            <span
+              data-testid="wf-edge-problem"
+              data-severity={problemSeverity}
+              title={problemTitle(problems)}
+              className={`${EDGE_CHIP_CLASS} pointer-events-auto max-w-40 truncate`}
+              style={PROBLEM_SURFACE[problemSeverity]}
+            >
+              {problems.length === 1 ? problems[0].message : `${problems.length} problems`}
+            </span>
+          )}
           {whenLabel && (
             <span
               title={whenLabel}
@@ -993,6 +1123,30 @@ function WfEdgeRenderer({
             >
               {visits !== undefined ? `↺ ≤${visits}` : "↺"}
             </span>
+          )}
+          {/* The label layer is `pointer-events: none` (React Flow's own CSS),
+              so anything meant to be hovered or pressed has to opt back in —
+              which is also what keeps the rest of the corridor pannable. */}
+          {offersInsert && (
+            <button
+              type="button"
+              data-testid="wf-edge-insert"
+              title="Insert a step here"
+              aria-label="Insert a step here"
+              className="pointer-events-auto flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm backdrop-blur transition hover:border-primary hover:text-primary"
+              // The label layer is a PORTAL, and a React synthetic event bubbles
+              // through the component tree rather than the DOM one — so this
+              // press reaches the edge wrapper that carries `onEdgeClick`, and
+              // inserting a step would also ask to edit the edge's guard. The
+              // chips beside it are readouts and let the click through on
+              // purpose: pressing one IS pressing the edge.
+              onClick={(event) => {
+                event.stopPropagation();
+                insertStep(source, target);
+              }}
+            >
+              <Plus size={12} aria-hidden />
+            </button>
           )}
         </div>
       </EdgeLabelRenderer>
@@ -1036,6 +1190,55 @@ export function buildStyledEdges(
       },
       ...(backEdge && maxNodeVisits !== undefined && e.data
         ? { data: { ...e.data, maxNodeVisits } }
+        : {}),
+    };
+  });
+}
+
+/**
+ * Fold the AUTHORING decorations onto already-styled edges: the problems
+ * anchored to each one, and whether it offers the insert control. Both are drawn
+ * by the custom renderer, so an edge that gains either is switched onto it —
+ * everything else keeps the built-in `smoothstep` it has always had.
+ *
+ * A problem also RECOLOURS the edge, from the same table the node it points at
+ * is tinted from, because a chip alone is unreadable at the zoom a whole
+ * pipeline is viewed at. It overrides the run colour by design: a graph is
+ * either being authored or being watched, and the one edge where both could
+ * meet should say the definition is broken.
+ *
+ * `insertable` is a predicate rather than a flag so this pass never has to
+ * re-derive which edges are the host's to change — {@link isEditableEdge}
+ * already answers that for delete and guard.
+ */
+export function decorateAuthoringEdges(
+  edges: WfFlowEdge[],
+  byEdge: ReadonlyMap<string, readonly WfProblem[]>,
+  insertable: (edge: WfFlowEdge) => boolean,
+): WfFlowEdge[] {
+  if (byEdge.size === 0 && !edges.some(insertable)) return edges;
+  return edges.map((e) => {
+    const problems = byEdge.get(e.id);
+    const severity = worstSeverity(problems);
+    const offersInsert = insertable(e);
+    if (!severity && !offersInsert) return e;
+    const stroke = severity ? PROBLEM_SURFACE[severity].color : undefined;
+    return {
+      ...e,
+      type: WF_EDGE_TYPE,
+      data: {
+        ...(e.data ?? { kind: "spine" as WfEdgeKind }),
+        ...(problems ? { problems } : {}),
+        ...(offersInsert ? { insertable: true } : {}),
+      },
+      ...(stroke
+        ? {
+            style: { ...e.style, stroke },
+            markerEnd:
+              e.markerEnd && typeof e.markerEnd === "object"
+                ? { ...e.markerEnd, color: stroke }
+                : e.markerEnd,
+          }
         : {}),
     };
   });
@@ -1103,8 +1306,14 @@ export interface WorkflowGraphProps {
    * Editing gestures. Supplying `onEdgeConnect` turns the canvas from a diagram
    * into an EDITOR: node handles become visible and draggable, an edge can be
    * selected and removed with Delete/Backspace, and clicking one asks to edit
-   * its guard. Omit all three — the default — and the graph stays the read-only
+   * its guard. Omit it — the default — and the graph stays the read-only
    * visualisation it has always been.
+   *
+   * `onEdgeConnect` is the ONE prop that decides it. Every other editing
+   * callback below (`onEdgeDelete`, `onEdgeClick`, `onEdgeInsert`,
+   * `onNodeInsert`, `onTriggerAdd`, `onTriggerDelete`) refines an editor and is
+   * inert without it — a canvas that cannot accept a new connection has no
+   * business drawing an add control either.
    *
    * Every callback speaks node ids (`actionNodeId`, `branchNodeId`), never
    * positions: this component reports the gesture, and turning it into a
@@ -1118,6 +1327,59 @@ export interface WorkflowGraphProps {
   onEdgeConnect?: (sourceId: string, targetId: string) => void;
   onEdgeDelete?: (sourceId: string, targetId: string) => void;
   onEdgeClick?: (sourceId: string, targetId: string) => void;
+  /**
+   * Add a step ON an edge: the edge draws a "+" at its midpoint, and pressing it
+   * reports the pair it sits between. The layout widens the corridor between
+   * layers to hold the control, so arming this RELAYS OUT the graph — a compact
+   * canvas pitches its layers at 20px, which is the whole button.
+   *
+   * Offered on exactly the edges the other three gestures are ({@link
+   * isEditableEdge}): inserting on a fan-out or trigger edge would name a pair
+   * that exists in no definition. "Add a step at the very start" is the
+   * {@link onNodeInsert} drop instead — dragged from the first step's inbound
+   * handle onto empty canvas, which names one node rather than a synthesized
+   * edge. (A definition with no `on:` at all has no inbound handle on its first
+   * step, because nothing points at it; there the step list is the only way in.)
+   */
+  onEdgeInsert?: (sourceId: string, targetId: string) => void;
+  /**
+   * Add a step at the loose end of a connection dragged from a node's handle and
+   * released over empty canvas — the canvas's answer to "and then what?".
+   * `side` is which handle it left from: `"after"` for the outbound one (the new
+   * step follows `nodeId`), `"before"` for the inbound one (it precedes it).
+   *
+   * Reported for ANY node, including a trigger and a fan-out branch leaf: unlike
+   * an edge gesture, this names a node that certainly exists, and whether a step
+   * may go beside it is a question about the definition's schema — which this
+   * library does not model and the host already answers.
+   */
+  onNodeInsert?: (nodeId: string, side: "before" | "after") => void;
+  /**
+   * The `on:` list gains an entry. Drawn as a canvas control rather than a
+   * per-node one, because the workflow that most needs it is the one with NO
+   * trigger — which has no trigger node to hang a "+" on.
+   */
+  onTriggerAdd?: () => void;
+  /** Remove the `on:` entry a trigger node stands for — the one node deletion
+   *  that IS a canvas gesture (every other node is a `do` entry, reordered and
+   *  removed in the list the host owns). Read the entry's position back with
+   *  `triggerNodeIndex`. */
+  onTriggerDelete?: (nodeId: string) => void;
+  /**
+   * AUTHORING problems anchored to the nodes and edges that carry them, so a
+   * compile error is visible on the canvas rather than only in a list beside it.
+   * See {@link WfProblem} — and note it is a separate channel from `nodeState`,
+   * which is what a node DID rather than what is wrong with what it says.
+   *
+   * A problem tints the node's border in either density, and states itself on a
+   * mark in the card's identity row (a corner of the compact tile). A graph
+   * showing a RUN is not an authoring surface — its cards state the run instead,
+   * and only the border tint carries a problem there.
+   *
+   * Immutability contract, as for `edges`: the index is memoized on this array's
+   * reference, so pass a stable one.
+   */
+  problems?: readonly WfProblem[];
 }
 
 export function WorkflowGraph({
@@ -1135,11 +1397,22 @@ export function WorkflowGraph({
   onEdgeConnect,
   onEdgeDelete,
   onEdgeClick,
+  onEdgeInsert,
+  onNodeInsert,
+  onTriggerAdd,
+  onTriggerDelete,
+  problems,
 }: WorkflowGraphProps) {
   // One gesture turns the canvas into an editor, so one prop decides it: a host
   // that cannot accept a new connection has no business showing a drag handle
-  // for one. The other two callbacks refine an editor, they don't create one.
+  // for one. Every other editing callback refines an editor, it doesn't create
+  // one — hence the pairing below rather than each affordance arming itself.
   const editable = onEdgeConnect !== undefined;
+  const insertOnEdge = editable ? onEdgeInsert : undefined;
+  const insertArmed = insertOnEdge !== undefined;
+  const insertAtNode = editable ? onNodeInsert : undefined;
+  const addTrigger = editable ? onTriggerAdd : undefined;
+  const deleteTrigger = editable ? onTriggerDelete : undefined;
   const colorMode = useColorMode();
   const isPreview = variant === "preview";
   // The proposal-card preview is always compact (a small thumbnail); the full
@@ -1189,17 +1462,42 @@ export function WorkflowGraph({
         direction,
         compact,
         wrap,
+        // The insert control lives IN the gap between two layers, so the gap is
+        // reserved here — where the layout is decided — rather than measured
+        // afterwards. It is the one editing prop that reaches the layout, which
+        // is why arming it re-lays the graph out.
+        reserveEdgeInsert: insertArmed,
         ...(declaredEdges ? { edges: declaredEdges } : {}),
       }),
-    [yaml, hasRunOverlay, direction, compact, wrap, declaredEdges],
+    [
+      yaml,
+      hasRunOverlay,
+      direction,
+      compact,
+      wrap,
+      insertArmed,
+      declaredEdges,
+    ],
   );
+
+  // The problems, indexed by what they are anchored to. Keyed on the array's
+  // identity (the documented contract), so a host that rebuilds the list only
+  // when its validation settles re-indexes only then.
+  const problemIndex = useMemo(() => indexProblems(problems), [problems]);
 
   // Edges restyled from the current run state (colored by each edge's target
   // status; the active hop animates). Derived from the STABLE structural edges +
   // nodeState, so a poll/SSE tick repaints edge color/flow without touching node
   // layout. Neutral throughout the static definition/preview view (no nodeState).
   const styledEdges = useMemo<WfFlowEdge[]>(() => {
-    const styled = buildStyledEdges(structural.edges, nodeState, maxNodeVisits);
+    const run = buildStyledEdges(structural.edges, nodeState, maxNodeVisits);
+    // The authoring pass runs AFTER the run styling, so a problem's colour wins
+    // over the run colour on the one edge that could carry both.
+    const styled = decorateAuthoringEdges(
+      run,
+      problemIndex.byEdge,
+      (edge) => insertArmed && isEditableEdge(edge),
+    );
     // `deletable` is React Flow's own gate on the Delete key. A read-only canvas
     // says so on the elements themselves rather than resting on `deleteKeyCode`
     // alone — the same stance nodes take, which are marked undeletable in both
@@ -1210,7 +1508,14 @@ export function WorkflowGraph({
       ...e,
       deletable: editable ? isEditableEdge(e) : false,
     }));
-  }, [structural.edges, nodeState, maxNodeVisits, editable]);
+  }, [
+    structural.edges,
+    nodeState,
+    maxNodeVisits,
+    editable,
+    problemIndex,
+    insertArmed,
+  ]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(structural.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(styledEdges);
@@ -1429,6 +1734,31 @@ export function WorkflowGraph({
   );
 
   /**
+   * A connection dragged from a handle and released over EMPTY canvas: the
+   * "and then what?" gesture, reported as the node it left and which end of it.
+   *
+   * React Flow fires this at the end of EVERY connection drag, including one
+   * that landed on a handle (which has already been reported through
+   * `onConnect`) — so a drop is only an add when nothing was under the pointer.
+   * `toNode` is set whenever the release was over a node at all, not merely over
+   * one of its handles, which is what keeps a near-miss from silently becoming
+   * an add somewhere else on the canvas.
+   */
+  const handleConnectEnd = useCallback(
+    (_event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+      if (!insertAtNode) return;
+      if (state.toNode || state.toHandle) return;
+      const from = state.fromNode;
+      if (!from) return;
+      insertAtNode(
+        from.id,
+        state.fromHandle?.type === "target" ? "before" : "after",
+      );
+    },
+    [insertAtNode],
+  );
+
+  /**
    * Enter/Space on a focused node opens its detail, exactly as a click does.
    * React Flow makes a node TABBABLE but gives it no activation key of its own,
    * so a keyboard user could reach every node and open none of them — the
@@ -1481,6 +1811,9 @@ export function WorkflowGraph({
       <RunModeContext.Provider value={hasRunOverlay}>
       <SelectedNodeContext.Provider value={selectedNodeId}>
       <ConnectableContext.Provider value={editable}>
+      <NodeProblemsContext.Provider value={problemIndex.byNode}>
+      <TriggerDeleteContext.Provider value={deleteTrigger ?? null}>
+      <EdgeInsertContext.Provider value={insertOnEdge ?? null}>
       <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
       <ReactFlow
         nodes={nodes}
@@ -1553,6 +1886,7 @@ export function WorkflowGraph({
               }
             : undefined
         }
+        onConnectEnd={insertAtNode ? handleConnectEnd : undefined}
         onEdgeClick={
           editable
             ? (_event, edge) => {
@@ -1585,7 +1919,20 @@ export function WorkflowGraph({
                 moment they have said the whole graph matters more than the size
                 of it, and this button is that ask. */}
             <Controls showInteractive={false} position="bottom-right" />
-            <Panel position="top-left">
+            <Panel position="top-left" className="flex items-center gap-1">
+              {addTrigger && (
+                <button
+                  type="button"
+                  data-testid="wf-trigger-add"
+                  onClick={addTrigger}
+                  title="Add a trigger"
+                  aria-label="Add a trigger"
+                  className="flex items-center gap-1 rounded-md border border-border bg-card/80 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur transition hover:text-foreground"
+                >
+                  <Plus size={12} aria-hidden />
+                  Trigger
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setUserCompact((c) => !c)}
@@ -1601,6 +1948,9 @@ export function WorkflowGraph({
         )}
       </ReactFlow>
       </div>
+      </EdgeInsertContext.Provider>
+      </TriggerDeleteContext.Provider>
+      </NodeProblemsContext.Provider>
       </ConnectableContext.Provider>
       </SelectedNodeContext.Provider>
       </RunModeContext.Provider>

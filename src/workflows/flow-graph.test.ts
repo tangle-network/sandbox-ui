@@ -2,11 +2,19 @@ import { Position, type Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 import {
   buildFlowGraph,
+  indexProblems,
   mergeRunState,
   sameRunState,
   WF_EDGE_TYPE,
+  worstSeverity,
 } from "./flow-graph";
-import { actionNodeId, type WfNodeData, type WfNodeState } from "./model";
+import {
+  actionNodeId,
+  type WfNodeData,
+  type WfNodeState,
+  type WfProblemSeverity,
+  wfEdgeId,
+} from "./model";
 
 const YAML = `
 on:
@@ -318,5 +326,70 @@ describe("buildFlowGraph — nodes are never canvas-deletable", () => {
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.deletable === false)).toBe(true);
     }
+  });
+});
+
+describe("authoring problems", () => {
+  const nodeProblem = (node: string, severity: WfProblemSeverity, message: string) =>
+    ({ anchor: "node", node, severity, message }) as const;
+  const edgeProblem = (
+    from: string,
+    to: string,
+    severity: WfProblemSeverity,
+    message: string,
+  ) => ({ anchor: "edge", from, to, severity, message }) as const;
+
+  it("indexes by node id and by edge id, keeping every problem on one anchor", () => {
+    const { byNode, byEdge } = indexProblems([
+      nodeProblem("a0", "error", "model is required"),
+      nodeProblem("a0", "warning", "no timeout set"),
+      edgeProblem("a0", "a1", "error", "a1 cannot depend on a0"),
+    ]);
+    expect(byNode.get("a0")?.map((p) => p.message)).toEqual([
+      "model is required",
+      "no timeout set",
+    ]);
+    // The edge key is the id `buildWorkflowGraph` gives that pair — the coupling
+    // that makes an anchor find its edge at all.
+    expect(byEdge.get(wfEdgeId("a0", "a1"))).toHaveLength(1);
+    expect(byEdge.get("a0->a1")).toHaveLength(1);
+  });
+
+  it("indexes an anchor the graph has no slot for rather than throwing", () => {
+    // A draft is edited between the validation that produced a problem and the
+    // graph drawn from it, so a stale anchor is normal traffic. It simply never
+    // gets looked up.
+    const { byNode } = indexProblems([nodeProblem("a9", "error", "gone")]);
+    expect(byNode.get("a9")).toHaveLength(1);
+    expect(byNode.get("a0")).toBeUndefined();
+  });
+
+  it("reads one error among warnings as an error", () => {
+    expect(
+      worstSeverity([
+        nodeProblem("a0", "warning", "w"),
+        nodeProblem("a0", "error", "e"),
+      ]),
+    ).toBe("error");
+    expect(worstSeverity([nodeProblem("a0", "warning", "w")])).toBe("warning");
+    expect(worstSeverity([])).toBeNull();
+    expect(worstSeverity(undefined)).toBeNull();
+  });
+});
+
+describe("reserveEdgeInsert", () => {
+  /** The gap between the first two layers, which is what the insert control
+   *  has to fit into. */
+  const layerGap = (options: Parameters<typeof buildFlowGraph>[1]) => {
+    const { nodes } = buildFlowGraph(YAML, options);
+    const [first, second] = nodes;
+    return second.position.x - (first.position.x + (first.width ?? 0));
+  };
+
+  it("widens the gap between layers so an insert control has room", () => {
+    expect(layerGap({ compact: true })).toBeLessThan(44);
+    expect(
+      layerGap({ compact: true, reserveEdgeInsert: true }),
+    ).toBeGreaterThanOrEqual(44);
   });
 });

@@ -1142,11 +1142,11 @@ export function WfEdgeRenderer({
   const nodeBoxes = useContext(NodeBoxesContext);
   const direction = useContext(DirectionContext);
   // A cluster is moved off a card when something in it TAKES THE POINTER — the
-  // insert control, or a problem chip whose tooltip is the only place its
-  // messages are written. Over a card, either one swallows clicks meant for the
-  // node beneath it. A guard or cycle chip is pointer-transparent and reads
-  // fine over a card, so a cluster carrying only those keeps its place rather
-  // than scattering a dense graph's annotations off their own edges.
+  // insert control, or a problem chip, whose tooltip is why it does. Over a
+  // card, either one swallows clicks meant for the node beneath it. A guard or
+  // cycle chip is pointer-transparent and reads fine over a card, so a cluster
+  // carrying only those keeps its place rather than scattering a dense graph's
+  // annotations off their own edges.
   const cleared =
     offersInsert || problemSeverity
       ? clearOfNodeBoxes(

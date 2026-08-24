@@ -50,8 +50,8 @@
   a release over a neighbour would otherwise add a step to the draft the drag
   started in.
 - A cluster that takes the pointer is nudged clear of any card its edge's
-  midpoint lands on — the insert control, and a problem chip whose tooltip is the
-  only place its messages are written. The reserved corridor only widens the gap
+  midpoint lands on — the insert control, and a problem chip, both of which take
+  the pointer for their tooltips. The reserved corridor only widens the gap
   between ADJACENT layers, so an edge spanning more than one had its control
   sitting on, and swallowing clicks for, an unrelated node. The test is sized to
   the control's own footprint, not to its centre point, and how far it may move

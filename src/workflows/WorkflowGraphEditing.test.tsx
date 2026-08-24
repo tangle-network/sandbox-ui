@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -80,9 +80,18 @@ vi.mock("@xyflow/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@xyflow/react")>();
   return {
     ...actual,
-    ReactFlow: (props: FlowProps) => {
+    // The stub stands in for the canvas React Flow would measure, but it renders
+    // the CHILDREN the graph puts inside it — the panel and the zoom controls —
+    // so the chrome those carry is testable. They read the flow store, which the
+    // real component gets from `ReactFlow` itself, so the stub supplies it.
+    ReactFlow: (props: FlowProps & { children?: React.ReactNode }) => {
       flowProps = props;
-      return <Probe />;
+      return (
+        <actual.ReactFlowProvider>
+          <Probe />
+          {props.children}
+        </actual.ReactFlowProvider>
+      );
     },
   };
 });
@@ -297,6 +306,31 @@ describe("WorkflowGraph add-step gestures", () => {
     );
     expect(flowProps.onConnectEnd).toBeUndefined();
     expect(flowProps.edges?.some((e) => e.data?.insertable)).toBe(false);
+  });
+
+  it("draws the add-trigger control and reports one press of it", () => {
+    const onTriggerAdd = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onTriggerAdd={onTriggerAdd}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("wf-trigger-add"));
+    expect(onTriggerAdd).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws no add-trigger control without the callback, or without an editor", () => {
+    // Two ways for it to be absent, and both matter: a host that cannot take
+    // another trigger withholds the callback, and a read-only canvas draws no
+    // editing chrome at all.
+    render(<WorkflowGraph yaml={YAML} edges={DECLARED} onEdgeConnect={vi.fn()} />);
+    expect(screen.queryByTestId("wf-trigger-add")).toBeNull();
+    cleanup();
+    render(<WorkflowGraph yaml={YAML} edges={DECLARED} onTriggerAdd={vi.fn()} />);
+    expect(screen.queryByTestId("wf-trigger-add")).toBeNull();
   });
 
   it("hands its edges the laid-out boxes they have to route around", () => {

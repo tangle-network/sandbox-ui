@@ -364,8 +364,10 @@ export interface ClusterHalfSize {
 const INSERT_MAX_CARDS_CROSSED = 2;
 
 /**
- * The CROSS-axis shift that moves a point off whatever node boxes it lands in,
- * or 0 when it is already clear (or cannot be cleared within the bound).
+ * The CROSS-axis shift that moves a point off whatever node boxes it lands in:
+ * 0 when it is already clear, and null when it is on a card that cannot be left
+ * within the bound. A caller has to be able to tell those two apart — only the
+ * second has to give up its pointer events.
  *
  * An edge spanning more than one layer runs THROUGH the layer it skips, so its
  * midpoint — where a control would otherwise sit — is inside an unrelated card.

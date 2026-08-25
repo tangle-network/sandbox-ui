@@ -16,6 +16,7 @@
  */
 
 import {
+  AlertTriangle,
   Bell,
   Box,
   Cable,
@@ -34,7 +35,13 @@ import {
 } from "lucide-react";
 import { ProviderIcon } from "../integrations/provider-logo";
 import { ModelBrandStack, modelBrandFor } from "../lib/model-brand";
-import type { WfNodeStatus, WfNodeTone } from "./model";
+import {
+  type WfNodeStatus,
+  type WfNodeTone,
+  type WfProblem,
+  type WfProblemSeverity,
+  worstSeverity,
+} from "./model";
 import { providerLabel } from "./provider-label";
 
 /** Track color behind a progress bar — a faint wash of the muted token. */
@@ -189,6 +196,180 @@ export const KIND_ICON: Record<string, LucideIcon> = {
   "script.run": Code,
   "trace.analyze": ScanSearch,
 };
+
+/** An authoring problem's colours — the same semantic surface trio the run
+ *  statuses use, so a broken step and a failed one are recognisably the same
+ *  family of "something is wrong here" without being the same signal. */
+const PROBLEM_SURFACE_BY_SEVERITY: Record<
+  WfProblemSeverity,
+  { background: string; color: string; borderColor: string }
+> = {
+  error: {
+    background: "var(--surface-danger-bg)",
+    color: "var(--surface-danger-text)",
+    borderColor: "var(--surface-danger-border)",
+  },
+  warning: {
+    background: "var(--surface-warning-bg)",
+    color: "var(--surface-warning-text)",
+    borderColor: "var(--surface-warning-border)",
+  },
+};
+
+/**
+ * The colours a severity is drawn in. A lookup rather than the table itself, so
+ * a severity this library has no entry for cannot throw its way out of a render
+ * — the same resilience `problemSentence` and `worstSeverity` already give it,
+ * and for the same reason: the package is consumed from JavaScript, and one
+ * malformed problem must not take the canvas down. An unrecognised severity is
+ * drawn as an error, matching how it is named and ranked.
+ */
+export function problemSurface(severity: WfProblemSeverity) {
+  return PROBLEM_SURFACE_BY_SEVERITY[severity] ?? PROBLEM_SURFACE_BY_SEVERITY.error;
+}
+
+/** A node's border once it carries an authoring problem. Applied only where the
+ *  node has no RUN status to state — a run's border is the more urgent reading
+ *  of the same edge of the same box, and a definition being edited has no run. */
+export function problemBorder(severity: WfProblemSeverity): {
+  borderColor: string;
+  boxShadow: string;
+} {
+  const color = problemSurface(severity).color;
+  return {
+    borderColor: color,
+    boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 35%, transparent)`,
+  };
+}
+
+/** How each severity is named where a colour cannot be seen. */
+const SEVERITY_WORD: Record<WfProblemSeverity, string> = {
+  error: "Error",
+  warning: "Warning",
+};
+
+/**
+ * One problem as a reader receives it: WHICH KIND it is, then what it says.
+ *
+ * The kind has to be in the words. A mark shows one aggregate severity — as a
+ * colour and a glyph, neither of which a screen reader receives — so an anchor
+ * carrying an error and a warning together would otherwise offer no way to tell
+ * which of the two is the one blocking the compile.
+ *
+ * NEWLINES are the only thing rewritten: each line is trimmed and the lines are
+ * run together, so a multi-line host message cannot break the one-problem-per-
+ * line reading below. Everything else survives — including internal spacing and
+ * the trailing punctuation a diagnostic may be ABOUT ("unexpected ;") — because
+ * the canvas has to say what the host's own problem list says. Separators are
+ * handled at the join instead ({@link joinSentences}).
+ *
+ * A problem with no message at all is named by its severity alone, rather than
+ * by a colon with nothing after it: nothing in {@link WfProblem} requires the
+ * text to be non-empty, and "this step has an error" is still worth saying.
+ */
+function problemSentence(problem: WfProblem): string {
+  // Typed as a string, but the package is consumed from JavaScript too, and one
+  // malformed entry must not take the whole canvas down with it — the
+  // severity-only reading below is already the right answer for no message.
+  const raw = typeof problem.message === "string" ? problem.message : "";
+  const message = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(" ");
+  // A JS host can send a severity this table has no word for. Reading it out as
+  // "undefined" helps nobody, and understating it as a warning is the wrong way
+  // to be wrong about something that might be blocking — so an unrecognised
+  // severity is named, and ranked, as an error.
+  const word = SEVERITY_WORD[problem.severity] ?? SEVERITY_WORD.error;
+  return message ? `${word}: ${message}` : word;
+}
+
+/** Run sentences together for a listener, adding a full stop only where the text
+ *  does not already end in one — so "Why?" is followed by a space rather than
+ *  "Why?.", and a message ending in a semicolon keeps it. Empty in, empty out:
+ *  `reduce` with no seed throws on an empty list, and this is reachable from any
+ *  caller holding an empty problem set. */
+function joinSentences(parts: readonly string[]): string {
+  return parts.reduce(
+    (joined, part) =>
+      joined ? `${joined}${/[.!?;,]$/.test(joined) ? "" : "."} ${part}` : part,
+    "",
+  );
+}
+
+/** Every problem on one anchor, as the tooltip text a marker hangs on. One per
+ *  line, so a step with three faults lists three rather than concatenating them
+ *  into a sentence nobody can parse. */
+export function problemTitle(problems: readonly WfProblem[]): string {
+  return problems.map(problemSentence).join("\n");
+}
+
+/**
+ * Every message on one anchor, as the text a reader who cannot hover receives.
+ * The visible mark has room for a glyph and a count, so the messages themselves
+ * would otherwise live only in a `title` — which a pointer opens and a keyboard,
+ * a screen reader and a touch device do not. Rendering them visually hidden puts
+ * the same words in the accessibility tree, where they become the mark's own
+ * accessible name.
+ */
+export function ProblemMessages({ problems }: { problems: readonly WfProblem[] }) {
+  // Nothing to announce, and no element to announce it in. Counting first would
+  // otherwise read "0 problems." to somebody standing on a healthy step.
+  if (problems.length === 0) return null;
+  return (
+    <span className="sr-only">
+      {problems.length === 1
+        ? problemSentence(problems[0])
+        : `${problems.length} problems. ${joinSentences(problems.map(problemSentence))}`}
+    </span>
+  );
+}
+
+/**
+ * The mark a node wears when the draft it is drawn from has a problem on it: a
+ * warning glyph, with a count once there is more than one. It is a READOUT, not
+ * a control — the node's own click already opens whatever the host shows for it,
+ * and a second target inside the card would compete with that.
+ *
+ * It carries every message twice over: on `title`, where a pointer finds it, and
+ * as visually hidden text, which is what the accessibility tree reads. That is
+ * what makes the mark worth more than the border tint — the canvas says WHICH
+ * step is broken at a glance and WHY without a trip to the problem list, however
+ * the reader is driving it.
+ */
+export function ProblemMarker({
+  problems,
+  className = "",
+}: {
+  problems: readonly WfProblem[];
+  className?: string;
+}) {
+  // Derived here rather than taken as a prop: the two are one fact, and a caller
+  // free to pass a warning alongside an error-carrying list is a caller free to
+  // paint a blocking problem in the colour of a harmless one.
+  const severity = worstSeverity(problems) ?? "error";
+  return (
+    <span
+      data-testid="wf-node-problem"
+      data-severity={severity}
+      className={`flex shrink-0 items-center gap-0.5 rounded-full border px-1 py-[1px] font-medium text-[10px] leading-none ${className}`}
+      style={problemSurface(severity)}
+    >
+      {/* The tooltip hangs on the VISIBLE part, which is hidden from the
+          accessibility tree. `title` on the marker itself would become its
+          accessible DESCRIPTION once the text below supplies its name, and most
+          screen readers read a description after the name — so every message
+          would be announced twice. A pointer still gets the tooltip; the tree
+          gets the text once. */}
+      <span aria-hidden className="flex items-center gap-0.5" title={problemTitle(problems)}>
+        <AlertTriangle size={9} />
+        {problems.length > 1 && <span>{problems.length}</span>}
+      </span>
+      <ProblemMessages problems={problems} />
+    </span>
+  );
+}
 
 /** The status pill in a card's header — the one place the run state is spelled
  *  out in words. */

@@ -14,6 +14,7 @@ import {
   triggerNodeId,
   triggerNodeIndex,
   type WfEdgeSpec,
+  wfEdgeId,
 } from "./model";
 
 describe("buildWorkflowGraph", () => {
@@ -1824,5 +1825,73 @@ do:
       direction: "TB",
     });
     expect(g.nodes.every((n) => n.sourceSide === undefined)).toBe(true);
+  });
+});
+
+describe("wfEdgeId", () => {
+  it("names every edge the graph builds, so an anchored problem finds one", () => {
+    // A host anchors an authoring problem to a PAIR of node ids; the graph
+    // stores its edges under this id. Written in one place precisely so the two
+    // cannot drift — if they did, every edge problem would silently vanish
+    // instead of failing loudly.
+    const graph = buildWorkflowGraph(`
+on:
+  webhook: {}
+do:
+  - notify:
+      url: https://example.com/a
+  - notify:
+      url: https://example.com/b
+`);
+    expect(graph.edges.length).toBeGreaterThan(0);
+    for (const edge of graph.edges) {
+      expect(edge.id).toBe(wfEdgeId(edge.source, edge.target));
+    }
+  });
+});
+
+describe("reserveEdgeInsert", () => {
+  const chainYaml = `
+on:
+  webhook: {}
+do:
+  - notify:
+      url: https://example.com/a
+  - notify:
+      url: https://example.com/b
+`;
+  /** The gap the layout leaves between two successive layers. */
+  const layerGap = (options: Parameters<typeof buildWorkflowGraph>[1]) => {
+    const { nodes } = buildWorkflowGraph(chainYaml, options);
+    const [first, second] = nodes;
+    return second.position.x - (first.position.x + first.width);
+  };
+
+  it("widens the tight compact corridor to hold the control", () => {
+    // Compact pitches its layers at 20px — the whole button. Rendering one into
+    // that gap puts it on top of the cards either side, which is why the LAYOUT
+    // reserves for it rather than the canvas measuring afterwards.
+    const plain = layerGap({ compact: true });
+    const reserved = layerGap({ compact: true, reserveEdgeInsert: true });
+    expect(reserved).toBeGreaterThan(plain);
+    expect(reserved).toBeGreaterThanOrEqual(44);
+  });
+
+  it("never narrows a corridor already widened for a label", () => {
+    // A guarded edge reserves a much wider lane for its chip. Asking for the
+    // insert lane as well must only ever widen — taking the insert lane here
+    // would drop the guard chip onto the nodes.
+    const labelled: WfEdgeSpec[] = [
+      { from: actionNodeId(0), to: actionNodeId(1), whenLabel: "risk == high" },
+    ];
+    const withLabel = layerGap({ compact: true, edges: labelled });
+    expect(
+      layerGap({ compact: true, edges: labelled, reserveEdgeInsert: true }),
+    ).toBe(withLabel);
+    expect(withLabel).toBeGreaterThan(44);
+  });
+
+  it("leaves the expanded layout alone, which already has the room", () => {
+    expect(layerGap({})).toBe(layerGap({ reserveEdgeInsert: true }));
   });
 });

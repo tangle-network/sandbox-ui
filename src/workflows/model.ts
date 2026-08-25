@@ -198,6 +198,12 @@ export function branchNodeId(actionIndex: number, branchIndex: number): string {
   return `${actionNodeId(actionIndex)}-b${branchIndex}`;
 }
 
+/** An edge's id, from its endpoints. Written in ONE place so the graph, the
+ *  styling pass and a problem anchored to a pair all name the same edge. */
+export function wfEdgeId(source: string, target: string): string {
+  return `${source}->${target}`;
+}
+
 export type WfEdgeKind = "spine" | "fork" | "join";
 
 export interface WfEdge {
@@ -246,6 +252,65 @@ export interface WfEdgeSpec {
   whenLabel?: string;
 }
 
+/** How serious an authoring problem is. An `error` stops the definition from
+ *  compiling; a `warning` compiles but is worth saying out loud. */
+export type WfProblemSeverity = "error" | "warning";
+
+/**
+ * One AUTHORING problem, anchored to the node or the edge that carries it.
+ *
+ * This is the DEFINITION-time counterpart of {@link WfNodeState}, and it is a
+ * separate channel on purpose: run state is what a node DID (status, cost,
+ * duration), while a problem is what is wrong with what it SAYS. Folding one
+ * into the other would make an unsaved compile error render as a failed run.
+ *
+ * The host supplies the message already written for a reader — this library
+ * renders graphs and never interprets a compiler's output. Anchors are node ids
+ * from THIS graph, so name them with the exported id helpers (`actionNodeId`,
+ * `branchNodeId`, `TRIGGER_NODE_ID`); an edge is named by its endpoints, the
+ * same way {@link WfEdgeSpec} names one.
+ *
+ * An anchor the graph has no slot for is simply not drawn — an authoring surface
+ * reports against a draft that is still moving, and a stale anchor must never
+ * blank the canvas the way a stale declared edge does. That is the ONLY safety
+ * this gives, and it is worth being exact about what it leaves out: these ids are
+ * POSITIONAL, so an insert, delete or reorder does not retire `a1` — it makes
+ * `a1` a different step. A problem computed against an earlier draft therefore
+ * survives the check and lands on whichever step now holds its position. Nothing
+ * here can tell the two apart, which is why the pairing contract on
+ * `WorkflowGraphProps.problems` is a contract and not a suggestion: a list must
+ * be handed over with the definition it was computed from.
+ */
+export type WfProblem =
+  | {
+      anchor: "node";
+      /** The node the problem sits on. */
+      node: string;
+      severity: WfProblemSeverity;
+      message: string;
+    }
+  | {
+      anchor: "edge";
+      /** The edge's endpoints, as {@link WfEdgeSpec} names them. */
+      from: string;
+      to: string;
+      severity: WfProblemSeverity;
+      message: string;
+    };
+
+/** The loudest severity in a set — one error among warnings makes the whole
+ *  anchor read as an error. Null for an empty set, so a caller can skip. */
+export function worstSeverity(
+  problems: readonly WfProblem[] | undefined,
+): WfProblem["severity"] | null {
+  if (!problems || problems.length === 0) return null;
+  // Read as "warning only if EVERY entry is one", so a severity this library has
+  // no word for ranks as an error rather than being quietly downgraded — the
+  // same way it is named. Understating something that might be blocking is the
+  // worse of the two ways to be wrong about a malformed entry.
+  return problems.every((p) => p.severity === "warning") ? "warning" : "error";
+}
+
 export interface WfGraph {
   nodes: WfNode[];
   edges: WfEdge[];
@@ -286,6 +351,11 @@ const CROSS_SEP = 24;
  * have labelled edges, so nothing else spreads out.
  */
 const EDGE_LABEL_LANE = 180;
+/** The corridor an edge needs when the canvas draws an INSERT control at its
+ *  midpoint: the button plus clearance from the cards either side, so the "+"
+ *  never sits on a node. Only widens a gap — a labelled graph's lane is already
+ *  bigger. */
+const EDGE_INSERT_LANE = 44;
 
 /** A card's fixed chrome: content padding (pt-2.5 + pb-2) + top/bottom border. */
 const CARD_CHROME = 20;
@@ -554,6 +624,16 @@ export interface BuildWorkflowGraphOptions {
    * worse than one that says it cannot be drawn.
    */
   edges?: readonly WfEdgeSpec[];
+  /**
+   * Widen the gap between layers so an edge has room for an in-line control at
+   * its midpoint — the insert affordance an EDITING canvas draws there. The
+   * compact densities pitch their layers at 20-34px, which is the whole button,
+   * so a canvas that renders one without asking for the lane puts it on top of
+   * the nodes either side. Reserved by the layout for the same reason run rows
+   * are: what a node or an edge renders is spaced for before it is drawn, never
+   * measured afterwards. Defaults to `false`.
+   */
+  reserveEdgeInsert?: boolean;
 }
 
 /**
@@ -1456,7 +1536,7 @@ export function buildWorkflowGraph(
     kind: WfEdgeKind,
     whenLabel?: string,
   ) => {
-    const id = `${source}->${target}`;
+    const id = wfEdgeId(source, target);
     // One edge per ordered pair. A declared topology can name the same pair
     // twice (two `needs` rows that resolve to it), and two identical lines are
     // one line plus a duplicate React Flow key.
@@ -1595,7 +1675,9 @@ export function buildWorkflowGraph(
   );
   const rankSep = labelled
     ? Math.max(geo.rankSep, EDGE_LABEL_LANE)
-    : geo.rankSep;
+    : options?.reserveEdgeInsert
+      ? Math.max(geo.rankSep, EDGE_INSERT_LANE)
+      : geo.rankSep;
 
   // A folded layout turns corners, and a guard chip sits ON the corridor a
   // straight run reserves for it — so a labelled graph keeps its single file.

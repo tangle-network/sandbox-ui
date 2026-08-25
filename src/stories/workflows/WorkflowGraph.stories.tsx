@@ -5,6 +5,7 @@ import {
   WorkflowGraphLazy,
   type WfEdgeSpec,
   type WfNodeState,
+  type WfProblem,
 } from "../../workflows";
 
 /**
@@ -903,10 +904,17 @@ do:
 
 /**
  * The canvas as an EDITOR. Supplying `onEdgeConnect` is what arms it: handles
- * become visible and draggable, an edge takes focus and answers Delete, and
- * clicking one asks to edit its guard. The gestures are reported as node ids —
- * turning one into a definition edit is the host's job — so this harness just
- * records what it was told, which is exactly the contract a consumer implements.
+ * become visible and draggable, an edge takes focus and answers Delete, clicking
+ * one asks to edit its guard, every editable edge offers a "+" that inserts a
+ * step between its ends, a connection dropped on empty canvas asks for a step
+ * beside the node it left, and the trigger gains its own add/remove controls.
+ * The gestures are reported as node ids — turning one into a definition edit is
+ * the host's job — so this harness just records what it was told, which is
+ * exactly the contract a consumer implements.
+ *
+ * It also carries the AUTHORING problems a dry run would produce, anchored to
+ * the step and the dependency that carry them, so the canvas says which step is
+ * broken rather than leaving it to a list underneath.
  */
 // Two roots (a0 and a2), so the trigger fans out — which is both a realistic
 // shape and the one that makes the synthesized trigger edges visibly distinct
@@ -919,6 +927,29 @@ const EDITABLE_EDGES: WfEdgeSpec[] = [
     from: actionNodeId(3),
     to: actionNodeId(4),
     whenLabel: "verdict == approved",
+  },
+];
+
+/** What a dry run says about this draft, anchored where it belongs. */
+const EDITABLE_PROBLEMS: WfProblem[] = [
+  {
+    anchor: "node",
+    node: actionNodeId(2),
+    severity: "error",
+    message: "script.run: `source` must export a default function",
+  },
+  {
+    anchor: "node",
+    node: actionNodeId(2),
+    severity: "warning",
+    message: "This step declares a connection it never reads",
+  },
+  {
+    anchor: "edge",
+    from: actionNodeId(1),
+    to: actionNodeId(3),
+    severity: "error",
+    message: "`needs` names a step that runs after this one",
   },
 ];
 
@@ -945,9 +976,33 @@ function EditableHarness() {
           variant="full"
           defaultCompact={false}
           className="h-full w-full"
+          problems={EDITABLE_PROBLEMS}
           onEdgeConnect={(source, target) => note(`connect ${source} → ${target}`)}
           onEdgeDelete={(source, target) => note(`delete ${source} → ${target}`)}
           onEdgeClick={(source, target) => note(`guard ${source} → ${target}`)}
+          onEdgeInsert={(source, target) => note(`insert between ${source} and ${target}`)}
+          onNodeInsert={(nodeId, side) => note(`add step ${side} ${nodeId}`)}
+          onTriggerAdd={() => note("add trigger")}
+          onTriggerDelete={(nodeId) => note(`remove ${nodeId}`)}
+          onNodeClick={(nodeId) => note(`select ${nodeId}`)}
+        />
+      </GraphPanel>
+      {/* The same editor turned on its side. "TB" makes a node's 292-unit WIDTH
+          the axis a cluster has to clear, which costs three times what the same
+          card costs lying down — so this is where the collision nudge is
+          actually put to work. */}
+      <GraphPanel title="Graph — editable, top-to-bottom" height="h-[26rem]">
+        <WorkflowGraphLazy
+          yaml={GRAPH_BODY}
+          edges={EDITABLE_EDGES}
+          variant="full"
+          direction="TB"
+          defaultCompact={false}
+          className="h-full w-full"
+          problems={EDITABLE_PROBLEMS}
+          onEdgeConnect={(source, target) => note(`connect ${source} → ${target}`)}
+          onEdgeInsert={(source, target) => note(`insert between ${source} and ${target}`)}
+          onNodeInsert={(nodeId, side) => note(`add step ${side} ${nodeId}`)}
           onNodeClick={(nodeId) => note(`select ${nodeId}`)}
         />
       </GraphPanel>
@@ -956,7 +1011,7 @@ function EditableHarness() {
         className="rounded-lg border border-border bg-card p-3 font-mono text-text-muted text-xs"
       >
         {log.length === 0
-          ? "Drag a handle to connect · click an edge to guard it · select an edge and press Delete"
+          ? "Drag a handle to connect · drop one on empty canvas to add a step · press an edge's + to insert one · click an edge to guard it · select an edge and press Delete"
           : log.map((entry) => <div key={entry.id}>{entry.line}</div>)}
       </div>
     </div>

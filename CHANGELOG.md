@@ -1,5 +1,77 @@
 # Changelog
 
+## 0.110.0
+
+### The workflow canvas gains its authoring gestures
+
+- **Add a step ON an edge.** `onEdgeInsert` draws a "+" at each editable edge's
+  midpoint and reports the pair it sits between. The layout reserves the
+  corridor for it (`reserveEdgeInsert`), because a compact graph pitches its
+  layers at 20px — the whole button — so drawing one without the lane puts it
+  on top of the cards either side. Offered on exactly the edges `onEdgeDelete`
+  and `onEdgeClick` are: a fan-out or trigger edge is a row no definition has.
+- **Add a step by dropping a connection on empty canvas.** `onNodeInsert`
+  reports the node the drag left and which handle it left from — `"after"` for
+  the outbound one, `"before"` for the inbound one, which is how a step is added
+  at the very start. React Flow ends every connection drag through the same
+  callback, so a drop that landed on a node is never reported as an add.
+- **The trigger gains add and remove.** `onTriggerAdd` draws a control in the
+  canvas chrome rather than on a node, because the workflow that most needs it
+  has no trigger node to hang one on. `onTriggerDelete` draws a "×" on each
+  trigger card and reports its node id; read the `on:` position back with
+  `triggerNodeIndex`. A trigger is the one node with a delete gesture — every
+  other node is a `do` entry, whose removal is a list edit.
+- **Authoring problems anchor to the node or edge that carries them.** The new
+  `problems` prop takes `WfProblem[]`, each anchored to a node id or an edge's
+  endpoints, with a severity and a message written for a reader. A node tints
+  its border and wears a mark carrying every message; an edge recolours and
+  states its problem on a chip. It is a channel separate from `nodeState` on
+  purpose: run state is what a node DID, and folding the two together would
+  render an unsaved compile error as a failed run.
+- `onEdgeConnect` remains the ONE prop that turns the canvas into an editor.
+  Every new callback refines that editor and is inert without it.
+- The problem chip and the insert control opt back into pointer events, and the
+  label cluster is lifted over the nodes. React Flow's label layer is
+  `pointer-events: none` and is painted UNDER the node layer, so an edge that
+  spans more than one layer had its control both buried and inert. The guard and
+  cycle chips deliberately stay pointer-transparent: raised over a card, one that
+  took pointer events would swallow clicks meant for the node beneath it.
+- A drop is only an add when the pointer was released on the empty canvas, which
+  is identified POSITIVELY — the element under the pointer has to be React Flow's
+  own pane. React Flow ends a connection drag on a document-level pointer-up, so
+  letting go anywhere reaches the callback, and `toNode` is resolved from a
+  handle within the connection radius rather than from the node under the
+  pointer: releasing in the middle of a card reported no target and added a step.
+  So did releasing on an edge, on the zoom controls, on the panel, or off the
+  graph entirely. Identifying the pane cannot miss a layer the way a list of
+  things to exclude can, and it fails closed. The pane also has to be THIS
+  graph's: React Flow completes a connection from a document-level pointer-up, so
+  a drag begun in one canvas is still live over every other one on the page, and
+  a release over a neighbour would otherwise add a step to the draft the drag
+  started in.
+- A cluster that takes the pointer is nudged clear of any card its edge's
+  midpoint lands on — the insert control, and a problem chip, both of which take
+  the pointer for their tooltips. The reserved corridor only widens the gap
+  between ADJACENT layers, so an edge spanning more than one had its control
+  sitting on, and swallowing clicks for, an unrelated node. The test is sized to
+  the control's own footprint, not to its centre point, and how far it may move
+  is counted in CARDS rather than pixels — a 292-unit node costs over 160 to
+  clear in "TB" against about 50 in "LR", so any fixed distance either fails to
+  clear one standard card or means nothing. A guard or cycle chip lets clicks
+  through and stays where it is. Where there is nowhere to move to — a dense
+  fan-out stacked either side of the edge — the cluster keeps its place and gives
+  up its pointer events instead, because furniture that has to sit on a card must
+  not also be what that card's clicks land on.
+- Every problem message reaches the accessibility tree, not only a `title`
+  tooltip. A mark carrying more than one problem showed "N problems" as its whole
+  accessible name, so a screen-reader user could hear that a step was broken and
+  never hear why. Each message names its OWN severity ("Error: …", "Warning: …"),
+  because the mark shows one aggregate severity as a colour and a glyph and a
+  reader receives neither — so an anchor holding an error and a warning together
+  said nothing about which one blocks the compile. The mark on the canvas stays a
+  LOCATOR: it says which step or dependency is at fault, and the host's own
+  problem list is where the full text is read and acted on.
+
 ## 0.109.0
 
 ### The `./editor` tiptap packages become optional peers

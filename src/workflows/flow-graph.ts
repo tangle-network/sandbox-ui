@@ -13,7 +13,10 @@ import {
   type WfEdgeSpec,
   type WfNodeData,
   type WfNodeState,
+  type WfProblem,
   type WfSide,
+  wfEdgeId,
+  worstSeverity,
 } from "./model";
 
 /**
@@ -30,6 +33,11 @@ export interface WfFlowEdgeData extends Record<string, unknown> {
   /** Per-node visit budget, rendered beside a back edge so the loop states its
    *  own bound. Merged in at style time by the component that knows it. */
   maxNodeVisits?: number;
+  /** The AUTHORING problems anchored to this edge, already written for a reader.
+   *  Folded on by the styling pass; absent on a run graph. */
+  problems?: readonly WfProblem[];
+  /** This edge offers the "insert a step here" control at its midpoint. */
+  insertable?: boolean;
 }
 
 export type WfFlowEdge = Edge<WfFlowEdgeData>;
@@ -77,6 +85,9 @@ export interface BuildFlowGraphOptions {
   /** Declared topology, replacing the inferred positional spine. Passed
    *  straight through to `buildWorkflowGraph` — see {@link WfEdgeSpec}. */
   edges?: readonly WfEdgeSpec[];
+  /** Reserve the layer gap an edge's insert control needs. Passed straight
+   *  through to `buildWorkflowGraph`. */
+  reserveEdgeInsert?: boolean;
 }
 
 /** A bare run-state map (`buildFlowGraph(yaml, { a0: { status: "running" } })`),
@@ -91,6 +102,34 @@ function isNodeStateMap(arg: object): arg is Record<string, WfNodeState> {
     )
   );
 }
+
+/**
+ * Every key {@link BuildFlowGraphOptions} declares. An options object is
+ * recognized by carrying one of them, so a key missing here makes the whole
+ * object fall through to the run-state test below — which it fails, silently
+ * losing ALL of its options rather than the one that was forgotten.
+ *
+ * The completeness assertion under it turns that into a BUILD error: adding an
+ * option without adding it here stops compiling, rather than shipping a graph
+ * that quietly ignores the caller. Written as a tuple whose membership the
+ * option keys must be assignable to.
+ */
+const FLOW_GRAPH_OPTION_KEYS = [
+  "nodeState",
+  "direction",
+  "compact",
+  "wrap",
+  "edges",
+  "reserveEdgeInsert",
+] as const;
+
+type ListedOptionKey = (typeof FLOW_GRAPH_OPTION_KEYS)[number];
+// `never` — and so a type error on the assignment — the moment an option key is
+// not in the list above.
+const _everyOptionKeyIsListed: keyof BuildFlowGraphOptions extends ListedOptionKey
+  ? true
+  : never = true;
+void _everyOptionKeyIsListed;
 
 /**
  * Accept either an options object or a bare `nodeState` map as the second arg, so
@@ -109,17 +148,7 @@ function normalizeFlowGraphOptions(
   arg: BuildFlowGraphOptions | Record<string, WfNodeState> | undefined,
 ): BuildFlowGraphOptions {
   if (!arg) return {};
-  // Every option key must be listed here. One that is missing makes an options
-  // object fall through to the run-state test below, which it fails — so the
-  // call silently loses ALL of its options rather than the one that was
-  // forgotten. Adding an option to BuildFlowGraphOptions means adding it here.
-  if (
-    "nodeState" in arg ||
-    "direction" in arg ||
-    "compact" in arg ||
-    "wrap" in arg ||
-    "edges" in arg
-  ) {
+  if (FLOW_GRAPH_OPTION_KEYS.some((key) => key in arg)) {
     return arg as BuildFlowGraphOptions;
   }
   return isNodeStateMap(arg) ? { nodeState: arg } : {};
@@ -148,6 +177,7 @@ export function buildFlowGraph(
     compact,
     ...(options.wrap ? { wrap: true } : {}),
     ...(options.edges ? { edges: options.edges } : {}),
+    ...(options.reserveEdgeInsert ? { reserveEdgeInsert: true } : {}),
   });
   const isLR = direction === "LR";
   const sourcePosition = isLR ? Position.Right : Position.Bottom;
@@ -240,4 +270,186 @@ export function mergeRunState(
       ? n
       : { ...n, data: nextData };
   });
+}
+
+/**
+ * The authoring problems a graph was handed, indexed by what they are anchored
+ * to. Built once per problem list rather than scanned per node/edge, and built
+ * even for an anchor the graph has no slot for — a draft the author is still
+ * typing legitimately produces a problem naming a step that has just been
+ * renamed away, and the lookup simply never asks for it.
+ */
+export interface ProblemIndex {
+  byNode: ReadonlyMap<string, readonly WfProblem[]>;
+  byEdge: ReadonlyMap<string, readonly WfProblem[]>;
+}
+
+/** Group problems by node id and by edge id (see {@link wfEdgeId}). */
+export function indexProblems(
+  problems: readonly WfProblem[] | undefined,
+): ProblemIndex {
+  const byNode = new Map<string, WfProblem[]>();
+  const byEdge = new Map<string, WfProblem[]>();
+  const named = (value: unknown): value is string =>
+    typeof value === "string" && value !== "";
+  for (const problem of problems ?? []) {
+    // Anything that does not name what it is anchored to is dropped rather than
+    // filed. Falling through to the edge branch would key a malformed entry
+    // under "undefined->undefined" and pile every other one on top of it — a row
+    // nothing ever looks up, carrying problems that then reach no reader at all.
+    // The rest of this module already survives a malformed entry; so does this.
+    const into =
+      problem.anchor === "node"
+        ? named(problem.node)
+          ? byNode
+          : null
+        : problem.anchor === "edge" && named(problem.from) && named(problem.to)
+          ? byEdge
+          : null;
+    if (!into) continue;
+    const key =
+      problem.anchor === "node"
+        ? problem.node
+        : wfEdgeId(problem.from, problem.to);
+    const at = into.get(key);
+    if (at) at.push(problem);
+    else into.set(key, [problem]);
+  }
+  return { byNode, byEdge };
+}
+
+/** A laid-out node's box in flow coordinates. */
+export interface NodeBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** How far past a node's edge a cluster's own EDGE must sit to clear the card. */
+const INSERT_CLEARANCE = 8;
+
+/**
+ * Half the box a cluster occupies, in flow units, by what it carries.
+ *
+ * The label layer lives inside the zoomed viewport, so a 20px control is 20
+ * units at every zoom and these numbers hold at any scale. They are bounds
+ * rather than measurements: the control is a fixed 20px square, and the chip
+ * TRUNCATES at Tailwind's `max-w-40`, so 160 is the widest it can ever render.
+ * Nothing here has to be measured, which is what keeps the placement
+ * collision-free by construction rather than by a measure-then-reflow pass.
+ *
+ * Both axes are given because the cluster is not square and the flow direction
+ * decides which of them is the cross axis: a chip is wide and short, so in "LR"
+ * its width spans the corridor while in "TB" that same width is what has to
+ * clear the cards.
+ */
+export const CLUSTER_HALF_SIZE = {
+  /** The insert control alone: a 20-unit square. */
+  control: { width: 10, height: 10 },
+  /**
+   * A problem chip — and, since the two stack in one column, the chip WITH the
+   * control under it, which is the taller of the two and so the one the bound
+   * has to cover. Measured on the rendered page at 160 x 38.5 flow units (the
+   * chip's `max-w-40` cap, over chip + gap + control), and rounded outward: a
+   * bound that understates is a bound that lets the cluster lap over a card.
+   */
+  chip: { width: 80, height: 20 },
+} as const;
+
+/** Half a cluster's extent along each axis. */
+export interface ClusterHalfSize {
+  width: number;
+  height: number;
+}
+/**
+ * How many cards a cluster may step past before the nudge is abandoned.
+ *
+ * A BOX COUNT rather than a distance, because what has to be cleared scales with
+ * the layout: a node is 292 units across, so in "TB" — where that width is the
+ * cross axis — moving a control off the card it sits on costs over 160, while
+ * the same node in "LR" costs about 50. Any fixed distance is therefore either
+ * too small to clear one standard card in one orientation, or too loose to mean
+ * anything in the other. Counting cards says what was actually meant: clearing
+ * the card you are on is the whole point, the next one is its neighbour in a
+ * stacked layer and is cheap, and past that the cluster is crossing a dense
+ * fan-out and would end up nowhere near the edge it belongs to — where leaving
+ * it overlapping, still clickable through the raised label layer, is the better
+ * of two bad answers.
+ */
+const INSERT_MAX_CARDS_CROSSED = 2;
+
+/**
+ * The CROSS-axis shift that moves a point off whatever node boxes it lands in:
+ * 0 when it is already clear, and null when it is on a card that cannot be left
+ * within the bound. A caller has to be able to tell those two apart — only the
+ * second has to give up its pointer events.
+ *
+ * An edge spanning more than one layer runs THROUGH the layer it skips, so its
+ * midpoint — where a control would otherwise sit — is inside an unrelated card.
+ * The reserved corridor only ever clears an adjacent-layer edge, because that is
+ * the only gap the layout can widen. Nudging along the cross axis keeps the
+ * control beside its own edge and off the card it was covering.
+ *
+ * Both directions are walked, so a stack of cards in the skipped layer is
+ * escaped rather than jumped into; the smaller shift wins, and a point that
+ * cannot be cleared inside {@link INSERT_MAX_CARDS_CROSSED} keeps its place, and
+ * says so by answering null rather than an offset.
+ */
+export function clearOfNodeBoxes(
+  point: { x: number; y: number },
+  boxes: readonly NodeBox[],
+  direction: WfDirection,
+  half: ClusterHalfSize,
+): number | null {
+  const isLR = direction === "LR";
+  const base = isLR ? point.y : point.x;
+  const main = isLR ? point.x : point.y;
+  // The cluster's own half-extent ALONG each axis, which is what turns "is this
+  // point inside a card" into "does any of this cluster lap over one".
+  const padMain = isLR ? half.width : half.height;
+  const padCross = isLR ? half.height : half.width;
+  // Only the boxes the point could ever be inside — those it already overlaps on
+  // the axis the flow advances along. Inflated, like the cross-axis test below,
+  // so a control whose centre sits beside a card but whose body laps over it is
+  // still treated as covered.
+  const column = boxes.filter((b) => {
+    const lo = (isLR ? b.x : b.y) - padMain;
+    const size = (isLR ? b.width : b.height) + padMain * 2;
+    return main >= lo && main <= lo + size;
+  });
+  if (column.length === 0) return 0;
+
+  const walk = (sign: 1 | -1): number | null => {
+    let at = base;
+    // One iteration per card it may cross, plus the step that finds nothing left
+    // to cross. Each step clears the box it hit and cannot return to it, so the
+    // walk always terminates well inside this.
+    for (let crossed = 0; crossed <= INSERT_MAX_CARDS_CROSSED; crossed += 1) {
+      const hit = column.find((b) => {
+        const lo = (isLR ? b.y : b.x) - padCross;
+        const size = (isLR ? b.height : b.width) + padCross * 2;
+        return at >= lo && at <= lo + size;
+      });
+      if (!hit) return at - base;
+      if (crossed === INSERT_MAX_CARDS_CROSSED) return null;
+      const lo = isLR ? hit.y : hit.x;
+      const size = isLR ? hit.height : hit.width;
+      at =
+        sign > 0
+          ? lo + size + padCross + INSERT_CLEARANCE
+          : lo - padCross - INSERT_CLEARANCE;
+    }
+    return null;
+  };
+
+  const up = walk(-1);
+  const down = walk(1);
+  // Null, not zero. Zero means "already clear"; a caller has to be able to tell
+  // that from "still on a card, and I could not move it off" — because a cluster
+  // that stays on a card must at least stop taking that card's clicks.
+  if (up === null && down === null) return null;
+  if (up === null) return down;
+  if (down === null) return up;
+  return Math.abs(up) <= Math.abs(down) ? up : down;
 }

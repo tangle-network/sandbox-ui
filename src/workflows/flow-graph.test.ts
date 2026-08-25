@@ -2,11 +2,21 @@ import { Position, type Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 import {
   buildFlowGraph,
+  clearOfNodeBoxes,
+  CLUSTER_HALF_SIZE,
+  indexProblems,
   mergeRunState,
   sameRunState,
   WF_EDGE_TYPE,
 } from "./flow-graph";
-import { actionNodeId, type WfNodeData, type WfNodeState } from "./model";
+import {
+  actionNodeId,
+  type WfNodeData,
+  type WfNodeState,
+  type WfProblemSeverity,
+  wfEdgeId,
+  worstSeverity,
+} from "./model";
 
 const YAML = `
 on:
@@ -317,6 +327,233 @@ describe("buildFlowGraph — nodes are never canvas-deletable", () => {
       const { nodes } = buildFlowGraph(YAML, options);
       expect(nodes.length).toBeGreaterThan(0);
       expect(nodes.every((n) => n.deletable === false)).toBe(true);
+    }
+  });
+});
+
+describe("authoring problems", () => {
+  const nodeProblem = (node: string, severity: WfProblemSeverity, message: string) =>
+    ({ anchor: "node", node, severity, message }) as const;
+  const edgeProblem = (
+    from: string,
+    to: string,
+    severity: WfProblemSeverity,
+    message: string,
+  ) => ({ anchor: "edge", from, to, severity, message }) as const;
+
+  it("indexes by node id and by edge id, keeping every problem on one anchor", () => {
+    const { byNode, byEdge } = indexProblems([
+      nodeProblem("a0", "error", "model is required"),
+      nodeProblem("a0", "warning", "no timeout set"),
+      edgeProblem("a0", "a1", "error", "a1 cannot depend on a0"),
+    ]);
+    expect(byNode.get("a0")?.map((p) => p.message)).toEqual([
+      "model is required",
+      "no timeout set",
+    ]);
+    // The edge key is the id `buildWorkflowGraph` gives that pair — the coupling
+    // that makes an anchor find its edge at all.
+    expect(byEdge.get(wfEdgeId("a0", "a1"))).toHaveLength(1);
+    expect(byEdge.get("a0->a1")).toHaveLength(1);
+  });
+
+  it("drops an entry that does not say what it is anchored to", () => {
+    // A malformed entry used to fall through to the edge branch and land under
+    // "undefined->undefined", where every other malformed one piled on top of
+    // it — a key nothing looks up, so those problems reached no reader at all.
+    const { byNode, byEdge } = indexProblems([
+      { severity: "error", message: "no anchor" } as never,
+      { anchor: "node", severity: "error", message: "no node" } as never,
+      { anchor: "node", node: "", severity: "error", message: "empty node" } as never,
+      { anchor: "edge", from: "a0", severity: "error", message: "no to" } as never,
+      nodeProblem("a0", "error", "a real one"),
+    ]);
+    expect([...byEdge.keys()]).toEqual([]);
+    expect([...byNode.keys()]).toEqual(["a0"]);
+    expect(byNode.get("a0")).toHaveLength(1);
+  });
+
+  it("indexes an anchor the graph has no slot for rather than throwing", () => {
+    // A draft is edited between the validation that produced a problem and the
+    // graph drawn from it, so a stale anchor is normal traffic. It simply never
+    // gets looked up.
+    const { byNode } = indexProblems([nodeProblem("a9", "error", "gone")]);
+    expect(byNode.get("a9")).toHaveLength(1);
+    expect(byNode.get("a0")).toBeUndefined();
+  });
+
+  it("reads one error among warnings as an error", () => {
+    expect(
+      worstSeverity([
+        nodeProblem("a0", "warning", "w"),
+        nodeProblem("a0", "error", "e"),
+      ]),
+    ).toBe("error");
+    expect(worstSeverity([nodeProblem("a0", "warning", "w")])).toBe("warning");
+    expect(worstSeverity([])).toBeNull();
+    expect(worstSeverity(undefined)).toBeNull();
+  });
+});
+
+describe("reserveEdgeInsert", () => {
+  /** The gap between the first two layers, which is what the insert control
+   *  has to fit into. */
+  const layerGap = (options: Parameters<typeof buildFlowGraph>[1]) => {
+    const { nodes } = buildFlowGraph(YAML, options);
+    const [first, second] = nodes;
+    return second.position.x - (first.position.x + (first.width ?? 0));
+  };
+
+  it("widens the gap between layers so an insert control has room", () => {
+    expect(layerGap({ compact: true })).toBeLessThan(44);
+    expect(
+      layerGap({ compact: true, reserveEdgeInsert: true }),
+    ).toBeGreaterThanOrEqual(44);
+  });
+});
+
+describe("clearOfNodeBoxes", () => {
+  const CONTROL = CLUSTER_HALF_SIZE.control;
+  const CHIP = CLUSTER_HALF_SIZE.chip;
+  // A layer of two stacked cards, as the layouter pitches them: same x band,
+  // separated on the cross axis.
+  const upper = { x: 300, y: 100, width: 292, height: 80 };
+  const lower = { x: 300, y: 200, width: 292, height: 80 };
+
+  it("leaves a point that is already clear where it is", () => {
+    // The common case: an adjacent-layer edge, whose midpoint sits in the
+    // corridor the layout reserved for it.
+    expect(clearOfNodeBoxes({ x: 250, y: 140 }, [upper, lower], "LR", CONTROL)).toBe(0);
+  });
+
+  it("moves a point off the card it landed inside, the short way", () => {
+    // Nearer the box's top edge, so it leaves upwards.
+    const up = clearOfNodeBoxes({ x: 400, y: 115 }, [upper], "LR", CONTROL);
+    expect(up).toBeLessThan(0);
+    expect(115 + (up ?? 0)).toBeLessThan(upper.y);
+    // Nearer the bottom edge, so it leaves downwards.
+    const down = clearOfNodeBoxes({ x: 400, y: 170 }, [upper], "LR", CONTROL);
+    expect(down).toBeGreaterThan(0);
+    expect(170 + (down ?? 0)).toBeGreaterThan(upper.y + upper.height);
+  });
+
+  it("escapes a STACK rather than stepping into the next card", () => {
+    // Deep inside the upper card, with the lower one just below: walking down
+    // must clear both, not stop between them where the second box begins.
+    const offset = clearOfNodeBoxes({ x: 400, y: 175 }, [upper, lower], "LR", CONTROL);
+    const landed = 175 + (offset ?? 0);
+    for (const box of [upper, lower]) {
+      const inside = landed >= box.y && landed <= box.y + box.height;
+      expect(inside).toBe(false);
+    }
+  });
+
+  it("ignores boxes the point never crosses on the flow axis", () => {
+    // Same cross-axis band, a different layer: not in the way at all.
+    expect(clearOfNodeBoxes({ x: 50, y: 140 }, [upper], "LR", CONTROL)).toBe(0);
+  });
+
+  it("clears along the other axis for a top-to-bottom flow", () => {
+    const box = { x: 100, y: 300, width: 80, height: 292 };
+    const offset = clearOfNodeBoxes({ x: 115, y: 400 }, [box], "TB", CONTROL);
+    expect(offset).toBeLessThan(0);
+    expect(115 + (offset ?? 0)).toBeLessThan(box.x);
+  });
+
+  it("clears the control's whole footprint, not just its centre point", () => {
+    // A centre a few units outside the card is NOT clear: the control is a 20px
+    // square in flow units at every zoom, so half of it is still over the card.
+    const justOutside = upper.y - 4;
+    const offset = clearOfNodeBoxes({ x: 400, y: justOutside }, [upper], "LR", CONTROL);
+    expect(offset).not.toBe(0);
+    expect(justOutside + (offset ?? 0)).toBeLessThan(upper.y - 12);
+  });
+
+  it("still leaves a control with real clearance alone", () => {
+    // Far enough out that the whole control is off the card — no nudge, or the
+    // control would drift away from its own edge for no reason.
+    expect(clearOfNodeBoxes({ x: 400, y: upper.y - 40 }, [upper], "LR", CONTROL)).toBe(0);
+  });
+
+  it("clears a CHIP by its own HEIGHT too, which the control's does not cover", () => {
+    // A chip and the control stack in one column, so the cluster is taller than
+    // either — 38.5 units measured on the page. This card sits in the band that
+    // the taller cluster laps into and the control alone does not.
+    const justAbove = { x: 0, y: 15, width: 100, height: 40 };
+    expect(clearOfNodeBoxes({ x: 50, y: 0 }, [justAbove], "LR", CONTROL)).toBe(0);
+    expect(clearOfNodeBoxes({ x: 50, y: 0 }, [justAbove], "LR", CHIP)).not.toBe(0);
+  });
+
+  it("clears a CHIP by its own width, which the control's size does not cover", () => {
+    // A problem chip truncates at `max-w-40` — 160 units, eight times the
+    // control — so a cluster carrying one laps over the cards either side of a
+    // corridor the control would have fitted in. It takes the pointer, so over
+    // a card it swallows that node's clicks.
+    const corridorCentre = { x: upper.x - 22, y: upper.y + 20 };
+    expect(clearOfNodeBoxes(corridorCentre, [upper], "LR", CONTROL)).toBe(0);
+    expect(clearOfNodeBoxes(corridorCentre, [upper], "LR", CHIP)).not.toBe(0);
+  });
+
+  it("reads a chip's width as the CROSS extent in a top-to-bottom flow", () => {
+    // Same chip, same card, rotated layout: the width that spanned the corridor
+    // in "LR" is now the axis that has to clear the card.
+    const tall = { x: 100, y: 300, width: 80, height: 292 };
+    const beside = { x: tall.x - 30, y: 400 };
+    expect(clearOfNodeBoxes(beside, [tall], "TB", CONTROL)).toBe(0);
+    expect(clearOfNodeBoxes(beside, [tall], "TB", CHIP)).not.toBe(0);
+  });
+
+  /** A `parallel` fanning out this many ways stacks that many boxes in one
+   *  layer, so the walk has to cope with a column far deeper than two. */
+  const deepStack = (count: number, height: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      x: 300,
+      y: 100 + i * height,
+      width: 292,
+      height,
+    }));
+
+  it("escapes a deep layer when the way out is within reach", () => {
+    const stack = deepStack(12, 24);
+    const nearTheEdge = { x: 400, y: stack[1].y + 10 };
+    const offset = clearOfNodeBoxes(nearTheEdge, stack, "LR", CONTROL);
+    expect(offset).not.toBeNull();
+    const landed = nearTheEdge.y + (offset ?? 0);
+    for (const box of stack) {
+      expect(landed >= box.y && landed <= box.y + box.height).toBe(false);
+    }
+  });
+
+  it("keeps its place when it would have to cross a whole fan-out to get out", () => {
+    // Buried in the middle of a deep stack, every way out crosses card after
+    // card. Giving up is the answer there — a control that far from its own edge
+    // no longer reads as belonging to it, and the raised label layer keeps an
+    // overlapping one clickable.
+    const stack = deepStack(40, 24);
+    const buried = { x: 400, y: stack[20].y + 10 };
+    // Null, not zero — the caller has to be able to tell "already clear" from
+    // "still on a card", because only the second has to give up its pointer.
+    expect(clearOfNodeBoxes(buried, stack, "LR", CONTROL)).toBeNull();
+  });
+
+  it("clears a REAL node in either orientation, whatever that costs", () => {
+    // The layouter emits 292-wide cards. In "TB" that width is the cross axis,
+    // so moving a control off the card it sits on costs over 160 units against
+    // the same node's ~50 in "LR" — which is why the bound counts cards rather
+    // than distance. Both must clear, and a chip's greater extent must not be
+    // what tips it over.
+    const node = { x: 100, y: 300, width: 292, height: 80 };
+    const centre = { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+    for (const half of [CONTROL, CHIP]) {
+      const tb = clearOfNodeBoxes(centre, [node], "TB", half);
+      expect(tb).not.toBeNull();
+      const landedX = centre.x + (tb ?? 0);
+      expect(landedX >= node.x && landedX <= node.x + node.width).toBe(false);
+
+      const lr = clearOfNodeBoxes(centre, [node], "LR", half);
+      expect(lr).not.toBeNull();
+      const landedY = centre.y + (lr ?? 0);
+      expect(landedY >= node.y && landedY <= node.y + node.height).toBe(false);
     }
   });
 });

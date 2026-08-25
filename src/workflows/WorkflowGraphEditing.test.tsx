@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * The EDITING wiring: which React Flow gestures the graph arms, and which edges
@@ -27,28 +27,107 @@ type FlowProps = {
     e: unknown,
     edge: { source: string; target: string; data?: unknown },
   ) => void;
-  edges?: { id: string; deletable?: boolean; data?: { kind?: string } }[];
+  onConnectEnd?: (e: unknown, state: unknown) => void;
+  nodes?: { id: string }[];
+  edges?: {
+    id: string;
+    type?: string;
+    deletable?: boolean;
+    style?: { stroke?: string };
+    data?: { kind?: string; insertable?: boolean; problems?: unknown[] };
+  }[];
 };
 
 let flowProps: FlowProps = {};
+
+/** Rendered INSIDE the graph's providers by the React Flow stub, so a test can
+ *  read what the component actually hands down to its nodes and edges. */
+let Probe: () => null = () => null;
+
+/**
+ * What the browser reports under the pointer at release. jsdom hit-tests
+ * nothing, so the gate has no answer until one is supplied — and since the gate
+ * identifies the pane POSITIVELY, the element it returns is the whole test.
+ */
+let elementAtPoint: Element | null = null;
+
+/** An element of the given class, as React Flow would render it. */
+function surface(className: string): Element {
+  const el = document.createElement("div");
+  el.className = className;
+  return el;
+}
+
+/** A pane belonging to some OTHER graph on the page — detached from the frame
+ *  under test, exactly as a neighbouring canvas's would be. */
+const FOREIGN_PANE = surface("react-flow__pane draggable");
+
+/** jsdom's own `elementFromPoint`, put back after each test so a later one that
+ *  wants real hit-testing is not silently answered by this stub. */
+const realElementFromPoint = document.elementFromPoint;
+
+function stubHitTesting() {
+  document.elementFromPoint = () => elementAtPoint;
+}
+
+/** A pointer release at a viewport position, shaped as React Flow delivers it. */
+function releaseAt(x: number, y: number): MouseEvent {
+  return new MouseEvent("mouseup", { clientX: x, clientY: y });
+}
+
+const ON_CANVAS = releaseAt(400, 300);
 
 vi.mock("@xyflow/react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@xyflow/react")>();
   return {
     ...actual,
-    ReactFlow: (props: FlowProps) => {
+    // The stub stands in for the canvas React Flow would measure, but it renders
+    // the CHILDREN the graph puts inside it — the panel and the zoom controls —
+    // so the chrome those carry is testable. They read the flow store, which the
+    // real component gets from `ReactFlow` itself, so the stub supplies it.
+    ReactFlow: (props: FlowProps & { children?: React.ReactNode }) => {
       flowProps = props;
-      return <div data-testid="flow" />;
+      return (
+        <actual.ReactFlowProvider>
+          <Probe />
+          {/* The canvas surface React Flow would draw, inside this graph's own
+              frame — which is what makes "is this pane mine" testable. */}
+          <div className="react-flow__pane" data-testid="pane" />
+          {props.children}
+        </actual.ReactFlowProvider>
+      );
     },
   };
 });
 
-const { WorkflowGraph } = await import("./WorkflowGraph");
+const { NodeBoxesContext, WorkflowGraph } = await import("./WorkflowGraph");
 const { actionNodeId, TRIGGER_NODE_ID } = await import("./model");
+const { useContext } = await import("react");
+type NodeBox = import("./flow-graph").NodeBox;
+
+let observedBoxes: readonly NodeBox[] = [];
+Probe = () => {
+  // biome-ignore lint/correctness/useHookAtTopLevel: this component IS the hook's caller
+  observedBoxes = useContext(NodeBoxesContext);
+  return null;
+};
+
+beforeEach(() => {
+  stubHitTesting();
+  elementAtPoint = null;
+});
+
+/** This graph's own pane, as rendered — the surface a drop has to land on. */
+function ownPane(): Element {
+  return screen.getByTestId("pane");
+}
 
 afterEach(() => {
   cleanup();
+  document.elementFromPoint = realElementFromPoint;
+  elementAtPoint = null;
   flowProps = {};
+  observedBoxes = [];
 });
 
 const YAML = `
@@ -98,6 +177,7 @@ describe("WorkflowGraph editing gates", () => {
     expect(flowProps.onConnect).toBeUndefined();
     expect(flowProps.onEdgesDelete).toBeUndefined();
     expect(flowProps.onEdgeClick).toBeUndefined();
+    expect(flowProps.onConnectEnd).toBeUndefined();
   });
 
   it("arms the edge gestures once onEdgeConnect is supplied", () => {
@@ -209,5 +289,320 @@ describe("WorkflowGraph edge gestures reach the host only for declared edges", (
       actionNodeId(0),
       actionNodeId(1),
     );
+  });
+});
+
+/**
+ * The Phase-4 authoring gestures at the FLOW level: which of them the component
+ * arms, and on which edges. What each one renders is covered next door in
+ * WorkflowGraphAuthoring.test.tsx, against the real node and edge components.
+ */
+describe("WorkflowGraph add-step gestures", () => {
+  it("stays inert without onEdgeConnect — the one prop that makes an editor", () => {
+    // Every other editing callback REFINES an editor. A canvas that cannot
+    // accept a connection must not draw an add control either, or the user is
+    // offered a step it has nowhere to attach.
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeInsert={vi.fn()}
+        onNodeInsert={vi.fn()}
+        onTriggerAdd={vi.fn()}
+        onTriggerDelete={vi.fn()}
+      />,
+    );
+    expect(flowProps.onConnectEnd).toBeUndefined();
+    expect(flowProps.edges?.some((e) => e.data?.insertable)).toBe(false);
+  });
+
+  it("draws the add-trigger control and reports one press of it", () => {
+    const onTriggerAdd = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onTriggerAdd={onTriggerAdd}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("wf-trigger-add"));
+    expect(onTriggerAdd).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws no add-trigger control without the callback, or without an editor", () => {
+    // Two ways for it to be absent, and both matter: a host that cannot take
+    // another trigger withholds the callback, and a read-only canvas draws no
+    // editing chrome at all.
+    render(<WorkflowGraph yaml={YAML} edges={DECLARED} onEdgeConnect={vi.fn()} />);
+    expect(screen.queryByTestId("wf-trigger-add")).toBeNull();
+    cleanup();
+    render(<WorkflowGraph yaml={YAML} edges={DECLARED} onTriggerAdd={vi.fn()} />);
+    expect(screen.queryByTestId("wf-trigger-add")).toBeNull();
+  });
+
+  it("hands its edges the laid-out boxes they have to route around", () => {
+    // The clearance an edge applies is only as good as the geometry it is given.
+    // These come from the LAYOUT, whose dimensions are authoritative, rather than
+    // from React Flow's node store — a map mutated in place, whose identity never
+    // changes and so would never notify the edge that a box had moved.
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onEdgeInsert={vi.fn()}
+      />,
+    );
+    expect(observedBoxes.length).toBe(flowProps.nodes?.length);
+    expect(observedBoxes.length).toBeGreaterThan(0);
+    expect(observedBoxes.every((b) => b.width > 0 && b.height > 0)).toBe(true);
+  });
+
+  it("lets a run keep its edge colour when the host also supplies problems", () => {
+    // The graph decides this, not the styling pass on its own: a canvas showing
+    // a run must not have its live colouring overwritten by an authoring
+    // problem, which is the same precedence the node card applies.
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        nodeState={{ [actionNodeId(1)]: { status: "running" } }}
+        problems={[
+          {
+            anchor: "edge",
+            from: actionNodeId(0),
+            to: actionNodeId(1),
+            severity: "error",
+            message: "bad",
+          },
+        ]}
+        onEdgeConnect={vi.fn()}
+      />,
+    );
+    const edge = flowProps.edges?.find(
+      (x) => x.id === `${actionNodeId(0)}->${actionNodeId(1)}`,
+    );
+    expect(edge?.style?.stroke).toBe("hsl(var(--primary))");
+    // The problem is still stated, just not by recolouring the line.
+    expect(edge?.data?.problems).toHaveLength(1);
+  });
+
+  it("offers the insert control on exactly the edges the host may change", () => {
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onEdgeInsert={vi.fn()}
+      />,
+    );
+    const byId = new Map(flowProps.edges?.map((e) => [e.id, e]) ?? []);
+    const declared = byId.get(`${actionNodeId(0)}->${actionNodeId(1)}`);
+    expect(declared?.data?.insertable).toBe(true);
+    // Both of these are edges no definition has a row for: one is the fan-out a
+    // structural step's own config produces, the other is what "nothing points
+    // at this node" renders as. Inserting BETWEEN either pair names nothing.
+    expect(
+      byId.get(`${TRIGGER_NODE_ID}->${actionNodeId(0)}`)?.data?.insertable,
+    ).toBeUndefined();
+    expect(
+      byId.get(`${actionNodeId(2)}->${actionNodeId(2)}-b0`)?.data?.insertable,
+    ).toBeUndefined();
+  });
+
+  it("reports a drop on empty canvas as an add beside the node it left", () => {
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    elementAtPoint = ownPane();
+    // Released over nothing, from the outbound handle: the new step FOLLOWS.
+    flowProps.onConnectEnd?.(ON_CANVAS, {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: { type: "source" },
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
+    // From the inbound handle it PRECEDES — which is the only way to add a step
+    // at the very start, since the trigger edge offers no insert.
+    flowProps.onConnectEnd?.(ON_CANVAS, {
+      fromNode: { id: actionNodeId(0) },
+      fromHandle: { type: "target" },
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(0), "before");
+  });
+
+  it("adds only when the release landed on the canvas itself", () => {
+    // React Flow ends the drag on a document-level pointer-up, so letting go
+    // ANYWHERE reaches this callback. Every one of these was reproduced in a
+    // browser adding a step before the gate existed — including the release in
+    // the middle of a card, which reports no target at all because React Flow
+    // resolves `toNode` from a handle within its connection radius, not from
+    // the node under the pointer.
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    const drag = {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: { type: "source" },
+      toNode: null,
+      toHandle: null,
+    };
+
+    elementAtPoint = ownPane();
+    const nodeBody = surface("truncate font-semibold");
+    surface("react-flow__node").appendChild(nodeBody);
+    const panelButton = document.createElement("button");
+    surface("react-flow__panel").appendChild(panelButton);
+
+    for (const target of [
+      null, // off the graph entirely — the page, not the pane
+      FOREIGN_PANE, // another graph's canvas, which this drag must not edit
+      nodeBody, // the middle of a card, where no handle is in range
+      surface("react-flow__edge"), // a line between two steps
+      surface("react-flow__controls"), // the zoom buttons
+      panelButton, // the density / add-trigger panel
+      surface("react-flow__edgelabel-renderer"), // an edge's own furniture
+    ]) {
+      elementAtPoint = target;
+      flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    }
+    expect(onNodeInsert).not.toHaveBeenCalled();
+
+    // The same drag, let go on the pane, still adds — so the gate rejects the
+    // release POSITION and not the gesture.
+    elementAtPoint = ownPane();
+    flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
+  });
+
+  it("adds from a touch drop, not only a mouse one", () => {
+    // A touch reports its position on `changedTouches` — `touches` is empty by
+    // the time the last finger lifts — so a gate reading `clientX` off the event
+    // would drop every touch gesture on the floor.
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    elementAtPoint = ownPane();
+    const touchRelease = {
+      changedTouches: [{ clientX: 400, clientY: 300 }],
+      touches: [],
+    } as unknown as TouchEvent;
+    flowProps.onConnectEnd?.(touchRelease, {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: { type: "source" },
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).toHaveBeenCalledWith(actionNodeId(1), "after");
+  });
+
+  it("never lets a drag in one graph edit the draft of another", () => {
+    // React Flow completes a connection from a document-level pointer-up, so a
+    // drag begun here is still live over every other canvas on the page. A gate
+    // that only asked "is this a pane" would let a release over a NEIGHBOUR add
+    // a step to this graph's draft.
+    const mine = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={mine}
+      />,
+    );
+    const drag = {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: { type: "source" },
+      toNode: null,
+      toHandle: null,
+    };
+    elementAtPoint = FOREIGN_PANE;
+    flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    expect(mine).not.toHaveBeenCalled();
+
+    elementAtPoint = ownPane();
+    flowProps.onConnectEnd?.(ON_CANVAS, drag);
+    expect(mine).toHaveBeenCalledTimes(1);
+  });
+
+  it("needs both ends of the drag before it names an add", () => {
+    // A release that reports no node, or no handle it left from, names nothing
+    // to insert beside — and defaulting a missing handle to "after" would put a
+    // step on the wrong side of the one node it did name.
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    elementAtPoint = ownPane();
+    flowProps.onConnectEnd?.(ON_CANVAS, {
+      fromNode: null,
+      fromHandle: null,
+      toNode: null,
+      toHandle: null,
+    });
+    flowProps.onConnectEnd?.(ON_CANVAS, {
+      fromNode: { id: actionNodeId(1) },
+      fromHandle: null,
+      toNode: null,
+      toHandle: null,
+    });
+    expect(onNodeInsert).not.toHaveBeenCalled();
+  });
+
+  it("never reads a completed connection as an add", () => {
+    // React Flow fires onConnectEnd at the end of EVERY connection drag,
+    // including the ones that landed on a handle and already went out through
+    // onConnect. Reporting those too would add a step for every edge drawn.
+    const onNodeInsert = vi.fn();
+    render(
+      <WorkflowGraph
+        yaml={YAML}
+        edges={DECLARED}
+        onEdgeConnect={vi.fn()}
+        onNodeInsert={onNodeInsert}
+      />,
+    );
+    flowProps.onConnectEnd?.(ON_CANVAS, {
+      fromNode: { id: actionNodeId(0) },
+      fromHandle: { type: "source" },
+      toNode: { id: actionNodeId(1) },
+      toHandle: { type: "target" },
+    });
+    // Released over a node's BODY, short of its handle: still not an add — the
+    // user was aiming at that node, not at the canvas behind it.
+    flowProps.onConnectEnd?.(ON_CANVAS, {
+      fromNode: { id: actionNodeId(0) },
+      fromHandle: { type: "source" },
+      toNode: { id: actionNodeId(1) },
+      toHandle: null,
+    });
+    expect(onNodeInsert).not.toHaveBeenCalled();
   });
 });

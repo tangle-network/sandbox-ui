@@ -306,14 +306,22 @@ describe("framing a graph against its canvas", () => {
   })
 
   it("leaves a clamped fit alone while it still fits the canvas", () => {
-    // Six steps land exactly on the floor and STILL fit 742px. Being clamped is
-    // not what moves the camera — running off the canvas is.
+    // Being clamped is not what moves the camera — running off the canvas is.
+    //
+    // The panel is sized deliberately, not taken from PANEL: a graph is clamped
+    // AND still fitting only while its floor-scaled width lands between the
+    // canvas edge and the gutter inside it, and that band is exactly as wide as
+    // the gutter. Six compact steps at the floor span ~713px, so 726px holds
+    // them with a few pixels either side. (It used to be an easy case to reach
+    // because the old scale-factor padding reserved ~100px per side; the band
+    // shrank with the gutter, and the invariant did not.)
     const yaml = chain(6)
-    const wide = framedSpan(yaml, true)
+    const clampedButFitting = { width: 726, height: 480 }
+    const wide = framedSpan(yaml, true, clampedButFitting)
     expect(wide.zoom).toBe(fitZoomFloor(true))
     expect(wide.left).toBeGreaterThan(0)
-    expect(wide.right).toBeLessThan(PANEL.width)
-    expect(wide.left).toBeCloseTo(PANEL.width - wide.right, 5)
+    expect(wide.right).toBeLessThan(clampedButFitting.width)
+    expect(wide.left).toBeCloseTo(clampedButFitting.width - wide.right, 5)
     // The same graph in a narrower panel cannot fit, and is anchored.
     const narrow = { width: 520, height: 480 }
     const cramped = framedSpan(yaml, true, narrow)
@@ -389,5 +397,71 @@ describe("framing a canvas that is measured late", () => {
 
     await new Promise((r) => setTimeout(r, 50))
     expect(setViewport).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("the gutter a fit leaves", () => {
+  // Five compact steps are FIT-bound on both panels below — neither the zoom
+  // ceiling nor the floor clamps them — which is the case the gutter describes.
+  // (Four steps hit the ceiling on the larger panel and the leftover room
+  // becomes centring slack; six hit the floor on the smaller one.)
+  const FIT_BOUND = chain(5)
+
+  it("is a fixed inset, so a bigger canvas is not a bigger margin", () => {
+    // The regression this replaces: padding was a SCALE FACTOR, so the slack a
+    // fit refused to use grew with the panel. Doubling the canvas doubled the
+    // wasted margin, on exactly the large graphs where zoom is legibility.
+    const small = framedSpan(FIT_BOUND, true, { width: 742, height: 480 })
+    const large = framedSpan(FIT_BOUND, true, { width: 1484, height: 960 })
+    expect(small.left).toBeCloseTo(large.left, 0)
+  })
+
+  it("is the room the overlays need, not a fraction of the canvas", () => {
+    // 16% of 742px was ~102px of margin on each side, and it grew with the
+    // canvas. The gutter is now breathing room and nothing more.
+    const { left, right } = framedSpan(FIT_BOUND, true)
+    expect(left).toBeGreaterThan(0)
+    expect(left).toBeLessThan(30)
+    expect(PANEL.width - right).toBeCloseTo(left, 0)
+  })
+
+  it("spends the room it reclaimed on zoom", () => {
+    // The same graph in the same panel, framed by the old scale-factor
+    // padding, sat at 0.578. Every point above that is legibility handed back —
+    // and the gap widens with the canvas, because the old margin grew with it.
+    expect(framedSpan(FIT_BOUND, true).zoom).toBeGreaterThan(0.578)
+  })
+})
+
+describe("reporting the density the reader chose", () => {
+  it("tells the host when the toggle moves, and what it moved to", () => {
+    // Without this a host can seed an opening density but never learn the
+    // reader wanted the other one, so every navigation undoes their choice.
+    const onCompactChange = vi.fn()
+    render(
+      <WorkflowGraph
+        yaml={chain(3)}
+        defaultCompact={true}
+        onCompactChange={onCompactChange}
+      />,
+    )
+    fireEvent.click(screen.getByRole("button", { name: /Expand/ }))
+    expect(onCompactChange).toHaveBeenCalledWith(false)
+    fireEvent.click(screen.getByRole("button", { name: /Compact/ }))
+    expect(onCompactChange).toHaveBeenLastCalledWith(true)
+  })
+
+  it("stays silent when nothing was pressed", () => {
+    // Reported from the GESTURE, not from the state — a host that persists this
+    // must not have the seed written back to it as if it were a choice.
+    const onCompactChange = vi.fn()
+    render(
+      <WorkflowGraph
+        yaml={chain(3)}
+        defaultCompact={true}
+        onCompactChange={onCompactChange}
+      />,
+    )
+    expect(onCompactChange).not.toHaveBeenCalled()
   })
 })

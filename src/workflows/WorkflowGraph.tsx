@@ -91,10 +91,25 @@ import {
   TONE_ACCENT,
 } from "./node-ui";
 
-/** How much of the canvas a fit leaves as margin. React Flow reads a numeric
- *  padding as a scale factor, not a fraction — 0.16 fits the graph into 1/1.16
- *  of the frame. */
-export const FIT_VIEW = { padding: 0.16 } as const;
+/**
+ * How much of the canvas a fit leaves as margin.
+ *
+ * A PIXEL gutter, not a fraction. Padding exists to keep the graph out from
+ * under the two overlays — the toolbar at top-left and the zoom controls at
+ * bottom-right — and those are a fixed size whatever the canvas is. Expressed
+ * as the old scale factor (0.16, i.e. fit into 1/1.16 of the frame) it instead
+ * grew with the panel, so the bigger the canvas the more of it a fit refused to
+ * use: measured on a 15-node pipeline in an 854×480 panel, a fit reached only
+ * 91% of the zoom that would still have fitted, and every pixel of that gap is
+ * legibility given away on exactly the graphs that need it most.
+ *
+ * 12px, because the gutter is breathing room and nothing more. The two overlays
+ * sit in OPPOSITE corners (toolbar top-left, zoom controls bottom-right) and are
+ * translucent chrome the canvas is expected to run under — reserving a band wide
+ * enough to clear them on all four sides would cost more zoom than the old
+ * scale factor did, on the short axis where a wide pipeline is already tightest.
+ */
+export const FIT_VIEW = { padding: "12px" } as const;
 
 /**
  * Zoom CEILING for a fit at the given density. Full cards at 1 are already
@@ -1378,6 +1393,17 @@ export interface WorkflowGraphProps {
    * toggle, and the preview variant is always compact.
    */
   defaultCompact?: boolean;
+  /**
+   * Called when the reader moves the density toggle, with the density they
+   * chose.
+   *
+   * `defaultCompact` seeds the graph; this reports back out of it, which is
+   * what a host needs to REMEMBER the choice. Without it a host can set an
+   * opening density but never learn that the reader wanted the other one, so
+   * every navigation puts them back where they started and the toggle has to
+   * be found again.
+   */
+  onCompactChange?: (compact: boolean) => void;
   /** Sizing for the wrapper; the caller controls height. */
   className?: string;
   /**
@@ -1525,6 +1551,7 @@ export function WorkflowGraph({
   variant = "full",
   direction = "LR",
   defaultCompact,
+  onCompactChange,
   className,
   wrap = false,
   nodeState,
@@ -2079,13 +2106,24 @@ export function WorkflowGraph({
             pinch-zooms and is always compact). */}
         {!isPreview && (
           <>
-            {/* Deliberately given no `fitViewOptions`, so its fit runs against
-                the canvas `minZoom` (0.2) rather than FIT_VIEW's floor. The
-                floor governs framing we do FOR the reader — never shrink a
-                pipeline to specks unasked; asking for a fit outright is the one
-                moment they have said the whole graph matters more than the size
-                of it, and this button is that ask. */}
-            <Controls showInteractive={false} position="bottom-right" />
+            {/* Given the GUTTER but not the zoom floor. The floor governs
+                framing we do FOR the reader — never shrink a pipeline to specks
+                unasked; asking for a fit outright is the one moment they have
+                said the whole graph matters more than the size of it, and this
+                button is that ask, so it runs against the canvas `minZoom`
+                (0.2) instead.
+
+                The padding is not part of that argument, and leaving it out
+                handed the button React Flow's own default (0.1 — a tenth of the
+                canvas, scaled), which is the opposite of what the ask means: a
+                reader pressing Fit View wants the graph as large as it goes
+                while still whole, and was given a fit that stopped 9% short of
+                it on every graph, at every canvas size. */}
+            <Controls
+              showInteractive={false}
+              position="bottom-right"
+              fitViewOptions={{ padding: FIT_VIEW.padding }}
+            />
             <Panel position="top-left" className="flex items-center gap-1">
               {addTrigger && (
                 <button
@@ -2102,7 +2140,11 @@ export function WorkflowGraph({
               )}
               <button
                 type="button"
-                onClick={() => setUserCompact((c) => !c)}
+                onClick={() => {
+                  const next = !userCompact;
+                  setUserCompact(next);
+                  onCompactChange?.(next);
+                }}
                 aria-pressed={userCompact}
                 title={userCompact ? "Expand nodes" : "Collapse nodes"}
                 className="flex items-center gap-1 rounded-md border border-border bg-card/80 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur transition hover:text-foreground"

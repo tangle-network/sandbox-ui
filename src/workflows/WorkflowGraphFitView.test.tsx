@@ -30,10 +30,18 @@ import { afterEach, describe, expect, it, vi } from "vitest"
  *   `setViewport` alongside the node swap.
  * - With no frame to fit into (a hidden canvas), the viewport is not touched.
  *
- * React Flow itself is stubbed: it measures a real viewport, which jsdom does
- * not have, and it is not the thing under test. The stub hands the component
- * the instance via `onInit` and renders the Panel so the toggle is clickable.
- * jsdom lays out nothing and has no visual rAF, so both are stubbed too.
+ * React Flow's COMPONENTS are stubbed: they measure a real viewport, which
+ * jsdom does not have, and they are not the thing under test. The stub hands
+ * the component the instance via `onInit` and renders the Panel so the toggle
+ * is clickable. jsdom lays out nothing and has no visual rAF, so both are
+ * stubbed too.
+ *
+ * Its math is NOT stubbed — the factory spreads the real module, so
+ * `framingViewport` runs the shipped `getViewportForBounds`. That is what makes
+ * the gutter assertions below a real check on the installed React Flow's
+ * reading of `FIT_VIEW.padding` rather than a check on our arithmetic: a
+ * version that ignored the CSS-length string would centre with no inset at all
+ * and fail `left > 0`.
  */
 const setViewport = vi.fn()
 const getViewport = vi.fn(() => ({ x: 0, y: 0, zoom: 1 }))

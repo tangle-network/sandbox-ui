@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.111.0
+
+### The workflow canvas frames itself tighter, and reports its density
+
+- **Fit View reaches the zoom it says it does.** The control was mounted with no
+  `fitViewOptions`, so the button fell through to React Flow's own default
+  padding — a tenth of the canvas, scaled — and every fit stopped ~9% short of
+  the largest whole view. Measured on a 15-node pipeline in an 854×480 panel,
+  compact went 0.71 → 0.74 and expanded 0.56 → 0.59. The deliberate part of that
+  mounting is kept: the button still runs against the canvas `minZoom` rather
+  than `FIT_VIEW`'s floor, because asking for a fit outright is the one moment a
+  reader has said the whole graph matters more than the size of it.
+- **The fit gutter is a fixed inset, not a fraction.** `FIT_VIEW.padding` was
+  `0.16` — a scale factor, so the margin a fit refused to use GREW with the
+  panel, and the bigger the canvas the more of it went unused. It is now `12px`:
+  the two overlays sit in opposite corners and are translucent chrome the canvas
+  is expected to run under, so reserving a band wide enough to clear them on all
+  four sides would cost more zoom than the scale factor did on the short axis,
+  where a wide pipeline is already tightest.
+- **`onCompactChange` reports the density toggle.** `defaultCompact` seeds the
+  graph; nothing reported back out of it, so a host could choose an opening
+  density but never learn the reader wanted the other one — every navigation put
+  them back and the toggle had to be found again. Fired from the gesture, not
+  from the state, so a host that persists it is never handed its own seed as
+  though it were a choice — and the gesture carries its own density, so two
+  presses that land in one batch are two densities rather than one reported
+  twice.
+
 ## 0.110.0
 
 ### The workflow canvas gains its authoring gestures

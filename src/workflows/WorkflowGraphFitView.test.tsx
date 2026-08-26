@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import type { FitViewOptions } from "@xyflow/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 /**
@@ -72,7 +73,18 @@ vi.mock("@xyflow/react", async (importOriginal) => {
       return <div data-testid="react-flow">{children}</div>
     },
     Background: () => null,
-    Controls: () => null,
+    // Not inert: the Fit View button is the whole mechanism behind the fixed
+    // gutter, and all it does is hand React Flow the options it was mounted
+    // with. Stubbing it to null would let the props the graph passes go
+    // unobserved, so the stand-in presses through to the same `fitView` the
+    // instance carries, exactly as `ControlsComponent` does.
+    Controls: ({ fitViewOptions }: { fitViewOptions?: FitViewOptions }) => (
+      <button
+        type="button"
+        aria-label="fit view"
+        onClick={() => fitView(fitViewOptions)}
+      />
+    ),
     Handle: () => null,
     Panel: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   }
@@ -463,5 +475,27 @@ describe("reporting the density the reader chose", () => {
       />,
     )
     expect(onCompactChange).not.toHaveBeenCalled()
+  })
+})
+
+describe("the Fit View button", () => {
+  it("hands React Flow the gutter, and nothing else", () => {
+    // The gutter reaches the AUTOMATIC framing through framingViewport, which
+    // the tests above cover. This button is React Flow's OWN fit, and it reads
+    // nothing but the options it was mounted with — mounted bare it took React
+    // Flow's default padding, a tenth of the canvas and scaled with it, so the
+    // one gesture that asks for the whole graph as large as it goes was given
+    // a fit that stopped short of that. The prop is the entire fix.
+    //
+    // Asserted exhaustively, because the ABSENCE matters too: the zoom floor
+    // governs framing done FOR the reader, and a floor added here would shrink
+    // a long pipeline to specks on the gesture that asked to see all of it.
+    measureableFrame(PANEL.width, PANEL.height)
+    render(<WorkflowGraph yaml={YAML} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "fit view" }))
+
+    expect(fitView).toHaveBeenCalledTimes(1)
+    expect(fitView).toHaveBeenCalledWith({ padding: FIT_VIEW.padding })
   })
 })

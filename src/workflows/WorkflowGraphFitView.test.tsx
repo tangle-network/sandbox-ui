@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type { FitViewOptions } from "@xyflow/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -469,6 +469,31 @@ describe("reporting the density the reader chose", () => {
     expect(onCompactChange).toHaveBeenCalledWith(false)
     fireEvent.click(screen.getByRole("button", { name: /Compact/ }))
     expect(onCompactChange).toHaveBeenLastCalledWith(true)
+  })
+
+  it("advances on the press, so two in one batch are two densities", () => {
+    // The press cannot read the density off the RENDER: two presses that share
+    // one render both see the same density, so the graph moves once where the
+    // reader pressed twice — and a host that persists the callback is handed
+    // that one density twice, never learning they ended where they started.
+    const onCompactChange = vi.fn()
+    render(
+      <WorkflowGraph
+        yaml={chain(3)}
+        defaultCompact={true}
+        onCompactChange={onCompactChange}
+      />,
+    )
+    const toggle = screen.getByRole("button", { name: /Expand/ })
+
+    act(() => {
+      toggle.click()
+      toggle.click()
+    })
+
+    expect(onCompactChange.mock.calls).toEqual([[false], [true]])
+    // And the graph is back where it started, not one flip along.
+    expect(screen.getByRole("button", { name: /Expand/ })).toBeTruthy()
   })
 
   it("stays silent when nothing was pressed", () => {

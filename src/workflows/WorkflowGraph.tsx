@@ -1592,6 +1592,18 @@ export function WorkflowGraph({
   const [userCompact, setUserCompact] = useState(
     defaultCompact ?? nodeState === undefined,
   );
+  /**
+   * What the NEXT press toggles away from.
+   *
+   * The press cannot read `userCompact` for this: two presses that land in one
+   * batch share a render, so both would see the same density, both would
+   * compute the same flip, and two presses would move the graph once — while
+   * reporting that one density twice to a host that persists it. The ref
+   * advances on the press itself, so the second press sees what the first
+   * chose. It is the toggle's own bookkeeping; the RENDER still follows
+   * `userCompact`, which is the only thing React may read for that.
+   */
+  const nextDensityFrom = useRef(userCompact);
   const compact = isPreview || userCompact;
   // What the nodes RENDER (content + handle anchors). Inside a layout tween it
   // TRAILS `compact` — the target density drives the layout and the camera at
@@ -2141,7 +2153,8 @@ export function WorkflowGraph({
               <button
                 type="button"
                 onClick={() => {
-                  const next = !userCompact;
+                  const next = !nextDensityFrom.current;
+                  nextDensityFrom.current = next;
                   setUserCompact(next);
                   onCompactChange?.(next);
                 }}

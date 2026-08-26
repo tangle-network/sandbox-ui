@@ -24,7 +24,9 @@
   density but never learn the reader wanted the other one — every navigation put
   them back and the toggle had to be found again. Fired from the gesture, not
   from the state, so a host that persists it is never handed its own seed as
-  though it were a choice.
+  though it were a choice — and the gesture carries its own density, so two
+  presses that land in one batch are two densities rather than one reported
+  twice.
 
 ## 0.110.0
 

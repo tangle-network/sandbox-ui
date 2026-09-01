@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react"
-import type { RichFileTreeGitEntry } from "../files"
+import type { RichFileTreeGitEntry, RichFileTreeGitStatus } from "../files"
 import type { ExposedPort } from "../dashboard"
 
 /** Which surface the artifact pane is currently showing. */
@@ -68,4 +68,47 @@ export interface SandboxArtifactPaneProps {
   onRemovePort?: (port: number) => void
   className?: string
   style?: CSSProperties
+}
+
+/**
+ * One entry of the sandbox's git working tree, as the Changes pane lists it.
+ * `additions` / `deletions` are the numstat counts the sidecar's
+ * `GET /git/diff` reports per file.
+ *
+ * `baseline` / `current` are the file contents the diff is drawn from and are
+ * absent until the consumer resolves them for the selected file. Which of the
+ * two counts as "resolved" follows the status: an added or untracked file has
+ * no baseline and diffs against the empty string once `current` is present; a
+ * deleted file has no working copy and diffs against the empty string once
+ * `baseline` is present; every other status waits for both.
+ */
+export interface ChangedFile {
+  path: string
+  status: RichFileTreeGitStatus
+  additions: number
+  deletions: number
+  /** Present once the consumer has resolved contents for the selected file. */
+  baseline?: string
+  current?: string
+}
+
+export interface ChangesPaneProps {
+  /** Current branch; `null` when the tree has no commits yet or is not a repository. */
+  branch: string | null
+  ahead?: number
+  behind?: number
+  files: ChangedFile[]
+  selectedPath?: string
+  onSelectFile?: (path: string) => void
+  loading?: boolean
+  error?: string | null
+  onRefresh?: () => void
+  /** Stage everything and commit. Resolve on success; reject with an Error the pane shows inline. */
+  onCommit?: (message: string) => Promise<void>
+  onPush?: () => Promise<void>
+  /** Which action is in flight; the pane disables the other and shows a spinner on this one. */
+  busy?: "commit" | "push" | null
+  /** Open the file as a workbench artifact (the product wires this to its artifact opener). */
+  onOpenFile?: (path: string) => void
+  className?: string
 }

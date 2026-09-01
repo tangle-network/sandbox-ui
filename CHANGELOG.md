@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased
+
+### The workbench gains a Changes pane
+
+- **`ChangesPane` is the working tree as a review surface.** One row per
+  changed file with the sidecar's numstat counts and a `GitStatusBadge`; the
+  selected file's word-level diff beneath, drawn through `PanelHeader` +
+  `DiffView`; a commit box and a push control in the footer. Data in,
+  callbacks out — the pane never fetches. A host feeds it `GET /git/status`
+  and `GET /git/diff`, resolves `baseline` / `current` for the file it is told
+  was selected, and wires `onCommit` / `onPush` to `/git/add` + `/git/commit`
+  and `/git/push`. A rejected promise is shown inline under the buttons; a
+  resolved commit clears the message.
+- **The list is capped at 40% of the pane and scrolls**, so the diff keeps
+  its room however many files changed. Which side of a diff counts as
+  "resolved" follows the status: an added or untracked file diffs against the
+  empty string once `current` is present, a deleted file once `baseline` is;
+  a modification waits for both, so a half-resolved file is never drawn as a
+  wholesale rewrite.
+- **Selection and focus are one thing in the list**, as in an SCM tree: the
+  arrow keys, Home and End report the next path through `onSelectFile`, and
+  the selected row is the list's single tab stop. When the host moves the
+  selection while the list holds focus, focus follows; a selection made from
+  elsewhere leaves focus alone.
+- **`DiffView` accepts `showFileHeader`.** The renderer's own sticky header
+  (name + counts) stays on by default; the Changes pane turns it off because
+  its `PanelHeader` already names the file, so the name is not printed twice.
+- **`DiffStatsBadge` is exported** from `/workbench` — the same `+n −m` pair
+  `PanelHeader` prints, so a host can put the counts next to its own chrome.
+- The dashboard's `GitPanel` stays what it is: a read-only branch + recent-
+  commits summary. `ChangesPane` is the surface for reading and committing a
+  diff.
+
 ## 0.111.1
 
 ### Agent Interface 2 support

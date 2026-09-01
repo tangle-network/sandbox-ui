@@ -28,6 +28,12 @@ export interface DiffViewProps {
   filename: string
   baseline: string
   current: string
+  /**
+   * The renderer's own sticky file header (name + counts). On by default; a
+   * host whose chrome already names the file, such as the Changes pane under
+   * its `PanelHeader`, turns it off so the name is not printed twice.
+   */
+  showFileHeader?: boolean
   className?: string
 }
 
@@ -36,10 +42,14 @@ export interface DiffViewProps {
  * with jsdiff's `createTwoFilesPatch` (baseline → current); the renderer owns
  * hunking, intra-line word diffing, gutters, and syntax highlighting.
  */
-export function DiffView({ filename, baseline, current, className }: DiffViewProps) {
+export function DiffView({ filename, baseline, current, showFileHeader = true, className }: DiffViewProps) {
   const patch = React.useMemo(
     () => buildUnifiedPatch(filename, baseline, current),
     [filename, baseline, current],
+  )
+  const options = React.useMemo(
+    () => (showFileHeader ? DIFF_OPTIONS : { ...DIFF_OPTIONS, disableFileHeader: true }),
+    [showFileHeader],
   )
 
   if (!patch) {
@@ -52,7 +62,7 @@ export function DiffView({ filename, baseline, current, className }: DiffViewPro
 
   return (
     <div className={cn("h-full min-h-0 overflow-auto bg-surface-container text-[13px]", className)}>
-      <PatchDiff patch={patch} options={DIFF_OPTIONS} />
+      <PatchDiff patch={patch} options={options} />
     </div>
   )
 }

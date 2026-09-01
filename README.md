@@ -168,6 +168,52 @@ const partMap: Record<string, SessionPart[]> = {};
 
 `FileTreeVisibilityOptions` is a UI-layer policy only. Sensitive paths still need to be hidden and denied by the app/backend layer.
 
+### The three-pane shell
+
+For a chats rail · transcript + composer · artifacts layout, hand `SandboxWorkbench` a `SessionSidebar` as its `rail`, your composer as `composer`, and `centerHeader={null}` for the quiet center. `WorkspaceLayout` owns the pane sizes and, when you pass `layout.leftOpen` / `layout.onLeftOpenChange`, the open state too.
+
+```tsx
+const [chatsOpen, setChatsOpen] = useState(true);
+
+<SandboxWorkbench
+  centerHeader={null}
+  rail={
+    <SessionSidebar
+      variant="quiet"
+      groupBy="status"
+      showUpdatedAt
+      fill
+      className="border-r-0"
+      title="Chats"
+      createLabel="New chat"
+      items={threads}
+      currentItemId={threadId}
+      onSelectItem={(item) => navigate(item.href)}
+      onCreate={createThread}
+      onCollapse={() => setChatsOpen(false)}
+    />
+  }
+  session={{ messages, partMap, isStreaming }}
+  composer={<ChatComposer onSend={runTurn} />}
+  artifacts={[
+    { id: "changes", kind: "custom", title: "Changes", icon: GitCompare, pinned: true, content: <ChangesPanel /> },
+    ...openFiles,
+  ]}
+  layout={{
+    leftOpen: chatsOpen,
+    onLeftOpenChange: setChatsOpen,
+    keyboardShortcuts: true,
+    leftCollapsedControl: (
+      <button type="button" aria-label="Show chats" onClick={() => setChatsOpen(true)}>
+        <PanelLeftOpen className="h-4 w-4" />
+      </button>
+    ),
+  }}
+/>;
+```
+
+Each `SessionSidebarItem` can carry an `icon` (rendered in a 16×20 slot, with the status dot as a corner badge) and a `meta` line; `formatRelativeAge` from `/workspace` formats the age for that line.
+
 ## Theming And Retheming
 
 There is a built-in Tangle default theme, but consumers can restyle the library in three layers:

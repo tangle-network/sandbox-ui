@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.111.1
+
+### Agent Interface 2 support
+
+- **The peer range accepts `@tangle-network/agent-interface` 1.x and 2.x.**
+  Sandbox UI uses the same harness, reasoning, and interactive-session symbols
+  in both generations, so consumers can install the current interface contract
+  without a duplicate package or a peer-resolution failure.
+- The development build and packed-consumer check run against 2.1.1.
+  The release workflow still checks the oldest supported 1.0.0 contract.
+
 ## 0.111.0
 
 ### The workflow canvas frames itself tighter, and reports its density

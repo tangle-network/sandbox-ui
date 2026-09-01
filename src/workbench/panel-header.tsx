@@ -29,9 +29,10 @@ export function GitStatusBadge({ status }: { status: RichFileTreeGitStatus }) {
   )
 }
 
-function DiffStatsBadge({ stats }: { stats: DiffStats }) {
+/** `+added −removed` line counts in mono; the same pair the Changes list prints per file. */
+export function DiffStatsBadge({ stats, className }: { stats: DiffStats; className?: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 font-mono text-xs">
+    <span className={cn("inline-flex items-center gap-1.5 font-mono text-xs", className)}>
       <span className="text-[var(--code-success,#10B981)]">+{stats.added}</span>
       <span className="text-[var(--code-error,#FF4D6D)]">-{stats.removed}</span>
     </span>

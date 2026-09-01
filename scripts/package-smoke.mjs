@@ -6,6 +6,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -15,7 +16,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "vite";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const workdir = mkdtempSync(join(tmpdir(), "sandbox-ui-package-smoke-"));
+// The real path, not the one `tmpdir()` reports: on macOS `/var` is a symlink
+// to `/private/var`, and Vite 8 emits the consumer's index.html relative to
+// the resolved root, so a symlinked root escapes it as `../../../private/...`
+// and the build refuses the asset name.
+const workdir = realpathSync(mkdtempSync(join(tmpdir(), "sandbox-ui-package-smoke-")));
 const packDir = join(workdir, "pack");
 const consumerDir = join(workdir, "consumer");
 const consumerDistDir = join(consumerDir, "dist");

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.112.0
 
 ### The workbench gains a Changes pane
 

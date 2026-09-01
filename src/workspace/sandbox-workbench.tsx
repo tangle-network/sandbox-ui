@@ -7,6 +7,7 @@ import {
   FolderTree,
   LayoutPanelTop,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Badge } from "@tangle-network/ui/primitives";
@@ -33,6 +34,10 @@ interface SandboxWorkbenchArtifactBase {
   headerActions?: ReactNode;
   toolbar?: ReactNode;
   footer?: ReactNode;
+  /** Tab glyph. Defaults per `kind`; a `custom` artifact usually names its own. */
+  icon?: LucideIcon;
+  /** A pinned artifact's tab sorts before the rest and carries no close button. */
+  pinned?: boolean;
 }
 
 export interface SandboxWorkbenchFileArtifact extends SandboxWorkbenchArtifactBase {
@@ -99,12 +104,18 @@ export interface SandboxWorkbenchLayoutOptions
     | "defaultRightOpen"
     | "defaultRightWidth"
     | "density"
+    | "keyboardShortcuts"
+    | "leftCollapsedControl"
+    | "leftOpen"
     | "maxLeftWidth"
     | "maxRightWidth"
     | "minLeftWidth"
     | "minRightWidth"
+    | "onLeftOpenChange"
+    | "onRightOpenChange"
     | "persistenceKey"
     | "resizable"
+    | "rightOpen"
     | "theme"
   > {
   directoryPlacement?: SandboxWorkbenchPlacement;
@@ -116,6 +127,27 @@ export interface SandboxWorkbenchProps {
   title?: ReactNode;
   subtitle?: ReactNode;
   status?: ReactNode;
+  /**
+   * Header above the transcript. `undefined` keeps the branded session card
+   * (`Tangle Sandbox` / `title` / `status`), a node replaces it, and `null`
+   * removes it: the transcript then renders directly on `bg-surface` with no
+   * eyebrow/title frame around it, and the shell's center header row appears
+   * only while it holds an open-pane toggle.
+   */
+  centerHeader?: ReactNode | null;
+  /**
+   * Composer rendered under the transcript on the panel background, inside the
+   * transcript's own `max-w-3xl` column. `session.composerControls`, when
+   * also given, sits above it as before.
+   */
+  composer?: ReactNode;
+  /**
+   * First section of the left region, ahead of the directory pane — a
+   * `SessionSidebar` for a chats rail. A rail that is the only left section
+   * fills the pane: no region header, no gutter. Give it `fill` and
+   * `className="border-r-0"` so the layout's own divider is the only one.
+   */
+  rail?: ReactNode;
   directory?: DirectoryPaneProps;
   session: SandboxWorkbenchSessionProps;
   artifacts?: SandboxWorkbenchArtifact[];
@@ -147,6 +179,15 @@ function artifactTabLabel(artifact: SandboxWorkbenchArtifact) {
   return "Artifact";
 }
 
+// A stable partition: pinned tabs first, each side in the order given.
+function sortPinnedFirst(artifacts: SandboxWorkbenchArtifact[]) {
+  if (!artifacts.some((artifact) => artifact.pinned)) return artifacts;
+  return [
+    ...artifacts.filter((artifact) => artifact.pinned),
+    ...artifacts.filter((artifact) => !artifact.pinned),
+  ];
+}
+
 function ArtifactTabs({
   artifacts,
   activeArtifactId,
@@ -163,7 +204,7 @@ function ArtifactTabs({
   return (
     <div className="flex items-center overflow-x-auto border-b border-[var(--md3-outline-variant)] bg-surface-container-high">
       {artifacts.map((artifact) => {
-        const Icon = getArtifactTabIcon(artifact.kind);
+        const Icon = artifact.icon ?? getArtifactTabIcon(artifact.kind);
         const isActive = artifact.id === activeArtifactId;
 
         return (
@@ -184,7 +225,7 @@ function ArtifactTabs({
               <Icon className="h-3.5 w-3.5 shrink-0" />
               <span className="max-w-[14rem] truncate">{artifactTabLabel(artifact)}</span>
             </button>
-            {onClose && (
+            {onClose && !artifact.pinned && (
               <button
                 type="button"
                 aria-label={`Close ${artifactTabLabel(artifact)}`}
@@ -273,7 +314,7 @@ function renderArtifact(artifact: SandboxWorkbenchArtifact) {
 }
 
 interface WorkbenchRegionSection {
-  key: "directory" | "artifacts" | "runtime";
+  key: "rail" | "directory" | "artifacts" | "runtime";
   content: ReactNode;
 }
 
@@ -286,6 +327,9 @@ function regionHeader(
   }
 
   switch (sections[0]?.key) {
+    // The rail brings its own header row.
+    case "rail":
+      return undefined;
     case "directory":
       return (
         <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -344,9 +388,12 @@ export function SandboxWorkbench({
   title = "Sandbox session",
   subtitle,
   status,
+  centerHeader: centerHeaderProp,
+  composer,
+  rail,
   directory,
   session,
-  artifacts = [],
+  artifacts: artifactsProp = [],
   activeArtifactId,
   onArtifactChange,
   onArtifactClose,
@@ -355,6 +402,7 @@ export function SandboxWorkbench({
   emptyArtifactState,
   className,
 }: SandboxWorkbenchProps) {
+  const artifacts = useMemo(() => sortPinnedFirst(artifactsProp), [artifactsProp]);
   const [uncontrolledArtifactId, setUncontrolledArtifactId] = useState<string | undefined>(
     activeArtifactId ?? artifacts[0]?.id,
   );
@@ -383,7 +431,7 @@ export function SandboxWorkbench({
     onArtifactChange?.(artifactId);
   };
 
-  const centerHeader = (
+  const brandedHeader = (
     <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-3.5">
       <div className="min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
@@ -399,8 +447,32 @@ export function SandboxWorkbench({
     </div>
   );
 
+  // `null` is the quiet look: no card above, no frame around, transcript on
+  // the base surface. `undefined` keeps the branded card and the framed pane.
+  const quiet = centerHeaderProp === null;
+  const centerHeader = centerHeaderProp === undefined ? brandedHeader : (centerHeaderProp ?? undefined);
+
   const { composerControls, ...chatSession } = session;
-  const center = (
+  const transcript = (
+    <div className={cn("flex h-full min-h-0 flex-col", quiet && "bg-surface")}>
+      <ChatContainer
+        {...chatSession}
+        className="min-h-0 flex-1"
+        presentation={session.presentation ?? "timeline"}
+      />
+      {composerControls && (
+        <div className="shrink-0 border-t border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
+          {composerControls}
+        </div>
+      )}
+      {composer && (
+        <div className="shrink-0">
+          <div className="mx-auto w-full max-w-3xl px-3 pb-3">{composer}</div>
+        </div>
+      )}
+    </div>
+  );
+  const center = quiet ? transcript : (
     <ArtifactPane
       eyebrow={session.eyebrow ?? "Agent Session"}
       title={session.title ?? "Execution timeline"}
@@ -410,18 +482,7 @@ export function SandboxWorkbench({
       className="h-full"
       contentClassName="bg-surface-container"
     >
-      <div className="flex h-full min-h-0 flex-col">
-        <ChatContainer
-          {...chatSession}
-          className="min-h-0 flex-1"
-          presentation={session.presentation ?? "timeline"}
-        />
-        {composerControls && (
-          <div className="shrink-0 border-t border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
-            {composerControls}
-          </div>
-        )}
-      </div>
+      {transcript}
     </ArtifactPane>
   );
 
@@ -461,6 +522,10 @@ export function SandboxWorkbench({
     bottom: [],
   };
 
+  if (rail) {
+    regionSections.left.push({ key: "rail", content: rail });
+  }
+
   if (directory && directoryPlacement !== "hidden") {
     regionSections[directoryPlacement].push({
       key: "directory",
@@ -485,6 +550,7 @@ export function SandboxWorkbench({
   const left = renderRegion(regionSections.left, "left");
   const right = renderRegion(regionSections.right, "right");
   const bottom = renderRegion(regionSections.bottom, "bottom");
+  const railOnly = regionSections.left.length === 1 && regionSections.left[0]?.key === "rail";
 
   const genericPanelsHeader = (
     <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
@@ -515,6 +581,14 @@ export function SandboxWorkbench({
       minRightWidth={layout?.minRightWidth}
       maxRightWidth={layout?.maxRightWidth}
       resizable={layout?.resizable}
+      leftOpen={layout?.leftOpen}
+      onLeftOpenChange={layout?.onLeftOpenChange}
+      rightOpen={layout?.rightOpen}
+      onRightOpenChange={layout?.onRightOpenChange}
+      keyboardShortcuts={layout?.keyboardShortcuts}
+      leftCollapsedControl={layout?.leftCollapsedControl}
+      leftContentClassName={railOnly ? "py-0" : undefined}
+      centerHeaderVisibility={quiet ? "auto" : "always"}
       className={cn("p-3 lg:p-4", className)}
     />
   );

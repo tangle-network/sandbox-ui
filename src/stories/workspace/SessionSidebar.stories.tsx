@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import { useState } from 'react'
+import { HarnessLogo } from '../../dashboard/harness-logo'
 import { SessionSidebar, type SessionSidebarItem, type SessionSidebarFilter } from '../../workspace/session-sidebar'
 
 const meta: Meta<typeof SessionSidebar> = {
@@ -176,5 +177,115 @@ export const NoSearch: Story = {
     items: SESSIONS.slice(0, 3),
     currentItemId: 'sess-002',
     enableSearch: false,
+  },
+}
+
+// A chats rail: every row carries its harness mark, the status dot rides the
+// mark's corner, and the meta line reads harness · age.
+const RAIL_SESSIONS: SessionSidebarItem[] = [
+  {
+    id: 'rail-001',
+    title: 'Migrate billing webhooks to idempotent handlers',
+    status: 'running',
+    updatedAt: new Date(NOW - 40_000),
+    icon: <HarnessLogo type="codex" size={16} />,
+    meta: 'Codex · now',
+  },
+  {
+    id: 'rail-002',
+    title: 'Why does the staging deploy skip the smoke job?',
+    status: 'attention-needed',
+    updatedAt: new Date(NOW - 6 * 60_000),
+    icon: <HarnessLogo type="claude-code" size={16} />,
+    meta: 'Claude Code · 6m',
+  },
+  {
+    id: 'rail-003',
+    title: 'Flaky terminal resize test',
+    status: 'error',
+    updatedAt: new Date(NOW - 42 * 60_000),
+    icon: <HarnessLogo type="opencode" size={16} />,
+    meta: 'OpenCode · 42m',
+  },
+  {
+    id: 'rail-004',
+    title: 'Add relative ages to the session rail',
+    status: 'running',
+    updatedAt: new Date(NOW - 3 * 60_000),
+    icon: <HarnessLogo type="claude-code" size={16} />,
+    meta: 'Claude Code · 3m',
+  },
+  {
+    id: 'rail-005',
+    title: 'Dependency graph analysis',
+    status: 'idle',
+    updatedAt: new Date(NOW - 2 * 60 * 60_000),
+    icon: <HarnessLogo type="codex" size={16} />,
+    meta: 'Codex · 2h',
+  },
+  {
+    id: 'rail-006',
+    title: 'Draft the Q3 provisioning retro',
+    status: 'idle',
+    updatedAt: new Date(NOW - 26 * 60 * 60_000),
+    icon: <HarnessLogo type="amp" size={16} />,
+    meta: 'AMP · 1d',
+  },
+  {
+    id: 'rail-007',
+    title: 'Rename harness picker exports',
+    status: 'idle',
+    updatedAt: new Date(NOW - 3 * 24 * 60 * 60_000),
+    icon: <HarnessLogo type="codex" size={16} />,
+    meta: 'Codex · 3d',
+  },
+]
+
+export const Quiet: Story = {
+  name: 'Quiet (three-pane rail)',
+  render: (args) => {
+    const [currentId, setCurrentId] = useState<string>('rail-002')
+    return (
+      <SessionSidebar
+        {...args}
+        currentItemId={currentId}
+        onSelectItem={(item) => setCurrentId(item.id)}
+      />
+    )
+  },
+  args: {
+    title: 'Chats',
+    variant: 'quiet',
+    items: RAIL_SESSIONS,
+    createLabel: 'New chat',
+    searchPlaceholder: 'Search chats',
+    onCreate: () => alert('New chat'),
+    onCollapse: () => alert('Hide chats'),
+  },
+}
+
+export const QuietGrouped: Story = {
+  name: 'Quiet, grouped by status',
+  render: (args) => {
+    const [currentId, setCurrentId] = useState<string>('rail-002')
+    return (
+      <SessionSidebar
+        {...args}
+        currentItemId={currentId}
+        onSelectItem={(item) => setCurrentId(item.id)}
+      />
+    )
+  },
+  args: {
+    title: 'Chats',
+    variant: 'quiet',
+    groupBy: 'status',
+    // No meta on these rows: the age comes from updatedAt.
+    items: RAIL_SESSIONS.map(({ meta: _meta, ...item }) => item),
+    showUpdatedAt: true,
+    createLabel: 'New chat',
+    searchPlaceholder: 'Search chats',
+    onCreate: () => alert('New chat'),
+    onCollapse: () => alert('Hide chats'),
   },
 }

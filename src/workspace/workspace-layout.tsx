@@ -9,6 +9,7 @@
  */
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -104,11 +105,58 @@ export interface WorkspaceLayoutProps {
   rightLabel?: string;
   /** Accessible label for the bottom panel */
   bottomLabel?: string;
+  /**
+   * Controlled open state for the left pane. Omit to keep the pane
+   * uncontrolled (`defaultLeftOpen`, persisted under `persistenceKey`).
+   */
+  leftOpen?: boolean;
+  /** Called with the next state whenever the layout would open or close the left pane. */
+  onLeftOpenChange?: (open: boolean) => void;
+  /** Controlled open state for the right pane; see `leftOpen`. */
+  rightOpen?: boolean;
+  /** Called with the next state whenever the layout would open or close the right pane. */
+  onRightOpenChange?: (open: boolean) => void;
+  /**
+   * ⌘B / Ctrl+B toggles the left pane and ⌘E / Ctrl+E the right pane. A
+   * chord with Alt or Shift, or one fired while an input, textarea, select, or
+   * contentEditable has focus, is left to the page. Off by default.
+   */
+  keyboardShortcuts?: boolean;
+  /**
+   * Replaces the default "Open left panel" button at the top-left of the
+   * center pane while a left pane is provided but closed.
+   */
+  leftCollapsedControl?: ReactNode;
+  /** Extra classes for the left pane's scrolling content wrapper, e.g. `py-0` so a rail owns its own gutter. */
+  leftContentClassName?: string;
+  /** Extra classes for the right pane's scrolling content wrapper. */
+  rightContentClassName?: string;
+  /**
+   * `always` (default) keeps the center header row whenever a side or bottom
+   * pane exists, so pane headers line up across the shell even while the row
+   * is empty. `auto` renders the row only while it has content: a
+   * `centerHeader`, or an open-pane toggle for a closed pane.
+   */
+  centerHeaderVisibility?: "always" | "auto";
   className?: string;
 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+/**
+ * True while a keystroke belongs to a text field. `isContentEditable` is
+ * missing from jsdom, so the attribute is checked too — through `closest`,
+ * because the target inside an editable region is usually a descendant.
+ */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  const editable = target.closest("[contenteditable]");
+  return editable !== null && editable.getAttribute("contenteditable") !== "false";
 }
 
 function readStoredLayout(key: string): WorkspaceLayoutStorage | null {
@@ -300,6 +348,15 @@ export function WorkspaceLayout({
   leftLabel = "Left workspace panel",
   rightLabel = "Right workspace panel",
   bottomLabel = "Bottom runtime panel",
+  leftOpen: leftOpenProp,
+  onLeftOpenChange,
+  rightOpen: rightOpenProp,
+  onRightOpenChange,
+  keyboardShortcuts = false,
+  leftCollapsedControl,
+  leftContentClassName,
+  rightContentClassName,
+  centerHeaderVisibility = "always",
   className,
 }: WorkspaceLayoutProps) {
   const desktop = useDesktopMediaQuery(DESKTOP_BREAKPOINT);
@@ -316,8 +373,30 @@ export function WorkspaceLayout({
     [persistenceKey],
   );
 
-  const [leftOpen, setLeftOpen] = useState(storedLayout?.leftOpen ?? defaultLeftOpen);
-  const [rightOpen, setRightOpen] = useState(storedLayout?.rightOpen ?? defaultRightOpen);
+  const [uncontrolledLeftOpen, setUncontrolledLeftOpen] = useState(storedLayout?.leftOpen ?? defaultLeftOpen);
+  const [uncontrolledRightOpen, setUncontrolledRightOpen] = useState(storedLayout?.rightOpen ?? defaultRightOpen);
+  // A controlled pane reads the prop and only reports; the uncontrolled one
+  // keeps its own state. Both notify, so a consumer can mirror without owning.
+  const leftControlled = leftOpenProp !== undefined;
+  const rightControlled = rightOpenProp !== undefined;
+  const leftOpen = leftControlled ? leftOpenProp : uncontrolledLeftOpen;
+  const rightOpen = rightControlled ? rightOpenProp : uncontrolledRightOpen;
+  const setLeftOpen = useCallback(
+    (open: boolean) => {
+      if (!leftControlled) setUncontrolledLeftOpen(open);
+      onLeftOpenChange?.(open);
+    },
+    [leftControlled, onLeftOpenChange],
+  );
+  const setRightOpen = useCallback(
+    (open: boolean) => {
+      if (!rightControlled) setUncontrolledRightOpen(open);
+      onRightOpenChange?.(open);
+    },
+    [rightControlled, onRightOpenChange],
+  );
+  const hasLeft = Boolean(left);
+  const hasRight = Boolean(right);
   const [bottomOpen, setBottomOpen] = useState(storedLayout?.bottomOpen ?? defaultBottomOpen);
   const [leftWidth, setLeftWidth] = useState(
     clamp(storedLayout?.leftWidth ?? defaultLeftWidth, minLeftWidth, maxLeftWidth),
@@ -328,6 +407,12 @@ export function WorkspaceLayout({
   const [bottomHeight, setBottomHeight] = useState(
     clamp(storedLayout?.bottomHeight ?? defaultBottomHeight, minBottomHeight, maxBottomHeight),
   );
+  const centerHeaderHasContent =
+    Boolean(centerHeader) || (hasLeft && !leftOpen) || (hasRight && !rightOpen) || (Boolean(bottom) && !bottomOpen);
+  const showCenterHeader =
+    centerHeaderVisibility === "auto"
+      ? centerHeaderHasContent
+      : Boolean(centerHeader || left || right || bottom);
 
   useEffect(() => {
     if (!persistenceKey || typeof window === "undefined") return;
@@ -343,6 +428,27 @@ export function WorkspaceLayout({
 
     window.localStorage.setItem(persistenceKey, JSON.stringify(payload));
   }, [bottomHeight, bottomOpen, leftOpen, leftWidth, persistenceKey, rightOpen, rightWidth]);
+
+  useEffect(() => {
+    if (!keyboardShortcuts || typeof window === "undefined") return;
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      if (isEditableTarget(event.target)) return;
+
+      const key = event.key.toLowerCase();
+      if (key === "b" && hasLeft) {
+        event.preventDefault();
+        setLeftOpen(!leftOpen);
+      } else if (key === "e" && hasRight) {
+        event.preventDefault();
+        setRightOpen(!rightOpen);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [hasLeft, hasRight, keyboardShortcuts, leftOpen, rightOpen, setLeftOpen, setRightOpen]);
 
   useEffect(() => {
     if (!desktop) return;
@@ -443,7 +549,7 @@ export function WorkspaceLayout({
                   </button>
                 </WorkspacePaneHeader>
               )}
-              <div className="min-h-0 flex-1 overflow-auto py-1">{left}</div>
+              <div className={cn("min-h-0 flex-1 overflow-auto py-1", leftContentClassName)}>{left}</div>
             </aside>
             {resizable && (
               <ResizeHandle
@@ -456,17 +562,19 @@ export function WorkspaceLayout({
         )}
 
         <main className="flex min-w-0 flex-1 flex-col">
-          {(centerHeader || left || right || bottom) && (
+          {showCenterHeader && (
             <WorkspacePaneHeader className="gap-2">
               {left && !leftOpen && (
-                <button
-                  type="button"
-                  aria-label="Open left panel"
-                  onClick={() => setLeftOpen(true)}
-                  className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
-                >
-                  <PanelLeftOpen className="h-4 w-4" />
-                </button>
+                leftCollapsedControl ?? (
+                  <button
+                    type="button"
+                    aria-label="Open left panel"
+                    onClick={() => setLeftOpen(true)}
+                    className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                  >
+                    <PanelLeftOpen className="h-4 w-4" />
+                  </button>
+                )
               )}
               <div className="min-w-0 flex-1">{centerHeader}</div>
               {bottom && !bottomOpen && (
@@ -566,7 +674,7 @@ export function WorkspaceLayout({
                   <PanelRightClose className="h-4 w-4" />
                 </button>
               </WorkspacePaneHeader>
-              <div className="min-h-0 flex-1 overflow-auto">{right}</div>
+              <div className={cn("min-h-0 flex-1 overflow-auto", rightContentClassName)}>{right}</div>
             </aside>
           </>
         )}

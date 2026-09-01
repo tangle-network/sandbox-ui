@@ -13,7 +13,10 @@ export {
   type SessionSidebarLink,
   type SessionSidebarFilter,
   type SessionSidebarBadge,
+  type SessionSidebarVariant,
+  type SessionSidebarGroupBy,
 } from "./session-sidebar";
+export { formatRelativeAge } from "../lib/format-relative-age";
 export {
   createShellShouldRevalidate,
   shellShouldRevalidate,

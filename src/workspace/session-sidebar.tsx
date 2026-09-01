@@ -1,7 +1,8 @@
 import { type CSSProperties, type ReactNode, type Ref, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { ArrowLeft, FolderTree, GripVertical, MessageSquareText, Plus, Search, Settings, Sparkles } from "lucide-react";
+import { ArrowLeft, FolderTree, GripVertical, MessageSquareText, PanelLeftClose, Plus, Search, Settings, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
 import { MOTION_CONTROL } from "../lib/motion";
+import { formatRelativeAge } from "../lib/format-relative-age";
 import { Badge } from "@tangle-network/ui/primitives";
 import { useNavbarSessions, type ActiveSessionRecord, type ActiveSessionStatus, type SessionProjectKey } from "@tangle-network/ui/stores";
 import {
@@ -22,6 +23,17 @@ export interface SessionSidebarItem {
   category?: string;
   isPinned?: boolean;
   badges?: SessionSidebarBadge[];
+  /**
+   * Glyph rendered in a 16×20 slot before the title — a harness mark, for
+   * example. While an icon is present the status dot becomes a 6px badge on
+   * the icon's corner instead of a leading dot.
+   */
+  icon?: ReactNode;
+  /**
+   * Muted 12px line under the title, e.g. `harness · age`. When omitted and
+   * `showUpdatedAt` is set, the row renders `updatedAt` as a relative age here.
+   */
+  meta?: ReactNode;
 }
 
 export interface SessionSidebarBadge {
@@ -48,6 +60,9 @@ export interface SessionSidebarFilter {
     },
   ) => boolean;
 }
+
+export type SessionSidebarVariant = "default" | "quiet";
+export type SessionSidebarGroupBy = "none" | "status";
 
 export interface SessionSidebarProps {
   title: string;
@@ -93,6 +108,34 @@ export interface SessionSidebarProps {
    * handlers. Only populated when `optimistic` is enabled.
    */
   optimisticRef?: Ref<SessionOptimisticController | null>;
+  /**
+   * `default` is the branded panel: icon-in-a-box header, running-count chip,
+   * bordered search field, accent-filled selected row. `quiet` is the rail of a
+   * three-pane shell: the header is one row (a "new" text button plus the
+   * optional `onCollapse` button), rows are `rounded-lg` with a surface fill
+   * for hover and selection, only non-neutral badges render, and search is a
+   * borderless field.
+   */
+  variant?: SessionSidebarVariant;
+  /**
+   * `status` partitions the list into "Needs input" (`attention-needed`),
+   * "Failed" (`error`), "Working" (`running`), and "Done" (everything else),
+   * in that order. Group labels render only while more than one group has
+   * items. Within a group the sort is unchanged: pinned first, then activity.
+   * Status comes from the active-sessions store record when one exists for the
+   * id, else from `item.status`.
+   */
+  groupBy?: SessionSidebarGroupBy;
+  /** Render `updatedAt` as a relative age under the title for rows with no `meta`. */
+  showUpdatedAt?: boolean;
+  /** Renders a "Hide chats" button in the `quiet` header. */
+  onCollapse?: () => void;
+  /**
+   * Fill the parent instead of carrying the sidebar's own width: no inline
+   * width, `h-full w-full`. Use when a layout owns the pane size. Ignored while
+   * `resizable`, which needs the inline width it drags.
+   */
+  fill?: boolean;
 }
 
 const NO_CONTROLLER: SessionOptimisticController = {
@@ -101,6 +144,28 @@ const NO_CONTROLLER: SessionOptimisticController = {
   remove: () => {},
   reset: () => {},
 };
+
+type SessionGroupKey = "attention" | "failed" | "working" | "done";
+
+const STATUS_GROUPS: ReadonlyArray<{ key: SessionGroupKey; label: string }> = [
+  { key: "attention", label: "Needs input" },
+  { key: "failed", label: "Failed" },
+  { key: "working", label: "Working" },
+  { key: "done", label: "Done" },
+];
+
+function groupKeyForStatus(status?: ActiveSessionStatus): SessionGroupKey {
+  switch (status) {
+    case "attention-needed":
+      return "attention";
+    case "error":
+      return "failed";
+    case "running":
+      return "working";
+    default:
+      return "done";
+  }
+}
 
 function statusDot(status?: ActiveSessionStatus) {
   switch (status) {
@@ -126,6 +191,12 @@ function iconForLink(icon?: SessionSidebarLink["icon"]) {
     default:
       return Sparkles;
   }
+}
+
+function toDate(value: SessionSidebarItem["updatedAt"]): Date | null {
+  if (value === undefined) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function sortItems(
@@ -240,7 +311,13 @@ export function SessionSidebar({
   renderItemActions,
   optimistic = false,
   optimisticRef,
+  variant = "default",
+  groupBy = "none",
+  showUpdatedAt = false,
+  onCollapse,
+  fill = false,
 }: SessionSidebarProps) {
+  const quiet = variant === "quiet";
   const [query, setQuery] = useState("");
   const [activeFilterId, setActiveFilterId] = useState(defaultFilterId ?? filters[0]?.id ?? "all");
   // Always call the hook (Rules of Hooks); it's a thin mirror when optimistic is
@@ -282,6 +359,22 @@ export function SessionSidebar({
       return haystack.includes(normalizedQuery);
     });
   }, [activeFilterId, currentItemId, filters, orderedItems, query, sessionsById]);
+  // A stable partition of the already-sorted list: order inside a group is the
+  // global order, and a single non-empty group is the flat list.
+  const groups = useMemo(() => {
+    if (groupBy !== "status") {
+      return [{ key: "all", label: null as string | null, items: visibleItems }];
+    }
+
+    return STATUS_GROUPS.map((group) => ({
+      key: group.key as string,
+      label: group.label as string | null,
+      items: visibleItems.filter(
+        (item) => groupKeyForStatus(sessionsById.get(item.id)?.status ?? item.status) === group.key,
+      ),
+    })).filter((group) => group.items.length > 0);
+  }, [groupBy, sessionsById, visibleItems]);
+  const showGroupLabels = groups.length > 1;
   const runningCount = activeSessions.filter((session) => session.status === "running").length;
   const filterCounts = useMemo(() => (
     Object.fromEntries(filters.map((filter) => [
@@ -294,48 +387,210 @@ export function SessionSidebar({
   ), [currentItemId, filters, orderedItems, sessionsById]);
 
   const resize = useResizable(defaultWidth, minWidth, maxWidth, onWidthChange);
+  const fillsParent = fill && !resizable;
+
+  const renderRow = (item: SessionSidebarItem, index: number) => {
+    const session = sessionsById.get(item.id) ?? null;
+    const isActive = currentItemId === item.id;
+    const status = session?.status ?? item.status;
+    // A running session is one whose agent is mid-turn. The sweep
+    // through its title is the only thing in the list that says so —
+    // a static row cannot distinguish "working" from "finished an
+    // hour ago" — so it opts out of the reduced-motion floor.
+    const isWorking = status === "running";
+    const visibleBadges = [
+      ...(item.isPinned ? [{ id: `${item.id}-pinned`, label: "Pinned", tone: "neutral" as const }] : []),
+      ...(item.badges ?? []),
+    ].filter((badge) => !quiet || (badge.tone ?? "neutral") !== "neutral");
+    const updatedAt = showUpdatedAt && item.meta === undefined ? toDate(item.updatedAt) : null;
+    const metaLine = item.meta ?? (updatedAt ? (
+      <time dateTime={updatedAt.toISOString()} title={updatedAt.toLocaleString()}>
+        {formatRelativeAge(updatedAt)}
+      </time>
+    ) : null);
+
+    return (
+      <li
+        key={item.id}
+        className="agent-arrive"
+        style={{ "--stagger-index": index } as CSSProperties}
+      >
+        <div
+          className={cn(
+            quiet
+              ? "group relative flex items-center gap-2 rounded-lg py-2 pl-2 pr-3 transition-colors"
+              : "group relative flex items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 transition-colors",
+            MOTION_CONTROL,
+            quiet
+              ? isActive
+                ? "bg-surface-container-high"
+                : "hover:bg-surface-container"
+              : isActive
+                ? "bg-accent font-medium text-foreground"
+                : "text-muted-foreground hover:bg-accent/30",
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              if (onSelectItem) {
+                onSelectItem(item);
+                return;
+              }
+              navigateToHref(item.href);
+            }}
+            aria-current={isActive ? "page" : undefined}
+            className="min-w-0 flex flex-1 items-center gap-2 text-left"
+          >
+            {item.icon ? (
+              <span className="relative flex h-5 w-4 shrink-0 items-center justify-center" aria-hidden="true">
+                {item.icon}
+                <span className={cn("absolute -bottom-0.5 -right-0.5 h-1.5 w-1.5 rounded-full", statusDot(status))} />
+              </span>
+            ) : (
+              <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusDot(status))} />
+            )}
+            <div className="min-w-0 flex-1">
+              <div
+                className={cn(
+                  quiet
+                    ? "truncate text-sm leading-5 text-foreground/75 group-hover:text-foreground"
+                    : "truncate text-sm font-medium",
+                  isActive && "text-foreground",
+                  isWorking && "agent-shimmer",
+                )}
+                // No `aria-label` beside it: the label would replace
+                // the session title in the row's accessible name, and
+                // trading the only piece of information a screen
+                // reader has for a status word is not an upgrade.
+                {...(isWorking ? { "data-motion": "essential" } : {})}
+              >
+                {item.title}
+              </div>
+              {item.subtitle && (
+                <div className="truncate text-xs leading-tight text-muted-foreground">
+                  {item.subtitle}
+                </div>
+              )}
+              {metaLine && (
+                <div className="truncate text-xs leading-tight text-muted-foreground">
+                  {metaLine}
+                </div>
+              )}
+            </div>
+          </button>
+
+          <div className="flex shrink-0 items-center gap-1">
+            {visibleBadges.length > 0 && visibleBadges.slice(0, 1).map((badge) => (
+              <span
+                key={badge.id}
+                className={cn(
+                  "rounded-full border px-1.5 py-px text-[8px] font-semibold uppercase",
+                  badgeTone(badge.tone),
+                )}
+              >
+                {badge.label}
+              </span>
+            ))}
+            {session?.isForeground && (
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-running)]" title="Live" />
+            )}
+            {renderItemActions ? (
+              <div
+                className={cn("opacity-0 transition-opacity group-hover:opacity-100", MOTION_CONTROL)}
+                onClick={(event) => event.stopPropagation()}
+              >
+                {renderItemActions(item, { session, isActive })}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </li>
+    );
+  };
+
+  // The stagger index runs across group boundaries so the whole list unfolds
+  // once, top to bottom, rather than restarting under every label.
+  let rowIndex = 0;
 
   return (
     <aside
-      className={cn("relative flex shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low", className)}
-      style={{ width: resizable ? resize.width : defaultWidth }}
+      className={cn(
+        "relative flex shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low",
+        fillsParent && "h-full w-full",
+        className,
+      )}
+      style={fillsParent ? undefined : { width: resizable ? resize.width : defaultWidth }}
     >
-      <WorkspacePaneHeader>
-        <div className="flex w-full items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary">
-              <MessageSquareText className="h-3.5 w-3.5" />
+      {quiet ? (
+        <div className="flex h-14 shrink-0 items-center justify-between gap-2 px-3">
+          <span className="sr-only">{title}</span>
+          {onCreate ? (
+            <button
+              type="button"
+              onClick={onCreate}
+              className={cn("flex items-center gap-1.5 rounded-md px-1.5 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground", MOTION_CONTROL)}
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              <span>{createLabel}</span>
+            </button>
+          ) : (
+            <span />
+          )}
+          {onCollapse && (
+            <button
+              type="button"
+              onClick={onCollapse}
+              aria-label="Hide chats"
+              className={cn("flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-container hover:text-foreground", MOTION_CONTROL)}
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <WorkspacePaneHeader>
+          <div className="flex w-full items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary">
+                <MessageSquareText className="h-3.5 w-3.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-foreground">{title}</div>
+                {subtitle && (
+                  <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
+                )}
+              </div>
             </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-foreground">{title}</div>
-              {subtitle && (
-                <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {runningCount > 0 && (
+                <span className="rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-1.5 py-px text-xs font-medium text-primary">
+                  {runningCount}
+                </span>
+              )}
+              {onCreate && (
+                <button
+                  type="button"
+                  onClick={onCreate}
+                  title={createLabel}
+                  className={cn("flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
               )}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {runningCount > 0 && (
-              <span className="rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-1.5 py-px text-xs font-medium text-primary">
-                {runningCount}
-              </span>
-            )}
-            {onCreate && (
-              <button
-                type="button"
-                onClick={onCreate}
-                title={createLabel}
-                className={cn("flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-      </WorkspacePaneHeader>
+        </WorkspacePaneHeader>
+      )}
 
       {/* Search + filters */}
       {((enableSearch && items.length > 0) || filters.length > 0) && (
-        <div className="shrink-0 border-b border-[var(--md3-outline-variant)] px-3 py-2.5">
+        <div
+          className={cn(
+            "shrink-0",
+            quiet ? "px-3 pb-1" : "border-b border-[var(--md3-outline-variant)] px-3 py-2.5",
+          )}
+        >
           {enableSearch && effectiveItems.length > 0 && (
             <div className="relative">
               <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -344,7 +599,12 @@ export function SessionSidebar({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
-                className={cn("h-8 w-full rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] bg-surface-container-lowest pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:border-[var(--border-accent)] focus-visible:bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]", MOTION_CONTROL)}
+                className={cn(
+                  quiet
+                    ? "h-8 w-full rounded-md border-0 bg-transparent pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:bg-surface-container focus-visible:outline-none"
+                    : "h-8 w-full rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] bg-surface-container-lowest pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:border-[var(--border-accent)] focus-visible:bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]",
+                  MOTION_CONTROL,
+                )}
               />
             </div>
           )}
@@ -383,101 +643,25 @@ export function SessionSidebar({
             <MessageSquareText className="h-5 w-5 opacity-50" aria-hidden="true" />
             <p>{query.trim() ? `No sessions match "${query.trim()}".` : emptyMessage}</p>
           </div>
+        ) : showGroupLabels ? (
+          groups.map((group, groupIndex) => (
+            <section key={group.key} aria-label={group.label ?? undefined}>
+              <div
+                className={cn(
+                  "px-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground",
+                  groupIndex === 0 ? "pt-1" : "pt-3",
+                )}
+              >
+                {group.label}
+              </div>
+              <ul className="space-y-px">
+                {group.items.map((item) => renderRow(item, rowIndex++))}
+              </ul>
+            </section>
+          ))
         ) : (
           <ul className="space-y-px">
-            {visibleItems.map((item, index) => {
-              const session = sessionsById.get(item.id) ?? null;
-              const isActive = currentItemId === item.id;
-              const status = session?.status ?? item.status;
-              // A running session is one whose agent is mid-turn. The sweep
-              // through its title is the only thing in the list that says so —
-              // a static row cannot distinguish "working" from "finished an
-              // hour ago" — so it opts out of the reduced-motion floor.
-              const isWorking = status === "running";
-              const visibleBadges = [
-                ...(item.isPinned ? [{ id: `${item.id}-pinned`, label: "Pinned", tone: "neutral" as const }] : []),
-                ...(item.badges ?? []),
-              ];
-
-              return (
-                <li
-                  key={item.id}
-                  className="agent-arrive"
-                  style={{ "--stagger-index": index } as CSSProperties}
-                >
-                  <div
-                    className={cn(
-                      "group relative flex items-center gap-2 rounded-[var(--radius-sm)] px-2.5 py-1.5 transition-colors",
-                      MOTION_CONTROL,
-                      isActive
-                        ? "bg-accent font-medium text-foreground"
-                        : "text-muted-foreground hover:bg-accent/30",
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onSelectItem) {
-                          onSelectItem(item);
-                          return;
-                        }
-                        navigateToHref(item.href);
-                      }}
-                      aria-current={isActive ? "page" : undefined}
-                      className="min-w-0 flex flex-1 items-center gap-2 text-left"
-                    >
-                      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", statusDot(status))} />
-                      <div className="min-w-0 flex-1">
-                        <div
-                          className={cn(
-                            "truncate text-sm font-medium",
-                            isActive && "text-foreground",
-                            isWorking && "agent-shimmer",
-                          )}
-                          // No `aria-label` beside it: the label would replace
-                          // the session title in the row's accessible name, and
-                          // trading the only piece of information a screen
-                          // reader has for a status word is not an upgrade.
-                          {...(isWorking ? { "data-motion": "essential" } : {})}
-                        >
-                          {item.title}
-                        </div>
-                        {item.subtitle && (
-                          <div className="truncate text-xs leading-tight text-muted-foreground">
-                            {item.subtitle}
-                          </div>
-                        )}
-                      </div>
-                    </button>
-
-                    <div className="flex shrink-0 items-center gap-1">
-                      {visibleBadges.length > 0 && visibleBadges.slice(0, 1).map((badge) => (
-                        <span
-                          key={badge.id}
-                          className={cn(
-                            "rounded-full border px-1.5 py-px text-[8px] font-semibold uppercase",
-                            badgeTone(badge.tone),
-                          )}
-                        >
-                          {badge.label}
-                        </span>
-                      ))}
-                      {session?.isForeground && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-running)]" title="Live" />
-                      )}
-                      {renderItemActions ? (
-                        <div
-                          className={cn("opacity-0 transition-opacity group-hover:opacity-100", MOTION_CONTROL)}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {renderItemActions(item, { session, isActive })}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
+            {visibleItems.map((item) => renderRow(item, rowIndex++))}
           </ul>
         )}
       </nav>

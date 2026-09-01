@@ -32,6 +32,58 @@
 - The dashboard's `GitPanel` stays what it is: a read-only branch + recent-
   commits summary. `ChangesPane` is the surface for reading and committing a
   diff.
+### The workspace primitives render the three-pane shell
+
+Chats rail on the left, transcript and composer in the center, artifacts on
+the right — `SessionSidebar`, `WorkspaceLayout`, and `SandboxWorkbench`
+now carry that design as opt-in props. Every default renders exactly as before.
+
+- **`SessionSidebar` gets a `quiet` variant for the rail.** One header row —
+  a text "new" button with the Plus glyph and an optional collapse button
+  (`onCollapse`, "Hide chats") — in place of the icon-in-a-box header and the
+  running-count chip. Rows are `rounded-lg`; the selected row is a
+  `bg-surface-container-high` fill with no border or accent bar, hover is
+  `bg-surface-container`, and only non-neutral badges render. Search stays on
+  by default but draws as a borderless field.
+- **Rows carry a harness mark and a meta line.** `SessionSidebarItem.icon`
+  renders in a 16×20 slot before the title, and the status dot becomes a 6px
+  badge on the icon's corner. `SessionSidebarItem.meta` is the muted 12px line
+  under the title; with `showUpdatedAt` a row that has no `meta` shows
+  `updatedAt` as a compact relative age (`formatRelativeAge`, exported from
+  `/workspace`: `now`, `5m`, `3h`, `2d`, `3w`, `4mo`, `1y`).
+- **`groupBy="status"` partitions the list** into "Needs input", "Failed",
+  "Working", and "Done", in that order, with labels only while more than one
+  group has items. Status comes from the active-sessions store record when one
+  exists, else `item.status`; the sort inside a group is unchanged.
+- **`fill` lets a layout own the sidebar's size.** No inline width,
+  `h-full w-full`; ignored while `resizable`.
+- **`WorkspaceLayout` panes can be controlled.** `leftOpen` /
+  `onLeftOpenChange` and `rightOpen` / `onRightOpenChange`; omit them and the
+  uncontrolled path, persistence included, is unchanged. `keyboardShortcuts`
+  (off by default) binds ⌘B / Ctrl+B to the left pane and ⌘E / Ctrl+E to the
+  right, and ignores the chord while an input, textarea, select, or
+  contentEditable has focus, or with Alt or Shift held. `leftCollapsedControl`
+  replaces the default "Open left panel" button at the top-left of the center
+  pane while the left pane is closed. `leftContentClassName` /
+  `rightContentClassName` reach the pane content wrappers, and
+  `centerHeaderVisibility="auto"` drops the center header row while it holds
+  nothing — no `centerHeader`, no closed pane to reopen.
+- **`SandboxWorkbench` takes the rail, the composer, and a quiet center.**
+  `rail` is the first left section, ahead of the directory pane, and fills the
+  pane with no region header or gutter when it is alone. `composer` renders
+  under the transcript on the panel background inside
+  `mx-auto w-full max-w-3xl px-3 pb-3`, the transcript's own column;
+  `session.composerControls` still renders, above it. `centerHeader={null}`
+  removes the branded "Tangle Sandbox" card and the framed
+  "Execution timeline" pane, so the transcript renders directly on
+  `bg-surface` and the shell's center header row shows only while a pane is
+  closed; a node replaces the card. `layout` forwards the new
+  `WorkspaceLayout` props.
+- **Artifacts can pin and pick their tab icon.** `icon` (a lucide icon) on
+  any artifact, and `pinned` so its tab sorts first and has no close button —
+  a "Changes" tab with `GitCompare`, for example.
+- Stories: `Workspace/SessionSidebar` "Quiet" and "Quiet, grouped by status";
+  `Workspace/SandboxWorkbench` "Default" and "Three-pane quiet".
 
 ## 0.111.1
 

@@ -268,6 +268,14 @@ export function usePtySession({
   // eventual `onclose`.
   const pendingWsRef = useRef<WebSocket | null>(null);
 
+  // True when a resize arrived while a WebSocket handshake was in flight.
+  // That resize is not sent: the `init` frame the socket sends on open
+  // carries the latest geometry, and the direct dial owns no REST session
+  // to PATCH (the sidecar answers 404). The flag survives only into the
+  // SSE fallback, which has no init frame and must PATCH once its stream
+  // is ready.
+  const geometryPendingRef = useRef(false);
+
   // Input serialization: at most one input dispatch is in flight per
   // session. Keystrokes that arrive while a request is in flight are
   // concatenated into `pendingBatchRef` and dispatched as a single
@@ -361,6 +369,7 @@ export function usePtySession({
       inputAbortRef.current = null;
     }
     transportReadyRef.current = false;
+    geometryPendingRef.current = false;
     if (sessionIdRef.current) {
       const sid = sessionIdRef.current;
       const shouldDeleteSession = shouldDeleteSessionRef.current;
@@ -505,6 +514,7 @@ export function usePtySession({
               cols: colsRef.current,
               rows: rowsRef.current,
             }));
+            geometryPendingRef.current = false;
           } catch {
             try {
               ws.close();
@@ -666,6 +676,31 @@ export function usePtySession({
     });
   }, [apiUrl, rejectPendingInput]);
 
+  // -- Resize over the REST contract (SSE+POST fallback only) ----------------
+
+  const patchGeometry = useCallback(async (
+    sessionId: string,
+    cols: number,
+    rows: number,
+  ) => {
+    try {
+      const res = await fetch(`${apiUrl}/terminals/${sessionId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${tokenRef.current}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ cols, rows }),
+      });
+      if (!res.ok) {
+        console.error('Failed to resize terminal:', res.status);
+      }
+    } catch (err) {
+      console.error('Failed to resize terminal', err);
+    }
+  }, [apiUrl]);
+
   // -- Connect SSE stream to an existing terminal session --------------------
 
   const connectStream = useCallback(async (sessionId: string) => {
@@ -699,6 +734,10 @@ export function usePtySession({
         setError(null);
         retryCountRef.current = 0;
         ensureDrainRunningRef.current?.();
+        if (geometryPendingRef.current) {
+          geometryPendingRef.current = false;
+          void patchGeometry(sessionId, colsRef.current, rowsRef.current);
+        }
       }
 
       const reader = streamRes.body.getReader();
@@ -771,7 +810,7 @@ export function usePtySession({
         }
       }
     }
-  }, [apiUrl, abortStream]);
+  }, [apiUrl, abortStream, patchGeometry]);
 
   onDataRef.current = onData;
   tokenRef.current = token;
@@ -850,6 +889,7 @@ export function usePtySession({
           rows: rowsRef.current,
         }),
       });
+      geometryPendingRef.current = false;
 
       if (!res.ok) {
         throw new Error(`Failed to create terminal: ${res.status}`);
@@ -937,29 +977,21 @@ export function usePtySession({
       }
     }
 
+    if (pendingWsRef.current) {
+      // Handshake in flight: the init frame sent on open carries
+      // colsRef/rowsRef, and there is no REST session to PATCH yet.
+      geometryPendingRef.current = true;
+      return;
+    }
+
     if (exactAttachRequiredRef.current) {
       throw new Error(
         'Interactive terminal is not attached with its exact identity',
       );
     }
 
-    try {
-      const res = await fetch(`${apiUrl}/terminals/${sid}`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${tokenRef.current}`,
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ cols, rows }),
-      });
-      if (!res.ok) {
-        console.error('Failed to resize terminal:', res.status);
-      }
-    } catch (err) {
-      console.error('Failed to resize terminal', err);
-    }
-  }, [apiUrl]);
+    await patchGeometry(sid, cols, rows);
+  }, [apiUrl, patchGeometry]);
 
   // -- Send command ----------------------------------------------------------
   //

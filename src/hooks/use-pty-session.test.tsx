@@ -253,6 +253,7 @@ function parsesAsJsonObject(body: BodyInit | null | undefined): boolean {
  */
 function installFetchHarness() {
   const inputPosts: PendingInput[] = []
+  const patches: FetchCall[] = []
   let streamController: ReadableStreamDefaultController<Uint8Array> | null = null
 
   const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
@@ -332,6 +333,15 @@ function installFetchHarness() {
       return mockResponse({ ok: true, status: 200 })
     }
 
+    if (href.endsWith(`/terminals/${SESSION_ID}`) && method === "PATCH") {
+      patches.push({
+        url: href,
+        method,
+        body: typeof init?.body === "string" ? init.body : null,
+      })
+      return mockResponse({ ok: true, status: 200 })
+    }
+
     throw new Error(`Unexpected fetch: ${method} ${href}`)
   })
 
@@ -341,6 +351,7 @@ function installFetchHarness() {
   return {
     fetchMock,
     inputPosts,
+    patches,
     closeStream: () => {
       streamController?.close()
       streamController = null
@@ -1406,6 +1417,73 @@ describe("usePtySession WebSocket transport", () => {
       JSON.stringify({ type: "resize", cols: 120, rows: 40 }),
     ])
     expect(stray).toHaveLength(0)
+  })
+
+  it("does not PATCH while the handshake is in flight; the init frame carries the geometry", async () => {
+    // xterm's fit() fires onResize as soon as the terminal mounts, before
+    // the WebSocket reaches OPEN. The direct dial owns no REST session, so a
+    // PATCH here is a guaranteed 404 — and pointless, because `init` sends
+    // the current geometry when the socket opens.
+    const harness = installWsHarness()
+    const onData = vi.fn()
+    const hook = renderHook(() =>
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData }),
+    )
+    await waitFor(() => expect(harness.handles).toHaveLength(1))
+    expect(harness.handles[0].readyState).toBe(0)
+
+    await act(async () => {
+      await hook.result.current.resizeTerminal(132, 43)
+    })
+    expect(harness.stray).toHaveLength(0)
+
+    openAndReady(harness.handles[0])
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+    expect(harness.handles[0].sentText).toEqual([
+      JSON.stringify({ type: "init", cols: 132, rows: 43 }),
+    ])
+    expect(harness.stray).toHaveLength(0)
+  })
+
+  it("flushes a resize skipped during the fallback handshake once the SSE stream is ready", async () => {
+    // The SSE+POST fallback has no init frame. A resize that lands while its
+    // WS attempt is still handshaking must reach the PTY through PATCH once
+    // the stream is up, or the fallback shell keeps the geometry the POST
+    // created it with.
+    const harness = installFetchHarness()
+    const wsStub = installOpeningWebSocketStub()
+    const onData = vi.fn()
+    const hook = renderHook(() =>
+      usePtySession({ apiUrl: API_URL, token: fixtureValue, onData }),
+    )
+    await waitFor(() => expect(wsStub.handles).toHaveLength(1))
+    // Direct dial fails before OPEN → POST /terminals → second dial.
+    act(() => {
+      wsStub.handles[0].close(1006)
+    })
+    await waitFor(() => expect(wsStub.handles).toHaveLength(2))
+    expect(wsStub.handles[1].readyState).toBe(0)
+
+    await act(async () => {
+      await hook.result.current.resizeTerminal(100, 30)
+    })
+    expect(harness.patches).toHaveLength(0)
+
+    act(() => {
+      wsStub.handles[1].close(1006)
+    })
+    await waitFor(() => expect(hook.result.current.isConnected).toBe(true))
+    await waitFor(() => expect(harness.patches).toHaveLength(1))
+    expect(JSON.parse(harness.patches[0].body ?? "null")).toEqual({
+      cols: 100,
+      rows: 30,
+    })
+    const create = harness.fetchMock.mock.calls.find(([url, init]) => {
+      const href = typeof url === "string" ? url : url.toString()
+      return href.endsWith("/terminals") && (init?.method ?? "GET").toUpperCase() === "POST"
+    })
+    // The POST predates the resize, so it still carried the defaults.
+    expect(JSON.parse(create![1]!.body as string)).toEqual({ cols: 80, rows: 24 })
   })
 
   it("flips isConnected to false when the WS closes mid-session", async () => {

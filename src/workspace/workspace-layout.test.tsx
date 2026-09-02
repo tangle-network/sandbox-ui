@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { fireEvent, render } from "@testing-library/react"
+import { act, fireEvent, render } from "@testing-library/react"
 import { WorkspaceLayout } from "./workspace-layout"
 
 function mockDesktop(matches: boolean) {
@@ -313,5 +313,61 @@ describe("WorkspaceLayout — mobile drawers", () => {
     expect(queryByRole("dialog")).toBeNull()
     fireEvent.click(getByLabelText("Open right panel"))
     expect(getByRole("dialog", { name: "Right workspace panel" })).toBeInTheDocument()
+  })
+})
+
+describe("WorkspaceLayout — center width floor", () => {
+  function withShellWidth(width: number) {
+    let callback: ResizeObserverCallback | null = null
+    // A class, not an arrow: the layout constructs the observer with `new`.
+    class FakeResizeObserver {
+      constructor(cb: ResizeObserverCallback) {
+        callback = cb
+      }
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    }
+    Object.defineProperty(window, "ResizeObserver", { writable: true, value: FakeResizeObserver })
+    const view = render(
+      <WorkspaceLayout
+        left={<div>rail</div>}
+        right={<div>artifacts</div>}
+        defaultLeftOpen
+        defaultRightOpen
+        defaultLeftWidth={280}
+        defaultRightWidth={480}
+        center={<div>center</div>}
+      />,
+    )
+    const fire = (w: number) => {
+      const entry = { contentRect: { width: w } } as ResizeObserverEntry
+      act(() => callback?.([entry], {} as ResizeObserver))
+    }
+    fire(width)
+    const left = view.container.querySelector('[aria-label="Left workspace panel"]') as HTMLElement
+    const right = view.container.querySelector('[aria-label="Right workspace panel"]') as HTMLElement
+    return { left, right, fire }
+  }
+
+  it("keeps the stored widths while the shell has room", () => {
+    const { left, right } = withShellWidth(1600)
+    expect(left.style.width).toBe("280px")
+    expect(right.style.width).toBe("480px")
+  })
+
+  it("shrinks the right pane first so the center keeps 400px", () => {
+    const { left, right } = withShellWidth(1024)
+    expect(right.style.width).toBe("344px")
+    expect(left.style.width).toBe("280px")
+  })
+
+  it("then shrinks the left pane, and restores both when room returns", () => {
+    const { left, right, fire } = withShellWidth(900)
+    expect(right.style.width).toBe("320px")
+    expect(left.style.width).toBe("220px")
+    fire(1600)
+    expect(right.style.width).toBe("480px")
+    expect(left.style.width).toBe("280px")
   })
 })

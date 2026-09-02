@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.113.2
+
+- **`SandboxWorkbench` renders `emptyArtifactState` before the first artifact
+  exists.** The artifact region used to mount only once the artifact list was
+  non-empty, so an empty-state element such as a directory pane never showed.
+  With the element given, the region renders on the right from the start;
+  without it, the region stays hidden as before.
+- **`ChangedFile.loadError`.** A consumer that could not resolve a file's two
+  sides (a binary file, a failed read) sets the message on the file, and
+  `ChangesPane` shows it under the file's header in place of "Loading diff…".
+
 ## 0.113.1
 
 - **`DiffView` renders under React StrictMode.** The renderer is now driven

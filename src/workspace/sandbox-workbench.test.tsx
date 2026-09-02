@@ -166,6 +166,16 @@ describe("SandboxWorkbench — artifact tabs", () => {
     { id: "changes", kind: "custom", title: "Changes", icon: GitCompare, pinned: true, content: <div>3 files</div> },
   ];
 
+  it("renders emptyArtifactState on the right before the first artifact exists", () => {
+    const { getByTestId, queryByTestId, rerender } = render(
+      <SandboxWorkbench session={session} artifacts={[]} emptyArtifactState={<div data-testid="empty">Files</div>} />,
+    );
+    expect(getByTestId("empty")).toBeTruthy();
+    // Without the element the region stays hidden, as before.
+    rerender(<SandboxWorkbench session={session} artifacts={[]} />);
+    expect(queryByTestId("empty")).toBeNull();
+  });
+
   it("sorts a pinned artifact first, gives it no close button, and uses its own icon", () => {
     const onArtifactClose = vi.fn();
     const { getAllByRole, queryByLabelText, getByLabelText, container } = render(

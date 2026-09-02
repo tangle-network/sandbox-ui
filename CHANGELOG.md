@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.113.1
+
+- **`DiffView` renders under React StrictMode.** The renderer is now driven
+  from an effect on a host element the component creates for every mount,
+  through `@pierre/diffs`' core `FileDiff`, instead of the library's React
+  wrapper. The wrapper hydrates the element React hands it and treats an
+  existing shadow `<pre>` as prerendered content; StrictMode attaches,
+  detaches, and re-attaches that element on mount, so the second hydrate
+  found the first mount's `<pre>` and rendered nothing. Every diff surface
+  (`SandboxArtifactPane`'s Diff tab, `ChangesPane`) was blank in any
+  StrictMode app in development. Same output, same options, no API change.
+
 ## 0.113.0
 
 - **`SessionSidebar` gets a `quiet` variant for the rail.** One header row —

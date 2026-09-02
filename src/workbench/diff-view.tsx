@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { PatchDiff } from "@pierre/diffs/react"
+import { FileDiff, getSingularPatch } from "@pierre/diffs"
 import { cn } from "../lib/utils"
 import { buildUnifiedPatch } from "./diff-utils"
 
@@ -24,6 +24,9 @@ const DIFF_OPTIONS = {
   stickyHeader: true,
 } as const
 
+/** The renderer's custom element; `@pierre/diffs` registers it on import. */
+const DIFF_CONTAINER_TAG = "diffs-container"
+
 export interface DiffViewProps {
   filename: string
   baseline: string
@@ -38,19 +41,42 @@ export interface DiffViewProps {
 }
 
 /**
- * Word-level unified diff via `@pierre/diffs`' `PatchDiff`. The patch is built
- * with jsdiff's `createTwoFilesPatch` (baseline → current); the renderer owns
- * hunking, intra-line word diffing, gutters, and syntax highlighting.
+ * Word-level unified diff via `@pierre/diffs`' core `FileDiff` renderer. The
+ * patch is built with jsdiff's `createTwoFilesPatch` (baseline → current); the
+ * renderer owns hunking, intra-line word diffing, gutters, and highlighting.
+ *
+ * The renderer is driven from an effect on a host element this component
+ * creates for every mount, not through the library's React wrapper. The
+ * wrapper hydrates the element React hands it and treats an existing shadow
+ * `<pre>` as prerendered content; React StrictMode attaches, detaches, and
+ * re-attaches that element on mount, so the second hydrate finds the first
+ * mount's `<pre>` and renders nothing. A fresh element per effect run has no
+ * such history, and the cleanup removes it (the instance is not
+ * container-managed).
  */
 export function DiffView({ filename, baseline, current, showFileHeader = true, className }: DiffViewProps) {
   const patch = React.useMemo(
     () => buildUnifiedPatch(filename, baseline, current),
     [filename, baseline, current],
   )
-  const options = React.useMemo(
-    () => (showFileHeader ? DIFF_OPTIONS : { ...DIFF_OPTIONS, disableFileHeader: true }),
-    [showFileHeader],
-  )
+  const hostRef = React.useRef<HTMLDivElement>(null)
+
+  React.useLayoutEffect(() => {
+    const host = hostRef.current
+    if (host == null || !patch) return
+    const container = document.createElement(DIFF_CONTAINER_TAG)
+    host.appendChild(container)
+    const instance = new FileDiff(
+      showFileHeader ? DIFF_OPTIONS : { ...DIFF_OPTIONS, disableFileHeader: true },
+      undefined,
+      false,
+    )
+    instance.hydrate({ fileDiff: getSingularPatch(patch), fileContainer: container })
+    return () => {
+      instance.cleanUp()
+      container.remove()
+    }
+  }, [patch, showFileHeader])
 
   if (!patch) {
     return (
@@ -61,8 +87,10 @@ export function DiffView({ filename, baseline, current, showFileHeader = true, c
   }
 
   return (
-    <div className={cn("h-full min-h-0 overflow-auto bg-surface-container text-[13px]", className)}>
-      <PatchDiff patch={patch} options={options} />
-    </div>
+    <div
+      ref={hostRef}
+      data-testid="diff-view"
+      className={cn("h-full min-h-0 overflow-auto bg-surface-container text-[13px]", className)}
+    />
   )
 }

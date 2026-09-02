@@ -156,6 +156,10 @@ export interface SandboxWorkbenchProps {
   onArtifactClose?: (artifactId: string) => void;
   runtime?: RuntimePaneProps;
   layout?: SandboxWorkbenchLayoutOptions;
+  /**
+   * Shown in the artifact region while no artifact is selected. When given,
+   * the region renders before the first artifact exists.
+   */
   emptyArtifactState?: ReactNode;
   className?: string;
 }
@@ -486,7 +490,9 @@ export function SandboxWorkbench({
     </ArtifactPane>
   );
 
-  const artifactPanel = artifacts.length > 0 ? (
+  // An empty-state element keeps the artifact region on screen before the
+  // first artifact exists, so a consumer can park a directory or a hint there.
+  const artifactPanel = artifacts.length > 0 || emptyArtifactState ? (
     <section className="flex h-full min-h-0 flex-col bg-surface-container">
       <ArtifactTabs
         artifacts={artifacts}
@@ -513,7 +519,7 @@ export function SandboxWorkbench({
   ) : null;
 
   const directoryPlacement = layout?.directoryPlacement ?? (directory ? "left" : "hidden");
-  const artifactPlacement = layout?.artifactPlacement ?? (artifacts.length > 0 ? "right" : "hidden");
+  const artifactPlacement = layout?.artifactPlacement ?? (artifactPanel ? "right" : "hidden");
   const runtimePlacement = layout?.runtimePlacement ?? (runtime ? "bottom" : "hidden");
 
   const regionSections: Record<SandboxWorkbenchRegion, WorkbenchRegionSection[]> = {

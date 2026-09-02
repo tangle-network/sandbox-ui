@@ -323,6 +323,10 @@ export function ChangesPane({
                 showFileHeader={false}
                 className="flex-1"
               />
+            ) : selected.loadError ? (
+              <p className="px-3 py-3 text-xs text-destructive" role="alert">
+                {selected.loadError}
+              </p>
             ) : (
               <p className="px-3 py-3 text-xs text-muted-foreground" role="status">
                 Loading diff…

@@ -174,6 +174,16 @@ describe("ChangesPane diff", () => {
     expect(screen.getByTestId("diff-view")).toBeInTheDocument()
   })
 
+  it("shows the file's load error under its header instead of the loading line", () => {
+    renderPane({
+      files: [{ path: "bin/app", status: "modified", additions: 0, deletions: 0, loadError: "bin/app is a binary file; no text diff" }],
+      selectedPath: "bin/app",
+    })
+    expect(screen.getByRole("alert")).toHaveTextContent("bin/app is a binary file; no text diff")
+    expect(screen.queryByText("Loading diff…")).toBeNull()
+    expect(screen.queryByTestId("diff-view")).toBeNull()
+  })
+
   it("waits for both sides of a modified file before drawing it", () => {
     diffViewSpy.mockClear()
     const half = FILES.map((f) => (f.path === "src/lib/sleep.ts" ? { ...f, current: "y\n" } : f))

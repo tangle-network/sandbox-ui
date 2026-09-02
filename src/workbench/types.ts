@@ -90,6 +90,11 @@ export interface ChangedFile {
   /** Present once the consumer has resolved contents for the selected file. */
   baseline?: string
   current?: string
+  /**
+   * Why the sides could not be resolved. Shown under the file's header in
+   * place of the loading line, so a failed read never looks like a slow one.
+   */
+  loadError?: string
 }
 
 export interface ChangesPaneProps {

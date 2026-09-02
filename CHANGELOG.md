@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.113.3
+
+- **`WorkspaceLayout` keeps the center column at `minCenterWidth` (default
+  400px) on desktop.** The stored pane widths used to render as-is, so a
+  1024px window with a 280px rail and a 480px artifact pane left the
+  transcript and composer 230px wide. The right pane now yields down to its
+  minimum first, then the left; only the rendered widths change, and the
+  stored widths return when the window has room.
+
 ## 0.113.2
 
 - **`SandboxWorkbench` renders `emptyArtifactState` before the first artifact

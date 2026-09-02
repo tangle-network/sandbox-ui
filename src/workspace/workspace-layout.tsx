@@ -8,16 +8,7 @@
  * Bottom: optional runtime panel
  */
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { type CSSProperties, type KeyboardEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   PanelBottomClose,
   PanelBottomOpen,
@@ -87,6 +78,12 @@ export interface WorkspaceLayoutProps {
   minRightWidth?: number;
   /** Maximum right panel width in px */
   maxRightWidth?: number;
+  /**
+   * Width in px the center column keeps on desktop. When the shell is too
+   * narrow for the stored pane widths, the right pane yields down to its
+   * minimum first, then the left; the stored widths return when room does.
+   */
+  minCenterWidth?: number;
   /** Minimum bottom panel height in px */
   minBottomHeight?: number;
   /** Maximum bottom panel height in px */
@@ -339,6 +336,7 @@ export function WorkspaceLayout({
   maxLeftWidth = 420,
   minRightWidth = 320,
   maxRightWidth = 720,
+  minCenterWidth = 400,
   minBottomHeight = 100,
   maxBottomHeight = 500,
   persistenceKey,
@@ -484,8 +482,37 @@ export function WorkspaceLayout({
     };
   }, [desktop, maxBottomHeight, maxLeftWidth, maxRightWidth, minBottomHeight, minLeftWidth, minRightWidth]);
 
-  const leftStyle = useMemo<CSSProperties>(() => ({ width: `${leftWidth}px` }), [leftWidth]);
-  const rightStyle = useMemo<CSSProperties>(() => ({ width: `${rightWidth}px` }), [rightWidth]);
+  // The shell's width decides how much of the stored pane widths fits. Only
+  // the rendered widths shrink; the stored values stay for a wider window.
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const [shellWidth, setShellWidth] = useState<number | null>(null);
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (typeof width === "number") setShellWidth(width);
+    });
+    observer.observe(shell);
+    return () => observer.disconnect();
+  }, []);
+  const { leftPx, rightPx } = useMemo(() => {
+    const leftShown = desktop && hasLeft && leftOpen;
+    const rightShown = desktop && hasRight && rightOpen;
+    let leftPx = leftWidth;
+    let rightPx = rightWidth;
+    if (shellWidth === null) return { leftPx, rightPx };
+    const room = () => shellWidth - (leftShown ? leftPx : 0) - (rightShown ? rightPx : 0);
+    if (rightShown && room() < minCenterWidth) {
+      rightPx = Math.max(minRightWidth, rightPx - (minCenterWidth - room()));
+    }
+    if (leftShown && room() < minCenterWidth) {
+      leftPx = Math.max(minLeftWidth, leftPx - (minCenterWidth - room()));
+    }
+    return { leftPx, rightPx };
+  }, [desktop, hasLeft, hasRight, leftOpen, leftWidth, minCenterWidth, minLeftWidth, minRightWidth, rightOpen, rightWidth, shellWidth]);
+  const leftStyle = useMemo<CSSProperties>(() => ({ width: `${leftPx}px` }), [leftPx]);
+  const rightStyle = useMemo<CSSProperties>(() => ({ width: `${rightPx}px` }), [rightPx]);
 
   const startResize = (side: "left" | "right", pointerStartX: number) => {
     dragStateRef.current = {
@@ -528,7 +555,7 @@ export function WorkspaceLayout({
         className,
       )}
     >
-      <div className="flex min-h-0 flex-1">
+      <div ref={shellRef} className="flex min-h-0 flex-1">
         {desktop && left && leftOpen && (
           <>
             <aside

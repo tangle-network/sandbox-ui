@@ -225,7 +225,14 @@ export interface RailHeaderProps {
   brand?: React.ReactNode
   /** Destination for the brand link. When set with `LinkComponent`, the brand is a link. */
   brandHref?: string
-  /** Optional middle content (e.g. a project/workspace switcher). Hidden when collapsed. */
+  /**
+   * Optional middle content (e.g. a project/workspace switcher).
+   *
+   * When `brand` is set, this is expanded-only — the collapsed rail has room
+   * for the mark alone. When `brand` is NOT set this content owns the rail top
+   * in BOTH states, so it is also rendered collapsed; read `useSidebar()` to
+   * swap in a compact mark there.
+   */
   children?: React.ReactNode
   /** Whether the rail is collapsed (icon-only). */
   collapsed: boolean
@@ -272,10 +279,27 @@ function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: bool
  * toggle (right). Collapsed: only the brand mark, which morphs into the
  * expand button on hover (brand fades out, panel glyph fades in over the same
  * box) so the collapse affordance is discoverable without spending rail width.
+ * With no `brand` but `children`, the collapsed rail falls back to `children` —
+ * the consumer's header content is then the only mark it has.
  * Renders its own `h-14` bordered bar — drop it in at the top of {@link SidebarRail}.
  */
+/**
+ * React renders nothing for `null`, `undefined`, booleans and empty (or
+ * all-empty) arrays, so a caller's `logo={cond && <Logo />}`, `logo={maybeLogo}`
+ * or `logo={items.map(...)}` can arrive here as a node that paints nothing.
+ * Those must count as "no brand": a strict `undefined` check would drop
+ * `railHeaderContent` from the collapsed rail for exactly them.
+ * `Children.toArray` applies React's own rule (drops the empties, flattens
+ * nested arrays) so this stays aligned with what actually renders.
+ */
+function isRenderable(node: React.ReactNode): boolean {
+  return React.Children.toArray(node).length > 0
+}
+
 export function RailHeader({ brand, brandHref, children, collapsed, onToggle, collapsible = true, LinkComponent, className }: RailHeaderProps) {
   const Link = LinkComponent ?? DefaultLink
+  const hasBrand = isRenderable(brand)
+  const hasChildren = isRenderable(children)
 
   const brandNode =
     brandHref !== undefined ? (
@@ -300,7 +324,35 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
       )}
     >
       {collapsed ? (
-        collapsible ? (
+        !hasBrand && hasChildren ? (
+          // No brand mark: `children` (SidebarLayout's `railHeaderContent`) is
+          // the only rail-top content the consumer gave us, so render it here
+          // too. Dropping it left an EMPTY header — the collapsed rail showed
+          // nothing at all where the product's mark belongs. With neither a
+          // brand nor children, the plain expand button below still owns the
+          // rail top so the rail stays expandable.
+          //
+          // Rendered outside the expand button on purpose: content that owns
+          // the rail top is routinely interactive itself (a mark that expands
+          // the rail on click), and a <button> inside a <button> is invalid
+          // HTML that React refuses to hydrate.
+          //
+          // The explicit "Expand sidebar" control stays in the tree for
+          // keyboard and assistive-tech users (the content may be a passive
+          // switcher, and the empty-rail click fallback is mouse-only). It sits
+          // over the content, invisible and non-interactive until it receives
+          // keyboard focus, so it costs no rail width.
+          <div className="relative flex min-w-0 items-center justify-center">
+            {children}
+            {collapsible && (
+              <PanelToggleButton
+                collapsed={collapsed}
+                onToggle={onToggle}
+                className="pointer-events-none absolute inset-0 m-auto bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100"
+              />
+            )}
+          </div>
+        ) : collapsible ? (
           <RailTooltip label="Expand sidebar">
             <button
               type="button"
@@ -322,7 +374,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
         )
       ) : (
         <>
-          {brand !== undefined && brandNode}
+          {hasBrand && brandNode}
           <div className="min-w-0 flex-1">{children}</div>
           {collapsible && <PanelToggleButton collapsed={collapsed} onToggle={onToggle} />}
         </>

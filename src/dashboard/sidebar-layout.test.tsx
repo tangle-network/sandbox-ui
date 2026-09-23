@@ -132,6 +132,116 @@ describe("SidebarLayout — rail header (brand · middle · toggle)", () => {
     )
     expect(screen.getByRole("button", { name: "Collapse sidebar" })).toBeInTheDocument()
   })
+
+  // A product that owns the rail top through `railHeaderContent` alone used to
+  // get an EMPTY collapsed header: the collapsed branch rendered only `logo`,
+  // and dropped the header content. Two shipped apps rendered a blank rail.
+  it("renders railHeaderContent in the collapsed rail when no logo is supplied", () => {
+    render(
+      <SidebarLayout
+        railLabels
+        railCollapsed
+        railHeaderContent={<span data-testid="mark">MARK</span>}
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    expect(screen.getByTestId("mark")).toBeInTheDocument()
+  })
+
+  // The consumer's mark is frequently a button that expands the rail. Nesting
+  // it inside our own expand <button> is invalid HTML React refuses to hydrate,
+  // so the fallback must render it as a sibling, not a child.
+  it("does not nest an interactive railHeaderContent inside a button", () => {
+    render(
+      <SidebarLayout
+        railLabels
+        railCollapsed
+        railHeaderContent={
+          <button type="button" data-testid="mark-button">
+            MARK
+          </button>
+        }
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    const mark = screen.getByTestId("mark-button")
+    expect(mark).toBeInTheDocument()
+    expect(mark.parentElement?.closest("button")).toBeNull()
+  })
+
+  // The header content may be a passive switcher, and the empty-rail click
+  // fallback is mouse-only, so the explicit expand control must stay
+  // reachable beside it.
+  it("keeps a keyboard-reachable expand control beside railHeaderContent", () => {
+    const onRailCollapsedChange = vi.fn()
+    render(
+      <SidebarLayout
+        railLabels
+        railCollapsed
+        onRailCollapsedChange={onRailCollapsedChange}
+        railHeaderContent={<span data-testid="mark">MARK</span>}
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    expect(screen.getByTestId("mark")).toBeInTheDocument()
+    const expand = screen.getByRole("button", { name: "Expand sidebar" })
+    expect(expand).not.toContainElement(screen.getByTestId("mark"))
+    fireEvent.click(expand)
+    // `railCollapsed` is the controlled prop: the click reports the change to the
+    // consumer instead of flipping internal state.
+    expect(onRailCollapsedChange).toHaveBeenCalledWith(false)
+  })
+
+  // `logo` is a ReactNode, so `logo={cond && <Logo />}`, `logo={maybeLogo}` and
+  // `logo={items.map(...)}` legally arrive as false / null / an empty array.
+  // React paints nothing for them, so they must count as "no logo" or the
+  // collapsed rail drops railHeaderContent again.
+  it.each([
+    ["null", null],
+    ["false", false],
+    ["empty-array", []],
+    ["array-of-null", [null]],
+  ])("treats a %s logo as absent and still renders railHeaderContent when collapsed", (_label, logo) => {
+    render(
+      <SidebarLayout
+        railLabels
+        railCollapsed
+        logo={logo}
+        railHeaderContent={<span data-testid="mark">MARK</span>}
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    const mark = screen.getByTestId("mark")
+    expect(mark).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).not.toContainElement(mark)
+  })
+
+  // The `logo` path is the one every other consumer is on: it must keep the
+  // hover-morph expand button, unchanged.
+  it("keeps the brand-mark expand button when a logo IS supplied", () => {
+    render(
+      <SidebarLayout
+        railLabels
+        railCollapsed
+        logo={<span>LOGO</span>}
+        railHeaderContent={<span data-testid="switcher">Switcher</span>}
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    expect(screen.getByText("LOGO").closest("button")).toHaveAttribute("aria-label", "Expand sidebar")
+    // Middle content stays expanded-only when there is a mark to show instead.
+    expect(screen.queryByTestId("switcher")).not.toBeInTheDocument()
+  })
 })
 
 describe("SidebarLayout — flyout nav item", () => {

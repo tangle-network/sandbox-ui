@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Activity, Plus, Skull, Terminal } from "lucide-react"
 import { cn } from "../lib/utils"
+import { focusField } from "@tangle-network/ui/utils"
 
 export interface ProcessInfo {
   pid: number
@@ -107,7 +108,7 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
           value={newCommand}
           onChange={(e) => setNewCommand(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSpawn()}
-          className="flex-1 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className={`flex-1 rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
         />
         <button
           type="button"

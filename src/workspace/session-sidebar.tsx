@@ -11,6 +11,7 @@ import {
   type UseOptimisticSessionItemsOptions,
 } from "./session-optimistic";
 import { WorkspacePaneHeader } from "./workspace-pane-header";
+import { focusField } from "@tangle-network/ui/utils";
 
 export interface SessionSidebarItem {
   id: string;
@@ -602,7 +603,7 @@ export function SessionSidebar({
                 className={cn(
                   quiet
                     ? "h-8 w-full rounded-md border-0 bg-transparent pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:bg-surface-container focus-visible:outline-none"
-                    : "h-8 w-full rounded-[var(--radius-sm)] border border-[var(--md3-outline-variant)] bg-surface-container-lowest pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:border-[var(--border-accent)] focus-visible:bg-transparent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-accent)]",
+                    : `h-8 w-full rounded-[var(--radius-sm)] border bg-surface-container-lowest pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`,
                   MOTION_CONTROL,
                 )}
               />

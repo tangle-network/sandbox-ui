@@ -1,8 +1,10 @@
 export {
+  CSV_PREVIEW_ROW_LIMIT,
   FileArtifactPane,
   type FileArtifactPaneProps,
   type FileFormat,
   type FileNode,
+  type FilePreviewKind,
   FilePreview,
   type FilePreviewProps,
   type FileTabData,
@@ -22,4 +24,6 @@ export {
   getCodeLanguage,
   getFormatLabel,
   getSyntaxLanguage,
+  parseCsv,
+  resolveFilePreviewKind,
 } from "@tangle-network/ui/files";

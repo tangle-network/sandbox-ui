@@ -5,6 +5,7 @@ import * as React from "react";
 import { cn } from "../lib/utils";
 import { useClickOutside } from "../lib/use-click-outside";
 import { AnchoredPopover } from "./anchored-popover";
+import { focusRing } from "@tangle-network/ui/utils";
 
 interface InformativeLockProps {
   children: React.ReactNode;
@@ -75,7 +76,7 @@ export function InformativeLock({
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5 opacity-60",
           "text-xs font-medium text-foreground shadow-sm transition-colors",
-          "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high", focusRing,
           "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
           triggerClassName,
         )}
@@ -117,7 +118,7 @@ export function InformativeLock({
             className={cn(
               "mt-3 flex w-full items-center justify-center gap-1.5 rounded-md px-2.5 py-2 text-sm font-medium text-foreground",
               "bg-primary/10 ring-1 ring-inset ring-primary/25 transition-colors",
-              "hover:bg-primary/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "hover:bg-primary/15", focusRing,
             )}
           >
             <Plus className="h-4 w-4" />

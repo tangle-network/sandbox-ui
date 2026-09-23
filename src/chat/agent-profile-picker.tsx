@@ -6,6 +6,7 @@ import { cn } from "../lib/utils";
 import { useClickOutside } from "../lib/use-click-outside";
 import { AnchoredPopover } from "./anchored-popover";
 import { InformativeLock } from "./informative-lock";
+import { focusField, focusRing } from "@tangle-network/ui/utils";
 
 /**
  * An agent profile: a named bundle of toolset + persona layered over the same
@@ -167,7 +168,7 @@ export function AgentProfilePicker({
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5",
           "text-xs font-medium text-foreground shadow-sm transition-colors",
-          "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high", focusRing,
           "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
           "disabled:cursor-not-allowed disabled:opacity-60",
           triggerClassName,
@@ -346,7 +347,7 @@ function ProfileForm({
         value={name}
         onChange={(event) => setName(event.target.value)}
         placeholder="Agent name (e.g. Tax Reviewer)"
-        className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2 text-sm outline-none focus:border-primary"
+        className={`w-full rounded-lg border bg-surface-container px-3 py-2 text-sm ${focusField}`}
       />
       {capabilities.length > 0 && (
         <div>
@@ -383,7 +384,7 @@ function ProfileForm({
         onChange={(event) => setInstructions(event.target.value)}
         rows={2}
         placeholder="Instructions (optional) — how this agent should behave"
-        className="w-full resize-none rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2 text-sm outline-none focus:border-primary"
+        className={`w-full resize-none rounded-lg border bg-surface-container px-3 py-2 text-sm ${focusField}`}
       />
       <div className="flex justify-end gap-2">
         <button

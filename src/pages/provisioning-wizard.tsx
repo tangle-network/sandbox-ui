@@ -28,6 +28,7 @@ import {
   Textarea,
 } from "../primitives";
 import { AddSshKeyDialog } from "./add-ssh-key-dialog";
+import { focusRing } from "@tangle-network/ui/utils";
 
 export interface EnvironmentOption {
   id: string;
@@ -589,7 +590,7 @@ function EnvVarValueInput({
         onClick={() => setRevealed((s) => !s)}
         aria-label={revealed ? "Hide value" : "Show value"}
         aria-pressed={revealed}
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={`absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground ${focusRing}`}
       >
         {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>
@@ -1194,7 +1195,7 @@ export function ProvisioningWizard({
                     <button
                       type="button"
                       onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium focus:outline-none"
+                      className={`flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium ${focusRing}`}
                     >
                       <Settings className="w-4 h-4" />
                       {showAdvanced

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Camera, Clock, HardDrive, Plus, RotateCcw } from "lucide-react"
 import { cn } from "../lib/utils"
+import { focusField } from "@tangle-network/ui/utils"
 
 export interface SnapshotInfo {
   id: string
@@ -69,7 +70,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
           />
           <div className="flex justify-end gap-2">
             <button

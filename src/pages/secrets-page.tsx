@@ -14,6 +14,7 @@ import {
 } from "@tangle-network/ui/primitives"
 import { InfoPanel } from "../dashboard/info-panel"
 import { parseEnvText, type EnvImportResult } from "./env-importer"
+import { focusField } from "@tangle-network/ui/utils"
 
 /** Cap pasted/uploaded import sources so a pathological file cannot blow up the parser/UI. */
 const MAX_IMPORT_FILE_BYTES = 256 * 1024 // 256 KiB
@@ -356,7 +357,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 onChange={(e) => setNewName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"))}
                 placeholder="MY_SECRET_KEY"
                 autoComplete="off"
-                className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className={`w-full rounded-md border bg-surface-container-low px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
               />
             </div>
             <div>
@@ -370,7 +371,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                   onChange={(e) => setNewValue(e.target.value)}
                   placeholder="Enter secret value..."
                   autoComplete="new-password"
-                  className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className={`w-full rounded-md border bg-surface-container-low px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
                 />
                 <button
                   type="button"
@@ -454,7 +455,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 onChange={(e) => setImportText(e.target.value)}
                 rows={6}
                 spellCheck={false}
-                className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className={`w-full rounded-md border bg-surface-container-low px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground ${focusField}`}
               />
               <p className="text-[11px] text-muted-foreground">
                 Lines starting with <span className="font-mono">#</span> are comments. Text after <span className="font-mono">#</span> inside a value is preserved.
@@ -508,7 +509,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                           value={row.key}
                           onChange={(e) => updateRowKey(index, e.target.value)}
                           disabled={isImportSaving}
-                          className="w-2/5 rounded border border-[var(--md3-outline-variant)] bg-surface-container-low px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+                          className={`w-2/5 rounded border bg-surface-container-low px-2 py-1.5 font-mono text-xs text-foreground disabled:opacity-60 ${focusField}`}
                         />
                         <input
                           type={showImportValues ? "text" : "password"}
@@ -516,7 +517,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                           value={row.value}
                           onChange={(e) => updateRowValue(index, e.target.value)}
                           disabled={isImportSaving}
-                          className="w-2/5 rounded border border-[var(--md3-outline-variant)] bg-surface-container-low px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
+                          className={`w-2/5 rounded border bg-surface-container-low px-2 py-1.5 font-mono text-xs text-foreground disabled:opacity-60 ${focusField}`}
                         />
                         <div className="flex w-1/5 flex-col items-end gap-1">
                           {status === "success" && (

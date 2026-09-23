@@ -238,7 +238,7 @@
   --trees-border-color-override: var(--md3-outline-variant);
   --trees-indent-guide-bg-override: var(--md3-outline-variant);
   --trees-accent-override: hsl(var(--primary));
-  --trees-focus-ring-color-override: hsl(var(--primary) / 0.4);
+  --trees-focus-ring-color-override: var(--focus-border);
 }
 
 @layer base {
@@ -249,6 +249,30 @@
 
   * {
     border-color: hsl(var(--border));
+  }
+
+  /* The default keyboard focus for any control that does not style its own,
+   * the same line and halo as ui's `focusRing` (mirrors brand's globals.css,
+   * which this bundle does not import). Base layer, so component utilities
+   * still win. Text fields show focus on their border instead. */
+  :where(
+      a[href],
+      button,
+      summary,
+      input:is([type="checkbox"], [type="radio"]),
+      [role="button"],
+      [role="checkbox"],
+      [role="link"],
+      [role="menuitem"],
+      [role="option"],
+      [role="radio"],
+      [role="switch"],
+      [role="tab"],
+      [tabindex]:not([tabindex="-1"])
+    ):focus-visible {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 0;
+    box-shadow: 0 0 0 4px var(--focus-halo);
   }
 
   body {

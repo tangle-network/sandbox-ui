@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from "@tangle-network/ui/primitives"
 import { InfoPanel } from "../dashboard/info-panel"
+import { focusField } from "@tangle-network/ui/utils"
 
 export type ScriptType = "bash" | "python" | "node" | "ruby" | "custom"
 
@@ -586,7 +587,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
                 placeholder="Install Claude Code"
                 maxLength={64}
-                className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className={`mt-1.5 w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
               />
             </div>
 
@@ -599,7 +600,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                 placeholder="Sets up Claude Code with authentication"
                 maxLength={256}
-                className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className={`mt-1.5 w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
               />
             </div>
 
@@ -641,7 +642,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 onChange={(e) => setFormData((p) => ({ ...p, content: e.target.value }))}
                 rows={12}
                 spellCheck={false}
-                className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y"
+                className={`mt-1.5 w-full rounded-lg border bg-surface-container-low px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted-foreground resize-y ${focusField}`}
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 {SCRIPT_TYPE_META[formData.scriptType].label} script. Injected secrets are available as environment variables (e.g. <code className="text-primary">$GITHUB_TOKEN</code>).
@@ -746,7 +747,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         placeholder="Any"
                         min={0.5}
                         step={0.5}
-                        className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className={`mt-1.5 w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
                       />
                     </div>
                     <div>
@@ -766,7 +767,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         placeholder="Any"
                         min={1}
                         step={1}
-                        className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className={`mt-1.5 w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
                       />
                     </div>
                   </div>
@@ -784,7 +785,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         onChange={(e) => setFormData((p) => ({ ...p, runOrder: e.target.value ? Math.max(0, Number(e.target.value)) : 0 }))}
                         min={0}
                         max={9999}
-                        className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className={`mt-1.5 w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
                       />
                       <p className="mt-1 text-xs text-muted-foreground">Lower runs first</p>
                     </div>
@@ -799,7 +800,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         onChange={(e) => setFormData((p) => ({ ...p, timeoutSeconds: e.target.value ? Math.max(5, Number(e.target.value)) : 300 }))}
                         min={5}
                         max={3600}
-                        className="mt-1.5 w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className={`mt-1.5 w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
                       />
                     </div>
                   </div>

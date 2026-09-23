@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { WorkspacePaneHeader } from "./workspace-pane-header";
+import { focusRing } from "@tangle-network/ui/utils";
 
 const DESKTOP_BREAKPOINT = "(min-width: 1024px)";
 
@@ -220,7 +221,7 @@ function ResizeHandle({ label, onDragStart, onStep, className }: ResizeHandlePro
       className={cn(
         "relative hidden w-3 shrink-0 cursor-col-resize lg:flex",
         "items-stretch justify-center bg-transparent touch-none",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
+        focusRing,
         className,
       )}
     >
@@ -266,7 +267,7 @@ function HorizontalResizeHandle({ label, onDragStart, onStep, className }: Horiz
       className={cn(
         "relative hidden h-3 shrink-0 cursor-row-resize lg:flex",
         "items-center justify-center bg-transparent touch-none w-full",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
+        focusRing,
         className,
       )}
     >
@@ -305,7 +306,7 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
             type="button"
             aria-label={`Close ${title}`}
             onClick={onClose}
-            className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+            className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
           >
             <X className="h-4 w-4" />
           </button>
@@ -570,7 +571,7 @@ export function WorkspaceLayout({
                     type="button"
                     aria-label="Collapse left panel"
                     onClick={() => setLeftOpen(false)}
-                    className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                    className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
                   >
                     <PanelLeftClose className="h-4 w-4" />
                   </button>
@@ -597,7 +598,7 @@ export function WorkspaceLayout({
                     type="button"
                     aria-label="Open left panel"
                     onClick={() => setLeftOpen(true)}
-                    className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                    className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
                   >
                     <PanelLeftOpen className="h-4 w-4" />
                   </button>
@@ -609,7 +610,7 @@ export function WorkspaceLayout({
                   type="button"
                   aria-label="Open bottom panel"
                   onClick={() => setBottomOpen(true)}
-                  className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                  className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
                 >
                   <PanelBottomOpen className="h-4 w-4" />
                 </button>
@@ -619,7 +620,7 @@ export function WorkspaceLayout({
                   type="button"
                   aria-label="Open right panel"
                   onClick={() => setRightOpen(true)}
-                  className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                  className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
                 >
                   <PanelRightOpen className="h-4 w-4" />
                 </button>
@@ -656,7 +657,7 @@ export function WorkspaceLayout({
                       type="button"
                       aria-label="Collapse bottom panel"
                       onClick={() => setBottomOpen(false)}
-                      className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                      className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
                     >
                       <PanelBottomClose className="h-4 w-4" />
                     </button>
@@ -696,7 +697,7 @@ export function WorkspaceLayout({
                   type="button"
                   aria-label="Collapse right panel"
                   onClick={() => setRightOpen(false)}
-                  className="rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+                  className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
                 >
                   <PanelRightClose className="h-4 w-4" />
                 </button>

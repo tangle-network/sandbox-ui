@@ -4,6 +4,7 @@ import * as React from "react";
 import { Sparkles, Send, Square, X } from "lucide-react";
 import { ChatMessage, type MessageRole } from "@tangle-network/ui/chat";
 import { cn } from "../lib/utils";
+import { focusField } from "@tangle-network/ui/utils";
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -342,7 +343,7 @@ export function ArtifactAgentDock({
             placeholder={`Ask about ${heading}…`}
             rows={2}
             disabled={!threadId}
-            className="min-h-[44px] flex-1 resize-none rounded-[20px] border border-[var(--md3-outline-variant)] bg-surface-dim px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:outline-none focus:border-[var(--border-accent)] disabled:opacity-50"
+            className={`min-h-[44px] flex-1 resize-none rounded-[20px] border bg-surface-dim px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground disabled:opacity-50 ${focusField}`}
           />
           {sending ? (
             <button

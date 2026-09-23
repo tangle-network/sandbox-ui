@@ -9,6 +9,7 @@ import {
 } from "@tangle-network/ui/files";
 import { EmptyState } from "@tangle-network/ui/primitives";
 import { Input } from "@tangle-network/ui/primitives";
+import { focusRing } from "@tangle-network/ui/utils";
 
 export interface DirectoryPaneProps {
   root: FileNode;
@@ -112,7 +113,7 @@ export function DirectoryPane({
               type="button"
               aria-label="Refresh directory"
               onClick={onRefresh}
-              className="rounded-[2px] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+              className={`rounded-[2px] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
             >
               <RefreshCw className="h-4 w-4" />
             </button>
@@ -122,7 +123,7 @@ export function DirectoryPane({
               type="button"
               aria-label="Upload files"
               onClick={onUpload}
-              className="rounded-[2px] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+              className={`rounded-[2px] p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
             >
               <Upload className="h-4 w-4" />
             </button>

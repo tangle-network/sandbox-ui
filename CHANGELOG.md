@@ -10,7 +10,8 @@
   dashboard, page, workspace, workbench and integration controls this package
   draws itself use the same helpers. Any control that sets no focus style of
   its own gets the same line and halo from the base layer, instead of the
-  browser's blue outline.
+  browser's blue outline. A native text field that sets none gets the 1px
+  focus line over its border, without the halo.
 - **Peer floors raised to `@tangle-network/brand ^1.6.0` and
   `@tangle-network/ui ^11.10.0`**, which define the focus tokens and helpers.
 - `./utils` re-exports `focusField`, `focusFieldWithin`, `focusFieldInvalid`,

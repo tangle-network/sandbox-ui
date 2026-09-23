@@ -254,7 +254,7 @@
   /* The default keyboard focus for any control that does not style its own,
    * the same line and halo as ui's `focusRing` (mirrors brand's globals.css,
    * which this bundle does not import). Base layer, so component utilities
-   * still win. Text fields show focus on their border instead. */
+   * still win. Text fields have their own fallback below. */
   :where(
       a[href],
       button,
@@ -273,6 +273,31 @@
     outline: 1px solid var(--focus-border);
     outline-offset: 0;
     box-shadow: 0 0 0 4px var(--focus-halo);
+  }
+
+  /* A native text field that styles no focus: a 1px --focus-border line over
+   * its border, instead of the browser's blue outline (mirrors brand's
+   * globals.css). An outline, because a border-colour utility on the field
+   * outranks a base-layer border colour. No halo: a field that hands its
+   * focus to a container clears the line with `outline-none`. */
+  :where(
+      input:not(
+          [type="button"],
+          [type="checkbox"],
+          [type="color"],
+          [type="file"],
+          [type="hidden"],
+          [type="image"],
+          [type="radio"],
+          [type="range"],
+          [type="reset"],
+          [type="submit"]
+        ),
+      select,
+      textarea
+    ):focus-visible {
+    outline: 1px solid var(--focus-border);
+    outline-offset: -1px;
   }
 
   body {

@@ -173,6 +173,31 @@ describe("SidebarLayout — rail header (brand · middle · toggle)", () => {
     expect(mark.parentElement?.closest("button")).toBeNull()
   })
 
+  // The header content may be a passive switcher, and the empty-rail click
+  // fallback is mouse-only, so the explicit expand control must stay
+  // reachable beside it.
+  it("keeps a keyboard-reachable expand control beside railHeaderContent", () => {
+    const onRailCollapsedChange = vi.fn()
+    render(
+      <SidebarLayout
+        railLabels
+        railCollapsed
+        onRailCollapsedChange={onRailCollapsedChange}
+        railHeaderContent={<span data-testid="mark">MARK</span>}
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    expect(screen.getByTestId("mark")).toBeInTheDocument()
+    const expand = screen.getByRole("button", { name: "Expand sidebar" })
+    expect(expand).not.toContainElement(screen.getByTestId("mark"))
+    fireEvent.click(expand)
+    // `railCollapsed` is the controlled prop: the click reports the change to the
+    // consumer instead of flipping internal state.
+    expect(onRailCollapsedChange).toHaveBeenCalledWith(false)
+  })
+
   // The `logo` path is the one every other consumer is on: it must keep the
   // hover-morph expand button, unchanged.
   it("keeps the brand-mark expand button when a logo IS supplied", () => {

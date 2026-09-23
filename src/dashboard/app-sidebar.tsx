@@ -321,7 +321,22 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
           // the rail top is routinely interactive itself (a mark that expands
           // the rail on click), and a <button> inside a <button> is invalid
           // HTML that React refuses to hydrate.
-          <div className="flex min-w-0 items-center justify-center">{children}</div>
+          //
+          // The explicit "Expand sidebar" control stays in the tree for
+          // keyboard and assistive-tech users (the content may be a passive
+          // switcher, and the empty-rail click fallback is mouse-only). It sits
+          // over the content, invisible and non-interactive until it receives
+          // keyboard focus, so it costs no rail width.
+          <div className="relative flex min-w-0 items-center justify-center">
+            {children}
+            {collapsible && (
+              <PanelToggleButton
+                collapsed={collapsed}
+                onToggle={onToggle}
+                className="pointer-events-none absolute inset-0 m-auto bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100"
+              />
+            )}
+          </div>
         ) : collapsible ? (
           <RailTooltip label="Expand sidebar">
             <button

@@ -283,8 +283,20 @@ function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: bool
  * the consumer's header content is then the only mark it has.
  * Renders its own `h-14` bordered bar — drop it in at the top of {@link SidebarRail}.
  */
+/**
+ * React renders nothing for `null`, `undefined` and booleans, so a caller's
+ * `logo={cond && <Logo />}` or `logo={maybeLogo}` arrives here as a node that
+ * paints nothing. Those must count as "no brand": a strict `undefined` check
+ * would drop `railHeaderContent` from the collapsed rail for exactly them.
+ */
+function isRenderable(node: React.ReactNode): boolean {
+  return node != null && typeof node !== "boolean"
+}
+
 export function RailHeader({ brand, brandHref, children, collapsed, onToggle, collapsible = true, LinkComponent, className }: RailHeaderProps) {
   const Link = LinkComponent ?? DefaultLink
+  const hasBrand = isRenderable(brand)
+  const hasChildren = isRenderable(children)
 
   const brandNode =
     brandHref !== undefined ? (
@@ -309,7 +321,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
       )}
     >
       {collapsed ? (
-        brand === undefined && children != null ? (
+        !hasBrand && hasChildren ? (
           // No brand mark: `children` (SidebarLayout's `railHeaderContent`) is
           // the only rail-top content the consumer gave us, so render it here
           // too. Dropping it left an EMPTY header — the collapsed rail showed
@@ -359,7 +371,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
         )
       ) : (
         <>
-          {brand !== undefined && brandNode}
+          {hasBrand && brandNode}
           <div className="min-w-0 flex-1">{children}</div>
           {collapsible && <PanelToggleButton collapsed={collapsed} onToggle={onToggle} />}
         </>

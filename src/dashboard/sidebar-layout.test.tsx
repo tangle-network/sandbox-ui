@@ -198,6 +198,26 @@ describe("SidebarLayout — rail header (brand · middle · toggle)", () => {
     expect(onRailCollapsedChange).toHaveBeenCalledWith(false)
   })
 
+  // `logo` is a ReactNode, so `logo={cond && <Logo />}` and `logo={maybeLogo}`
+  // legally arrive as false / null. React paints nothing for them, so they must
+  // count as "no logo" or the collapsed rail drops railHeaderContent again.
+  it.each([null, false])("treats a %s logo as absent and still renders railHeaderContent when collapsed", (logo) => {
+    render(
+      <SidebarLayout
+        railLabels
+        railCollapsed
+        logo={logo}
+        railHeaderContent={<span data-testid="mark">MARK</span>}
+        navItems={[navItem({ id: "home" })]}
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    const mark = screen.getByTestId("mark")
+    expect(mark).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).not.toContainElement(mark)
+  })
+
   // The `logo` path is the one every other consumer is on: it must keep the
   // hover-morph expand button, unchanged.
   it("keeps the brand-mark expand button when a logo IS supplied", () => {

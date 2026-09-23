@@ -119,13 +119,13 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
           value={newPort}
           onChange={(e) => setNewPort(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleExpose()}
-          className="flex-1 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="flex-1 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring"
         />
         <button
           type="button"
           onClick={handleExpose}
           disabled={!newPort || isExposing}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary/20 border border-primary/30 px-4 py-2 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-primary/55 disabled:text-primary-foreground/90 disabled:shadow-none"
         >
           <Plus className="h-4 w-4" />
           Expose

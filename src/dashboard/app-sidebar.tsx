@@ -284,16 +284,22 @@ function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: bool
  * Renders its own `h-14` bordered bar — drop it in at the top of {@link SidebarRail}.
  */
 /**
- * React renders nothing for `null`, `undefined`, booleans and empty (or
- * all-empty) arrays, so a caller's `logo={cond && <Logo />}`, `logo={maybeLogo}`
- * or `logo={items.map(...)}` can arrive here as a node that paints nothing.
- * Those must count as "no brand": a strict `undefined` check would drop
- * `railHeaderContent` from the collapsed rail for exactly them.
+ * React renders nothing for `null`, `undefined`, booleans, empty (or
+ * all-empty) arrays and fragments whose children are all of those, so a
+ * caller's `logo={cond && <Logo />}`, `logo={maybeLogo}`, `logo={items.map(...)}`
+ * or `logo={<>{cond && <Logo />}</>}` can arrive here as a node that paints
+ * nothing. Those must count as "no brand": a strict `undefined` check would
+ * drop `railHeaderContent` from the collapsed rail for exactly them.
  * `Children.toArray` applies React's own rule (drops the empties, flattens
- * nested arrays) so this stays aligned with what actually renders.
+ * nested arrays) but keeps a fragment as one opaque child, so fragments are
+ * recursed into by hand to stay aligned with what actually renders.
  */
 function isRenderable(node: React.ReactNode): boolean {
-  return React.Children.toArray(node).length > 0
+  return React.Children.toArray(node).some((child) =>
+    React.isValidElement<{ children?: React.ReactNode }>(child) && child.type === React.Fragment
+      ? isRenderable(child.props.children)
+      : true,
+  )
 }
 
 export function RailHeader({ brand, brandHref, children, collapsed, onToggle, collapsible = true, LinkComponent, className }: RailHeaderProps) {

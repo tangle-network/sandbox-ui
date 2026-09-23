@@ -298,6 +298,9 @@
     ):focus-visible {
     outline: 1px solid var(--focus-border);
     outline-offset: -1px;
+    /* A field with an explicit tabindex also matches the control rule above;
+     * drop that rule's halo. */
+    box-shadow: none;
   }
 
   body {

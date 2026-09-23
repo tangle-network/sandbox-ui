@@ -198,10 +198,16 @@ describe("SidebarLayout — rail header (brand · middle · toggle)", () => {
     expect(onRailCollapsedChange).toHaveBeenCalledWith(false)
   })
 
-  // `logo` is a ReactNode, so `logo={cond && <Logo />}` and `logo={maybeLogo}`
-  // legally arrive as false / null. React paints nothing for them, so they must
-  // count as "no logo" or the collapsed rail drops railHeaderContent again.
-  it.each([null, false])("treats a %s logo as absent and still renders railHeaderContent when collapsed", (logo) => {
+  // `logo` is a ReactNode, so `logo={cond && <Logo />}`, `logo={maybeLogo}` and
+  // `logo={items.map(...)}` legally arrive as false / null / an empty array.
+  // React paints nothing for them, so they must count as "no logo" or the
+  // collapsed rail drops railHeaderContent again.
+  it.each([
+    ["null", null],
+    ["false", false],
+    ["empty-array", []],
+    ["array-of-null", [null]],
+  ])("treats a %s logo as absent and still renders railHeaderContent when collapsed", (_label, logo) => {
     render(
       <SidebarLayout
         railLabels

@@ -284,13 +284,16 @@ function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: bool
  * Renders its own `h-14` bordered bar — drop it in at the top of {@link SidebarRail}.
  */
 /**
- * React renders nothing for `null`, `undefined` and booleans, so a caller's
- * `logo={cond && <Logo />}` or `logo={maybeLogo}` arrives here as a node that
- * paints nothing. Those must count as "no brand": a strict `undefined` check
- * would drop `railHeaderContent` from the collapsed rail for exactly them.
+ * React renders nothing for `null`, `undefined`, booleans and empty (or
+ * all-empty) arrays, so a caller's `logo={cond && <Logo />}`, `logo={maybeLogo}`
+ * or `logo={items.map(...)}` can arrive here as a node that paints nothing.
+ * Those must count as "no brand": a strict `undefined` check would drop
+ * `railHeaderContent` from the collapsed rail for exactly them.
+ * `Children.toArray` applies React's own rule (drops the empties, flattens
+ * nested arrays) so this stays aligned with what actually renders.
  */
 function isRenderable(node: React.ReactNode): boolean {
-  return node != null && typeof node !== "boolean"
+  return React.Children.toArray(node).length > 0
 }
 
 export function RailHeader({ brand, brandHref, children, collapsed, onToggle, collapsible = true, LinkComponent, className }: RailHeaderProps) {

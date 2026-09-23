@@ -1,3 +1,4 @@
+import * as React from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -198,8 +199,9 @@ describe("SidebarLayout — rail header (brand · middle · toggle)", () => {
     expect(onRailCollapsedChange).toHaveBeenCalledWith(false)
   })
 
-  // `logo` is a ReactNode, so `logo={cond && <Logo />}`, `logo={maybeLogo}` and
-  // `logo={items.map(...)}` legally arrive as false / null / an empty array.
+  // `logo` is a ReactNode, so `logo={cond && <Logo />}`, `logo={maybeLogo}`,
+  // `logo={items.map(...)}` and `logo={<>{cond && <Logo />}</>}` legally arrive
+  // as false / null / an empty array / a fragment around one of those.
   // React paints nothing for them, so they must count as "no logo" or the
   // collapsed rail drops railHeaderContent again.
   it.each([
@@ -207,6 +209,10 @@ describe("SidebarLayout — rail header (brand · middle · toggle)", () => {
     ["false", false],
     ["empty-array", []],
     ["array-of-null", [null]],
+    ["fragment-wrapped-false", <>{false && <span>LOGO</span>}</>],
+    ["empty-fragment", <></>],
+    ["nested-empty-fragment", <><>{null}</></>],
+    ["array-of-empty-fragment", [<React.Fragment key="a">{false}</React.Fragment>]],
   ])("treats a %s logo as absent and still renders railHeaderContent when collapsed", (_label, logo) => {
     render(
       <SidebarLayout
@@ -225,13 +231,18 @@ describe("SidebarLayout — rail header (brand · middle · toggle)", () => {
   })
 
   // The `logo` path is the one every other consumer is on: it must keep the
-  // hover-morph expand button, unchanged.
-  it("keeps the brand-mark expand button when a logo IS supplied", () => {
+  // hover-morph expand button, unchanged — also when the logo arrives inside
+  // a fragment, so the fragment recursion above never over-reports "absent".
+  it.each([
+    ["plain", <span>LOGO</span>],
+    ["fragment-wrapped", <><span>LOGO</span></>],
+    ["fragment-wrapped-conditional", <>{true && <span>LOGO</span>}</>],
+  ])("keeps the brand-mark expand button when a %s logo IS supplied", (_label, logo) => {
     render(
       <SidebarLayout
         railLabels
         railCollapsed
-        logo={<span>LOGO</span>}
+        logo={logo}
         railHeaderContent={<span data-testid="switcher">Switcher</span>}
         navItems={[navItem({ id: "home" })]}
       >

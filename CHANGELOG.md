@@ -18,6 +18,15 @@
   `focusRing` and `focusRingInset`. `./primitives` re-exports `TextShimmer`.
   `./files` re-exports `CSV_PREVIEW_ROW_LIMIT`, `FilePreviewKind`, `parseCsv`
   and `resolveFilePreviewKind`.
+- **The artifact workbench works in narrow panes and from the keyboard.**
+  `CodeView` switches between Files and Code below 560 px, leaving code readable.
+  Pill tabs and artifact tabs support arrow, Home and End keys and name their panels.
+  The terminal Close button has its own keyboard focus stop.
+- **Preview addresses commit on Enter.** Typing no longer navigates the iframe.
+  Invalid or unsupported addresses show an error, and a slow frame keeps its loading state.
+- **Provisioning controls have names and state.** Sliders, advanced fields and the disclosure expose labels and state to assistive technology.
+  Integration sorting uses pressed buttons instead of content tabs.
+- **Secrets actions fit narrow screens.** The team hint and page actions wrap, and each mobile row shows its date and Delete action.
 - **The collapsed rail renders `railHeaderContent` when no `logo` is given**
   (#280), and a `logo` that is a fragment around nothing counts as no logo
   (#282).

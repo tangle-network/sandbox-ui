@@ -181,13 +181,18 @@ describe("SandboxWorkbench — artifact tabs", () => {
     const { getAllByRole, queryByLabelText, getByLabelText, container } = render(
       <SandboxWorkbench session={session} artifacts={artifacts} onArtifactClose={onArtifactClose} />,
     );
-    const tabs = getAllByRole("button", { name: /^(Changes|Notes)$/ });
+    const tabs = getAllByRole("tab", { name: /^(Changes|Notes)$/ });
     expect(tabs.map((tab) => tab.textContent)).toEqual(["Changes", "Notes"]);
     expect(queryByLabelText("Close Changes")).toBeNull();
     expect(getByLabelText("Close Notes")).toBeInTheDocument();
     expect(tabs[0]?.querySelector("svg.lucide-git-compare")).not.toBeNull();
     // The pinned tab is the default selection, so its content shows first.
     expect(container.textContent).toContain("3 files");
+    tabs[0]?.focus();
+    fireEvent.keyDown(tabs[0]!, { key: "ArrowRight" });
+    expect(tabs[1]).toHaveFocus();
+    expect(tabs[1]).toHaveAttribute("aria-selected", "true");
+    expect(getAllByRole("tabpanel")[0]).toHaveAttribute("aria-labelledby", tabs[1]?.id);
   });
 
   it("keeps the given order and every close button when nothing is pinned", () => {
@@ -198,7 +203,7 @@ describe("SandboxWorkbench — artifact tabs", () => {
         onArtifactClose={() => {}}
       />,
     );
-    const tabs = getAllByRole("button", { name: /^(Changes|Notes)$/ });
+    const tabs = getAllByRole("tab", { name: /^(Changes|Notes)$/ });
     expect(tabs.map((tab) => tab.textContent)).toEqual(["Notes", "Changes"]);
     expect(getByLabelText("Close Changes")).toBeInTheDocument();
   });

@@ -147,8 +147,12 @@ const meta: Meta<typeof ChangesPane> = {
     onOpenFile: () => {},
   },
   decorators: [
-    (Story) => (
-      <div data-sandbox-ui="true" className="h-[720px] w-[440px] border-r border-[var(--md3-outline-variant)] bg-surface-container-low">
+    (Story, context) => (
+      <div
+        data-sandbox-ui="true"
+        data-sandbox-theme={context.globals.sandboxTheme === 'light' ? 'vault' : undefined}
+        className="h-[720px] w-[440px] border-r border-[var(--md3-outline-variant)] bg-surface-container-low"
+      >
         <Story />
       </div>
     ),

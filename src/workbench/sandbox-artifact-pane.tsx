@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Code2, GitCompare, Globe, Network, SquareTerminal } from "lucide-react"
+import { focusRingInset } from "@tangle-network/ui/utils"
 import { cn } from "../lib/utils"
 import { PortsList } from "../dashboard"
 import { TerminalView } from "../terminal"
@@ -68,6 +69,8 @@ export function SandboxArtifactPane({
   const [internalView, setInternalView] = React.useState<ArtifactView>(
     () => (defaultView && (defaultView !== "diff" || hasDiff) ? defaultView : "code"),
   )
+  const tabIdPrefix = React.useId()
+  const panelId = `${tabIdPrefix}-panel`
 
   const controlled = activeView != null
   const requestedView = controlled ? activeView : internalView
@@ -122,10 +125,23 @@ export function SandboxArtifactPane({
       />
 
       <div className="flex items-center border-b border-[var(--md3-outline-variant)] bg-surface-container-lowest px-3 py-1.5">
-        <PillTabs items={tabs} value={view} onChange={selectView} aria-label="Artifact view" />
+        <PillTabs
+          items={tabs}
+          value={view}
+          onChange={selectView}
+          aria-label="Artifact view"
+          idPrefix={tabIdPrefix}
+          panelId={panelId}
+        />
       </div>
 
-      <div className="min-h-0 flex-1">
+      <div
+        id={panelId}
+        role="tabpanel"
+        aria-labelledby={`${tabIdPrefix}-${view}`}
+        tabIndex={0}
+        className={`min-h-0 flex-1 ${focusRingInset}`}
+      >
         {view === "code" && (
           <CodeView
             path={artifact.path}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Bot,
   Boxes,
@@ -198,16 +198,21 @@ function ArtifactTabs({
   activeArtifactId,
   onSelect,
   onClose,
+  tabIdPrefix,
+  panelId,
 }: {
   artifacts: SandboxWorkbenchArtifact[];
   activeArtifactId?: string;
   onSelect: (artifactId: string) => void;
   onClose?: (artifactId: string) => void;
+  tabIdPrefix: string;
+  panelId: string;
 }) {
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
   if (artifacts.length === 0) return null;
 
   return (
-    <div className="flex items-center overflow-x-auto border-b border-[var(--md3-outline-variant)] bg-surface-container-high">
+    <div role="tablist" aria-label="Artifacts" className="flex items-center overflow-x-auto border-b border-[var(--md3-outline-variant)] bg-surface-container-high">
       {artifacts.map((artifact) => {
         const Icon = artifact.icon ?? getArtifactTabIcon(artifact.kind);
         const isActive = artifact.id === activeArtifactId;
@@ -224,7 +229,31 @@ function ArtifactTabs({
           >
             <button
               type="button"
+              ref={(element) => {
+                if (element) tabRefs.current.set(artifact.id, element);
+                else tabRefs.current.delete(artifact.id);
+              }}
+              id={`${tabIdPrefix}-${artifact.id}`}
+              role="tab"
+              aria-controls={panelId}
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => onSelect(artifact.id)}
+              onKeyDown={(event) => {
+                const index = artifacts.findIndex((entry) => entry.id === artifact.id);
+                let nextIndex: number;
+                switch (event.key) {
+                  case "ArrowRight": nextIndex = (index + 1) % artifacts.length; break;
+                  case "ArrowLeft": nextIndex = (index - 1 + artifacts.length) % artifacts.length; break;
+                  case "Home": nextIndex = 0; break;
+                  case "End": nextIndex = artifacts.length - 1; break;
+                  default: return;
+                }
+                event.preventDefault();
+                const next = artifacts[nextIndex];
+                onSelect(next.id);
+                tabRefs.current.get(next.id)?.focus();
+              }}
               className={`flex min-w-0 items-center gap-2 px-3 py-2 text-[12px] uppercase tracking-wider font-medium transition-colors hover:text-foreground ${focusRingInset}`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -234,6 +263,7 @@ function ArtifactTabs({
               <button
                 type="button"
                 aria-label={`Close ${artifactTabLabel(artifact)}`}
+                tabIndex={isActive ? 0 : -1}
                 onClick={() => onClose(artifact.id)}
                 className={`mr-1 rounded-[2px] p-1 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 ${focusRing}`}
               >
@@ -408,6 +438,8 @@ export function SandboxWorkbench({
   className,
 }: SandboxWorkbenchProps) {
   const artifacts = useMemo(() => sortPinnedFirst(artifactsProp), [artifactsProp]);
+  const artifactTabsId = useId();
+  const artifactPanelId = `${artifactTabsId}-panel`;
   const [uncontrolledArtifactId, setUncontrolledArtifactId] = useState<string | undefined>(
     activeArtifactId ?? artifacts[0]?.id,
   );
@@ -500,8 +532,17 @@ export function SandboxWorkbench({
         activeArtifactId={resolvedArtifactId}
         onSelect={handleArtifactChange}
         onClose={onArtifactClose}
+        tabIdPrefix={artifactTabsId}
+        panelId={artifactPanelId}
       />
-      <div className="min-h-0 flex-1 overflow-auto bg-surface-container">
+      <div
+        id={artifactPanelId}
+        role="tabpanel"
+        aria-labelledby={activeArtifact ? `${artifactTabsId}-${activeArtifact.id}` : undefined}
+        aria-label={activeArtifact ? undefined : "Artifact content"}
+        tabIndex={0}
+        className={`min-h-0 flex-1 overflow-auto bg-surface-container ${focusRingInset}`}
+      >
         {activeArtifact ? (
           renderArtifact(activeArtifact)
         ) : (

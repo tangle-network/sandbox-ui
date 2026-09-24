@@ -96,8 +96,12 @@ const meta: Meta<typeof SandboxArtifactPane> = {
     },
   },
   decorators: [
-    (Story) => (
-      <div data-sandbox-ui="true" className="dark h-[640px] bg-background p-4">
+    (Story, context) => (
+      <div
+        data-sandbox-ui="true"
+        data-sandbox-theme={context.globals.sandboxTheme === 'light' ? 'vault' : undefined}
+        className={`${context.globals.sandboxTheme === 'light' ? '' : 'dark '}h-[640px] bg-background p-4`}
+      >
         <Story />
       </div>
     ),

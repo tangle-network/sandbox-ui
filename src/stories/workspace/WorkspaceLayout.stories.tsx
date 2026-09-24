@@ -13,8 +13,12 @@ const meta: Meta<typeof WorkspaceLayout> = {
     backgrounds: { default: 'dark' },
   },
   decorators: [
-    (Story) => (
-      <div className="h-screen" data-sandbox-ui="true" >
+    (Story, context) => (
+      <div
+        className="h-screen"
+        data-sandbox-ui="true"
+        data-sandbox-theme={context.globals.sandboxTheme === 'light' ? 'vault' : undefined}
+      >
         <Story />
       </div>
     ),
@@ -308,7 +312,7 @@ export const VaultTheme: Story = {
   name: 'Vault Theme',
   decorators: [
     (Story) => (
-      <div className="h-screen" data-sandbox-ui="true">
+      <div className="h-screen" data-sandbox-ui="true" data-sandbox-theme="vault">
         <Story />
       </div>
     ),

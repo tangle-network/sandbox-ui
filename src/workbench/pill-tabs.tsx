@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { focusRing } from "@tangle-network/ui/utils"
 import { cn } from "../lib/utils"
 
 export interface PillTabItem<T extends string> {
@@ -15,6 +16,9 @@ export interface PillTabsProps<T extends string> {
   onChange: (value: T) => void
   className?: string
   "aria-label"?: string
+  /** Stable IDs supplied by the parent when it renders the associated panel. */
+  idPrefix?: string
+  panelId?: string
 }
 
 /**
@@ -30,6 +34,8 @@ export function PillTabs<T extends string>({
   onChange,
   className,
   "aria-label": ariaLabel,
+  idPrefix,
+  panelId,
 }: PillTabsProps<T>) {
   const containerRef = React.useRef<HTMLDivElement>(null)
   const tabRefs = React.useRef(new Map<T, HTMLButtonElement>())
@@ -90,10 +96,38 @@ export function PillTabs<T extends string>({
             }}
             type="button"
             role="tab"
+            id={idPrefix ? `${idPrefix}-${item.value}` : undefined}
+            aria-controls={panelId}
             aria-selected={selected}
+            tabIndex={selected ? 0 : -1}
             onClick={() => onChange(item.value)}
+            onKeyDown={(event) => {
+              const index = items.findIndex((candidate) => candidate.value === item.value)
+              let nextIndex: number
+              switch (event.key) {
+                case "ArrowRight":
+                  nextIndex = (index + 1) % items.length
+                  break
+                case "ArrowLeft":
+                  nextIndex = (index - 1 + items.length) % items.length
+                  break
+                case "Home":
+                  nextIndex = 0
+                  break
+                case "End":
+                  nextIndex = items.length - 1
+                  break
+                default:
+                  return
+              }
+              event.preventDefault()
+              const next = items[nextIndex]
+              onChange(next.value)
+              tabRefs.current.get(next.value)?.focus()
+            }}
             className={cn(
               "relative z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",
+              focusRing,
               selected
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground",

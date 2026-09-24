@@ -13,8 +13,12 @@ const meta: Meta<typeof SandboxWorkbench> = {
     layout: 'fullscreen',
   },
   decorators: [
-    (Story) => (
-      <div className="h-screen" data-sandbox-ui="true">
+    (Story, context) => (
+      <div
+        className="h-screen"
+        data-sandbox-ui="true"
+        data-sandbox-theme={context.globals.sandboxTheme === 'light' ? 'vault' : undefined}
+      >
         <Story />
       </div>
     ),

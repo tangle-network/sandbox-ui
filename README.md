@@ -316,22 +316,6 @@ For that, compose directly from:
 
 Retheming is absolutely supported, but the documentation was thinner than it should be. The token layer is strong; the higher-level surfaces are themeable, but more opinionated. For a radically different product look, prefer keeping the token contract and wrapping the higher-level workbench/chat surfaces rather than fighting every internal class.
 
-## Visual tests
-
-The CI gate compares every Storybook story in dark and light themes at desktop and mobile widths.
-Critical states also run at tablet width, and five browser flows cover visible interactions.
-
-Run the gate in a Linux environment with the repository's Playwright Chromium installed:
-
-```bash
-pnpm build-storybook
-CI=1 pnpm test:visual
-```
-
-For an intended visual change, update only the affected snapshots with `pnpm exec playwright test -g '<story-or-flow>' --update-snapshots`.
-Inspect the changed PNGs, then run the complete gate without snapshot updates.
-Keep the local Storybook font imports loaded so comparisons do not depend on external requests.
-
 ## Docs
 
 | Guide | Description |

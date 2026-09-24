@@ -8,7 +8,9 @@ An evidence floor measures what the checks proved; it is not a claim that an unt
 ## Scope and method
 
 The inventory is the 96 non-test, non-story `.tsx` files under `src` at sandbox-ui commit `928f622`.
-The hosted [Storybook catalog](https://sandbox-ui-storybook.pages.dev/) has 25 story files and 155 story entries.
+At capture time, the hosted [Storybook catalog](https://sandbox-ui-storybook.pages.dev/) had 25 story files and 155 story entries.
+The later [catalog expansion](https://github.com/tangle-network/sandbox-ui/pull/288) added 64 story files after this audit's capture.
+Its new stories require another browser pass before the evidence tiers or acceptance counts change.
 I sampled 34 entries at desktop light, desktop dark, 390 px light, and 320 px light.
 That produced 136 Chromium visits, 102 story screenshots, and no page errors.
 The [story results](component-audit-story-results.json) retain widths, theme tokens, visible text, and a basic unnamed-control triage.

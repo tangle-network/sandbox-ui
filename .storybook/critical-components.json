@@ -1,0 +1,7 @@
+[
+  { "component": "SandboxTable", "source": "src/dashboard/sandbox-table.tsx", "storyFile": "src/stories/dashboard/SandboxTable.stories.tsx", "task": "Find and manage a sandbox" },
+  { "component": "ChangesPane", "source": "src/workbench/changes-pane.tsx", "storyFile": "src/stories/workbench/changes-pane.stories.tsx", "task": "Review changed files" },
+  { "component": "DiffView", "source": "src/workbench/diff-view.tsx", "storyFile": "src/stories/workbench/DiffView.stories.tsx", "task": "Read complete changed lines" },
+  { "component": "PreviewView", "source": "src/workbench/preview-view.tsx", "storyFile": "src/stories/workbench/PreviewView.stories.tsx", "task": "Inspect application preview state" },
+  { "component": "TerminalView", "source": "src/terminal/terminal-view.tsx", "storyFile": "src/stories/terminal/TerminalView.stories.tsx", "task": "Read command output and connection state" }
+]

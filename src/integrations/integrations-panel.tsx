@@ -263,11 +263,15 @@ function rankOf(
 }
 
 function displayNameOf(provider: IntegrationProvider): string {
-  return provider.displayName ?? provider.providerId.replace(/[-_]/g, " ");
+  return (
+    provider.displayName ??
+    provider.title ??
+    provider.providerId.replace(/[-_]/g, " ")
+  );
 }
 
 function matchesQuery(provider: IntegrationProvider, q: string): boolean {
-  const hay = `${provider.displayName ?? ""} ${provider.providerId} ${
+  const hay = `${displayNameOf(provider)} ${provider.providerId} ${
     provider.description ?? ""
   }`.toLowerCase();
   return hay.includes(q);
@@ -543,7 +547,7 @@ export function IntegrationsPanel({
                     <ProviderIcon
                       id={provider.providerId}
                       iconUrl={provider.iconUrl}
-                      displayName={provider.displayName}
+                      displayName={displayNameOf(provider)}
                       size={LOGO_SIZE}
                       className="rounded-2xl"
                     />
@@ -668,7 +672,7 @@ export function IntegrationsPanel({
                 <ProviderIcon
                   id={provider.providerId}
                   iconUrl={provider.iconUrl}
-                  displayName={provider.displayName}
+                  displayName={displayNameOf(provider)}
                   size={LOGO_SIZE}
                   className="rounded-2xl"
                 />

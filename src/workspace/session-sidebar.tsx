@@ -11,7 +11,7 @@ import {
   type UseOptimisticSessionItemsOptions,
 } from "./session-optimistic";
 import { WorkspacePaneHeader } from "./workspace-pane-header";
-import { focusField } from "@tangle-network/ui/utils";
+import { focusField, focusRing } from "@tangle-network/ui/utils";
 
 export interface SessionSidebarItem {
   id: string;
@@ -602,7 +602,7 @@ export function SessionSidebar({
                 aria-label={searchPlaceholder}
                 className={cn(
                   quiet
-                    ? "h-8 w-full rounded-md border-0 bg-transparent pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:bg-surface-container focus-visible:outline-none"
+                    ? `h-8 w-full rounded-md border-0 bg-transparent pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus-visible:bg-surface-container ${focusRing}`
                     : `h-8 w-full rounded-[var(--radius-sm)] border bg-surface-container-lowest pl-7 pr-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`,
                   MOTION_CONTROL,
                 )}

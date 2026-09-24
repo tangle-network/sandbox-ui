@@ -22,7 +22,8 @@ export default defineConfig({
     deviceScaleFactor: 1,
     locale: 'en-US',
     timezoneId: 'UTC',
-    serviceWorkers: 'block',
+    // Playwright's blocker throws inside the PreviewView frame without allow-same-origin.
+    serviceWorkers: 'allow',
     trace: 'retain-on-failure',
   },
   webServer: {

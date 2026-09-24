@@ -60,6 +60,12 @@ for (const story of stories) {
         if (story.id === 'workbench-diffview--changed-line') {
           await waitForDiffRender(page, 'retryDelay')
         }
+        if (/^workbench-diffreadability--(wrapped|horizontal-scroll|narrow)$/.test(story.id)) {
+          await waitForDiffRender(page, 'endpoint')
+        }
+        if (story.id === 'workbench-diffreadability--unbroken-text') {
+          await waitForDiffRender(page, 'END_OF_LINE')
+        }
         if (story.id.startsWith('workflows-')) {
           await expect(page.locator('.react-flow__node').first()).toBeVisible()
           await expect(page.getByText('Loading graph...')).toHaveCount(0)

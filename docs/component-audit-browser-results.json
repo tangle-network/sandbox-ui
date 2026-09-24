@@ -14,11 +14,12 @@
     "viewport": "desktop",
     "requested": "https://sandbox.tangle.tools/dashboard",
     "status": 200,
-    "title": "Sign in \u00b7 Tangle",
+    "title": "Sign in \u2014 Tangle Platform",
     "pageErrors": [],
     "screenshot": "screenshots/component-audit-2026-09/consumer-dashboard-desktop.webp",
     "finalOriginPath": "https://id.tangle.tools/login",
-    "returnPath": "https://sandbox.tangle.tools/dashboard"
+    "returnPath": "https://sandbox.tangle.tools/dashboard",
+    "captureReady": "Sign in to Tangle heading visible; fonts ready"
   },
   {
     "route": "provisioning",

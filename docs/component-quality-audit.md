@@ -20,11 +20,14 @@ The hosted catalog was deployed by [the merged Storybook workflow](https://githu
 Its `index.json` SHA-256 was `c1869c42a3dcc941266e9232ae0e7eddcc222f562ac4ec4a375f360b7a626cb8` after deployment.
 The browser used 1440 × 900, 390 × 844, and 320 × 700 CSS pixel viewports.
 The 320 px pass measured document overflow without storing another set of screenshots.
-Dark and light desktop captures verify the sampled first views, while other states remain unobserved.
+Dark and light desktop captures show the sampled first views, while other states remain unobserved.
+Dark `renderedThemeToken` values are `null` because Storybook sets `data-sandbox-theme` to an empty string in dark mode.
+Use the linked dark screenshots to inspect rendered styling; that metadata value alone cannot establish theme fidelity.
 
 I opened eight real consumer URLs at desktop and mobile widths in an anonymous Chromium context.
 The [consumer route results](component-audit-browser-results.json) include the final origin/path, preserved return path, response status, and screenshot.
 All 16 visits had no page error; protected routes led to [Tangle sign-in](screenshots/component-audit-2026-09/consumer-dashboard-mobile.webp).
+The [dashboard desktop capture](screenshots/component-audit-2026-09/consumer-dashboard-desktop.webp) was repeated after the visible sign-in heading and fonts loaded.
 No test account, sandbox, payment, connector grant, or authenticated data was used.
 The consumer source review used `agent-dev-container` commit `bd8ce2965f2b78836dea4acf69220c1b9bca5981` without editing its active checkout.
 Source findings below describe code at that commit; their deployment and authenticated outcome are unverified.
@@ -91,7 +94,8 @@ The ledger retains smaller source risks for BackendConfig and CreditBalance cont
 
 ## Coverage blockers and next proof
 
-The catalog's fixed-width fixtures cause page overflow in 11 of 34 sampled states at 390 px and 16 of 34 at 320 px.
+At 390 px, 13 of 34 sampled states had document overflow; two exceeded the viewport by only 2 px.
+The remaining 11 exceeded it by more than 2 px, as did 16 of 34 states at 320 px.
 Several are explicitly fixed at 440, 560, 760, or 1000 px in story files.
 These screenshots show a Storybook coverage problem; they do not prove the underlying component fails in a responsive consumer.
 Provide responsive story variants for those components, then check the component inside a narrow host pane.

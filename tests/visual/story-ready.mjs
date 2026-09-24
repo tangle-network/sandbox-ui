@@ -39,4 +39,9 @@ export async function waitForDiffRender(page, expectedText) {
     (text) => document.querySelector('[data-testid="diff-view"] diffs-container')?.shadowRoot?.textContent?.includes(text),
     expectedText,
   )
+  // The diff custom element mounts after the initial story font wait.
+  await page.evaluate(async () => {
+    await document.fonts.load('400 13px "Geist Mono"')
+    await document.fonts.ready
+  })
 }

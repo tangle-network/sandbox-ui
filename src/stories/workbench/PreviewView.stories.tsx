@@ -1,7 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react'
+import geistRegular from '@fontsource/geist/files/geist-latin-400-normal.woff2?inline'
+import geistBold from '@fontsource/geist/files/geist-latin-700-normal.woff2?inline'
 import { PreviewView } from '../../workbench/preview-view'
 
-const page = '<!doctype html><html><body style="font:16px system-ui;padding:48px;color:#24233d"><h1>Northstar preview</h1><p>Your local app is running.</p><button>Continue</button></body></html>'
+const page = `<!doctype html><html><head><style>
+  @font-face { font-family: "Preview Geist"; src: url("${geistRegular}") format("woff2"); font-weight: 400; }
+  @font-face { font-family: "Preview Geist"; src: url("${geistBold}") format("woff2"); font-weight: 700; }
+  body { font: 16px "Preview Geist", sans-serif; padding: 48px; color: #24233d; }
+  </style></head><body><h1>Northstar preview</h1><p>Your local app is running.</p><button>Continue</button></body></html>`
 const url = `data:text/html;charset=utf-8,${encodeURIComponent(page)}`
 
 const meta = {

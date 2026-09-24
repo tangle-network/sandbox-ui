@@ -48,6 +48,11 @@ for (const story of stories) {
           })
         }
         await openStory(page, story.id, theme, viewport)
+        if (story.id === 'workbench-previewview--local-app') {
+          const preview = page.frameLocator('iframe')
+          await expect(preview.getByRole('heading', { name: 'Northstar preview' })).toBeVisible()
+          await preview.locator('body').evaluate(async () => document.fonts.ready)
+        }
         if (/^workbench-changespane--(default|many-files|commit-failed|committing)$/.test(story.id) ||
           story.id === 'workbench-sandboxartifactpane--diff-active') {
           await waitForDiffRender(page, 'RetryOptions')

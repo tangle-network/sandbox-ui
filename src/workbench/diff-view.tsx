@@ -65,6 +65,11 @@ export function DiffView({ filename, baseline, current, showFileHeader = true, c
     const host = hostRef.current
     if (host == null || !patch) return
     const container = document.createElement(DIFF_CONTAINER_TAG)
+    // The renderer's shadow styles otherwise choose an OS-specific mono face.
+    container.style.setProperty(
+      "--diffs-font-family",
+      'var(--font-mono, "Geist Mono", "JetBrains Mono", ui-monospace, monospace)',
+    )
     host.appendChild(container)
     const instance = new FileDiff(
       showFileHeader ? DIFF_OPTIONS : { ...DIFF_OPTIONS, disableFileHeader: true },

@@ -1,17 +1,10 @@
 import { test, expect } from 'playwright/test'
+import { openStory } from './story-ready.mjs'
 
 const themes = ['dark', 'light']
 const viewports = {
   desktop: { width: 1440, height: 900 },
   mobile: { width: 390, height: 844 },
-}
-
-async function openStory(page, id, theme, viewport) {
-  await page.clock.install({ time: new Date('2026-09-23T12:00:00Z') })
-  await page.setViewportSize(viewport)
-  await page.goto(`/iframe.html?id=${id}&viewMode=story&globals=sandboxTheme:${theme}`)
-  await expect(page.locator('#storybook-root')).toBeVisible()
-  await page.evaluate(() => document.fonts.ready)
 }
 
 const flows = [

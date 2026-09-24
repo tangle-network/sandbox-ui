@@ -3,9 +3,11 @@ import { defineConfig, devices } from 'playwright/test'
 export default defineConfig({
   testDir: './tests/visual',
   fullyParallel: true,
+  forbidOnly: true,
+  updateSnapshots: 'none',
   reporter: process.env.CI ? 'dot' : 'list',
   workers: process.env.CI ? 4 : undefined,
-  retries: process.env.CI ? 1 : 0,
+  retries: 0,
   timeout: 30_000,
   expect: {
     toHaveScreenshot: {
@@ -18,6 +20,9 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     baseURL: 'http://127.0.0.1:6006',
     deviceScaleFactor: 1,
+    locale: 'en-US',
+    timezoneId: 'UTC',
+    serviceWorkers: 'block',
     trace: 'retain-on-failure',
   },
   webServer: {

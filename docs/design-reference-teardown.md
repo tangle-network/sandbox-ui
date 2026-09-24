@@ -53,11 +53,13 @@ The public first view pairs its claim with a small runnable SDK example.
 Its mobile layout stacks the action and code example without hiding the primary action.
 Daytona's Playground documents Sandbox, Terminal, and VNC tabs that operate on the same active sandbox.
 Its sandbox configuration can also produce code snippets from the chosen values.
+Opening Terminal or VNC creates a sandbox with the configured values when none is active.
 
 **Adopt:** bind each workspace mode to the same selected sandbox and show the mode's real controls.
 A terminal needs command input; a preview needs an address and reload; a file needs inspection and editing controls.
 **Avoid:** tabs that switch only the heading while leaving the same generic chat input underneath.
 Do not show a VNC or code mode unless the consumer can execute it.
+If entering a mode creates a billable or persistent runtime, disclose that action before the switch.
 
 ![Daytona public desktop first view](screenshots/design-references-2026-09/daytona-desktop.webp)
 
@@ -91,12 +93,13 @@ Do not imply that a successful preview means the deployed app is live.
 ### Replit: a preview is a test surface
 
 Replit's Preview docs show an interactive app view with device presets, developer tools, and a temporary URL.
-Its task board docs separate planned, active, ready, and applied work.
+Its task board docs separate drafts, active work, and work ready for review.
+The Done column can also include archived or cancelled tasks, so Done alone does not prove an applied result.
 The visible documentation capture includes a real Preview screenshot, but the signed-in editor was not accessible here.
 
 **Adopt:** attach a usable preview and its URL to the work it tests.
 Expose responsive sizes and errors where a builder can act on them.
-Give planned, running, reviewable, and applied work distinct states.
+Give planned, running, reviewable, applied, and cancelled work distinct states.
 **Avoid:** adding every editor tool to the default shell before the user has a task that needs it.
 
 ![Replit Preview documentation in Chromium](screenshots/design-references-2026-09/replit-docs.webp)
@@ -117,7 +120,7 @@ Do not silently turn an annotation into a verified code change.
 ### Cursor web: finish with reviewable work
 
 Cursor documents cloud agents that produce diffs, pull requests, screenshots, videos, logs, and a remote desktop.
-Its agent overview also documents checkpoints and ways to steer running work.
+Its general Agent overview documents local file checkpoints, separate from Git, and ways to steer running work.
 The Cloud Agent docs page displays a product media frame, but the signed-in agent UI was not accessible here.
 
 **Adopt:** a completed coding run should link to the changed files and the evidence used to check them.
@@ -131,6 +134,7 @@ Show only the evidence and actions supported by the current task.
 
 These references support a workspace with one selected runtime and a task-specific main surface.
 The runtime header should show actual identity, lifecycle state, elapsed time, and a stop or failure reason when present.
+Show the run and artifact revision used for a preview, file, result, or log so users can tell whether it is current.
 The main surface should show the selected artifact: preview, file, terminal, graph, result, or execution history.
 The agent timeline should open the artifact or log line created by each event.
 An explicit review boundary should separate generated output from checked results and published state.
@@ -138,6 +142,7 @@ An explicit review boundary should separate generated output from checked result
 On desktop, the current [workspace shell direction](../UI-DIRECTION.md) can use parallel task and artifact panes.
 On mobile, keep one primary pane visible and make the other panes reachable without losing selected runtime context.
 Use the existing brand tokens and semantic states instead of importing a competitor's palette.
+The composer and agent controls remain owned by `@tangle-network/agent-app/web-react`, as the existing UI direction specifies.
 Visible activity must correspond to real work; an idle skeleton or invented status should never imply progress.
 
 The next rebuilds should prioritize the surfaces that make this model fail in a real task.
@@ -167,8 +172,11 @@ An automated accessibility scan can find defects but cannot establish WCAG confo
 For each component, inspect relevant default, focus, disabled, loading, empty, error, and overflow states in light and dark themes.
 Capture desktop at 1440 × 900, mobile at 390 × 844, and test 320 CSS px reflow.
 For each flow, use the real consumer route and exercise success, failure, keyboard operation, and return to work after an interruption.
-Use a performance trace or field metric for flows; mark isolated component performance **unmeasured** if no useful interaction exists.
-Do not silently convert missing evidence into a pass.
+Use a performance trace or field metric for flows; profile render and layout work for components without interaction.
+Mark absent performance evidence **unmeasured** and score that dimension zero until it is checked.
+Use a manual screen reader check alongside automated scans for components that expose content or controls.
+Do not silently convert any other missing evidence into a pass.
 
 An 8/10 score is the rebuild target, not a waiver for a failed WCAG 2.2 AA criterion or unreachable core keyboard action.
+An incorrect or incomplete core task also blocks acceptance, regardless of the score.
 Those failures block acceptance until fixed and rechecked.

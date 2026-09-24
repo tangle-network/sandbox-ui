@@ -165,7 +165,7 @@ export function VariantList({
             }`}
             onClick={() => onSelect?.(variant.id)}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge className={`shrink-0 ${status.bg} ${status.border} ${status.color}`}>
                 <StatusIcon
                   className={`mr-1 h-3 w-3 ${status.animate ? "animate-spin" : ""}`}
@@ -185,7 +185,7 @@ export function VariantList({
                   {(variant.durationMs / 1000).toFixed(1)}s
                 </span>
               )}
-              <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
                 {variant.outcome && (
                   <Badge
                     className={`${outcomeConfig[variant.outcome].bg} ${outcomeConfig[variant.outcome].border} ${outcomeConfig[variant.outcome].color}`}

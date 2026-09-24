@@ -24,7 +24,7 @@ type Story = StoryObj<typeof SandboxCard>
 
 export const Running: Story = {
   name: 'Running',
-  render: (args) => <div className="w-80"><SandboxCard {...args} /></div>,
+  render: (args) => <div className="w-full max-w-80"><SandboxCard {...args} /></div>,
   args: {
     sandbox: {
       id: 'sb-1',
@@ -44,7 +44,7 @@ export const Running: Story = {
 
 export const RunningHighCPU: Story = {
   name: 'Running — saturated',
-  render: (args) => <div className="w-80"><SandboxCard {...args} /></div>,
+  render: (args) => <div className="w-full max-w-80"><SandboxCard {...args} /></div>,
   args: {
     sandbox: {
       id: 'sb-2',
@@ -64,7 +64,7 @@ export const RunningHighCPU: Story = {
 
 export const CustomImage: Story = {
   name: 'Running — custom image',
-  render: (args) => <div className="w-80"><SandboxCard {...args} /></div>,
+  render: (args) => <div className="w-full max-w-80"><SandboxCard {...args} /></div>,
   args: {
     sandbox: {
       id: 'sb-8',
@@ -85,7 +85,7 @@ export const CustomImage: Story = {
 
 export const Hibernating: Story = {
   name: 'Hibernating',
-  render: (args) => <div className="w-80"><SandboxCard {...args} /></div>,
+  render: (args) => <div className="w-full max-w-80"><SandboxCard {...args} /></div>,
   args: {
     sandbox: {
       id: 'sb-3',
@@ -102,7 +102,7 @@ export const Hibernating: Story = {
 
 export const Provisioning: Story = {
   name: 'Provisioning',
-  render: (args) => <div className="w-80"><SandboxCard {...args} /></div>,
+  render: (args) => <div className="w-full max-w-80"><SandboxCard {...args} /></div>,
   args: {
     sandbox: {
       id: 'sb-4',
@@ -120,7 +120,7 @@ export const Provisioning: Story = {
 
 export const Stopped: Story = {
   name: 'Stopped',
-  render: (args) => <div className="w-80"><SandboxCard {...args} /></div>,
+  render: (args) => <div className="w-full max-w-80"><SandboxCard {...args} /></div>,
   args: {
     sandbox: {
       id: 'sb-5',
@@ -137,7 +137,7 @@ export const Stopped: Story = {
 
 export const Failed: Story = {
   name: 'Failed',
-  render: (args) => <div className="w-80"><SandboxCard {...args} /></div>,
+  render: (args) => <div className="w-full max-w-80"><SandboxCard {...args} /></div>,
   args: {
     sandbox: {
       id: 'sb-6',
@@ -153,7 +153,7 @@ export const Failed: Story = {
 
 export const Archived: Story = {
   name: 'Archived',
-  render: (args) => <div className="w-80"><SandboxCard {...args} /></div>,
+  render: (args) => <div className="w-full max-w-80"><SandboxCard {...args} /></div>,
   args: {
     sandbox: {
       id: 'sb-7',
@@ -171,7 +171,7 @@ export const Archived: Story = {
 export const NewCard: Story = {
   name: 'New Sandbox Card',
   render: () => (
-    <div className="w-80">
+    <div className="w-full max-w-80">
       <NewSandboxCard onClick={() => console.log('new sandbox')} />
     </div>
   ),
@@ -181,7 +181,7 @@ export const Grid: Story = {
   name: 'Card grid (all states)',
   parameters: { layout: 'padded', backgrounds: { default: 'dark' } },
   render: () => (
-    <div className="grid grid-cols-3 gap-4" style={{ width: 960 }}>
+    <div className="grid w-full max-w-[960px] grid-cols-1 gap-4 sm:grid-cols-3">
       <SandboxCard
         sandbox={{ id: 'a', name: 'api-gateway', nodeId: 'iad1 · node-7f3a9c', status: 'running', vcpu: 2, cpuPercent: 34, ramUsed: 1.8, ramTotal: 8, diskUsed: 6.4, diskTotal: 40, uptime: '3d 4h' }}
         onOpenIDE={() => {}} onOpenTerminal={() => {}} onStop={() => {}} onFork={() => {}} onUsage={() => {}} onHealth={() => {}}

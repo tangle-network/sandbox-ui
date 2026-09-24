@@ -61,7 +61,7 @@ export const IconOnlySizes: Story = {
 export const InNavbar: Story = {
   name: 'In Navbar',
   render: () => (
-    <div className="flex items-center justify-between w-[640px] rounded-xl border border-border bg-card px-4 py-3">
+    <div className="flex w-full max-w-[640px] items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
       <Logo size="md" variant="sandbox" />
       <nav className="flex items-center gap-1">
         <button className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground">

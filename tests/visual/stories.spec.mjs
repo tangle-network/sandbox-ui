@@ -35,11 +35,13 @@ for (const story of stories) {
         const externalRequests = []
         page.on('pageerror', (error) => errors.push(error.message))
         if (critical) {
-          page.on('request', (request) => {
-            const url = new URL(request.url())
+          await page.route('**/*', (route) => {
+            const url = new URL(route.request().url())
             if (/^https?:$/.test(url.protocol) && url.origin !== new URL(baseURL).origin) {
               externalRequests.push(url.href)
+              return route.abort('blockedbyclient')
             }
+            return route.continue()
           })
         }
         await openStory(page, story.id, theme, viewport)
@@ -61,7 +63,7 @@ for (const story of stories) {
         }
         expect(errors).toEqual([])
         await expect(page).toHaveScreenshot(`${story.id}-${theme}-${viewportName}.png`, {
-          fullPage: critical,
+          fullPage: critical || story.id === 'workflows-framing-candidates--narrow-host',
         })
       })
     }

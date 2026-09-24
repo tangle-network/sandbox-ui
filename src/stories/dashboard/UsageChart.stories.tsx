@@ -20,7 +20,7 @@ const meta: Meta<typeof UsageChart> = {
   parameters: { layout: 'centered', backgrounds: { default: 'dark' } },
   decorators: [
     (Story) => (
-      <div className="w-[560px] p-4 rounded-xl bg-muted">
+      <div className="w-[calc(100vw-32px)] max-w-[560px] p-4 rounded-xl bg-muted">
         <Story />
       </div>
     ),

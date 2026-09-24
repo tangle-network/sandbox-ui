@@ -106,7 +106,7 @@ const STATUS_META: Record<SandboxStatus, { label: string; color: string }> = {
 
 function Spec({ icon, value, unit }: { icon: React.ReactNode; value: number; unit: string }) {
   return (
-    <span className="flex items-center gap-1.5">
+    <span className="flex shrink-0 items-center gap-1.5">
       <span className="text-muted-foreground" aria-hidden="true">{icon}</span>
       <span className="font-mono text-xs tabular-nums text-foreground">{value}</span>
       <span className="text-[10px] text-muted-foreground">{unit}</span>
@@ -297,7 +297,7 @@ export function SandboxCard({
 
         {/* Allocated resources */}
         {specs.length > 0 && (
-          <div className="flex items-center gap-4 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
             {specs.map((s) => (
               <Spec key={s.key} icon={s.icon} value={s.value} unit={s.unit} />
             ))}

@@ -1,0 +1,22 @@
+{
+  "scope": "integration card narrow-layout diff",
+  "base": "626f2111703151864e4837db668f6c0a08e5c9eb",
+  "head": "2ade162b68eef1e2996e5b100bb4f3d8f46baa08",
+  "filesReviewed": 3,
+  "newFindings": 0,
+  "project": "TypeScript React component library",
+  "reviewers": [
+    "A: correctness and security",
+    "B: architecture and quality",
+    "C: standards and real-system coverage"
+  ],
+  "reviewMode": "serial",
+  "createdAt": "2026-07-28T08:10:06Z",
+  "verdict": "APPROVE",
+  "unresolved": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  }
+}

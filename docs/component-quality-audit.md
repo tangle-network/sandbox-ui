@@ -119,3 +119,13 @@ Inspect the [BackendConfig before](screenshots/component-rebuilds/control-names-
 Inspect the [CreditBalance before](screenshots/component-rebuilds/control-names-credit-before-390.png) and [after](screenshots/component-rebuilds/control-names-credit-after-390.png) mobile views for the visible amount label.
 The [keyboard recording](screenshots/component-rebuilds/control-names-keyboard.webm) shows target-specific removal in PortsList, NetworkConfig, and SandboxTable.
 Full component scores and the 0/5 authenticated flow acceptance count remain unchanged until manual assistive-technology and consumer-flow checks pass.
+
+## Mobile port actions follow-up
+
+In the 390 px Storybook view before this repair, the Remove port 3000 button began at x=466.5 px.
+The table clipped the button while document width remained 390 px, so the action had no visible scroll path.
+The [before](screenshots/component-rebuilds/ports-before-390.png) and [after](screenshots/component-rebuilds/ports-after-390.png) screenshots show the change.
+At 320 and 390 px, the updated port list keeps status, copy, and remove controls inside the viewport.
+The [browser result](screenshots/component-rebuilds/ports-mobile-browser-proof.json) records six desktop and mobile captures, the control positions, keyboard copy and remove actions, and zero page errors.
+The [keyboard recording](screenshots/component-rebuilds/ports-mobile-actions.webm) shows Enter copying port 5432's URL and removing only port 3000.
+This Storybook component proof does not raise the 0/96 component or 0/5 authenticated-flow acceptance counts.

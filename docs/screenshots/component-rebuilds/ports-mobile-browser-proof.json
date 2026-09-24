@@ -1,0 +1,103 @@
+{
+  "beforeSourceSha": "a49820326142ed2374480157b9cda902922b1833",
+  "afterSource": "fix/mobile-port-actions",
+  "afterPatchSha256": "ab3451b115343ba536b8ad7618baf44c8700d2d661917eb82173dd609f260ec1",
+  "captures": [
+    {
+      "stage": "before",
+      "width": 390,
+      "screenshot": "ports-before-390.png",
+      "removeBox": {
+        "x": 466.5,
+        "y": 66,
+        "width": 30,
+        "height": 30
+      },
+      "visibleInViewport": false,
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "rootWidth": 358
+    },
+    {
+      "stage": "after",
+      "width": 390,
+      "screenshot": "ports-after-390.png",
+      "removeBox": {
+        "x": 321,
+        "y": 25,
+        "width": 40,
+        "height": 40
+      },
+      "visibleInViewport": true,
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "rootWidth": 358,
+      "actions": {
+        "copied": "https://5432.preview.example.com",
+        "removedPort3000": true,
+        "remainingPort5432": true
+      }
+    },
+    {
+      "stage": "before",
+      "width": 320,
+      "screenshot": "ports-before-320.png",
+      "removeBox": {
+        "x": 466.5,
+        "y": 66,
+        "width": 30,
+        "height": 30
+      },
+      "visibleInViewport": false,
+      "viewportWidth": 320,
+      "documentWidth": 320,
+      "rootWidth": 288
+    },
+    {
+      "stage": "after",
+      "width": 320,
+      "screenshot": "ports-after-320.png",
+      "removeBox": {
+        "x": 251,
+        "y": 25,
+        "width": 40,
+        "height": 40
+      },
+      "visibleInViewport": true,
+      "viewportWidth": 320,
+      "documentWidth": 320,
+      "rootWidth": 288
+    },
+    {
+      "stage": "before",
+      "width": 1440,
+      "screenshot": "ports-before-1440.png",
+      "removeBox": {
+        "x": 669,
+        "y": 66,
+        "width": 30,
+        "height": 30
+      },
+      "visibleInViewport": true,
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "rootWidth": 1408
+    },
+    {
+      "stage": "after",
+      "width": 1440,
+      "screenshot": "ports-after-1440.png",
+      "removeBox": {
+        "x": 655,
+        "y": 58,
+        "width": 48,
+        "height": 40
+      },
+      "visibleInViewport": true,
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "rootWidth": 1408
+    }
+  ],
+  "pageErrors": []
+}

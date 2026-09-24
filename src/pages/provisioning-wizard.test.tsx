@@ -56,6 +56,22 @@ async function openAdvanced() {
   await userEvent.click(screen.getByText("Show Advanced Options"))
 }
 
+describe("ProvisioningWizard field names", () => {
+  it("names resource sliders and advanced fields for keyboard and screen-reader use", async () => {
+    render(<ProvisioningWizard />)
+    expect(screen.getByRole("slider", { name: "Compute Cores (CPU)" })).toBeInTheDocument()
+    expect(screen.getByRole("slider", { name: "Memory (RAM)" })).toBeInTheDocument()
+    expect(screen.getByRole("slider", { name: "Ephemeral Storage" })).toBeInTheDocument()
+
+    const advanced = screen.getByRole("button", { name: "Show Advanced Options" })
+    expect(advanced).toHaveAttribute("aria-expanded", "false")
+    await userEvent.click(advanced)
+    expect(screen.getByRole("button", { name: "Hide Advanced Options" })).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByRole("textbox", { name: "Workspace Name" })).toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "Git Repository URL" })).toBeInTheDocument()
+  })
+})
+
 
 describe("ProvisioningWizard — startup scripts integration", () => {
   it("renders environment, resources, and access together as one page (no stepper)", async () => {

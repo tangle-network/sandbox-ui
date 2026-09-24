@@ -578,6 +578,7 @@ function EnvVarValueInput({
     <div className="relative flex-[2]">
       <Input
         type={revealed ? "text" : "password"}
+        aria-label="Environment variable value"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete="off"
@@ -611,6 +612,7 @@ export function ProvisioningWizard({
   pricingRates,
   planTiers,
 }: ProvisioningWizardProps) {
+  const fieldIdPrefix = React.useId();
   // CPU_MAX / RAM_MAX / STORAGE_MAX are fallback ceilings, applied only when
   // the caller supplies no plan limits. When `resourceLimits` is present it is
   // authoritative and must not be capped to the fallback — otherwise a
@@ -1109,6 +1111,7 @@ export function ProvisioningWizard({
                   <div className="space-y-4">
                     {[
                       {
+                        id: "cpu",
                         label: "Compute Cores (CPU)",
                         value: cpuCores,
                         setter: setCpuCores,
@@ -1118,6 +1121,7 @@ export function ProvisioningWizard({
                         unit: "vCPU",
                       },
                       {
+                        id: "ram",
                         label: "Memory (RAM)",
                         value: ramGB,
                         setter: setRamGB,
@@ -1127,6 +1131,7 @@ export function ProvisioningWizard({
                         unit: "GB",
                       },
                       {
+                        id: "storage",
                         label: "Ephemeral Storage",
                         value: storageGB,
                         setter: setStorageGB,
@@ -1136,7 +1141,7 @@ export function ProvisioningWizard({
                         unit: "GB",
                       },
                     ].map(
-                      ({ label, value, setter, min, max, step: s, unit }) => {
+                      ({ id, label, value, setter, min, max, step: s, unit }) => {
                         const displayUnit =
                           unit === "vCPU"
                             ? `${value} vCPU${value === 1 ? "" : "s"}`
@@ -1144,7 +1149,7 @@ export function ProvisioningWizard({
                         return (
                           <div key={label}>
                             <div className="flex justify-between items-end pb-1 mb-1.5">
-                              <label className={FIELD_LABEL_CLASS}>
+                              <label htmlFor={`${fieldIdPrefix}-${id}`} className={FIELD_LABEL_CLASS}>
                                 {label}
                               </label>
                               <span className="text-sm font-semibold text-foreground tabular-nums">
@@ -1152,6 +1157,7 @@ export function ProvisioningWizard({
                               </span>
                             </div>
                             <input
+                              id={`${fieldIdPrefix}-${id}`}
                               type="range"
                               min={min}
                               max={max}
@@ -1194,6 +1200,8 @@ export function ProvisioningWizard({
                     <button
                       type="button"
                       onClick={() => setShowAdvanced(!showAdvanced)}
+                      aria-expanded={showAdvanced}
+                      aria-controls={`${fieldIdPrefix}-advanced`}
                       className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium focus:outline-none"
                     >
                       <Settings className="w-4 h-4" />
@@ -1202,14 +1210,14 @@ export function ProvisioningWizard({
                         : "Show Advanced Options"}
                     </button>
 
-                    {showAdvanced && (
-                      <div className="mt-4 space-y-4">
+                    <div id={`${fieldIdPrefix}-advanced`} hidden={!showAdvanced} className="mt-4 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
+                            <label htmlFor={`${fieldIdPrefix}-name`} className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
                               Workspace Name
                             </label>
                             <Input
+                              id={`${fieldIdPrefix}-name`}
                               type="text"
                               value={name}
                               onChange={(e) => setName(e.target.value)}
@@ -1219,7 +1227,7 @@ export function ProvisioningWizard({
                             />
                           </div>
                           <div>
-                            <label className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
+                            <label htmlFor={`${fieldIdPrefix}-driver`} className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
                               Virtualization Driver
                             </label>
                             <Select
@@ -1231,7 +1239,7 @@ export function ProvisioningWizard({
                                   );
                               }}
                             >
-                              <SelectTrigger className="h-9">
+                              <SelectTrigger id={`${fieldIdPrefix}-driver`} className="h-9">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -1250,10 +1258,11 @@ export function ProvisioningWizard({
                         </div>
 
                         <div>
-                          <label className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
+                          <label htmlFor={`${fieldIdPrefix}-git-url`} className={cn(FIELD_LABEL_CLASS, "mb-1.5")}>
                             Git Repository URL
                           </label>
                           <Input
+                            id={`${fieldIdPrefix}-git-url`}
                             type="text"
                             value={gitUrl}
                             onChange={(e) => setGitUrl(e.target.value)}
@@ -1282,6 +1291,7 @@ export function ProvisioningWizard({
                               <div key={env.uid} className="flex gap-2">
                                 <Input
                                   type="text"
+                                  aria-label="Environment variable name"
                                   value={env.key}
                                   onChange={(e) =>
                                     setEnvVars(
@@ -1435,7 +1445,6 @@ export function ProvisioningWizard({
                           </div>
                         )}
                       </div>
-                    )}
                   </div>
                 </section>
           </div>
@@ -1565,4 +1574,3 @@ export function ProvisioningWizard({
     </div>
   );
 }
-

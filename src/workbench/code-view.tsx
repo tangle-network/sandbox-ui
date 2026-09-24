@@ -37,29 +37,41 @@ export function CodeView({
   showTree = true,
   className,
 }: CodeViewProps) {
+  const [narrowPane, setNarrowPane] = React.useState<"code" | "files">("code")
   const treePaths = React.useMemo(() => {
     const list = paths && paths.length > 0 ? paths : [path]
     return list.includes(path) ? list : [...list, path]
   }, [paths, path])
 
   return (
-    <div className={cn("flex h-full min-h-0 w-full", className)}>
-      {showTree && (
-        <div className="sandbox-tree-surface flex w-60 shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-lowest">
-          <RichFileTree
-            paths={treePaths}
-            selectedPath={path}
-            onSelect={(next) => onFileSelect?.(next)}
-            gitStatus={gitStatus}
-            search={treePaths.length > 12}
-            height="100%"
-          />
-        </div>
-      )}
-      <div className="flex min-w-0 flex-1 flex-col bg-surface-container">
-        <FileBreadcrumb path={path} />
-        <div className="min-h-0 flex-1">
-          <CodeSurface code={content} filename={filename} language={language} />
+    <div className={cn("sandbox-code-view h-full min-h-0 w-full", className)}>
+      <div className="sandbox-code-view-layout flex h-full min-h-0 w-full">
+        {showTree && (
+          <div className="sandbox-code-view-mobile-toolbar" role="group" aria-label="Code view pane">
+            <button type="button" aria-pressed={narrowPane === "files"} onClick={() => setNarrowPane("files")}>Files</button>
+            <button type="button" aria-pressed={narrowPane === "code"} onClick={() => setNarrowPane("code")}>Code</button>
+          </div>
+        )}
+        {showTree && (
+          <div className="sandbox-code-view-tree sandbox-tree-surface flex w-60 shrink-0 flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-lowest" data-mobile-open={narrowPane === "files"}>
+            <RichFileTree
+              paths={treePaths}
+              selectedPath={path}
+              onSelect={(next) => {
+                onFileSelect?.(next)
+                setNarrowPane("code")
+              }}
+              gitStatus={gitStatus}
+              search={treePaths.length > 12}
+              height="100%"
+            />
+          </div>
+        )}
+        <div className="sandbox-code-view-editor flex min-w-0 flex-1 flex-col bg-surface-container" data-mobile-hidden={showTree && narrowPane === "files"}>
+          <FileBreadcrumb path={path} />
+          <div className="min-h-0 flex-1">
+            <CodeSurface code={content} filename={filename} language={language} />
+          </div>
         </div>
       </div>
     </div>

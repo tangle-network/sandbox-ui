@@ -1,5 +1,5 @@
 import { test, expect } from 'playwright/test'
-import { openStory } from './story-ready.mjs'
+import { openStory, waitForDiffRender } from './story-ready.mjs'
 
 const themes = ['dark', 'light']
 const viewports = {
@@ -34,6 +34,7 @@ const flows = [
       const diff = page.getByRole('tab', { name: 'Diff' })
       await diff.click()
       await expect(diff).toHaveAttribute('aria-selected', 'true')
+      await waitForDiffRender(page, 'RetryOptions')
     },
   },
   {

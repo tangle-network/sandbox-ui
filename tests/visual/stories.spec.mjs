@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { test, expect } from 'playwright/test'
-import { openStory } from './story-ready.mjs'
+import { openStory, waitForDiffRender } from './story-ready.mjs'
 
 const index = JSON.parse(readFileSync(new URL('../../storybook-static/index.json', import.meta.url)))
 const stories = Object.values(index.entries).filter((entry) => entry.type === 'story')
@@ -43,8 +43,12 @@ for (const story of stories) {
           })
         }
         await openStory(page, story.id, theme, viewport)
-        if (/^workbench-changespane--(default|many-files|commit-failed|committing)$/.test(story.id)) {
-          await page.waitForFunction(() => document.querySelector('[data-testid="diff-view"] diffs-container')?.shadowRoot?.textContent?.includes('RetryOptions'))
+        if (/^workbench-changespane--(default|many-files|commit-failed|committing)$/.test(story.id) ||
+          story.id === 'workbench-sandboxartifactpane--diff-active') {
+          await waitForDiffRender(page, 'RetryOptions')
+        }
+        if (story.id === 'workbench-diffview--changed-line') {
+          await waitForDiffRender(page, 'retryDelay')
         }
         if (story.id.startsWith('workflows-')) {
           await expect(page.locator('.react-flow__node').first()).toBeVisible()

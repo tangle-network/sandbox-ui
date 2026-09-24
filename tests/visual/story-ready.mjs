@@ -13,8 +13,9 @@ export async function openStory(page, id, theme, viewport) {
   })
   await page.goto(`/iframe.html?${params}`, { waitUntil: 'load' })
 
+  // Some full-screen stories paint visible descendants inside a zero-size root child.
   // Dialog stories render in a portal and leave the Storybook root empty.
-  await expect(page.locator('#storybook-root > :visible, [role="dialog"]:visible').first()).toBeVisible()
+  await expect(page.locator('#storybook-root :visible, [role="dialog"]:visible').first()).toBeVisible()
   await expect(page.locator('.sb-errordisplay')).not.toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-sandbox-ui', 'true')
   await page.waitForFunction(() => {
@@ -31,4 +32,11 @@ export async function openStory(page, id, theme, viewport) {
   await page.evaluate(() => new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(resolve))
   }))
+}
+
+export async function waitForDiffRender(page, expectedText) {
+  await page.waitForFunction(
+    (text) => document.querySelector('[data-testid="diff-view"] diffs-container')?.shadowRoot?.textContent?.includes(text),
+    expectedText,
+  )
 }

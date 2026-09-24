@@ -10,6 +10,8 @@
 
 React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a shadcn-style primitive layer plus higher-order sandbox surfaces for agent chat, files, runtime state, artifacts, and dashboard views.
 
+[Browse the live Storybook](https://sandbox-ui-storybook.pages.dev/) to inspect component states in dark and light themes at desktop and mobile widths.
+
 ## Install
 
 ```bash

@@ -22,6 +22,7 @@ const preview: Preview = {
   decorators: [withSandboxTheme],
   initialGlobals: {
     sandboxTheme: 'dark',
+    viewport: { value: 'desktop', isRotated: false },
   },
   globalTypes: {
     sandboxTheme: {
@@ -39,6 +40,20 @@ const preview: Preview = {
   },
   parameters: {
     backgrounds: { disable: true },
+    viewport: {
+      options: {
+        desktop: {
+          name: 'Desktop (1440 × 900)',
+          styles: { width: '1440px', height: '900px' },
+          type: 'desktop',
+        },
+        mobile: {
+          name: 'Mobile (390 × 844)',
+          styles: { width: '390px', height: '844px' },
+          type: 'mobile',
+        },
+      },
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,

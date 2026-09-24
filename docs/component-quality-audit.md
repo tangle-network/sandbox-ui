@@ -109,3 +109,13 @@ Measure component interaction latency and the complete create-to-command path; n
 Run manual screen-reader checks with the automated scan and record the applicable WCAG 2.2 AA criteria.
 Accept a component or flow only after these checks pass and the P1 findings are rechecked in the served consumer.
 Wrong-runtime actions, lost work, false state, exposed data, and incomplete core tasks also block acceptance regardless of points.
+
+## Control-name follow-up
+
+The original ledger remains a snapshot of commit `928f622`.
+The BackendConfig and CreditBalance control-name defects were corrected after that audit.
+The [browser proof](screenshots/component-rebuilds/control-names-browser-proof.json) records eight desktop and mobile before/after captures, five control actions, and zero page errors.
+Inspect the [BackendConfig before](screenshots/component-rebuilds/control-names-backend-before-390.png) and [after](screenshots/component-rebuilds/control-names-backend-after-390.png) mobile views for the labeled add form.
+Inspect the [CreditBalance before](screenshots/component-rebuilds/control-names-credit-before-390.png) and [after](screenshots/component-rebuilds/control-names-credit-after-390.png) mobile views for the visible amount label.
+The [keyboard recording](screenshots/component-rebuilds/control-names-keyboard.webm) shows target-specific removal in PortsList, NetworkConfig, and SandboxTable.
+Full component scores and the 0/5 authenticated flow acceptance count remain unchanged until manual assistive-technology and consumer-flow checks pass.

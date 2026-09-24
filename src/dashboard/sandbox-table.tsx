@@ -352,7 +352,7 @@ export function SandboxTable({
                                   type="button"
                                   onClick={stopRowClick}
                                   className={`p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90 ${focusRing}`}
-                                  aria-label="More actions"
+                                  aria-label={`More actions for ${sb.name}`}
                                   title="More actions"
                                 >
                                   <MoreVertical className="h-4 w-4" />
@@ -370,7 +370,7 @@ export function SandboxTable({
                           )
                         })()}
                         {onDelete && canAdminSandbox(sb) && (
-                          <button type="button" onClick={(e) => { stopRowClick(e); onDelete(sb.id) }} className="p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90" title="Delete">
+                          <button type="button" aria-label={`Delete ${sb.name}`} onClick={(e) => { stopRowClick(e); onDelete(sb.id) }} className={`p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90 ${focusRing}`} title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}

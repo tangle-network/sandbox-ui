@@ -23,6 +23,7 @@ describe("CreditBalance", () => {
       render(<CreditBalance amount={0} onTopUp={onTopUp} />)
 
       const input = screen.getByDisplayValue("$50.00")
+      expect(screen.getByRole("textbox", { name: "Top-up amount (USD)" })).toBe(input)
       await user.clear(input)
       await user.type(input, "abc12.34xyz")
 

@@ -61,6 +61,7 @@ describe("SandboxTable", () => {
       />,
     )
     expect(screen.getByTitle("Delete")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Delete My Sandbox" })).toBeInTheDocument()
   })
 
   it("shows Delete button for team owner", () => {

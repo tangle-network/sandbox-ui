@@ -92,8 +92,9 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
                     {onRemovePort && (
                       <button
                         type="button"
+                        aria-label={`Remove port ${p.port}`}
                         onClick={() => onRemovePort(p.port)}
-                        className="p-1 text-muted-foreground hover:text-destructive transition-colors rounded"
+                        className={`p-2 text-muted-foreground hover:text-destructive transition-colors rounded ${focusRing}`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -114,6 +115,7 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
       <div className="flex items-center gap-3">
         <input
           type="number"
+          aria-label="Port number"
           min={1}
           max={65535}
           placeholder="Port (e.g. 3000)"

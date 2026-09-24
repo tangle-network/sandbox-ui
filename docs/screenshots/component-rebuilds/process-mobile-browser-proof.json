@@ -1,0 +1,103 @@
+{
+  "beforeSourceSha": "cc33fe5efa23927575c6b1f4ae1b273ed76209b1",
+  "afterSource": "fix/mobile-process-actions",
+  "captures": [
+    {
+      "stage": "before",
+      "width": 390,
+      "screenshot": "process-before-390.png",
+      "killBox": {
+        "x": 452.5,
+        "y": 66,
+        "width": 22,
+        "height": 22
+      },
+      "visibleInViewport": false,
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "rootWidth": 358
+    },
+    {
+      "stage": "after",
+      "width": 390,
+      "screenshot": "process-after-390.png",
+      "killBox": {
+        "x": 321,
+        "y": 29,
+        "width": 40,
+        "height": 40
+      },
+      "visibleInViewport": true,
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "rootWidth": 358,
+      "actions": {
+        "killedPid221": true,
+        "pid198Unchanged": true,
+        "spawnedCommand": "node server.js",
+        "spawnedPid": 302
+      }
+    },
+    {
+      "stage": "before",
+      "width": 320,
+      "screenshot": "process-before-320.png",
+      "killBox": {
+        "x": 459.625,
+        "y": 66,
+        "width": 22,
+        "height": 22
+      },
+      "visibleInViewport": false,
+      "viewportWidth": 320,
+      "documentWidth": 335,
+      "rootWidth": 288
+    },
+    {
+      "stage": "after",
+      "width": 320,
+      "screenshot": "process-after-320.png",
+      "killBox": {
+        "x": 251,
+        "y": 29,
+        "width": 40,
+        "height": 40
+      },
+      "visibleInViewport": true,
+      "viewportWidth": 320,
+      "documentWidth": 320,
+      "rootWidth": 288
+    },
+    {
+      "stage": "before",
+      "width": 1440,
+      "screenshot": "process-before-1440.png",
+      "killBox": {
+        "x": 677,
+        "y": 66,
+        "width": 22,
+        "height": 22
+      },
+      "visibleInViewport": true,
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "rootWidth": 1408
+    },
+    {
+      "stage": "after",
+      "width": 1440,
+      "screenshot": "process-after-1440.png",
+      "killBox": {
+        "x": 663,
+        "y": 29,
+        "width": 40,
+        "height": 40
+      },
+      "visibleInViewport": true,
+      "viewportWidth": 1440,
+      "documentWidth": 1440,
+      "rootWidth": 1408
+    }
+  ],
+  "pageErrors": []
+}

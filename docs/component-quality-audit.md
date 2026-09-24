@@ -129,3 +129,13 @@ At 320 and 390 px, the updated port list keeps status, copy, and remove controls
 The [browser result](screenshots/component-rebuilds/ports-mobile-browser-proof.json) records six desktop and mobile captures, the control positions, keyboard copy and remove actions, and zero page errors.
 The [keyboard recording](screenshots/component-rebuilds/ports-mobile-actions.webm) shows Enter copying port 5432's URL and removing only port 3000.
 This Storybook component proof does not raise the 0/96 component or 0/5 authenticated-flow acceptance counts.
+
+## Mobile process actions follow-up
+
+The running process action began at x=452.5 px in the 390 px Storybook view before this repair.
+The table hid that action without a scroll path, and its 320 px view also widened the document.
+The [before](screenshots/component-rebuilds/process-before-390.png) and [after](screenshots/component-rebuilds/process-after-390.png) screenshots show the mobile change.
+At 320 and 390 px, the process status and 40 px Kill control now fit inside the viewport.
+The [browser result](screenshots/component-rebuilds/process-mobile-browser-proof.json) records six before and after captures, keyboard spawn and kill actions, and zero page errors.
+The [keyboard recording](screenshots/component-rebuilds/process-mobile-actions.webm) shows Enter killing only PID 221 and spawning a new command.
+The original ledger remains a snapshot; this package story does not prove a completed authenticated consumer flow.

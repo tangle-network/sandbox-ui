@@ -1,7 +1,8 @@
 import { expect } from 'playwright/test'
 
 export async function openStory(page, id, theme, viewport) {
-  await page.clock.install({ time: new Date('2026-09-23T12:00:00Z') })
+  // Keep Date stable while Storybook timers run; frozen timers can leave stories blank.
+  await page.clock.setFixedTime(new Date('2026-09-23T12:00:00Z'))
   await page.setViewportSize(viewport)
   await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
 

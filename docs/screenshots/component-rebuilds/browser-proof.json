@@ -1,0 +1,54 @@
+[
+  {
+    "phase": "before",
+    "check": "pill-tabs-arrow",
+    "diffSelected": "false"
+  },
+  {
+    "phase": "before",
+    "check": "preview-draft",
+    "initialFrame": "https://3000-sandbox.tngl.dev",
+    "draftFrame": "https://example.com/changed"
+  },
+  {
+    "phase": "before",
+    "check": "sort-semantics",
+    "group": 0,
+    "tablist": 1
+  },
+  {
+    "phase": "before",
+    "check": "slider-labels",
+    "named": 0,
+    "total": 3
+  },
+  {
+    "phase": "after",
+    "check": "artifact-mobile",
+    "codeWidth": 356,
+    "filesVisible": true
+  },
+  {
+    "phase": "after",
+    "check": "pill-tabs-arrow",
+    "diffSelected": "true"
+  },
+  {
+    "phase": "after",
+    "check": "preview-draft",
+    "initialFrame": "https://3000-sandbox.tngl.dev",
+    "draftFrame": "https://3000-sandbox.tngl.dev"
+  },
+  {
+    "phase": "after",
+    "check": "sort-semantics",
+    "group": 1,
+    "tablist": 0
+  },
+  {
+    "phase": "after",
+    "check": "slider-labels",
+    "named": 3,
+    "total": 3
+  }
+]

@@ -15,36 +15,57 @@ export interface PreviewViewProps {
  * iframe. The iframe is force-remounted by bumping `iframeKey` on reload — the
  * same remount trick blueprint-agent's `Preview` uses. The readiness probe is
  * intentionally a stub here: the iframe shows optimistically and a loading
- * veil clears on `onLoad` (or a short fallback timer), which is the right
- * behavior for a static origin without a probe service wired in.
+ * veil clears when the frame fires `load`. A slow load stays visible as a
+ * warning, since a timer cannot prove the preview became ready.
  */
 export function PreviewView({ url, className }: PreviewViewProps) {
   const [address, setAddress] = React.useState(url)
+  const [activeUrl, setActiveUrl] = React.useState(url)
   const [iframeKey, setIframeKey] = React.useState(0)
   const [loading, setLoading] = React.useState(true)
+  const [slow, setSlow] = React.useState(false)
+  const [addressError, setAddressError] = React.useState<string | null>(null)
+  const errorId = React.useId()
 
   React.useEffect(() => {
     setAddress(url)
+    setActiveUrl(url)
     setIframeKey((k) => k + 1)
     setLoading(true)
+    setSlow(false)
+    setAddressError(null)
   }, [url])
 
-  // Optimistic fallback — clear the veil even if `onLoad` never fires
-  // (cross-origin frames sometimes suppress it).
   React.useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 1500)
+    if (!loading) return
+    const t = setTimeout(() => setSlow(true), 8000)
     return () => clearTimeout(t)
-  }, [iframeKey])
+  }, [iframeKey, loading])
 
   const reload = React.useCallback(() => {
     setIframeKey((k) => k + 1)
     setLoading(true)
+    setSlow(false)
   }, [])
 
   const navigate = React.useCallback(() => {
+    let nextUrl: URL
+    try {
+      nextUrl = new URL(address, activeUrl)
+    } catch {
+      setAddressError("Enter a valid preview URL.")
+      return
+    }
+    if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") {
+      setAddressError("Use an HTTP or HTTPS preview URL.")
+      return
+    }
+    setAddressError(null)
+    setActiveUrl(nextUrl.toString())
     setIframeKey((k) => k + 1)
     setLoading(true)
-  }, [])
+    setSlow(false)
+  }, [activeUrl, address])
 
   return (
     <div className={cn("flex h-full min-h-0 flex-col bg-surface-container", className)}>
@@ -59,13 +80,21 @@ export function PreviewView({ url, className }: PreviewViewProps) {
         </button>
         <input
           value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && navigate()}
+          onChange={(e) => {
+            setAddress(e.target.value)
+            setAddressError(null)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") navigate()
+          }}
+          aria-label="Preview address"
+          aria-invalid={addressError != null}
+          aria-describedby={addressError ? errorId : undefined}
           spellCheck={false}
           className="h-7 flex-1 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-2.5 font-mono text-xs text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
         <a
-          href={address}
+          href={activeUrl}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Open preview in new tab"
@@ -74,18 +103,24 @@ export function PreviewView({ url, className }: PreviewViewProps) {
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </div>
+      {addressError && <p id={errorId} role="alert" className="px-3 py-1 text-xs text-destructive">{addressError}</p>}
       <div className="relative min-h-0 flex-1 bg-surface-container-lowest">
         <iframe
-          key={`${iframeKey}-${address}`}
-          src={address}
+          key={iframeKey}
+          src={activeUrl}
           title="Sandbox preview"
           className="h-full w-full border-0 bg-white"
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-          onLoad={() => setLoading(false)}
+          onLoad={() => {
+            setLoading(false)
+            setSlow(false)
+          }}
         />
         {loading && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-surface-container-lowest">
-            <p className="text-xs text-muted-foreground">Loading {address}…</p>
+          <div role="status" className="pointer-events-none absolute inset-0 flex items-center justify-center bg-surface-container-lowest">
+            <p className="px-4 text-center text-xs text-muted-foreground">
+              {slow ? "Preview is still loading. Check the address or open it in a new tab." : `Loading ${activeUrl}…`}
+            </p>
           </div>
         )}
       </div>

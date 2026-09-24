@@ -527,6 +527,8 @@ describe("IntegrationsPanel — the skeleton reserves the loaded layout", () => 
     expect(screen.getByTestId("integration-search")).toBeInTheDocument();
     expect(screen.getByTestId("sort-featured")).toBeInTheDocument();
     expect(screen.getByTestId("sort-alpha")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Sort integrations" })).toBeInTheDocument();
+    expect(screen.getByTestId("sort-featured")).toHaveAttribute("aria-pressed", "true");
 
     unmount();
 

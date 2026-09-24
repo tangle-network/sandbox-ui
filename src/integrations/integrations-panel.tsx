@@ -182,6 +182,7 @@ function IntegrationsToolbar({
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
+          aria-label="Search integrations"
           placeholder="Search integrations..."
           autoFocus
           data-testid="integration-search"
@@ -189,7 +190,7 @@ function IntegrationsToolbar({
         />
       </div>
       <div
-        role="tablist"
+        role="group"
         aria-label="Sort integrations"
         className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card p-1"
       >
@@ -202,12 +203,11 @@ function IntegrationsToolbar({
           <button
             key={value}
             type="button"
-            role="tab"
-            aria-selected={sort === value}
+            aria-pressed={sort === value}
             onClick={() => onSortChange(value)}
             data-testid={`sort-${value}`}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               sort === value
                 ? "bg-accent text-foreground"
                 : "text-muted-foreground hover:text-foreground",

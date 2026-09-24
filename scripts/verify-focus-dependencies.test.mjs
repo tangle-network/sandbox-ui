@@ -1,6 +1,7 @@
+// @vitest-environment node
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { test } from 'node:test';
+import { test } from 'vitest';
 import { verifyArtifact, verifyFocusHelpers } from './verify-focus-dependencies.mjs';
 
 const bytes = Buffer.from('verified package bytes');

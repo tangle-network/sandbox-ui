@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Bot, Plus, Trash2, Server, Wrench } from "lucide-react"
 import { cn } from "../lib/utils"
+import { focusField } from "@tangle-network/ui/utils"
 
 export interface BackendStatusData {
   running: boolean
@@ -173,21 +174,21 @@ export function BackendConfig({
               placeholder="Server name"
               value={mcpName}
               onChange={(e) => setMcpName(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
             />
             <input
               type="text"
               placeholder="Command (e.g. npx @server/mcp)"
               value={mcpCommand}
               onChange={(e) => setMcpCommand(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
             />
             <input
               type="text"
               placeholder="Arguments (space-separated, optional)"
               value={mcpArgs}
               onChange={(e) => setMcpArgs(e.target.value)}
-              className="w-full rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
             />
             <div className="flex justify-end gap-2 pt-1">
               <button

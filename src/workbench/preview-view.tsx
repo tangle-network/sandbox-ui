@@ -3,6 +3,7 @@
 import * as React from "react"
 import { ExternalLink, RotateCw } from "lucide-react"
 import { cn } from "../lib/utils"
+import { focusField } from "@tangle-network/ui/utils"
 
 export interface PreviewViewProps {
   /** Origin to load in the preview iframe. */
@@ -91,7 +92,7 @@ export function PreviewView({ url, className }: PreviewViewProps) {
           aria-invalid={addressError != null}
           aria-describedby={addressError ? errorId : undefined}
           spellCheck={false}
-          className="h-7 flex-1 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-2.5 font-mono text-xs text-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className={`h-7 flex-1 rounded-md border bg-surface-container px-2.5 font-mono text-xs text-foreground ${focusField}`}
         />
         <a
           href={activeUrl}

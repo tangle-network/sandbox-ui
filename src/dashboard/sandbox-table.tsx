@@ -29,6 +29,7 @@ import {
 } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
+import { focusRing } from "@tangle-network/ui/utils"
 
 export interface SandboxTableProps {
   sandboxes: SandboxCardData[]
@@ -350,7 +351,7 @@ export function SandboxTable({
                                 <button
                                   type="button"
                                   onClick={stopRowClick}
-                                  className="p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90 outline-none"
+                                  className={`p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90 ${focusRing}`}
                                   aria-label="More actions"
                                   title="More actions"
                                 >

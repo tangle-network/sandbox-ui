@@ -15,6 +15,7 @@ import {
   BarChart2, Trash2, Network, Play, Plus, Users,
   Cpu, MemoryStick, HardDrive, Box,
 } from "lucide-react"
+import { focusRing } from "@tangle-network/ui/utils"
 
 export type SandboxStatus = "running" | "hibernating" | "provisioning" | "stopped" | "failed" | "archived" | "creating"
 
@@ -188,7 +189,7 @@ export function SandboxCard({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-container-high hover:text-foreground outline-none"
+              className={`rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-container-high hover:text-foreground ${focusRing}`}
               aria-label="Sandbox options"
             >
               <MoreVertical className="h-4 w-4" />

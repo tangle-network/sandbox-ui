@@ -7,6 +7,7 @@
 
 import { useRef, useEffect, useId } from "react";
 import { Terminal as TerminalIcon, ChevronDown, ChevronUp, X } from "lucide-react";
+import { focusRing } from "@tangle-network/ui/utils";
 import { cn } from "../lib/utils";
 
 export interface TerminalLine {
@@ -68,7 +69,7 @@ export function TerminalPanel({
           disabled={!onToggle}
           aria-expanded={!isCollapsed}
           aria-controls={contentId}
-          className="flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+          className={`flex min-w-0 flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-default ${focusRing}`}
         >
           <TerminalIcon className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="font-medium">{title}</span>
@@ -85,7 +86,7 @@ export function TerminalPanel({
             type="button"
             aria-label={`Close ${title}`}
             onClick={onClose}
-            className="rounded p-1.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={`rounded p-1.5 text-muted-foreground transition-colors hover:text-foreground ${focusRing}`}
           >
             <X className="h-3 w-3" aria-hidden="true" />
           </button>

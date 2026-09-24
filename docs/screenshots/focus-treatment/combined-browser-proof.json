@@ -1,0 +1,41 @@
+{
+  "stories": [
+    {
+      "id": "workbench-pilltabs--switch-views",
+      "focusVisible": true,
+      "outlineColor": "rgba(189, 196, 255, 0.8)",
+      "outlineWidth": "1px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(189, 196, 255, 0.18) 0px 0px 0px 4px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+      "ariaSelected": "true",
+      "image": "pill-tabs-combined-dark.png"
+    },
+    {
+      "id": "workspace-terminalpanel--command-output",
+      "focusVisible": true,
+      "outlineColor": "rgba(189, 196, 255, 0.8)",
+      "outlineWidth": "1px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(189, 196, 255, 0.18) 0px 0px 0px 4px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+      "ariaSelected": null,
+      "image": "terminal-close-combined-dark.png"
+    },
+    {
+      "id": "workbench-codeview--file-tree-navigation",
+      "focusVisible": true,
+      "outlineColor": "rgba(189, 196, 255, 0.8)",
+      "outlineWidth": "1px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(189, 196, 255, 0.18) 0px 0px 0px 4px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+      "ariaSelected": null,
+      "image": "code-files-combined-dark.png"
+    },
+    {
+      "id": "workspace-sessionsidebar--quiet",
+      "focusVisible": true,
+      "outlineColor": "rgba(189, 196, 255, 0.8)",
+      "outlineStyle": "solid",
+      "outlineWidth": "1px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(189, 196, 255, 0.18) 0px 0px 0px 4px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+      "image": "quiet-search-combined-dark.png"
+    }
+  ],
+  "pageErrors": []
+}

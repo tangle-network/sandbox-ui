@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Network, Plus, Trash2, ShieldAlert } from "lucide-react"
 import { cn } from "../lib/utils"
+import { focusField } from "@tangle-network/ui/utils"
 
 export interface NetworkConfigData {
   blockOutbound: boolean
@@ -112,7 +113,7 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
             value={newCidr}
             onChange={(e) => setNewCidr(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddCidr()}
-            className="flex-1 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className={`flex-1 rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
           />
           <button
             type="button"

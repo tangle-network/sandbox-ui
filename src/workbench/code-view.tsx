@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { focusRing } from "@tangle-network/ui/utils"
 import { RichFileTree, type RichFileTreeGitEntry } from "../files"
 import { cn } from "../lib/utils"
 import { CodeSurface } from "./syntax"
@@ -48,8 +49,8 @@ export function CodeView({
       <div className="sandbox-code-view-layout flex h-full min-h-0 w-full">
         {showTree && (
           <div className="sandbox-code-view-mobile-toolbar" role="group" aria-label="Code view pane">
-            <button type="button" aria-pressed={narrowPane === "files"} onClick={() => setNarrowPane("files")}>Files</button>
-            <button type="button" aria-pressed={narrowPane === "code"} onClick={() => setNarrowPane("code")}>Code</button>
+            <button type="button" aria-pressed={narrowPane === "files"} onClick={() => setNarrowPane("files")} className={focusRing}>Files</button>
+            <button type="button" aria-pressed={narrowPane === "code"} onClick={() => setNarrowPane("code")} className={focusRing}>Code</button>
           </div>
         )}
         {showTree && (

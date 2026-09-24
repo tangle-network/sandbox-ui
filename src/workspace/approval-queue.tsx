@@ -1,5 +1,6 @@
 import { type ReactNode, useState, useMemo } from "react";
 import { cn } from "../lib/utils";
+import { focusField } from "@tangle-network/ui/utils";
 
 // ── Types ──
 
@@ -211,7 +212,7 @@ export function ApprovalQueue({
                         placeholder="Why are you rejecting this?"
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
-                        className="w-full rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 mb-2"
+                        className={`w-full rounded-md border bg-surface-container-low px-3 py-2 text-sm placeholder:text-muted-foreground mb-2 ${focusField}`}
                         rows={2}
                       />
                       <div className="flex gap-2 justify-end">

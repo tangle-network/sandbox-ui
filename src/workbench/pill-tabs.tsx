@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { focusRing } from "@tangle-network/ui/utils"
 import { cn } from "../lib/utils"
 
 export interface PillTabItem<T extends string> {
@@ -125,7 +126,8 @@ export function PillTabs<T extends string>({
               tabRefs.current.get(next.value)?.focus()
             }}
             className={cn(
-              "relative z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "relative z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",
+              focusRing,
               selected
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground",

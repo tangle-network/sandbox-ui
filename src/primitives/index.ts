@@ -105,6 +105,8 @@ export {
   TerminalLine,
   Textarea,
   type TextareaProps,
+  TextShimmer,
+  type TextShimmerProps,
   ThemeToggle,
   type Toast,
   ToastContainer,

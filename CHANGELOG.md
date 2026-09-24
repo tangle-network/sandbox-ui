@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.113.5
+
+- **One soft focus treatment replaces the hard 2px indigo ring.** A focused
+  field keeps its 1px border, shifts it to `--focus-border`, and adds a 3px
+  `--focus-halo` ring. A button, rail item or tile shows a 1px focus line
+  with the same halo, on keyboard focus only, so a mouse click draws no ring.
+  The bundle compiles the new `@tangle-network/ui` primitives, and the
+  dashboard, page, workspace, workbench and integration controls this package
+  draws itself use the same helpers. Any control that sets no focus style of
+  its own gets the same line and halo from the base layer, instead of the
+  browser's blue outline. A native text field that sets none gets the 1px
+  focus line over its border, without the halo. The quiet session search
+  now shows its keyboard focus.
+- **Peer floors raised to `@tangle-network/brand ^1.6.0` and
+  `@tangle-network/ui ^11.10.0`**, which define the focus tokens and helpers.
+- `./utils` re-exports `focusField`, `focusFieldWithin`, `focusFieldInvalid`,
+  `focusRing` and `focusRingInset`. `./primitives` re-exports `TextShimmer`.
+  `./files` re-exports `CSV_PREVIEW_ROW_LIMIT`, `FilePreviewKind`, `parseCsv`
+  and `resolveFilePreviewKind`.
+- **The artifact workbench works in narrow panes and from the keyboard.**
+  `CodeView` switches between Files and Code below 560 px, leaving code readable.
+  Pill tabs and artifact tabs support arrow, Home and End keys and name their panels.
+  The terminal Close button has its own keyboard focus stop.
+- **Preview addresses commit on Enter.** Typing no longer navigates the iframe.
+  Invalid or unsupported addresses show an error, and a slow frame keeps its loading state.
+- **Provisioning controls have names and state.** Sliders, advanced fields and the disclosure expose labels and state to assistive technology.
+  Integration sorting uses pressed buttons instead of content tabs.
+- **Secrets actions fit narrow screens.** The team hint and page actions wrap, and each mobile row shows its date and Delete action.
+- **The collapsed rail renders `railHeaderContent` when no `logo` is given**
+  (#280), and a `logo` that is a fragment around nothing counts as no logo
+  (#282).
+
+## 0.113.4
+
+- **The `PortsList` Expose button is visible.** It uses the solid primary
+  fill like other primary actions, and keeps a 55% fill while disabled
+  (#281).
+
 ## 0.113.3
 
 - **`WorkspaceLayout` keeps the center column at `minCenterWidth` (default

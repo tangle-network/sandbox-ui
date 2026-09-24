@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Code2, GitCompare, Globe, Network, SquareTerminal } from "lucide-react"
+import { focusRingInset } from "@tangle-network/ui/utils"
 import { cn } from "../lib/utils"
 import { PortsList } from "../dashboard"
 import { TerminalView } from "../terminal"
@@ -139,7 +140,7 @@ export function SandboxArtifactPane({
         role="tabpanel"
         aria-labelledby={`${tabIdPrefix}-${view}`}
         tabIndex={0}
-        className="min-h-0 flex-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className={`min-h-0 flex-1 ${focusRingInset}`}
       >
         {view === "code" && (
           <CodeView

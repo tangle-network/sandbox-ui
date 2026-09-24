@@ -24,6 +24,7 @@ import {
   useSidebar,
 } from "./sidebar-context"
 import { RailTooltip, RAIL_FLOATING_SURFACE } from "./rail-tooltip"
+import { focusRing } from "@tangle-network/ui/utils"
 
 // ============================================================================
 // Types
@@ -151,7 +152,7 @@ export function RailThemeToggle({ className }: { className?: string }) {
         "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
         MOTION_CONTROL,
         "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        focusRing,
         className,
       )}
     >
@@ -205,7 +206,7 @@ export function RailCollapseToggle({ collapsed, showLabel, onToggle, className }
           MOTION_CONTROL,
           showLabel ? "h-9 w-full justify-start gap-2.5 px-2.5" : "h-9 w-9 justify-center",
           "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          focusRing,
           className,
         )}
       >
@@ -264,7 +265,7 @@ function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: bool
         "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
         MOTION_CONTROL,
         "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        focusRing,
         className,
       )}
     >
@@ -365,7 +366,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
               onClick={onToggle}
               aria-label="Expand sidebar"
               aria-pressed={true}
-              className={cn("group/brand relative flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring", MOTION_CONTROL)}
+              className={cn("group/brand relative flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)]", focusRing, MOTION_CONTROL)}
             >
               <span className={cn("flex items-center justify-center transition-opacity group-hover/brand:opacity-0", MOTION_CONTROL)}>
                 {brand}
@@ -568,7 +569,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
     MOTION_CONTROL,
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
     // Quiet press feedback via color only — no scale on the full-width row.
-    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+    focusRing,
     // The active item (route matches) and any explicit primary share one
     // emphasized look — a filled accent pill with an accent ring — so the
     // current destination clearly stands out from the default rows.
@@ -692,7 +693,7 @@ export function RailFlyout({
     "relative flex shrink-0 items-center rounded-md transition-colors",
     MOTION_CONTROL,
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
-    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+    focusRing,
     active
       ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]"
       : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
@@ -1021,7 +1022,7 @@ export function RailExpandable({
     const triggerClasses = cn(
       "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
       MOTION_CONTROL,
-      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      focusRing,
       isActive || open
         ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
         : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
@@ -1133,7 +1134,7 @@ export function RailExpandable({
           aria-expanded={open}
           aria-controls={discloseId}
           aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
-          className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${focusRing}`}
         >
           <Icon
             className={cn("h-[17px] w-[17px] shrink-0 opacity-100 transition-opacity group-hover/exp:opacity-0", MOTION_CONTROL)}
@@ -1433,7 +1434,7 @@ export function ProfileAvatar({
           className={cn(
             "flex items-center rounded-lg transition-colors hover:bg-[var(--accent-surface-soft)]",
             MOTION_CONTROL,
-            "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            focusRing,
             showDetails ? "w-full gap-2.5 px-3 py-2 text-left" : "justify-center w-12 h-12",
             className,
           )}

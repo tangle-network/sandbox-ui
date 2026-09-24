@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "../lib/utils";
+import { focusFieldWithin } from "@tangle-network/ui/utils";
 
 export interface CreditBalanceProps {
   amount: number;
@@ -40,7 +41,7 @@ export function CreditBalance({
       </div>
       {onTopUp && (
         <div className="space-y-2.5 mt-5">
-          <div className="bg-surface-container-low border border-[var(--md3-outline-variant)] p-1 rounded-lg flex items-center">
+          <div className={`bg-surface-container-low border p-1 rounded-lg flex items-center ${focusFieldWithin}`}>
             <input
               type="text"
               value={`$${topUpValue}`}

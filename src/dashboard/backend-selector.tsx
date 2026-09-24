@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import * as Select from "@radix-ui/react-select";
 import { cn } from "../lib/utils";
+import { focusRing } from "@tangle-network/ui/utils";
 
 export interface Backend {
   type: string;
@@ -56,7 +57,7 @@ export function BackendSelector({
           "px-2.5 text-xs font-medium text-foreground shadow-sm",
           "transition-colors duration-[var(--transition-fast)]",
           "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high",
-          "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          focusRing,
           "data-[state=open]:border-[var(--md3-outline)] data-[state=open]:bg-surface-container-high",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           triggerClassName,
@@ -80,7 +81,7 @@ export function BackendSelector({
           "border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2.5 text-sm text-left",
           "transition-colors duration-[var(--transition-fast)]",
           "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high",
-          "focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          focusRing,
           "data-[state=open]:border-[var(--md3-outline)] data-[state=open]:bg-surface-container-high",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           triggerClassName,

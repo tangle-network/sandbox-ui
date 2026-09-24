@@ -21,6 +21,7 @@ import { ArtifactPane } from "@tangle-network/ui/primitives";
 import { DirectoryPane, type DirectoryPaneProps } from "./directory-pane";
 import { RuntimePane, type RuntimePaneProps } from "./runtime-pane";
 import { WorkspaceLayout, type WorkspaceLayoutProps } from "./workspace-layout";
+import { focusRing, focusRingInset } from "@tangle-network/ui/utils";
 
 export type SandboxWorkbenchPlacement = "left" | "right" | "bottom" | "hidden";
 type SandboxWorkbenchRegion = Exclude<SandboxWorkbenchPlacement, "hidden">;
@@ -253,7 +254,7 @@ function ArtifactTabs({
                 onSelect(next.id);
                 tabRefs.current.get(next.id)?.focus();
               }}
-              className="flex min-w-0 items-center gap-2 px-3 py-2 text-[12px] uppercase tracking-wider font-medium transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/60"
+              className={`flex min-w-0 items-center gap-2 px-3 py-2 text-[12px] uppercase tracking-wider font-medium transition-colors hover:text-foreground ${focusRingInset}`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
               <span className="max-w-[14rem] truncate">{artifactTabLabel(artifact)}</span>
@@ -264,7 +265,7 @@ function ArtifactTabs({
                 aria-label={`Close ${artifactTabLabel(artifact)}`}
                 tabIndex={isActive ? 0 : -1}
                 onClick={() => onClose(artifact.id)}
-                className="mr-1 rounded-[2px] p-1 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60 group-hover:opacity-100"
+                className={`mr-1 rounded-[2px] p-1 opacity-0 transition-opacity hover:bg-accent hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 ${focusRing}`}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -540,7 +541,7 @@ export function SandboxWorkbench({
         aria-labelledby={activeArtifact ? `${artifactTabsId}-${activeArtifact.id}` : undefined}
         aria-label={activeArtifact ? undefined : "Artifact content"}
         tabIndex={0}
-        className="min-h-0 flex-1 overflow-auto bg-surface-container focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className={`min-h-0 flex-1 overflow-auto bg-surface-container ${focusRingInset}`}
       >
         {activeArtifact ? (
           renderArtifact(activeArtifact)

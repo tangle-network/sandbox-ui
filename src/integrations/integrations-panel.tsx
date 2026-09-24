@@ -29,6 +29,7 @@ import type {
   IntegrationHealth,
   IntegrationProvider,
 } from "./types";
+import { focusFieldWithin, focusRing } from "@tangle-network/ui/utils";
 
 export type IntegrationSort = "featured" | "alpha";
 
@@ -176,7 +177,7 @@ function IntegrationsToolbar({
 }) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-1 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2">
+      <div className={`flex flex-1 items-center gap-2 rounded-lg border bg-card px-3 py-2 ${focusFieldWithin}`}>
         <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
         <input
           type="text"
@@ -207,7 +208,8 @@ function IntegrationsToolbar({
             onClick={() => onSortChange(value)}
             data-testid={`sort-${value}`}
             className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+              focusRing,
               sort === value
                 ? "bg-accent text-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -529,7 +531,7 @@ export function IntegrationsPanel({
                       rel="noopener noreferrer"
                       aria-label={`Manage ${name} (opens in new window)`}
                       data-testid={`manage-${provider.providerId}`}
-                      className="absolute inset-0 z-10 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      className={`absolute inset-0 z-10 rounded-xl ${focusRing}`}
                     />
                   ) : null}
                   <span className="pointer-events-none absolute left-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--surface-success-text)] text-white">
@@ -578,7 +580,7 @@ export function IntegrationsPanel({
                         data-testid={`menu-${provider.providerId}`}
                         aria-label={`More actions for ${name}`}
                         title="More actions"
-                        className="absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-background hover:text-foreground focus-visible:bg-background focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        className={`absolute right-1.5 top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-background hover:text-foreground focus-visible:bg-background focus-visible:text-foreground ${focusRing}`}
                       >
                         <MoreVertical className="h-3.5 w-3.5" />
                       </button>
@@ -660,7 +662,7 @@ export function IntegrationsPanel({
                 className={cn(
                   TILE_BOX_CLASS,
                   "group border-border bg-card transition-all",
-                  "hover:border-primary/40 hover:bg-accent/40 hover:shadow-sm focus:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20",
+                  "hover:border-[var(--border-strong)] hover:bg-accent/40 hover:shadow-sm", focusRing,
                 )}
               >
                 <ProviderIcon

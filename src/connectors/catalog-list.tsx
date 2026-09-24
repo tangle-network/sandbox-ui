@@ -5,6 +5,7 @@ import { Blocks, ChevronRight, Search } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { cn } from "../lib/utils";
 import type { ConnectorCatalogEntry } from "./types";
+import { focusField } from "@tangle-network/ui/utils";
 
 interface FilterOption {
   value: string;
@@ -73,7 +74,7 @@ function FilterSelect({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       aria-label={ariaLabel}
-      className="rounded-lg border border-border bg-card px-3 py-2 text-foreground text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className={`rounded-lg border bg-card px-3 py-2 text-foreground text-sm ${focusField}`}
     >
       <option value="">{allLabel}</option>
       {options.map((option) => (

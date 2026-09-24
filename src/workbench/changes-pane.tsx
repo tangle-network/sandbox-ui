@@ -8,6 +8,7 @@ import { DiffStatsBadge, GitStatusBadge, PanelHeader } from "./panel-header"
 import { DiffView } from "./diff-view"
 import { buildUnifiedPatch, computeDiffStats } from "./diff-utils"
 import type { ChangedFile, ChangesPaneProps } from "./types"
+import { focusRing, focusRingInset } from "@tangle-network/ui/utils"
 
 const BORDER = "border-[var(--md3-outline-variant)]"
 
@@ -224,7 +225,7 @@ export function ChangesPane({
               type="button"
               onClick={onRefresh}
               aria-label="Refresh"
-              className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-container-high hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/60"
+              className={`rounded-md p-1 text-muted-foreground transition-colors hover:bg-surface-container-high hover:text-foreground ${focusRing}`}
             >
               <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
             </button>
@@ -278,7 +279,7 @@ export function ChangesPane({
                   tabIndex={tabbable ? 0 : -1}
                   onClick={() => onSelectFile?.(file.path)}
                   className={cn(
-                    "flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary/60",
+                    "flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs transition-colors", focusRingInset,
                     isSelected ? "bg-surface-container-high" : "hover:bg-surface-container",
                   )}
                 >

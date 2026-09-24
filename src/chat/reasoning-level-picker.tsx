@@ -9,6 +9,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Brain, ChevronDown, Sparkles } from "lucide-react";
 import * as React from "react";
 import { cn } from "../lib/utils";
+import { focusRing } from "@tangle-network/ui/utils";
 
 /**
  * A reasoning selection: `auto` is a UI-only sentinel ("let the harness/model default decide",
@@ -177,7 +178,7 @@ export function ReasoningLevelPicker({
           className={cn(
             "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5",
             "text-xs font-medium text-foreground shadow-sm transition-colors",
-            "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high focus:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+            "hover:border-[var(--md3-outline-variant)] hover:bg-surface-container-high", focusRing,
             "data-[state=open]:border-[var(--md3-outline-variant)] data-[state=open]:bg-surface-container-high",
             "disabled:cursor-not-allowed disabled:opacity-50",
             className,

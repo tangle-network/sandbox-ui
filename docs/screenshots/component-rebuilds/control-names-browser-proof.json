@@ -1,0 +1,72 @@
+{
+  "capturedAt": "2026-09-24T04:59:38.665Z",
+  "beforeOrigin": "https://sandbox-ui-storybook.pages.dev",
+  "beforeIndexSha256": "638517285cc5668d62fa12ad170cb5a59969976c13eac98bdb0b84d928c15a58",
+  "beforeIframeSha256": "1fc134613bc1318210d1ec3f056f5288318cb678910a38c7de0c3c34f3854afd",
+  "afterOrigin": "http://127.0.0.1:6012",
+  "afterIndexSha256": "638517285cc5668d62fa12ad170cb5a59969976c13eac98bdb0b84d928c15a58",
+  "afterIframeSha256": "ae0119d5015e52e92319804bc1bae79ba5455e9e749710455b18d7b9f1d07e26",
+  "viewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "captures": [
+    {
+      "story": "backend",
+      "label": "before",
+      "path": "docs/screenshots/component-rebuilds/control-names-backend-before-1440.png",
+      "missingName": true
+    },
+    {
+      "story": "backend",
+      "label": "after",
+      "path": "docs/screenshots/component-rebuilds/control-names-backend-after-1440.png",
+      "missingName": false
+    },
+    {
+      "story": "backend",
+      "label": "before",
+      "path": "docs/screenshots/component-rebuilds/control-names-backend-before-390.png",
+      "missingName": true
+    },
+    {
+      "story": "backend",
+      "label": "after",
+      "path": "docs/screenshots/component-rebuilds/control-names-backend-after-390.png",
+      "missingName": false
+    },
+    {
+      "story": "credit",
+      "label": "before",
+      "path": "docs/screenshots/component-rebuilds/control-names-credit-before-1440.png",
+      "missingName": true
+    },
+    {
+      "story": "credit",
+      "label": "after",
+      "path": "docs/screenshots/component-rebuilds/control-names-credit-after-1440.png",
+      "missingName": false
+    },
+    {
+      "story": "credit",
+      "label": "before",
+      "path": "docs/screenshots/component-rebuilds/control-names-credit-before-390.png",
+      "missingName": true
+    },
+    {
+      "story": "credit",
+      "label": "after",
+      "path": "docs/screenshots/component-rebuilds/control-names-credit-after-390.png",
+      "missingName": false
+    }
+  ],
+  "actions": [
+    "add MCP fields named",
+    "top-up amount named",
+    "port removed by Enter",
+    "CIDR removed by Enter",
+    "sandbox removed by Enter"
+  ],
+  "pageErrors": [],
+  "videoPath": "docs/screenshots/component-rebuilds/control-names-keyboard.webm"
+}

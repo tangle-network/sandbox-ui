@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Bot, Plus, Trash2, Server, Wrench } from "lucide-react"
 import { cn } from "../lib/utils"
-import { focusField } from "@tangle-network/ui/utils"
+import { focusField, focusRing } from "@tangle-network/ui/utils"
 
 export interface BackendStatusData {
   running: boolean
@@ -152,8 +152,9 @@ export function BackendConfig({
                   )}
                   <button
                     type="button"
+                    aria-label={`Remove ${s.name} MCP server`}
                     onClick={() => onRemoveMcp(s.name)}
-                    className="p-1 text-muted-foreground hover:text-destructive transition-colors rounded"
+                    className={`p-2 text-muted-foreground hover:text-destructive transition-colors rounded ${focusRing}`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -169,27 +170,35 @@ export function BackendConfig({
 
         {showAddMcp && (
           <div className="p-4 border-t border-[var(--md3-outline-variant)] bg-surface-container-high space-y-2">
-            <input
-              type="text"
-              placeholder="Server name"
-              value={mcpName}
-              onChange={(e) => setMcpName(e.target.value)}
-              className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
-            />
-            <input
-              type="text"
-              placeholder="Command (e.g. npx @server/mcp)"
-              value={mcpCommand}
-              onChange={(e) => setMcpCommand(e.target.value)}
-              className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
-            />
-            <input
-              type="text"
-              placeholder="Arguments (space-separated, optional)"
-              value={mcpArgs}
-              onChange={(e) => setMcpArgs(e.target.value)}
-              className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
-            />
+            <label className="block space-y-1 text-xs font-medium text-muted-foreground">
+              <span>Server name</span>
+              <input
+                type="text"
+                value={mcpName}
+                onChange={(e) => setMcpName(e.target.value)}
+                className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground ${focusField}`}
+              />
+            </label>
+            <label className="block space-y-1 text-xs font-medium text-muted-foreground">
+              <span>Command</span>
+              <input
+                type="text"
+                placeholder="npx @server/mcp"
+                value={mcpCommand}
+                onChange={(e) => setMcpCommand(e.target.value)}
+                className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
+              />
+            </label>
+            <label className="block space-y-1 text-xs font-medium text-muted-foreground">
+              <span>Arguments (optional)</span>
+              <input
+                type="text"
+                placeholder="Space-separated arguments"
+                value={mcpArgs}
+                onChange={(e) => setMcpArgs(e.target.value)}
+                className={`w-full rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
+              />
+            </label>
             <div className="flex justify-end gap-2 pt-1">
               <button
                 type="button"

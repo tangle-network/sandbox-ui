@@ -25,3 +25,15 @@ describe("BackendConfig restart action", () => {
     expect(onRestart).toHaveBeenCalledOnce()
   })
 })
+
+describe("BackendConfig server actions", () => {
+  it("names the server before removing it", () => {
+    const onRemoveMcp = vi.fn()
+    render(<BackendConfig {...baseProps} mcpServers={[{ name: "GitHub", command: "npx github-mcp" }, { name: "Files", command: "npx files-mcp" }]} onRemoveMcp={onRemoveMcp} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Files MCP server" }))
+
+    expect(onRemoveMcp).toHaveBeenCalledOnce()
+    expect(onRemoveMcp).toHaveBeenCalledWith("Files")
+  })
+})

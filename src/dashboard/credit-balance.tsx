@@ -20,6 +20,7 @@ export function CreditBalance({
   className,
 }: CreditBalanceProps) {
   const [topUpValue, setTopUpValue] = React.useState("50.00");
+  const topUpId = React.useId();
 
   return (
     <div
@@ -41,9 +42,14 @@ export function CreditBalance({
       </div>
       {onTopUp && (
         <div className="space-y-2.5 mt-5">
+          <label htmlFor={topUpId} className="block text-xs font-medium text-muted-foreground">
+            Top-up amount (USD)
+          </label>
           <div className={`bg-surface-container-low border p-1 rounded-lg flex items-center ${focusFieldWithin}`}>
             <input
+              id={topUpId}
               type="text"
+              inputMode="decimal"
               value={`$${topUpValue}`}
               onChange={(e) => {
                 const raw = e.target.value.replace(/[^0-9.]/g, "");

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Network, Plus, Trash2, ShieldAlert } from "lucide-react"
 import { cn } from "../lib/utils"
-import { focusField } from "@tangle-network/ui/utils"
+import { focusField, focusRing } from "@tangle-network/ui/utils"
 
 export interface NetworkConfigData {
   blockOutbound: boolean
@@ -94,8 +94,9 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
                 <span className="font-mono text-xs text-foreground">{cidr}</span>
                 <button
                   type="button"
+                  aria-label={`Remove ${cidr} from allowlist`}
                   onClick={() => handleRemoveCidr(cidr)}
-                  className="p-1 text-muted-foreground hover:text-destructive transition-colors rounded"
+                  className={`p-2 text-muted-foreground hover:text-destructive transition-colors rounded ${focusRing}`}
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>
@@ -109,6 +110,7 @@ export function NetworkConfig({ config, onUpdate, loading = false, className }: 
         <div className="flex items-center gap-3">
           <input
             type="text"
+            aria-label="CIDR to allow"
             placeholder="CIDR (e.g. 10.0.0.0/8)"
             value={newCidr}
             onChange={(e) => setNewCidr(e.target.value)}

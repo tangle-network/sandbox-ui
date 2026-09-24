@@ -1,0 +1,10 @@
+{
+  "scope": "working-tree dependency and release diff",
+  "base": "a0c18ba1eba3094fd49c00f7f9016d259b0ef5fc",
+  "head": "WORKTREE",
+  "files": 6,
+  "projectType": "TypeScript React package",
+  "reviewers": ["A", "B", "C"],
+  "verdict": "APPROVE",
+  "findings": 0
+}

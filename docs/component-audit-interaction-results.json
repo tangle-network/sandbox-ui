@@ -1,0 +1,53 @@
+{
+  "capturedAt": "2026-09-24T02:24:12.184529+00:00",
+  "browser": "Chromium",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "checks": {
+    "artifactTabArrowRight": {
+      "expected": "focus or selection moves to Diff",
+      "focusAfter": "Code",
+      "selectedAfter": [
+        "Code"
+      ]
+    },
+    "previewTyping": {
+      "expected": "iframe remains at committed address until Enter",
+      "srcBefore": "https://3000-sandbox.tngl.dev",
+      "srcAfterTyping": "https://example.com/changed",
+      "inputAccessibleName": null,
+      "associatedLabelCount": 0
+    },
+    "integrationSortArrowRight": {
+      "expected": "focus or selection moves to A\u2013Z",
+      "focusAfter": "Featured",
+      "selectedAfter": [
+        "Featured"
+      ]
+    },
+    "provisioningSliderNames": {
+      "expected": "each range has an accessible name",
+      "sliders": [
+        {
+          "ariaLabel": null,
+          "associatedLabelCount": 0
+        },
+        {
+          "ariaLabel": null,
+          "associatedLabelCount": 0
+        },
+        {
+          "ariaLabel": null,
+          "associatedLabelCount": 0
+        }
+      ]
+    },
+    "advancedDisclosure": {
+      "expected": "aria-expanded and aria-controls expose state and target",
+      "ariaExpanded": null,
+      "ariaControls": null
+    }
+  }
+}

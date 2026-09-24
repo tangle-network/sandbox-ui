@@ -1,0 +1,177 @@
+[
+  {
+    "route": "landing",
+    "viewport": "desktop",
+    "requested": "https://sandbox.tangle.tools/",
+    "status": 200,
+    "title": "Agent Sandboxes | Tangle Sandbox",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-landing-desktop.webp",
+    "finalOriginPath": "https://sandbox.tangle.tools/"
+  },
+  {
+    "route": "dashboard",
+    "viewport": "desktop",
+    "requested": "https://sandbox.tangle.tools/dashboard",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-dashboard-desktop.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard",
+    "captureReady": "Sign in to Tangle heading visible; fonts ready"
+  },
+  {
+    "route": "provisioning",
+    "viewport": "desktop",
+    "requested": "https://sandbox.tangle.tools/dashboard/new",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-provisioning-desktop.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard/new"
+  },
+  {
+    "route": "session",
+    "viewport": "desktop",
+    "requested": "https://sandbox.tangle.tools/dashboard/sandbox/audit-probe",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-session-desktop.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard/sandbox/audit-probe"
+  },
+  {
+    "route": "artifact",
+    "viewport": "desktop",
+    "requested": "https://sandbox.tangle.tools/dashboard/sandbox/audit-probe?view=ide",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-artifact-desktop.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard/sandbox/audit-probe?view=ide"
+  },
+  {
+    "route": "connectors",
+    "viewport": "desktop",
+    "requested": "https://id.tangle.tools/app/connectors",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-connectors-desktop.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "/app/connectors"
+  },
+  {
+    "route": "connector-detail",
+    "viewport": "desktop",
+    "requested": "https://id.tangle.tools/app/connectors/github",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-connector-detail-desktop.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "/app/connectors/github"
+  },
+  {
+    "route": "legacy-integrations",
+    "viewport": "desktop",
+    "requested": "https://sandbox.tangle.tools/dashboard/integrations",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-legacy-integrations-desktop.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard"
+  },
+  {
+    "route": "landing",
+    "viewport": "mobile",
+    "requested": "https://sandbox.tangle.tools/",
+    "status": 200,
+    "title": "Agent Sandboxes | Tangle Sandbox",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-landing-mobile.webp",
+    "finalOriginPath": "https://sandbox.tangle.tools/"
+  },
+  {
+    "route": "dashboard",
+    "viewport": "mobile",
+    "requested": "https://sandbox.tangle.tools/dashboard",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-dashboard-mobile.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard"
+  },
+  {
+    "route": "provisioning",
+    "viewport": "mobile",
+    "requested": "https://sandbox.tangle.tools/dashboard/new",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-provisioning-mobile.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard/new"
+  },
+  {
+    "route": "session",
+    "viewport": "mobile",
+    "requested": "https://sandbox.tangle.tools/dashboard/sandbox/audit-probe",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-session-mobile.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard/sandbox/audit-probe"
+  },
+  {
+    "route": "artifact",
+    "viewport": "mobile",
+    "requested": "https://sandbox.tangle.tools/dashboard/sandbox/audit-probe?view=ide",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-artifact-mobile.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard/sandbox/audit-probe?view=ide"
+  },
+  {
+    "route": "connectors",
+    "viewport": "mobile",
+    "requested": "https://id.tangle.tools/app/connectors",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-connectors-mobile.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "/app/connectors"
+  },
+  {
+    "route": "connector-detail",
+    "viewport": "mobile",
+    "requested": "https://id.tangle.tools/app/connectors/github",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-connector-detail-mobile.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "/app/connectors/github"
+  },
+  {
+    "route": "legacy-integrations",
+    "viewport": "mobile",
+    "requested": "https://sandbox.tangle.tools/dashboard/integrations",
+    "status": 200,
+    "title": "Sign in \u2014 Tangle Platform",
+    "pageErrors": [],
+    "screenshot": "screenshots/component-audit-2026-09/consumer-legacy-integrations-mobile.webp",
+    "finalOriginPath": "https://id.tangle.tools/login",
+    "returnPath": "https://sandbox.tangle.tools/dashboard"
+  }
+]

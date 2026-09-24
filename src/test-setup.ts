@@ -7,22 +7,24 @@ import {
 // jsdom lacks the pointer-capture, scroll, and resize-observer APIs that
 // Radix UI primitives (e.g. Select) call during interaction. Provide no-op
 // shims so userEvent can drive them in tests.
-if (!Element.prototype.hasPointerCapture) {
-  Element.prototype.hasPointerCapture = () => false
-}
-if (!Element.prototype.setPointerCapture) {
-  Element.prototype.setPointerCapture = () => {}
-}
-if (!Element.prototype.releasePointerCapture) {
-  Element.prototype.releasePointerCapture = () => {}
-}
-if (!Element.prototype.scrollIntoView) {
-  Element.prototype.scrollIntoView = () => {}
+if (typeof Element !== 'undefined') {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false
+  }
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => {}
+  }
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => {}
+  }
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {}
+  }
 }
 // jsdom has no layout engine, so ProseMirror's coordinate lookups
 // (posAtCoords → elementFromPoint) have nothing to hit. A null-returning shim
 // lets the editor process pointer events in tests without throwing.
-if (!Document.prototype.elementFromPoint) {
+if (typeof Document !== 'undefined' && !Document.prototype.elementFromPoint) {
   Document.prototype.elementFromPoint = () => null
 }
 if (!globalThis.ResizeObserver) {

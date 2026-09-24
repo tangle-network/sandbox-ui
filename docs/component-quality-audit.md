@@ -139,3 +139,20 @@ At 320 and 390 px, the process status and 40 px Kill control now fit inside the 
 The [browser result](screenshots/component-rebuilds/process-mobile-browser-proof.json) records six before and after captures, keyboard spawn and kill actions, and zero page errors.
 The [keyboard recording](screenshots/component-rebuilds/process-mobile-actions.webm) shows Enter killing only PID 221 and spawning a new command.
 The original ledger remains a snapshot; this package story does not prove a completed authenticated consumer flow.
+
+## Text scaling and action feedback follow-up
+
+The hosted #300 Storybook exposed further failures at 320 CSS px with 200% root text size.
+The port number overlapped its status by 18 px, and the port and command fields had 0 and 1 px of usable inner width.
+Three enabled controls failed text contrast: dark URL 1.79:1, light Expose 2.59:1, and dark Spawn 2.41:1.
+Entering `3.5` also exposed port 3, while out-of-range and duplicate values left Expose enabled without feedback.
+The [port before](screenshots/component-rebuilds/ports-before-textzoom-light-320.png) and [after](screenshots/component-rebuilds/ports-after-textzoom-light-320-2.png) images show the full port number and field.
+The [process before](screenshots/component-rebuilds/process-before-textzoom-dark-320.png) and [after](screenshots/component-rebuilds/process-after-textzoom-dark-320-2.png) images show the full command field.
+The [browser result](screenshots/component-rebuilds/textzoom-browser-proof.json) covers 20 local light and dark cases at 320, 390, and 1440 px, with no document overflow or page error.
+At 320 px and 200% text, both fields now have 206 px of inner width; the port number and status no longer overlap.
+The corrected enabled contrast pairs measure 6.65:1, 7.43:1, and 9.21:1 on the same Storybook states.
+Fractional, out-of-range, and existing ports now disable Expose and show a linked error, as the [invalid entry](screenshots/component-rebuilds/ports-invalid-textzoom-320.png) shows.
+A valid port still exposes with Enter.
+The [port](screenshots/component-rebuilds/ports-textzoom-keyboard.webm) and [process](screenshots/component-rebuilds/process-textzoom-keyboard.webm) recordings show keyboard action and focus recovery.
+An [isolated Orca run](screenshots/component-rebuilds/textzoom-orca-proof.txt) spoke the process exit result after Kill.
+These are package-story checks; the original ledger, 0/96 full component acceptance, and 0/5 authenticated-flow acceptance remain unchanged.

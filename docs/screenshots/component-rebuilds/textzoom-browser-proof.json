@@ -1,0 +1,874 @@
+{
+  "beforeBuild": "6883b4ff4e6507398471a970902a46d2d3fabd76",
+  "afterBranch": "fix/mobile-text-zoom-actions",
+  "cases": [
+    {
+      "name": "ports-after-textzoom-light-320-2",
+      "kind": "ports",
+      "theme": "light",
+      "width": 320,
+      "scale": 2,
+      "fields": {
+        "viewportWidth": 320,
+        "documentWidth": 320,
+        "input": {
+          "x": 32,
+          "y": 599.5625,
+          "width": 256,
+          "height": 74,
+          "right": 288,
+          "bottom": 673.5625
+        },
+        "inputInnerWidth": 206,
+        "action": {
+          "x": 32,
+          "y": 697.5625,
+          "width": 211,
+          "height": 72,
+          "right": 243,
+          "bottom": 769.5625
+        },
+        "portText": {
+          "x": 57,
+          "y": 73,
+          "width": 56,
+          "height": 31,
+          "right": 113,
+          "bottom": 104
+        },
+        "status": {
+          "x": 57,
+          "y": 137,
+          "width": 72,
+          "height": 22.28125,
+          "right": 129,
+          "bottom": 159.28125
+        },
+        "remove": {
+          "x": 183,
+          "y": 49,
+          "width": 80,
+          "height": 80,
+          "right": 263,
+          "bottom": 129
+        }
+      },
+      "pageErrors": [],
+      "actions": {
+        "removedPort3000Only": true,
+        "focusMovedToPort5432": true,
+        "invalidPortsRejected": [
+          "3.5",
+          "0",
+          "65536",
+          "5432"
+        ],
+        "exposedPort8080ViaEnter": true
+      }
+    },
+    {
+      "name": "ports-after-textzoom-light-390-2",
+      "kind": "ports",
+      "theme": "light",
+      "width": 390,
+      "scale": 2,
+      "fields": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "input": {
+          "x": 32,
+          "y": 567.5625,
+          "width": 326,
+          "height": 74,
+          "right": 358,
+          "bottom": 641.5625
+        },
+        "inputInnerWidth": 276,
+        "action": {
+          "x": 32,
+          "y": 665.5625,
+          "width": 211,
+          "height": 72,
+          "right": 243,
+          "bottom": 737.5625
+        },
+        "portText": {
+          "x": 57,
+          "y": 73,
+          "width": 56,
+          "height": 31,
+          "right": 113,
+          "bottom": 104
+        },
+        "status": {
+          "x": 57,
+          "y": 137,
+          "width": 72,
+          "height": 22.28125,
+          "right": 129,
+          "bottom": 159.28125
+        },
+        "remove": {
+          "x": 253,
+          "y": 49,
+          "width": 80,
+          "height": 80,
+          "right": 333,
+          "bottom": 129
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "ports-after-textzoom-light-320-1",
+      "kind": "ports",
+      "theme": "light",
+      "width": 320,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 320,
+        "documentWidth": 320,
+        "input": {
+          "x": 16,
+          "y": 299.5625,
+          "width": 170,
+          "height": 38,
+          "right": 186,
+          "bottom": 337.5625
+        },
+        "inputInnerWidth": 144,
+        "action": {
+          "x": 198,
+          "y": 301.5625,
+          "width": 106,
+          "height": 36,
+          "right": 304,
+          "bottom": 337.5625
+        },
+        "portText": {
+          "x": 29,
+          "y": 37,
+          "width": 28,
+          "height": 16,
+          "right": 57,
+          "bottom": 53
+        },
+        "status": {
+          "x": 29,
+          "y": 69,
+          "width": 56,
+          "height": 18.28125,
+          "right": 85,
+          "bottom": 87.28125
+        },
+        "remove": {
+          "x": 251,
+          "y": 25,
+          "width": 40,
+          "height": 40,
+          "right": 291,
+          "bottom": 65
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "ports-after-textzoom-light-390-1",
+      "kind": "ports",
+      "theme": "light",
+      "width": 390,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "input": {
+          "x": 16,
+          "y": 299.5625,
+          "width": 240,
+          "height": 38,
+          "right": 256,
+          "bottom": 337.5625
+        },
+        "inputInnerWidth": 214,
+        "action": {
+          "x": 268,
+          "y": 301.5625,
+          "width": 106,
+          "height": 36,
+          "right": 374,
+          "bottom": 337.5625
+        },
+        "portText": {
+          "x": 29,
+          "y": 37,
+          "width": 28,
+          "height": 16,
+          "right": 57,
+          "bottom": 53
+        },
+        "status": {
+          "x": 29,
+          "y": 69,
+          "width": 56,
+          "height": 18.28125,
+          "right": 85,
+          "bottom": 87.28125
+        },
+        "remove": {
+          "x": 321,
+          "y": 25,
+          "width": 40,
+          "height": 40,
+          "right": 361,
+          "bottom": 65
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "ports-after-textzoom-light-1440-1",
+      "kind": "ports",
+      "theme": "light",
+      "width": 1440,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 1440,
+        "documentWidth": 1440,
+        "input": {
+          "x": 16,
+          "y": 188,
+          "width": 582,
+          "height": 38,
+          "right": 598,
+          "bottom": 226
+        },
+        "inputInnerWidth": 556,
+        "action": {
+          "x": 610,
+          "y": 190,
+          "width": 106,
+          "height": 36,
+          "right": 716,
+          "bottom": 226
+        },
+        "portText": {
+          "x": 29,
+          "y": 70,
+          "width": 28,
+          "height": 16,
+          "right": 57,
+          "bottom": 86
+        },
+        "status": {
+          "x": 559,
+          "y": 68.859375,
+          "width": 56,
+          "height": 18.28125,
+          "right": 615,
+          "bottom": 87.140625
+        },
+        "remove": {
+          "x": 655,
+          "y": 58,
+          "width": 48,
+          "height": 40,
+          "right": 703,
+          "bottom": 98
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "ports-after-textzoom-dark-320-2",
+      "kind": "ports",
+      "theme": "dark",
+      "width": 320,
+      "scale": 2,
+      "fields": {
+        "viewportWidth": 320,
+        "documentWidth": 320,
+        "input": {
+          "x": 32,
+          "y": 599.5625,
+          "width": 256,
+          "height": 74,
+          "right": 288,
+          "bottom": 673.5625
+        },
+        "inputInnerWidth": 206,
+        "action": {
+          "x": 32,
+          "y": 697.5625,
+          "width": 211,
+          "height": 72,
+          "right": 243,
+          "bottom": 769.5625
+        },
+        "portText": {
+          "x": 57,
+          "y": 73,
+          "width": 56,
+          "height": 31,
+          "right": 113,
+          "bottom": 104
+        },
+        "status": {
+          "x": 57,
+          "y": 137,
+          "width": 72,
+          "height": 22.28125,
+          "right": 129,
+          "bottom": 159.28125
+        },
+        "remove": {
+          "x": 183,
+          "y": 49,
+          "width": 80,
+          "height": 80,
+          "right": 263,
+          "bottom": 129
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "ports-after-textzoom-dark-390-2",
+      "kind": "ports",
+      "theme": "dark",
+      "width": 390,
+      "scale": 2,
+      "fields": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "input": {
+          "x": 32,
+          "y": 567.5625,
+          "width": 326,
+          "height": 74,
+          "right": 358,
+          "bottom": 641.5625
+        },
+        "inputInnerWidth": 276,
+        "action": {
+          "x": 32,
+          "y": 665.5625,
+          "width": 211,
+          "height": 72,
+          "right": 243,
+          "bottom": 737.5625
+        },
+        "portText": {
+          "x": 57,
+          "y": 73,
+          "width": 56,
+          "height": 31,
+          "right": 113,
+          "bottom": 104
+        },
+        "status": {
+          "x": 57,
+          "y": 137,
+          "width": 72,
+          "height": 22.28125,
+          "right": 129,
+          "bottom": 159.28125
+        },
+        "remove": {
+          "x": 253,
+          "y": 49,
+          "width": 80,
+          "height": 80,
+          "right": 333,
+          "bottom": 129
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "ports-after-textzoom-dark-320-1",
+      "kind": "ports",
+      "theme": "dark",
+      "width": 320,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 320,
+        "documentWidth": 320,
+        "input": {
+          "x": 16,
+          "y": 299.5625,
+          "width": 170,
+          "height": 38,
+          "right": 186,
+          "bottom": 337.5625
+        },
+        "inputInnerWidth": 144,
+        "action": {
+          "x": 198,
+          "y": 301.5625,
+          "width": 106,
+          "height": 36,
+          "right": 304,
+          "bottom": 337.5625
+        },
+        "portText": {
+          "x": 29,
+          "y": 37,
+          "width": 28,
+          "height": 16,
+          "right": 57,
+          "bottom": 53
+        },
+        "status": {
+          "x": 29,
+          "y": 69,
+          "width": 56,
+          "height": 18.28125,
+          "right": 85,
+          "bottom": 87.28125
+        },
+        "remove": {
+          "x": 251,
+          "y": 25,
+          "width": 40,
+          "height": 40,
+          "right": 291,
+          "bottom": 65
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "ports-after-textzoom-dark-390-1",
+      "kind": "ports",
+      "theme": "dark",
+      "width": 390,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "input": {
+          "x": 16,
+          "y": 299.5625,
+          "width": 240,
+          "height": 38,
+          "right": 256,
+          "bottom": 337.5625
+        },
+        "inputInnerWidth": 214,
+        "action": {
+          "x": 268,
+          "y": 301.5625,
+          "width": 106,
+          "height": 36,
+          "right": 374,
+          "bottom": 337.5625
+        },
+        "portText": {
+          "x": 29,
+          "y": 37,
+          "width": 28,
+          "height": 16,
+          "right": 57,
+          "bottom": 53
+        },
+        "status": {
+          "x": 29,
+          "y": 69,
+          "width": 56,
+          "height": 18.28125,
+          "right": 85,
+          "bottom": 87.28125
+        },
+        "remove": {
+          "x": 321,
+          "y": 25,
+          "width": 40,
+          "height": 40,
+          "right": 361,
+          "bottom": 65
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "ports-after-textzoom-dark-1440-1",
+      "kind": "ports",
+      "theme": "dark",
+      "width": 1440,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 1440,
+        "documentWidth": 1440,
+        "input": {
+          "x": 16,
+          "y": 188,
+          "width": 582,
+          "height": 38,
+          "right": 598,
+          "bottom": 226
+        },
+        "inputInnerWidth": 556,
+        "action": {
+          "x": 610,
+          "y": 190,
+          "width": 106,
+          "height": 36,
+          "right": 716,
+          "bottom": 226
+        },
+        "portText": {
+          "x": 29,
+          "y": 70,
+          "width": 28,
+          "height": 16,
+          "right": 57,
+          "bottom": 86
+        },
+        "status": {
+          "x": 559,
+          "y": 68.859375,
+          "width": 56,
+          "height": 18.28125,
+          "right": 615,
+          "bottom": 87.140625
+        },
+        "remove": {
+          "x": 655,
+          "y": 58,
+          "width": 48,
+          "height": 40,
+          "right": 703,
+          "bottom": 98
+        }
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-light-320-2",
+      "kind": "process",
+      "theme": "light",
+      "width": 320,
+      "scale": 2,
+      "fields": {
+        "viewportWidth": 320,
+        "documentWidth": 320,
+        "input": {
+          "x": 32,
+          "y": 701.65625,
+          "width": 256,
+          "height": 74,
+          "right": 288,
+          "bottom": 775.65625
+        },
+        "inputInnerWidth": 206,
+        "action": {
+          "x": 32,
+          "y": 791.65625,
+          "width": 189,
+          "height": 80,
+          "right": 221,
+          "bottom": 871.65625
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": [],
+      "actions": {
+        "killedPid221Only": true,
+        "focusMovedToCommand": true,
+        "killResultStatus": "Process 221 exited with code 143.",
+        "spawnedPid302ViaEnter": true
+      }
+    },
+    {
+      "name": "process-after-textzoom-light-390-2",
+      "kind": "process",
+      "theme": "light",
+      "width": 390,
+      "scale": 2,
+      "fields": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "input": {
+          "x": 32,
+          "y": 528.328125,
+          "width": 326,
+          "height": 74,
+          "right": 358,
+          "bottom": 602.328125
+        },
+        "inputInnerWidth": 276,
+        "action": {
+          "x": 32,
+          "y": 618.328125,
+          "width": 189,
+          "height": 80,
+          "right": 221,
+          "bottom": 698.328125
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-light-320-1",
+      "kind": "process",
+      "theme": "light",
+      "width": 320,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 320,
+        "documentWidth": 320,
+        "input": {
+          "x": 16,
+          "y": 213.65625,
+          "width": 288,
+          "height": 38,
+          "right": 304,
+          "bottom": 251.65625
+        },
+        "inputInnerWidth": 262,
+        "action": {
+          "x": 16,
+          "y": 259.65625,
+          "width": 96,
+          "height": 40,
+          "right": 112,
+          "bottom": 299.65625
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-light-390-1",
+      "kind": "process",
+      "theme": "light",
+      "width": 390,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "input": {
+          "x": 16,
+          "y": 193.65625,
+          "width": 254,
+          "height": 38,
+          "right": 270,
+          "bottom": 231.65625
+        },
+        "inputInnerWidth": 228,
+        "action": {
+          "x": 278,
+          "y": 191.65625,
+          "width": 96,
+          "height": 40,
+          "right": 374,
+          "bottom": 231.65625
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-light-1440-1",
+      "kind": "process",
+      "theme": "light",
+      "width": 1440,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 1440,
+        "documentWidth": 1440,
+        "input": {
+          "x": 16,
+          "y": 193.65625,
+          "width": 596,
+          "height": 38,
+          "right": 612,
+          "bottom": 231.65625
+        },
+        "inputInnerWidth": 570,
+        "action": {
+          "x": 620,
+          "y": 191.65625,
+          "width": 96,
+          "height": 40,
+          "right": 716,
+          "bottom": 231.65625
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-dark-320-2",
+      "kind": "process",
+      "theme": "dark",
+      "width": 320,
+      "scale": 2,
+      "fields": {
+        "viewportWidth": 320,
+        "documentWidth": 320,
+        "input": {
+          "x": 32,
+          "y": 701.65625,
+          "width": 256,
+          "height": 74,
+          "right": 288,
+          "bottom": 775.65625
+        },
+        "inputInnerWidth": 206,
+        "action": {
+          "x": 32,
+          "y": 791.65625,
+          "width": 189,
+          "height": 80,
+          "right": 221,
+          "bottom": 871.65625
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-dark-390-2",
+      "kind": "process",
+      "theme": "dark",
+      "width": 390,
+      "scale": 2,
+      "fields": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "input": {
+          "x": 32,
+          "y": 528.328125,
+          "width": 326,
+          "height": 74,
+          "right": 358,
+          "bottom": 602.328125
+        },
+        "inputInnerWidth": 276,
+        "action": {
+          "x": 32,
+          "y": 618.328125,
+          "width": 189,
+          "height": 80,
+          "right": 221,
+          "bottom": 698.328125
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-dark-320-1",
+      "kind": "process",
+      "theme": "dark",
+      "width": 320,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 320,
+        "documentWidth": 320,
+        "input": {
+          "x": 16,
+          "y": 213.65625,
+          "width": 288,
+          "height": 38,
+          "right": 304,
+          "bottom": 251.65625
+        },
+        "inputInnerWidth": 262,
+        "action": {
+          "x": 16,
+          "y": 259.65625,
+          "width": 96,
+          "height": 40,
+          "right": 112,
+          "bottom": 299.65625
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-dark-390-1",
+      "kind": "process",
+      "theme": "dark",
+      "width": 390,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "input": {
+          "x": 16,
+          "y": 193.65625,
+          "width": 254,
+          "height": 38,
+          "right": 270,
+          "bottom": 231.65625
+        },
+        "inputInnerWidth": 228,
+        "action": {
+          "x": 278,
+          "y": 191.65625,
+          "width": 96,
+          "height": 40,
+          "right": 374,
+          "bottom": 231.65625
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    },
+    {
+      "name": "process-after-textzoom-dark-1440-1",
+      "kind": "process",
+      "theme": "dark",
+      "width": 1440,
+      "scale": 1,
+      "fields": {
+        "viewportWidth": 1440,
+        "documentWidth": 1440,
+        "input": {
+          "x": 16,
+          "y": 193.65625,
+          "width": 596,
+          "height": 38,
+          "right": 612,
+          "bottom": 231.65625
+        },
+        "inputInnerWidth": 570,
+        "action": {
+          "x": 620,
+          "y": 191.65625,
+          "width": 96,
+          "height": 40,
+          "right": 716,
+          "bottom": 231.65625
+        },
+        "portText": null,
+        "status": null,
+        "remove": null
+      },
+      "pageErrors": []
+    }
+  ],
+  "errors": []
+}

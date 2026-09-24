@@ -1,0 +1,8 @@
+Sandbox UI PortsList/ProcessList candidate, 2026-09-24 00:28 MDT
+Frozen Storybook iframe SHA-256: 418715bf0ca2794c93c81947b55c34e19f2380878c8e13abe041ce4ebe1027da
+Environment: isolated Xvfb, Openbox, Chrome, private D-Bus, Orca.
+Action: focus Kill process 221 and press Enter in the ProcessList story.
+DOM: process 221 changed from running to exited (143); focus moved to Command.
+Orca 00:28:00.824361: SPEECH OUTPUT: 'Process 221 exited with code 143.'
+Raw local Orca log SHA-256: 1741b0f0ec27ffc041057fae638f142f58af86f00f3df1a327d0f3a4a45129e0
+Raw local audit: /tmp/sandbox-ui-audit-final/orca-windowed-debug.log

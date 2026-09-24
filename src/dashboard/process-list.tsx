@@ -33,7 +33,21 @@ function formatUptime(startedAt?: string): string {
 
 export function ProcessList({ processes, onSpawn, onKill, loading = false, className }: ProcessListProps) {
   const [newCommand, setNewCommand] = React.useState("")
+  const [statusMessage, setStatusMessage] = React.useState("")
   const commandId = React.useId()
+  const commandInputRef = React.useRef<HTMLInputElement>(null)
+  const pendingKillRef = React.useRef<{ pid: number; restoreFocus: boolean } | null>(null)
+
+  React.useEffect(() => {
+    const pending = pendingKillRef.current
+    if (!pending || processes.some((process) => process.pid === pending.pid && process.running)) return
+    const stopped = processes.find((process) => process.pid === pending.pid)
+    setStatusMessage(stopped?.exitCode == null
+      ? `Process ${pending.pid} stopped.`
+      : `Process ${pending.pid} exited with code ${stopped.exitCode}.`)
+    if (pending.restoreFocus) commandInputRef.current?.focus()
+    pendingKillRef.current = null
+  }, [processes])
 
   const handleSpawn = () => {
     const cmd = newCommand.trim()
@@ -45,6 +59,7 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
 
   return (
     <div className={cn("space-y-4", className)}>
+      <span role="status" className="sr-only">{statusMessage}</span>
       {loading ? (
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
           <Activity className="mx-auto h-6 w-6 text-muted-foreground animate-spin mb-2" data-motion="essential" />
@@ -77,7 +92,10 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
                   {p.running && (
                     <button
                       type="button"
-                      onClick={() => onKill(p.pid)}
+                      onClick={(event) => {
+                        pendingKillRef.current = { pid: p.pid, restoreFocus: event.detail === 0 }
+                        onKill(p.pid)
+                      }}
                       className={`flex size-10 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive ${focusRing}`}
                       aria-label={`Kill process ${p.pid}`}
                       title={`Kill process ${p.pid}`}
@@ -97,13 +115,14 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
         </div>
       )}
 
-      <form onSubmit={(event) => { event.preventDefault(); handleSpawn() }} className="flex min-w-0 items-end gap-2">
-        <div className="min-w-0 flex-1">
+      <form onSubmit={(event) => { event.preventDefault(); handleSpawn() }} className="flex min-w-0 flex-wrap items-end gap-2">
+        <div className="min-w-0 flex-[1_1_12rem]">
           <label htmlFor={commandId} className="mb-1 block text-xs font-medium text-muted-foreground">Command</label>
           <input
+            ref={commandInputRef}
             id={commandId}
             type="text"
-            placeholder="node server.js"
+            placeholder="node app.js"
             value={newCommand}
             onChange={(e) => setNewCommand(e.target.value)}
             className={`w-full min-w-0 rounded-lg border bg-surface-container-low px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
@@ -112,7 +131,7 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
         <button
           type="submit"
           disabled={!newCommand.trim()}
-          className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-primary/20 border border-primary/30 px-3 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50 ${focusRing}`}
+          className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-3 text-sm font-medium text-[var(--accent-text)] transition-colors hover:bg-[var(--btn-primary-bg)] hover:text-[var(--btn-primary-text)] disabled:opacity-50 ${focusRing}`}
         >
           <Plus aria-hidden="true" className="h-4 w-4" />
           Spawn

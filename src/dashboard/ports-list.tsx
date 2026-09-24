@@ -50,60 +50,52 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
   return (
     <div className={cn("space-y-4", className)}>
       {ports.length > 0 ? (
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Port</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Public URL</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground w-20" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {ports.map((p) => (
-                <tr key={p.port}>
-                  <td className="px-4 py-3 font-mono text-xs text-foreground">{p.port}</td>
-                  <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(p.url, p.port)}
-                      className="flex items-center gap-2 font-mono text-xs text-primary hover:underline cursor-pointer group"
-                    >
-                      <span className="truncate max-w-[300px]">{p.url}</span>
-                      {copiedPort === p.port ? (
-                        <Check className="h-3 w-3 text-[var(--surface-success-text)] shrink-0" />
-                      ) : (
-                        <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                      )}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                      p.status === "active"
-                        ? "bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]"
-                        : "bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]"
-                    )}>
-                      {p.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {onRemovePort && (
-                      <button
-                        type="button"
-                        aria-label={`Remove port ${p.port}`}
-                        onClick={() => onRemovePort(p.port)}
-                        className={`p-2 text-muted-foreground hover:text-destructive transition-colors rounded ${focusRing}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="overflow-hidden rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container text-sm">
+          <div aria-hidden="true" className="hidden border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2.5 text-xs font-medium text-muted-foreground sm:grid sm:grid-cols-[4rem_minmax(0,1fr)_5.5rem_3rem] sm:gap-x-2">
+            <span>Port</span>
+            <span>Public URL</span>
+            <span>Status</span>
+          </div>
+          <ul className="divide-y divide-border">
+            {ports.map((p) => (
+              <li key={p.port} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1 px-3 py-2 sm:grid-cols-[4rem_minmax(0,1fr)_5.5rem_3rem] sm:py-1">
+                <span className="col-start-1 row-start-1 font-mono text-xs text-foreground">
+                  <span className="sr-only">Port </span>{p.port}
+                </span>
+                <button
+                  type="button"
+                  aria-label={copiedPort === p.port ? `Copied public URL for port ${p.port}` : `Copy public URL for port ${p.port}: ${p.url}`}
+                  onClick={() => handleCopy(p.url, p.port)}
+                  className={`col-span-3 row-start-2 flex min-h-10 min-w-0 items-center gap-2 rounded text-left font-mono text-xs text-primary hover:underline sm:col-span-1 sm:col-start-2 sm:row-start-1 ${focusRing}`}
+                >
+                  <span aria-hidden="true" className="min-w-0 flex-1 break-all sm:truncate">{p.url}</span>
+                  {copiedPort === p.port ? (
+                    <Check className="h-4 w-4 shrink-0 text-[var(--surface-success-text)]" aria-hidden="true" />
+                  ) : (
+                    <Copy className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  )}
+                </button>
+                <span className={cn(
+                  "col-start-2 row-start-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider sm:col-start-3",
+                  p.status === "active"
+                    ? "bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]"
+                    : "bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]"
+                )}>
+                  <span className="sr-only">Status: </span>{p.status}
+                </span>
+                {onRemovePort && (
+                  <button
+                    type="button"
+                    aria-label={`Remove port ${p.port}`}
+                    onClick={() => onRemovePort(p.port)}
+                    className={`col-start-3 row-start-1 inline-flex min-h-10 min-w-10 items-center justify-center rounded text-muted-foreground transition-colors hover:text-destructive sm:col-start-4 ${focusRing}`}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : (
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
@@ -122,7 +114,7 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
           value={newPort}
           onChange={(e) => setNewPort(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleExpose()}
-          className={`flex-1 rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
+          className={`min-w-0 flex-1 rounded-lg border bg-surface-container-low px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground ${focusField}`}
         />
         <button
           type="button"

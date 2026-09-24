@@ -1870,21 +1870,10 @@ export function WorkflowGraph({
   }, [structural, compact, setNodes]);
 
   /**
-   * Own the INITIAL frame.
-   *
-   * React Flow's `fitView` prop paints a first approximation before anything
-   * can be measured, and it fires exactly ONCE — the moment the nodes report a
-   * size, against whatever width/height the pane happens to have then. A canvas
-   * that is still 0×0 at that instant (a lazily-mounted chunk, a flex panel, a
-   * tab that mounts hidden) is framed against nothing, and nothing ever refits
-   * it. That fit also CENTERS a graph too big to fit, which is what pushed the
-   * trigger off the leading edge (see framingViewport).
-   *
-   * So the prop stays as the pre-paint approximation — dropping it would flash
-   * the graph at zoom 1 before this ran — and the real frame is taken here, as
-   * soon as there is an instance and a canvas with a size. Once taken, the
-   * camera is the reader's: later resizes are left alone rather than yanking
-   * someone who has panned somewhere deliberately.
+   * Own the INITIAL frame once the instance and canvas have a size. React
+   * Flow's one-time `fitView` can run after this effect and overwrite the
+   * anchored camera, leaving the entry node off-screen. Only this effect may
+   * set the initial camera; later resizes leave the reader's pan alone.
    */
   useEffect(() => {
     if (framedRef.current) return;
@@ -2041,15 +2030,6 @@ export function WorkflowGraph({
         // React Flow forwards unknown props onto its wrapper, so a keydown
         // from a focused node bubbles here.
         onKeyDown={onNodeClick ? handleNodeKeyDown : undefined}
-        // A pre-paint approximation only — the authoritative frame is taken by
-        // the framing effect once the canvas has been measured. Without it the
-        // graph would paint once at zoom 1, top-left, before that lands.
-        fitView
-        fitViewOptions={{
-          ...FIT_VIEW,
-          minZoom: fitZoomFloor(compact),
-          maxZoom: fitZoomCeiling(compact),
-        }}
         proOptions={{ hideAttribution: true }}
         // Node dragging is reserved for the full editor; a preview stays
         // read-only so its layout can't be disturbed. Both variants pan + zoom so

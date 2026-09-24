@@ -102,14 +102,14 @@ export function DiffView({
         aria-label={`Diff for ${filename}`}
         aria-describedby={hintId}
         tabIndex={0}
-        className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto text-[13px] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--ring)]"
+        className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto text-[13px]"
       />
       <details className="max-h-[40%] shrink-0 overflow-auto border-t border-border">
-        <summary className="cursor-pointer px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--ring)]">
+        <summary className="cursor-pointer px-3 py-2 text-sm">
           Read plain-text diff
         </summary>
-        <pre tabIndex={0} aria-label={`Plain-text diff for ${filename}`}
-          className="m-0 whitespace-pre-wrap p-3 font-mono text-xs leading-relaxed focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--ring)]"
+        <pre role="region" tabIndex={0} aria-label={`Plain-text diff for ${filename}`}
+          className="m-0 whitespace-pre-wrap p-3 font-mono text-xs leading-relaxed"
           style={{ overflowWrap: "anywhere" }}>
           {patch}
         </pre>

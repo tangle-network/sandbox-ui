@@ -8,7 +8,7 @@ const meta: Meta<typeof HarnessPicker> = {
   parameters: { layout: "centered", backgrounds: { default: "dark" } },
   decorators: [
     (Story) => (
-      <div className="w-[360px] p-6 rounded-xl bg-muted">
+      <div className="w-[calc(100vw-32px)] max-w-[360px] p-6 rounded-xl bg-muted">
         <Story />
       </div>
     ),

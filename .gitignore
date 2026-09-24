@@ -8,3 +8,5 @@ storybook-static
 agent-results/
 audit-results/
 thoughts/
+playwright-report/
+test-results/

@@ -122,6 +122,7 @@
     "typecheck": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
+    "test:visual": "playwright test",
     "test": "vitest run",
     "test:package": "node scripts/package-smoke.mjs && PACKAGE_OMIT_OPTIONAL_PEERS='[\"@hocuspocus/provider\",\"@tiptap/core\",\"@tiptap/extension-collaboration\",\"@tiptap/extension-collaboration-caret\",\"@tiptap/react\",\"@tiptap/starter-kit\",\"yjs\"]' node scripts/package-smoke.mjs",
     "test:watch": "vitest",
@@ -204,6 +205,11 @@
     "yaml": "^2.5.0"
   },
   "devDependencies": {
+    "@fontsource/geist": "5.3.0",
+    "@fontsource/geist-mono": "5.3.0",
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/manrope": "5.3.0",
+    "@fontsource/outfit": "5.3.0",
     "@hocuspocus/provider": "^4.4.0",
     "@nanostores/react": "^1.1.0",
     "@storybook/react": "^10.5.4",

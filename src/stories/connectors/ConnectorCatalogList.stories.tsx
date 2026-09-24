@@ -95,7 +95,7 @@ type Story = StoryObj<typeof ConnectorCatalogList>;
 export const Default: Story = {
   name: "Default",
   render: (args) => (
-    <div className="w-[760px]">
+    <div className="w-full max-w-[760px]">
       <ConnectorCatalogList {...args} />
     </div>
   ),
@@ -104,7 +104,7 @@ export const Default: Story = {
 export const WithHostIcons: Story = {
   name: "With host icons",
   render: (args) => (
-    <div className="w-[760px]">
+    <div className="w-full max-w-[760px]">
       <ConnectorCatalogList {...args} />
     </div>
   ),
@@ -116,7 +116,7 @@ export const WithHostIcons: Story = {
 export const Empty: Story = {
   name: "No connectors",
   render: (args) => (
-    <div className="w-[760px]">
+    <div className="w-full max-w-[760px]">
       <ConnectorCatalogList {...args} />
     </div>
   ),

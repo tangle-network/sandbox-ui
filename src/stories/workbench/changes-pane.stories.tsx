@@ -151,7 +151,7 @@ const meta: Meta<typeof ChangesPane> = {
       <div
         data-sandbox-ui="true"
         data-sandbox-theme={context.globals.sandboxTheme === 'light' ? 'vault' : undefined}
-        className="h-[720px] w-[440px] border-r border-[var(--md3-outline-variant)] bg-surface-container-low"
+        className="h-[720px] w-full max-w-[440px] border-r border-[var(--md3-outline-variant)] bg-surface-container-low"
       >
         <Story />
       </div>

@@ -56,6 +56,11 @@ export function DiffView({
     const host = hostRef.current
     if (host == null || !patch) return
     const container = document.createElement(DIFF_CONTAINER_TAG)
+    // The renderer's shadow styles otherwise choose an OS-specific mono face.
+    container.style.setProperty(
+      "--diffs-font-family",
+      'var(--font-mono, "Geist Mono", "JetBrains Mono", ui-monospace, monospace)',
+    )
     container.style.display = "block"
     container.style.minWidth = "0"
     container.style.maxWidth = "100%"

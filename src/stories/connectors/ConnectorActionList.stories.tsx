@@ -114,7 +114,7 @@ type Story = StoryObj<typeof ConnectorActionList>;
 export const Default: Story = {
   name: "Default",
   render: (args) => (
-    <div className="w-[760px]">
+    <div className="w-full max-w-[760px]">
       <ConnectorActionList {...args} />
     </div>
   ),
@@ -123,7 +123,7 @@ export const Default: Story = {
 export const Truncated: Story = {
   name: "Truncated (N+)",
   render: (args) => (
-    <div className="w-[760px]">
+    <div className="w-full max-w-[760px]">
       <ConnectorActionList {...args} />
     </div>
   ),
@@ -133,7 +133,7 @@ export const Truncated: Story = {
 export const WithoutAssistant: Story = {
   name: "Without assistant button",
   render: (args) => (
-    <div className="w-[760px]">
+    <div className="w-full max-w-[760px]">
       <ConnectorActionList {...args} />
     </div>
   ),
@@ -143,7 +143,7 @@ export const WithoutAssistant: Story = {
 export const Empty: Story = {
   name: "No actions",
   render: (args) => (
-    <div className="w-[760px]">
+    <div className="w-full max-w-[760px]">
       <ConnectorActionList {...args} />
     </div>
   ),

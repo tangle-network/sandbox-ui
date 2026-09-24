@@ -4,10 +4,10 @@ import { WorkflowGraphLazy } from "../../workflows";
 /**
  * Candidates for how a long workflow should occupy its panel.
  *
- * Every canvas below is 742x480 — the workflow detail page's graph panel
+ * The comparison canvases are 742x480 — the workflow detail page's graph panel
  * (`h-[30rem]`, that wide beside the step list). Each row shows the SAME
  * workflow framed two ways, so the question is only ever "which of these do I
- * want to look at".
+ * want to look at". NarrowHost keeps that comparison in a separate narrow pane.
  */
 
 const chain = (steps: number) =>
@@ -20,15 +20,17 @@ const chain = (steps: number) =>
 function Canvas({
   caption,
   children,
+  narrow = false,
 }: {
   caption: string;
   children: React.ReactNode;
+  narrow?: boolean;
 }) {
   return (
     <div>
       <div className="mb-1 text-text-muted text-xs">{caption}</div>
       <div
-        style={{ width: 742, height: 480 }}
+        style={narrow ? { width: "100%", maxWidth: 742, height: 480 } : { width: 742, height: 480 }}
         className="overflow-hidden rounded-lg border border-border bg-background"
       >
         {children}
@@ -41,10 +43,12 @@ function Compare({
   title,
   steps,
   compact = true,
+  narrow = false,
 }: {
   title: string;
   steps: number;
   compact?: boolean;
+  narrow?: boolean;
 }) {
   const common = {
     yaml: chain(steps),
@@ -56,11 +60,11 @@ function Compare({
   return (
     <div className="mb-8">
       <div className="mb-2 font-medium text-base text-text">{title}</div>
-      <div className="flex flex-wrap gap-6">
-        <Canvas caption="one row — today">
+      <div className={narrow ? "flex flex-col gap-6" : "flex flex-wrap gap-6"}>
+        <Canvas caption="one row — today" narrow={narrow}>
           <WorkflowGraphLazy {...common} />
         </Canvas>
-        <Canvas caption="folded into rows">
+        <Canvas caption="folded into rows" narrow={narrow}>
           <WorkflowGraphLazy {...common} wrap />
         </Canvas>
       </div>
@@ -75,6 +79,14 @@ export default meta;
  *  so both canvases are identical on purpose. */
 export const ShortStaysALine: StoryObj = {
   render: () => <Compare title="3 steps — unchanged (below the fold threshold)" steps={3} />,
+};
+
+export const NarrowHost: StoryObj = {
+  render: () => (
+    <div className="w-full max-w-[390px]">
+      <Compare title="7 steps — narrow host pane" steps={7} narrow />
+    </div>
+  ),
 };
 
 /** The first length that folds. One row frames at 0.70; folded, at 1.18. */

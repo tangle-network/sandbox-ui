@@ -171,8 +171,7 @@ describe("reframing on the density toggle", () => {
     timerDrivenFrames()
     measureableFrame()
     render(<WorkflowGraph yaml={YAML} />)
-    // Mounting takes the frame itself — React Flow's `fitView` prop is only a
-    // pre-paint approximation. Set it aside; the tween is what's under test.
+    // Mounting takes the initial frame; the tween is what's under test.
     await waitFor(() => expect(setViewport).toHaveBeenCalledTimes(1))
     setViewport.mockClear()
 
@@ -387,8 +386,7 @@ describe("framing a canvas that is measured late", () => {
     timerDrivenFrames()
     const resize = observeResizes()
     // The canvas mounts at 0×0 — a lazy chunk, or a flex/hidden panel that has
-    // not been laid out yet. React Flow's own fitView has already fired and
-    // spent itself against nothing by this point.
+    // not been laid out yet. The component must wait to frame it.
     render(<WorkflowGraph yaml={chain(7)} />)
     await new Promise((r) => setTimeout(r, 20))
     expect(setViewport).not.toHaveBeenCalled()

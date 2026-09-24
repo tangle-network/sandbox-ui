@@ -187,11 +187,13 @@ export function VariantList({
               )}
               <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1.5">
                 {variant.outcome && (
-                  <Badge
-                    className={`${outcomeConfig[variant.outcome].bg} ${outcomeConfig[variant.outcome].border} ${outcomeConfig[variant.outcome].color}`}
-                  >
-                    {outcomeConfig[variant.outcome].label}
-                  </Badge>
+                  <span className="flex max-[359px]:w-full max-[359px]:justify-start">
+                    <Badge
+                      className={`${outcomeConfig[variant.outcome].bg} ${outcomeConfig[variant.outcome].border} ${outcomeConfig[variant.outcome].color}`}
+                    >
+                      {outcomeConfig[variant.outcome].label}
+                    </Badge>
+                  </span>
                 )}
                 {variant.status === "completed" &&
                   variant.outcome === "pending_review" &&

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.113.7
+
+- **Integration tiles show the provider's real name.** The hub catalog sends
+  each provider's name as `title` ("GitHub", "Google Sheets"), but the panel
+  read only `displayName`, so every tile showed the lowercased id ("github",
+  "google sheets"). `IntegrationProvider` now carries `title`; the tile label,
+  A–Z sort, search and monogram use `displayName`, then `title`, then the id.
+
 ## 0.113.6
 
 - Dashboard backend, billing, network, port, and sandbox controls have visible

@@ -34,6 +34,8 @@ export interface IntegrationConnector {
 export interface IntegrationProvider {
   providerId: string;
   displayName?: string;
+  /** The hub catalog's name for the provider ("GitHub", "Google Sheets"). */
+  title?: string;
   description?: string;
   iconUrl?: string;
   connectors?: IntegrationConnector[];

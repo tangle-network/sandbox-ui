@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.113.6
+
+- Dashboard backend, billing, network, port, and sandbox controls have visible
+  and programmatic names. The backend entry form names its fields, the credit
+  form names its amount, and repeated Remove actions identify their targets.
+- Port and process actions stay visible in narrow dashboard panes. Each mobile
+  row shows its status and actions without hiding Remove or Kill.
+- Port and process controls remain usable at 320 px with 200% text. The forms
+  wrap, the port field rejects fractional, duplicate, and out-of-range values
+  with an associated error, and focus moves to a useful control after Remove
+  or Kill. Action results are announced in a persistent status region.
+- Port URLs and enabled Expose and Spawn buttons use readable semantic colors
+  in light and dark themes.
+
 ## 0.113.5
 
 - **One soft focus treatment replaces the hard 2px indigo ring.** A focused

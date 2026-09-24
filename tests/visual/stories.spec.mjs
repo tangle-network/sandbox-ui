@@ -20,6 +20,9 @@ const tablet = { width: 768, height: 1024 }
 
 test('catalog contains stories and critical states', () => {
   expect(stories.length).toBeGreaterThan(0)
+  for (const story of stories) {
+    expect(story.id, 'Storybook IDs must be safe snapshot names').toMatch(/^[a-z0-9_-]+$/i)
+  }
   for (const module of criticalModules) {
     expect(stories.some((story) => story.importPath.replace(/^\.\//, '') === module), module).toBe(true)
   }
@@ -56,15 +59,18 @@ for (const story of stories) {
           await expect(page.locator('.react-flow__node').first()).toBeVisible()
           await expect(page.getByText('Loading graph...')).toHaveCount(0)
         }
-        if (critical) {
-          expect(externalRequests, 'Critical fixtures must be self-contained').toEqual([])
-          const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-          expect(overflow, 'Horizontal scrolling belongs inside the component').toBeLessThanOrEqual(1)
+        try {
+          await expect(page).toHaveScreenshot(`${story.id}-${theme}-${viewportName}.png`, {
+            fullPage: critical || story.id === 'workflows-framing-candidates--narrow-host',
+          })
+        } finally {
+          expect(errors, 'Story runtime errors invalidate snapshots').toEqual([])
+          if (critical) {
+            expect(externalRequests, 'Critical fixtures must be self-contained').toEqual([])
+            const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+            expect(overflow, 'Horizontal scrolling belongs inside the component').toBeLessThanOrEqual(1)
+          }
         }
-        expect(errors).toEqual([])
-        await expect(page).toHaveScreenshot(`${story.id}-${theme}-${viewportName}.png`, {
-          fullPage: critical || story.id === 'workflows-framing-candidates--narrow-host',
-        })
       })
     }
   }

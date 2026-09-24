@@ -70,10 +70,13 @@ for (const flow of flows) {
         page.on('pageerror', (error) => errors.push(error.message))
         await openStory(page, flow.story, theme, viewport)
         await flow.act(page)
-        expect(errors).toEqual([])
-        await expect(page).toHaveScreenshot(`${flow.name}-${theme}-${viewportName}.png`, {
-          fullPage: false,
-        })
+        try {
+          await expect(page).toHaveScreenshot(`${flow.name}-${theme}-${viewportName}.png`, {
+            fullPage: false,
+          })
+        } finally {
+          expect(errors, 'Flow runtime errors invalidate snapshots').toEqual([])
+        }
       })
     }
   }

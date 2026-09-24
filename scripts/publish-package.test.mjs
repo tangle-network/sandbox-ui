@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { registryPackageUrl, registryShasum } from "./publish-package.mjs";
+import { registryPackageUrl, registryShasum, waitForPublishedArtifact } from "./publish-package.mjs";
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -10,6 +11,37 @@ describe("registryPackageUrl", () => {
     expect(
       registryPackageUrl("https://registry.npmjs.org", "@tangle-network/sandbox-ui"),
     ).toBe("https://registry.npmjs.org/@tangle-network%2Fsandbox-ui");
+  });
+});
+
+describe("waitForPublishedArtifact", () => {
+  it("waits beyond the previous 50-second window for npm to process a published package", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    let checks = 0;
+    const fetchImpl = vi.fn(async () => {
+      checks += 1;
+      return new Response(
+        JSON.stringify({
+          versions: checks >= 8 ? { "0.113.4": { dist: { shasum: "abc123" } } } : {},
+        }),
+        { status: 200 },
+      );
+    });
+
+    const publication = waitForPublishedArtifact(
+      {
+        registry: "https://registry.npmjs.org",
+        packageName: "@tangle-network/sandbox-ui",
+        version: "0.113.4",
+        fetchImpl,
+      },
+      "abc123",
+    );
+
+    await vi.advanceTimersByTimeAsync(70_000);
+    await expect(publication).resolves.toBeUndefined();
+    expect(fetchImpl).toHaveBeenCalledTimes(8);
   });
 });
 

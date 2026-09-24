@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const POLL_ATTEMPTS = 6;
+const POLL_TIMEOUT_MS = 10 * 60_000;
 const POLL_INTERVAL_MS = 10_000;
 
 export function registryPackageUrl(registry, packageName) {
@@ -70,8 +70,12 @@ function npmUserConfig({ registry, packageName, token, directory }) {
   return path;
 }
 
-async function waitForPublishedArtifact(options, expectedShasum) {
-  for (let attempt = 1; attempt <= POLL_ATTEMPTS; attempt += 1) {
+export async function waitForPublishedArtifact(options, expectedShasum) {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  let attempts = 0;
+
+  do {
+    attempts += 1;
     const publishedShasum = await registryShasum(options);
     if (publishedShasum === expectedShasum) {
       return;
@@ -81,11 +85,23 @@ async function waitForPublishedArtifact(options, expectedShasum) {
         `${options.registry} returned different package bytes: local=${expectedShasum} registry=${publishedShasum}`,
       );
     }
-    if (attempt < POLL_ATTEMPTS) {
-      await new Promise((resolvePromise) => setTimeout(resolvePromise, POLL_INTERVAL_MS));
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      break;
     }
-  }
-  throw new Error(`Published package was not visible from ${options.registry} after ${POLL_ATTEMPTS} attempts`);
+    console.log(
+      `Waiting for ${options.packageName}@${options.version} at ${options.registry} ` +
+        `(${attempts} checks, ${Math.ceil(remainingMs / 1000)}s left)`,
+    );
+    await new Promise((resolvePromise) =>
+      setTimeout(resolvePromise, Math.min(POLL_INTERVAL_MS, remainingMs)),
+    );
+  } while (Date.now() <= deadline);
+
+  throw new Error(
+    `Published package was not visible from ${options.registry} after ${attempts} checks over 10 minutes`,
+  );
 }
 
 async function main() {

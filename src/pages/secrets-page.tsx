@@ -253,7 +253,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             <button
               type="button"
               onClick={() => setIsImportOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-surface-container-high transition-colors active:scale-[0.97]"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-container-high active:scale-[0.97] sm:gap-2 sm:px-4"
             >
               <Upload className="h-4 w-4" />
               Import .env
@@ -261,7 +261,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] border border-[var(--border-accent,transparent)] px-5 py-2.5 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--border-accent,transparent)] bg-[var(--btn-primary-bg)] px-3 py-2.5 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97] sm:gap-2 sm:px-5"
             >
               <Plus className="h-4 w-4" />
               New Secret
@@ -276,22 +276,21 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
           shared credentials here and wondering why teammates can't see
           them. */}
       {teamSecretsHint && (
-        <div className="flex items-center gap-3 rounded-lg border border-[var(--md3-outline-variant)] bg-[var(--accent-surface-soft)]/40 px-4 py-3">
-          <Users className="h-5 w-5 shrink-0 text-[var(--accent-text)]" aria-hidden="true" />
-          <div className="flex-1 text-sm">
-            <p className="font-semibold text-foreground">
-              Setting up secrets for a team?
-            </p>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              Secrets here are <strong>personal</strong> — only available in
-              sandboxes you create. To share credentials with teammates,
-              configure them on the team page instead.
-            </p>
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--md3-outline-variant)] bg-[var(--accent-surface-soft)]/40 px-4 py-3">
+          <div className="flex min-w-[min(100%,18rem)] flex-1 items-start gap-3">
+            <Users className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent-text)]" aria-hidden="true" />
+            <div className="min-w-0 text-sm">
+              <p className="font-semibold text-foreground">Setting up secrets for a team?</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Secrets here are <strong>personal</strong> and only available in sandboxes you create.
+                Add shared credentials on the team page.
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={teamSecretsHint.onNavigate}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-container-high transition-colors"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-1 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface-container-high sm:w-auto"
           >
             {teamSecretsHint.label ?? "Manage team secrets"}
             <ArrowRight className="h-3 w-3" aria-hidden="true" />
@@ -641,30 +640,33 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
-                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Secret Name</th>
-                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Encrypted Value</th>
-                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right">Created</th>
-                <th className="px-6 py-4 w-12" />
+                <th scope="col" className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:px-6 sm:py-4">Secret Name</th>
+                <th scope="col" className="hidden px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:table-cell">Encrypted Value</th>
+                <th scope="col" className="hidden px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:table-cell">Created</th>
+                <th scope="col" aria-label="Actions" className="w-12 px-3 py-3 sm:px-6 sm:py-4" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {secrets.map((secret) => (
                 <tr key={secret.name} className="hover:bg-surface-container-high transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3 sm:px-6 sm:py-4">
                     <div className="flex items-center gap-3">
-                      <Key className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-bold font-mono text-foreground">{secret.name}</span>
+                      <Key className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <span className="break-all font-mono text-sm font-bold text-foreground sm:break-normal">{secret.name}</span>
+                        <span className="mt-1 block text-xs text-muted-foreground sm:hidden">Created {formatDate(secret.createdAt)}</span>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="hidden px-6 py-4 sm:table-cell">
                     <code className="text-xs font-mono text-muted-foreground bg-surface-container-high px-2 py-1 rounded">
                       ••••••••••••••••
                     </code>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="hidden px-6 py-4 text-right sm:table-cell">
                     <span className="text-xs text-muted-foreground">{formatDate(secret.createdAt)}</span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-3 sm:px-6 sm:py-4">
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(secret.name)}

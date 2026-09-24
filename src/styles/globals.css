@@ -296,7 +296,8 @@
 
 @layer utilities {
   /* Gradient text -- Tangle default accent */
-  .text-gradient-sandbox {
+  .text-gradient-sandbox,
+  .text-gradient-brand {
     background-image: var(--tangle-gradient);
     background-clip: text;
     -webkit-background-clip: text;

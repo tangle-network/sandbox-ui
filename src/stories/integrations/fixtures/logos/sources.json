@@ -1,0 +1,170 @@
+[
+  {
+    "file": "acme-erp.png",
+    "source": "Original ProviderIcon monogram in IntegrationsPanel/Default, Chromium 1.62.1, 48px at deviceScaleFactor 1",
+    "bytes": 1146,
+    "sha256": "337d680a5cd4689632456770fdb4d987827d0dda2b0527fef523ec2bcfe8b637"
+  },
+  {
+    "file": "airtable.png",
+    "source": "https://cdn.activepieces.com/pieces/airtable.png",
+    "bytes": 23429,
+    "sha256": "8cdf568da09d46a566f045cde2617fdc422171bd83133866ed1a8d69c88c1f7b"
+  },
+  {
+    "file": "asana.png",
+    "source": "https://cdn.activepieces.com/pieces/asana.png",
+    "bytes": 65723,
+    "sha256": "34cced5c9053b5bc5e969320911329cb514e6c245caa458a9409ccaffafe1de6"
+  },
+  {
+    "file": "datadog.png",
+    "source": "https://cdn.activepieces.com/pieces/datadog.png",
+    "bytes": 55752,
+    "sha256": "1423453f662c0ed28534bdcac8e165423cb271341ca751930b4ad9e9a6a91771"
+  },
+  {
+    "file": "discord.png",
+    "source": "https://cdn.activepieces.com/pieces/discord.png",
+    "bytes": 20527,
+    "sha256": "868d5430520fb6587fc8de1f58d0b079dca89a780db0969cfb87c06c44929fe2"
+  },
+  {
+    "file": "figma.png",
+    "source": "https://cdn.activepieces.com/pieces/figma.png",
+    "bytes": 12524,
+    "sha256": "3f31f8800833cf59dc5c55448a89ff5b457b3a1471c52c224cee77508f85ec2a"
+  },
+  {
+    "file": "github.png",
+    "source": "https://cdn.activepieces.com/pieces/github.png",
+    "bytes": 20693,
+    "sha256": "7f618ca8ea9328d9dea218bd4a569cd062e8ac1f98b2c614d7edc077e8e788f3"
+  },
+  {
+    "file": "gitlab.png",
+    "source": "https://cdn.activepieces.com/pieces/gitlab.png",
+    "bytes": 121387,
+    "sha256": "9340fa3770ed61da013af9a7ae27e2135e686d9506c9430504a59cc348a4a4e7"
+  },
+  {
+    "file": "gmail.png",
+    "source": "https://cdn.activepieces.com/pieces/gmail.png",
+    "bytes": 15416,
+    "sha256": "bb2964827ced6e7210dd05e60505bfcf23220183903b70313807b157cb878a5c"
+  },
+  {
+    "file": "google-calendar.png",
+    "source": "https://cdn.activepieces.com/pieces/google-calendar.png",
+    "bytes": 11730,
+    "sha256": "f66ea7c30eed6ecc5092d4c66440f3e62a3d5a7a329284d78d0015fbac757f2e"
+  },
+  {
+    "file": "google-drive.png",
+    "source": "https://cdn.activepieces.com/pieces/google-drive.png",
+    "bytes": 21242,
+    "sha256": "9c4849f01854bedd21d2083f677a5de781e82695f8c6a190d5b2e6e66ce68e74"
+  },
+  {
+    "file": "google-sheets.png",
+    "source": "https://cdn.activepieces.com/pieces/google-sheets.png",
+    "bytes": 11108,
+    "sha256": "a3397eca48bb2da527aa0cc026b7c2ddcc24b34a5135b1f535b63285ea24d716"
+  },
+  {
+    "file": "hubspot.png",
+    "source": "https://cdn.activepieces.com/pieces/hubspot.png",
+    "bytes": 19793,
+    "sha256": "9f364b7d3683218eebc0cf0cc5b176894c96e08862e299b65cc0882a62b78e08"
+  },
+  {
+    "file": "intercom.png",
+    "source": "https://cdn.activepieces.com/pieces/intercom.png",
+    "bytes": 18638,
+    "sha256": "d83ea0e8df137d0f15d935b305c91da24d8d2cc3a00ecce13ffb9ec1d670c20e"
+  },
+  {
+    "file": "internal-billing.png",
+    "source": "Original ProviderIcon monogram in IntegrationsPanel/Default, Chromium 1.62.1, 48px at deviceScaleFactor 1",
+    "bytes": 848,
+    "sha256": "2c6f072b7813762dc59b5b08631341eeb848b274c0787e944ba6bca2ebd7031d"
+  },
+  {
+    "file": "jira.png",
+    "source": "https://cdn.activepieces.com/pieces/jira.png",
+    "bytes": 56325,
+    "sha256": "15ab8a8e8f7ef60a6ba3d02978e78f4af839f6427910b0d1d2969712d3b6f7fc"
+  },
+  {
+    "file": "linear.png",
+    "source": "https://cdn.activepieces.com/pieces/linear.png",
+    "bytes": 76680,
+    "sha256": "e63eab3f1fe3e506c4bd94b831529fdd96e6bd7c307cadb8bb899b492daf1e5d"
+  },
+  {
+    "file": "mailchimp.png",
+    "source": "https://cdn.activepieces.com/pieces/mailchimp.png",
+    "bytes": 35255,
+    "sha256": "ae6482b0e53c7b90f413e47bf6483318c035740b74595223c16975ac4b0d9f79"
+  },
+  {
+    "file": "notion.png",
+    "source": "https://cdn.activepieces.com/pieces/notion.png",
+    "bytes": 24066,
+    "sha256": "2684c6a04b08f1f8adf64de676a1f7483165e033c515ae0689ebcba7fcfbb82f"
+  },
+  {
+    "file": "outlook.svg",
+    "source": "https://svgl.app/library/microsoft-outlook.svg",
+    "bytes": 8541,
+    "sha256": "334bf1a0ef366570a80d62faa0dc9c34de094cbc18c4935f2ceb26a140875d5b"
+  },
+  {
+    "file": "salesforce.svg",
+    "source": "https://svgl.app/library/salesforce.svg",
+    "bytes": 8567,
+    "sha256": "aa6d730bbb164c2df9ab8355731a8b5c327b54640ae9f9a6a25527785dda5682"
+  },
+  {
+    "file": "shopify.png",
+    "source": "https://cdn.activepieces.com/pieces/shopify.png",
+    "bytes": 34514,
+    "sha256": "bc2b3164ca0ec9a87fff18c196a50d7d83954dc95ea394856058dfe57746446d"
+  },
+  {
+    "file": "slack.svg",
+    "source": "https://svgl.app/library/slack.svg",
+    "bytes": 1497,
+    "sha256": "29734796b3a85f9d0e03150d53142fab0b7f994ae80c7e3e1efd0bef52c12f5d"
+  },
+  {
+    "file": "snowflake.png",
+    "source": "https://cdn.activepieces.com/pieces/snowflake.png",
+    "bytes": 41380,
+    "sha256": "feccbac950a6d9d71715d473f8dc40476c36a8285c0cec4d449fc0491942e061"
+  },
+  {
+    "file": "stripe.png",
+    "source": "https://cdn.activepieces.com/pieces/stripe.png",
+    "bytes": 13391,
+    "sha256": "dd1ff7e67ddabfd18e3a1174b738fe4ce953a770aeca71a34178fa2e8aa65be7"
+  },
+  {
+    "file": "supabase.png",
+    "source": "https://cdn.activepieces.com/pieces/supabase.png",
+    "bytes": 7668,
+    "sha256": "1b4006ff3c587f38aa6c9091d3912ad0ad01a29cf865c063aa808d2f330e4bbd"
+  },
+  {
+    "file": "twilio.svg",
+    "source": "https://svgl.app/library/twilio.svg",
+    "bytes": 504,
+    "sha256": "16de11fe08c106fc52a984b8204ea2e5a51f50b2193d4411212c57e35e9bd4be"
+  },
+  {
+    "file": "zendesk.png",
+    "source": "https://cdn.activepieces.com/pieces/zendesk.png",
+    "bytes": 15508,
+    "sha256": "5660049c36629694996b8a9cc95764c4f030efaaa495f80cde39010a7c59bb1d"
+  }
+]

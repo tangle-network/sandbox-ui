@@ -4,7 +4,7 @@ import { WorkflowGraphLazy } from "../../workflows";
 /**
  * Candidates for how a long workflow should occupy its panel.
  *
- * The comparison canvases are 742x480 — the workflow detail page's graph panel
+ * The comparison canvases are at most 742x480 — the workflow detail page's graph panel
  * (`h-[30rem]`, that wide beside the step list). Each row shows the SAME
  * workflow framed two ways, so the question is only ever "which of these do I
  * want to look at". NarrowHost keeps that comparison in a separate narrow pane.
@@ -20,17 +20,15 @@ const chain = (steps: number) =>
 function Canvas({
   caption,
   children,
-  narrow = false,
 }: {
   caption: string;
   children: React.ReactNode;
-  narrow?: boolean;
 }) {
   return (
-    <div>
+    <div className="w-full max-w-[742px] min-w-0">
       <div className="mb-1 text-text-muted text-xs">{caption}</div>
       <div
-        style={narrow ? { width: "100%", maxWidth: 742, height: 480 } : { width: 742, height: 480 }}
+        style={{ width: "100%", maxWidth: 742, height: 480 }}
         className="overflow-hidden rounded-lg border border-border bg-background"
       >
         {children}
@@ -61,10 +59,10 @@ function Compare({
     <div className="mb-8">
       <div className="mb-2 font-medium text-base text-text">{title}</div>
       <div className={narrow ? "flex flex-col gap-6" : "flex flex-wrap gap-6"}>
-        <Canvas caption="one row — today" narrow={narrow}>
+        <Canvas caption="one row — today">
           <WorkflowGraphLazy {...common} />
         </Canvas>
-        <Canvas caption="folded into rows" narrow={narrow}>
+        <Canvas caption="folded into rows">
           <WorkflowGraphLazy {...common} wrap />
         </Canvas>
       </div>

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Workspace status bars wrap context badges and credits inside narrow panes.
+
 ## 0.113.7
 
 - **Integration tiles show the provider's real name.** The hub catalog sends

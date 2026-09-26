@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { test, expect } from 'playwright/test'
-import { openStory, waitForDiffRender } from './story-ready.mjs'
+import { assertStoryHealthy, openStory, waitForDiffRender } from './story-ready.mjs'
+
+test.afterEach(async ({ page }) => {
+  await assertStoryHealthy(page)
+})
 
 const index = JSON.parse(readFileSync(new URL('../../storybook-static/index.json', import.meta.url)))
 const stories = Object.values(index.entries).filter((entry) => entry.type === 'story')
@@ -34,20 +38,7 @@ for (const story of stories) {
   for (const theme of themes) {
     for (const [viewportName, viewport] of Object.entries(storyViewports)) {
       test(`${story.id} ${theme} ${viewportName}`, async ({ page, baseURL }) => {
-        const errors = []
-        const externalRequests = []
-        page.on('pageerror', (error) => errors.push(error.message))
-        if (critical) {
-          await page.route('**/*', (route) => {
-            const url = new URL(route.request().url())
-            if (/^https?:$/.test(url.protocol) && url.origin !== new URL(baseURL).origin) {
-              externalRequests.push(url.href)
-              return route.abort('blockedbyclient')
-            }
-            return route.continue()
-          })
-        }
-        await openStory(page, story.id, theme, viewport)
+        await openStory(page, story.id, theme, viewport, baseURL)
         if (/^workbench-previewview--(local-app|verified-response|failed-check)$/.test(story.id)) {
           const preview = page.frameLocator('iframe')
           await expect(preview.getByRole('heading', { name: 'Local preview fixture' })).toBeVisible()
@@ -73,18 +64,9 @@ for (const story of stories) {
             await expect(page.locator('.react-flow__node[data-id="trigger"]')).toHaveCount(2)
           }
         }
-        try {
-          await expect(page).toHaveScreenshot(`${story.id}-${theme}-${viewportName}.png`, {
-            fullPage: critical || story.id === 'workflows-framing-candidates--narrow-host',
-          })
-        } finally {
-          expect(errors, 'Story runtime errors invalidate snapshots').toEqual([])
-          if (critical) {
-            expect(externalRequests, 'Critical fixtures must be self-contained').toEqual([])
-            const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-            expect(overflow, 'Horizontal scrolling belongs inside the component').toBeLessThanOrEqual(1)
-          }
-        }
+        await expect(page).toHaveScreenshot(`${story.id}-${theme}-${viewportName}.png`, {
+          fullPage: critical || story.id === 'workflows-framing-candidates--narrow-host',
+        })
       })
     }
   }

@@ -44,7 +44,7 @@ export function StatusBar({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-3 py-1 border-t border-[var(--md3-outline-variant)] bg-surface-container-high font-sans text-[12px]",
+        "flex flex-wrap items-center gap-3 px-3 py-1 border-t border-[var(--md3-outline-variant)] bg-surface-container-high font-sans text-[12px]",
         className,
       )}
     >

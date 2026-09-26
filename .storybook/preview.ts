@@ -19,6 +19,15 @@ import '@fontsource/manrope/latin-500.css'
 import '@fontsource/manrope/latin-600.css'
 import '@fontsource/manrope/latin-700.css'
 import '../src/styles/globals.css'
+import { PROVIDER_LOGO_URLS, PROVIDER_VECTOR_LOGOS } from '../src/integrations/provider-logo'
+import { providerLogos } from '../src/stories/integrations/fixtures/provider-logos'
+
+// Workflow nodes resolve their provider marks through these shared tables.
+// Pin those sources only in Storybook; production keeps its catalog fallbacks.
+Object.assign(PROVIDER_LOGO_URLS, providerLogos)
+for (const id of ['slack', 'outlook', 'microsoftoutlook', 'salesforce', 'twilio']) {
+  delete PROVIDER_VECTOR_LOGOS[id]
+}
 
 const withSandboxTheme: Decorator = (Story, context) => {
   const theme = context.globals.sandboxTheme ?? 'dark'

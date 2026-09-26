@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Workspace status bars wrap context badges and credits inside narrow panes.
+  Context removal buttons have accessible names and do not submit enclosing forms.
+
 ## 0.113.7
 
 - **Integration tiles show the provider's real name.** The hub catalog sends

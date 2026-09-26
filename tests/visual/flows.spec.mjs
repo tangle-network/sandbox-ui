@@ -1,5 +1,9 @@
 import { test, expect } from 'playwright/test'
-import { openStory, waitForDiffRender } from './story-ready.mjs'
+import { assertStoryHealthy, openStory, waitForDiffRender } from './story-ready.mjs'
+
+test.afterEach(async ({ page }) => {
+  await assertStoryHealthy(page)
+})
 
 const themes = ['dark', 'light']
 const viewports = {
@@ -65,18 +69,12 @@ const flows = [
 for (const flow of flows) {
   for (const theme of themes) {
     for (const [viewportName, viewport] of Object.entries(viewports)) {
-      test(`${flow.name} ${theme} ${viewportName}`, async ({ page }) => {
-        const errors = []
-        page.on('pageerror', (error) => errors.push(error.message))
-        await openStory(page, flow.story, theme, viewport)
+      test(`${flow.name} ${theme} ${viewportName}`, async ({ page, baseURL }) => {
+        await openStory(page, flow.story, theme, viewport, baseURL)
         await flow.act(page)
-        try {
-          await expect(page).toHaveScreenshot(`${flow.name}-${theme}-${viewportName}.png`, {
-            fullPage: false,
-          })
-        } finally {
-          expect(errors, 'Flow runtime errors invalidate snapshots').toEqual([])
-        }
+        await expect(page).toHaveScreenshot(`${flow.name}-${theme}-${viewportName}.png`, {
+          fullPage: false,
+        })
       })
     }
   }

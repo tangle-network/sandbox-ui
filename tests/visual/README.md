@@ -21,8 +21,13 @@ Run the complete gate without snapshot updates before pushing.
 New stories fail comparison until their screenshots are reviewed and added.
 The regular test command never updates snapshots.
 
-Critical stories also fail on external requests or document overflow.
+Every rendered story and flow fails on runtime errors, console errors, external requests, or document overflow above 1 CSS pixel.
+The shared guard runs before capture and again after screenshots while the browser remains open.
+Context request events detect redirects and service workers that bypass request routing.
+Scrolling inside a component remains valid.
 Storybook bundles fonts so visual checks do not depend on remote font services.
+Integration fixtures also bundle their original provider marks.
+Their source URLs and hashes are recorded in `src/stories/integrations/fixtures/logos/sources.json`.
 
 These checks exercise Storybook fixtures and component interactions.
 They do not verify authenticated Sandbox actions or hosted consumer routes.

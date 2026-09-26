@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { providerLogos } from "./fixtures/provider-logos";
 import { IntegrationsPanel } from "../../integrations/integrations-panel";
 import type {
   IntegrationConnection,
@@ -24,7 +25,7 @@ const meta: Meta<typeof IntegrationsPanel> = {
 export default meta;
 type Story = StoryObj<typeof IntegrationsPanel>;
 
-const catalog: IntegrationProvider[] = [
+const catalog: IntegrationProvider[] = ([
   { providerId: "gmail", displayName: "Gmail" },
   { providerId: "google-sheets", displayName: "Google Sheets" },
   { providerId: "google-drive", displayName: "Google Drive" },
@@ -51,10 +52,13 @@ const catalog: IntegrationProvider[] = [
   { providerId: "supabase", displayName: "Supabase" },
   { providerId: "snowflake", displayName: "Snowflake" },
   { providerId: "datadog", displayName: "Datadog" },
-  // long-tail / no-curated-slug → derived slug or monogram fallback
+  // Local captures preserve the original monogram fallback for unknown providers.
   { providerId: "acme-erp", displayName: "Acme ERP" },
   { providerId: "internal-billing", displayName: "Internal Billing" },
-];
+] satisfies IntegrationProvider[]).map((provider) => ({
+  ...provider,
+  iconUrl: providerLogos[provider.providerId],
+}));
 
 function Interactive(props: { connected?: IntegrationConnection[] }) {
   const [connections, setConnections] = useState<IntegrationConnection[]>(

@@ -344,8 +344,8 @@ const meta: Meta<typeof WorkflowGraphLazy> = {
   parameters: { layout: "centered", backgrounds: { disable: true } },
   decorators: [
     withColorMode,
-    (Story) => (
-      <div className="p-6">
+    (Story, context) => (
+      <div className={context.parameters.layout === "fullscreen" ? "p-6" : "w-full max-w-[calc(100vw-2rem)] p-6"}>
         <Story />
       </div>
     ),
@@ -664,7 +664,7 @@ export const TopToBottom: Story = {
   name: "Top-to-bottom direction (compact + expanded)",
   parameters: { layout: "fullscreen" },
   render: () => (
-    <div className="grid grid-cols-2 gap-6 p-6">
+    <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-2">
       <GraphPanel title="TB · compact" height="h-[34rem]">
         <WorkflowGraphLazy
           yaml={PROVIDER_EVENT}
@@ -695,11 +695,11 @@ export const TopToBottom: Story = {
 export const Preview: Story = {
   name: "Preview variant (proposal card)",
   render: () => (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid max-w-[calc(100vw-5rem)] grid-cols-1 gap-4 md:grid-cols-2">
       {[LINEAR, PARALLEL_SYNTHESIS].map((yaml) => (
         <div
           key={yaml}
-          className="h-[220px] w-[360px] overflow-hidden rounded-lg border border-border bg-card"
+          className="h-[220px] w-[360px] max-w-full overflow-hidden rounded-lg border border-border bg-card"
         >
           <WorkflowGraphLazy yaml={yaml} variant="preview" className="h-full w-full" />
         </div>

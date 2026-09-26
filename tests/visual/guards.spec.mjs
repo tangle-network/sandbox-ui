@@ -3,6 +3,18 @@ import { assertStoryHealthy, openStory } from './story-ready.mjs'
 
 const viewport = { width: 390, height: 844 }
 
+test('keeps mobile context removal named and usable', async ({ page, baseURL }) => {
+  await openStory(page, 'workspace-statusbar--with-removable-badges', 'dark', viewport, baseURL)
+  const remove = page.getByRole('button', { name: 'Remove sandbox-ui from context', exact: true })
+  await page.keyboard.press('Tab')
+  await expect(remove).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(remove).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Remove README.md from context', exact: true })).toBeVisible()
+  await expect(page.getByText('31,000')).toBeVisible()
+  await assertStoryHealthy(page)
+})
+
 test('blocks an unexpected WebSocket after a flow opens', async ({ page, baseURL }) => {
   await openStory(page, 'dashboard-sandboxcard--running', 'dark', viewport, baseURL)
   await page.evaluate(() => new Promise((resolve) => {

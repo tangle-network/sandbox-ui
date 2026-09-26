@@ -67,6 +67,8 @@ export function StatusBar({
           )}
           {onRemoveBadge && (
             <button
+              type="button"
+              aria-label={`Remove ${badge.label} from context`}
               onClick={() => onRemoveBadge(badge.id)}
               className="hover:text-foreground transition-colors"
             >

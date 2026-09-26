@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Workspace status bars wrap context badges and credits inside narrow panes.
+  Context removal buttons have accessible names and do not submit enclosing forms.
 
 ## 0.113.7
 

@@ -1,9 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.114.0
 
 - Workspace status bars wrap context badges and credits inside narrow panes.
   Context removal buttons have accessible names and do not submit enclosing forms.
+- Dependencies move to their latest releases.
+- `eventsource-parser` 4 is ESM only and supports Node.js 22.12 or later.
+  Browser bundles are unaffected.
+- tsdown builds the package on TypeScript 7 instead of tsup.
+  Export paths are unchanged; internal chunk file names differ.
 
 ## 0.113.7
 

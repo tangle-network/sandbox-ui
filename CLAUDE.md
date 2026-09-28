@@ -12,7 +12,7 @@ Run `pnpm test:bridge` when changing a bridge; it builds before checking identit
 Source-only tests cannot prove the packaged re-export contract.
 Preserve intentional named exports and aliases in `src/index.ts` to avoid collisions between editor, hook, and terminal types.
 
-A subpath change must align the `package.json` export map, `tsup.config.ts` entry, and source barrel.
+A subpath change must align the `package.json` export map, `tsdown.config.ts` entry, and source barrel.
 Test the packed artifact in a fresh consumer with `pnpm test:package`.
 Keep optional-peer omissions covered so an unrelated import does not force optional feature dependencies.
 

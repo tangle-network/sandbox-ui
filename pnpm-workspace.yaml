@@ -1,12 +1,6 @@
 packages:
   - "."
 
-overrides:
-  'storybook>@testing-library/jest-dom': "6.9.1"
-  esbuild: "0.28.1"
-  picomatch: ">=4.0.4"
-  undici: "7.29.0"
-
 allowBuilds:
   canvas: false
   esbuild: true

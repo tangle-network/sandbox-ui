@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
 export default defineConfig({
   entry: {
@@ -27,16 +27,16 @@ export default defineConfig({
     assets: "src/assets/index.ts",
   },
   format: ["esm"],
+  platform: "neutral",
   dts: true,
-  splitting: true,
   clean: true,
-  noExternal: ["@lobehub/icons-static-svg"],
+  fixedExtension: false,
+  // Provider logos ship inside the bundle as data URLs, so consumers need no
+  // asset loader for them.
+  deps: { alwaysBundle: [/^@lobehub\/icons-static-svg\//] },
+  loader: { ".svg": "dataurl" },
   onSuccess: "node scripts/copy-styles.mjs",
-  esbuildOptions(options) {
-    options.jsx = "automatic";
-    options.loader = {
-      ...options.loader,
-      ".svg": "dataurl",
-    };
-  },
+  // Bundling drops per-file "use client" directives, as tsup did before.
+  // Consumers mark their own client boundaries.
+  checks: { moduleLevelDirective: false },
 });

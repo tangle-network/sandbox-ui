@@ -19,6 +19,8 @@ export interface EmbeddedApp {
 
 export interface EmbeddedAppViewProps {
   app: EmbeddedApp
+  /** Product-approved origins, obtained independently of the app URL. */
+  allowedOrigins?: readonly string[]
   /** Recheck or restart the preview through the host's own service. */
   onRetry?: () => void
   className?: string
@@ -28,12 +30,12 @@ export interface EmbeddedAppViewProps {
  * An app-sized preview surface for a product workspace.
  * The host owns app discovery, persistence, access policy, and readiness checks.
  */
-export function EmbeddedAppView({ app, onRetry, className }: EmbeddedAppViewProps) {
+export function EmbeddedAppView({ app, allowedOrigins, onRetry, className }: EmbeddedAppViewProps) {
   let previewUrl: string | null = null
   let urlError: string | null = null
   if (app.status === "ready") {
     try {
-      previewUrl = safePreviewUrl(app.previewUrl ?? "")
+      previewUrl = safePreviewUrl(app.previewUrl ?? "", undefined, allowedOrigins)
     } catch (failure) {
       urlError = failure instanceof Error ? failure.message : "Preview URL is invalid."
     }
@@ -42,7 +44,7 @@ export function EmbeddedAppView({ app, onRetry, className }: EmbeddedAppViewProp
   if (previewUrl) {
     return (
       <section aria-label={`${app.name} app`} className={cn("h-full min-h-0 min-w-0", className)}>
-        <PreviewView key={app.id} url={previewUrl} title={app.name} variant="embedded" />
+        <PreviewView key={app.id} url={previewUrl} allowedOrigins={allowedOrigins} title={app.name} variant="embedded" />
       </section>
     )
   }

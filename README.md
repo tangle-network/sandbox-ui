@@ -55,14 +55,18 @@ import { EmbeddedAppView } from "@tangle-network/sandbox-ui/workbench"
       previewUrl: selectedApp.previewUrl,
       statusMessage: selectedApp.previewError,
     }}
+    allowedOrigins={workspace.previewOrigins}
     onRetry={() => recheckPreview(selectedApp.id)}
   />
 </main>
 ```
 
 The host supplies the app list, stable identity, persistence, authorization, and readiness result.
-Set `status: "ready"` only after the preview service verifies the app.
+Set `status: "ready"` only after an app-level HTTP probe succeeds.
+A preview route becoming available does not prove app health.
 Supply a resolved, credential-free HTTPS URL, or HTTP loopback for local development.
+Pass `allowedOrigins` from product policy or the enforcing service, independent of the URL.
+The host must authorize access before it returns the URL.
 The component shows starting and unavailable states without mounting a frame.
 Its ready view uses the same URL validation and iframe isolation as `PreviewView`.
 The compact header provides Reload and Open in new tab.

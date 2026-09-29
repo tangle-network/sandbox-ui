@@ -21,6 +21,17 @@ describe("EmbeddedAppView", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("unavailable")
   })
 
+  it("rejects a preview origin outside the host's approved set", () => {
+    const { container } = render(
+      <EmbeddedAppView
+        app={{ ...app, status: "ready", previewUrl: "https://outside.example.test/" }}
+        allowedOrigins={["https://preview.example.test"]}
+      />,
+    )
+    expect(container.querySelector("iframe")).toBeNull()
+    expect(screen.getByRole("alert")).toHaveTextContent("not approved")
+  })
+
   it("never mounts a frame or open link for an invalid address and offers host retry", () => {
     const retry = vi.fn()
     const { container } = render(<EmbeddedAppView app={{ ...app, status: "ready", previewUrl: "https://user:secret@preview.example.test/" }} onRetry={retry} />)

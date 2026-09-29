@@ -38,6 +38,46 @@ Import styles in your app root:
 import "@tangle-network/sandbox-ui/styles";
 ```
 
+### Embed a sandbox app
+
+Use `EmbeddedAppView` when a workspace presents a running web app beside an agent conversation.
+Render it in a container with a defined height.
+
+```tsx
+import { EmbeddedAppView } from "@tangle-network/sandbox-ui/workbench"
+
+<main className="h-full min-h-0">
+  <EmbeddedAppView
+    app={{
+      id: selectedApp.id,
+      name: selectedApp.name,
+      status: selectedApp.previewStatus,
+      previewUrl: selectedApp.previewUrl,
+      statusMessage: selectedApp.previewError,
+    }}
+    allowedOrigins={workspace.previewOrigins}
+    readiness={selectedApp.httpReadiness}
+    access={workspace.enforcedPreviewAccess}
+    toolbarActions={<AppActions app={selectedApp} />}
+    onRetry={() => recheckPreview(selectedApp.id)}
+  />
+</main>
+```
+
+The host supplies the app list, stable identity, persistence, authorization, and readiness result.
+Set `status: "ready"` only after an app-level HTTP probe succeeds.
+A preview route becoming available does not prove app health.
+Supply a resolved, credential-free HTTPS URL, or HTTP loopback for local development.
+Pass `allowedOrigins` from product policy or the enforcing service, independent of the URL.
+The host must authorize access before it returns the URL.
+The component shows starting and unavailable states without mounting a frame.
+Its ready view uses the same URL validation and iframe isolation as `PreviewView`.
+The compact header provides Reload and Open in new tab.
+Place product actions in `toolbarActions` to share that header without a second toolbar.
+Pass service-observed `readiness` and enforced `access` to show their status inside the pane.
+Show process and port state beside the pane if your runtime exposes those separately.
+Do not infer either state from the preview URL or iframe load.
+
 ### Fonts
 
 sandbox-ui references the following font families in its design tokens but does **not** bundle them — consumer apps must load the fonts themselves. This is deliberate: a URL `@import` inside a library CSS bundle breaks when downstream apps chain-import the stylesheet (see CHANGELOG 0.10.9 for the full reasoning).

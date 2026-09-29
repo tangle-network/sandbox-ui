@@ -104,3 +104,18 @@ test('rejects external requests made by a service worker', async ({ page, baseUR
   await page.screenshot()
   await expect(assertStoryHealthy(page)).rejects.toThrow('Story fixtures must be self-contained')
 })
+
+test('keeps an embedded app interactive and reloadable from the keyboard', async ({ page, baseURL }) => {
+  await openStory(page, 'workbench-embeddedappview--ready', 'dark', viewport, baseURL)
+  const frame = page.frameLocator('iframe')
+  await expect(frame.getByRole('heading', { name: 'Local preview fixture' })).toBeVisible()
+  await frame.getByRole('button', { name: 'Test preview interaction' }).click()
+  await expect(frame.locator('#result')).toHaveText('The preview button works.')
+  const reload = page.getByRole('button', { name: 'Reload Reporting' })
+  await reload.focus()
+  await page.keyboard.press('Enter')
+  await expect(frame.locator('#result')).toContainText('The frame loaded.')
+  await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts allow-forms')
+  await expect(page.getByRole('link', { name: 'Open Reporting in new tab' })).toHaveAttribute('href', /preview-fixture/)
+  await assertStoryHealthy(page)
+})

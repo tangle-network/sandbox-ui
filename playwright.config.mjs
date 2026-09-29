@@ -1,5 +1,7 @@
 import { defineConfig, devices } from 'playwright/test'
 
+const storybookPort = Number(process.env.STORYBOOK_PORT ?? 6006)
+
 export default defineConfig({
   testDir: './tests/visual',
   fullyParallel: true,
@@ -18,7 +20,7 @@ export default defineConfig({
   },
   use: {
     ...devices['Desktop Chrome'],
-    baseURL: 'http://127.0.0.1:6006',
+    baseURL: `http://127.0.0.1:${storybookPort}`,
     deviceScaleFactor: 1,
     locale: 'en-US',
     timezoneId: 'UTC',
@@ -27,8 +29,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'python3 -m http.server 6006 --bind 127.0.0.1 --directory storybook-static',
-    url: 'http://127.0.0.1:6006/index.json',
+    command: `python3 -m http.server ${storybookPort} --bind 127.0.0.1 --directory storybook-static`,
+    url: `http://127.0.0.1:${storybookPort}/index.json`,
     reuseExistingServer: !process.env.CI,
     stderr: 'ignore',
     timeout: 120_000,

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.115.0
+
+- `EmbeddedAppView` renders a named sandbox application at full pane height.
+  Host-supplied starting, ready, and unavailable states govern when the iframe mounts.
+  The ready view uses the existing preview URL policy and iframe isolation, with compact refresh and open controls.
+
+
 ## 0.114.0
 
 - Workspace status bars wrap context badges and credits inside narrow panes.

@@ -16,10 +16,14 @@ export interface PreviewViewProps {
   readiness?: PreviewReadiness
   onCheckReadiness?: () => void
   onNavigate?: (url: string) => void
+  /** Compact app chrome omits the editable address and verification row. */
+  variant?: "browser" | "embedded"
+  /** Accessible frame title and compact app label. */
+  title?: string
   className?: string
 }
 
-export function PreviewView({ url, allowedOrigins, access, readiness, onCheckReadiness, onNavigate, className }: PreviewViewProps) {
+export function PreviewView({ url, allowedOrigins, access, readiness, onCheckReadiness, onNavigate, variant = "browser", title = "Sandbox preview", className }: PreviewViewProps) {
   const initial = React.useMemo(() => {
     try { return { url: safePreviewUrl(url), error: null } }
     catch (failure) { return { url: null, error: failure instanceof Error ? failure.message : "Preview URL is invalid." } }
@@ -69,7 +73,7 @@ export function PreviewView({ url, allowedOrigins, access, readiness, onCheckRea
 
   return (
     <div className={cn("flex h-full min-h-0 min-w-0 flex-col bg-surface-container", className)}>
-      <form aria-label="Preview navigation" onSubmit={(event) => { event.preventDefault(); navigate() }}
+      {variant === "browser" ? <form aria-label="Preview navigation" onSubmit={(event) => { event.preventDefault(); navigate() }}
         className="flex flex-wrap items-center gap-2 border-b border-border bg-surface-container-low px-2 py-2">
         <Button type="button" variant="ghost" size="sm" onClick={reload} disabled={!activeUrl} aria-label="Reload preview">
           <RotateCw aria-hidden="true" className="size-4" />
@@ -84,18 +88,28 @@ export function PreviewView({ url, allowedOrigins, access, readiness, onCheckRea
             <ExternalLink aria-hidden="true" className="size-4" />
           </a>
         </Button>}
-      </form>
+      </form> : <div className="flex min-w-0 items-center gap-2 border-b border-border bg-surface-container-low px-3 py-2">
+        <h2 className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{title}</h2>
+        <Button type="button" variant="ghost" size="sm" onClick={reload} disabled={!activeUrl} aria-label={`Reload ${title}`}>
+          <RotateCw aria-hidden="true" className="size-4" />
+        </Button>
+        {activeUrl && <Button asChild type="button" variant="ghost" size="sm">
+          <a href={activeUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${title} in new tab`}>
+            <ExternalLink aria-hidden="true" className="size-4" />
+          </a>
+        </Button>}
+      </div>}
       {error && <p id={errorId} role="alert" className="px-3 py-2 text-sm text-destructive">{error}</p>}
-      <div id={stateId} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-3 py-2 text-xs text-muted-foreground">
+      {variant === "browser" && <div id={stateId} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-3 py-2 text-xs text-muted-foreground">
         <span>{previewAccessLabel(currentAccess)}</span>
         <span role="status">{previewReadinessLabel(currentReadiness)}</span>
         {currentReadiness && "checkedAt" in currentReadiness && <time dateTime={currentReadiness.checkedAt}>Checked {currentReadiness.checkedAt}</time>}
         {currentAccess && "expiresAt" in currentAccess && currentAccess.expiresAt && <time dateTime={currentAccess.expiresAt}>Expires {currentAccess.expiresAt}</time>}
         {onCheckReadiness && <Button type="button" variant="outline" size="sm" onClick={onCheckReadiness}
           disabled={currentReadiness?.state === "checking"}>Check application</Button>}
-      </div>
+      </div>}
       <div className="relative min-h-0 min-w-0 flex-1 bg-surface-container-lowest">
-        {activeUrl && <iframe key={`${activeUrl}:${iframeKey}`} src={activeUrl} title="Sandbox preview"
+        {activeUrl && <iframe key={`${activeUrl}:${iframeKey}`} src={activeUrl} title={title}
           className="h-full w-full border-0 bg-white" referrerPolicy="no-referrer"
           sandbox={sameApplicationOrigin ? "allow-scripts allow-forms" : "allow-scripts allow-same-origin allow-forms"}
           onLoad={() => { setLoading(false); setSlow(false) }}

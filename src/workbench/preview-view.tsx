@@ -20,10 +20,12 @@ export interface PreviewViewProps {
   variant?: "browser" | "embedded"
   /** Accessible frame title and compact app label. */
   title?: string
+  /** Product actions beside the compact app label. */
+  toolbarActions?: React.ReactNode
   className?: string
 }
 
-export function PreviewView({ url, allowedOrigins, access, readiness, onCheckReadiness, onNavigate, variant = "browser", title = "Sandbox preview", className }: PreviewViewProps) {
+export function PreviewView({ url, allowedOrigins, access, readiness, onCheckReadiness, onNavigate, variant = "browser", title = "Sandbox preview", toolbarActions, className }: PreviewViewProps) {
   const initial = React.useMemo(() => {
     try { return { url: safePreviewUrl(url), error: null } }
     catch (failure) { return { url: null, error: failure instanceof Error ? failure.message : "Preview URL is invalid." } }
@@ -88,9 +90,10 @@ export function PreviewView({ url, allowedOrigins, access, readiness, onCheckRea
             <ExternalLink aria-hidden="true" className="size-4" />
           </a>
         </Button>}
-      </form> : <div className="flex min-w-0 items-center gap-2 border-b border-border bg-surface-container-low px-3 py-2">
-        <h2 className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{title}</h2>
-        <Button type="button" variant="ghost" size="sm" onClick={reload} disabled={!activeUrl} aria-label={`Reload ${title}`}>
+      </form> : <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-border bg-surface-container-low px-3 py-2">
+        <h2 className={cn("min-w-0 truncate text-sm font-medium text-foreground", toolbarActions ? "basis-full sm:basis-auto sm:flex-1" : "flex-1")}>{title}</h2>
+        {toolbarActions && <div className="flex shrink-0 items-center gap-1">{toolbarActions}</div>}
+        <Button type="button" variant="ghost" size="sm" onClick={reload} disabled={!activeUrl} aria-label={`Reload ${title}`} className={toolbarActions ? "ml-auto sm:ml-0" : undefined}>
           <RotateCw aria-hidden="true" className="size-4" />
         </Button>
         {activeUrl && <Button asChild type="button" variant="ghost" size="sm">

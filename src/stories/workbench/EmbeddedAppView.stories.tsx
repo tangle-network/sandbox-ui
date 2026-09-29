@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react"
+import { Button } from "@tangle-network/ui/primitives"
 import { EmbeddedAppView } from "../../workbench/embedded-app-view"
 
 const url = new URL("./preview-fixture.html", import.meta.url).href
@@ -15,6 +16,16 @@ export default meta
 type Story = StoryObj<typeof EmbeddedAppView>
 
 export const Ready: Story = {}
+export const WithToolbarActions: Story = {
+  args: {
+    toolbarActions: (
+      <>
+        <Button type="button" variant="outline" size="sm">Edit with agent</Button>
+        <Button type="button" variant="ghost" size="sm">Remove</Button>
+      </>
+    ),
+  },
+}
 export const VerifiedMetadata: Story = {
   args: {
     readiness: { state: "ready", checkedAt: "2026-09-23T12:00:00Z", statusCode: 200 },

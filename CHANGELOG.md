@@ -5,7 +5,7 @@
 - `EmbeddedAppView` renders a named sandbox application at full pane height.
   Host-supplied starting, ready, and unavailable states govern when the iframe mounts.
   The ready view uses the existing preview URL policy and iframe isolation, with compact refresh and open controls.
-  Products can constrain initial app URLs with `allowedOrigins` and show service-observed readiness and enforced access metadata.
+  Products can constrain initial app URLs with `allowedOrigins`, show service-observed readiness and enforced access metadata, and place their own actions in the compact header.
 
 
 ## 0.114.0

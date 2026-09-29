@@ -15,6 +15,12 @@ export default meta
 type Story = StoryObj<typeof EmbeddedAppView>
 
 export const Ready: Story = {}
+export const VerifiedMetadata: Story = {
+  args: {
+    readiness: { state: "ready", checkedAt: "2026-09-23T12:00:00Z", statusCode: 200 },
+    access: { state: "public", source: "enforced-policy" },
+  },
+}
 export const Starting: Story = {
   args: { app: { id: "reporting", name: "Reporting", status: "starting" } },
 }

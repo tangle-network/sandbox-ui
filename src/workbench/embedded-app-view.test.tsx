@@ -21,6 +21,18 @@ describe("EmbeddedAppView", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("unavailable")
   })
 
+  it("shows only service-supplied readiness and enforced access metadata", () => {
+    render(
+      <EmbeddedAppView
+        app={{ ...app, status: "ready", previewUrl: "https://preview.example.test/" }}
+        readiness={{ state: "ready", checkedAt: "2026-09-29T00:00:00Z", statusCode: 200 }}
+        access={{ state: "public", source: "enforced-policy" }}
+      />,
+    )
+    expect(screen.getByText("Application responded: HTTP 200")).toBeInTheDocument()
+    expect(screen.getByText("Public URL")).toBeInTheDocument()
+  })
+
   it("rejects a preview origin outside the host's approved set", () => {
     const { container } = render(
       <EmbeddedAppView

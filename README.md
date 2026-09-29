@@ -56,6 +56,8 @@ import { EmbeddedAppView } from "@tangle-network/sandbox-ui/workbench"
       statusMessage: selectedApp.previewError,
     }}
     allowedOrigins={workspace.previewOrigins}
+    readiness={selectedApp.httpReadiness}
+    access={workspace.enforcedPreviewAccess}
     onRetry={() => recheckPreview(selectedApp.id)}
   />
 </main>
@@ -70,6 +72,9 @@ The host must authorize access before it returns the URL.
 The component shows starting and unavailable states without mounting a frame.
 Its ready view uses the same URL validation and iframe isolation as `PreviewView`.
 The compact header provides Reload and Open in new tab.
+Pass service-observed `readiness` and enforced `access` to show their status inside the pane.
+Show process and port state beside the pane if your runtime exposes those separately.
+Do not infer either state from the preview URL or iframe load.
 
 ### Fonts
 

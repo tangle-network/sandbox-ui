@@ -100,7 +100,7 @@ export function PreviewView({ url, allowedOrigins, access, readiness, onCheckRea
         </Button>}
       </div>}
       {error && <p id={errorId} role="alert" className="px-3 py-2 text-sm text-destructive">{error}</p>}
-      {variant === "browser" && <div id={stateId} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-3 py-2 text-xs text-muted-foreground">
+      {(variant === "browser" || readiness || access || onCheckReadiness) && <div id={stateId} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-3 py-2 text-xs text-muted-foreground">
         <span>{previewAccessLabel(currentAccess)}</span>
         <span role="status">{previewReadinessLabel(currentReadiness)}</span>
         {currentReadiness && "checkedAt" in currentReadiness && <time dateTime={currentReadiness.checkedAt}>Checked {currentReadiness.checkedAt}</time>}

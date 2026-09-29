@@ -41,7 +41,7 @@ for (const story of stories) {
       test(`${story.id} ${theme} ${viewportName}`, async ({ page, baseURL }) => {
         await openStory(page, story.id, theme, viewport, baseURL)
         if (/^workbench-previewview--(local-app|verified-response|failed-check)$/.test(story.id) ||
-          story.id === 'workbench-embeddedappview--ready') {
+          /^workbench-embeddedappview--(ready|verified-metadata)$/.test(story.id)) {
           const preview = page.frameLocator('iframe')
           await expect(preview.getByRole('heading', { name: 'Local preview fixture' })).toBeVisible()
           await preview.locator('body').evaluate(async () => document.fonts.ready)

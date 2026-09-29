@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Button } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
-import { safePreviewUrl } from "./preview-policy"
+import { previewAccessLabel, previewReadinessLabel, safePreviewUrl, type PreviewAccess, type PreviewReadiness } from "./preview-policy"
 import { PreviewView } from "./preview-view"
 
 export interface EmbeddedApp {
@@ -21,6 +21,10 @@ export interface EmbeddedAppViewProps {
   app: EmbeddedApp
   /** Product-approved origins, obtained independently of the app URL. */
   allowedOrigins?: readonly string[]
+  /** Service-observed HTTP result. Never derive it from iframe load. */
+  readiness?: PreviewReadiness
+  /** Enforced access policy, supplied by the host service. */
+  access?: PreviewAccess
   /** Recheck or restart the preview through the host's own service. */
   onRetry?: () => void
   className?: string
@@ -30,7 +34,7 @@ export interface EmbeddedAppViewProps {
  * An app-sized preview surface for a product workspace.
  * The host owns app discovery, persistence, access policy, and readiness checks.
  */
-export function EmbeddedAppView({ app, allowedOrigins, onRetry, className }: EmbeddedAppViewProps) {
+export function EmbeddedAppView({ app, allowedOrigins, readiness, access, onRetry, className }: EmbeddedAppViewProps) {
   let previewUrl: string | null = null
   let urlError: string | null = null
   if (app.status === "ready") {
@@ -44,7 +48,7 @@ export function EmbeddedAppView({ app, allowedOrigins, onRetry, className }: Emb
   if (previewUrl) {
     return (
       <section aria-label={`${app.name} app`} className={cn("h-full min-h-0 min-w-0", className)}>
-        <PreviewView key={app.id} url={previewUrl} allowedOrigins={allowedOrigins} title={app.name} variant="embedded" />
+        <PreviewView key={app.id} url={previewUrl} allowedOrigins={allowedOrigins} readiness={readiness} access={access} title={app.name} variant="embedded" />
       </section>
     )
   }
@@ -60,6 +64,11 @@ export function EmbeddedAppView({ app, allowedOrigins, onRetry, className }: Emb
         <div className="max-w-md text-center">
           <h2 className="text-base font-medium text-foreground">{app.name}</h2>
           <p role={starting ? "status" : "alert"} className="mt-2 text-sm text-muted-foreground">{message}</p>
+          {(readiness || access) && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {previewReadinessLabel(readiness)} · {previewAccessLabel(access)}
+            </p>
+          )}
           {!starting && onRetry && (
             <Button type="button" variant="outline" size="sm" className="mt-4" onClick={onRetry}>
               Retry preview

@@ -2,10 +2,10 @@
 
 ## 0.115.4
 
-- Markdown prose follows a host's foreground and muted foreground tokens.
-  Assistant text now stays readable when a product changes those colors without changing the brand text ramp.
+- Markdown prose follows the nearest foreground and muted foreground aliases.
+  Explicit brand themes now resolve those aliases inside their own scopes, while a nearer product override still wins.
 - Table headers and cells use the prose color.
-  Explicit brand themes keep their body text colors, while quotations use each theme's muted foreground.
+  Assistant text stays readable on light product skins and in named light themes.
 
 ## 0.115.3
 

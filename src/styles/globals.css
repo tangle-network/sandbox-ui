@@ -33,6 +33,14 @@
  * nothing. A gate whose own source satisfies it is not a gate. */
 @import "tailwindcss" source(none);
 
+/* Brand defines these aliases on :root and [data-sandbox-ui]. Rebind them on
+ * explicit theme scopes so nested themes resolve their own HSL colors. A host
+ * can still override either alias on a nearer wrapper. */
+:is(.dark, .light, [data-theme], [data-sandbox-theme="vault"]) {
+  --foreground: var(--hsl-foreground);
+  --muted-foreground: var(--hsl-muted-foreground);
+}
+
 /* `--text-dim` arrives from brand and is NOT overridden here.
  *
  * `--text-dim` is the quietest text tier: an Input/Textarea hint, a StatCard
@@ -934,17 +942,10 @@
  * /run entries). ui ships no @tailwindcss/typography, so without these rules
  * headings, lists, tables, and block spacing carry no styling in consumers that
  * source prose CSS solely from @tangle-network/sandbox-ui/styles. Self-contained
- * and token-driven so it re-skins with light / vault / dark; mirrors
- * @tangle-network/brand's globals.css so it ships from a single sandbox-ui import. */
+ * and token-driven so it re-skins with host, light, vault, and dark colors. */
 .tangle-prose {
   color: hsl(var(--foreground));
   line-height: 1.7;
-}
-/* Brand's explicit theme scopes tune their own text ramp. The HSL aliases are
- * inherited from :root and do not re-resolve inside a nested theme scope. */
-:is(.dark, .light, [data-theme], [data-sandbox-theme="vault"]) .tangle-prose,
-.tangle-prose:is(.dark, .light, [data-theme], [data-sandbox-theme="vault"]) {
-  color: var(--text-primary);
 }
 /* Zero the browser's default block margins at zero specificity (:where) so the
  * owl selector below owns all vertical rhythm — a plain `.tangle-prose p` reset
@@ -973,10 +974,6 @@
   border-left: 2px solid var(--border-default);
   padding-left: 0.9em;
   color: hsl(var(--muted-foreground));
-}
-:is(.dark, .light, [data-theme], [data-sandbox-theme="vault"]) .tangle-prose blockquote,
-.tangle-prose:is(.dark, .light, [data-theme], [data-sandbox-theme="vault"]) blockquote {
-  color: hsl(var(--hsl-muted-foreground));
 }
 .tangle-prose hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 1.2em 0; }
 .tangle-prose :not(pre) > code {

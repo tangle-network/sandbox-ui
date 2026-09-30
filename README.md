@@ -302,6 +302,9 @@ The shared visual contract lives in [src/styles/tokens.css](./src/styles/tokens.
 - borders: `--border-subtle`, `--border-default`, `--border-accent`
 - radii/shadows: `--radius-*`, `--shadow-card`, `--shadow-dropdown`, `--shadow-accent`
 
+Markdown prose uses `--foreground` and `--muted-foreground` as HSL channel values.
+Set them on the nearest product wrapper when its colors differ from the brand theme.
+
 App-level overrides can be scoped to a wrapper:
 
 ```css

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.115.4
+
+- Markdown prose follows a host's foreground and muted foreground tokens.
+  Assistant text now stays readable when a product changes those colors without changing the brand text ramp.
+- Table headers and cells use the prose color.
+  Explicit brand themes keep their body text colors, while quotations use each theme's muted foreground.
+
 ## 0.115.3
 
 - Embedded app views fill the available width inside flex panes by default.

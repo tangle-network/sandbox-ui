@@ -9,6 +9,7 @@ export default defineConfig({
     run: "src/run/index.ts",
     workspace: "src/workspace/index.ts",
     workbench: "src/workbench/index.ts",
+    "workbench/embedded-app": "src/workbench/embedded-app.ts",
     openui: "src/openui/index.ts",
     files: "src/files/index.ts",
     dashboard: "src/dashboard/index.ts",

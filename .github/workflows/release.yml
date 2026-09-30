@@ -49,6 +49,11 @@ jobs:
           SANDBOX_UI_TARBALL: ${{ steps.package.outputs.path }}
         run: pnpm test:package
 
+      - name: Test embedded app consumer without terminal peers
+        env:
+          SANDBOX_UI_TARBALL: ${{ steps.package.outputs.path }}
+        run: pnpm test:embedded-app-package
+
       - name: Test oldest supported agent interface
         env:
           SANDBOX_UI_TARBALL: ${{ steps.package.outputs.path }}

@@ -44,7 +44,7 @@ Use `EmbeddedAppView` when a workspace presents a running web app beside an agen
 Render it in a container with a defined height.
 
 ```tsx
-import { EmbeddedAppView } from "@tangle-network/sandbox-ui/workbench"
+import { EmbeddedAppView } from "@tangle-network/sandbox-ui/workbench/embedded-app"
 
 <main className="h-full min-h-0">
   <EmbeddedAppView
@@ -372,6 +372,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/workspace` | SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
 | `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
 | `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane |
+| `/workbench/embedded-app` | EmbeddedAppView and preview status types without terminal or editor modules |
 | `/dashboard` | [Sidebar](./docs/sidebar.md), DashboardLayout, BillingDashboard, UsageChart, ProfileSelector |
 | `/editor` | TipTap collaborative editor (requires optional peers) |
 | `/terminal` | xterm.js terminal view (requires optional peers) |

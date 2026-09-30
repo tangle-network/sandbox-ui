@@ -1,6 +1,6 @@
 {
   "name": "@tangle-network/sandbox-ui",
-  "version": "0.115.0",
+  "version": "0.115.1",
   "packageManager": "pnpm@12.6.0",
   "description": "Unified UI component library for Tangle Sandbox — primitives, chat, dashboard, terminal, editor, and workspace components",
   "repository": {
@@ -42,6 +42,10 @@
     "./workbench": {
       "import": "./dist/workbench.js",
       "types": "./dist/workbench.d.ts"
+    },
+    "./workbench/embedded-app": {
+      "import": "./dist/workbench/embedded-app.js",
+      "types": "./dist/workbench/embedded-app.d.ts"
     },
     "./openui": {
       "import": "./dist/openui.js",
@@ -126,6 +130,7 @@
     "test": "vitest run",
     "test:package": "node scripts/package-smoke.mjs && PACKAGE_OMIT_OPTIONAL_PEERS='[\"@hocuspocus/provider\",\"@tiptap/core\",\"@tiptap/extension-collaboration\",\"@tiptap/extension-collaboration-caret\",\"@tiptap/react\",\"@tiptap/starter-kit\",\"yjs\"]' node scripts/package-smoke.mjs",
     "test:watch": "vitest",
+    "test:embedded-app-package": "node scripts/embedded-app-package-smoke.mjs",
     "test:bridge": "pnpm build && vitest run src/__tests__/re-export-identity.test.ts"
   },
   "peerDependencies": {

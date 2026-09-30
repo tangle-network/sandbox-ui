@@ -330,6 +330,11 @@
     box-shadow: none;
   }
 
+  /* The rounded composite owns the focus line, not its inner editor. */
+  .focus-field-within :is(input:not([type=button],[type=submit],[type=reset],[type=image],[type=checkbox],[type=radio],[type=range],[type=color],[type=file]),textarea,select,[contenteditable]:not([contenteditable=false])):focus-visible {
+    outline: none;
+  }
+
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

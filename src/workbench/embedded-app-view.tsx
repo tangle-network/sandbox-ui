@@ -49,7 +49,7 @@ export function EmbeddedAppView({ app, allowedOrigins, readiness, access, toolba
 
   if (previewUrl) {
     return (
-      <section aria-label={`${app.name} app`} className={cn("h-full min-h-0 min-w-0", className)}>
+      <section aria-label={`${app.name} app`} className={cn("h-full w-full min-h-0 min-w-0", className)}>
         <PreviewView key={app.id} url={previewUrl} allowedOrigins={allowedOrigins} readiness={readiness} access={access} title={app.name} toolbarActions={toolbarActions} variant="embedded" />
       </section>
     )
@@ -61,7 +61,7 @@ export function EmbeddedAppView({ app, allowedOrigins, readiness, access, toolba
     : urlError ?? app.statusMessage ?? "The app preview is unavailable."
 
   return (
-    <section aria-label={`${app.name} app`} className={cn("flex h-full min-h-0 min-w-0 flex-col bg-surface-container", className)}>
+    <section aria-label={`${app.name} app`} className={cn("flex h-full w-full min-h-0 min-w-0 flex-col bg-surface-container", className)}>
       <div className="flex min-h-0 flex-1 items-center justify-center p-6">
         <div className="max-w-md text-center">
           <h2 className="text-base font-medium text-foreground">{app.name}</h2>

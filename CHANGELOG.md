@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.115.3
+
+- Embedded app views fill the available width inside flex panes by default.
+
 ## 0.115.2
 
 - Borderless text fields inside rounded composite controls now show focus on the full outer boundary without a sharp inner outline. Standalone inputs, textareas, selects, and inner buttons retain their own focus indicators.

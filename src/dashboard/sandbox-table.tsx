@@ -128,7 +128,7 @@ export function SandboxTable({
 
   const scrollColumns = (direction: -1 | 1) => {
     const scroller = tableScrollRef.current
-    scroller?.scrollBy({ left: direction * scroller.clientWidth * 0.75, behavior: "smooth" })
+    scroller?.scrollBy({ left: direction * scroller.clientWidth * 0.75 })
   }
 
   // Hibernating is the one status that historically wired up to `onWake`.

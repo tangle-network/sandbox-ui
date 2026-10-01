@@ -77,7 +77,10 @@ export interface SandboxMetrics {
 }
 
 export interface UseSandboxMetricsOptions {
-  /** Sandbox API base URL, e.g. `https://api.tangle.tools`. */
+  /**
+   * Sandbox API base URL, e.g. `https://api.tangle.tools`.
+   * Use an empty string for same-origin requests.
+   */
   apiBaseUrl: string;
   /** Sandbox id; when falsy the hook stays idle. */
   sandboxId?: string | null;
@@ -164,7 +167,7 @@ export function useSandboxMetrics({
     // the JSDoc promises the hook "stays idle", so we must not leak
     // stale metrics or an error banner from a sandbox that is no
     // longer selected.
-    const sandboxCleared = !sandboxId || !apiBaseUrl;
+    const sandboxCleared = !sandboxId;
     const sandboxChanged =
       prevSandboxIdRef.current !== null &&
       prevSandboxIdRef.current !== sandboxId;

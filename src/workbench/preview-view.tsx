@@ -5,6 +5,7 @@ import { Button } from "@tangle-network/ui/primitives"
 import { focusField } from "@tangle-network/ui/utils"
 import { ExternalLink, RotateCw } from "lucide-react"
 import { cn } from "../lib/utils"
+import { WorkspacePaneHeader } from "../workspace/workspace-pane-header"
 import { previewAccessLabel, previewReadinessLabel, safePreviewUrl, type PreviewAccess, type PreviewReadiness } from "./preview-policy"
 
 export interface PreviewViewProps {
@@ -90,18 +91,18 @@ export function PreviewView({ url, allowedOrigins, access, readiness, onCheckRea
             <ExternalLink aria-hidden="true" className="size-4" />
           </a>
         </Button>}
-      </form> : <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-border bg-surface-container-low px-3 py-2">
-        <h2 className={cn("min-w-0 truncate text-sm font-medium text-foreground", toolbarActions ? "basis-full sm:basis-auto sm:flex-1" : "flex-1")}>{title}</h2>
+      </form> : <WorkspacePaneHeader className="min-w-0 gap-2 overflow-x-auto">
+        <h2 className="min-w-16 flex-1 truncate text-sm font-medium text-foreground">{title}</h2>
         {toolbarActions && <div className="flex shrink-0 items-center gap-1">{toolbarActions}</div>}
-        <Button type="button" variant="ghost" size="sm" onClick={reload} disabled={!activeUrl} aria-label={`Reload ${title}`} className={toolbarActions ? "ml-auto sm:ml-0" : undefined}>
+        <Button type="button" variant="ghost" size="sm" onClick={reload} disabled={!activeUrl} aria-label={`Reload ${title}`} className="shrink-0">
           <RotateCw aria-hidden="true" className="size-4" />
         </Button>
-        {activeUrl && <Button asChild type="button" variant="ghost" size="sm">
+        {activeUrl && <Button asChild type="button" variant="ghost" size="sm" className="shrink-0">
           <a href={activeUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${title} in new tab`}>
             <ExternalLink aria-hidden="true" className="size-4" />
           </a>
         </Button>}
-      </div>}
+      </WorkspacePaneHeader>}
       {error && <p id={errorId} role="alert" className="px-3 py-2 text-sm text-destructive">{error}</p>}
       {(variant === "browser" || readiness || access || onCheckReadiness) && <div id={stateId} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-3 py-2 text-xs text-muted-foreground">
         <span>{previewAccessLabel(currentAccess)}</span>

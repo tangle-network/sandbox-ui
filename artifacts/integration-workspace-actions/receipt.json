@@ -1,0 +1,31 @@
+{
+  "target": "GTR Chromium rendered shared Storybook",
+  "results": [
+    {
+      "width": 1280,
+      "bind": true,
+      "unbind": true,
+      "searchTiles": 1,
+      "layout": {
+        "heights": [
+          161
+        ],
+        "overflow": false
+      },
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "bind": true,
+      "unbind": true,
+      "searchTiles": 1,
+      "layout": {
+        "heights": [
+          136
+        ],
+        "overflow": false
+      },
+      "pageErrors": []
+    }
+  ]
+}

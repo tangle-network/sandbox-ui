@@ -173,3 +173,22 @@ export const SkeletonMatchesLoaded: Story = {
     </div>
   ),
 };
+
+
+function WorkspaceConnectionsScene() {
+  const [bound, setBound] = useState(false);
+  return <IntegrationsPanel
+    catalog={catalog}
+    connections={[{ id: "slack-personal", providerId: "slack", status: "connected", accountDisplay: "Product team" }]}
+    onConnect={() => {}}
+    onDisconnect={() => {}}
+    getConnectionContext={() => bound ? "In workspace" : "Personal"}
+    getConnectionActions={() => [{
+      id: "workspace-access",
+      label: bound ? "Stop using in this workspace" : "Use in this workspace",
+      onSelect: () => setBound(!bound),
+    }]}
+  />;
+}
+
+export const WorkspaceAccess: Story = { render: () => <WorkspaceConnectionsScene /> };

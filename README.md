@@ -38,6 +38,17 @@ Import styles in your app root:
 import "@tangle-network/sandbox-ui/styles";
 ```
 
+### Workspace integration access
+
+Use `IntegrationsPanel` from `/integrations` for the provider catalog, logos, search, connection status, and account actions.
+Do not render a second connection catalog above it.
+Supply `getConnectionContext` for a short access label on each connected card.
+Supply `getConnectionActions` for authorized workspace actions in that card's menu.
+Each action has an `id`, `label`, optional `disabled` flag, and `onSelect` callback.
+The panel waits for asynchronous actions and surfaces failures.
+Keep workspace authorization and binding persistence in the consuming application's server.
+When a provider has multiple accounts, include distinct account labels and identities in its workspace actions.
+
 ### Embed a sandbox app
 
 Use `EmbeddedAppView` when a workspace presents a running web app beside an agent conversation.

@@ -73,6 +73,38 @@ export const Desktop: Story = {
   parameters: { viewport: { defaultViewport: "responsive" } },
 }
 
+/** Expanded app and history groups share the same child-row sizing. */
+export const ExpandableGroups: Story = {
+  args: {
+    ...base,
+    activeId: "apps",
+    navItems: [
+      {
+        id: "apps",
+        icon: LayoutGrid,
+        label: "Apps",
+        href: "/apps",
+        expandable: true,
+        defaultOpen: true,
+        subActiveIds: ["app"],
+        subItems: [{ id: "app", label: "Sample app", href: "/apps/sample" }],
+      },
+      {
+        id: "history",
+        icon: History,
+        label: "History",
+        href: "/history",
+        expandable: true,
+        defaultOpen: true,
+        subItems: [
+          { id: "chat", label: "Recent chat", href: "/chat/recent" },
+          { id: "all", label: "View all chats", href: "/history", emphasis: true },
+        ],
+      },
+    ],
+  },
+}
+
 /**
  * Phone. The rail is hidden by `hideBelow`, so the bar's menu button is the
  * ONLY way into Vault / Board / Approvals / History / Terminal.

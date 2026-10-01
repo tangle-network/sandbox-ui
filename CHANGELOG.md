@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.115.7
+
+- Expanded sidebar groups keep app and history child links at a 32px row height
+  with 14px text, including when a child has no action menu.
+  The disclosure chevron stays visible beside its destination icon at rest.
+
 ## 0.115.6
 
 - The embedded preview toolbar fits its title, host actions, Reload, and Open

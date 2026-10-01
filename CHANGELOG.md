@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.115.6
+
+- The embedded preview toolbar fits its title, host actions, Reload, and Open
+  in a 390px pane. Longer titles retain a full-name tooltip.
+
 ## 0.115.5
 
 - The embedded app preview uses the shared 56px workspace pane header.

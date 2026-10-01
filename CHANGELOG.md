@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.116.5
+
+- Keep SandboxTable's Resources and Actions within the desktop table when sandbox,
+  team, or image labels are long. Full names and IDs remain available for selection
+  and in hover titles.
+- Bound long tables to the viewport height and add narrow-screen column controls,
+  so Resources, Actions, and Resume remain reachable above a long list.
+
 ## 0.116.4
 
 - Forward UI 11.11.4 OpenUI schema and validation bindings through openui and root exports.

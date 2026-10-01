@@ -29,7 +29,7 @@ import {
 } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
-import { focusRing } from "@tangle-network/ui/utils"
+import { focusRing, focusRingInset } from "@tangle-network/ui/utils"
 
 export interface SandboxTableProps {
   sandboxes: SandboxCardData[]
@@ -124,6 +124,32 @@ export function SandboxTable({
   const totalCount = total ?? sandboxes.length
   const totalPages = Math.ceil(totalCount / pageSize)
   const hasTeamSandboxes = sandboxes.some((sb) => sb.team !== undefined)
+  const tableScrollRef = React.useRef<HTMLDivElement>(null)
+  const [hasHiddenColumns, setHasHiddenColumns] = React.useState(false)
+
+  React.useEffect(() => {
+    const scroller = tableScrollRef.current
+    const table = scroller?.querySelector("table")
+    if (!scroller || !table) return
+
+    const measure = () => setHasHiddenColumns(scroller.scrollWidth > scroller.clientWidth + 1)
+    measure()
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure)
+      return () => window.removeEventListener("resize", measure)
+    }
+
+    const observer = new ResizeObserver(measure)
+    observer.observe(scroller)
+    observer.observe(table)
+    return () => observer.disconnect()
+  }, [sandboxes, hasTeamSandboxes])
+
+  const scrollColumns = (direction: -1 | 1) => {
+    const scroller = tableScrollRef.current
+    scroller?.scrollBy({ left: direction * scroller.clientWidth * 0.75 })
+  }
 
   // Hibernating is the one status that historically wired up to `onWake`.
   // For that status we fall back to `onWake` when `onResume` is absent,
@@ -146,10 +172,21 @@ export function SandboxTable({
 
   return (
     <div className={cn("w-full", className)}>
+      {sandboxes.length > 0 && hasHiddenColumns && (
+        <div className="mb-2 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <span>Columns</span>
+          <button type="button" onClick={() => scrollColumns(-1)} className={`rounded-md border border-[var(--md3-outline-variant)] p-1.5 ${focusRing}`} aria-label="Scroll sandbox table left" title="Scroll table left">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={() => scrollColumns(1)} className={`rounded-md border border-[var(--md3-outline-variant)] p-1.5 ${focusRing}`} aria-label="Scroll sandbox table right" title="Scroll table right">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div className="w-full bg-surface-container rounded-2xl overflow-hidden border border-[var(--md3-outline-variant)]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
+        <div ref={tableScrollRef} className={`max-h-[min(60vh,35rem)] overflow-auto ${focusRingInset}`} role="region" aria-label="Sandbox table; scroll horizontally for more columns" tabIndex={0}>
+          <table className={cn("w-full text-left border-collapse", hasTeamSandboxes && "[&_th]:px-4 [&_td]:px-4")}>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sandbox Name</th>
@@ -208,21 +245,21 @@ export function SandboxTable({
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{sb.name}</span>
-                        {sb.nodeId && <span className="text-[10px] font-mono text-muted-foreground">{sb.nodeId}</span>}
+                      <div className={cn("flex min-w-0 flex-col", hasTeamSandboxes ? "max-w-36" : "max-w-64")}>
+                        <span className="truncate text-sm font-bold text-foreground group-hover:text-primary transition-colors" title={sb.name}>{sb.name}</span>
+                        {sb.nodeId && <span className="truncate text-[10px] font-mono text-muted-foreground" title={sb.nodeId}>{sb.nodeId}</span>}
                       </div>
                     </td>
                     {hasTeamSandboxes && (
                       <td className="px-6 py-5">
                         {sb.team ? (
                           <div
-                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
+                            className="inline-flex max-w-40 items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
                             title={`Shared with ${sb.team.name ?? "Team"} · ${sb.team.role}`}
                           >
-                            <Users className="h-3 w-3" aria-hidden="true" />
-                            <span>{sb.team.name ?? "Team"}</span>
-                            <span className="font-normal text-muted-foreground">
+                            <Users className="h-3 w-3 shrink-0" aria-hidden="true" />
+                            <span className="min-w-0 truncate">{sb.team.name ?? "Team"}</span>
+                            <span className="shrink-0 font-normal text-muted-foreground">
                               · {sb.team.role}
                             </span>
                           </div>
@@ -238,28 +275,28 @@ export function SandboxTable({
                       </td>
                     )}
                     <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
+                      <div className={cn("flex min-w-0 items-center gap-3", hasTeamSandboxes ? "max-w-26" : "max-w-28")}>
                         {sb.imageIcon && (
-                          <div className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center">
+                          <div className="w-8 h-8 shrink-0 rounded-lg bg-surface-container-high flex items-center justify-center">
                             {sb.imageIcon}
                           </div>
                         )}
-                        {sb.image && <span className="text-xs font-bold text-foreground">{sb.image}</span>}
+                        {sb.image && <span className="min-w-0 truncate text-xs font-bold text-foreground" title={sb.image}>{sb.image}</span>}
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       {isActive ? (
-                        <div className="space-y-3 w-48">
+                        <div className={cn("space-y-3", hasTeamSandboxes ? "w-44" : "w-48")}>
                           <MiniMeter label="CPU" percent={sb.cpuPercent ?? 0} />
                           <MiniMeter label="RAM" percent={sb.ramTotal ? Math.round(((sb.ramUsed ?? 0) / sb.ramTotal) * 100) : 0} />
                         </div>
                       ) : isProvisioning ? (
-                        <div className="flex items-center gap-2 text-primary italic text-[10px] font-bold">
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" data-motion="essential" />
-                          {sb.provisioningMessage ?? "Allocating nodes..."}
+                        <div className={cn("flex items-center gap-2 text-primary italic text-[10px] font-bold", hasTeamSandboxes ? "max-w-44" : "max-w-48")}>
+                          <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin" data-motion="essential" />
+                          <span className="min-w-0 truncate" title={sb.provisioningMessage ?? "Allocating nodes..."}>{sb.provisioningMessage ?? "Allocating nodes..."}</span>
                         </div>
                       ) : isHibernating ? (
-                        <div className="space-y-3 w-48 opacity-30">
+                        <div className={cn("space-y-3 opacity-30", hasTeamSandboxes ? "w-44" : "w-48")}>
                           <MiniMeter label="CPU" percent={0} />
                           <MiniMeter label="RAM" percent={0} />
                         </div>

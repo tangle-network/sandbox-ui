@@ -576,3 +576,62 @@ describe("IntegrationsPanel — the skeleton reserves the loaded layout", () => 
     expect(skeletonTiles()).toHaveLength(24);
   });
 });
+
+
+describe("consumer connection actions", () => {
+  const live = { id: "workspace-slack", providerId: "slack", status: "connected" };
+
+  it("filters workspace context with its provider and invokes the card action", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const bind = vi.fn();
+    renderPanel({
+      connections: [live],
+      getConnectionContext: () => "Personal connection",
+      getConnectionActions: (connection) => [{
+        id: "bind", label: "Use in this workspace", onSelect: () => bind(connection.id),
+      }],
+    });
+    expect(screen.getByText("Personal connection")).toBeInTheDocument();
+    await user.click(screen.getByTestId("menu-slack"));
+    await user.click(screen.getByRole("menuitem", { name: "Use in this workspace" }));
+    expect(bind).toHaveBeenCalledWith("workspace-slack");
+    await user.type(screen.getByPlaceholderText(/search/i), "Google");
+    expect(screen.queryByText("Personal connection")).toBeNull();
+    expect(screen.queryByTestId("integration-slack")).toBeNull();
+  });
+
+  it("surfaces action rejection without disconnecting the account", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const disconnect = vi.fn();
+    renderPanel({
+      connections: [live], onDisconnect: disconnect,
+      getConnectionActions: () => [{
+        id: "unbind", label: "Stop using in this workspace",
+        onSelect: async () => { throw new Error("Only the workspace owner can change access."); },
+      }],
+    });
+    await user.click(screen.getByTestId("menu-slack"));
+    await user.click(screen.getByRole("menuitem", { name: "Stop using in this workspace" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Only the workspace owner");
+    expect(disconnect).not.toHaveBeenCalled();
+  });
+
+  it("keeps a disabled consumer action unavailable", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const bind = vi.fn();
+    renderPanel({ connections: [live], getConnectionActions: () => [{
+      id: "bind", label: "Use in this workspace", disabled: true, onSelect: bind,
+    }] });
+    await user.click(screen.getByTestId("menu-slack"));
+    expect(screen.getByRole("menuitem", { name: "Use in this workspace" })).toHaveAttribute("aria-disabled", "true");
+    expect(bind).not.toHaveBeenCalled();
+  });
+});
+
+
+it("does not expose consumer actions for a revoked connection", () => {
+  const actions = vi.fn(() => []);
+  renderPanel({ connections: [{ id: "revoked", providerId: "slack", status: "revoked" }], getConnectionActions: actions });
+  expect(screen.getByTestId("integration-slack")).toHaveAttribute("data-connected", "false");
+  expect(actions).not.toHaveBeenCalled();
+});

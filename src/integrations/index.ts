@@ -1,6 +1,7 @@
 export {
   IntegrationsPanel,
   type IntegrationsPanelProps,
+  type IntegrationConnectionAction,
   type IntegrationSort,
 } from "./integrations-panel";
 export {

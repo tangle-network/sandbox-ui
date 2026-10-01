@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.116.6
+
+- Add consumer-owned workspace access labels and actions to connected integration cards.
+- Keep workspace actions inside the searchable provider catalog and surface asynchronous action failures.
+
 ## 0.116.5
 
 - Keep SandboxTable's Resources and Actions within the desktop table when sandbox,

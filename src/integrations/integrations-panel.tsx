@@ -33,6 +33,13 @@ import { focusFieldWithin, focusRing } from "@tangle-network/ui/utils";
 
 export type IntegrationSort = "featured" | "alpha";
 
+export interface IntegrationConnectionAction {
+  id: string;
+  label: string;
+  disabled?: boolean;
+  onSelect: () => void | Promise<void>;
+}
+
 export interface IntegrationsPanelProps {
   catalog: IntegrationProvider[];
   connections: IntegrationConnection[];
@@ -72,6 +79,10 @@ export interface IntegrationsPanelProps {
     connectionId: string;
     providerId: string;
   }) => void | Promise<void>;
+  /** Consumer-owned access context shown below the connected account. */
+  getConnectionContext?: (connection: IntegrationConnection) => string | undefined;
+  /** Additional authorized actions in the connected card menu. */
+  getConnectionActions?: (connection: IntegrationConnection) => IntegrationConnectionAction[];
   /** Empty-state message when the catalog hasn't loaded any providers. */
   emptyCatalogLabel?: string;
   /**
@@ -287,12 +298,29 @@ export function IntegrationsPanel({
   onDisconnect,
   getManageHref,
   onManage,
+  getConnectionContext,
+  getConnectionActions,
   emptyCatalogLabel = "No integrations available yet.",
   featuredIds = DEFAULT_FEATURED_IDS,
   defaultSort = "featured",
   skeletonCount = DEFAULT_SKELETON_COUNT,
   className,
 }: IntegrationsPanelProps) {
+  const tileBoxClass = cn(TILE_BOX_CLASS, getConnectionContext && "w-full min-h-[136px]");
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [pendingAction, setPendingAction] = React.useState(false);
+  const runConnectionAction = async (action: IntegrationConnectionAction) => {
+    setActionError(null);
+    setPendingAction(true);
+    try {
+      await action.onSelect();
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not update the connection.");
+    } finally {
+      setPendingAction(false);
+    }
+  };
+
   const [query, setQuery] = React.useState("");
   const [sort, setSort] = React.useState<IntegrationSort>(defaultSort);
   // A connected tile's disconnect control sets this target, which opens the
@@ -439,7 +467,7 @@ export function IntegrationsPanel({
               key={i}
               aria-hidden
               className={cn(
-                TILE_BOX_CLASS,
+                tileBoxClass,
                 "animate-pulse border-border bg-muted/40",
               )}
             >
@@ -478,6 +506,10 @@ export function IntegrationsPanel({
         onSortChange={setSort}
       />
 
+      {actionError ? (
+        <p role="alert" className="text-sm text-destructive">{actionError}</p>
+      ) : null}
+
       {connectError ? (
         <div
           role="alert"
@@ -504,6 +536,8 @@ export function IntegrationsPanel({
             const connected = Boolean(live);
 
             if (connected && live) {
+              const connectionContext = getConnectionContext?.(live);
+              const connectionActions = getConnectionActions?.(live) ?? [];
               const manageHref = getManageHref?.(live);
               const canManage = Boolean(manageHref) || Boolean(onManage);
               return (
@@ -517,7 +551,7 @@ export function IntegrationsPanel({
                       : name
                   }
                   className={cn(
-                    TILE_BOX_CLASS,
+                    tileBoxClass,
                     "group relative",
                     "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]",
                   )}
@@ -573,6 +607,11 @@ export function IntegrationsPanel({
                       ) : null}
                     </div>
                   </div>
+                  {connectionContext ? (
+                    <span className="pointer-events-none w-full truncate text-[11px] leading-4 text-muted-foreground" title={connectionContext}>
+                      {connectionContext}
+                    </span>
+                  ) : null}
                   {/* Overflow menu (above the Manage link) listing the explicit
                       actions. Always rendered so touch users — who have no hover —
                       can reach Manage/Disconnect, and so the destructive action
@@ -621,7 +660,16 @@ export function IntegrationsPanel({
                           <ExternalLink className="mr-2 h-4 w-4" /> Manage
                         </DropdownMenuItem>
                       ) : null}
-                      {canManage ? <DropdownMenuSeparator /> : null}
+                      {connectionActions.map((action) => (
+                        <DropdownMenuItem
+                          key={action.id}
+                          disabled={action.disabled || pendingAction}
+                          onSelect={() => { void runConnectionAction(action); }}
+                        >
+                          {action.label}
+                        </DropdownMenuItem>
+                      ))}
+                      {canManage || connectionActions.length > 0 ? <DropdownMenuSeparator /> : null}
                       <DropdownMenuItem
                         data-testid={`disconnect-${provider.providerId}`}
                         className="text-destructive focus:text-destructive"
@@ -664,7 +712,7 @@ export function IntegrationsPanel({
                     : `Connect ${name}`
                 }
                 className={cn(
-                  TILE_BOX_CLASS,
+                  tileBoxClass,
                   "group border-border bg-card transition-all",
                   "hover:border-[var(--border-strong)] hover:bg-accent/40 hover:shadow-sm", focusRing,
                 )}

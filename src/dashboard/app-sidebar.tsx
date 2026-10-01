@@ -1324,7 +1324,8 @@ export interface ProfileAvatarProps {
   isLoading?: boolean
   onLogout?: () => void
   onSettingsClick?: () => void
-  settingsHref?: string
+  /** Pass null when the host has no settings destination. */
+  settingsHref?: string | null
   /** Extra dropdown items rendered before settings/logout */
   children?: React.ReactNode
   className?: string
@@ -1503,17 +1504,17 @@ export function ProfileAvatar({
             <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             Settings
           </DropdownMenuItem>
-        ) : (
+        ) : settingsHref !== null ? (
           <DropdownMenuItem asChild>
             <Link href={settingsHref} to={settingsHref} className="flex items-center">
               <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               Settings
             </Link>
           </DropdownMenuItem>
-        )}
+        ) : null}
         {onLogout && (
           <>
-            <DropdownMenuSeparator />
+            {(children || appearance || onSettingsClick || settingsHref !== null) && <DropdownMenuSeparator />}
             <DropdownMenuItem className="text-[var(--surface-danger-text)]" onClick={onLogout}>
               <LogOutIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               Sign Out

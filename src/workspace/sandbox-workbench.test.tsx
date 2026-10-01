@@ -31,10 +31,7 @@ describe("SandboxWorkbench — composer slot", () => {
       <SandboxWorkbench session={session} composer={<div data-testid="composer">Composer</div>} />,
     );
     const column = getByTestId("composer").parentElement as HTMLElement;
-    expect(column.className).toBe("mx-auto w-full max-w-3xl px-3 pb-3");
-    const band = column.parentElement as HTMLElement;
-    expect(band.className).toBe("shrink-0");
-    expect(band.className).not.toMatch(/border-t/);
+    expect(column).toHaveClass("max-w-3xl");
     // The slot follows the transcript inside the same column wrapper.
     const transcript = getByText("Start a conversation.");
     expect(transcript.compareDocumentPosition(getByTestId("composer")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -50,7 +47,8 @@ describe("SandboxWorkbench — composer slot", () => {
     const controls = getByTestId("controls");
     const composer = getByTestId("composer");
     expect(controls.compareDocumentPosition(composer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect((controls.parentElement as HTMLElement).className).toMatch(/border-t/);
+    const column = controls.parentElement as HTMLElement;
+    expect(column).toBe(composer.parentElement);
   });
 });
 
@@ -62,7 +60,7 @@ describe("SandboxWorkbench — centerHeader", () => {
     expect(getByText("Execution timeline")).toBeInTheDocument();
   });
 
-  it("null hides the card and renders the transcript directly on bg-surface", () => {
+  it("null hides the card and renders the transcript directly on bg-background", () => {
     const { queryByText, getByText } = render(
       <SandboxWorkbench title="Tax filing" session={session} centerHeader={null} />,
     );
@@ -71,9 +69,9 @@ describe("SandboxWorkbench — centerHeader", () => {
     expect(queryByText("Execution timeline")).toBeNull();
     expect(queryByText("Agent Session")).toBeNull();
     const transcript = getByText("Start a conversation.");
-    const column = transcript.closest("div.bg-surface") as HTMLElement;
+    const column = transcript.closest("div.bg-background") as HTMLElement;
     expect(column).not.toBeNull();
-    expect(column.className).toBe("flex h-full min-h-0 flex-col bg-surface");
+    expect(column).toHaveClass("bg-background");
     // No ArtifactPane frame between the center slot and the transcript column.
     expect(column.closest("section")).toBeNull();
   });

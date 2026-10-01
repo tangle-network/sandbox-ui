@@ -138,6 +138,8 @@ export interface IntegrationsCatalogProps {
   actionError?: string | null;
   connectError?: string | null;
   busyProviderId?: string | null;
+  /** Compact facade reserves its context line before any account has loaded. */
+  reserveConnectionContext?: boolean;
   skeletonCount?: number;
   emptyCatalogLabel?: string;
   title?: string;

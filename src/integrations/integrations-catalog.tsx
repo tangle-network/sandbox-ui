@@ -104,7 +104,7 @@ export function IntegrationsCatalog({
   rows, query, onQueryChange, categoryFilter = "", onCategoryFilterChange,
   sort, onSortChange, onSelectConnection, onConnect, onManage, onDisconnect,
   onRequestIntegration, onRetry, loading = false, error, actionError, connectError,
-  busyProviderId, skeletonCount, emptyCatalogLabel = "No integrations are available to connect yet.",
+  busyProviderId, reserveConnectionContext = false, skeletonCount, emptyCatalogLabel = "No integrations are available to connect yet.",
   title, description, layout = "cards", className,
 }: IntegrationsCatalogProps) {
   const compact = layout === "tiles";
@@ -119,9 +119,10 @@ export function IntegrationsCatalog({
   const gridClass = compact
     ? "grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6"
     : "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3";
-  const boxClass = compact
+  const boxClass = cn(compact
     ? "flex min-w-0 aspect-square flex-col items-center justify-center gap-2 rounded-xl border p-3 text-center"
-    : "flex min-w-0 min-h-[200px] flex-col gap-3 rounded-xl border p-4 text-left";
+    : "flex min-w-0 min-h-[200px] flex-col gap-3 rounded-xl border p-4 text-left",
+    compact && reserveConnectionContext && "w-full min-h-[136px]");
   const headerClass = cn("flex w-full min-w-0 gap-2", compact ? "flex-col items-center" : "items-start gap-3");
   const clearFilters = () => { onQueryChange(""); onCategoryFilterChange?.(""); };
 
@@ -210,7 +211,7 @@ export function IntegrationsCatalog({
               data-connecting={connecting ? "true" : undefined} aria-busy={connecting || undefined}
               disabled={wholeButton ? connecting : undefined}
               onClick={wholeButton ? () => provider && onConnect?.(provider) : undefined}
-              title={connection?.accountDisplay ? `${row.title} — ${connection.accountDisplay}` : row.description}
+              title={connection?.accountDisplay ? `${row.title} — ${connection.accountDisplay}` : row.description ?? row.title}
               className={cn(boxClass, "group relative", compact && active ? "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)]" : "border-border bg-card", wholeButton && cn("transition-all hover:border-[var(--border-strong)] hover:bg-accent/40 hover:shadow-sm", focusRing), connection?.detail && compact && "w-full min-h-[136px]")}>
               {compact && manageHref ? <a href={manageHref} target={connection?.manageInNewWindow ? "_blank" : undefined}
                 rel={connection?.manageInNewWindow ? "noopener noreferrer" : undefined}

@@ -146,6 +146,7 @@ export function IntegrationsPanel({
   return <>
     <IntegrationsCatalog rows={rows} query={query} onQueryChange={setQuery}
       sort={sort} onSortChange={setSort} layout="tiles" loading={isLoading}
+      reserveConnectionContext={Boolean(getConnectionContext)}
       error={error ? `Failed to load integrations: ${error.message}` : null}
       actionError={actionError} connectError={connectError} busyProviderId={connectingId}
       skeletonCount={skeletonCount} emptyCatalogLabel={emptyCatalogLabel} className={className}

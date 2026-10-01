@@ -71,3 +71,23 @@ export const CustomLabel: Story = {
     )
   },
 }
+
+
+export const LongCatalog: Story = {
+  render: () => {
+    const [selected, setSelected] = useState('runtime-1')
+    return (
+      <BackendSelector
+        variant="field"
+        label="Runtime"
+        selected={selected}
+        onChange={setSelected}
+        backends={Array.from({ length: 12 }, (_, index) => ({
+          type: `runtime-${index + 1}`,
+          label: `Runtime ${index + 1}`,
+          description: 'A runtime with a second line of descriptive text',
+        }))}
+      />
+    )
+  },
+}

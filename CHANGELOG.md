@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.116.7
+
+- Runtime and backend menus scroll within the available viewport height on narrow screens.
+
 ## 0.116.6
 
 - Add consumer-owned workspace access labels and actions to connected integration cards.

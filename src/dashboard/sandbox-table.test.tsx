@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SandboxTable } from "./sandbox-table"
 import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
@@ -22,6 +22,32 @@ describe("SandboxTable", () => {
     render(<SandboxTable sandboxes={sandboxes} />)
     expect(screen.getByText("Alpha")).toBeInTheDocument()
     expect(screen.getByText("Beta")).toBeInTheDocument()
+  })
+
+  it("shows column controls when the table overflows its container", () => {
+    let onResize: ResizeObserverCallback | undefined
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) { onResize = callback }
+      observe() {}
+      disconnect() {}
+    })
+
+    try {
+      render(<SandboxTable sandboxes={[makeSandbox()]} />)
+      const region = screen.getByRole("region", { name: /Sandbox table/ })
+      let contentWidth = 1069
+      Object.defineProperty(region, "clientWidth", { configurable: true, value: 990 })
+      Object.defineProperty(region, "scrollWidth", { configurable: true, get: () => contentWidth })
+
+      act(() => onResize?.([], {} as ResizeObserver))
+      expect(screen.getByRole("button", { name: "Scroll sandbox table right" })).toBeInTheDocument()
+
+      contentWidth = 990
+      act(() => onResize?.([], {} as ResizeObserver))
+      expect(screen.queryByRole("button", { name: "Scroll sandbox table right" })).not.toBeInTheDocument()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it("renders team badge for team sandboxes", () => {

@@ -125,6 +125,26 @@ export function SandboxTable({
   const totalPages = Math.ceil(totalCount / pageSize)
   const hasTeamSandboxes = sandboxes.some((sb) => sb.team !== undefined)
   const tableScrollRef = React.useRef<HTMLDivElement>(null)
+  const [hasHiddenColumns, setHasHiddenColumns] = React.useState(false)
+
+  React.useEffect(() => {
+    const scroller = tableScrollRef.current
+    const table = scroller?.querySelector("table")
+    if (!scroller || !table) return
+
+    const measure = () => setHasHiddenColumns(scroller.scrollWidth > scroller.clientWidth + 1)
+    measure()
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure)
+      return () => window.removeEventListener("resize", measure)
+    }
+
+    const observer = new ResizeObserver(measure)
+    observer.observe(scroller)
+    observer.observe(table)
+    return () => observer.disconnect()
+  }, [sandboxes, hasTeamSandboxes])
 
   const scrollColumns = (direction: -1 | 1) => {
     const scroller = tableScrollRef.current
@@ -152,8 +172,8 @@ export function SandboxTable({
 
   return (
     <div className={cn("w-full", className)}>
-      {sandboxes.length > 0 && (
-        <div className="mb-2 flex items-center justify-end gap-2 text-xs text-muted-foreground lg:hidden">
+      {sandboxes.length > 0 && hasHiddenColumns && (
+        <div className="mb-2 flex items-center justify-end gap-2 text-xs text-muted-foreground">
           <span>Columns</span>
           <button type="button" onClick={() => scrollColumns(-1)} className={`rounded-md border border-[var(--md3-outline-variant)] p-1.5 ${focusRing}`} aria-label="Scroll sandbox table left" title="Scroll table left">
             <ChevronLeft className="h-4 w-4" />

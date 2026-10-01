@@ -63,7 +63,7 @@ export async function openStory(page, id, theme, viewport, baseURL) {
   await page.waitForFunction(() => {
     const isVisible = (element) => {
       const rect = element.getBoundingClientRect()
-      return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== 'hidden'
+      return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility === 'visible'
     }
     const root = document.getElementById('storybook-root')
     if (root) {

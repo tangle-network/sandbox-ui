@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.116.3
+
+- Rebuild bundled styles with the neutral Brand 1.9.0 token and theme sheets.
+- Align emitted UI utilities with `@tangle-network/ui` 11.11.4.
+
 ## 0.116.2
 
 - `useSandboxMetrics` supports an empty `apiBaseUrl` for same-origin proxy requests.

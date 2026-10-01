@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.115.4
+
+- Markdown prose follows the nearest foreground and muted foreground aliases.
+  Explicit brand themes now resolve those aliases inside their own scopes, while a nearer product override still wins.
+- Table headers and cells use the prose color.
+  Assistant text stays readable on light product skins and in named light themes.
+
 ## 0.115.3
 
 - Embedded app views fill the available width inside flex panes by default.

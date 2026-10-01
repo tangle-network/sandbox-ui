@@ -1,4 +1,6 @@
 export {
+  OPENUI_NODE_JSON_SCHEMA,
+  OPENUI_NODE_TYPES,
   type OpenUIAction,
   type OpenUIActionsNode,
   OpenUIArtifactRenderer,
@@ -12,9 +14,14 @@ export {
   type OpenUIKeyValueNode,
   type OpenUIMarkdownNode,
   type OpenUIPrimitive,
+  type OpenUISchemaIssue,
+  type OpenUISchemaValidation,
   type OpenUISeparatorNode,
   type OpenUIStackNode,
   type OpenUIStatNode,
   type OpenUITableNode,
   type OpenUITextNode,
+  findUnsupportedOpenUINode,
+  validateOpenUIJsonArtifact,
+  validateOpenUIJsonNode,
 } from "@tangle-network/ui/openui";

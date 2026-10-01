@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.116.4
+
+- Forward UI 11.11.4 OpenUI schema and validation bindings through openui and root exports.
+
 ## 0.116.3
 
 - Rebuild bundled styles with the neutral Brand 1.9.0 token and theme sheets.

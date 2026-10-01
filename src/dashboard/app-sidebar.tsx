@@ -868,8 +868,8 @@ function SubItemsSkeleton() {
 
 /**
  * A nav item that reveals sub-items. On the labeled rail it expands inline as an
- * accordion: the leading icon morphs into a chevron on hover, clicking the
- * chevron toggles the list, and clicking the label navigates (`href`). On the
+ * accordion: the leading icon and chevron remain visible, their shared button
+ * toggles the list, and clicking the label navigates (`href`). On the
  * icon-only rail it shows the sub-items in a right-anchored flyout on hover.
  * Sub-items can be fixed (`subItems`) or lazy (`loadSubItems`, with a loading
  * skeleton). Used for e.g. a "History" entry fronting recent sessions.
@@ -935,13 +935,17 @@ export function RailExpandable({
         onClick={onNavigate}
         {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
         className={cn(
-          "flex min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 text-[12px] transition-colors",
+          "flex h-8 min-w-0 items-center gap-2 rounded-md px-2.5 text-sm transition-colors",
           MOTION_CONTROL,
+          // A direct child of the vertical disclosure must keep its row height.
+          // `flex-1` gives it a zero basis there, so the grid can shrink it to
+          // one line; only the actions wrapper needs horizontal flex growth.
+          showLabel && item.actions?.length ? "flex-1" : "w-full flex-none",
           active
-            ? "h-7 bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
+            ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
             : item.emphasis
-              ? "py-2 font-medium text-[var(--accent-text)] hover:underline"
-              : "h-7 text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
+              ? "font-medium text-[var(--accent-text)] hover:underline"
+              : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         )}
       >
         {item.unread && !item.isLoading && !active && (
@@ -1126,25 +1130,24 @@ export function RailExpandable({
             : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         )}
       >
-        {/* Leading slot: the item's own icon at rest (whether open or closed);
-            the chevron reveals only on hover (rotated down when open). Toggles the list. */}
+        {/* The icon identifies the destination; the visible chevron shows that
+            this control expands its child list even before hover. */}
         <button
           type="button"
           onClick={toggle}
           aria-expanded={open}
           aria-controls={discloseId}
           aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
-          className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${focusRing}`}
+          className={`flex h-9 w-12 shrink-0 items-center gap-1 rounded-md pl-2 pr-1 ${focusRing}`}
         >
-          <Icon
-            className={cn("h-[17px] w-[17px] shrink-0 opacity-100 transition-opacity group-hover/exp:opacity-0", MOTION_CONTROL)}
-          />
+          <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden />
           <ChevronRightIcon
             className={cn(
-              "absolute h-4 w-4 opacity-0 transition-all group-hover/exp:opacity-100",
+              "h-3.5 w-3.5 shrink-0 transition-transform",
               MOTION_CONTROL,
               open && "rotate-90",
             )}
+            aria-hidden
           />
         </button>
 

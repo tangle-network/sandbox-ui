@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.116.2
+
+- `useSandboxMetrics` supports an empty `apiBaseUrl` for same-origin proxy requests.
+  Polling starts while a sandbox is selected and keeps the existing idle and pause behavior.
+
 ## 0.116.1
 
 - Workspace layouts omit the empty center header row by default. A closed pane

@@ -26,3 +26,43 @@ type Story = StoryObj<typeof meta>
 
 export const MixedStatuses: Story = { render: () => <LiveTable /> }
 export const Empty: Story = { args: { sandboxes: [] } }
+
+const longName = 'recoveredworkspace20261001' + 'longsessionname'.repeat(18)
+const longRows: SandboxCardData[] = Array.from({ length: 50 }, (_, index) => ({
+  id: `sandbox-${index}`,
+  name: index === 0 ? longName : `workspace-${index}`,
+  nodeId: index === 0 ? `iad1 · recoverednode${'0123456789abcdef'.repeat(3)}` : `iad1 · node-${index}`,
+  status: index === 1 ? 'stopped' : index === 2 ? 'provisioning' : 'running',
+  provisioningMessage: index === 2 ? 'Allocatingnodes'.repeat(10) : undefined,
+  image: 'NixOS 25.05',
+  cpuPercent: 34,
+  ramUsed: 2.2,
+  ramTotal: 8,
+}))
+
+function LongNameTable({ withScope = false }: { withScope?: boolean }) {
+  const rows = withScope
+    ? longRows.map((row, index) => index === 0 ? {
+        ...row,
+        image: 'nixosimage'.repeat(12),
+        team: { id: 'platform', name: 'platformengineering'.repeat(8), role: 'admin' as const },
+      } : row)
+    : longRows
+  return (
+    <div className="w-full max-w-[1086px]">
+      <SandboxTable
+        sandboxes={rows}
+        pageSize={50}
+        onOpenIDE={() => {}}
+        onOpenTerminal={() => {}}
+        onSSH={() => {}}
+        onResume={() => {}}
+        onMore={() => {}}
+        onDelete={() => {}}
+      />
+    </div>
+  )
+}
+
+export const LongNames: Story = { render: () => <LongNameTable /> }
+export const LongNamesWithScope: Story = { render: () => <LongNameTable withScope /> }

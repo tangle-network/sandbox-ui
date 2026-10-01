@@ -13,7 +13,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 // effect below; the type-only import keeps `WebglAddon` typed without
 // pulling the runtime module.
 import type { WebglAddon as WebglAddonType } from "@xterm/addon-webgl";
-import { usePtySession } from "../hooks/use-pty-session";
+import { usePtySession, type UsePtySessionReturn } from "../hooks/use-pty-session";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,7 +44,14 @@ export interface TerminalTheme {
   brightWhite: string;
 }
 
+/** A caller-owned terminal connection, rendered without opening a shell. */
+export interface TerminalSession extends UsePtySessionReturn {
+  subscribeData(listener: (data: string) => void): () => void;
+}
+
 export interface TerminalViewProps {
+  /** Native session transport. The built-in shell transport stays disabled. */
+  session?: TerminalSession;
   /** Base URL of the sidecar. */
   apiUrl: string;
   /** Bearer token for authentication. */
@@ -112,6 +119,7 @@ export const DEFAULT_TERMINAL_THEME: TerminalTheme = {
 // ---------------------------------------------------------------------------
 
 export default function TerminalView({
+  session,
   apiUrl,
   token,
   theme,
@@ -168,7 +176,9 @@ export default function TerminalView({
     });
   }, []);
 
-  const { isConnected, error, sendCommand, resizeTerminal, reconnect } = usePtySession({
+  const usesCallerSession = session !== undefined;
+  const shellSession = usePtySession({
+    enabled: !usesCallerSession,
     apiUrl,
     token,
     onData,
@@ -176,6 +186,11 @@ export default function TerminalView({
     incarnationId,
     control,
   });
+  const { isConnected, error, sendCommand, resizeTerminal, reconnect } =
+    session ?? shellSession;
+  const subscribeData = session?.subscribeData;
+
+  useEffect(() => subscribeData?.(onData), [subscribeData, onData]);
 
   // Initialize xterm
   useEffect(() => {
@@ -253,7 +268,7 @@ export default function TerminalView({
     term.onData((data) => {
       // Manually handle CTRL+L (form feed) to clear the screen
       // since the fallback shell might not correctly implement clear line via readline.
-      if (data === '\x0c') {
+      if (!usesCallerSession && data === '\x0c') {
         termRef.current?.clear();
         // Send a carriage return to force the prompt to redraw at the top
         sendCommand('\r').catch(console.error);
@@ -296,7 +311,7 @@ export default function TerminalView({
       termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [sendCommand, resizeTerminal, title, subtitle]);
+  }, [sendCommand, resizeTerminal, title, subtitle, usesCallerSession]);
 
   // Update theme without re-creating the terminal
   useEffect(() => {

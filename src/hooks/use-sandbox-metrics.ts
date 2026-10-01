@@ -110,16 +110,16 @@ export interface UseSandboxMetricsResult {
    */
   history: SandboxMetricsSample[];
   /**
-   * True only until the first successful sample has arrived (or the
-   * first one after the target `sandboxId` changes). Subsequent polls
-   * do not flip this back to true, so consumers can gate a spinner
-   * on it without it flashing on every cycle.
+   * True while waiting for the first successful metrics response for this
+   * sandbox. Errors clear it so consumers can show the failure state.
    */
   loading: boolean;
   error: Error | null;
-  /** Wall-clock ms of the last successful sample, or null. */
+  /** Wall-clock ms of the last successful metrics response, or null. */
   lastUpdatedAt: number | null;
 }
+
+const METRICS_REQUEST_TIMEOUT_MS = 15_000;
 
 /**
  * Polls the sandbox's sidecar metrics through the API proxy and
@@ -185,15 +185,22 @@ export function useSandboxMetrics({
       return;
     }
 
-    const controller = new AbortController();
     let cancelled = false;
     let timeoutId: number | null = null;
+    let activeRequestController: AbortController | null = null;
     const delay = Math.max(intervalMs, 500);
 
     const fetchOnce = async () => {
       // Only surface `loading` before the first successful sample.
       // After that, polls must not flash a spinner in consumer UIs.
       if (!hasLoadedRef.current) setLoading(true);
+      const requestController = new AbortController();
+      activeRequestController = requestController;
+      let requestTimedOut = false;
+      const requestTimeoutId = window.setTimeout(() => {
+        requestTimedOut = true;
+        requestController.abort();
+      }, METRICS_REQUEST_TIMEOUT_MS);
       try {
         const headers: Record<string, string> = {};
         if (token) headers.Authorization = `Bearer ${token}`;
@@ -203,7 +210,7 @@ export function useSandboxMetrics({
             method: "GET",
             credentials: "include",
             headers,
-            signal: controller.signal,
+            signal: requestController.signal,
           }
         );
         if (!res.ok) {
@@ -264,16 +271,26 @@ export function useSandboxMetrics({
         hasLoadedRef.current = true;
         setLoading(false);
       } catch (err) {
-        if (
-          cancelled ||
-          (err instanceof DOMException && err.name === "AbortError")
-        ) {
+        if (cancelled) return;
+        if (requestTimedOut) {
+          setError(
+            new Error(
+              `Metrics request timed out after ${METRICS_REQUEST_TIMEOUT_MS / 1000} seconds`,
+            ),
+          );
+        } else if (err instanceof DOMException && err.name === "AbortError") {
           return;
+        } else {
+          setError(err instanceof Error ? err : new Error(String(err)));
         }
-        setError(err instanceof Error ? err : new Error(String(err)));
         // Surface a terminal loading=false so consumers can render the
         // error instead of remaining stuck on a skeleton forever.
         if (!hasLoadedRef.current) setLoading(false);
+      } finally {
+        window.clearTimeout(requestTimeoutId);
+        if (activeRequestController === requestController) {
+          activeRequestController = null;
+        }
       }
     };
 
@@ -293,7 +310,7 @@ export function useSandboxMetrics({
 
     return () => {
       cancelled = true;
-      controller.abort();
+      activeRequestController?.abort();
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
   }, [apiBaseUrl, sandboxId, token, enabled, intervalMs, historyLimit]);

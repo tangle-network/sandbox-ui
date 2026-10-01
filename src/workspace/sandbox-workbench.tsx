@@ -20,6 +20,7 @@ import { ArtifactPane } from "@tangle-network/ui/primitives";
 import { DirectoryPane, type DirectoryPaneProps } from "./directory-pane";
 import { RuntimePane, type RuntimePaneProps } from "./runtime-pane";
 import { WorkspaceLayout, type WorkspaceLayoutProps } from "./workspace-layout";
+import { WorkspacePaneHeader } from "./workspace-pane-header";
 import { focusRing, focusRingInset } from "@tangle-network/ui/utils";
 
 export type SandboxWorkbenchPlacement = "left" | "right" | "bottom" | "hidden";
@@ -492,18 +493,33 @@ export function SandboxWorkbench({
       )}
     </div>
   );
+  const paneSubtitle = subtitle ?? session.subtitle;
   const center = quiet ? transcript : (
-    <ArtifactPane
-      eyebrow={session.eyebrow}
-      title={title ?? session.title ?? "Execution timeline"}
-      subtitle={subtitle ?? session.subtitle}
-      meta={status ? <>{session.meta}{status}</> : session.meta}
-      headerActions={session.headerActions}
-      className="h-full"
-      contentClassName="bg-background"
-    >
-      {transcript}
-    </ArtifactPane>
+    <section className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground">
+      <WorkspacePaneHeader className="gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            {session.eyebrow && (
+              <span className="max-w-[35%] shrink-0 truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {session.eyebrow}
+              </span>
+            )}
+            <div className="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
+              {title ?? session.title ?? "Execution timeline"}
+            </div>
+          </div>
+          {(paneSubtitle || session.meta || status) && (
+            <div className="mt-0.5 flex min-w-0 items-center gap-2 overflow-hidden text-xs text-muted-foreground">
+              {paneSubtitle && <span className="min-w-0 truncate">{paneSubtitle}</span>}
+              {session.meta && <span className="min-w-0 truncate">{session.meta}</span>}
+              {status && <span className="shrink-0">{status}</span>}
+            </div>
+          )}
+        </div>
+        {session.headerActions && <div className="flex shrink-0 items-center gap-1.5">{session.headerActions}</div>}
+      </WorkspacePaneHeader>
+      <div className="min-h-0 flex-1 overflow-auto bg-background">{transcript}</div>
+    </section>
   );
 
   // An empty-state element keeps the artifact region on screen before the

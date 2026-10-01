@@ -55,14 +55,24 @@ describe("SandboxWorkbench — composer slot", () => {
 describe("SandboxWorkbench — centerHeader", () => {
   it("puts the session identity and status in the pane header without a second row", () => {
     const { getByText, queryByText } = render(
-      <SandboxWorkbench title="Tax filing" subtitle="Workspace 12" status={<span>Running</span>} session={session} />,
+      <SandboxWorkbench
+        title="Tax filing"
+        subtitle="Workspace 12"
+        status={<span>Running</span>}
+        session={{ ...session, eyebrow: "Agent", meta: "3 files", headerActions: <button type="button">Share</button> }}
+      />,
     );
     expect(getByText("Tax filing")).toBeInTheDocument();
     expect(getByText("Workspace 12")).toBeInTheDocument();
     expect(getByText("Running")).toBeInTheDocument();
+    expect(getByText("Agent")).toBeInTheDocument();
+    expect(getByText("3 files")).toBeInTheDocument();
+    expect(getByText("Share")).toBeInTheDocument();
     expect(queryByText("Tangle Sandbox")).toBeNull();
     expect(queryByText("Execution timeline")).toBeNull();
-    expect(getByText("Tax filing").closest("main")?.querySelector("div.h-14")).toBeNull();
+    const centerHeader = getByText("Tax filing").closest("div.h-14");
+    expect(centerHeader).not.toBeNull();
+    expect(centerHeader?.closest("main")?.querySelectorAll("div.h-14")).toHaveLength(1);
   });
 
   it("null hides the card and renders the transcript directly on bg-background", () => {

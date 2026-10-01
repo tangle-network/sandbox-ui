@@ -14,7 +14,7 @@ export function WorkspacePaneHeader({
   return (
     <div
       className={cn(
-        "flex h-14 shrink-0 items-center border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-3",
+        "flex h-14 shrink-0 items-center border-b border-border bg-card px-3",
         className,
       )}
       {...props}

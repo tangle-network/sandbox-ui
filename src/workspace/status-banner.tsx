@@ -1,9 +1,10 @@
 /**
- * StatusBanner — full-width notification banner for connection/provisioning states.
+ * StatusBanner — inline notice for connection and provisioning states.
  */
 
 import { Loader2, AlertCircle, AlertTriangle, CheckCircle, Wifi, WifiOff } from "lucide-react";
 import { cn } from "../lib/utils";
+import { focusRing } from "@tangle-network/ui/utils";
 
 export type BannerType =
   | "provisioning"
@@ -27,7 +28,12 @@ const BANNER_STYLES: Record<
 > = {
   provisioning: { bg: "bg-primary/5", border: "border-primary/20", text: "text-primary", icon: Loader2 },
   connecting: { bg: "bg-[var(--code-number)]/5", border: "border-[var(--code-number)]/20", text: "text-[var(--code-number)]", icon: Wifi },
-  error: { bg: "bg-[var(--code-error)]/5", border: "border-[var(--code-error)]/20", text: "text-[var(--code-error)]", icon: AlertCircle },
+  error: {
+    bg: "bg-[var(--surface-danger-bg)]",
+    border: "border-[var(--surface-danger-border)]",
+    text: "text-[var(--surface-danger-text)]",
+    icon: AlertCircle,
+  },
   // Degraded, not broken: the thing still works, with less than was asked for.
   // `error` would overstate it and `info` would understate it, and a notice
   // styled as neither gets read as neither. Uses the brand's theme-reactive
@@ -41,7 +47,7 @@ const BANNER_STYLES: Record<
     icon: AlertTriangle,
   },
   success: { bg: "bg-[var(--code-success)]/5", border: "border-[var(--code-success)]/20", text: "text-[var(--code-success)]", icon: CheckCircle },
-  info: { bg: "bg-surface-container-high", border: "border-[var(--md3-outline-variant)]", text: "text-muted-foreground", icon: AlertCircle },
+  info: { bg: "bg-background", border: "border-border", text: "text-muted-foreground", icon: AlertCircle },
 };
 
 export function StatusBanner({ type, message, detail, onDismiss, className }: StatusBannerProps) {
@@ -65,7 +71,7 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
   return (
     <div
       className={cn(
-        "flex items-center gap-2.5 px-4 py-2 border-b font-sans text-sm",
+        "flex items-start gap-3 rounded-lg border px-3 py-2.5 font-sans text-sm",
         style.bg,
         style.border,
         className,
@@ -76,22 +82,27 @@ export function StatusBanner({ type, message, detail, onDismiss, className }: St
           announced as one unit — a Dismiss button inside it gets read out as
           part of the message, stripped of its button semantics and with no way
           to reach it, since focus never moves to a live region. */}
-      <div role={role} className="flex min-w-0 items-center gap-2.5">
+      <div role={role} className="flex min-w-0 flex-1 items-start gap-2.5">
         {/* While provisioning/connecting the spin is the only thing saying the
             work is still in flight, so it stays under reduced motion. */}
         <Icon
-          className={cn("h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")}
+          className={cn("mt-0.5 h-4 w-4 shrink-0", style.text, isAnimated && "animate-spin")}
           {...(isAnimated ? { "data-motion": "essential" } : {})}
         />
-        <span className="font-medium text-foreground">{message}</span>
-        {detail && (
-          <span className="font-mono text-xs text-muted-foreground tabular-nums">{detail}</span>
-        )}
+        <div className="min-w-0 flex-1">
+          <p className="break-words font-medium text-foreground">{message}</p>
+          {detail && (
+            <p className="mt-0.5 break-words font-mono text-xs text-muted-foreground tabular-nums">
+              {detail}
+            </p>
+          )}
+        </div>
       </div>
       {onDismiss && (
         <button
+          type="button"
           onClick={onDismiss}
-          className="ml-auto font-sans text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className={`ml-auto mt-0.5 shrink-0 font-sans text-xs font-medium text-muted-foreground transition-colors hover:text-foreground ${focusRing}`}
         >
           Dismiss
         </button>

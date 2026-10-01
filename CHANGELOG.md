@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.116.0
+
+- `TerminalView` can render a caller-owned terminal session without opening its built-in shell transport.
+- Workspace panes use semantic neutral surfaces and one-pixel dividers with wider resize hit areas; composer controls share the transcript column.
+- Status notices wrap long messages and details, and file artifacts avoid repeating a filename already shown as their path.
+- Metrics polling aborts a request after 15 seconds across response headers and body parsing, then retries serially while retaining the last successful sample.
+
 ## 0.115.7
 
 - Expanded sidebar groups keep app and history child links at a 32px row height

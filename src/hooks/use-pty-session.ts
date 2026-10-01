@@ -6,6 +6,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 // ---------------------------------------------------------------------------
 
 export interface UsePtySessionOptions {
+  /** Disable the built-in shell transport when a caller supplies a session. */
+  enabled?: boolean;
   /** Base URL of the sidecar (e.g. "http://localhost:9100"). */
   apiUrl: string;
   /** Bearer token for authentication. */
@@ -209,6 +211,7 @@ function interactiveIdentityKey(
  * deployments that have not yet shipped the WS endpoint.
  */
 export function usePtySession({
+  enabled = true,
   apiUrl,
   token,
   onData,
@@ -1139,13 +1142,14 @@ export function usePtySession({
   // -- Lifecycle -------------------------------------------------------------
 
   useEffect(() => {
+    if (!enabled) return;
     mountedRef.current = true;
     connect();
     return () => {
       mountedRef.current = false;
       cleanup();
     };
-  }, [connect, cleanup]);
+  }, [enabled, connect, cleanup]);
 
   return { isConnected, error, sendCommand, resizeTerminal, reconnect: connect };
 }

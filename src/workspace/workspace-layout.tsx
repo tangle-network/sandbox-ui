@@ -219,14 +219,13 @@ function ResizeHandle({ label, onDragStart, onStep, className }: ResizeHandlePro
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}
       className={cn(
-        "relative hidden w-3 shrink-0 cursor-col-resize lg:flex",
-        "items-stretch justify-center bg-transparent touch-none",
+        "group relative z-10 hidden w-px shrink-0 cursor-col-resize overflow-visible bg-transparent p-0 touch-none lg:flex",
         focusRing,
         className,
       )}
     >
-      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[var(--md3-outline-variant)] transition-colors" />
-      <span className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-transparent hover:bg-primary/30 focus-visible:bg-primary/40" />
+      <span aria-hidden="true" className="absolute inset-y-0 left-1/2 z-10 w-[9px] -translate-x-1/2 cursor-col-resize bg-transparent" />
+      <span aria-hidden="true" className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-primary/20 group-focus-visible:bg-primary/30" />
     </button>
   );
 }
@@ -265,14 +264,13 @@ function HorizontalResizeHandle({ label, onDragStart, onStep, className }: Horiz
       onPointerDown={handlePointerDown}
       onKeyDown={handleKeyDown}
       className={cn(
-        "relative hidden h-3 shrink-0 cursor-row-resize lg:flex",
-        "items-center justify-center bg-transparent touch-none w-full",
+        "group relative z-10 hidden h-px w-full shrink-0 cursor-row-resize overflow-visible bg-transparent p-0 touch-none lg:flex",
         focusRing,
         className,
       )}
     >
-      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[var(--md3-outline-variant)] transition-colors" />
-      <span className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-transparent hover:bg-primary/30 focus-visible:bg-primary/40" />
+      <span aria-hidden="true" className="absolute inset-x-0 top-1/2 z-10 h-[9px] w-full -translate-y-1/2 cursor-row-resize bg-transparent" />
+      <span aria-hidden="true" className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border transition-colors group-hover:bg-primary/20 group-focus-visible:bg-primary/30" />
     </button>
   );
 }
@@ -296,7 +294,7 @@ function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerPr
       />
       <aside
         className={cn(
-          "relative flex h-full w-[min(88vw,24rem)] flex-col border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+          "relative flex h-full w-[min(88vw,24rem)] flex-col border-border bg-card shadow-[0_8px_30px_rgba(0,0,0,0.18)]",
           side === "left" ? "border-r" : "ml-auto border-l",
         )}
       >
@@ -552,7 +550,7 @@ export function WorkspaceLayout({
       {...(theme ? { "data-sandbox-ui": "true", "data-sandbox-theme": theme } : {})}
       data-density={density}
       className={cn(
-        "flex h-screen flex-col overflow-hidden bg-[var(--bg-root)] text-foreground font-sans",
+        "flex h-screen flex-col overflow-hidden bg-background text-foreground font-sans",
         className,
       )}
     >
@@ -562,7 +560,10 @@ export function WorkspaceLayout({
             <aside
               aria-label={leftLabel}
               style={leftStyle}
-              className="hidden shrink-0 border-r border-[var(--md3-outline-variant)] bg-surface-container-low lg:flex lg:flex-col"
+              className={cn(
+                "hidden shrink-0 bg-card lg:flex lg:flex-col",
+                !resizable && "border-r border-border",
+              )}
             >
               {leftHeader && (
                 <WorkspacePaneHeader className="justify-between gap-2">
@@ -641,11 +642,14 @@ export function WorkspaceLayout({
               )}
               <section
                 aria-label={bottomLabel}
-                className="border-t border-[var(--md3-outline-variant)] bg-surface-container shrink-0"
+                className={cn(
+                  "shrink-0 bg-card",
+                  !resizable && "border-t border-border",
+                )}
                 style={{ height: `${bottomHeight}px` }}
               >
                 <div className="flex h-full flex-col">
-                  <div className="flex items-center justify-between gap-2 border-b border-[var(--md3-outline-variant)] px-3 py-1.5 bg-surface-container-high shrink-0">
+                  <div className="flex items-center justify-between gap-2 border-b border-border bg-background px-3 py-1.5 shrink-0">
                     <div className="min-w-0 flex-1">
                       {bottomHeader ?? (
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -669,7 +673,7 @@ export function WorkspaceLayout({
           )}
 
           {centerFooter && (
-            <div className="shrink-0 border-t border-[var(--md3-outline-variant)] bg-surface-container-low">
+            <div className="shrink-0 border-t border-border bg-card">
               {centerFooter}
             </div>
           )}
@@ -687,7 +691,10 @@ export function WorkspaceLayout({
             <aside
               aria-label={rightLabel}
               style={rightStyle}
-              className="hidden shrink-0 border-l border-[var(--md3-outline-variant)] bg-surface-container-low lg:flex lg:flex-col"
+              className={cn(
+                "hidden shrink-0 bg-card lg:flex lg:flex-col",
+                !resizable && "border-l border-border",
+              )}
             >
               <WorkspacePaneHeader className="justify-between gap-2">
                 <div className="min-w-0 flex-1">

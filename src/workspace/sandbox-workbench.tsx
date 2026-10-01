@@ -84,7 +84,7 @@ export interface SandboxWorkbenchSessionProps extends Omit<ChatContainerProps, "
   meta?: ReactNode;
   headerActions?: ReactNode;
   /**
-   * Controls rendered as a strip attached beneath the chat composer —
+   * Controls rendered above the composer in the same centered column —
    * harness/model/effort pickers, token meters, etc. Use
    * `AgentSessionControls` from `@tangle-network/agent-app/web-react` for the
    * standard set.
@@ -131,15 +131,14 @@ export interface SandboxWorkbenchProps {
   /**
    * Header above the transcript. `undefined` keeps the branded session card
    * (`Tangle Sandbox` / `title` / `status`), a node replaces it, and `null`
-   * removes it: the transcript then renders directly on `bg-surface` with no
+   * removes it: the transcript then renders directly on `bg-background` with no
    * eyebrow/title frame around it, and the shell's center header row appears
    * only while it holds an open-pane toggle.
    */
   centerHeader?: ReactNode | null;
   /**
-   * Composer rendered under the transcript on the panel background, inside the
-   * transcript's own `max-w-3xl` column. `session.composerControls`, when
-   * also given, sits above it as before.
+   * Composer rendered under the transcript in the same centered column as
+   * `session.composerControls`.
    */
   composer?: ReactNode;
   /**
@@ -212,7 +211,7 @@ function ArtifactTabs({
   if (artifacts.length === 0) return null;
 
   return (
-    <div role="tablist" aria-label="Artifacts" className="flex items-center overflow-x-auto border-b border-[var(--md3-outline-variant)] bg-surface-container-high">
+    <div role="tablist" aria-label="Artifacts" className="flex items-center overflow-x-auto border-b border-border bg-background">
       {artifacts.map((artifact) => {
         const Icon = artifact.icon ?? getArtifactTabIcon(artifact.kind);
         const isActive = artifact.id === activeArtifactId;
@@ -221,10 +220,10 @@ function ArtifactTabs({
           <div
             key={artifact.id}
             className={cn(
-              "group flex shrink-0 items-center border-r border-[var(--md3-outline-variant)] bg-surface-container relative",
+              "group relative flex shrink-0 items-center border-r border-border bg-card",
               isActive
                 ? "text-foreground after:absolute after:top-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary"
-                : "text-muted-foreground hover:bg-surface-container-high cursor-pointer",
+                : "cursor-pointer text-muted-foreground hover:bg-muted",
             )}
           >
             <button
@@ -282,7 +281,7 @@ function renderArtifact(artifact: SandboxWorkbenchArtifact) {
     case "file":
       return (
         <FileArtifactPane
-          path={artifact.path}
+          path={artifact.path === artifact.filename ? undefined : artifact.path}
           filename={artifact.filename}
           content={artifact.content}
           blobUrl={artifact.blobUrl}
@@ -292,10 +291,17 @@ function renderArtifact(artifact: SandboxWorkbenchArtifact) {
           activeTabId={artifact.activeTabId}
           onTabSelect={artifact.onTabSelect}
           onTabClose={artifact.onTabClose}
-          eyebrow={artifact.eyebrow}
+          eyebrow={artifact.eyebrow ?? null}
           meta={artifact.meta}
           toolbar={artifact.toolbar}
           footer={artifact.footer}
+          hideTitleBlock={
+            typeof artifact.title === "string" &&
+            artifact.title === artifact.filename &&
+            artifact.path === artifact.filename &&
+            !artifact.eyebrow &&
+            !artifact.meta
+          }
         />
       );
 
@@ -469,7 +475,7 @@ export function SandboxWorkbench({
   };
 
   const brandedHeader = (
-    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-3.5">
+    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-border bg-card px-4 py-3.5">
       <div className="min-w-0">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
           Tangle Sandbox
@@ -491,20 +497,16 @@ export function SandboxWorkbench({
 
   const { composerControls, ...chatSession } = session;
   const transcript = (
-    <div className={cn("flex h-full min-h-0 flex-col", quiet && "bg-surface")}>
+    <div className={cn("flex h-full min-h-0 flex-col", quiet && "bg-background")}>
       <ChatContainer
         {...chatSession}
         className="min-h-0 flex-1"
         presentation={session.presentation ?? "timeline"}
       />
-      {composerControls && (
-        <div className="shrink-0 border-t border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2">
+      {(composerControls || composer) && (
+        <div className="mx-auto flex w-full max-w-3xl shrink-0 flex-col gap-2 px-3 py-3">
           {composerControls}
-        </div>
-      )}
-      {composer && (
-        <div className="shrink-0">
-          <div className="mx-auto w-full max-w-3xl px-3 pb-3">{composer}</div>
+          {composer}
         </div>
       )}
     </div>
@@ -517,7 +519,7 @@ export function SandboxWorkbench({
       meta={session.meta}
       headerActions={session.headerActions}
       className="h-full"
-      contentClassName="bg-surface-container"
+      contentClassName="bg-background"
     >
       {transcript}
     </ArtifactPane>
@@ -526,7 +528,7 @@ export function SandboxWorkbench({
   // An empty-state element keeps the artifact region on screen before the
   // first artifact exists, so a consumer can park a directory or a hint there.
   const artifactPanel = artifacts.length > 0 || emptyArtifactState ? (
-    <section className="flex h-full min-h-0 flex-col bg-surface-container">
+    <section className="flex h-full min-h-0 flex-col bg-background">
       <ArtifactTabs
         artifacts={artifacts}
         activeArtifactId={resolvedArtifactId}
@@ -541,7 +543,7 @@ export function SandboxWorkbench({
         aria-labelledby={activeArtifact ? `${artifactTabsId}-${activeArtifact.id}` : undefined}
         aria-label={activeArtifact ? undefined : "Artifact content"}
         tabIndex={0}
-        className={`min-h-0 flex-1 overflow-auto bg-surface-container ${focusRingInset}`}
+        className={`min-h-0 flex-1 overflow-auto bg-background ${focusRingInset}`}
       >
         {activeArtifact ? (
           renderArtifact(activeArtifact)
@@ -637,7 +639,7 @@ export function SandboxWorkbench({
       leftCollapsedControl={layout?.leftCollapsedControl}
       leftContentClassName={railOnly ? "py-0" : undefined}
       centerHeaderVisibility={quiet ? "auto" : "always"}
-      className={cn("p-3 lg:p-4", className)}
+      className={cn("p-2", className)}
     />
   );
 }

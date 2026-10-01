@@ -1,6 +1,6 @@
 # Sandbox table overflow browser receipt
 
-Source: `fafd15fed51ca4c1363733a7fca9d5e4e5c2f548` (`@tangle-network/sandbox-ui` 0.116.5).
+Source: `f5a42809779297a49076dbc2dd219b28cb19026e` (`@tangle-network/sandbox-ui` 0.116.5).
 Target: Storybook 10.6 on drew-GTR-Pro, Chromium from Playwright 1.63.
 The 50-row fixtures use long unbroken sandbox, node, team, image, and provisioning labels.
 The five-column and six-column stories are `dashboard-sandboxtable--long-names` and `dashboard-sandboxtable--long-names-with-scope`.
@@ -51,7 +51,7 @@ The [raw interaction record](interaction.json) retains the measurements and zero
 - Typecheck, package build, and Storybook build: passed.
 - Focused Storybook image checks: 24/24 across dark/light and desktop/tablet/mobile.
 - One local 0.116.5 tarball passed clean consumer builds for 24 JS and 3 CSS exports, with and without optional peers.
-  Its local SHA-256 is `5a16d832d560b49d727be07f2ffcfb2060d9df4cabff083beff4de9eb1d63ae4`.
+  Its local SHA-256 is `5d29d4d80080ea6f3798ac84ac7763105ef4a4b5da58dc5a4639606035c7ff2d`.
 
 The browser proof is a local Storybook component flow.
 The ADC consumer will repeat the actual product route after it pins the published package.

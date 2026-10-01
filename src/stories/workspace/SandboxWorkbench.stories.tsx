@@ -279,6 +279,17 @@ export const Default: Story = {
   },
 }
 
+export const LongHeader: Story = {
+  name: 'Long session header',
+  args: {
+    ...Default.args,
+    title: 'Investigate why the staging deployment fails its smoke check after the workflow migration',
+    subtitle: 'sandbox-3f9a · node 20 · /workspace/services/deployment/very-long-directory-name',
+    status: <span className="rounded-full border border-border px-2 py-0.5 text-[11px]">Running</span>,
+    layout: { defaultLeftOpen: false, defaultRightOpen: false },
+  },
+}
+
 export const ThreePaneQuiet: Story = {
   name: 'Three-pane quiet',
   render: () => {

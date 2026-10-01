@@ -241,6 +241,22 @@ export const CenterOnly: Story = {
   },
 }
 
+export const CompactPaneHeaders: Story = {
+  name: 'Compact Pane Headers',
+  render: () => (
+    <WorkspaceLayout
+      left={<Pane label="Session list" />}
+      leftHeader={<span className="text-sm font-medium">Chats</span>}
+      center={<ChatArea />}
+      right={<ArtifactContent />}
+      rightHeader={<span className="text-sm font-medium">Artifact</span>}
+      defaultRightOpen
+      keyboardShortcuts
+      resizable={false}
+    />
+  ),
+}
+
 export const WithStatusBanner: Story = {
   name: 'With Status Banner',
   render: () => (

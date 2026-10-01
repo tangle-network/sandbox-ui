@@ -626,9 +626,20 @@ describe("useIntegrations", () => {
     const addDocument = vi.spyOn(document, "addEventListener");
     const removeDocument = vi.spyOn(document, "removeEventListener");
     const fetchImpl = mockFetchSequence(routes());
-    const { result, unmount } = renderHook(() => useIntegrations({
-      apiBaseUrl: "/api/integrations", fetchImpl, refreshOnReturn: true,
-    }), { wrapper: ({ children }) => <React.StrictMode>{children}</React.StrictMode> });
+    const replay: string[] = [];
+    const { result, unmount } = renderHook(() => {
+      const integrations = useIntegrations({
+        apiBaseUrl: "/api/integrations", fetchImpl, refreshOnReturn: true,
+      });
+      React.useEffect(() => {
+        replay.push("setup");
+        return () => { replay.push("cleanup"); };
+      }, []);
+      return integrations;
+      // RTL wraps the root itself; a wrapper component adds a non-strict parent
+      // and React can omit initial passive-effect replay for that subtree.
+    }, { reactStrictMode: true });
+    expect(replay).toEqual(["setup", "cleanup", "setup"]);
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     // The discarded setup's deferred worker must never issue a request.
     expect(calls(fetchImpl, "/api/integrations/catalog")).toHaveLength(1);
@@ -643,11 +654,13 @@ describe("useIntegrations", () => {
       expect(remove.mock.calls.filter(([event]) => event === type)).toHaveLength(1);
     }
     unmount();
+    expect(replay).toEqual(["setup", "cleanup", "setup", "cleanup"]);
     for (const [add, remove, type] of [
       [addWindow, removeWindow, "focus"],
       [addWindow, removeWindow, "pageshow"],
       [addDocument, removeDocument, "visibilitychange"],
     ] as const) {
+      expect(remove.mock.calls.filter(([event]) => event === type)).toHaveLength(2);
       for (const [event, listener] of add.mock.calls.filter(([event]) => event === type)) {
         expect(remove).toHaveBeenCalledWith(event, listener);
       }

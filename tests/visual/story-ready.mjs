@@ -58,9 +58,22 @@ export async function openStory(page, id, theme, viewport, baseURL) {
   })
   await page.goto(`/iframe.html?${params}`, { waitUntil: 'load' })
 
-  // Some full-screen stories paint visible descendants inside a zero-size root child.
-  // Dialog stories render in a portal and leave the Storybook root empty.
-  await expect(page.locator('#storybook-root :visible, [role="dialog"]:visible').first()).toBeVisible()
+  // Walk until the first visible element; the selector engine would inspect every cell in large tables.
+  // Some full-screen stories paint inside a zero-size root child, and dialogs render in a portal.
+  await page.waitForFunction(() => {
+    const isVisible = (element) => {
+      const rect = element.getBoundingClientRect()
+      return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility === 'visible'
+    }
+    const root = document.getElementById('storybook-root')
+    if (root) {
+      const elements = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT)
+      while (elements.nextNode()) {
+        if (isVisible(elements.currentNode)) return true
+      }
+    }
+    return [...document.querySelectorAll('[role="dialog"]')].some(isVisible)
+  }, null, { timeout: 10_000 })
   await expect(page.locator('.sb-errordisplay')).not.toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-sandbox-ui', 'true')
   await page.waitForFunction(() => {

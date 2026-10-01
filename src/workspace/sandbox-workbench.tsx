@@ -10,7 +10,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Badge } from "@tangle-network/ui/primitives";
 import { EmptyState } from "@tangle-network/ui/primitives";
 import { Markdown } from "@tangle-network/ui/markdown";
 import { ChatContainer, type ChatContainerProps } from "@tangle-network/ui/chat";
@@ -129,11 +128,10 @@ export interface SandboxWorkbenchProps {
   subtitle?: ReactNode;
   status?: ReactNode;
   /**
-   * Header above the transcript. `undefined` keeps the branded session card
-   * (`Tangle Sandbox` / `title` / `status`), a node replaces it, and `null`
-   * removes it: the transcript then renders directly on `bg-background` with no
-   * eyebrow/title frame around it, and the shell's center header row appears
-   * only while it holds an open-pane toggle.
+   * Optional header above the transcript. By default, `title`, `subtitle`,
+   * and `status` live in the transcript pane's own header, with no separate
+   * shell row. A node adds a distinct shell header. `null` removes the pane
+   * frame too and renders the transcript directly on `bg-background`.
    */
   centerHeader?: ReactNode | null;
   /**
@@ -426,7 +424,7 @@ function renderRegion(
  * runtime in one reusable shell.
  */
 export function SandboxWorkbench({
-  title = "Sandbox session",
+  title,
   subtitle,
   status,
   centerHeader: centerHeaderProp,
@@ -474,26 +472,9 @@ export function SandboxWorkbench({
     onArtifactChange?.(artifactId);
   };
 
-  const brandedHeader = (
-    <div className="flex min-w-0 items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-border bg-card px-4 py-3.5">
-      <div className="min-w-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-          Tangle Sandbox
-        </div>
-        <div className="truncate text-[17px] font-semibold tracking-[0.01em] text-foreground">{title}</div>
-        {subtitle && <div className="truncate text-sm text-muted-foreground">{subtitle}</div>}
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-        {status}
-        {artifacts.length > 0 && <Badge variant="outline">{artifacts.length} artifacts</Badge>}
-      </div>
-    </div>
-  );
-
-  // `null` is the quiet look: no card above, no frame around, transcript on
-  // the base surface. `undefined` keeps the branded card and the framed pane.
+  // `null` is the quiet look: no pane frame around the transcript.
   const quiet = centerHeaderProp === null;
-  const centerHeader = centerHeaderProp === undefined ? brandedHeader : (centerHeaderProp ?? undefined);
+  const centerHeader = centerHeaderProp ?? undefined;
 
   const { composerControls, ...chatSession } = session;
   const transcript = (
@@ -513,10 +494,10 @@ export function SandboxWorkbench({
   );
   const center = quiet ? transcript : (
     <ArtifactPane
-      eyebrow={session.eyebrow ?? "Agent Session"}
-      title={session.title ?? "Execution timeline"}
-      subtitle={session.subtitle}
-      meta={session.meta}
+      eyebrow={session.eyebrow}
+      title={title ?? session.title ?? "Execution timeline"}
+      subtitle={subtitle ?? session.subtitle}
+      meta={status ? <>{session.meta}{status}</> : session.meta}
       headerActions={session.headerActions}
       className="h-full"
       contentClassName="bg-background"
@@ -638,7 +619,7 @@ export function SandboxWorkbench({
       keyboardShortcuts={layout?.keyboardShortcuts}
       leftCollapsedControl={layout?.leftCollapsedControl}
       leftContentClassName={railOnly ? "py-0" : undefined}
-      centerHeaderVisibility={quiet ? "auto" : "always"}
+      centerHeaderVisibility="auto"
       className={cn("p-2", className)}
     />
   );

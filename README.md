@@ -212,7 +212,12 @@ const partMap: Record<string, SessionPart[]> = {};
 
 ### The three-pane shell
 
-For a chats rail · transcript + composer · artifacts layout, hand `SandboxWorkbench` a `SessionSidebar` as its `rail`, your composer as `composer`, and `centerHeader={null}` for the quiet center. `WorkspaceLayout` owns the pane sizes and, when you pass `layout.leftOpen` / `layout.onLeftOpenChange`, the open state too.
+For a chats rail · transcript + composer · artifacts layout, hand `SandboxWorkbench` a `SessionSidebar` as its `rail` and your composer as `composer`.
+The default places the session title and status in the transcript pane header without a second shell row.
+Use `centerHeader={null}` when the transcript should have no pane frame either.
+`WorkspaceLayout` leaves its center row out until a caller supplies `centerHeader`.
+Closed panes get compact edge controls with reserved space beside the transcript.
+It owns pane sizes and, when you pass `layout.leftOpen` / `layout.onLeftOpenChange`, the open state too.
 
 ```tsx
 const [chatsOpen, setChatsOpen] = useState(true);

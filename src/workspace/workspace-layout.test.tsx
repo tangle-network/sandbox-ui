@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { act, fireEvent, render } from "@testing-library/react"
+import { act, fireEvent, render, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { WorkspaceLayout } from "./workspace-layout"
 
 function mockDesktop(matches: boolean) {
@@ -129,7 +130,7 @@ describe("WorkspaceLayout — controlled panes", () => {
     expect(getByLabelText("Right workspace panel")).toBeInTheDocument()
   })
 
-  it("stays uncontrolled when the props are omitted", () => {
+  it("stays uncontrolled and restores focus to the edge control after collapse", async () => {
     const { getByLabelText, queryByLabelText } = render(
       <WorkspaceLayout
         left={<div>Left content</div>}
@@ -138,8 +139,10 @@ describe("WorkspaceLayout — controlled panes", () => {
       />,
     )
     expect(getByLabelText("Left workspace panel")).toBeInTheDocument()
+    getByLabelText("Collapse left panel").focus()
     fireEvent.click(getByLabelText("Collapse left panel"))
     expect(queryByLabelText("Left workspace panel")).toBeNull()
+    await waitFor(() => expect(getByLabelText("Open left panel")).toHaveFocus())
   })
 })
 
@@ -211,8 +214,9 @@ describe("WorkspaceLayout — collapsed left control", () => {
     const control = getByText("Show chats")
     expect(control).toBeInTheDocument()
     expect(queryByLabelText("Open left panel")).toBeNull()
-    // Top-left of the center pane: first child of the center header row.
-    expect(control.closest("main")?.firstElementChild?.firstElementChild).toBe(control)
+    const main = control.closest("main") as HTMLElement
+    expect(main.querySelector("div.h-14")).toBeNull()
+    expect(control.parentElement).toHaveClass("shrink-0", "pt-2")
   })
 
   it("keeps the default button while the control is omitted", () => {
@@ -246,15 +250,22 @@ describe("WorkspaceLayout — pane content classes", () => {
 })
 
 describe("WorkspaceLayout — center header visibility", () => {
-  it("keeps the row while a pane exists, even empty, by default", () => {
+  it("does not reserve an empty center row by default", () => {
     const { getByText } = render(
       <WorkspaceLayout left={<div>Left content</div>} center={<div>Center content</div>} resizable={false} />,
     )
     const main = getByText("Center content").closest("main") as HTMLElement
-    expect(main.firstElementChild).toHaveClass("h-14")
+    expect(main.querySelector("div.h-14")).toBeNull()
   })
 
-  it("auto drops the empty row and brings it back with an open-pane toggle", () => {
+  it("keeps the aligned row when explicitly requested", () => {
+    const { getByText } = render(
+      <WorkspaceLayout left={<div>Left content</div>} center={<div>Center content</div>} centerHeaderVisibility="always" />,
+    )
+    expect(getByText("Center content").closest("main")?.querySelector("div.h-14")).not.toBeNull()
+  })
+
+  it("auto keeps the center row absent when a pane closes", () => {
     const { getByText, getByLabelText, queryByLabelText } = render(
       <WorkspaceLayout
         left={<div>Left content</div>}
@@ -269,8 +280,13 @@ describe("WorkspaceLayout — center header visibility", () => {
     expect(queryByLabelText("Open left panel")).toBeNull()
 
     fireEvent.click(getByLabelText("Collapse left panel"))
-    expect(main.querySelector("div.h-14")).not.toBeNull()
-    expect(getByLabelText("Open left panel")).toBeInTheDocument()
+    expect(main.querySelector("div.h-14")).toBeNull()
+    const reopen = getByLabelText("Open left panel")
+    expect(reopen).toBeInTheDocument()
+    expect(reopen.parentElement).toHaveClass("shrink-0", "pt-2")
+    fireEvent.click(reopen)
+    expect(queryByLabelText("Open left panel")).toBeNull()
+    expect(getByLabelText("Left workspace panel")).toBeInTheDocument()
   })
 
   it("auto keeps the row while a centerHeader is given", () => {
@@ -290,7 +306,7 @@ describe("WorkspaceLayout — center header visibility", () => {
 describe("WorkspaceLayout — mobile drawers", () => {
   it("opens the left drawer from the mobile toggle", () => {
     mockDesktop(false)
-    const { getByLabelText, queryByRole, getByRole, getAllByRole } = render(
+    const { getByLabelText, queryByRole, getByRole } = render(
       <WorkspaceLayout
         left={<div>Left content</div>}
         center={<div>Center content</div>}
@@ -300,9 +316,25 @@ describe("WorkspaceLayout — mobile drawers", () => {
     expect(queryByRole("dialog")).toBeNull()
     fireEvent.click(getByLabelText("Open left panel"))
     expect(getByRole("dialog", { name: "Left workspace panel" })).toBeInTheDocument()
-    // Backdrop and the X both close; either proves the drawer is dismissable.
-    fireEvent.click(getAllByRole("button", { name: "Close Left workspace panel" })[0]!)
+    fireEvent.click(getByRole("button", { name: "Close Left workspace panel" }))
     expect(queryByRole("dialog")).toBeNull()
+  })
+
+  it("focuses and traps the drawer, then returns focus to its edge control on Escape", async () => {
+    mockDesktop(false)
+    const user = userEvent.setup()
+    const { getByLabelText, getByRole, queryByRole } = render(
+      <WorkspaceLayout left={<button type="button">Session action</button>} center={<div>Center content</div>} defaultLeftOpen={false} />,
+    )
+    const reopen = getByLabelText("Open left panel")
+    await user.click(reopen)
+    const dialog = getByRole("dialog", { name: "Left workspace panel" })
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    await user.tab()
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    await user.keyboard("{Escape}")
+    expect(queryByRole("dialog")).toBeNull()
+    await waitFor(() => expect(getByLabelText("Open left panel")).toHaveFocus())
   })
 
   it("opens the right drawer from the mobile toggle", () => {

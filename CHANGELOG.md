@@ -1,12 +1,20 @@
 # Changelog
 
+## 0.116.1
+
+- Workspace layouts omit the empty center header row by default. A closed pane
+  gets a compact edge control without covering content. Callers can request aligned headers.
+- Sandbox workbenches show the session title, subtitle, and status in the
+  transcript pane header instead of adding a second header above it.
+- Mobile workspace drawers trap focus, close on Escape or backdrop activation,
+  and return focus to the matching reopen control.
+
 ## 0.116.0
 
 - `TerminalView` can render a caller-owned terminal session without opening its built-in shell transport.
 - Workspace panes use semantic neutral surfaces and one-pixel dividers with wider resize hit areas; composer controls share the transcript column.
 - Status notices wrap long messages and details, and file artifacts avoid repeating a filename already shown as their path.
 - Metrics polling aborts a request after 15 seconds across response headers and body parsing, then retries serially while retaining the last successful sample.
-
 ## 0.115.7
 
 - Expanded sidebar groups keep app and history child links at a 32px row height

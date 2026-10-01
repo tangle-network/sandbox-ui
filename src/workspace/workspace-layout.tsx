@@ -9,6 +9,7 @@
  */
 
 import { type CSSProperties, type KeyboardEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   PanelBottomClose,
   PanelBottomOpen,
@@ -130,10 +131,9 @@ export interface WorkspaceLayoutProps {
   /** Extra classes for the right pane's scrolling content wrapper. */
   rightContentClassName?: string;
   /**
-   * `always` (default) keeps the center header row whenever a side or bottom
-   * pane exists, so pane headers line up across the shell even while the row
-   * is empty. `auto` renders the row only while it has content: a
-   * `centerHeader`, or an open-pane toggle for a closed pane.
+   * `auto` (default) reserves the center row only for `centerHeader`.
+   * Closed panes get narrow edge controls beside the content instead of a
+   * full-width row. `always` aligns every pane to the 56px header row.
    */
   centerHeaderVisibility?: "always" | "auto";
   className?: string;
@@ -280,38 +280,46 @@ interface MobileDrawerProps {
   title: string;
   header?: ReactNode;
   onClose: () => void;
+  onReturnFocus: () => void;
+  theme?: string;
+  density: "comfortable" | "compact";
   children: ReactNode;
 }
 
-function MobileDrawer({ side, title, header, onClose, children }: MobileDrawerProps) {
+function MobileDrawer({ side, title, header, onClose, onReturnFocus, theme, density, children }: MobileDrawerProps) {
   return (
-    <div className="fixed inset-0 z-50 flex lg:hidden" aria-modal="true" role="dialog" aria-label={title}>
-      <button
-        type="button"
-        aria-label={`Close ${title}`}
-        onClick={onClose}
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-      />
-      <aside
-        className={cn(
-          "relative flex h-full w-[min(88vw,24rem)] flex-col border-border bg-card shadow-[0_8px_30px_rgba(0,0,0,0.18)]",
-          side === "left" ? "border-r" : "ml-auto border-l",
-        )}
-      >
-        <WorkspacePaneHeader className="justify-between gap-3">
-          <div className="min-w-0 flex-1">{header ?? <span className="text-[13px] font-medium text-foreground">{title}</span>}</div>
-          <button
-            type="button"
-            aria-label={`Close ${title}`}
-            onClick={onClose}
-            className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </WorkspacePaneHeader>
-        <div className="flex-1 overflow-auto">{children}</div>
-      </aside>
-    </div>
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm lg:hidden" />
+        <DialogPrimitive.Content
+          {...(theme ? { "data-sandbox-ui": "true", "data-sandbox-theme": theme } : {})}
+          data-density={density}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            requestAnimationFrame(onReturnFocus);
+          }}
+          className={cn(
+            "fixed inset-y-0 z-50 flex h-full w-[min(88vw,24rem)] flex-col border-border bg-card shadow-[0_8px_30px_rgba(0,0,0,0.18)] lg:hidden",
+            side === "left" ? "left-0 border-r" : "right-0 border-l",
+          )}
+        >
+          <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+          <WorkspacePaneHeader className="justify-between gap-3">
+            <div className="min-w-0 flex-1">{header ?? <span className="text-[13px] font-medium text-foreground">{title}</span>}</div>
+            <DialogPrimitive.Close asChild>
+              <button
+                type="button"
+                aria-label={`Close ${title}`}
+                className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </DialogPrimitive.Close>
+          </WorkspacePaneHeader>
+          <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 
@@ -353,7 +361,7 @@ export function WorkspaceLayout({
   leftCollapsedControl,
   leftContentClassName,
   rightContentClassName,
-  centerHeaderVisibility = "always",
+  centerHeaderVisibility = "auto",
   className,
 }: WorkspaceLayoutProps) {
   const desktop = useDesktopMediaQuery(DESKTOP_BREAKPOINT);
@@ -404,12 +412,32 @@ export function WorkspaceLayout({
   const [bottomHeight, setBottomHeight] = useState(
     clamp(storedLayout?.bottomHeight ?? defaultBottomHeight, minBottomHeight, maxBottomHeight),
   );
-  const centerHeaderHasContent =
-    Boolean(centerHeader) || (hasLeft && !leftOpen) || (hasRight && !rightOpen) || (Boolean(bottom) && !bottomOpen);
   const showCenterHeader =
     centerHeaderVisibility === "auto"
-      ? centerHeaderHasContent
+      ? Boolean(centerHeader)
       : Boolean(centerHeader || left || right || bottom);
+  const reopenClassName = showCenterHeader
+    ? `rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`
+    : `flex h-10 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground ${focusRing}`;
+  const leftReopenControl = left && !leftOpen
+    ? leftCollapsedControl ?? (
+        <button type="button" aria-label="Open left panel" onClick={() => setLeftOpen(true)} className={reopenClassName}>
+          <PanelLeftOpen className="h-4 w-4" />
+        </button>
+      )
+    : null;
+  const bottomReopenControl = bottom && !bottomOpen ? (
+    <button type="button" aria-label="Open bottom panel" onClick={() => setBottomOpen(true)} className={reopenClassName}>
+      <PanelBottomOpen className="h-4 w-4" />
+    </button>
+  ) : null;
+  const rightReopenControl = right && !rightOpen ? (
+    <button type="button" aria-label="Open right panel" onClick={() => setRightOpen(true)} className={reopenClassName}>
+      <PanelRightOpen className="h-4 w-4" />
+    </button>
+  ) : null;
+  const leftReopenRef = useRef<HTMLDivElement | null>(null);
+  const rightReopenRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!persistenceKey || typeof window === "undefined") return;
@@ -484,6 +512,15 @@ export function WorkspaceLayout({
   // The shell's width decides how much of the stored pane widths fits. Only
   // the rendered widths shrink; the stored values stay for a wider window.
   const shellRef = useRef<HTMLDivElement | null>(null);
+  const focusSideControl = (side: "left" | "right") => {
+    const reopen = (side === "left" ? leftReopenRef : rightReopenRef).current;
+    const target = reopen?.querySelector<HTMLElement>('button, a[href], [tabindex]:not([tabindex="-1"])');
+    if (target) {
+      target.focus();
+      return;
+    }
+    shellRef.current?.querySelector<HTMLElement>(`[aria-label="Collapse ${side} panel"]`)?.focus();
+  };
   const [shellWidth, setShellWidth] = useState<number | null>(null);
   useEffect(() => {
     const shell = shellRef.current;
@@ -571,7 +608,10 @@ export function WorkspaceLayout({
                   <button
                     type="button"
                     aria-label="Collapse left panel"
-                    onClick={() => setLeftOpen(false)}
+                    onClick={() => {
+                      setLeftOpen(false);
+                      requestAnimationFrame(() => focusSideControl("left"));
+                    }}
                     className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
                   >
                     <PanelLeftClose className="h-4 w-4" />
@@ -593,43 +633,25 @@ export function WorkspaceLayout({
         <main className="flex min-w-0 flex-1 flex-col">
           {showCenterHeader && (
             <WorkspacePaneHeader className="gap-2">
-              {left && !leftOpen && (
-                leftCollapsedControl ?? (
-                  <button
-                    type="button"
-                    aria-label="Open left panel"
-                    onClick={() => setLeftOpen(true)}
-                    className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
-                  >
-                    <PanelLeftOpen className="h-4 w-4" />
-                  </button>
-                )
-              )}
+              {leftReopenControl && <div ref={leftReopenRef} className="shrink-0">{leftReopenControl}</div>}
               <div className="min-w-0 flex-1">{centerHeader}</div>
-              {bottom && !bottomOpen && (
-                <button
-                  type="button"
-                  aria-label="Open bottom panel"
-                  onClick={() => setBottomOpen(true)}
-                  className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
-                >
-                  <PanelBottomOpen className="h-4 w-4" />
-                </button>
-              )}
-              {right && !rightOpen && (
-                <button
-                  type="button"
-                  aria-label="Open right panel"
-                  onClick={() => setRightOpen(true)}
-                  className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
-                >
-                  <PanelRightOpen className="h-4 w-4" />
-                </button>
-              )}
+              {bottomReopenControl}
+              {rightReopenControl && <div ref={rightReopenRef} className="shrink-0">{rightReopenControl}</div>}
             </WorkspacePaneHeader>
           )}
 
-          <div className="min-h-0 flex-1 overflow-auto">{center}</div>
+          <div className="flex min-h-0 flex-1">
+            {!showCenterHeader && leftReopenControl && (
+              <div ref={leftReopenRef} className="shrink-0 pt-2">{leftReopenControl}</div>
+            )}
+            <div className="min-w-0 flex-1 overflow-auto">{center}</div>
+            {!showCenterHeader && (bottomReopenControl || rightReopenControl) && (
+              <div className="flex shrink-0 flex-col gap-1 pt-2">
+                {bottomReopenControl}
+                {rightReopenControl && <div ref={rightReopenRef}>{rightReopenControl}</div>}
+              </div>
+            )}
+          </div>
 
           {bottom && bottomOpen && (
             <>
@@ -703,7 +725,10 @@ export function WorkspaceLayout({
                 <button
                   type="button"
                   aria-label="Collapse right panel"
-                  onClick={() => setRightOpen(false)}
+                  onClick={() => {
+                    setRightOpen(false);
+                    requestAnimationFrame(() => focusSideControl("right"));
+                  }}
                   className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
                 >
                   <PanelRightClose className="h-4 w-4" />
@@ -715,12 +740,15 @@ export function WorkspaceLayout({
         )}
       </div>
 
-      {!desktop && left && leftOpen && (
+      {!desktop && left && leftOpen && !(right && rightOpen) && (
         <MobileDrawer
           side="left"
           title={leftLabel}
           header={leftHeader}
           onClose={() => setLeftOpen(false)}
+          onReturnFocus={() => focusSideControl("left")}
+          theme={theme}
+          density={density}
         >
           {left}
         </MobileDrawer>
@@ -732,6 +760,9 @@ export function WorkspaceLayout({
           title={rightLabel}
           header={rightHeader}
           onClose={() => setRightOpen(false)}
+          onReturnFocus={() => focusSideControl("right")}
+          theme={theme}
+          density={density}
         >
           {right}
         </MobileDrawer>

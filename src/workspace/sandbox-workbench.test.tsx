@@ -53,11 +53,16 @@ describe("SandboxWorkbench — composer slot", () => {
 });
 
 describe("SandboxWorkbench — centerHeader", () => {
-  it("keeps the branded card and the framed transcript by default", () => {
-    const { getByText } = render(<SandboxWorkbench title="Tax filing" session={session} />);
-    expect(getByText("Tangle Sandbox")).toBeInTheDocument();
+  it("puts the session identity and status in the pane header without a second row", () => {
+    const { getByText, queryByText } = render(
+      <SandboxWorkbench title="Tax filing" subtitle="Workspace 12" status={<span>Running</span>} session={session} />,
+    );
     expect(getByText("Tax filing")).toBeInTheDocument();
-    expect(getByText("Execution timeline")).toBeInTheDocument();
+    expect(getByText("Workspace 12")).toBeInTheDocument();
+    expect(getByText("Running")).toBeInTheDocument();
+    expect(queryByText("Tangle Sandbox")).toBeNull();
+    expect(queryByText("Execution timeline")).toBeNull();
+    expect(getByText("Tax filing").closest("main")?.querySelector("div.h-14")).toBeNull();
   });
 
   it("null hides the card and renders the transcript directly on bg-background", () => {
@@ -76,7 +81,7 @@ describe("SandboxWorkbench — centerHeader", () => {
     expect(column.closest("section")).toBeNull();
   });
 
-  it("null also drops the shell's empty center header row until a pane closes", () => {
+  it("null drops the empty row and shows the reopen control when a pane closes", () => {
     const { getByText, getByLabelText } = render(
       <SandboxWorkbench
         session={session}
@@ -89,7 +94,8 @@ describe("SandboxWorkbench — centerHeader", () => {
     const main = getByText("Start a conversation.").closest("main") as HTMLElement;
     expect(main.querySelector("div.h-14")).toBeNull();
     fireEvent.click(getByLabelText("Collapse right panel"));
-    expect(getByLabelText("Open right panel").closest("div.h-14")).not.toBeNull();
+    expect(main.querySelector("div.h-14")).toBeNull();
+    expect(getByLabelText("Open right panel").parentElement?.parentElement).toHaveClass("shrink-0", "pt-2");
   });
 
   it("a node replaces the card", () => {

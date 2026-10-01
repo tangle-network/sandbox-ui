@@ -121,10 +121,12 @@ export function useIntegrations({
   autoLoad = true,
   refreshOnReturn = false,
 }: UseIntegrationsOptions): UseIntegrationsResult {
-  const fetcher = fetchImpl ?? (typeof fetch === "function" ? fetch : null);
-  if (!fetcher) {
+  const availableFetch = fetchImpl ?? (typeof fetch === "function" ? fetch : null);
+  if (!availableFetch) {
     throw new Error("useIntegrations: fetch is not available in this environment");
   }
+  // Capture the narrowed type for nested named callbacks as well as closures.
+  const fetcher = availableFetch;
   const base = apiBaseUrl.replace(/\/+$/, "");
 
   const [catalog, setCatalog] = React.useState<IntegrationProvider[]>([]);

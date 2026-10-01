@@ -115,7 +115,7 @@ export function BackendSelector({
             position="popper"
             sideOffset={4}
             className={cn(
-              "z-50 overflow-hidden",
+              "z-50 max-h-[var(--radix-select-content-available-height)] overflow-hidden",
               variant === "pill"
                 ? "min-w-[240px] max-w-[320px]"
                 : "w-[var(--radix-select-trigger-width)]",
@@ -127,7 +127,7 @@ export function BackendSelector({
               "data-[side=bottom]:slide-in-from-top-1",
             )}
           >
-            <Select.Viewport className="p-1">
+            <Select.Viewport className="max-h-[min(24rem,calc(var(--radix-select-content-available-height)-2px))] overflow-y-auto overscroll-contain p-1">
               {backends.map((backend) => (
                 <Select.Item
                   key={backend.type}

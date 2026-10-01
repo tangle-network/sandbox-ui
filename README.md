@@ -72,7 +72,7 @@ Pass `allowedOrigins` from product policy or the enforcing service, independent 
 The host must authorize access before it returns the URL.
 The component shows starting and unavailable states without mounting a frame.
 Its ready view uses the same URL validation and iframe isolation as `PreviewView`.
-The compact header provides Reload and Open in new tab.
+The compact header uses the shared 56px workspace pane row and provides Reload and Open in new tab.
 Place product actions in `toolbarActions` to share that header without a second toolbar.
 Pass service-observed `readiness` and enforced `access` to show their status inside the pane.
 Show process and port state beside the pane if your runtime exposes those separately.

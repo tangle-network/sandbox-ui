@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.115.5
+
+- The embedded app preview uses the shared 56px workspace pane header.
+  Its title and actions stay on one row beside other pane headers.
+  Narrow panes can scroll the toolbar when its actions do not fit.
+
 ## 0.115.4
 
 - Markdown prose follows the nearest foreground and muted foreground aliases.

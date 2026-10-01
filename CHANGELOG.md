@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.116.0
 
 - `TerminalView` can render a caller-owned terminal session without opening its built-in shell transport.
 - Workspace panes use semantic neutral surfaces and one-pixel dividers with wider resize hit areas; composer controls share the transcript column.

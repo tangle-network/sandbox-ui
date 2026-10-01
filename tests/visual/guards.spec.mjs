@@ -105,7 +105,7 @@ test('rejects external requests made by a service worker', async ({ page, baseUR
   await expect(assertStoryHealthy(page)).rejects.toThrow('Story fixtures must be self-contained')
 })
 
-test('keeps an embedded app interactive and reloadable from the keyboard', async ({ page, baseURL }) => {
+test('keeps an embedded app interactive and its toolbar usable on mobile', async ({ page, baseURL }) => {
   await openStory(page, 'workbench-embeddedappview--ready', 'dark', viewport, baseURL)
   const frame = page.frameLocator('iframe')
   await expect(frame.getByRole('heading', { name: 'Local preview fixture' })).toBeVisible()
@@ -117,5 +117,22 @@ test('keeps an embedded app interactive and reloadable from the keyboard', async
   await expect(frame.locator('#result')).toContainText('The frame loaded.')
   await expect(page.locator('iframe')).toHaveAttribute('sandbox', 'allow-scripts allow-forms')
   await expect(page.getByRole('link', { name: 'Open Reporting in new tab' })).toHaveAttribute('href', /preview-fixture/)
+  await assertStoryHealthy(page)
+
+  await openStory(page, 'workbench-embeddedappview--with-toolbar-actions', 'dark', viewport, baseURL)
+  const toolbar = page.getByRole('heading', { name: 'Reporting' }).locator('..')
+  const bounds = await toolbar.evaluate((element) => {
+    const open = element.querySelector('[aria-label="Open Reporting in new tab"]')
+    return {
+      height: element.getBoundingClientRect().height,
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      openRight: open?.getBoundingClientRect().right,
+      toolbarRight: element.getBoundingClientRect().right,
+    }
+  })
+  expect(bounds.height).toBe(56)
+  expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth)
+  expect(bounds.openRight).toBeLessThanOrEqual(bounds.toolbarRight)
   await assertStoryHealthy(page)
 })

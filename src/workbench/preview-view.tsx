@@ -91,8 +91,8 @@ export function PreviewView({ url, allowedOrigins, access, readiness, onCheckRea
             <ExternalLink aria-hidden="true" className="size-4" />
           </a>
         </Button>}
-      </form> : <WorkspacePaneHeader className="min-w-0 gap-2 overflow-x-auto">
-        <h2 className="min-w-16 flex-1 truncate text-sm font-medium text-foreground">{title}</h2>
+      </form> : <WorkspacePaneHeader className="min-w-0 gap-1 overflow-x-auto px-2">
+        <h2 className="min-w-14 flex-1 truncate text-sm font-medium text-foreground" title={title}>{title}</h2>
         {toolbarActions && <div className="flex shrink-0 items-center gap-1">{toolbarActions}</div>}
         <Button type="button" variant="ghost" size="sm" onClick={reload} disabled={!activeUrl} aria-label={`Reload ${title}`} className="shrink-0">
           <RotateCw aria-hidden="true" className="size-4" />

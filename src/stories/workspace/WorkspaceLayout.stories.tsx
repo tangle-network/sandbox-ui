@@ -378,3 +378,31 @@ export const NotResizable: Story = {
     right: <ArtifactContent />,
   },
 }
+
+/** Stateful fixture; entering text demonstrates retention without opening a live PTY. */
+function RetainedInput() {
+  const [value, setValue] = useState('')
+  return (
+    <div className="p-4">
+      <label className="flex flex-col gap-2 text-sm">
+        Terminal input
+        <input className="rounded-md border border-border bg-background p-2" value={value} onChange={(event) => setValue(event.target.value)} />
+      </label>
+    </div>
+  )
+}
+
+export const RetainedCompanion: Story = {
+  name: 'Retained Companion — Floating Controls',
+  render: () => (
+    <WorkspaceLayout
+      center={<ChatArea />}
+      right={<RetainedInput />}
+      rightHeader={<span className="text-sm font-medium">Terminal</span>}
+      keepRightMounted
+      collapsedControlsPlacement="overlay"
+      keyboardShortcuts
+      resizable={false}
+    />
+  ),
+}

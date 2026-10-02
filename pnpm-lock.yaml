@@ -193,6 +193,9 @@ importers:
       nanostores:
         specifier: ^1.5.4
         version: 1.5.4
+      tailwindcss-animate:
+        specifier: ^1.0.7
+        version: 1.0.7(tailwindcss@4.3.3)
       yaml:
         specifier: ^2.9.1
         version: 2.9.1
@@ -317,9 +320,6 @@ importers:
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
-      tailwindcss-animate:
-        specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@4.3.3)
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(oxc-resolver@11.21.2)(typescript@7.0.2)

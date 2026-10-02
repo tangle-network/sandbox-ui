@@ -7,6 +7,10 @@
 - Keep WorkflowGraph's React Flow chrome in the graph wrapper's resolved light or dark theme, including nested Vault workspaces inside a dark app root.
 - Forward the UI Markdown heading-fragment helper through the Markdown and root exports.
 
+## 0.117.1
+
+- Declare `tailwindcss-animate` as a runtime dependency so the exported Tailwind preset works in production installs.
+
 ## 0.117.0
 
 - Add `AgentMessagingConnection` through the package root and `/connections` subpath.

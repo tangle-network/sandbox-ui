@@ -62,9 +62,9 @@ function permissions(id: string): IntegrationPermissionGroup[] {
     decisionOptions: [{ value: "deny", label: "Deny" }],
   }] }];
 }
-function DetailScene({ initial = "loaded" }: { initial?: State }) {
+function DetailScene({ initial = "loaded", initialSelected = null }: { initial?: State; initialSelected?: string | null }) {
   const [state, setState] = useState<State>(initial);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialSelected);
   const [receipt, setReceipt] = useState("No action");
   return <><States value={state} onChange={setState} />
     <IntegrationConnectionDetail provider={{ providerId: "slack", title: "Slack", iconUrl: providerLogos.slack }}
@@ -79,8 +79,8 @@ function DetailScene({ initial = "loaded" }: { initial?: State }) {
     <output className="mt-4 block break-all text-sm text-muted-foreground" data-testid="settings-receipt">{receipt}</output>
   </>;
 }
-function DialogScene() {
-  const [kind, setKind] = useState<"key" | "oauth" | null>(null);
+function DialogScene({ initialKind = null }: { initialKind?: "key" | "oauth" | null }) {
+  const [kind, setKind] = useState<"key" | "oauth" | null>(initialKind);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const open = (next: "key" | "oauth") => { setValue(""); setError(null); setKind(next); };
@@ -102,7 +102,10 @@ export const CatalogError: Story = { render: () => <CatalogScene initial="error"
 export const Geometry: Story = { render: () => <CatalogScene geometry initial="loading" /> };
 export const DetailLight: Story = { globals: { sandboxTheme: "light" }, render: () => <DetailScene /> };
 export const DetailDark: Story = { globals: { sandboxTheme: "dark" }, render: () => <DetailScene /> };
+export const DetailSelected: Story = { render: () => <DetailScene initialSelected="team/two" /> };
 export const DetailLoading: Story = { render: () => <DetailScene initial="loading" /> };
 export const DetailEmpty: Story = { render: () => <DetailScene initial="empty" /> };
 export const DetailError: Story = { render: () => <DetailScene initial="error" /> };
 export const Dialogs: Story = { render: () => <DialogScene /> };
+export const DialogApiKey: Story = { render: () => <DialogScene initialKind="key" /> };
+export const DialogOAuth: Story = { render: () => <DialogScene initialKind="oauth" /> };

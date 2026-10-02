@@ -49,6 +49,28 @@ test('rejects document overflow introduced after a flow opens', async ({ page, b
   await expect(assertStoryHealthy(page)).rejects.toThrow('Horizontal scrolling belongs inside the component')
 })
 
+test('keeps desktop sandbox scope and actions within their cells', async ({ page, baseURL }) => {
+  await openStory(page, 'dashboard-sandboxtable--long-names-with-scope', 'light', { width: 1440, height: 900 }, baseURL)
+  const row = page.getByRole('region', { name: 'Sandbox list' }).locator('tbody tr').first()
+  const scopeCell = row.locator('td').nth(2)
+  const scopeBadge = scopeCell.locator('div[title]').first()
+  const environmentText = row.locator('td').nth(3).locator('span[title]').first()
+  await expect(scopeBadge).toBeVisible()
+  await expect(environmentText).toBeVisible()
+  const scopeBounds = await scopeCell.boundingBox()
+  const badgeBounds = await scopeBadge.boundingBox()
+  const environmentBounds = await environmentText.boundingBox()
+  expect(badgeBounds.x + badgeBounds.width).toBeLessThanOrEqual(scopeBounds.x + scopeBounds.width)
+  expect(badgeBounds.x + badgeBounds.width + 8).toBeLessThanOrEqual(environmentBounds.x)
+
+  const actionTops = await row.locator('td').last().getByRole('button').evaluateAll((buttons) =>
+    buttons.map((button) => button.getBoundingClientRect().top),
+  )
+  expect(actionTops).toHaveLength(5)
+  expect(Math.max(...actionTops) - Math.min(...actionTops)).toBeLessThan(2)
+  await assertStoryHealthy(page)
+})
+
 test('rejects runtime errors recorded after a screenshot', async ({ page, baseURL }) => {
   await openStory(page, 'dashboard-sandboxcard--running', 'dark', viewport, baseURL)
   await page.screenshot()

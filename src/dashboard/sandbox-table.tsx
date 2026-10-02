@@ -238,7 +238,7 @@ export function SandboxTable({
                 {hasTeamSandboxes && <th scope="col" className="hidden w-32 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Scope</th>}
                 <th scope="col" className="hidden w-28 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Environment</th>
                 <th scope="col" className="hidden w-48 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Resources</th>
-                <th scope="col" className="w-28 px-2 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:w-52 xl:px-4">Actions</th>
+                <th scope="col" className="w-28 px-2 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:w-72 xl:px-4">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -323,7 +323,7 @@ export function SandboxTable({
                       <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
                         {sb.team ? (
                           <div
-                            className="inline-flex max-w-40 items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
+                            className="inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
                             title={"Shared with " + (sb.team.name ?? "Team") + " \u00b7 " + sb.team.role}
                           >
                             <Users className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -360,7 +360,7 @@ export function SandboxTable({
                     <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
                       <SandboxResources sandbox={sb} />
                     </td>
-                    <td className="w-28 px-2 py-3 text-right align-top xl:w-52 xl:px-4 xl:py-5">
+                    <td className="w-28 px-2 py-3 text-right align-top xl:w-72 xl:px-4 xl:py-5">
                       <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
                         {isActive && (
                           <>

@@ -92,6 +92,9 @@ describe("SandboxTable", () => {
 
     expect(screen.getByText("Showing 51-60 of 86 sandboxes")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Go to page 6" })).toHaveAttribute("aria-current", "page")
+    for (const name of ["Previous page", "Go to page 6", "Next page"]) {
+      expect(screen.getByRole("button", { name })).toHaveClass("min-h-11", "min-w-11")
+    }
     await userEvent.setup().click(screen.getByRole("button", { name: "Go to page 7" }))
     expect(onPageChange).toHaveBeenCalledWith(7)
   })
@@ -376,6 +379,17 @@ describe("SandboxTable", () => {
     )
     expect(screen.getAllByTitle("Open IDE")).toHaveLength(1)
     expect(screen.getByTitle("More actions")).toBeInTheDocument()
+
+    const iconActions = [
+      screen.getByRole("button", { name: "Open IDE" }),
+      screen.getByRole("button", { name: "Open terminal" }),
+      screen.getByRole("button", { name: "Open SSH details" }),
+      screen.getByRole("button", { name: "More actions for My Sandbox" }),
+      screen.getByRole("button", { name: "Delete My Sandbox" }),
+    ]
+    for (const action of iconActions) {
+      expect(action).toHaveClass("min-h-11", "min-w-11")
+    }
   })
 
   it("hides the overflow trigger when no overflow callbacks are passed", () => {

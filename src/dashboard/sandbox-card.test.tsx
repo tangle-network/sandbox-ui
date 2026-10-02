@@ -77,6 +77,26 @@ describe("SandboxCard", () => {
     expect(heading).toHaveClass("truncate")
   })
 
+  it("bounds a long team name while retaining its full accessible title", () => {
+    const name = "workspace-" + "a-very-long-project-name-".repeat(8)
+    const teamName = "platform-engineering-".repeat(12)
+    render(
+      <SandboxCard
+        sandbox={makeSandbox({
+          name,
+          team: { id: "t1", name: teamName, role: "admin" },
+        })}
+      />,
+    )
+
+    const heading = screen.getByRole("heading", { level: 3, name })
+    expect(heading).toHaveAttribute("title", name)
+    const teamLabel = screen.getByText(teamName)
+    expect(teamLabel).toHaveClass("min-w-0", "truncate")
+    expect(teamLabel.parentElement).toHaveClass("min-w-0", "max-w-40")
+    expect(teamLabel.parentElement).toHaveAttribute("title", `Shared with ${teamName} \u00b7 admin`)
+  })
+
   it("renders team badge when team is present", () => {
     const sandbox = makeSandbox({
       team: { id: "t1", name: "Alpha Team", role: "member" },

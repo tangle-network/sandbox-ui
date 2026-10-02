@@ -491,7 +491,7 @@ export function SandboxTable({
               onClick={() => onPageChange?.(currentPage - 1)}
               disabled={!onPageChange || currentPage <= 1}
               aria-label="Previous page"
-              className={cn("rounded-lg border border-[var(--md3-outline-variant)] p-2 transition-colors hover:bg-surface-container-high disabled:opacity-30", focusRing)}
+              className={cn("min-h-11 min-w-11 rounded-lg border border-[var(--md3-outline-variant)] p-2 transition-colors hover:bg-surface-container-high disabled:opacity-30", focusRing)}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -505,7 +505,7 @@ export function SandboxTable({
                   aria-label={"Go to page " + item}
                   aria-current={item === currentPage ? "page" : undefined}
                   className={cn(
-                    "min-h-8 min-w-8 rounded-lg px-2 py-1 transition-colors",
+                    "min-h-11 min-w-11 rounded-lg px-2 py-1 transition-colors",
                     item === currentPage
                       ? "border border-[var(--md3-outline)] bg-[var(--accent-surface-soft)] text-primary"
                       : "hover:bg-surface-container-high",
@@ -523,7 +523,7 @@ export function SandboxTable({
               onClick={() => onPageChange?.(currentPage + 1)}
               disabled={!onPageChange || currentPage >= totalPages}
               aria-label="Next page"
-              className={cn("rounded-lg border border-[var(--md3-outline-variant)] p-2 transition-colors hover:bg-surface-container-high disabled:opacity-30", focusRing)}
+              className={cn("min-h-11 min-w-11 rounded-lg border border-[var(--md3-outline-variant)] p-2 transition-colors hover:bg-surface-container-high disabled:opacity-30", focusRing)}
             >
               <ChevronRight className="h-4 w-4" />
             </button>

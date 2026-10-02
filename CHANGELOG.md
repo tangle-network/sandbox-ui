@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.117.0
+
+- Add `AgentMessagingConnection` through the package root and `/connections` subpath.
+  Hosts provide authenticated private agent enrollment, safe target labels, and application/member shared route state.
+  The component shows a message destination and action only when both the target and route are confirmed.
+- Keep the full desktop Sandbox table status label inside its column with space before the Sandbox name.
+
 ## 0.116.9
 
 - Fit sandbox lists to narrow screens while keeping full names and row actions accessible.

@@ -2,7 +2,7 @@ import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { IntegrationsCatalog } from "./integrations-catalog";
+import { ConnectionSelector, IntegrationsCatalog } from "./integrations-catalog";
 import { IntegrationConnectionDetail } from "./connection-detail";
 import { ApiKeyConnectDialog, OAuthConnectionParameterDialog } from "./connection-dialogs";
 import { IntegrationsPanel } from "./integrations-panel";
@@ -30,24 +30,26 @@ const groups: IntegrationPermissionGroup[] = [{
 }];
 
 describe("controlled catalog", () => {
-  it("never chooses between accounts, even with identical display names", () => {
+  it("never chooses between accounts, even with identical display names", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const select = vi.fn();
     const disconnect = vi.fn();
     const { rerender } = render(<IntegrationsCatalog {...catalogProps} onSelectConnection={select} onDisconnect={disconnect} />);
     const selector = screen.getByRole("combobox", { name: "Account for Slack" });
-    expect(selector).toHaveValue("");
-    expect(within(selector).getByRole("option", { name: "Same display name · account/one" })).toBeInTheDocument();
-    expect(within(selector).getByRole("option", { name: "Same display name · account/two" })).toBeInTheDocument();
+    expect(selector).toHaveTextContent("Select an account");
+    await user.click(selector);
+    expect(screen.getByRole("option", { name: "Same display name · …nt/one" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Same display name · …nt/two" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Manage" })).toBeNull();
     expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
-    fireEvent.change(selector, { target: { value: "account/two" } });
+    await user.click(screen.getByRole("option", { name: "Same display name · …nt/two" }));
     expect(select).toHaveBeenCalledWith("slack", "account/two");
-    expect(selector).toHaveValue("");
+    expect(selector).toHaveTextContent("Select an account");
     rerender(<IntegrationsCatalog {...catalogProps} rows={[{ ...provider, selectedConnectionId: "account/two" }]} />);
     expect(screen.getByTestId("manage-slack")).toHaveAttribute("href", "/settings/connections/account%2Ftwo");
     expect(screen.getByTestId("manage-slack")).not.toHaveAttribute("target");
     rerender(<IntegrationsCatalog {...catalogProps} rows={[{ ...provider, connections: [accounts[0]!], selectedConnectionId: "account/two" }]} />);
-    expect(screen.getByRole("combobox")).toHaveValue("");
+    expect(screen.getByRole("combobox")).toHaveTextContent("Select an account");
     expect(screen.queryByTestId("manage-slack")).toBeNull();
     expect(disconnect).not.toHaveBeenCalled();
   });
@@ -101,7 +103,8 @@ describe("controlled catalog", () => {
 });
 
 describe("controlled connection detail", () => {
-  it("requires explicit selection and never infers a policy from risk", () => {
+  it("requires explicit selection and never infers a policy from risk", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
     const change = vi.fn();
     const reset = vi.fn();
     const test = vi.fn();
@@ -114,9 +117,12 @@ describe("controlled connection detail", () => {
     expect(screen.queryByText("Send a message")).toBeNull();
     rerender(<IntegrationConnectionDetail {...props} selectedConnectionId="account/one" />);
     const decision = screen.getByRole("combobox", { name: "Decision for messages.send" });
-    expect(decision).toHaveValue("");
+    expect(decision).toHaveTextContent("Not available");
+    expect(change).not.toHaveBeenCalled();
+    await user.click(decision);
     expect(screen.queryByRole("option", { name: "Allow" })).toBeNull();
-    fireEvent.change(decision, { target: { value: "ask" } });
+    expect(change).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("option", { name: "Ask" }));
     expect(change).toHaveBeenCalledWith("account/one", "messages.send", "ask");
     fireEvent.click(screen.getByRole("button", { name: "Reset messages.send" }));
     expect(reset).toHaveBeenCalledWith("account/one", "messages.send");
@@ -206,12 +212,37 @@ it("the legacy facade keeps every account, routes exact IDs, and does not retarg
   const props = { catalog: [{ providerId: "slack", displayName: "Slack" }], connections, onConnect: vi.fn(), onDisconnect: disconnect };
   const { rerender } = render(<IntegrationsPanel {...props} />);
   expect(screen.queryByTestId("menu-slack")).toBeNull();
-  await user.selectOptions(screen.getByRole("combobox", { name: "Account for Slack" }), "account/two");
+  await user.click(screen.getByRole("combobox", { name: "Account for Slack" }));
+  await user.click(screen.getByRole("option", { name: "Same display name · …nt/two" }));
   await user.click(screen.getByTestId("menu-slack"));
   await user.click(screen.getByTestId("disconnect-slack"));
   await user.click(screen.getByTestId("confirm-disconnect"));
   expect(disconnect).toHaveBeenCalledWith("account/two");
   rerender(<IntegrationsPanel {...props} connections={[connections[0]!]} />);
-  expect(screen.getByRole("combobox", { name: "Account for Slack" })).toHaveValue("");
+  expect(screen.getByRole("combobox", { name: "Account for Slack" })).toHaveTextContent("Select an account");
   expect(screen.queryByTestId("menu-slack")).toBeNull();
+});
+
+it("shows friendly unique labels and differentiates overlapping ID suffixes without choosing an account", async () => {
+  const user = userEvent.setup({ pointerEventsCheck: 0 });
+  const change = vi.fn();
+  const connections = [
+    { id: "hubconn_inkbox_machine_long", accountDisplay: "@tangle-operator", statusLabel: "Preview account", capabilities: {} },
+    { id: "abcdef", accountDisplay: "Same account", statusLabel: "Preview account", capabilities: {} },
+    { id: "prefixabcdef", accountDisplay: "Same account", statusLabel: "Preview account", capabilities: {} },
+    { id: "unlabelled-connection", statusLabel: "Preview account", capabilities: {} },
+  ];
+  const { rerender } = render(<ConnectionSelector connections={connections} value={connections[0]!.id} onChange={change} label="Account for Inkbox" />);
+  const trigger = screen.getByRole("combobox", { name: "Account for Inkbox" });
+  expect(trigger).toHaveTextContent("@tangle-operator");
+  expect(trigger).not.toHaveTextContent("hubconn_");
+  await user.click(trigger);
+  expect(screen.getByRole("option", { name: "Same account · abcdef" })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "Same account · …xabcdef" })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "unlabelled-connection" })).toBeInTheDocument();
+  await user.click(screen.getByRole("option", { name: "Select an account" }));
+  expect(change).toHaveBeenCalledWith(null);
+  expect(trigger).toHaveTextContent("@tangle-operator");
+  rerender(<ConnectionSelector connections={connections} value={null} onChange={change} label="Account for Inkbox" />);
+  expect(trigger).toHaveTextContent("Select an account");
 });

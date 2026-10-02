@@ -1,3 +1,4 @@
+import { monogramColor } from "../../integrations/provider-logo";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { Button } from "@tangle-network/ui/primitives";
@@ -109,3 +110,24 @@ export const DetailError: Story = { render: () => <DetailScene initial="error" /
 export const Dialogs: Story = { render: () => <DialogScene /> };
 export const DialogApiKey: Story = { render: () => <DialogScene initialKind="key" /> };
 export const DialogOAuth: Story = { render: () => <DialogScene initialKind="oauth" /> };
+
+function InkboxAccountScene() {
+  const storageKey = "sandbox-ui-inkbox-account-picker-story";
+  const [selected, setSelected] = useState<string | null>(() => {
+    const saved = localStorage.getItem(storageKey);
+    return saved === null ? "hubconn_inkbox_operator_abcdef" : saved || null;
+  });
+  const connections = [
+    { id: "hubconn_inkbox_operator_abcdef", accountDisplay: "@tangle-operator", statusLabel: "Preview account", capabilities: {} },
+    { id: "hubconn_inkbox_team_one_123456", accountDisplay: "@team", statusLabel: "Preview account", capabilities: {} },
+    { id: "hubconn_inkbox_team_two_123456", accountDisplay: "@team", statusLabel: "Preview account", capabilities: {} },
+  ];
+  return <IntegrationConnectionDetail provider={{ providerId: "inkbox", title: "Inkbox", iconUrl: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="${monogramColor("inkbox")}"/><text x="24" y="32" text-anchor="middle" font-family="sans-serif" font-size="28" fill="white">I</text></svg>`)}` }}
+    description="Preview fixture. Account selection is saved in this preview only."
+    connections={connections} selectedConnectionId={selected} detailsByConnectionId={{}}
+    onSelectConnection={(value) => {
+      localStorage.setItem(storageKey, value ?? "");
+      setSelected(value);
+    }} />;
+}
+export const InkboxAccountSelection: Story = { render: () => <InkboxAccountScene /> };

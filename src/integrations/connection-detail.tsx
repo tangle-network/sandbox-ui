@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@tangle-network/ui/primitives";
+import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@tangle-network/ui/primitives";
 import { cn, focusRing } from "@tangle-network/ui/utils";
-import { ConnectionSelector } from "./integrations-catalog";
+import { ConnectionSelector, integrationSelectContentClassName, integrationSelectItemClassName } from "./integrations-catalog";
 import { ProviderIcon } from "./provider-logo";
 import type { IntegrationConnectionDetailProps, IntegrationPermissionGroup } from "./types";
 
@@ -33,14 +33,20 @@ export function IntegrationConnectionDetail({
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:shrink-0">
             <span className="text-xs text-muted-foreground">{row.sourceLabel}</span>
-            {editable ? <select
-              aria-label={`Decision for ${row.actionPath}`} value={known ? row.decision! : ""}
+            {editable ? <Select
+              value={known ? String(row.decisionOptions.findIndex((option) => option.value === row.decision)) : ""}
               disabled={busy || row.disabled}
-              onChange={(event) => { if (connection && row.decisionOptions.some((option) => option.value === event.target.value)) onDecisionChange?.(connection.id, row.actionPath, event.target.value); }}
-              className={cn("h-9 rounded-md border border-border bg-background px-2 text-sm", focusRing)}>
-              {!known ? <option value="" disabled>Not available</option> : null}
-              {row.decisionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select> : <span className="text-sm">{known ? row.decisionOptions.find((option) => option.value === row.decision)?.label : "Not available"}</span>}
+              onValueChange={(value) => {
+                const option = row.decisionOptions.find((_, index) => String(index) === value);
+                if (connection && option) onDecisionChange?.(connection.id, row.actionPath, option.value);
+              }}>
+              <SelectTrigger aria-label={`Decision for ${row.actionPath}`} className="h-9 min-w-32">
+                <SelectValue placeholder="Not available" />
+              </SelectTrigger>
+              <SelectContent className={integrationSelectContentClassName}>
+                {row.decisionOptions.map((option, index) => <SelectItem key={option.value} value={String(index)} className={integrationSelectItemClassName}>{option.label}</SelectItem>)}
+              </SelectContent>
+            </Select> : <span className="text-sm">{known ? row.decisionOptions.find((option) => option.value === row.decision)?.label : "Not available"}</span>}
             {row.canReset && connection?.capabilities.resetPermissions && onResetDecision ?
               <Button variant="outline" disabled={busy || row.disabled} aria-label={`Reset ${row.actionPath}`} onClick={() => onResetDecision(connection.id, row.actionPath)}>Reset</Button> : null}
           </div>

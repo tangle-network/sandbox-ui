@@ -2,44 +2,60 @@ name: Presentation compatibility
 
 on:
   pull_request:
-    paths:
-      - '.github/workflows/presentation.yml'
-      - 'src/primitives/**'
-      - 'src/styles/**'
-      - 'scripts/*presentation*'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
 
 permissions:
   contents: read
 
 jobs:
   presentation:
+    if: github.repository == 'tangle-network/sandbox-ui' && github.event.pull_request.number == 343 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/pursuit7-canonical-presentation'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    # One-time, explicitly authorized feature-branch commit. No releases, tags,
+    # main writes, force pushes, external secrets or credential persistence.
+    # The retained workflow is restored to read-only by the PR author afterward.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
           persist-credentials: false
+      - name: Bind bootstrap to the reviewed branch parent
+        run: test "$(git rev-parse HEAD^)" = 9d883e322c76f114b89bf499c1b98753b27a5c59
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.23.3
-      # Migration bootstrap: generate the exact published-peer lock candidate
-      # with the repository's package manager, never invent lock integrities.
-      # This read-only job cannot commit, publish or alter the frozen release.
-      # Replace with frozen install once the reviewed candidate is committed.
-      - name: Generate canonical peer lock candidate
-        run: pnpm update --dev --save-exact --lockfile-only @tangle-network/ui@11.13.0 @tangle-network/brand@1.10.0
-      - name: Retain candidate for review
-        if: always()
-        run: tar --exclude=.git --exclude=node_modules --exclude=presentation-candidate.tar.gz -czf presentation-candidate.tar.gz .
+      - name: Apply reviewed compatibility edits
+        run: python .github/apply-presentation.py
+      - name: Generate and verify the reviewed lock candidate
+        run: |
+          pnpm update --dev --save-exact --lockfile-only @tangle-network/ui@11.13.0 @tangle-network/brand@1.10.0
+          echo '6e995e0a856e2027888f0ba733e86cab48c705b903e50c8553e71b4953e0db89  pnpm-lock.yaml' | sha256sum --check
+      - name: Commit to the authorized feature branch only
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- CHANGELOG.md README.md package.json pnpm-lock.yaml scripts/copy-styles.mjs scripts/package-smoke.mjs src/index.ts src/styles/globals.css src/__tests__/re-export-identity.test.ts src/__tests__/ui-export-parity.test.ts
+          git rm -- .github/apply-presentation.py .github/presentation-final.yml
+          git diff --cached --check
+          git commit -m 'refactor: consolidate Brand CSS and lock canonical presentation peers'
+          git -c credential.helper='!gh auth git-credential' push origin HEAD:refs/heads/feat/pursuit7-canonical-presentation
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:presentation
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: presentation-lock-candidate
-          path: presentation-candidate.tar.gz
-          if-no-files-found: error
-          retention-days: 3
-      - name: Uncommitted lock changes are not acceptance
-        run: git diff --exit-code -- package.json pnpm-lock.yaml
+          name: presentation-${{ steps.commit.outputs.sha }}
+          path: test-results/presentation/
+          if-no-files-found: warn
+          retention-days: 7

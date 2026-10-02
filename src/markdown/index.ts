@@ -4,4 +4,5 @@ export {
   CopyButton,
   Markdown,
   type MarkdownProps,
+  getSanitizedMarkdownHeadingIdFromRawFragment,
 } from "@tangle-network/ui/markdown";

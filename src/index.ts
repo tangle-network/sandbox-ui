@@ -194,7 +194,11 @@ export * from "./auth";
 export * from "./connections";
 
 // --- Markdown ---
-export { Markdown, type MarkdownProps } from "@tangle-network/ui/markdown";
+export {
+  Markdown,
+  type MarkdownProps,
+  getSanitizedMarkdownHeadingIdFromRawFragment,
+} from "@tangle-network/ui/markdown";
 
 // --- Hooks (named — excludes `ConnectionState`. The editor declares a
 //     `ConnectionState` of its own, so neither type takes the root name and

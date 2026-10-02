@@ -1,3 +1,5 @@
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
@@ -6,6 +8,8 @@ import {
   assertBuiltAgainstPeerFloor,
   assertTextRamp,
   collectForwardedTokenUtilities,
+  escapeUtility,
+  peerFloor,
   validateBuiltCss,
 } from "./validate-built-css.mjs"
 
@@ -101,7 +105,7 @@ describe("collectForwardedTokenUtilities", () => {
     expect(utilities).not.toBeNull()
     expect(utilities.size).toBeGreaterThan(0)
     for (const utility of utilities.keys()) {
-      expect(utility).toMatch(/^[a-z-]+-\[(color:)?var\(--[\w-]+\)\]$/)
+      expect(utility).toMatch(/^[a-z-]+-\[(?:(?:color|length):)?var\(--[\w-]+(?:,[^\]\s]+)?\)\]$/)
     }
   })
 
@@ -145,8 +149,8 @@ describe("assertBuiltAgainstPeerFloor", () => {
   })
 
   it("accepts a build against something newer than the floor", () => {
-    // Extra rules are dead bytes for a consumer on an older ui, never missing
-    // ones, so newer is always safe.
+    // Retain the legacy minimum-version mode. The actual CSS build uses
+    // exact mode below; a newer source tree is not proof of an older floor.
     expect(() => assertBuiltAgainstPeerFloor("11.3.0", "^11.2.4")).not.toThrow()
   })
 
@@ -161,5 +165,53 @@ describe("assertBuiltAgainstPeerFloor", () => {
   it("throws across a major, in either direction", () => {
     expect(() => assertBuiltAgainstPeerFloor("10.9.9", "^11.2.4")).toThrow()
     expect(() => assertBuiltAgainstPeerFloor("12.0.0", "^11.2.4")).toThrow()
+  })
+})
+
+
+describe("canonical presentation CSS coverage", () => {
+  it("collects Heading lengths and nested fallbacks, excluding tests and stories", () => {
+    const directory = mkdtempSync(join(tmpdir(), "presentation-utilities-"))
+    const classes = [
+      "text-[length:var(--font-size-3xl,1.875rem)]",
+      "leading-[var(--line-height-heading,1.15)]",
+      "tracking-[var(--tracking-tight,-0.02em)]",
+      "text-[var(--brand-cool,hsl(var(--primary)))]",
+    ]
+    try {
+      writeFileSync(join(directory, "heading.tsx"), `export const classes = "${classes.join(" ")}"`)
+      writeFileSync(join(directory, "heading.test.tsx"), '"text-[var(--test-only)]"')
+      writeFileSync(join(directory, "heading.stories.tsx"), '"text-[var(--story-only)]"')
+      const required = collectForwardedTokenUtilities(directory)
+      expect([...required.keys()]).toEqual(classes)
+      const css = classes.map((name) => `.${escapeUtility(name)}{color:inherit}`).join("\n")
+      expect(() => validateBuiltCss(css, { requiredUtilities: required })).not.toThrow()
+      expect(() => validateBuiltCss(css.replace(escapeUtility(classes[0]), "removed"), {
+        requiredUtilities: required,
+      })).toThrow(/font-size-3xl/)
+      expect(() => validateBuiltCss(`/* ${css} */`, { requiredUtilities: required })).toThrow()
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
+  it("does not count commented text-ramp rules as compiled utilities", () => {
+    const rules = REQUIRED_TEXT_RAMP.map((name) => `.${escapeUtility(name)}{}`).join("\n")
+    expect(() => assertTextRamp(`/* ${rules} */`)).toThrow(/text ramp is missing/)
+  })
+
+  it("requires the exact declared floor when requested by build and consumer", () => {
+    expect(() => assertBuiltAgainstPeerFloor("11.13.0", "^11.13.0", { exact: true })).not.toThrow()
+    expect(() => assertBuiltAgainstPeerFloor("11.14.0", "^11.13.0", { exact: true })).toThrow(/exactly 11.13.0/)
+    expect(() => assertBuiltAgainstPeerFloor("1.9.0", "^1.10.0", {
+      exact: true, packageName: "@tangle-network/brand",
+    })).toThrow(/brand 1.9.0/)
+  })
+
+  it("rejects unknown range grammar and malformed installed versions", () => {
+    for (const value of ["", "*", "latest", "^11", "^11.13.0 || ^12.0.0"]) {
+      expect(() => peerFloor(value)).toThrow(/Unsupported peer floor/)
+    }
+    expect(() => assertBuiltAgainstPeerFloor("11.13", "^11.13.0")).toThrow(/Invalid resolved version/)
   })
 })

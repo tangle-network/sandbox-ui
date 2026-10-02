@@ -32,6 +32,8 @@
  * checking for were emitted BY the check. Every assertion passed, measuring
  * nothing. A gate whose own source satisfies it is not a gate. */
 @import "tailwindcss" source(none);
+/* Canonical font, radius and semantic-color utility registrations. */
+@import "@tangle-network/brand/styles/theme.css";
 
 /* Brand defines these aliases on :root and [data-sandbox-ui]. Rebind them on
  * explicit theme scopes so nested themes resolve their own HSL colors. A host
@@ -104,43 +106,12 @@
 @source inline("bg-[var(--run-mix-in-flight)]");
 @source inline("bg-[var(--run-mix-cancelled)]");
 
-/* Tailwind v4 utility generation for the design tokens. globals.css imports the
- * brand CSS variables (tokens.css) but Tailwind v4 only emits `bg-*`/`text-*`/
- * `border-*` utilities for colors registered in an `@theme` block — without this,
- * `bg-card`, `bg-surface-container*`, `bg-muted`, etc. produce NO rule and every
- * surface renders transparent (body color + borders only = the "flat" theme).
- * Map the semantic + MD3 surface tokens to `--color-*` so the utilities exist and
- * stay theme-reactive (the underlying vars flip with dark / vault). */
-@theme {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-
-  /* MD3 surface elevation ladder — the depth system (hex tokens, theme-reactive). */
+/* Compatibility names not registered by Brand 1.10.0. The runtime values
+ * still belong to Brand; do not duplicate its other @theme registrations. */
+@theme inline {
   --color-surface: var(--md3-surface);
   --color-surface-dim: var(--md3-surface-dim);
   --color-surface-bright: var(--md3-surface-bright);
-  --color-surface-container-lowest: var(--md3-surface-container-lowest);
-  --color-surface-container-low: var(--md3-surface-container-low);
-  --color-surface-container: var(--md3-surface-container);
-  --color-surface-container-high: var(--md3-surface-container-high);
-  --color-surface-container-highest: var(--md3-surface-container-highest);
 }
 
 /* ── Motion ────────────────────────────────────────────────────────────────

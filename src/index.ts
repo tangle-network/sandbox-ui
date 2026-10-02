@@ -26,6 +26,7 @@ export {
   CardFooter,
   CardHeader,
   CardTitle,
+  type CardTitleProps,
   CodeBlock,
   type CodeBlockProps,
   CopyButton,
@@ -60,6 +61,9 @@ export {
   type EmptyStateProps,
   FilterField,
   type FilterFieldProps,
+  Heading,
+  type HeadingProps,
+  type HeadingVariant,
   InlineCode,
   type InlineCodeProps,
   Input,
@@ -71,7 +75,13 @@ export {
   type MetricProps,
   MetricStrip,
   type MetricStripProps,
+  PageHeader,
+  type PageHeaderProps,
+  PageShell,
+  type PageShellProps,
   Progress,
+  SectionTitle,
+  type SectionTitleProps,
   SegmentedControl,
   type SegmentedControlOption,
   type SegmentedControlProps,
@@ -97,6 +107,7 @@ export {
   type StatusTone,
   Switch,
   Table,
+  type TableProps,
   TableBody,
   TableCaption,
   TableCell,
@@ -183,7 +194,7 @@ export * from "./auth";
 export * from "./connections";
 
 // --- Markdown ---
-export { Markdown, type MarkdownProps } from "@tangle-network/ui/markdown";
+export { getSanitizedMarkdownHeadingIdFromRawFragment, Markdown, type MarkdownProps } from "@tangle-network/ui/markdown";
 
 // --- Hooks (named — excludes `ConnectionState`. The editor declares a
 //     `ConnectionState` of its own, so neither type takes the root name and

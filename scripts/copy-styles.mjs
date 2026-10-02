@@ -62,11 +62,14 @@ const result = await postcss([
 const uiDir = join(rootDir, "node_modules", "@tangle-network", "ui")
 const uiSrcDir = join(uiDir, "src")
 
-assertBuiltAgainstPeerFloor(
-  JSON.parse(await readFile(join(uiDir, "package.json"), "utf8")).version,
-  JSON.parse(await readFile(join(rootDir, "package.json"), "utf8"))
-    .peerDependencies["@tangle-network/ui"],
-)
+const manifest = JSON.parse(await readFile(join(rootDir, "package.json"), "utf8"))
+for (const packageName of ["@tangle-network/ui", "@tangle-network/brand"]) {
+  const peer = JSON.parse(await readFile(join(rootDir, "node_modules", packageName, "package.json"), "utf8"))
+  assertBuiltAgainstPeerFloor(peer.version, manifest.peerDependencies[packageName], {
+    exact: true,
+    packageName,
+  })
+}
 validateBuiltCss(result.css, {
   requiredUtilities: collectForwardedTokenUtilities(uiSrcDir),
 })

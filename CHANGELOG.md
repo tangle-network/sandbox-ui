@@ -6,6 +6,9 @@
   Hosts provide authenticated private agent enrollment, safe target labels, and application/member shared route state.
   The component shows a message destination and action only when both the target and route are confirmed.
 - Keep the full desktop Sandbox table status label inside its column with space before the Sandbox name.
+- Let `WorkspaceLayout` retain a right pane's DOM across collapse and responsive drawer moves with `keepRightMounted`.
+  Set `collapsedControlsPlacement="overlay"` to float reopen controls over the center pane.
+- Use readable text tokens for Sandbox table status labels, resource values, hovered names, and selected pagination in both themes.
 
 ## 0.116.9
 

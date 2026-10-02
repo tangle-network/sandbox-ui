@@ -50,7 +50,7 @@ for (const story of stories) {
           story.id === 'workbench-sandboxartifactpane--diff-active') {
           await waitForDiffRender(page, 'RetryOptions')
         }
-        if (story.id === 'workbench-diffview--changed-line') {
+        if (/^workbench-diffview--(changed-line|dark-theme|light-theme)$/.test(story.id)) {
           await waitForDiffRender(page, 'retryDelay')
         }
         if (/^workbench-diffreadability--(wrapped|horizontal-scroll|narrow)$/.test(story.id)) {

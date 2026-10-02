@@ -15,4 +15,6 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const ChangedLine: Story = {}
+export const DarkTheme: Story = { args: { themeType: 'dark' }, globals: { sandboxTheme: 'dark' } }
+export const LightTheme: Story = { args: { themeType: 'light' }, globals: { sandboxTheme: 'light' } }
 export const NoChanges: Story = { args: { current: baseline } }

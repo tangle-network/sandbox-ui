@@ -3,6 +3,8 @@ import * as React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const lifecycle: Array<{ event: "hydrate" | "cleanUp"; container: HTMLElement | null }> = []
+const rendererOptions: Array<Record<string, unknown>> = []
+const themeChanges: string[] = []
 
 vi.mock("@pierre/diffs", () => {
   class FileDiff {
@@ -11,7 +13,12 @@ vi.mock("@pierre/diffs", () => {
       public options: Record<string, unknown> | undefined,
       _pool?: unknown,
       public isContainerManaged?: boolean,
-    ) {}
+    ) {
+      rendererOptions.push(options ?? {})
+    }
+    setThemeType(themeType: string) {
+      themeChanges.push(themeType)
+    }
     hydrate({ fileContainer }: { fileContainer: HTMLElement }) {
       this.container = fileContainer
       const shadow = fileContainer.shadowRoot ?? fileContainer.attachShadow({ mode: "open" })
@@ -37,6 +44,8 @@ import { DiffView } from "./diff-view"
 // the log is cleared at the start of each test, after that unmount landed.
 beforeEach(() => {
   lifecycle.length = 0
+  rendererOptions.length = 0
+  themeChanges.length = 0
 })
 
 const baseline = "const a = 1;\nconst b = 2;\n"
@@ -71,6 +80,30 @@ describe("DiffView", () => {
     const { unmount } = render(<DiffView filename="x.ts" baseline={baseline} current={current} showFileHeader={false} />)
     unmount()
     expect(lifecycle.map((entry) => entry.event)).toEqual(["hydrate", "cleanUp"])
+  })
+
+  it("matches an explicit app theme and updates the live renderer without replacing its container", () => {
+    const { rerender } = render(
+      <DiffView filename="x.ts" baseline={baseline} current={current} themeType="light" />,
+    )
+    const container = screen.getByTestId("diff-view").querySelector("diffs-container")
+    expect(rendererOptions).toHaveLength(1)
+    expect(rendererOptions[0].themeType).toBe("light")
+
+    rerender(<DiffView filename="x.ts" baseline={baseline} current={current} themeType="dark" />)
+    expect(themeChanges.at(-1)).toBe("dark")
+    expect(rendererOptions).toHaveLength(1)
+    expect(screen.getByTestId("diff-view").querySelector("diffs-container")).toBe(container)
+    expect(lifecycle.map((entry) => entry.event)).toEqual(["hydrate"])
+
+    rerender(<DiffView filename="x.ts" baseline={baseline} current={`${current}// changed`} themeType="light" />)
+    expect(rendererOptions.at(-1)?.themeType).toBe("light")
+    expect(themeChanges).toEqual(["dark"])
+  })
+
+  it("keeps the existing dark default", () => {
+    render(<DiffView filename="x.ts" baseline={baseline} current={current} />)
+    expect(rendererOptions[0].themeType).toBe("dark")
   })
 
   it("says so when both sides are identical", () => {

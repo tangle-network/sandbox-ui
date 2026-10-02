@@ -13,7 +13,6 @@ const DIFF_OPTIONS = {
   hunkSeparators: "simple",
   expandUnchanged: false,
   theme: { dark: "github-dark", light: "github-light" },
-  themeType: "dark",
   stickyHeader: true,
 } as const
 
@@ -27,6 +26,8 @@ export interface DiffViewProps {
   showFileHeader?: boolean
   /** Start wrapped so narrow review panes never conceal the end of a line. */
   defaultWrap?: boolean
+  /** Match the host app's selected theme. Defaults to dark for existing consumers. */
+  themeType?: "light" | "dark"
   className?: string
 }
 
@@ -42,6 +43,7 @@ export function DiffView({
   current,
   showFileHeader = true,
   defaultWrap = true,
+  themeType = "dark",
   className,
 }: DiffViewProps) {
   const patch = React.useMemo(
@@ -51,6 +53,13 @@ export function DiffView({
   const [wrap, setWrap] = React.useState(defaultWrap)
   const hintId = React.useId()
   const hostRef = React.useRef<HTMLDivElement>(null)
+  const instanceRef = React.useRef<FileDiff | null>(null)
+  const latestThemeType = React.useRef(themeType)
+  const appliedThemeType = React.useRef(themeType)
+
+  React.useLayoutEffect(() => {
+    latestThemeType.current = themeType
+  }, [themeType])
 
   React.useLayoutEffect(() => {
     const host = hostRef.current
@@ -68,18 +77,28 @@ export function DiffView({
     const instance = new FileDiff(
       {
         ...DIFF_OPTIONS,
+        themeType: latestThemeType.current,
         overflow: wrap ? "wrap" : "scroll",
         disableFileHeader: !showFileHeader,
       },
       undefined,
       false,
     )
+    instanceRef.current = instance
+    appliedThemeType.current = latestThemeType.current
     instance.hydrate({ fileDiff: getSingularPatch(patch), fileContainer: container })
     return () => {
+      if (instanceRef.current === instance) instanceRef.current = null
       instance.cleanUp()
       container.remove()
     }
   }, [patch, showFileHeader, wrap])
+
+  React.useLayoutEffect(() => {
+    if (appliedThemeType.current === themeType) return
+    instanceRef.current?.setThemeType(themeType)
+    appliedThemeType.current = themeType
+  }, [themeType])
 
   if (!patch) {
     return (

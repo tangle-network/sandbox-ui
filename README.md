@@ -375,6 +375,8 @@ For that, compose directly from:
 
 Retheming is absolutely supported, but the documentation was thinner than it should be. The token layer is strong; the higher-level surfaces are themeable, but more opinionated. For a radically different product look, prefer keeping the token contract and wrapping the higher-level workbench/chat surfaces rather than fighting every internal class.
 
+`DiffView` from `/workbench` defaults to a dark code theme. If the host app offers a light/dark switch, pass its selected theme as `themeType`. The diff renderer updates when that value changes.
+
 ## Docs
 
 | Guide | Description |
@@ -389,6 +391,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/chat` | ChatContainer, ChatInput, ChatMessage, AgentTimeline, ThinkingIndicator |
 | `/run` | ToolCallFeed, RunGroup, InlineToolItem, ExpandedToolDetail |
 | `/workspace` | SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
+| `/workbench` | DiffView, ChangesPane, CodeView, artifact and preview components |
 | `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
 | `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane |
 | `/workbench/embedded-app` | EmbeddedAppView and preview status types without terminal or editor modules |

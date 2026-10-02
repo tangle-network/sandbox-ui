@@ -79,6 +79,10 @@
       "import": "./dist/integrations.js",
       "types": "./dist/integrations.d.ts"
     },
+    "./connections": {
+      "import": "./dist/connections.js",
+      "types": "./dist/connections.d.ts"
+    },
     "./connectors": {
       "import": "./dist/connectors.js",
       "types": "./dist/connectors.d.ts"

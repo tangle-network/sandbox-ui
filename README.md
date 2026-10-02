@@ -89,6 +89,53 @@ Pass service-observed `readiness` and enforced `access` to show their status ins
 Show process and port state beside the pane if your runtime exposes those separately.
 Do not infer either state from the preview URL or iframe load.
 
+### Show a shared agent messaging connection
+
+Use `AgentMessagingConnection` in any app that enrolls a member with a private agent target and a shared messaging route.
+The host owns authentication, the member grant, canonical target resolution, and route readiness.
+
+```tsx
+import {
+  AgentMessagingConnection,
+  type AgentEnrollmentViewState,
+  type SharedMessagingRouteViewState,
+} from "@tangle-network/sandbox-ui/connections";
+
+type MessagingConnectionProps = {
+  enrollment: AgentEnrollmentViewState;
+  route: SharedMessagingRouteViewState;
+  enroll: () => Promise<void>;
+  openMessages: () => void;
+  refresh: () => Promise<void>;
+};
+
+export function MessagingConnection({
+  enrollment,
+  route,
+  enroll,
+  openMessages,
+  refresh,
+}: MessagingConnectionProps) {
+  return (
+    <AgentMessagingConnection
+      enrollment={enrollment}
+      route={route}
+      onEnroll={enroll}
+      onOpenMessages={openMessages}
+      onRetry={refresh}
+    />
+  );
+}
+```
+
+Report `eligible` only after the host checks the member's current grant.
+Report `enrolled` only after it resolves the authorized, canonical private agent target.
+Give the component display labels, not raw enrollment, instance, sandbox, or session IDs.
+Report route `ready` only when the shared route is valid for this application and member.
+An attached provider line on its own does not prove that state.
+The component never attaches, buys, or reassigns a provider identity.
+It shows a messaging action only when both the target and route are confirmed.
+
 ### Fonts
 
 sandbox-ui references the following font families in its design tokens but does **not** bundle them — consumer apps must load the fonts themselves. This is deliberate: a URL `@import` inside a library CSS bundle breaks when downstream apps chain-import the stylesheet (see CHANGELOG 0.10.9 for the full reasoning).

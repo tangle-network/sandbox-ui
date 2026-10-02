@@ -15,6 +15,7 @@ const criticalModules = [
   'src/stories/workbench/PreviewView.stories.tsx',
   'src/stories/workbench/EmbeddedAppView.stories.tsx',
   'src/stories/terminal/TerminalView.stories.tsx',
+  'src/stories/connections/AgentMessagingConnection.stories.tsx',
 ]
 const themes = ['dark', 'light']
 const viewports = {

@@ -15,7 +15,6 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "vite";
 import { writeIntegrationsContract } from "./integrations-package-contract.mjs";
-import { presentationConsumerSpecs, validatePresentationConsumer } from "./presentation-package-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // The real path, not the one `tmpdir()` reports: on macOS `/var` is a symlink
@@ -172,7 +171,6 @@ try {
       "react@19",
       "react-dom@19",
       ...optionalPeers,
-      ...presentationConsumerSpecs(manifest),
     ],
     { cwd: consumerDir, stdio: "inherit" },
   );
@@ -348,12 +346,6 @@ createRoot(document.getElementById("root")).render(
         "The marker was read from Vite 8.1.5 — compare it against the Vite now installed " +
         "and update stubMarker() in this file.",
     );
-  }
-
-  // The omitted-peer pass retains all its existing coverage. Reuse the full
-  // install once for the presentation browser/type/CSS contract.
-  if (omittedOptionalPeers.length === 0) {
-    await validatePresentationConsumer({ root, consumerDir, manifest });
   }
 
   const omissionNote =

@@ -39,11 +39,9 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type RefObject,
 } from "react";
 import {
   COMPACT_NODE_SIZE,
@@ -247,32 +245,24 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const easeInOutCubic = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
-/** React Flow adds its own .light/.dark class below the graph wrapper. Read
- * that wrapper's inherited scheme so a nested WorkspaceLayout theme wins over
- * the page root without React Flow's class influencing the answer. */
-function currentColorMode(anchor: HTMLElement | null): ColorMode {
-  if (typeof document === "undefined" || typeof window === "undefined") return "light";
-  const scheme = window.getComputedStyle(anchor ?? document.documentElement).colorScheme;
-  if (scheme.startsWith("dark")) return "dark";
-  if (scheme.startsWith("light")) return "light";
-  return (anchor ?? document.documentElement).closest(".dark") ? "dark" : "light";
-}
-
-function useColorMode(wrapperRef: RefObject<HTMLDivElement | null>, hasGraph: boolean): ColorMode {
-  const [mode, setMode] = useState<ColorMode>(() => currentColorMode(null));
-  useLayoutEffect(() => {
-    const anchor = hasGraph ? wrapperRef.current : null;
-    const update = () => setMode(currentColorMode(anchor));
+/** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
+ *  background) themes with the rest of the app. */
+function useColorMode(): ColorMode {
+  const [mode, setMode] = useState<ColorMode>(() =>
+    typeof document !== "undefined" &&
+    document.documentElement.classList.contains("dark")
+      ? "dark"
+      : "light",
+  );
+  useEffect(() => {
+    const el = document.documentElement;
+    const update = () =>
+      setMode(el.classList.contains("dark") ? "dark" : "light");
     update();
     const observer = new MutationObserver(update);
-    for (let el: HTMLElement | null = anchor ?? document.documentElement; el; el = el.parentElement) {
-      observer.observe(el, {
-        attributes: true,
-        attributeFilter: ["class", "data-theme", "data-sandbox-theme", "style"],
-      });
-    }
+    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
-  }, [wrapperRef, hasGraph]);
+  }, []);
   return mode;
 }
 
@@ -1588,6 +1578,7 @@ export function WorkflowGraph({
   const insertAtNode = editable ? onNodeInsert : undefined;
   const addTrigger = editable ? onTriggerAdd : undefined;
   const deleteTrigger = editable ? onTriggerDelete : undefined;
+  const colorMode = useColorMode();
   const isPreview = variant === "preview";
   // The proposal-card preview is always compact (a small thumbnail); the full
   // variant defaults per prop and lets the user toggle density.
@@ -1665,7 +1656,6 @@ export function WorkflowGraph({
       declaredEdges,
     ],
   );
-  const colorMode = useColorMode(wrapperRef, !structural.error && structural.nodes.length > 0);
 
   // The boxes a decorated edge's cluster must keep clear of. Derived from the
   // layout, so it is recomputed exactly when the layout moves and never carries

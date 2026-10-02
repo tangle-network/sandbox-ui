@@ -14,9 +14,6 @@ import { TiptapEditor as E1 } from "@tangle-network/sandbox-ui/editor";
 import { TiptapEditor as E2 } from "@tangle-network/ui/editor";
 import { Markdown as M1 } from "@tangle-network/sandbox-ui/markdown";
 import { Markdown as M2 } from "@tangle-network/ui/markdown";
-import { getSanitizedMarkdownHeadingIdFromRawFragment as MH1 } from "@tangle-network/sandbox-ui/markdown";
-import { getSanitizedMarkdownHeadingIdFromRawFragment as MH2 } from "@tangle-network/ui/markdown";
-import { getSanitizedMarkdownHeadingIdFromRawFragment as MHR } from "@tangle-network/sandbox-ui";
 import { GitHubLoginButton as A1 } from "@tangle-network/sandbox-ui/auth";
 import { GitHubLoginButton as A2 } from "@tangle-network/ui/auth";
 import { cn as U1 } from "@tangle-network/sandbox-ui/utils";
@@ -30,21 +27,7 @@ import { activeSessionsAtom as ST2 } from "@tangle-network/ui/stores";
 import { CommandPreview as TP1 } from "@tangle-network/sandbox-ui";
 import { CommandPreview as TP2 } from "@tangle-network/ui/tool-previews";
 
-import * as sandboxPrimitives from "@tangle-network/sandbox-ui/primitives";
-import * as sandboxRoot from "@tangle-network/sandbox-ui";
-import * as canonicalPrimitives from "@tangle-network/ui/primitives";
-
-const presentationNames = [
-  "Heading", "PageHeader", "PageShell", "Card", "CardHeader", "CardContent",
-  "CardFooter", "CardDescription", "CardTitle", "Table", "TableHeader",
-  "TableBody", "TableFooter", "TableHead", "TableRow", "TableCell", "TableCaption",
-] as const;
-
 const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
-  ...presentationNames.flatMap((name) => [
-    [`primitives.${name}`, sandboxPrimitives[name], canonicalPrimitives[name]] as const,
-    [`root.${name}`, sandboxRoot[name], canonicalPrimitives[name]] as const,
-  ]),
   ["primitives.Button", B1, B2],
   ["chat.ChatMessage", C1, C2],
   ["run.RunGroup", R1, R2],
@@ -52,8 +35,6 @@ const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
   ["files.FileTree", F1, F2],
   ["editor.TiptapEditor", E1, E2],
   ["markdown.Markdown", M1, M2],
-  ["markdown.getSanitizedMarkdownHeadingIdFromRawFragment", MH1, MH2],
-  ["root.getSanitizedMarkdownHeadingIdFromRawFragment", MHR, MH2],
   ["auth.GitHubLoginButton", A1, A2],
   ["utils.cn", U1, U2],
   ["hooks.useAutoScroll", H1, H2],

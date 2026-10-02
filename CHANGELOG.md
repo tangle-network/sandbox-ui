@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.116.8
+
+- Cancel integration requests and OAuth navigation when their hook lifetime ends.
+- Coalesce integration refreshes and optionally refresh on return to a visible tab.
+- Let layouts omit unavailable Settings links while retaining callbacks and signout actions.
+
 ## 0.116.7
 
 - Runtime and backend menus scroll within the available viewport height on narrow screens.

@@ -18,7 +18,7 @@ React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a
 npm install @tangle-network/sandbox-ui
 ```
 
-**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0 || ^2.0.0`, `@tangle-network/brand ^1.6.0`, and `@tangle-network/ui ^11.10.0`.
+**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0 || ^2.0.0`, `@tangle-network/brand ^1.10.0`, and `@tangle-network/ui ^11.13.0`.
 Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which.
 
 ## Usage
@@ -37,6 +37,38 @@ Import styles in your app root:
 ```tsx
 import "@tangle-network/sandbox-ui/styles";
 ```
+
+### Canonical presentation and Tailwind
+
+`Heading`, `PageHeader`, `PageShell`, Card parts, and Table parts are exact
+`@tangle-network/ui/primitives` bindings, available through `/primitives` and
+additively through the package root. Existing `role`, `action`, `eyebrow`,
+`titleAs`, semantic levels, native attributes and refs remain supported.
+`SectionTitle` adapts its legacy API to canonical `PageHeader level={2}`; it no
+longer maintains heading markup. The named Sandbox `HeadingProps` type retains
+its required six-value visual `role` and `children` contract.
+
+Use **one** stylesheet path. `styles` and `globals.css` are identical precompiled
+CSS for the declared peer floors. Applications resolving newer UI versions
+should compile the installed sources so new peer utilities are included.
+For Tailwind v4 hosts, the opt-in `tailwind.css` entry composes the same Brand
+CSS and Sandbox compatibility rules, scanning packed Sandbox JS and the
+installed UI source without needing this repository:
+
+```css
+/* app.css, processed by @tailwindcss/postcss */
+@import "@tangle-network/sandbox-ui/tailwind.css";
+@source "./**/*.{ts,tsx}";
+/* Add application-specific @theme overrides here, after the canonical theme. */
+```
+
+Do not also import the precompiled bundle or another Tailwind reset in this
+mode. The source entry deliberately contains Tailwind directives; it is not a
+ready-to-link browser stylesheet. The existing `./tailwind` CommonJS config
+remains available for legacy consumers; this migration does not rewrite it.
+`PageShell` is optional width/gutters/rhythm, not routing, navigation, auth, or
+an application shell. Existing workspace and agent compositions stay separate.
+See [migration decisions and caller inventory](docs/presentation-migration.md).
 
 ### Workspace integration access
 
@@ -142,34 +174,29 @@ sandbox-ui references the following font families in its design tokens but does 
 
 | Family       | Role                                | Used as CSS variable |
 | ------------ | ----------------------------------- | -------------------- |
-| Geist        | UI body text                        | `--font-sans`        |
-| Geist Mono   | Code, terminal                      | `--font-mono`        |
-| Outfit       | Display / headings (default theme)  | `--font-display`     |
-| Manrope      | Display / headings (vault theme)    | `--font-display`     |
-| Inter        | UI body (vault theme)               | `--font-sans`        |
+| Inter        | Canonical body and generic headings | `--font-sans`, `--font-display` |
+| Geist        | Body/display fallback               | `--font-sans`, `--font-display` |
+| Geist Mono   | Code and terminal                   | `--font-mono` |
+
+Legacy host overrides may still select Outfit or Manrope; load those only when
+the host explicitly selects them. Brand owns the default family chain.
 
 Pick one loading strategy that fits your app:
 
 **1. Self-hosted via `@fontsource/*`** (recommended — no external network request):
 
 ```bash
-npm install @fontsource/geist-sans @fontsource/geist-mono @fontsource/outfit @fontsource/manrope @fontsource/inter
+npm install @fontsource/geist-mono @fontsource/inter
 ```
 
 ```tsx
 // app entry
-import "@fontsource/geist-sans/400.css";
-import "@fontsource/geist-sans/500.css";
-import "@fontsource/geist-sans/600.css";
-import "@fontsource/geist-sans/700.css";
 import "@fontsource/geist-mono/400.css";
 import "@fontsource/geist-mono/500.css";
-import "@fontsource/outfit/500.css";
-import "@fontsource/outfit/700.css";
-import "@fontsource/manrope/500.css";
-import "@fontsource/manrope/700.css";
 import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
 ```
 
 **2. Google Fonts via HTML `<link>`:**
@@ -180,7 +207,7 @@ import "@fontsource/inter/600.css";
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
 ```
 
-Any family you omit falls back per the `--font-*` token chain (e.g. `--font-sans` falls back to `"DM Sans", ui-sans-serif, system-ui, sans-serif`).
+Any family you omit falls back per the `--font-*` token chain (e.g. `--font-sans` falls back to the system sans-serif stack).
 
 If you are building on the sandbox SDK directly, use `useSdkSession` to turn raw SDK/session-gateway events into the `messages + partMap` model that `ChatContainer` and `SandboxWorkbench` expect:
 

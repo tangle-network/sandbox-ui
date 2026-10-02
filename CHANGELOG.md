@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Consume canonical UI Heading, PageHeader and PageShell while preserving legacy imports and props; compose SectionTitle through the canonical header. Card/table remain upstream bindings.
+- Consolidate generic theme, base, focus and prose CSS through Brand exports, retaining explicit Sandbox compatibility deltas and agent motion.
+- Add an opt-in host `tailwind.css` source entry and packed peer-floor type/CSS/browser validation. This future migration requires UI ^11.13.0 and Brand ^1.10.0; it does not change the frozen 0.117.0 publication cut.
+
 ## 0.117.0
 
 - Add `AgentMessagingConnection` through the package root and `/connections` subpath.

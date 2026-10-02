@@ -12,6 +12,8 @@ import {
   validateBuiltCss,
 } from "./validate-built-css.mjs"
 
+import { assertPresentationUtilities, collectPresentationUtilities } from "./presentation-css-contract.mjs"
+
 const rootDir = dirname(fileURLToPath(new URL("../package.json", import.meta.url)))
 const srcStylesDir = join(rootDir, "src", "styles")
 const distDir = join(rootDir, "dist")
@@ -71,6 +73,30 @@ validateBuiltCss(result.css, {
   requiredUtilities: collectForwardedTokenUtilities(uiSrcDir),
 })
 assertTextRamp(result.css)
+// Typography fallbacks and layout variants are outside the older simple-token
+// regex. Derive their classes from the actual canonical peer, not this check's
+// source (scripts are excluded by source(none)).
+assertPresentationUtilities(result.css, await collectPresentationUtilities(), "dist/globals.css")
 
 await writeFile(join(distDir, "globals.css"), result.css)
 await writeFile(join(distDir, "styles.css"), result.css)
+
+// Host Tailwind entry: compile the same owned CSS, but scan the PACKED JS and
+// the installed canonical peer. Neither repo source nor test fixtures ship.
+const hostInput = postcss.parse(globalsCss)
+const sourcePaths = new Map([
+  ['"../../src/**/*.tsx"', '"./**/*.js"'],
+  ['"../../src/**/*.ts"', null],
+  ['"../../node_modules/@tangle-network/ui/src/**/*.tsx"', '"../../ui/src/**/*.tsx"'],
+  ['"../../node_modules/@tangle-network/ui/src/**/*.ts"', '"../../ui/src/**/*.ts"'],
+])
+const rewritten = new Set()
+hostInput.walkAtRules("source", (rule) => {
+  if (!sourcePaths.has(rule.params)) return
+  rewritten.add(rule.params)
+  const target = sourcePaths.get(rule.params)
+  if (target === null) rule.remove()
+  else rule.params = target
+})
+if (rewritten.size !== sourcePaths.size) throw new Error("Host Tailwind source paths drifted; update the packed source mapping")
+await writeFile(join(distDir, "tailwind.css"), hostInput.toString())

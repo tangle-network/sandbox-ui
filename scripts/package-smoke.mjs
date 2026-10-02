@@ -258,7 +258,9 @@ try {
     const target = exportTarget(value);
     if (target?.endsWith(".js")) {
       jsSpecifiers.push(packageSpecifier(manifest.name, subpath));
-    } else if (target?.endsWith(".css")) {
+    } else if (target?.endsWith(".css") && subpath !== "./tailwind.css") {
+      // The opt-in Tailwind source entry is compiled independently by
+      // presentation-package-smoke.mjs, not treated as precompiled CSS.
       cssSpecifiers.push(packageSpecifier(manifest.name, subpath));
     }
   }

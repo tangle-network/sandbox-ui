@@ -1,4 +1,7 @@
 import { describe, expect, test } from "vitest";
+import * as SandboxPrimitives from "@tangle-network/sandbox-ui/primitives";
+import * as SandboxRoot from "@tangle-network/sandbox-ui";
+import * as UiPrimitives from "@tangle-network/ui/primitives";
 
 import { Button as B1 } from "@tangle-network/sandbox-ui/primitives";
 import { Button as B2 } from "@tangle-network/ui/primitives";
@@ -48,6 +51,22 @@ describe("re-export bridge identity", () => {
     test(`${name} forwards to @tangle-network/ui`, () => {
       expect(fromUi).toBeDefined();
       expect(fromBridge).toBe(fromUi);
+    });
+  }
+});
+
+const presentationBindings = [
+  "Heading", "PageHeader", "PageShell", "Card", "CardHeader", "CardContent",
+  "CardFooter", "CardTitle", "CardDescription", "Table", "TableHeader",
+  "TableBody", "TableFooter", "TableHead", "TableRow", "TableCell", "TableCaption",
+] as const;
+
+describe("canonical presentation through built public imports", () => {
+  for (const name of presentationBindings) {
+    test(`${name} is the upstream binding at both public entries`, () => {
+      expect(UiPrimitives[name]).toBeDefined();
+      expect(SandboxPrimitives[name]).toBe(UiPrimitives[name]);
+      expect(SandboxRoot[name]).toBe(UiPrimitives[name]);
     });
   }
 });

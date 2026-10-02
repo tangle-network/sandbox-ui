@@ -32,6 +32,10 @@
  * checking for were emitted BY the check. Every assertion passed, measuring
  * nothing. A gate whose own source satisfies it is not a gate. */
 @import "tailwindcss" source(none);
+/* Canonical generic presentation; local rules below are Sandbox compatibility
+ * or agent-specific composition, not copies of Brand's base/theme/prose. */
+@import "@tangle-network/brand/styles/theme.css";
+@import "@tangle-network/brand/styles/globals.css";
 
 /* Brand defines these aliases on :root and [data-sandbox-ui]. Rebind them on
  * explicit theme scopes so nested themes resolve their own HSL colors. A host
@@ -104,43 +108,12 @@
 @source inline("bg-[var(--run-mix-in-flight)]");
 @source inline("bg-[var(--run-mix-cancelled)]");
 
-/* Tailwind v4 utility generation for the design tokens. globals.css imports the
- * brand CSS variables (tokens.css) but Tailwind v4 only emits `bg-*`/`text-*`/
- * `border-*` utilities for colors registered in an `@theme` block — without this,
- * `bg-card`, `bg-surface-container*`, `bg-muted`, etc. produce NO rule and every
- * surface renders transparent (body color + borders only = the "flat" theme).
- * Map the semantic + MD3 surface tokens to `--color-*` so the utilities exist and
- * stay theme-reactive (the underlying vars flip with dark / vault). */
+/* Legacy surface aliases not exported by Brand's theme. Keep the public
+ * utility names without duplicating the canonical semantic/container map. */
 @theme {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-
-  /* MD3 surface elevation ladder — the depth system (hex tokens, theme-reactive). */
   --color-surface: var(--md3-surface);
   --color-surface-dim: var(--md3-surface-dim);
   --color-surface-bright: var(--md3-surface-bright);
-  --color-surface-container-lowest: var(--md3-surface-container-lowest);
-  --color-surface-container-low: var(--md3-surface-container-low);
-  --color-surface-container: var(--md3-surface-container);
-  --color-surface-container-high: var(--md3-surface-container-high);
-  --color-surface-container-highest: var(--md3-surface-container-highest);
 }
 
 /* ── Motion ────────────────────────────────────────────────────────────────
@@ -283,104 +256,12 @@
     --sandbox-glow: var(--info);
   }
 
-  * {
-    border-color: hsl(var(--border));
-  }
-
-  /* The default keyboard focus for any control that does not style its own,
-   * the same line and halo as ui's `focusRing` (mirrors brand's globals.css,
-   * which this bundle does not import). Base layer, so component utilities
-   * still win. Text fields have their own fallback below. */
-  :where(
-      a[href],
-      button,
-      summary,
-      input:is([type="checkbox"], [type="radio"]),
-      [role="button"],
-      [role="checkbox"],
-      [role="link"],
-      [role="menuitem"],
-      [role="option"],
-      [role="radio"],
-      [role="switch"],
-      [role="tab"],
-      [tabindex]:not([tabindex="-1"])
-    ):focus-visible {
-    outline: 1px solid var(--focus-border);
-    outline-offset: 0;
-    box-shadow: 0 0 0 4px var(--focus-halo);
-  }
-
-  /* A native text field that styles no focus: a 1px --focus-border line over
-   * its border, instead of the browser's blue outline (mirrors brand's
-   * globals.css). An outline, because a border-colour utility on the field
-   * outranks a base-layer border colour. No halo: a field that hands its
-   * focus to a container clears the line with `outline-none`. */
-  :where(
-      input:not(
-          [type="button"],
-          [type="checkbox"],
-          [type="color"],
-          [type="file"],
-          [type="hidden"],
-          [type="image"],
-          [type="radio"],
-          [type="range"],
-          [type="reset"],
-          [type="submit"]
-        ),
-      select,
-      textarea
-    ):focus-visible {
-    outline: 1px solid var(--focus-border);
-    outline-offset: -1px;
-    /* A field with an explicit tabindex also matches the control rule above;
-     * drop that rule's halo. */
-    box-shadow: none;
-  }
-
-  /* The rounded composite owns the focus line, not its inner editor. */
-  .focus-field-within :is(input:not([type=button],[type=submit],[type=reset],[type=image],[type=checkbox],[type=radio],[type=range],[type=color],[type=file]),textarea,select,[contenteditable]:not([contenteditable=false])):focus-visible {
-    outline: none;
-  }
-
-  body {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-sans);
-    font-feature-settings:
-      "rlig" 1,
-      "calt" 1,
-      "ss01" 1;
-  }
-
-  ::selection {
-    background: var(--bg-selection);
-    color: hsl(var(--hsl-foreground));
-  }
-
-  /* Thin neutral scrollbar — recedes until hovered. */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
+  /* Published Sandbox scrollbar treatment; all generic base/focus rules are
+   * supplied by Brand's exported globals.css above. */
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--border) / 0.6);
     border-radius: 9999px;
   }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.4);
-  }
-
-  /* Firefox: thin neutral track. */
   * {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border) / 0.6) transparent;
@@ -389,8 +270,7 @@
 
 @layer utilities {
   /* Gradient text -- Tangle default accent */
-  .text-gradient-sandbox,
-  .text-gradient-brand {
+  .text-gradient-sandbox {
     background-image: var(--tangle-gradient);
     background-clip: text;
     -webkit-background-clip: text;
@@ -505,26 +385,16 @@
     pointer-events: none;
   }
 
-  /* Status dots — operational state indicators */
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-    flex-shrink: 0;
-  }
-
-  .status-dot-running {
-    background: var(--status-running);
+  /* Brand owns the dot anatomy. Sandbox keeps operational extensions below
+   * and its published quiet running/error treatment (no status halos). */
+  .status-dot-running,
+  .status-dot-error {
+    box-shadow: none;
   }
 
   .status-dot-creating {
     background: var(--status-creating);
     animation: status-pulse 2s ease-in-out infinite;
-  }
-
-  .status-dot-stopped {
-    background: var(--status-stopped);
   }
 
   .status-dot-warm {
@@ -533,10 +403,6 @@
 
   .status-dot-cold {
     background: var(--status-cold);
-  }
-
-  .status-dot-error {
-    background: var(--status-error);
   }
 
   .status-dot-deleted {
@@ -938,80 +804,14 @@
   box-shadow: none;
 }
 
-/* Markdown prose — styles the `tangle-prose` surface that @tangle-network/ui's
- * Markdown renderer emits (re-exported from this library's /markdown, /chat and
- * /run entries). ui ships no @tailwindcss/typography, so without these rules
- * headings, lists, tables, and block spacing carry no styling in consumers that
- * source prose CSS solely from @tangle-network/sandbox-ui/styles. Self-contained
- * and token-driven so it re-skins with host, light, vault, and dark colors. */
-.tangle-prose {
-  color: hsl(var(--foreground));
-  line-height: 1.7;
-}
-/* Zero the browser's default block margins at zero specificity (:where) so the
- * owl selector below owns all vertical rhythm — a plain `.tangle-prose p` reset
- * (0,1,1) would outrank the owl (0,1,0) and collapse the gap between blocks. */
-.tangle-prose :where(p, ul, ol) { margin: 0; }
-.tangle-prose > * + * { margin-top: 0.85em; }
-.tangle-prose h1, .tangle-prose h2, .tangle-prose h3, .tangle-prose h4 {
-  font-weight: 600;
-  line-height: 1.3;
-  margin-top: 1.4em;
-  margin-bottom: 0.5em;
-  color: inherit;
-}
-.tangle-prose h1 { font-size: 1.4em; }
-.tangle-prose h2 { font-size: 1.25em; }
-.tangle-prose h3 { font-size: 1.1em; }
-.tangle-prose ul, .tangle-prose ol { padding-left: 1.4em; }
-.tangle-prose li { margin: 0.25em 0; }
-.tangle-prose li > ul, .tangle-prose li > ol { margin-top: 0.25em; }
-.tangle-prose a {
-  color: var(--accent-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.tangle-prose blockquote {
-  border-left: 2px solid var(--border-default);
-  padding-left: 0.9em;
-  color: hsl(var(--muted-foreground));
-}
-.tangle-prose hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 1.2em 0; }
-.tangle-prose :not(pre) > code {
-  background: var(--md3-surface-container-high);
-  padding: 0.12em 0.36em;
-  border-radius: 4px;
-  font-size: 0.9em;
-  font-family: var(--font-mono);
-}
-.tangle-prose pre { margin: 0.85em 0; }
-
-/* Tables — hairline dividers + real cell padding, so columns read as a grid
- * instead of colliding. `display: block` + `overflow-x` lets wide tables scroll
- * on narrow viewports; that also makes `border-collapse` inert (it only applies
- * to `display: table`), so dividers come from the per-cell `border-top` /
- * `border-left` and the `thead` underline below — not from border collapsing. */
-.tangle-prose table {
-  width: 100%;
-  margin: 0.85em 0;
-  font-size: 0.95em;
-  display: block;
-  overflow-x: auto;
-  color: inherit;
-}
-.tangle-prose thead { border-bottom: 1px solid var(--border-default); }
-.tangle-prose th {
-  text-align: left;
-  font-weight: 600;
-  padding: 0.5em 0.85em;
-  color: inherit;
-  white-space: nowrap;
-}
-.tangle-prose td {
-  padding: 0.5em 0.85em;
-  border-top: 1px solid var(--border-subtle);
-  vertical-align: top;
-}
-.tangle-prose th:not(:first-child), .tangle-prose td:not(:first-child) {
-  border-left: 1px solid var(--border-subtle);
-}
+/* Compatibility deltas only; Brand's exported globals owns prose/table
+ * anatomy. Preserve Sandbox's scoped colors and the published paragraph-gap
+ * fix: Brand 1.10's p/ul/ol reset outranks its own owl selector. The more
+ * specific direct-child override restores that gap without copying a renderer
+ * or a second prose stylesheet. Remove deltas only after equivalent upstream
+ * behavior is available at the declared Brand floor. */
+.tangle-prose { color: hsl(var(--foreground)); }
+.tangle-prose > :is(p, ul, ol):not(:first-child) { margin-top: 0.85em; }
+.tangle-prose :is(h1, h2, h3, h4, table, th) { color: inherit; }
+.tangle-prose blockquote { color: hsl(var(--muted-foreground)); }
+.tangle-prose :not(pre) > code { background: var(--md3-surface-container-high); }

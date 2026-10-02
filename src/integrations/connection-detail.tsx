@@ -40,7 +40,7 @@ export function IntegrationConnectionDetail({
                 const option = row.decisionOptions.find((_, index) => String(index) === value);
                 if (connection && option) onDecisionChange?.(connection.id, row.actionPath, option.value);
               }}>
-              <SelectTrigger aria-label={`Decision for ${row.actionPath}`} className="h-9 min-w-32">
+              <SelectTrigger aria-label={`Decision for ${row.actionPath}`} className="h-9 w-auto min-w-32">
                 <SelectValue placeholder="Not available" />
               </SelectTrigger>
               <SelectContent className={integrationSelectContentClassName}>

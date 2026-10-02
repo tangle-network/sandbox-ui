@@ -95,15 +95,37 @@ Use `AgentMessagingConnection` in any app that enrolls a member with a private a
 The host owns authentication, the member grant, canonical target resolution, and route readiness.
 
 ```tsx
-import { AgentMessagingConnection } from "@tangle-network/sandbox-ui/connections";
+import {
+  AgentMessagingConnection,
+  type AgentEnrollmentViewState,
+  type SharedMessagingRouteViewState,
+} from "@tangle-network/sandbox-ui/connections";
 
-<AgentMessagingConnection
-  enrollment={agentEnrollmentView}
-  route={memberRouteView}
-  onEnroll={() => enrollAgentForCurrentMember()}
-  onOpenMessages={() => openAuthorizedConversation()}
-  onRetry={() => refreshConnectionState()}
-/>
+type MessagingConnectionProps = {
+  enrollment: AgentEnrollmentViewState;
+  route: SharedMessagingRouteViewState;
+  enroll: () => Promise<void>;
+  openMessages: () => void;
+  refresh: () => Promise<void>;
+};
+
+export function MessagingConnection({
+  enrollment,
+  route,
+  enroll,
+  openMessages,
+  refresh,
+}: MessagingConnectionProps) {
+  return (
+    <AgentMessagingConnection
+      enrollment={enrollment}
+      route={route}
+      onEnroll={enroll}
+      onOpenMessages={openMessages}
+      onRetry={refresh}
+    />
+  );
+}
 ```
 
 Report `eligible` only after the host checks the member's current grant.

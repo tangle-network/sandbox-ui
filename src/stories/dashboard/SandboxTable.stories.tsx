@@ -66,3 +66,22 @@ function LongNameTable({ withScope = false }: { withScope?: boolean }) {
 
 export const LongNames: Story = { render: () => <LongNameTable /> }
 export const LongNamesWithScope: Story = { render: () => <LongNameTable withScope /> }
+
+const statusRows: SandboxCardData[] = (['running', 'failed', 'provisioning', 'creating', 'stopped', 'hibernating', 'archived'] as const).map((status, index) => ({
+  id: status,
+  name: `${status}-workspace`,
+  status,
+  nodeId: `iad1 · node-${index + 1}`,
+  image: 'NixOS 25.05',
+  cpuPercent: 34,
+  ramUsed: 2.2,
+  ramTotal: 8,
+}))
+
+export const StatusContrast: Story = {
+  render: () => (
+    <div className="w-full max-w-[1086px]">
+      <SandboxTable sandboxes={statusRows} onOpenIDE={() => {}} onResume={() => {}} />
+    </div>
+  ),
+}

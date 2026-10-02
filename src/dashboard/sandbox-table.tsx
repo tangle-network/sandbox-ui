@@ -69,12 +69,12 @@ export interface SandboxTableProps {
 }
 
 const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: string }> = {
-  running: { dot: "bg-[var(--code-success)] animate-pulse", text: "text-[var(--code-success)]", bar: "bg-[var(--code-success)]" },
+  running: { dot: "bg-[var(--code-success)] animate-pulse", text: "text-[var(--surface-success-text)]", bar: "bg-[var(--code-success)]" },
   hibernating: { dot: "bg-muted-foreground", text: "text-muted-foreground", bar: "bg-muted-foreground" },
-  provisioning: { dot: "bg-primary animate-pulse", text: "text-primary", bar: "bg-primary" },
-  creating: { dot: "bg-primary animate-pulse", text: "text-primary", bar: "bg-primary" },
+  provisioning: { dot: "bg-primary animate-pulse", text: "text-[var(--accent-text)]", bar: "bg-primary" },
+  creating: { dot: "bg-primary animate-pulse", text: "text-[var(--accent-text)]", bar: "bg-primary" },
   stopped: { dot: "bg-muted-foreground", text: "text-foreground", bar: "bg-muted-foreground" },
-  failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--code-error)]", bar: "bg-[var(--code-error)]" },
+  failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--surface-danger-text)]", bar: "bg-[var(--code-error)]" },
   archived: { dot: "bg-border", text: "text-muted-foreground", bar: "bg-border" },
 }
 
@@ -94,7 +94,7 @@ function MiniMeter({ label, percent, className }: { label: string; percent?: num
     <div className={cn("space-y-1", className)}>
       <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
         <span className="font-bold">{label}</span>
-        <span className={hasValue ? "text-primary" : "text-muted-foreground"}>
+        <span className={hasValue ? "text-[var(--accent-text)]" : "text-muted-foreground"}>
           {hasValue ? String(percent) + "%" : "Unknown"}
         </span>
       </div>
@@ -140,7 +140,7 @@ function SandboxResources({ sandbox, className }: { sandbox: SandboxCardData; cl
 
   if (sandbox.status === "provisioning" || sandbox.status === "creating") {
     return (
-      <div className={cn("flex min-w-0 items-center gap-2 text-primary italic text-[10px] font-bold", className)}>
+      <div className={cn("flex min-w-0 items-center gap-2 text-[var(--accent-text)] italic text-[10px] font-bold", className)}>
         <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin" data-motion="essential" />
         <span className="min-w-0 truncate" title={sandbox.provisioningMessage ?? "Allocating nodes..."}>
           {sandbox.provisioningMessage ?? "Allocating nodes..."}
@@ -285,7 +285,7 @@ export function SandboxTable({
                             <StatusIndicator status={sb.status} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="block min-w-0 truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary" title={sb.name} aria-label={sb.name}>{sb.name}</span>
+                            <span className="block min-w-0 truncate text-sm font-bold text-foreground transition-colors group-hover:text-[var(--accent-text)]" title={sb.name} aria-label={sb.name}>{sb.name}</span>
                             {sb.nodeId && <span className="block min-w-0 truncate text-[10px] font-mono text-muted-foreground" title={sb.nodeId}>{sb.nodeId}</span>}
                           </div>
                         </div>
@@ -379,7 +379,7 @@ export function SandboxTable({
                           <button
                             type="button"
                             onClick={(e) => { stopRowClick(e); resumeHandler(sb.id) }}
-                            className={cn("inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--md3-outline-variant)] text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all", focusRing)}
+                            className={cn("inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--md3-outline-variant)] text-[var(--accent-text)] text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all", focusRing)}
                             title={resumeLabel}
                           >
                             <Play className="h-3 w-3" />
@@ -507,7 +507,7 @@ export function SandboxTable({
                   className={cn(
                     "min-h-11 min-w-11 rounded-lg px-2 py-1 transition-colors",
                     item === currentPage
-                      ? "border border-[var(--md3-outline)] bg-[var(--accent-surface-soft)] text-primary"
+                      ? "border border-[var(--md3-outline)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
                       : "hover:bg-surface-container-high",
                     !onPageChange && "cursor-not-allowed opacity-30",
                   )}

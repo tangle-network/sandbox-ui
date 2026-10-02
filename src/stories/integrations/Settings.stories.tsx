@@ -111,23 +111,31 @@ export const Dialogs: Story = { render: () => <DialogScene /> };
 export const DialogApiKey: Story = { render: () => <DialogScene initialKind="key" /> };
 export const DialogOAuth: Story = { render: () => <DialogScene initialKind="oauth" /> };
 
-function InkboxAccountScene() {
+function InkboxAccountScene({ permissionControls = false }: { permissionControls?: boolean }) {
+  const [receipt, setReceipt] = useState("No action");
   const storageKey = "sandbox-ui-inkbox-account-picker-story";
   const [selected, setSelected] = useState<string | null>(() => {
     const saved = localStorage.getItem(storageKey);
     return saved === null ? "hubconn_inkbox_operator_abcdef" : saved || null;
   });
   const connections = [
-    { id: "hubconn_inkbox_operator_abcdef", accountDisplay: "@tangle-operator", statusLabel: "Preview account", capabilities: {} },
-    { id: "hubconn_inkbox_team_one_123456", accountDisplay: "@team", statusLabel: "Preview account", capabilities: {} },
-    { id: "hubconn_inkbox_team_two_123456", accountDisplay: "@team", statusLabel: "Preview account", capabilities: {} },
+    { id: "hubconn_inkbox_operator_abcdef", accountDisplay: "@tangle-operator", statusLabel: "Preview account", capabilities: { editPermissions: permissionControls, resetPermissions: permissionControls } },
+    { id: "hubconn_inkbox_team_one_123456", accountDisplay: "@team", statusLabel: "Preview account", capabilities: { editPermissions: permissionControls, resetPermissions: permissionControls } },
+    { id: "hubconn_inkbox_team_two_123456", accountDisplay: "@team", statusLabel: "Preview account", capabilities: { editPermissions: permissionControls, resetPermissions: permissionControls } },
   ];
-  return <IntegrationConnectionDetail provider={{ providerId: "inkbox", title: "Inkbox", iconUrl: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="${monogramColor("inkbox")}"/><text x="24" y="32" text-anchor="middle" font-family="sans-serif" font-size="28" fill="white">I</text></svg>`)}` }}
+  return <><IntegrationConnectionDetail provider={{ providerId: "inkbox", title: "Inkbox", iconUrl: `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="${monogramColor("inkbox")}"/><text x="24" y="32" text-anchor="middle" font-family="sans-serif" font-size="28" fill="white">I</text></svg>`)}` }}
     description="Preview fixture. Account selection is saved in this preview only."
-    connections={connections} selectedConnectionId={selected} detailsByConnectionId={{}}
+    connections={connections} selectedConnectionId={selected} detailsByConnectionId={permissionControls ? Object.fromEntries(connections.map((connection) => [connection.id, { permissionGroups: [{ id: "preview", title: "Permission controls", rows: [
+      { actionPath: "messages.send", title: "Send a message", riskLabel: "Write", decision: "allow", sourceLabel: "Stored override", canReset: true, decisionOptions: [{ value: "allow", label: "Allow" }, { value: "deny", label: "Deny" }] },
+      { actionPath: "messages.list", title: "List messages", riskLabel: "Read", decision: null, sourceLabel: "Not available", canReset: true, decisionOptions: [{ value: "ask", label: "Ask" }, { value: "deny", label: "Deny" }] },
+    ] }] }])) : {}}
+    onDecisionChange={(id, path, decision) => setReceipt(`decision:${id}:${path}:${decision}`)}
+    onResetDecision={(id, path) => setReceipt(`reset:${id}:${path}`)}
     onSelectConnection={(value) => {
       localStorage.setItem(storageKey, value ?? "");
       setSelected(value);
-    }} />;
+    }} /><output data-testid="settings-receipt" className="mt-4 block break-all text-sm text-muted-foreground">{receipt}</output></>;
 }
 export const InkboxAccountSelection: Story = { render: () => <InkboxAccountScene /> };
+
+export const InkboxPermissionControls: Story = { render: () => <InkboxAccountScene permissionControls /> };

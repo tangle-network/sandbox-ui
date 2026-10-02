@@ -233,7 +233,7 @@ export function SandboxTable({
           <table className="w-full table-fixed border-collapse text-left">
             <thead className="sticky top-0 z-10">
               <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
-                <th scope="col" className="hidden w-28 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Status</th>
+                <th scope="col" className="hidden w-36 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Status</th>
                 <th scope="col" className="px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:px-6">Sandbox</th>
                 {hasTeamSandboxes && <th scope="col" className="hidden w-32 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Scope</th>}
                 <th scope="col" className="hidden w-28 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Environment</th>
@@ -275,7 +275,7 @@ export function SandboxTable({
                     )}
                     onClick={onRowClick}
                   >
-                    <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
+                    <td className="hidden px-3 py-4 align-top xl:table-cell xl:w-36 xl:px-4 xl:py-5">
                       <StatusIndicator status={sb.status} />
                     </td>
                     <td className="min-w-0 px-3 py-4 align-top xl:px-6 xl:py-5">

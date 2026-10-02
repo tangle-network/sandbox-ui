@@ -71,6 +71,23 @@ test('keeps desktop sandbox scope and actions within their cells', async ({ page
   await assertStoryHealthy(page)
 })
 
+test('keeps the desktop provisioning status clear of the sandbox name', async ({ page, baseURL }) => {
+  await openStory(page, 'dashboard-sandboxtable--long-names-with-scope', 'light', { width: 1440, height: 900 }, baseURL)
+  const row = page.getByRole('region', { name: 'Sandbox list' }).locator('tbody tr').nth(2)
+  const statusCell = row.locator('td').first()
+  const statusLabel = statusCell.locator('span').last()
+  const sandboxName = row.locator('td').nth(1).locator('span[title]').first()
+  await expect(statusLabel).toHaveText('Provisioning')
+  await expect(sandboxName).toBeVisible()
+
+  const cellBounds = await statusCell.boundingBox()
+  const labelBounds = await statusLabel.boundingBox()
+  const nameBounds = await sandboxName.boundingBox()
+  expect(labelBounds.x + labelBounds.width).toBeLessThanOrEqual(cellBounds.x + cellBounds.width)
+  expect(labelBounds.x + labelBounds.width + 12).toBeLessThanOrEqual(nameBounds.x)
+  await assertStoryHealthy(page)
+})
+
 test('rejects runtime errors recorded after a screenshot', async ({ page, baseURL }) => {
   await openStory(page, 'dashboard-sandboxcard--running', 'dark', viewport, baseURL)
   await page.screenshot()

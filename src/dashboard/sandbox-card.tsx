@@ -114,6 +114,15 @@ function Spec({ icon, value, unit }: { icon: React.ReactNode; value: number; uni
   )
 }
 
+function UnknownMetric({ label }: { label: string }) {
+  return (
+    <div className="flex items-center justify-between text-xs font-mono uppercase tracking-wide text-muted-foreground">
+      <span>{label}</span>
+      <span>Unknown</span>
+    </div>
+  )
+}
+
 export function SandboxCard({
   sandbox, onOpenIDE, onOpenTerminal, onWake, onRestore, onDelete,
   onStop, onResume, onFork, onKeepAlive, onUsage, onHealth, className
@@ -138,16 +147,16 @@ export function SandboxCard({
 
   const status = STATUS_META[sandbox.status]
   const isArchived = sandbox.status === "archived"
-  const cpuPercent = sandbox.cpuPercent ?? 0
-  const ramUsed = sandbox.ramUsed ?? 0
-  const ramTotal = sandbox.ramTotal ?? 0
+  const cpuPercent = sandbox.cpuPercent
+  const ramUsed = sandbox.ramUsed
+  const ramTotal = sandbox.ramTotal
   const diskUsed = sandbox.diskUsed
   const diskTotal = sandbox.diskTotal
 
   // Allocated-resource chips: render only the dimensions the caller provided.
   const specs = [
     sandbox.vcpu != null && { key: "vcpu", icon: <Cpu className="h-3.5 w-3.5" />, value: sandbox.vcpu, unit: "vCPU" },
-    ramTotal > 0 && { key: "ram", icon: <MemoryStick className="h-3.5 w-3.5" />, value: ramTotal, unit: "GB RAM" },
+    ramTotal != null && ramTotal > 0 && { key: "ram", icon: <MemoryStick className="h-3.5 w-3.5" />, value: ramTotal, unit: "GB RAM" },
     diskTotal != null && { key: "disk", icon: <HardDrive className="h-3.5 w-3.5" />, value: diskTotal, unit: "GB SSD" },
   ].filter(Boolean) as { key: string; icon: React.ReactNode; value: number; unit: string }[]
 
@@ -160,10 +169,10 @@ export function SandboxCard({
     )}>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h3 className="truncate text-sm font-bold text-foreground">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <h3 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground" title={sandbox.name} aria-label={sandbox.name}>
               {sandbox.name}
             </h3>
             {sandbox.team && (
@@ -176,7 +185,7 @@ export function SandboxCard({
               </span>
             )}
           </div>
-          <p className="mt-0.5 font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
+          <p className="mt-0.5 min-w-0 truncate font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
             {sandbox.nodeId || "Unknown Node"}
             {sandbox.team && (
               <span className="ml-2 normal-case tracking-normal">
@@ -258,15 +267,26 @@ export function SandboxCard({
         {/* Live metrics — only meaningful while the sandbox is running */}
         {isRunning ? (
           <div className="space-y-2 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-high p-3">
-            <ResourceMeter label="CPU" value={cpuPercent} max={100} icon={<Cpu className="h-3 w-3" />} />
-            {ramTotal > 0 && (
+            {cpuPercent != null ? (
+              <ResourceMeter label="CPU" value={cpuPercent} max={100} icon={<Cpu className="h-3 w-3" />} />
+            ) : (
+              <UnknownMetric label="CPU" />
+            )}
+            {ramUsed != null && ramTotal != null && ramTotal > 0 ? (
               <ResourceMeter
-                label="MEM"
+                label="RAM"
                 value={ramUsed}
                 max={ramTotal}
-                valueLabel={`${ramUsed} / ${ramTotal} GB`}
+                valueLabel={String(ramUsed) + " / " + String(ramTotal) + " GB"}
                 icon={<MemoryStick className="h-3 w-3" />}
               />
+            ) : ramUsed != null ? (
+              <p className="flex items-center justify-between text-xs font-mono uppercase tracking-wide text-muted-foreground">
+                <span>RAM</span>
+                <span>{String(ramUsed)} GB used; capacity unknown</span>
+              </p>
+            ) : (
+              <UnknownMetric label="RAM" />
             )}
             {diskUsed != null && diskTotal != null && diskTotal > 0 && (
               <ResourceMeter
@@ -319,7 +339,7 @@ export function SandboxCard({
           <button
             type="button"
             onClick={() => onOpenIDE?.(sandbox.id)}
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97]"
+            className={cn("flex w-full items-center justify-center gap-2 min-h-11 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97]", focusRing)}
           >
             <Network className="h-4 w-4" />
             Connect Session
@@ -330,7 +350,8 @@ export function SandboxCard({
             onClick={() => resumeHandler?.(sandbox.id)}
             disabled={isTransitioning || !resumeHandler}
             className={cn(
-              "flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors border",
+              "flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors border",
+              focusRing,
               isTransitioning || !resumeHandler
                 ? "bg-muted text-muted-foreground cursor-not-allowed border-[var(--md3-outline-variant)]"
                 : "bg-surface-container-high text-foreground hover:bg-surface-container-highest border-[var(--md3-outline-variant)] active:scale-[0.97]"

@@ -87,18 +87,95 @@ function isResumable(status: SandboxStatus): boolean {
   return status !== "running" && status !== "provisioning" && status !== "creating"
 }
 
-function MiniMeter({ label, percent, className }: { label: string; percent: number; className?: string }) {
+function MiniMeter({ label, percent, className }: { label: string; percent?: number; className?: string }) {
+  const hasValue = percent != null && Number.isFinite(percent)
+
   return (
     <div className={cn("space-y-1", className)}>
       <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
         <span className="font-bold">{label}</span>
-        <span className="text-primary">{percent}%</span>
+        <span className={hasValue ? "text-primary" : "text-muted-foreground"}>
+          {hasValue ? String(percent) + "%" : "Unknown"}
+        </span>
       </div>
-      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-        <div className="h-full bg-primary rounded-full" style={{ width: `${percent}%` }} />
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
+        {hasValue && (
+          <div className="h-full rounded-full bg-primary" style={{ width: String(percent) + "%" }} />
+        )}
       </div>
     </div>
   )
+}
+
+function StatusIndicator({ status }: { status: SandboxStatus }) {
+  const sc = statusColors[status] ?? statusColors.stopped
+
+  return (
+    <div className="flex items-center gap-2 whitespace-nowrap">
+      <span
+        className={cn("flex h-2.5 w-2.5 shrink-0 rounded-full", sc.dot)}
+        aria-hidden="true"
+        {...(sc.dot.includes("animate-") ? { "data-motion": "essential" } : {})}
+      />
+      <span className={cn("text-xs font-bold uppercase tracking-wide", sc.text)}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    </div>
+  )
+}
+
+function SandboxResources({ sandbox, className }: { sandbox: SandboxCardData; className?: string }) {
+  if (sandbox.status === "running") {
+    const ramPercent = sandbox.ramUsed != null && sandbox.ramTotal != null && sandbox.ramTotal > 0
+      ? Math.round((sandbox.ramUsed / sandbox.ramTotal) * 100)
+      : undefined
+
+    return (
+      <div className={cn("min-w-0 space-y-3", className)}>
+        <MiniMeter label="CPU" percent={sandbox.cpuPercent} />
+        <MiniMeter label="RAM" percent={ramPercent} />
+      </div>
+    )
+  }
+
+  if (sandbox.status === "provisioning" || sandbox.status === "creating") {
+    return (
+      <div className={cn("flex min-w-0 items-center gap-2 text-primary italic text-[10px] font-bold", className)}>
+        <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin" data-motion="essential" />
+        <span className="min-w-0 truncate" title={sandbox.provisioningMessage ?? "Allocating nodes..."}>
+          {sandbox.provisioningMessage ?? "Allocating nodes..."}
+        </span>
+      </div>
+    )
+  }
+
+  if (sandbox.status === "hibernating") {
+    return <p className={cn("text-xs text-muted-foreground", className)}>Not running</p>
+  }
+
+  return null
+}
+
+function getPageItems(page: number, totalPages: number): Array<number | "start-ellipsis" | "end-ellipsis"> {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1)
+
+  let start = Math.max(2, page - 1)
+  let end = Math.min(totalPages - 1, page + 1)
+
+  if (page <= 3) {
+    start = 2
+    end = 5
+  } else if (page >= totalPages - 2) {
+    start = totalPages - 4
+    end = totalPages - 1
+  }
+
+  const items: Array<number | "start-ellipsis" | "end-ellipsis"> = [1]
+  if (start > 2) items.push("start-ellipsis")
+  for (let current = start; current <= end; current += 1) items.push(current)
+  if (end < totalPages - 1) items.push("end-ellipsis")
+  items.push(totalPages)
+  return items
 }
 
 export function SandboxTable({
@@ -121,35 +198,14 @@ export function SandboxTable({
   onFork,
   className,
 }: SandboxTableProps) {
-  const totalCount = total ?? sandboxes.length
-  const totalPages = Math.ceil(totalCount / pageSize)
+  const totalCount = Math.max(0, total ?? sandboxes.length)
+  const safePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 10
+  const totalPages = Math.ceil(totalCount / safePageSize)
+  const requestedPage = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1
+  const currentPage = Math.min(requestedPage, Math.max(1, totalPages))
+  const rangeStart = totalCount === 0 || sandboxes.length === 0 ? 0 : (currentPage - 1) * safePageSize + 1
+  const rangeEnd = rangeStart === 0 ? 0 : Math.min(rangeStart + sandboxes.length - 1, totalCount)
   const hasTeamSandboxes = sandboxes.some((sb) => sb.team !== undefined)
-  const tableScrollRef = React.useRef<HTMLDivElement>(null)
-  const [hasHiddenColumns, setHasHiddenColumns] = React.useState(false)
-
-  React.useEffect(() => {
-    const scroller = tableScrollRef.current
-    const table = scroller?.querySelector("table")
-    if (!scroller || !table) return
-
-    const measure = () => setHasHiddenColumns(scroller.scrollWidth > scroller.clientWidth + 1)
-    measure()
-
-    if (typeof ResizeObserver === "undefined") {
-      window.addEventListener("resize", measure)
-      return () => window.removeEventListener("resize", measure)
-    }
-
-    const observer = new ResizeObserver(measure)
-    observer.observe(scroller)
-    observer.observe(table)
-    return () => observer.disconnect()
-  }, [sandboxes, hasTeamSandboxes])
-
-  const scrollColumns = (direction: -1 | 1) => {
-    const scroller = tableScrollRef.current
-    scroller?.scrollBy({ left: direction * scroller.clientWidth * 0.75 })
-  }
 
   // Hibernating is the one status that historically wired up to `onWake`.
   // For that status we fall back to `onWake` when `onResume` is absent,
@@ -172,36 +228,24 @@ export function SandboxTable({
 
   return (
     <div className={cn("w-full", className)}>
-      {sandboxes.length > 0 && hasHiddenColumns && (
-        <div className="mb-2 flex items-center justify-end gap-2 text-xs text-muted-foreground">
-          <span>Columns</span>
-          <button type="button" onClick={() => scrollColumns(-1)} className={`rounded-md border border-[var(--md3-outline-variant)] p-1.5 ${focusRing}`} aria-label="Scroll sandbox table left" title="Scroll table left">
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button type="button" onClick={() => scrollColumns(1)} className={`rounded-md border border-[var(--md3-outline-variant)] p-1.5 ${focusRing}`} aria-label="Scroll sandbox table right" title="Scroll table right">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      )}
       <div className="w-full bg-surface-container rounded-2xl overflow-hidden border border-[var(--md3-outline-variant)]">
-        <div ref={tableScrollRef} className={`max-h-[min(60vh,35rem)] overflow-auto ${focusRingInset}`} role="region" aria-label="Sandbox table; scroll horizontally for more columns" tabIndex={0}>
-          <table className={cn("w-full text-left border-collapse", hasTeamSandboxes && "[&_th]:px-4 [&_td]:px-4")}>
+        <div className={cn("max-h-[min(60vh,35rem)] overflow-x-hidden overflow-y-auto", focusRingInset)} role="region" aria-label="Sandbox list" tabIndex={0}>
+          <table className="w-full table-fixed border-collapse text-left">
             <thead className="sticky top-0 z-10">
               <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sandbox Name</th>
-                {hasTeamSandboxes && <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Scope</th>}
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Environment</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resources</th>
-                <th className="px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
+                <th scope="col" className="hidden w-28 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Status</th>
+                <th scope="col" className="px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:px-6">Sandbox</th>
+                {hasTeamSandboxes && <th scope="col" className="hidden w-32 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Scope</th>}
+                <th scope="col" className="hidden w-28 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Environment</th>
+                <th scope="col" className="hidden w-48 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Resources</th>
+                <th scope="col" className="w-28 px-2 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:w-52 xl:px-4">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {sandboxes.map((sb) => {
-                const sc = statusColors[sb.status] ?? statusColors.stopped
                 const isActive = sb.status === "running"
                 const isHibernating = sb.status === "hibernating"
-                const isProvisioning = sb.status === "provisioning"
+                const isProvisioning = sb.status === "provisioning" || sb.status === "creating"
                 const resumeHandler = isResumable(sb.status) ? resolveResumeHandler(sb.status) : undefined
                 const onRowClick = resolveRowClick(sb)
                 const resumeLabel = isHibernating ? "Wake Up" : "Resume"
@@ -231,36 +275,61 @@ export function SandboxTable({
                     )}
                     onClick={onRowClick}
                   >
-                    <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {/* The pulse on a running/provisioning dot is the live-state
-                            signal, not decoration — it stays under reduced motion. */}
-                        <span
-                          className={cn("flex h-2.5 w-2.5 rounded-full", sc.dot)}
-                          {...(sc.dot.includes("animate-") ? { "data-motion": "essential" } : {})}
-                        />
-                        <span className={cn("text-xs font-bold uppercase tracking-wide", sc.text)}>
-                          {sb.status.charAt(0).toUpperCase() + sb.status.slice(1)}
-                        </span>
-                      </div>
+                    <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
+                      <StatusIndicator status={sb.status} />
                     </td>
-                    <td className="px-6 py-5">
-                      <div className={cn("flex min-w-0 flex-col", hasTeamSandboxes ? "max-w-36" : "max-w-64")}>
-                        <span className="truncate text-sm font-bold text-foreground group-hover:text-primary transition-colors" title={sb.name}>{sb.name}</span>
-                        {sb.nodeId && <span className="truncate text-[10px] font-mono text-muted-foreground" title={sb.nodeId}>{sb.nodeId}</span>}
+                    <td className="min-w-0 px-3 py-4 align-top xl:px-6 xl:py-5">
+                      <div className="flex min-w-0 flex-col gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <div className="shrink-0 xl:hidden">
+                            <StatusIndicator status={sb.status} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="block min-w-0 truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary" title={sb.name} aria-label={sb.name}>{sb.name}</span>
+                            {sb.nodeId && <span className="block min-w-0 truncate text-[10px] font-mono text-muted-foreground" title={sb.nodeId}>{sb.nodeId}</span>}
+                          </div>
+                        </div>
+                        <div className="grid min-w-0 gap-1 text-[11px] xl:hidden">
+                          {hasTeamSandboxes && (
+                            <div className="flex min-w-0 gap-2">
+                              <span className="shrink-0 text-muted-foreground">Scope</span>
+                              {sb.team ? (
+                                <span className="min-w-0 truncate text-foreground" title={"Shared with " + (sb.team.name ?? "Team") + " \u00b7 " + sb.team.role}>
+                                  {sb.team.name ?? "Team"} - {sb.team.role}
+                                </span>
+                              ) : (
+                                <span className="text-foreground">Personal</span>
+                              )}
+                            </div>
+                          )}
+                          {(sb.customImage ?? sb.image) && (
+                            <div className="flex min-w-0 gap-2">
+                              <span className="shrink-0 text-muted-foreground">Environment</span>
+                              <span className="min-w-0 truncate text-foreground" title={sb.customImage ?? sb.image}>
+                                {sb.customImage ?? sb.image}
+                              </span>
+                            </div>
+                          )}
+                          {(isActive || isProvisioning || isHibernating) && (
+                            <div className="flex min-w-0 flex-col gap-1">
+                              <span className="text-muted-foreground">Resources</span>
+                              <SandboxResources sandbox={sb} />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                     {hasTeamSandboxes && (
-                      <td className="px-6 py-5">
+                      <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
                         {sb.team ? (
                           <div
                             className="inline-flex max-w-40 items-center gap-1.5 rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
-                            title={`Shared with ${sb.team.name ?? "Team"} · ${sb.team.role}`}
+                            title={"Shared with " + (sb.team.name ?? "Team") + " \u00b7 " + sb.team.role}
                           >
                             <Users className="h-3 w-3 shrink-0" aria-hidden="true" />
                             <span className="min-w-0 truncate">{sb.team.name ?? "Team"}</span>
                             <span className="shrink-0 font-normal text-muted-foreground">
-                              · {sb.team.role}
+                              - {sb.team.role}
                             </span>
                           </div>
                         ) : (
@@ -274,45 +343,34 @@ export function SandboxTable({
                         )}
                       </td>
                     )}
-                    <td className="px-6 py-5">
-                      <div className={cn("flex min-w-0 items-center gap-3", hasTeamSandboxes ? "max-w-26" : "max-w-28")}>
+                    <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
+                      <div className="flex min-w-0 items-center gap-2">
                         {sb.imageIcon && (
-                          <div className="w-8 h-8 shrink-0 rounded-lg bg-surface-container-high flex items-center justify-center">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-container-high">
                             {sb.imageIcon}
                           </div>
                         )}
-                        {sb.image && <span className="min-w-0 truncate text-xs font-bold text-foreground" title={sb.image}>{sb.image}</span>}
+                        {(sb.customImage ?? sb.image) && (
+                          <span className="min-w-0 truncate text-xs font-bold text-foreground" title={sb.customImage ?? sb.image}>
+                            {sb.customImage ?? sb.image}
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td className="px-6 py-5">
-                      {isActive ? (
-                        <div className={cn("space-y-3", hasTeamSandboxes ? "w-44" : "w-48")}>
-                          <MiniMeter label="CPU" percent={sb.cpuPercent ?? 0} />
-                          <MiniMeter label="RAM" percent={sb.ramTotal ? Math.round(((sb.ramUsed ?? 0) / sb.ramTotal) * 100) : 0} />
-                        </div>
-                      ) : isProvisioning ? (
-                        <div className={cn("flex items-center gap-2 text-primary italic text-[10px] font-bold", hasTeamSandboxes ? "max-w-44" : "max-w-48")}>
-                          <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin" data-motion="essential" />
-                          <span className="min-w-0 truncate" title={sb.provisioningMessage ?? "Allocating nodes..."}>{sb.provisioningMessage ?? "Allocating nodes..."}</span>
-                        </div>
-                      ) : isHibernating ? (
-                        <div className={cn("space-y-3 opacity-30", hasTeamSandboxes ? "w-44" : "w-48")}>
-                          <MiniMeter label="CPU" percent={0} />
-                          <MiniMeter label="RAM" percent={0} />
-                        </div>
-                      ) : null}
+                    <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
+                      <SandboxResources sandbox={sb} />
                     </td>
-                    <td className="px-6 py-5 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className="w-28 px-2 py-3 text-right align-top xl:w-52 xl:px-4 xl:py-5">
+                      <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
                         {isActive && (
                           <>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenIDE?.(sb.id) }} className="p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Open IDE">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenIDE?.(sb.id) }} className={cn("min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90", focusRing)} aria-label="Open IDE" title="Open IDE">
                               <Code2 className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenTerminal?.(sb.id) }} className="p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90" title="Terminal">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenTerminal?.(sb.id) }} className={cn("min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90", focusRing)} aria-label="Open terminal" title="Terminal">
                               <Terminal className="h-4 w-4" />
                             </button>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onSSH?.(sb.id) }} className="p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90" title="SSH">
+                            <button type="button" onClick={(e) => { stopRowClick(e); onSSH?.(sb.id) }} className={cn("min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90", focusRing)} aria-label="Open SSH details" title="SSH">
                               <Key className="h-4 w-4" />
                             </button>
                           </>
@@ -321,7 +379,7 @@ export function SandboxTable({
                           <button
                             type="button"
                             onClick={(e) => { stopRowClick(e); resumeHandler(sb.id) }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--md3-outline-variant)] text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all"
+                            className={cn("inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--md3-outline-variant)] text-primary text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all", focusRing)}
                             title={resumeLabel}
                           >
                             <Play className="h-3 w-3" />
@@ -388,7 +446,7 @@ export function SandboxTable({
                                 <button
                                   type="button"
                                   onClick={stopRowClick}
-                                  className={`p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90 ${focusRing}`}
+                                  className={`min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90 ${focusRing}`}
                                   aria-label={`More actions for ${sb.name}`}
                                   title="More actions"
                                 >
@@ -407,7 +465,7 @@ export function SandboxTable({
                           )
                         })()}
                         {onDelete && canAdminSandbox(sb) && (
-                          <button type="button" aria-label={`Delete ${sb.name}`} onClick={(e) => { stopRowClick(e); onDelete(sb.id) }} className={`p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90 ${focusRing}`} title="Delete">
+                          <button type="button" aria-label={`Delete ${sb.name}`} onClick={(e) => { stopRowClick(e); onDelete(sb.id) }} className={`min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90 ${focusRing}`} title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -423,29 +481,53 @@ export function SandboxTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex flex-col md:flex-row justify-between items-center text-muted-foreground text-xs font-medium gap-4">
-          <p>Showing {sandboxes.length} of {totalCount} active sandboxes</p>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => onPageChange?.(page - 1)} disabled={page <= 1} className="p-2 rounded-lg border border-[var(--md3-outline-variant)] hover:bg-surface-container-high transition-colors disabled:opacity-30">
+        <div className="mt-6 flex flex-col items-center justify-between gap-4 text-xs font-medium text-muted-foreground sm:flex-row">
+          <p>
+            {rangeStart === 0 ? <>Showing 0 of {totalCount} sandboxes</> : <>Showing {rangeStart}-{rangeEnd} of {totalCount} sandboxes</>}
+          </p>
+          <nav className="flex flex-wrap items-center justify-center gap-1" aria-label="Sandbox pages">
+            <button
+              type="button"
+              onClick={() => onPageChange?.(currentPage - 1)}
+              disabled={!onPageChange || currentPage <= 1}
+              aria-label="Previous page"
+              className={cn("rounded-lg border border-[var(--md3-outline-variant)] p-2 transition-colors hover:bg-surface-container-high disabled:opacity-30", focusRing)}
+            >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => onPageChange?.(p)}
-                className={cn(
-                  "px-3 py-1 rounded-lg transition-colors",
-                  p === page ? "bg-[var(--accent-surface-soft)] text-primary border border-[var(--md3-outline)]" : "hover:bg-surface-container-high",
-                )}
-              >
-                {p}
-              </button>
+            {getPageItems(currentPage, totalPages).map((item) => (
+              typeof item === "number" ? (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => onPageChange?.(item)}
+                  disabled={!onPageChange}
+                  aria-label={"Go to page " + item}
+                  aria-current={item === currentPage ? "page" : undefined}
+                  className={cn(
+                    "min-h-8 min-w-8 rounded-lg px-2 py-1 transition-colors",
+                    item === currentPage
+                      ? "border border-[var(--md3-outline)] bg-[var(--accent-surface-soft)] text-primary"
+                      : "hover:bg-surface-container-high",
+                    !onPageChange && "cursor-not-allowed opacity-30",
+                  )}
+                >
+                  {item}
+                </button>
+              ) : (
+                <span key={item} className="px-1" aria-hidden="true">...</span>
+              )
             ))}
-            <button type="button" onClick={() => onPageChange?.(page + 1)} disabled={page >= totalPages} className="p-2 rounded-lg border border-[var(--md3-outline-variant)] hover:bg-surface-container-high transition-colors disabled:opacity-30">
+            <button
+              type="button"
+              onClick={() => onPageChange?.(currentPage + 1)}
+              disabled={!onPageChange || currentPage >= totalPages}
+              aria-label="Next page"
+              className={cn("rounded-lg border border-[var(--md3-outline-variant)] p-2 transition-colors hover:bg-surface-container-high disabled:opacity-30", focusRing)}
+            >
               <ChevronRight className="h-4 w-4" />
             </button>
-          </div>
+          </nav>
         </div>
       )}
     </div>

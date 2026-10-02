@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SandboxTable } from "./sandbox-table"
 import type { SandboxCardData, SandboxStatus } from "./sandbox-card"
@@ -24,30 +24,76 @@ describe("SandboxTable", () => {
     expect(screen.getByText("Beta")).toBeInTheDocument()
   })
 
-  it("shows column controls when the table overflows its container", () => {
-    let onResize: ResizeObserverCallback | undefined
-    vi.stubGlobal("ResizeObserver", class {
-      constructor(callback: ResizeObserverCallback) { onResize = callback }
-      observe() {}
-      disconnect() {}
-    })
+  it("uses a fixed responsive list without horizontal scroll controls", () => {
+    render(<SandboxTable sandboxes={[makeSandbox()]} />)
+    const region = screen.getByRole("region", { name: "Sandbox list" })
+    const table = region.querySelector("table")
 
-    try {
-      render(<SandboxTable sandboxes={[makeSandbox()]} />)
-      const region = screen.getByRole("region", { name: /Sandbox table/ })
-      let contentWidth = 1069
-      Object.defineProperty(region, "clientWidth", { configurable: true, value: 990 })
-      Object.defineProperty(region, "scrollWidth", { configurable: true, get: () => contentWidth })
+    expect(region).toHaveClass("overflow-x-hidden")
+    expect(table).toHaveClass("table-fixed")
+    expect(screen.queryByRole("button", { name: /Scroll sandbox table/ })).not.toBeInTheDocument()
+  })
 
-      act(() => onResize?.([], {} as ResizeObserver))
-      expect(screen.getByRole("button", { name: "Scroll sandbox table right" })).toBeInTheDocument()
+  it("shows missing live telemetry as unknown and preserves measured zero", () => {
+    render(
+      <SandboxTable
+        sandboxes={[
+          makeSandbox({ name: "Telemetry pending" }),
+          makeSandbox({ id: "zero", name: "Measured zero", cpuPercent: 0, ramUsed: 0, ramTotal: 8 }),
+        ]}
+      />,
+    )
 
-      contentWidth = 990
-      act(() => onResize?.([], {} as ResizeObserver))
-      expect(screen.queryByRole("button", { name: "Scroll sandbox table right" })).not.toBeInTheDocument()
-    } finally {
-      vi.unstubAllGlobals()
-    }
+    expect(screen.getAllByText("Unknown")).toHaveLength(4)
+    expect(screen.getAllByText("0%")).toHaveLength(4)
+  })
+
+  it("does not report zero resource use for hibernating sandboxes", () => {
+    render(<SandboxTable sandboxes={[makeSandbox({ status: "hibernating" })]} />)
+
+    expect(screen.getAllByText("Not running")).toHaveLength(2)
+    expect(screen.queryByText("0%")).not.toBeInTheDocument()
+  })
+
+  it("keeps a long sandbox name available when its cell is truncated", () => {
+    const name = "workspace-" + "a-very-long-project-name-".repeat(8)
+    render(<SandboxTable sandboxes={[makeSandbox({ name })]} />)
+
+    const nameCell = screen.getByText(name)
+    expect(nameCell).toHaveAttribute("title", name)
+    expect(nameCell).toHaveAttribute("aria-label", name)
+    expect(nameCell).toHaveClass("truncate")
+  })
+
+  it("limits the displayed range to rows supplied for the current page", () => {
+    render(
+      <SandboxTable
+        sandboxes={[makeSandbox({ id: "one" }), makeSandbox({ id: "two" })]}
+        page={2}
+        pageSize={10}
+        total={26}
+      />,
+    )
+
+    expect(screen.getByText("Showing 11-12 of 26 sandboxes")).toBeInTheDocument()
+  })
+
+  it("navigates to pages beyond the first five", async () => {
+    const onPageChange = vi.fn()
+    render(
+      <SandboxTable
+        sandboxes={Array.from({ length: 10 }, (_, index) => makeSandbox({ id: String(index) }))}
+        page={6}
+        pageSize={10}
+        total={86}
+        onPageChange={onPageChange}
+      />,
+    )
+
+    expect(screen.getByText("Showing 51-60 of 86 sandboxes")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Go to page 6" })).toHaveAttribute("aria-current", "page")
+    await userEvent.setup().click(screen.getByRole("button", { name: "Go to page 7" }))
+    expect(onPageChange).toHaveBeenCalledWith(7)
   })
 
   it("renders team badge for team sandboxes", () => {
@@ -55,8 +101,8 @@ describe("SandboxTable", () => {
       makeSandbox({ team: { id: "t1", name: "DevOps", role: "admin" } }),
     ]
     render(<SandboxTable sandboxes={sandboxes} />)
-    expect(screen.getByText("DevOps")).toBeInTheDocument()
-    expect(screen.getByText(/admin/)).toBeInTheDocument()
+    expect(screen.getByText("DevOps - admin")).toBeInTheDocument()
+    expect(screen.getAllByText(/admin/)).toHaveLength(2)
   })
 
   it("hides Scope column when no sandboxes have teams", () => {
@@ -71,9 +117,9 @@ describe("SandboxTable", () => {
       makeSandbox({ id: "2", team: { id: "t1", name: "Infra", role: "admin" } }),
     ]
     render(<SandboxTable sandboxes={sandboxes} />)
-    expect(screen.getByText("Scope")).toBeInTheDocument()
-    expect(screen.getByText("Personal")).toBeInTheDocument()
-    expect(screen.getByText("Infra")).toBeInTheDocument()
+    expect(screen.getAllByText("Scope")).toHaveLength(3)
+    expect(screen.getAllByText("Personal")).toHaveLength(2)
+    expect(screen.getByText("Infra - admin")).toBeInTheDocument()
   })
 
   // --- RBAC: delete button visibility ---

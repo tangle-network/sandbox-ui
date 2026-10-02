@@ -57,6 +57,26 @@ describe("SandboxCard", () => {
     expect(screen.getByText("Test Box")).toBeInTheDocument()
   })
 
+  it("shows missing live metrics as unknown and keeps measured zero", () => {
+    const { unmount } = render(<SandboxCard sandbox={makeSandbox()} />)
+    expect(screen.getAllByText("Unknown")).toHaveLength(2)
+    expect(screen.queryByText("0%")).not.toBeInTheDocument()
+    unmount()
+
+    render(<SandboxCard sandbox={makeSandbox({ cpuPercent: 0, ramUsed: 0, ramTotal: 8 })} />)
+    expect(screen.getAllByText("0%")).toHaveLength(1)
+    expect(screen.getByText("0 / 8 GB")).toBeInTheDocument()
+  })
+
+  it("retains the full name in the accessible heading when visually truncated", () => {
+    const name = "workspace-" + "a-very-long-project-name-".repeat(8)
+    render(<SandboxCard sandbox={makeSandbox({ name })} />)
+
+    const heading = screen.getByRole("heading", { level: 3, name })
+    expect(heading).toHaveAttribute("title", name)
+    expect(heading).toHaveClass("truncate")
+  })
+
   it("renders team badge when team is present", () => {
     const sandbox = makeSandbox({
       team: { id: "t1", name: "Alpha Team", role: "member" },

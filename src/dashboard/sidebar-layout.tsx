@@ -103,7 +103,8 @@ export interface SidebarLayoutProps {
   isLoading?: boolean
   onLogout?: () => void
   onSettingsClick?: () => void
-  settingsHref?: string
+  /** Pass null when the host has no settings destination. */
+  settingsHref?: string | null
   /** Extra items rendered before settings/logout in the profile menu. */
   profileMenuItems?: React.ReactNode
   /**

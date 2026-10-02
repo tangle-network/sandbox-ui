@@ -70,7 +70,8 @@ export interface DashboardLayoutProps {
   isLoading?: boolean
   onLogout?: () => void
   onSettingsClick?: () => void
-  settingsHref?: string
+  /** Pass null when the host has no settings destination. */
+  settingsHref?: string | null
   onNewSandbox?: () => void
   className?: string
   sidebarClassName?: string

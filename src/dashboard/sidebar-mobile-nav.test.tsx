@@ -37,6 +37,32 @@ function renderShell(props: Partial<React.ComponentProps<typeof SidebarLayout>> 
 }
 
 describe("SidebarLayout — mobile section nav", () => {
+  it("keeps the default settings destination when the host omits it", async () => {
+    const user = userEvent.setup()
+    renderShell({ user: { name: "Workspace owner", email: "owner@example.test" } })
+    await user.click(screen.getAllByRole("button", { name: "User menu" }).at(-1)!)
+    expect(screen.getByRole("menuitem", { name: /Settings$/ }).getAttribute("href")).toBe("/dashboard/settings")
+  })
+
+  it("omits unavailable settings while keeping signout actionable", async () => {
+    const user = userEvent.setup()
+    const onLogout = vi.fn()
+    renderShell({ user: { name: "Workspace owner", email: "owner@example.test" }, settingsHref: null, onLogout })
+    await user.click(screen.getAllByRole("button", { name: "User menu" }).at(-1)!)
+    expect(screen.queryByRole("menuitem", { name: /Settings$/ })).toBeNull()
+    await user.click(screen.getByRole("menuitem", { name: /Sign Out$/ }))
+    expect(onLogout).toHaveBeenCalledTimes(1)
+  })
+
+  it("honors the host settings callback even without a route", async () => {
+    const user = userEvent.setup()
+    const onSettingsClick = vi.fn()
+    renderShell({ user: { name: "Workspace owner", email: "owner@example.test" }, settingsHref: null, onSettingsClick })
+    await user.click(screen.getAllByRole("button", { name: "User menu" }).at(-1)!)
+    await user.click(screen.getByRole("menuitem", { name: /Settings$/ }))
+    expect(onSettingsClick).toHaveBeenCalledTimes(1)
+  })
+
   it("exposes a menu trigger whenever the rail is hidden below a breakpoint", () => {
     renderShell()
     expect(screen.getByRole("button", { name: "Open navigation" })).toBeTruthy()

@@ -9,6 +9,7 @@
  */
 
 import { type CSSProperties, type KeyboardEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
   PanelBottomClose,
@@ -136,6 +137,10 @@ export interface WorkspaceLayoutProps {
    * full-width row. `always` aligns every pane to the 56px header row.
    */
   centerHeaderVisibility?: "always" | "auto";
+  /** Retain visited right content across closure and desktop/mobile relocation. */
+  keepRightMounted?: boolean;
+  /** Closed controls use edge columns by default; overlay preserves center width. */
+  collapsedControlsPlacement?: "edge" | "overlay";
   className?: string;
 }
 
@@ -361,6 +366,8 @@ export function WorkspaceLayout({
   leftCollapsedControl,
   leftContentClassName,
   rightContentClassName,
+  keepRightMounted = false,
+  collapsedControlsPlacement = "edge",
   centerHeaderVisibility = "auto",
   className,
 }: WorkspaceLayoutProps) {
@@ -402,6 +409,28 @@ export function WorkspaceLayout({
   );
   const hasLeft = Boolean(left);
   const hasRight = Boolean(right);
+  const [rightVisited, setRightVisited] = useState(false);
+  const rightParkingRef = useRef<HTMLDivElement>(null);
+  const rightHost = useMemo(() => {
+    if (!keepRightMounted || typeof document === "undefined") return null;
+    const host = document.createElement("div");
+    host.className = "flex h-full min-h-0 min-w-0 flex-col";
+    return host;
+  }, [keepRightMounted]);
+  useEffect(() => {
+    if (keepRightMounted && rightOpen && hasRight) setRightVisited(true);
+  }, [keepRightMounted, rightOpen, hasRight]);
+  // The portal target stays stable. Moving its host preserves terminals and
+  // editors when the visible pane becomes a drawer or parks while closed.
+  const mountRightHost = useCallback((node: HTMLDivElement | null) => {
+    if (!rightHost) return;
+    const destination = node ?? rightParkingRef.current;
+    if (destination) destination.appendChild(rightHost);
+  }, [rightHost]);
+  const rightContent = keepRightMounted
+    ? <div ref={mountRightHost} className="flex h-full min-h-0 min-w-0 flex-1 flex-col" />
+    : right;
+
   const [bottomOpen, setBottomOpen] = useState(storedLayout?.bottomOpen ?? defaultBottomOpen);
   const [leftWidth, setLeftWidth] = useState(
     clamp(storedLayout?.leftWidth ?? defaultLeftWidth, minLeftWidth, maxLeftWidth),
@@ -451,7 +480,11 @@ export function WorkspaceLayout({
       bottomHeight,
     };
 
-    window.localStorage.setItem(persistenceKey, JSON.stringify(payload));
+    try {
+      window.localStorage.setItem(persistenceKey, JSON.stringify(payload));
+    } catch {
+      // Pane controls remain usable when browser storage is unavailable.
+    }
   }, [bottomHeight, bottomOpen, leftOpen, leftWidth, persistenceKey, rightOpen, rightWidth]);
 
   useEffect(() => {
@@ -630,7 +663,7 @@ export function WorkspaceLayout({
           </>
         )}
 
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main className="relative flex min-w-0 flex-1 flex-col">
           {showCenterHeader && (
             <WorkspacePaneHeader className="gap-2">
               {leftReopenControl && <div ref={leftReopenRef} className="shrink-0">{leftReopenControl}</div>}
@@ -640,13 +673,13 @@ export function WorkspaceLayout({
             </WorkspacePaneHeader>
           )}
 
-          <div className="flex min-h-0 flex-1">
+          <div className="relative flex min-h-0 flex-1">
             {!showCenterHeader && leftReopenControl && (
-              <div ref={leftReopenRef} className="shrink-0 pt-2">{leftReopenControl}</div>
+              <div ref={leftReopenRef} className={cn("shrink-0 pt-2", collapsedControlsPlacement === "overlay" && "absolute left-2 top-2 z-20 pt-0")}>{leftReopenControl}</div>
             )}
             <div className="min-w-0 flex-1 overflow-auto">{center}</div>
             {!showCenterHeader && (bottomReopenControl || rightReopenControl) && (
-              <div className="flex shrink-0 flex-col gap-1 pt-2">
+              <div className={cn("flex shrink-0 flex-col gap-1 pt-2", collapsedControlsPlacement === "overlay" && "absolute right-2 top-2 z-20 pt-0")}>
                 {bottomReopenControl}
                 {rightReopenControl && <div ref={rightReopenRef}>{rightReopenControl}</div>}
               </div>
@@ -734,11 +767,17 @@ export function WorkspaceLayout({
                   <PanelRightClose className="h-4 w-4" />
                 </button>
               </WorkspacePaneHeader>
-              <div className={cn("min-h-0 flex-1 overflow-auto", rightContentClassName)}>{right}</div>
+              <div className={cn("min-h-0 flex-1 overflow-auto", rightContentClassName)}>{rightContent}</div>
             </aside>
           </>
         )}
       </div>
+
+      {keepRightMounted && (
+        <div hidden ref={rightParkingRef} aria-hidden="true">
+          {rightHost && (rightOpen || rightVisited) && hasRight ? createPortal(right, rightHost) : null}
+        </div>
+      )}
 
       {!desktop && left && leftOpen && !(right && rightOpen) && (
         <MobileDrawer
@@ -764,7 +803,7 @@ export function WorkspaceLayout({
           theme={theme}
           density={density}
         >
-          {right}
+          {rightContent}
         </MobileDrawer>
       )}
     </div>

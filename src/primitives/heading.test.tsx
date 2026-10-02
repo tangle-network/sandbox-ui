@@ -122,3 +122,32 @@ describe("PageShell", () => {
     )
   })
 })
+
+
+describe("canonical compatibility boundary", () => {
+  it("consumes the old visual role instead of leaking an invalid ARIA role", () => {
+    render(<Heading role="page">Visual role</Heading>)
+    expect(screen.getByRole("heading", { level: 1, name: "Visual role" })).not.toHaveAttribute("role")
+  })
+
+  it("retains titleAs, IDs and the canonical header ref", () => {
+    const ref = createRef<HTMLElement>()
+    render(<PageHeader ref={ref} title="Nested title" titleAs="h3" titleId="nested-title" />)
+    expect(screen.getByRole("heading", { level: 3, name: "Nested title" })).toHaveAttribute("id", "nested-title")
+    expect(ref.current?.tagName).toBe("HEADER")
+  })
+
+  it("uses canonical action precedence without an adapter renderer", () => {
+    render(<PageHeader title="Current" action={<button>Legacy</button>} actions={<button>Canonical</button>} />)
+    expect(screen.getByRole("button", { name: "Canonical" })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Legacy" })).toBeNull()
+  })
+
+  it("keeps the SectionTitle description, action and className contract", () => {
+    const { container } = render(<SectionTitle title="Limits" description="Settings" action={<button>Manage</button>} className="custom-section" />)
+    expect(screen.getByRole("heading", { level: 2, name: "Limits" })).toBeTruthy()
+    expect(screen.getByText("Settings")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Manage" })).toBeTruthy()
+    expect(container.firstElementChild).toHaveClass("custom-section")
+  })
+})

@@ -4,18 +4,12 @@ import { join } from "node:path"
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g
 const URL_IMPORT = /@import\s+url\s*\([^)]*\)\s*;?/i
 
-/**
- * A token-backed arbitrary utility: `text-[var(--text-dim)]`,
- * `bg-[var(--brand-glow)]`, `h-[var(--avatar-size)]`, `text-[color:var(--x)]`.
- *
- * Deliberately only the SIMPLE shape. A utility carrying a fallback
- * (`text-[var(--brand-cool,hsl(var(--primary)))]`) still emits; it is just not
- * required, because matching its escaped form means re-implementing Tailwind's
- * normalisation and a brittle check that fails on a formatting change is worse
- * than no check.
+/** Token-backed utilities, including Heading's length hints and fallbacks.
+ * Read class spelling from the installed source; do not safelist the checker.
+ * The closing bracket bounds the token, including nested fallback functions.
  */
 const TOKEN_UTILITY =
-  /(?:^|["'\s`])((?:[a-z]+-)*[a-z]+-\[(?:color:)?var\((--[\w-]+)\)\])/g
+  /(?:^|["'\s`])((?:[a-z]+-)*[a-z]+-\[(?:(?:color|length):)?var\(--[\w-]+(?:,[^\]\s]+)?\)\])/g
 
 /**
  * The brand text ramp, which the bundle must carry whatever `@tangle-network/ui`
@@ -43,8 +37,9 @@ export const REQUIRED_TEXT_RAMP = [
  * takes no options to forget to pass.
  */
 export function assertTextRamp(css) {
+  const stripped = css.replace(BLOCK_COMMENT, "")
   const missing = REQUIRED_TEXT_RAMP.filter(
-    (utility) => !css.includes(escapeUtility(utility)),
+    (utility) => !stripped.includes(escapeUtility(utility)),
   )
   if (missing.length > 0) {
     throw new Error(
@@ -109,35 +104,36 @@ export function collectForwardedTokenUtilities(uiSrcDir) {
   return utilities
 }
 
-const parseVersion = (v) => v.replace(/^[^\d]*/, "").split(".").map(Number)
+/** Only the stable caret ranges this package declares are accepted.
+ * Fail closed on a changed range grammar instead of comparing NaN values.
+ */
+export function peerFloor(peerRange) {
+  const match = /^\^?(\d+\.\d+\.\d+)$/.exec(peerRange)
+  if (!match) throw new Error(`Unsupported peer floor: ${peerRange}`)
+  return match[1]
+}
 
 /**
- * The precompiled CSS only carries the utilities of the `@tangle-network/ui`
- * it was BUILT against, so the floor this package declares to consumers has to
- * be a version it actually scanned. That is the whole mechanism behind the
- * missing `text-[var(--text-dim)]` rule: sandbox-ui resolved ui 11.2.0 while
- * consumers installed 11.2.4, the peer range `^11.0.0` permitted both, and the
- * three primitives 11.2.4 restyled onto that token rendered at the inherited
- * body colour for anyone who does not run their own Tailwind scan over
- * `@tangle-network/ui` (physim, blueprint-agent).
- *
- * Building against something older than the declared floor makes the bundle a
- * promise the build did not keep, so it fails here rather than in a consumer.
- * The reverse — building against something NEWER — is safe: the extra rules are
- * dead bytes for a consumer on an older ui, never a missing one.
+ * By default retain the existing same-major/minimum-version check. The CSS
+ * build and packed consumer request exact=true: newer releases may REMOVE or
+ * replace utility spellings, so scanning a newer peer does not prove its floor.
  */
-export function assertBuiltAgainstPeerFloor(resolvedVersion, peerRange) {
-  const [rMajor, rMinor, rPatch] = parseVersion(resolvedVersion)
-  const [fMajor, fMinor, fPatch] = parseVersion(peerRange)
-  const older =
-    rMajor < fMajor ||
-    (rMajor === fMajor &&
-      (rMinor < fMinor || (rMinor === fMinor && rPatch < fPatch)))
-  if (rMajor !== fMajor || older) {
+export function assertBuiltAgainstPeerFloor(resolvedVersion, peerRange, options = {}) {
+  const packageName = options.packageName ?? "@tangle-network/ui"
+  const floor = peerFloor(peerRange)
+  if (!/^\d+\.\d+\.\d+$/.test(resolvedVersion)) {
+    throw new Error(`Invalid resolved version for ${packageName}: ${resolvedVersion}`)
+  }
+  const [rMajor, rMinor, rPatch] = resolvedVersion.split(".").map(Number)
+  const [fMajor, fMinor, fPatch] = floor.split(".").map(Number)
+  const older = rMajor < fMajor ||
+    (rMajor === fMajor && (rMinor < fMinor || (rMinor === fMinor && rPatch < fPatch)))
+  if (rMajor !== fMajor || older || (options.exact && resolvedVersion !== floor)) {
     throw new Error(
-      `dist/globals.css was built against @tangle-network/ui ${resolvedVersion}, but package.json declares the peer floor "${peerRange}". ` +
-        `The precompiled bundle only emits utilities from the source it scanned, so a consumer on the floor version would be missing rules. ` +
-        `Install a ui that satisfies the floor and rebuild, or lower the floor to what you build against.`,
+      `dist/globals.css was built against ${packageName} ${resolvedVersion}, ` +
+      `but package.json declares the peer floor "${peerRange}". ` +
+      (options.exact ? `Install exactly ${floor} to prove the declared floor. ` : "Install a peer that satisfies the floor. ") +
+      "Rebuild and rerun the packed consumer; do not infer floor coverage from a newer source tree.",
     )
   }
 }
@@ -185,7 +181,7 @@ export function validateBuiltCss(css, options = {}) {
 
   if (options.requiredUtilities) {
     const missing = [...options.requiredUtilities].filter(
-      ([utility]) => !css.includes(escapeUtility(utility)),
+      ([utility]) => !stripped.includes(escapeUtility(utility)),
     )
     if (missing.length > 0) {
       const detail = missing

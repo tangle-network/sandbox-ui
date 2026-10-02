@@ -259,11 +259,11 @@ describe("ChangesPane commit", () => {
     expect(box).toHaveValue("feat: retry")
   })
 
-  it("spins the in-flight action and disables the other", () => {
+  it("marks the in-flight action busy and disables the other", () => {
     renderPane({ onCommit: async () => {}, onPush: async () => {}, ahead: 1, busy: "commit" })
     const commit = screen.getByRole("button", { name: /commit/i })
     expect(commit).toBeDisabled()
-    expect(within(commit).getByTitle("Loading spinner")).toBeInTheDocument()
+    expect(commit).toHaveAttribute("aria-busy", "true")
     expect(screen.getByRole("button", { name: /push/i })).toBeDisabled()
   })
 

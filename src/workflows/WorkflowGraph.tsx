@@ -245,22 +245,29 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const easeInOutCubic = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
-/** Tracks the app's dark/light class so React Flow's chrome (edges, controls,
- *  background) themes with the rest of the app. */
+/** React Flow adds its own .light/.dark class. Read the host's resolved scheme
+ * before it mounts so that class cannot create a light token island on a dark
+ * Sandbox theme selected through data-sandbox-theme or data-theme. */
+function currentColorMode(): ColorMode {
+  if (typeof document === "undefined" || typeof window === "undefined") return "light";
+  const root = document.documentElement;
+  const scheme = window.getComputedStyle(root).colorScheme;
+  if (scheme.startsWith("dark")) return "dark";
+  if (scheme.startsWith("light")) return "light";
+  return root.classList.contains("dark") ? "dark" : "light";
+}
+
 function useColorMode(): ColorMode {
-  const [mode, setMode] = useState<ColorMode>(() =>
-    typeof document !== "undefined" &&
-    document.documentElement.classList.contains("dark")
-      ? "dark"
-      : "light",
-  );
+  const [mode, setMode] = useState<ColorMode>(currentColorMode);
   useEffect(() => {
     const el = document.documentElement;
-    const update = () =>
-      setMode(el.classList.contains("dark") ? "dark" : "light");
+    const update = () => setMode(currentColorMode());
     update();
     const observer = new MutationObserver(update);
-    observer.observe(el, { attributes: true, attributeFilter: ["class"] });
+    observer.observe(el, {
+      attributes: true,
+      attributeFilter: ["class", "data-theme", "data-sandbox-theme", "style"],
+    });
     return () => observer.disconnect();
   }, []);
   return mode;

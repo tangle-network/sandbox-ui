@@ -62,6 +62,7 @@ for (const story of stories) {
         }
         if (story.id.startsWith('workflows-')) {
           await expect(page.locator('.react-flow__node').first()).toBeVisible()
+          await expect(page.locator('.react-flow').first()).toHaveClass(new RegExp(`\\b${theme}\\b`))
           await expect(page.getByText('Loading graph…')).toHaveCount(0)
           if (story.id === 'workflows-framing-candidates--narrow-host') {
             await expect(page.locator('.react-flow__node[data-id="trigger"]')).toHaveCount(2)

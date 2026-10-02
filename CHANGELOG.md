@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.116.9
+
+- Fit sandbox lists to narrow screens while keeping full names and row actions accessible.
+- Keep missing CPU/RAM readings unknown, preserve measured zero, and report accurate paginated ranges.
+
 ## 0.116.8
 
 - Cancel integration requests and OAuth navigation when their hook lifetime ends.

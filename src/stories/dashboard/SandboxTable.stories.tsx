@@ -11,7 +11,7 @@ const sandboxes: SandboxCardData[] = [
 
 function LiveTable() {
   const [rows, setRows] = useState(sandboxes)
-  return <div className="w-full max-w-[1100px] overflow-x-auto"><SandboxTable sandboxes={rows} onResume={(id) => setRows((current) => current.map((row) => row.id === id ? { ...row, status: 'running' } : row))} onStop={(id) => setRows((current) => current.map((row) => row.id === id ? { ...row, status: 'stopped' } : row))} onDelete={(id) => setRows((current) => current.filter((row) => row.id !== id))} onOpenIDE={() => {}} onOpenTerminal={() => {}} /></div>
+  return <div className="w-full max-w-[1100px]"><SandboxTable sandboxes={rows} onResume={(id) => setRows((current) => current.map((row) => row.id === id ? { ...row, status: 'running' } : row))} onStop={(id) => setRows((current) => current.map((row) => row.id === id ? { ...row, status: 'stopped' } : row))} onDelete={(id) => setRows((current) => current.filter((row) => row.id !== id))} onOpenIDE={() => {}} onOpenTerminal={() => {}} /></div>
 }
 
 const meta = {

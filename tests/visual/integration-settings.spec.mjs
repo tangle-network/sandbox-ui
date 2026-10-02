@@ -42,6 +42,18 @@ for (const theme of ['light', 'dark']) {
       await expect(page.getByTestId('settings-receipt')).toHaveText('decision:team/two:messages.send:deny')
       await page.getByRole('button', { name: 'Test connection' }).click()
       await expect(page.getByTestId('settings-receipt')).toHaveText('test:team/two')
+      const disconnectContrast = await page.getByRole('button', { name: 'Disconnect' }).evaluate((button) => {
+        const style = getComputedStyle(button)
+        const channels = (color) => color.match(/[\d.]+/g).slice(0, 3).map((value) => {
+          const channel = Number(value) / 255
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+        })
+        const luminance = (color) => channels(color).reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0)
+        const foreground = luminance(style.color)
+        const background = luminance(style.backgroundColor)
+        return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
+      })
+      expect(disconnectContrast).toBeGreaterThanOrEqual(4.5)
       await testInfo.attach(`detail-${theme}-${viewport.width}`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
     })
     test(`settings dialog keyboard ${theme} ${viewport.width}`, async ({ page, baseURL }) => {

@@ -3,5 +3,6 @@
   { "component": "ChangesPane", "source": "src/workbench/changes-pane.tsx", "storyFile": "src/stories/workbench/changes-pane.stories.tsx", "task": "Review changed files" },
   { "component": "DiffView", "source": "src/workbench/diff-view.tsx", "storyFile": "src/stories/workbench/DiffView.stories.tsx", "task": "Read complete changed lines" },
   { "component": "PreviewView", "source": "src/workbench/preview-view.tsx", "storyFile": "src/stories/workbench/PreviewView.stories.tsx", "task": "Inspect application preview state" },
-  { "component": "TerminalView", "source": "src/terminal/terminal-view.tsx", "storyFile": "src/stories/terminal/TerminalView.stories.tsx", "task": "Read command output and connection state" }
+  { "component": "TerminalView", "source": "src/terminal/terminal-view.tsx", "storyFile": "src/stories/terminal/TerminalView.stories.tsx", "task": "Read command output and connection state" },
+  { "component": "AgentMessagingConnection", "source": "src/connections/agent-messaging-connection.tsx", "storyFile": "src/stories/connections/AgentMessagingConnection.stories.tsx", "task": "Connect a private agent to the shared member messaging route" }
 ]

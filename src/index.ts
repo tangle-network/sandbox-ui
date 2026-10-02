@@ -179,6 +179,9 @@ export * from "./dashboard";
 // --- Auth ---
 export * from "./auth";
 
+// --- Connections ---
+export * from "./connections";
+
 // --- Markdown ---
 export { Markdown, type MarkdownProps } from "@tangle-network/ui/markdown";
 

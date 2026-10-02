@@ -43,6 +43,11 @@ try {
   writeFileSync(join(consumer, "package.json"), JSON.stringify({
     name: "sandbox-presentation-real-consumer", private: true, type: "module",
     dependencies: {
+      // Exercise root imports with their real optional peers, as test:package
+      // does. Optional-peer omission stays covered by that existing suite.
+      ...Object.fromEntries(Object.entries(packed.peerDependenciesMeta ?? {})
+        .filter(([, metadata]) => metadata.optional === true)
+        .map(([name]) => [name, floor(manifest.devDependencies[name])])),
       "@tangle-network/sandbox-ui": `file:${tarball}`,
       "@tangle-network/ui": uiFloor, "@tangle-network/brand": brandFloor,
       "@tangle-network/agent-interface": manifest.devDependencies["@tangle-network/agent-interface"],

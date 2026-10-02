@@ -70,6 +70,26 @@ describe("ProviderIcon", () => {
     );
   });
 
+  it("uses a dark-theme-safe GitHub mark only when it derives the logo", () => {
+    const { container, rerender } = render(
+      <ProviderIcon id="GitHub-App" size={16} />,
+    );
+    expect(container.querySelector("img")).toHaveClass(
+      "[[data-sandbox-theme='']_&]:invert",
+    );
+
+    rerender(
+      <ProviderIcon
+        id="github"
+        iconUrl="https://example.test/brand-github.png"
+        size={16}
+      />,
+    );
+    expect(container.querySelector("img")).not.toHaveClass(
+      "[[data-sandbox-theme='']_&]:invert",
+    );
+  });
+
   it("falls back to a monogram tile when no logo can resolve", () => {
     const { container } = render(
       <ProviderIcon id="" displayName="Zapier" size={16} />,

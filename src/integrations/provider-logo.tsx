@@ -349,6 +349,11 @@ export function ProviderIcon({
   const label = (displayName ?? id).trim();
   const initial = label.charAt(0).toUpperCase() || "?";
   const src = candidates[index];
+  // The catalog's default GitHub mark is monochrome black. Invert only that
+  // derived mark for dark themes; caller-provided brand artwork keeps its
+  // original colors.
+  const usesDefaultGithubMark =
+    !iconUrl && normalizeProviderId(id) === "github";
 
   if (!src) {
     return (
@@ -373,7 +378,7 @@ export function ProviderIcon({
       width={size}
       height={size}
       loading="lazy"
-      className={`shrink-0 object-contain ${className ?? ""}`}
+      className={`shrink-0 object-contain ${usesDefaultGithubMark ? "dark:invert [[data-sandbox-theme='']_&]:invert" : ""} ${className ?? ""}`}
       style={{ width: size, height: size }}
       onError={() => setIndex((i) => i + 1)}
     />

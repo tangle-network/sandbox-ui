@@ -5,6 +5,7 @@
 - Add `AgentMessagingConnection` through the package root and `/connections` subpath.
   Hosts provide authenticated private agent enrollment, safe target labels, and application/member shared route state.
   The component shows a message destination and action only when both the target and route are confirmed.
+  Its status copy uses plain messaging terms while keeping the host route state contract unchanged.
 - Keep the full desktop Sandbox table status label inside its column with space before the Sandbox name.
 - Keep destructive action text legible in both themes.
   Give desktop Sandbox table Scope and Actions cells room for long names and multiple controls.

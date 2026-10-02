@@ -69,12 +69,12 @@ export interface SandboxTableProps {
 }
 
 const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: string }> = {
-  running: { dot: "bg-[var(--code-success)] animate-pulse", text: "text-[var(--code-success)]", bar: "bg-[var(--code-success)]" },
+  running: { dot: "bg-[var(--code-success)] animate-pulse", text: "text-[var(--surface-success-text)]", bar: "bg-[var(--code-success)]" },
   hibernating: { dot: "bg-muted-foreground", text: "text-muted-foreground", bar: "bg-muted-foreground" },
   provisioning: { dot: "bg-primary animate-pulse", text: "text-[var(--accent-text)]", bar: "bg-primary" },
   creating: { dot: "bg-primary animate-pulse", text: "text-[var(--accent-text)]", bar: "bg-primary" },
   stopped: { dot: "bg-muted-foreground", text: "text-foreground", bar: "bg-muted-foreground" },
-  failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--code-error)]", bar: "bg-[var(--code-error)]" },
+  failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--surface-danger-text)]", bar: "bg-[var(--code-error)]" },
   archived: { dot: "bg-border", text: "text-muted-foreground", bar: "bg-border" },
 }
 

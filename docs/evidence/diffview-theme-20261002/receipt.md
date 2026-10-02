@@ -18,4 +18,4 @@ The dark diff remained `rgb(36, 41, 46)` with `color-scheme: dark`.
 All eight captures had zero page-level horizontal overflow and zero page errors.
 [Browser readings](browser-proof.json) retain the URL, size, theme, and computed colors for each capture.
 
-Checks: targeted Vitest, typecheck, package build, packed-consumer smoke, Storybook build, and four built-Storybook Playwright theme checks.
+Checks: targeted Vitest, typecheck, package build, packed-consumer smoke, Storybook build, four renderer theme checks, and twelve catalog snapshot checks on the built Storybook.

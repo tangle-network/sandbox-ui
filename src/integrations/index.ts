@@ -1,9 +1,12 @@
+export { IntegrationsPanel } from "./integrations-panel";
+export { IntegrationsCatalog, catalogRowActive } from "./integrations-catalog";
+export { IntegrationConnectionDetail } from "./connection-detail";
 export {
-  IntegrationsPanel,
-  type IntegrationsPanelProps,
-  type IntegrationConnectionAction,
-  type IntegrationSort,
-} from "./integrations-panel";
+  ApiKeyConnectDialog,
+  ApiKeyConnectDialog as ApiKeyConnectModal,
+  OAuthConnectionParameterDialog,
+  OAuthConnectionParameterDialog as OAuthConnectionParameterModal,
+} from "./connection-dialogs";
 export {
   useIntegrations,
   type ConnectInput,
@@ -15,9 +18,4 @@ export {
   providerLogoCandidates,
   type ProviderIconProps,
 } from "./provider-logo";
-export type {
-  IntegrationConnection,
-  IntegrationConnector,
-  IntegrationHealth,
-  IntegrationProvider,
-} from "./types";
+export type * from "./types";

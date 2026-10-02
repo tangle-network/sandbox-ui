@@ -8,8 +8,8 @@ import {
 
 const routeReady: SharedMessagingRouteViewState = {
   status: "ready",
-  channelLabel: "app messages",
-  destinationLabel: "Shared conversation for this member",
+  channelLabel: "Messages",
+  destinationLabel: "Member conversation",
 };
 
 const enrolled: AgentEnrollmentViewState = {

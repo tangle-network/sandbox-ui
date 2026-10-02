@@ -1,0 +1,28 @@
+[
+  {
+    "label": "desktop",
+    "width": 1440,
+    "centers": [
+      341,
+      341,
+      341
+    ],
+    "spread": 0,
+    "overflow": false,
+    "rowHeight": 75,
+    "callbackProof": true
+  },
+  {
+    "label": "mobile",
+    "width": 390,
+    "centers": [
+      396,
+      396,
+      396
+    ],
+    "spread": 0,
+    "overflow": false,
+    "rowHeight": 123,
+    "callbackProof": true
+  }
+]

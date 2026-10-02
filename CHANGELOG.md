@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.117.3
+
+- Keep integration permission choices inline with their action and reset control on desktop while retaining the themed Select and its existing callbacks.
+
 ## 0.117.2
 
 - Use the shared styled Select for integration account, category, and permission choices while retaining controlled selection and keyboard access.

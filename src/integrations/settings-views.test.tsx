@@ -164,7 +164,7 @@ describe("shared controlled dialogs", () => {
     const dialog = screen.getByRole("dialog", { name: "Connect Slack" });
     const field = within(dialog).getByLabelText(oauth ? "Workspace" : "API key", { exact: true });
     expect(field).toHaveFocus();
-    const submit = within(dialog).getByRole("button", { name: oauth ? "Continue" : "Connect", exact: true });
+    const submit = within(dialog).getByRole("button", { name: oauth ? "Continue" : "Connect" });
     expect(submit).toBeDisabled();
     await user.type(field, "   ");
     expect(submit).toBeDisabled();

@@ -1,12 +1,6 @@
 name: Focus dependency preflight
 
 on:
-  pull_request:
-    paths:
-      - scripts/verify-focus-dependencies.mjs
-      - scripts/verify-focus-dependencies.test.mjs
-      - scripts/publish-package.mjs
-      - .github/workflows/focus-dependency-preflight.yml
   workflow_dispatch:
     inputs:
       brand-version:

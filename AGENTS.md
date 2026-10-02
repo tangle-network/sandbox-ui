@@ -30,7 +30,7 @@ Keep generic event adaptation in that owner instead of duplicating it here.
 
 ## Checks and releases
 
-Read [package scripts](package.json) and [CI](.github/workflows/ci.yml) for current checks.
+Read [package scripts](package.json) for local checks.
 For code or export changes, run affected tests plus typecheck, build, packed-consumer checks, and the relevant UI or Storybook proof.
 
 Read [the release workflow](.github/workflows/release.yml) before releasing.

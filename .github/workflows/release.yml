@@ -2,9 +2,6 @@ name: Auto Release & Publish
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: [package.json]
 
 permissions:
   contents: write
@@ -20,6 +17,11 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Guard the 0.117 maintenance release
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/maintenance/0.117'
+          test "$(jq -r '.version' package.json)" = '0.117.2'
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -61,14 +63,16 @@ jobs:
         run: pnpm test:package
 
       - name: Install trusted-publishing npm
-        run: npm install --global npm@12.1.0
+        # OIDC publishing with a non-latest tag requires npm 12.2.0 or newer.
+        run: npm install --global npm@12.2.0
 
+      # This branch publishes the App-compatible line without moving latest off 0.118.x.
       - name: Publish and verify npm artifact
         run: >-
           node scripts/publish-package.mjs
           "${{ steps.package.outputs.path }}"
           https://registry.npmjs.org
-          latest
+          compat-0-117
           --provenance
 
       - name: Publish and verify GitHub Packages artifact
@@ -78,7 +82,7 @@ jobs:
           node scripts/publish-package.mjs
           "${{ steps.package.outputs.path }}"
           https://npm.pkg.github.com
-          latest
+          compat-0-117
 
       - name: Create GitHub Release
         env:

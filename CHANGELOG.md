@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.117.2
+
+- Use the shared styled Select for integration account, category, and permission choices while retaining controlled selection and keyboard access.
+- Disambiguate accounts with the same display name without exposing long IDs for unique names.
+
 ## 0.117.1
 
 - Declare `tailwindcss-animate` as a runtime dependency so the exported Tailwind preset works in production installs.

@@ -1,0 +1,94 @@
+[
+  {
+    "label": "light-desktop",
+    "width": 1440,
+    "height": 900,
+    "styleProof": {
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(25, 28, 36, 0.1) 0px 8px 30px 0px",
+      "background": "rgb(255, 255, 255)",
+      "selectedBackground": "rgba(76, 63, 198, 0.13)"
+    },
+    "options": [
+      "Select an account",
+      "@tangle-operator",
+      "@team · …e_123456",
+      "@team · …o_123456"
+    ],
+    "selected": "@team · …e_123456",
+    "stored": "hubconn_inkbox_team_one_123456",
+    "overflow": false,
+    "errors": [],
+    "keyboard": "Space,ArrowDown,Enter",
+    "reopened": true,
+    "proofScope": "actual shared component; preview-only localStorage, not GTM production storage"
+  },
+  {
+    "label": "dark-desktop",
+    "width": 1440,
+    "height": 900,
+    "styleProof": {
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.45) 0px 8px 30px 0px",
+      "background": "rgb(48, 48, 48)",
+      "selectedBackground": "rgba(76, 63, 197, 0.3)"
+    },
+    "options": [
+      "Select an account",
+      "@tangle-operator",
+      "@team · …e_123456",
+      "@team · …o_123456"
+    ],
+    "selected": "@team · …e_123456",
+    "stored": "hubconn_inkbox_team_one_123456",
+    "overflow": false,
+    "errors": [],
+    "keyboard": "Space,ArrowDown,Enter",
+    "reopened": true,
+    "proofScope": "actual shared component; preview-only localStorage, not GTM production storage"
+  },
+  {
+    "label": "light-mobile",
+    "width": 390,
+    "height": 844,
+    "styleProof": {
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(25, 28, 36, 0.1) 0px 8px 30px 0px",
+      "background": "rgb(255, 255, 255)",
+      "selectedBackground": "rgba(76, 63, 198, 0.13)"
+    },
+    "options": [
+      "Select an account",
+      "@tangle-operator",
+      "@team · …e_123456",
+      "@team · …o_123456"
+    ],
+    "selected": "@team · …e_123456",
+    "stored": "hubconn_inkbox_team_one_123456",
+    "overflow": false,
+    "errors": [],
+    "keyboard": "Space,ArrowDown,Enter",
+    "reopened": true,
+    "proofScope": "actual shared component; preview-only localStorage, not GTM production storage"
+  },
+  {
+    "label": "dark-mobile",
+    "width": 390,
+    "height": 844,
+    "styleProof": {
+      "shadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.45) 0px 8px 30px 0px",
+      "background": "rgb(48, 48, 48)",
+      "selectedBackground": "rgba(76, 63, 197, 0.3)"
+    },
+    "options": [
+      "Select an account",
+      "@tangle-operator",
+      "@team · …e_123456",
+      "@team · …o_123456"
+    ],
+    "selected": "@team · …e_123456",
+    "stored": "hubconn_inkbox_team_one_123456",
+    "overflow": false,
+    "errors": [],
+    "keyboard": "Space,ArrowDown,Enter",
+    "reopened": true,
+    "proofScope": "actual shared component; preview-only localStorage, not GTM production storage"
+  }
+]

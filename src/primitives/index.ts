@@ -19,6 +19,7 @@ export {
   CardFooter,
   CardHeader,
   CardTitle,
+  type CardTitleProps,
   CodeBlock,
   type CodeBlockProps,
   CopyButton,
@@ -53,6 +54,8 @@ export {
   type EmptyStateProps,
   FilterField,
   type FilterFieldProps,
+  Heading,
+  type HeadingVariant,
   InlineCode,
   type InlineCodeProps,
   Input,
@@ -62,6 +65,10 @@ export {
   type MetricProps,
   MetricStrip,
   type MetricStripProps,
+  PageHeader,
+  type PageHeaderProps,
+  PageShell,
+  type PageShellProps,
   Progress,
   SegmentedControl,
   type SegmentedControlOption,
@@ -88,6 +95,7 @@ export {
   type StatusTone,
   Switch,
   Table,
+  type TableProps,
   TableBody,
   TableCaption,
   TableCell,
@@ -121,13 +129,4 @@ export {
 } from "@tangle-network/ui/primitives";
 
 export { Logo, TangleKnot, type LogoProps } from "./logo";
-export {
-  Heading,
-  type HeadingProps,
-  type HeadingVariant,
-  PageHeader,
-  type PageHeaderProps,
-  SectionTitle,
-  type SectionTitleProps,
-} from "./heading";
-export { PageShell, type PageShellProps } from "./page-shell";
+export { type HeadingProps, SectionTitle, type SectionTitleProps } from "./heading";

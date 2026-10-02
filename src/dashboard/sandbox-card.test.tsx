@@ -57,6 +57,46 @@ describe("SandboxCard", () => {
     expect(screen.getByText("Test Box")).toBeInTheDocument()
   })
 
+  it("shows missing live metrics as unknown and keeps measured zero", () => {
+    const { unmount } = render(<SandboxCard sandbox={makeSandbox()} />)
+    expect(screen.getAllByText("Unknown")).toHaveLength(2)
+    expect(screen.queryByText("0%")).not.toBeInTheDocument()
+    unmount()
+
+    render(<SandboxCard sandbox={makeSandbox({ cpuPercent: 0, ramUsed: 0, ramTotal: 8 })} />)
+    expect(screen.getAllByText("0%")).toHaveLength(1)
+    expect(screen.getByText("0 / 8 GB")).toBeInTheDocument()
+  })
+
+  it("retains the full name in the accessible heading when visually truncated", () => {
+    const name = "workspace-" + "a-very-long-project-name-".repeat(8)
+    render(<SandboxCard sandbox={makeSandbox({ name })} />)
+
+    const heading = screen.getByRole("heading", { level: 3, name })
+    expect(heading).toHaveAttribute("title", name)
+    expect(heading).toHaveClass("truncate")
+  })
+
+  it("bounds a long team name while retaining its full accessible title", () => {
+    const name = "workspace-" + "a-very-long-project-name-".repeat(8)
+    const teamName = "platform-engineering-".repeat(12)
+    render(
+      <SandboxCard
+        sandbox={makeSandbox({
+          name,
+          team: { id: "t1", name: teamName, role: "admin" },
+        })}
+      />,
+    )
+
+    const heading = screen.getByRole("heading", { level: 3, name })
+    expect(heading).toHaveAttribute("title", name)
+    const teamLabel = screen.getByText(teamName)
+    expect(teamLabel).toHaveClass("min-w-0", "truncate")
+    expect(teamLabel.parentElement).toHaveClass("min-w-0", "max-w-40")
+    expect(teamLabel.parentElement).toHaveAttribute("title", `Shared with ${teamName} \u00b7 admin`)
+  })
+
   it("renders team badge when team is present", () => {
     const sandbox = makeSandbox({
       team: { id: "t1", name: "Alpha Team", role: "member" },

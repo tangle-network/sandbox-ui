@@ -3,6 +3,7 @@
 import {
   Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, EmptyState,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@tangle-network/ui/primitives";
 import { cn, focusFieldWithin, focusRing } from "@tangle-network/ui/utils";
 import { Check, ExternalLink, MoreVertical, Search, Unplug } from "lucide-react";
@@ -22,6 +23,9 @@ export function catalogRowActive(row: IntegrationsCatalogRow): boolean {
   return row.kind === "app" ? row.installedCount > 0 : row.connections.length > 0;
 }
 
+export const integrationSelectContentClassName = "shadow-[var(--shadow-dropdown)]";
+export const integrationSelectItemClassName = "focus:bg-[var(--accent-surface-strong)] data-[state=checked]:bg-[var(--accent-surface-strong)] data-[state=checked]:text-foreground";
+
 /** A controlled selector shared by the catalog and detail; never picks an account. */
 export function ConnectionSelector({ connections, value, onChange, label }: {
   connections: readonly IntegrationDisplayConnection[];
@@ -29,21 +33,35 @@ export function ConnectionSelector({ connections, value, onChange, label }: {
   onChange: (id: string | null) => void;
   label: string;
 }) {
-  const selected = connections.some((connection) => connection.id === value) ? value : "";
+  const selectedIndex = connections.findIndex((connection) => connection.id === value);
+  const accountLabel = (connection: IntegrationDisplayConnection) => {
+    const display = connection.accountDisplay?.trim();
+    if (!display) return connection.id;
+    const duplicates = connections.filter((item) => item.accountDisplay?.trim() === display);
+    if (duplicates.length < 2) return display;
+    let length = Math.min(6, connection.id.length);
+    while (length < connection.id.length && duplicates.some((item) => item.id !== connection.id && item.id.endsWith(connection.id.slice(-length)))) length++;
+    return `${display} · ${length < connection.id.length ? "…" : ""}${connection.id.slice(-length)}`;
+  };
   return (
-    <select
-      aria-label={label}
-      value={selected ?? ""}
-      onChange={(event) => onChange(event.target.value || null)}
-      className={cn("h-8 w-full min-w-0 truncate rounded-md border border-border bg-background px-2 text-sm text-foreground", focusRing)}
-    >
-      <option value="">Select an account</option>
-      {connections.map((connection) => (
-        <option key={connection.id} value={connection.id}>
-          {connection.accountDisplay ? `${connection.accountDisplay} · ${connection.id}` : connection.id}
-        </option>
-      ))}
-    </select>
+    <Select value={selectedIndex < 0 ? "" : String(selectedIndex)}
+      onValueChange={(next) => {
+        if (next === "none") onChange(null);
+        else {
+          const connection = connections.find((_, index) => String(index) === next);
+          if (connection) onChange(connection.id);
+        }
+      }}>
+      <SelectTrigger aria-label={label} className={cn("h-10 w-full min-w-0 max-w-md data-[state=open]:border-primary data-[state=open]:bg-[var(--accent-surface-strong)]", selectedIndex >= 0 && "border-primary/30 bg-[var(--accent-surface-soft)]")}>
+        <SelectValue placeholder="Select an account" />
+      </SelectTrigger>
+      <SelectContent className={integrationSelectContentClassName}>
+        <SelectItem value="none" className={integrationSelectItemClassName}>Select an account</SelectItem>
+        {connections.map((connection, index) => (
+          <SelectItem key={connection.id} value={String(index)} className={integrationSelectItemClassName}>{accountLabel(connection)}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -140,12 +158,17 @@ export function IntegrationsCatalog({
             data-testid="integration-search" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
         </div>
         {onCategoryFilterChange ? (
-          <select aria-label="Filter by category" value={categoryFilter} onChange={(event) => onCategoryFilterChange(event.target.value)}
-            className={cn("h-10 min-w-0 rounded-lg border bg-card px-3 text-sm", focusRing)}>
-            <option value="">All categories</option>
-            {categoryFilter && !categories.includes(categoryFilter) ? <option value={categoryFilter}>{categoryFilter}</option> : null}
-            {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-          </select>
+          <Select value={categoryFilter ? `category:${categoryFilter}` : "all"}
+            onValueChange={(value) => onCategoryFilterChange(value === "all" ? "" : value.slice("category:".length))}>
+            <SelectTrigger aria-label="Filter by category" className="h-10 w-full sm:w-auto sm:min-w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className={integrationSelectContentClassName}>
+              <SelectItem value="all" className={integrationSelectItemClassName}>All categories</SelectItem>
+              {categoryFilter && !categories.includes(categoryFilter) ? <SelectItem value={`category:${categoryFilter}`} className={integrationSelectItemClassName}>{categoryFilter}</SelectItem> : null}
+              {categories.map((category) => <SelectItem key={category} value={`category:${category}`} className={integrationSelectItemClassName}>{category}</SelectItem>)}
+            </SelectContent>
+          </Select>
         ) : null}
         {sort && onSortChange ? (
           <div role="group" aria-label="Sort integrations" className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card p-1">

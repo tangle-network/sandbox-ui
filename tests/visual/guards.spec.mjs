@@ -1,5 +1,6 @@
 import { test, expect } from 'playwright/test'
 import { assertStoryHealthy, openStory } from './story-ready.mjs'
+import { AA_NORMAL, contrast } from '../../scripts/text-dim-surfaces.mjs'
 
 const viewport = { width: 390, height: 844 }
 
@@ -87,6 +88,40 @@ test('keeps the desktop provisioning status clear of the sandbox name', async ({
   expect(labelBounds.x + labelBounds.width + 12).toBeLessThanOrEqual(nameBounds.x)
   await assertStoryHealthy(page)
 })
+
+for (const theme of ['light', 'dark']) {
+  test(`keeps sandbox table accent text readable in ${theme} mode`, async ({ page, baseURL }) => {
+    await openStory(page, 'dashboard-sandboxtable--long-names-with-scope', theme, { width: 1440, height: 900 }, baseURL)
+    const rows = page.getByRole('region', { name: 'Sandbox list' }).locator('tbody tr')
+    const text = {
+      provisioning: rows.nth(2).locator('td').first().locator('span').last(),
+      percentage: rows.first().getByText('34%', { exact: true }).first(),
+      allocation: rows.nth(2).locator('td').nth(4).locator('span[title]').first(),
+      resume: rows.nth(1).getByRole('button', { name: 'Resume' }),
+    }
+
+    const rgb = (value) => {
+      const match = value.match(/^rgb\((\d+), (\d+), (\d+)\)$/)
+      expect(match, `Expected an opaque browser color, received ${value}`).not.toBeNull()
+      return match.slice(1).map(Number)
+    }
+    const readable = async (label, locator) => {
+      const colors = await locator.evaluate((element) => {
+        let plane = element
+        while (plane && !getComputedStyle(plane).backgroundColor.startsWith('rgb(')) plane = plane.parentElement
+        return { foreground: getComputedStyle(element).color, background: plane && getComputedStyle(plane).backgroundColor }
+      })
+      expect(contrast(rgb(colors.foreground), rgb(colors.background)), `${theme} ${label} on its rendered surface`).toBeGreaterThanOrEqual(AA_NORMAL)
+    }
+
+    for (const [label, locator] of Object.entries(text)) await readable(label, locator)
+    const name = rows.first().locator('td').nth(1).locator('span[title]').first()
+    await name.hover()
+    await page.waitForTimeout(200)
+    await readable('hovered name', name)
+    await assertStoryHealthy(page)
+  })
+}
 
 test('rejects runtime errors recorded after a screenshot', async ({ page, baseURL }) => {
   await openStory(page, 'dashboard-sandboxcard--running', 'dark', viewport, baseURL)

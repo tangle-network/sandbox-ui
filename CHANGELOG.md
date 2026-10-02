@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.117.1
+
+- Declare `tailwindcss-animate` as a runtime dependency so the exported Tailwind preset works in production installs.
+
 ## 0.117.0
 
 - Add `AgentMessagingConnection` through the package root and `/connections` subpath.

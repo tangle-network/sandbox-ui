@@ -4,7 +4,7 @@
 
 - Forward `Heading`, `PageHeader`, and `PageShell` from the canonical UI primitives through the root and `/primitives` exports. Keep the required legacy `HeadingProps` type and the `SectionTitle` h2 adapter.
 - Use Brand's theme registrations for semantic colors and surfaces while retaining Sandbox motion, focus, and prose styles. Build and test the compiled CSS against the declared UI 11.13.0 and Brand 1.10.0 peer floors.
-- Keep WorkflowGraph's React Flow chrome in the host's resolved light or dark theme, including hosts that select themes with data attributes.
+- Keep WorkflowGraph's React Flow chrome in the graph wrapper's resolved light or dark theme, including nested Vault workspaces inside a dark app root.
 - Forward the UI Markdown heading-fragment helper through the Markdown and root exports.
 
 ## 0.117.0

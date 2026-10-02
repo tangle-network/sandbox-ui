@@ -18,6 +18,7 @@ The canonical PageHeader slightly tightens title and description spacing.
 The Brand 1.10 theme resolves semantic colors inside nested scopes.
 WorkflowGraph now gives React Flow the host's resolved mode, so its dark tiles remain dark and readable.
 The explicit vault workspace story resolves to a light surface as its theme requests.
+The independent source review found that a graph in a nested Vault workspace still inherited the dark root's React Flow mode. The graph now reads the wrapper's computed scheme, before React Flow's own class can affect it. A dark outer page with a light nested workspace passed [desktop](../../../tests/visual/stories.spec.mjs-snapshots/workflows-workflowgraph--nested-vault-dark-desktop-linux.png) and [phone](../../../tests/visual/stories.spec.mjs-snapshots/workflows-workflowgraph--nested-vault-dark-mobile-linux.png) visual proof. All four nested light/dark desktop/phone cases passed snapshot creation and a separate no-update replay; the focused workflow unit suite passed 371/371.
 
 The first full visual run passed 1,416 of 1,466 cases and exposed 50 changed snapshots, including the graph defect.
 After the graph correction, the full catalog passed 1,466 of 1,466 with 42 intentional snapshot updates.

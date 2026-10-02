@@ -65,9 +65,9 @@ would preserve the split ownership. A new universal app shell was rejected
 because it would change product composition instead of completing the bridge.
 
 Brand 1.10 resolves semantic colors at the element. React Flow adds an internal
-`.light` or `.dark` class, so WorkflowGraph reads the host's resolved color
+`.light` or `.dark` class, so WorkflowGraph reads its wrapper's inherited color
 scheme before giving React Flow its mode. This keeps graph tiles and controls in
-the host theme when it is selected with `data-theme` or `data-sandbox-theme`.
+the nearest host theme, including a nested Vault workspace inside a dark page.
 
 ## Dependency and publication boundary
 

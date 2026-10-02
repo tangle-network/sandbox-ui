@@ -366,6 +366,23 @@ export const Linear: Story = {
   ),
 };
 
+/** WorkspaceLayout can select Vault on its own wrapper under a dark app root. */
+export const NestedVault: Story = {
+  name: "Nested Vault workspace",
+  render: () => (
+    <div
+      data-testid="workflow-nested-vault"
+      data-sandbox-ui="true"
+      data-sandbox-theme="vault"
+      className="rounded-xl bg-background p-4 text-foreground"
+    >
+      <GraphPanel>
+        <WorkflowGraphLazy yaml={LINEAR} variant="full" className="h-full w-full" />
+      </GraphPanel>
+    </div>
+  ),
+};
+
 export const ProviderEvent: Story = {
   name: "Provider event (definition)",
   render: () => (

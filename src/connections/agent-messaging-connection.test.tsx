@@ -23,7 +23,7 @@ describe("AgentMessagingConnection", () => {
         onOpenMessages={vi.fn()}
       />,
     );
-    expect(screen.getByText("Shared route available. Connect your agent to use it.")).toBeInTheDocument();
+    expect(screen.getByText("Connect your agent to use messaging.")).toBeInTheDocument();
     expect(screen.queryByText("Member conversation")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open messages" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Connect agent" }));
@@ -50,7 +50,7 @@ describe("AgentMessagingConnection", () => {
     const { rerender } = render(
       <AgentMessagingConnection enrollment={enrolled} route={{ status: "pending" }} onEnroll={() => {}} onOpenMessages={onOpenMessages} />,
     );
-    expect(screen.getByText("The shared route is being prepared.")).toBeInTheDocument();
+    expect(screen.getByText("Setting up messaging…")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open messages" })).not.toBeInTheDocument();
     rerender(
       <AgentMessagingConnection enrollment={enrolled} route={{ status: "unavailable" }} onEnroll={() => {}} onOpenMessages={onOpenMessages} />,
@@ -60,7 +60,7 @@ describe("AgentMessagingConnection", () => {
     rerender(
       <AgentMessagingConnection enrollment={enrolled} route={{ status: "forbidden" }} onEnroll={() => {}} onOpenMessages={onOpenMessages} />,
     );
-    expect(screen.getByText("You cannot use this messaging route.")).toBeInTheDocument();
+    expect(screen.getByText("You cannot use messaging in this app.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open messages" })).not.toBeInTheDocument();
   });
 
@@ -72,7 +72,7 @@ describe("AgentMessagingConnection", () => {
     expect(screen.queryByRole("button", { name: "Connect agent" })).not.toBeInTheDocument();
     rerender(<AgentMessagingConnection enrollment={{ status: "forbidden" }} route={readyRoute} onEnroll={onEnroll} />);
     expect(screen.getByText("You cannot connect this agent.")).toBeInTheDocument();
-    expect(screen.getByText("Shared route available. Agent connection is unconfirmed.")).toBeInTheDocument();
+    expect(screen.getByText("Agent connection is unconfirmed.")).toBeInTheDocument();
     rerender(<AgentMessagingConnection enrollment={{ status: "error" }} route={readyRoute} onEnroll={onEnroll} />);
     expect(screen.getByText("Could not check agent access.")).toBeInTheDocument();
     expect(onEnroll).not.toHaveBeenCalled();

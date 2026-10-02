@@ -7,7 +7,7 @@ test.afterEach(async ({ page }) => {
 
 test('keyboard enrollment waits for host confirmation', async ({ page, baseURL }) => {
   await openStory(page, 'connections-agentmessagingconnection--ready-to-enroll', 'dark', { width: 390, height: 844 }, baseURL)
-  await expect(page.getByText('Shared conversation for this member')).toHaveCount(0)
+  await expect(page.getByText('Member conversation')).toHaveCount(0)
 
   await page.keyboard.press('Tab')
   const action = page.getByRole('button', { name: 'Connect agent' })
@@ -15,6 +15,6 @@ test('keyboard enrollment waits for host confirmation', async ({ page, baseURL }
   await page.keyboard.press('Enter')
 
   await expect(page.getByText('Connecting your agent…')).toBeVisible()
-  await expect(page.getByText('Shared conversation for this member')).toHaveCount(0)
+  await expect(page.getByText('Member conversation')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Open messages' })).toHaveCount(0)
 })

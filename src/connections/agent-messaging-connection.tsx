@@ -77,9 +77,9 @@ function RouteStatus({
 }) {
   switch (route.status) {
     case "checking":
-      return <span>Checking the shared route…</span>;
+      return <span>Checking messaging…</span>;
     case "pending":
-      return <span>{route.message ?? "The shared route is being prepared."}</span>;
+      return <span>{route.message ?? "Setting up messaging…"}</span>;
     case "ready":
       return enrollment.status === "enrolled" ? (
         <span>
@@ -87,16 +87,16 @@ function RouteStatus({
           <span className="block break-words">{route.destinationLabel}</span>
         </span>
       ) : enrollment.status === "eligible" ? (
-        <span>Shared route available. Connect your agent to use it.</span>
+        <span>Connect your agent to use messaging.</span>
       ) : (
-        <span>Shared route available. Agent connection is unconfirmed.</span>
+        <span>Agent connection is unconfirmed.</span>
       );
     case "unavailable":
       return <span>{route.message ?? "Messaging is unavailable right now."}</span>;
     case "forbidden":
-      return <span>{route.message ?? "You cannot use this messaging route."}</span>;
+      return <span>{route.message ?? "You cannot use messaging in this app."}</span>;
     case "error":
-      return <span>{route.message ?? "Could not check the shared route."}</span>;
+      return <span>{route.message ?? "Could not check messaging."}</span>;
   }
 }
 
@@ -142,7 +142,7 @@ export function AgentMessagingConnection({
     try {
       await onRetry();
     } catch {
-      setActionError("Could not check the connection. Try again.");
+      setActionError("Could not check messaging. Try again.");
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -154,10 +154,7 @@ export function AgentMessagingConnection({
       aria-label="Agent messaging connection"
       className={cn("rounded-xl border border-border bg-card p-4 text-sm text-foreground sm:p-5", className)}
     >
-      <div className="mb-4">
-        <h2 className="text-base font-semibold">Agent messaging</h2>
-        <p className="mt-1 text-muted-foreground">Messages use this app's shared route.</p>
-      </div>
+      <h2 className="mb-4 text-base font-semibold">Agent messaging</h2>
 
       <div className="divide-y divide-border rounded-lg border border-border">
         <div className="flex gap-3 p-3 sm:p-4">
@@ -176,7 +173,7 @@ export function AgentMessagingConnection({
         <div className="flex gap-3 p-3 sm:p-4">
           <MessageSquare aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
-            <p className="font-medium">Shared messaging route</p>
+            <p className="font-medium">Messaging</p>
             <p aria-live="polite" className="mt-0.5 break-words text-muted-foreground">
               <RouteStatus enrollment={enrollment} route={route} />
             </p>

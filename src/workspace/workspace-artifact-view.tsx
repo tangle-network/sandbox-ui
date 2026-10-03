@@ -6,10 +6,12 @@ import type { SandboxWorkbenchArtifact } from "./sandbox-workbench";
 
 export interface WorkspaceArtifactViewProps {
   artifact: SandboxWorkbenchArtifact;
+  /** Hide identity already supplied by the containing pane; retain actions and content. */
+  hideTitleBlock?: boolean;
 }
 
 /** The shared technical renderer for workspace files and generated artifacts. */
-export function WorkspaceArtifactView({ artifact }: WorkspaceArtifactViewProps) {
+export function WorkspaceArtifactView({ artifact, hideTitleBlock }: WorkspaceArtifactViewProps) {
   switch (artifact.kind) {
     case "file":
       return (
@@ -29,11 +31,13 @@ export function WorkspaceArtifactView({ artifact }: WorkspaceArtifactViewProps) 
           toolbar={artifact.toolbar}
           footer={artifact.footer}
           hideTitleBlock={
-            typeof artifact.title === "string" &&
-            artifact.title === artifact.filename &&
-            artifact.path === artifact.filename &&
-            !artifact.eyebrow &&
-            !artifact.meta
+            hideTitleBlock ?? (
+              typeof artifact.title === "string" &&
+              artifact.title === artifact.filename &&
+              artifact.path === artifact.filename &&
+              !artifact.eyebrow &&
+              !artifact.meta
+            )
           }
         />
       );
@@ -41,6 +45,7 @@ export function WorkspaceArtifactView({ artifact }: WorkspaceArtifactViewProps) 
     case "markdown":
       return (
         <ArtifactPane
+          hideTitleBlock={hideTitleBlock}
           eyebrow={artifact.eyebrow ?? "Document"}
           title={artifact.title}
           subtitle={artifact.subtitle}
@@ -58,6 +63,7 @@ export function WorkspaceArtifactView({ artifact }: WorkspaceArtifactViewProps) 
     case "openui":
       return (
         <ArtifactPane
+          hideTitleBlock={hideTitleBlock}
           eyebrow={artifact.eyebrow ?? "Structured Artifact"}
           title={artifact.title}
           subtitle={artifact.subtitle}
@@ -73,6 +79,7 @@ export function WorkspaceArtifactView({ artifact }: WorkspaceArtifactViewProps) 
     case "custom":
       return (
         <ArtifactPane
+          hideTitleBlock={hideTitleBlock}
           eyebrow={artifact.eyebrow ?? "Artifact"}
           title={artifact.title}
           subtitle={artifact.subtitle}

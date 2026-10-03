@@ -54,7 +54,7 @@ describe("SecretsPage", () => {
     expect(screen.getByText("GITHUB_TOKEN")).toBeInTheDocument()
   })
 
-  it("displays correct total count in stats", async () => {
+  it("shows the secret count in the list header", async () => {
     const secrets = [
       makeSecret({ name: "KEY_A" }),
       makeSecret({ name: "KEY_B" }),

@@ -79,3 +79,34 @@ for (const flow of flows) {
     }
   }
 }
+
+// Real layout geometry: a hidden mobile rail must not reserve header space.
+for (const theme of themes) {
+  for (const [viewportName, viewport] of Object.entries(viewports)) {
+    test(`dashboard-header-bounds ${theme} ${viewportName}`, async ({ page, baseURL }) => {
+      await openStory(page, 'dashboard-dashboardlayout--labeled-rail', theme, viewport, baseURL)
+      await page.evaluate((mode) => document.documentElement.classList.toggle('dark', mode === 'dark'), theme)
+      await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+      const header = page.locator('nav').first()
+      const measure = async () => {
+        const bounds = await header.boundingBox()
+        const content = await page.locator('main').boundingBox()
+        expect(bounds.x).toBe(viewportName === 'mobile' ? 0 : content.x)
+        expect(bounds.x + bounds.width).toBe(viewport.width)
+      }
+      await measure()
+      await test.info().attach('header geometry', { body: await page.screenshot(), contentType: 'image/png' })
+      if (viewportName === 'desktop') {
+        const before = await header.boundingBox()
+        await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click()
+        await expect(page.getByRole('button', { name: 'Expand sidebar', exact: true })).toBeVisible()
+        await measure()
+        expect((await header.boundingBox()).x).toBeLessThan(before.x)
+      } else {
+        await page.getByRole('button', { name: 'Open menu', exact: true }).click()
+        await expect(page.getByRole('link', { name: 'Workspaces', exact: true })).toBeVisible()
+        await measure()
+      }
+    })
+  }
+}

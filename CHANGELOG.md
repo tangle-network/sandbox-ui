@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.120.2
+
+- Keep the dashboard header full width when the desktop sidebar is hidden on mobile. Desktop rail and panel offsets still follow collapse state.
+
 ## 0.120.1
 
 - Let `WorkspaceArtifactView` hide an identity block already supplied by its containing Files pane, while preserving download, format, toolbar, and content controls. Standalone rendering keeps its existing defaults.

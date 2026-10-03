@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.119.0
+
+- Let `SecretsPage` fill a workspace pane with `variant="pane"`: a header bar above an edge-to-edge list that scrolls in the available height. The default `page` variant keeps the padded, bordered layout.
+- Add `title`, `description`, `createDescription`, `emptyDescription`, and `deleteConsequence` so hosts other than Sandbox can describe where their secrets are used. Defaults keep the Sandbox copy.
+- Add optional `SecretsApiClient.updateSecret`; when present, each row offers Replace, which overwrites the value without revealing it.
+- Remove the secret count cards, the "All engines operational" audit panel, and the encryption and access-policy cards, which stated guarantees the component cannot verify. The list header shows the count; rows show the last update.
+- Show a retry state when the first load fails instead of the empty state, and a skeleton while loading.
+- Keep integration permission controls inline and use themed controlled account selectors in integration settings.
+
 ## 0.118.0
 
 - Forward `Heading`, `PageHeader`, and `PageShell` from the canonical UI primitives through the root and `/primitives` exports. Keep the required legacy `HeadingProps` type and the `SectionTitle` h2 adapter.

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, Shield, CheckCircle, Users, ArrowRight, Upload } from "lucide-react"
+import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, CheckCircle, Users, ArrowRight, Upload } from "lucide-react"
 import { cn } from "../lib/utils"
 import { PageHeader } from "../primitives"
 import {
@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@tangle-network/ui/primitives"
-import { InfoPanel } from "../dashboard/info-panel"
 import { parseEnvText, type EnvImportResult } from "./env-importer"
 import { focusField } from "@tangle-network/ui/utils"
 
@@ -29,13 +28,39 @@ export interface SecretsApiClient {
   listSecrets: () => Promise<Secret[]>
   createSecret: (name: string, value: string) => Promise<void>
   deleteSecret: (name: string) => Promise<void>
+  /**
+   * Replace the value of an existing secret. When provided, each row offers
+   * Replace value; omit it when the backend cannot overwrite a saved value.
+   */
+  updateSecret?: (name: string, value: string) => Promise<void>
 }
 
 type ImportRowStatus = "idle" | "success" | "error"
 
+const DEFAULT_DESCRIPTION = "Secrets are securely stored and automatically exposed as environment variables across all your sandboxes."
+const DEFAULT_CREATE_DESCRIPTION = "Secrets are automatically exposed as environment variables across all your new sandboxes."
+const DEFAULT_EMPTY_DESCRIPTION = "Create a secret to inject into your sandboxes."
+const DEFAULT_DELETE_CONSEQUENCE = "Sandboxes using this secret will lose access to it."
+
 export interface SecretsPageProps {
   apiClient: SecretsApiClient
   className?: string
+  /** Page title. Defaults to "Environment Secrets". */
+  title?: string
+  /** Text below the title. Defaults to the Sandbox environment-variable description. */
+  description?: React.ReactNode
+  /** Explains where a new secret is used, in the create dialog. */
+  createDescription?: string
+  /** Text in the empty state. */
+  emptyDescription?: string
+  /** Sentence after "This will permanently delete NAME." in the delete dialog. */
+  deleteConsequence?: string
+  /**
+   * `page` renders a padded page with a bordered list.
+   * `pane` fills its container like a workspace pane: a header bar above an
+   * edge-to-edge list that scrolls inside the available height.
+   */
+  variant?: "page" | "pane"
   /**
    * Optional hint pointing users at team-level secrets. When provided,
    * renders a persistent informational banner below the header clarifying
@@ -52,7 +77,19 @@ export interface SecretsPageProps {
   }
 }
 
-export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPageProps) {
+export function SecretsPage({
+  apiClient,
+  className,
+  teamSecretsHint,
+  title = "Environment Secrets",
+  description = DEFAULT_DESCRIPTION,
+  createDescription = DEFAULT_CREATE_DESCRIPTION,
+  emptyDescription = DEFAULT_EMPTY_DESCRIPTION,
+  deleteConsequence = DEFAULT_DELETE_CONSEQUENCE,
+  variant = "page",
+}: SecretsPageProps) {
+  const pane = variant === "pane"
+  const canReplace = typeof apiClient.updateSecret === "function"
   const [secrets, setSecrets] = React.useState<Secret[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -64,6 +101,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
   const [isCreating, setIsCreating] = React.useState(false)
   const [createError, setCreateError] = React.useState<string | null>(null)
 
+  const [replaceTarget, setReplaceTarget] = React.useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = React.useState<string | null>(null)
   const [isDeleting, setIsDeleting] = React.useState(false)
 
@@ -101,16 +139,42 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
     loadSecrets()
   }, [loadSecrets])
 
+  const openCreate = () => {
+    setReplaceTarget(null)
+    setNewName("")
+    setNewValue("")
+    setCreateError(null)
+    setShowValue(false)
+    setIsCreateOpen(true)
+  }
+
+  const openReplace = (name: string) => {
+    setReplaceTarget(name)
+    setNewName(name)
+    setNewValue("")
+    setCreateError(null)
+    setShowValue(false)
+    setIsCreateOpen(true)
+  }
+
+  const closeCreate = () => {
+    setIsCreateOpen(false)
+    setReplaceTarget(null)
+    setNewName("")
+    setNewValue("")
+    setCreateError(null)
+    setShowValue(false)
+  }
+
   const handleCreate = async () => {
     if (!newName.trim() || !newValue.trim()) return
     setIsCreating(true)
     setCreateError(null)
     try {
-      await apiRef.current.createSecret(newName.trim(), newValue)
-      setIsCreateOpen(false)
-      setNewName("")
-      setNewValue("")
-      setShowValue(false)
+      const update = apiRef.current.updateSecret
+      if (replaceTarget && update) await update(replaceTarget, newValue)
+      else await apiRef.current.createSecret(newName.trim(), newValue)
+      closeCreate()
       await loadSecrets(false)
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Failed to create secret")
@@ -244,32 +308,45 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
     }
   }
 
+  const actions = (
+    <>
+      <button
+        type="button"
+        onClick={() => setIsImportOpen(true)}
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-container-high active:scale-[0.97] sm:gap-2"
+      >
+        <Upload className="h-4 w-4" aria-hidden="true" />
+        Import .env
+      </button>
+      <button
+        type="button"
+        onClick={openCreate}
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--border-accent,transparent)] bg-[var(--btn-primary-bg)] px-3 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97] sm:gap-2 sm:px-4"
+      >
+        <Plus className="h-4 w-4" aria-hidden="true" />
+        New Secret
+      </button>
+    </>
+  )
+
   return (
-    <div className={cn("mx-auto w-full max-w-6xl space-y-8", className)}>
-      <PageHeader
-        title="Environment Secrets"
-        description="Secrets are securely stored and automatically exposed as environment variables across all your sandboxes."
-        action={
-          <>
-            <button
-              type="button"
-              onClick={() => setIsImportOpen(true)}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-container-high active:scale-[0.97] sm:gap-2 sm:px-4"
-            >
-              <Upload className="h-4 w-4" />
-              Import .env
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--border-accent,transparent)] bg-[var(--btn-primary-bg)] px-3 py-2.5 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97] sm:gap-2 sm:px-5"
-            >
-              <Plus className="h-4 w-4" />
-              New Secret
-            </button>
-          </>
-        }
-      />
+    <div
+      className={cn(
+        pane ? "flex h-full min-h-0 w-full flex-col" : "mx-auto w-full max-w-6xl space-y-6",
+        className,
+      )}
+    >
+      {pane ? (
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border px-4 py-4 sm:px-6">
+          <div className="min-w-0 flex-1 basis-64">
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
+            {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        </header>
+      ) : (
+        <PageHeader title={title} description={description} action={actions} />
+      )}
 
       {/* Team-secrets hint — rendered only when the host app opts in.
           These secrets are personal; team-scoped credentials live on the
@@ -277,7 +354,10 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
           shared credentials here and wondering why teammates can't see
           them. */}
       {teamSecretsHint && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--md3-outline-variant)] bg-[var(--accent-surface-soft)]/40 px-4 py-3">
+        <div className={cn(
+          "flex flex-wrap items-center gap-3 border-[var(--md3-outline-variant)] bg-[var(--accent-surface-soft)]/40 px-4 py-3",
+          pane ? "shrink-0 border-b sm:px-6" : "rounded-lg border",
+        )}>
           <div className="flex min-w-[min(100%,18rem)] flex-1 items-start gap-3">
             <Users className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent-text)]" aria-hidden="true" />
             <div className="min-w-0 text-sm">
@@ -299,44 +379,26 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
         </div>
       )}
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-[var(--shadow-card)]">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Active Secrets</p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="font-display text-2xl font-extrabold text-foreground">{secrets.length}</span>
-          </div>
-        </div>
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-[var(--shadow-card)]">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</p>
-          <div className="mt-2 flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-[var(--surface-success-text,#047857)]" />
-            <span className="text-sm font-semibold text-[var(--surface-success-text,#047857)]">Encrypted</span>
-          </div>
-        </div>
-        <InfoPanel
-          className="md:col-span-2"
-          label="Security Audit"
-          title="All engines operational."
-          description="Secrets are encrypted at rest using AES-256."
-        />
-      </div>
-
-      {/* Error banner */}
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 flex items-center gap-3">
-          <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
-          <p className="text-destructive text-sm font-medium">{error}</p>
+      {/* Error banner. A failed first load renders its own retry state in the list. */}
+      {error && (secrets.length > 0 || loading) && (
+        <div role="alert" className={cn(
+          "flex items-center gap-3 border-destructive/30 bg-destructive/10 p-4",
+          pane ? "shrink-0 border-b sm:px-6" : "rounded-lg border",
+        )}>
+          <AlertCircle className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+          <p className="text-sm font-medium text-destructive">{error}</p>
         </div>
       )}
 
       {/* Create dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null); setShowValue(false) } }}>
+      <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) closeCreate() }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Secret</DialogTitle>
+            <DialogTitle>{replaceTarget ? "Replace Value" : "Create Secret"}</DialogTitle>
             <DialogDescription>
-              Secrets are automatically exposed as environment variables across all your new sandboxes.
+              {replaceTarget
+                ? <>Save a new value for <span className="font-mono font-bold text-foreground">{replaceTarget}</span>. The current value is overwritten and cannot be recovered.</>
+                : createDescription}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -356,6 +418,8 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                 onChange={(e) => setNewName(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "_"))}
                 placeholder="MY_SECRET_KEY"
                 autoComplete="off"
+                readOnly={replaceTarget !== null}
+                aria-readonly={replaceTarget !== null}
                 className={`w-full rounded-md border bg-surface-container-low px-3 py-2.5 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
               />
             </div>
@@ -370,6 +434,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                   onChange={(e) => setNewValue(e.target.value)}
                   placeholder="Enter secret value..."
                   autoComplete="new-password"
+                  autoFocus={replaceTarget !== null}
                   className={`w-full rounded-md border bg-surface-container-low px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
                 />
                 <button
@@ -381,7 +446,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
                   {showValue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="mt-1.5 text-xs text-muted-foreground">This value cannot be retrieved after creation.</p>
+              <p className="mt-1.5 text-xs text-muted-foreground">This value cannot be retrieved after it is saved.</p>
             </div>
             {/* Hidden submit so the form is valid and Enter key submits even though the visible
                 submit button lives in DialogFooter and uses type="button" for layout reasons. */}
@@ -391,7 +456,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
           <DialogFooter>
             <button
               type="button"
-              onClick={() => { setIsCreateOpen(false); setNewName(""); setNewValue(""); setCreateError(null) }}
+              onClick={closeCreate}
               className="rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-container-high transition-colors"
             >
               Cancel
@@ -402,7 +467,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
               disabled={!newName.trim() || !newValue.trim() || isCreating}
               className="rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 active:scale-[0.97]"
             >
-              {isCreating ? "Creating..." : "Create Secret"}
+              {isCreating ? "Saving..." : replaceTarget ? "Replace Value" : "Create Secret"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -583,7 +648,7 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
           <DialogHeader>
             <DialogTitle>Delete Secret?</DialogTitle>
             <DialogDescription>
-              This will permanently delete <span className="font-mono font-bold text-foreground">{deleteTarget}</span>. Sandboxes using this secret will lose access to it.
+              This will permanently delete <span className="font-mono font-bold text-foreground">{deleteTarget}</span>. {deleteConsequence}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -606,109 +671,116 @@ export function SecretsPage({ apiClient, className, teamSecretsHint }: SecretsPa
         </DialogContent>
       </Dialog>
 
-      {/* Secrets table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-card)]">
-        <div className="border-b border-[var(--md3-outline-variant)] px-6 py-4 flex items-center justify-between">
-          <div className="flex gap-6">
-            <button type="button" className="text-xs font-bold uppercase tracking-widest text-foreground border-b-2 border-foreground pb-1">All Secrets</button>
-          </div>
-          <span className="text-xs text-muted-foreground font-mono">{secrets.length} secret{secrets.length !== 1 ? "s" : ""}</span>
-        </div>
-
+      {/* Secrets list */}
+      <section
+        aria-label={title}
+        className={cn(
+          pane
+            ? "min-h-0 flex-1 overflow-y-auto"
+            : "overflow-hidden rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-card)]",
+        )}
+      >
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" data-motion="essential" />
+          <div role="status" aria-busy="true" className="divide-y divide-border">
+            <span className="sr-only">Loading secrets…</span>
+            {[44, 36, 52].map((width) => (
+              <div key={width} className="flex items-center gap-3 px-4 py-4 sm:px-6" aria-hidden="true">
+                <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                <div className="h-4 animate-pulse rounded bg-muted" style={{ width: `${width * 4}px` }} />
+              </div>
+            ))}
           </div>
-        ) : secrets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Lock className="h-10 w-10 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">No secrets yet</h3>
-            <p className="mt-1 text-sm text-muted-foreground max-w-sm">Create a secret to inject into your sandboxes.</p>
+        ) : error && secrets.length === 0 ? (
+          <div role="alert" className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <AlertCircle className="mb-4 h-10 w-10 text-destructive" aria-hidden="true" />
+            <h3 className="text-base font-semibold text-foreground">Secrets could not load</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">{error}</p>
             <button
               type="button"
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => void loadSecrets()}
+              className="mt-6 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-container-high"
+            >
+              Retry
+            </button>
+          </div>
+        ) : secrets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <Lock className="mb-4 h-10 w-10 text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-lg font-semibold text-foreground">No secrets yet</h3>
+            <p className="mt-1 max-w-sm text-sm text-muted-foreground">{emptyDescription}</p>
+            <button
+              type="button"
+              onClick={openCreate}
               // aria-label distinguishes this empty-state CTA from the
               // header "New Secret" button for assistive tech (and tests)
               // while keeping the visible verb consistent across the page.
               aria-label="Create your first secret"
-              className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors active:scale-[0.97]"
+              className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97]"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4" aria-hidden="true" />
               New Secret
             </button>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
-                <th scope="col" className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:px-6 sm:py-4">Secret Name</th>
-                <th scope="col" className="hidden px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:table-cell">Encrypted Value</th>
-                <th scope="col" className="hidden px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground sm:table-cell">Created</th>
-                <th scope="col" aria-label="Actions" className="w-12 px-3 py-3 sm:px-6 sm:py-4" />
+          <table className="w-full border-collapse text-left">
+            <caption className="sr-only">{secrets.length} secret{secrets.length !== 1 ? "s" : ""}</caption>
+            <thead className={cn(pane && "sticky top-0 z-10 bg-background")}>
+              <tr className="border-b border-[var(--md3-outline-variant)]">
+                <th scope="col" className="px-4 py-2.5 text-xs font-medium text-muted-foreground sm:px-6">
+                  Name <span className="ml-1 font-mono tabular-nums">{secrets.length}</span>
+                </th>
+                <th scope="col" className="hidden px-4 py-2.5 text-xs font-medium text-muted-foreground md:table-cell">Value</th>
+                <th scope="col" className="hidden px-4 py-2.5 text-right text-xs font-medium text-muted-foreground sm:table-cell">Updated</th>
+                <th scope="col" className="w-px px-4 py-2.5 sm:pr-6"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {secrets.map((secret) => (
-                <tr key={secret.name} className="hover:bg-surface-container-high transition-colors">
-                  <td className="px-4 py-3 sm:px-6 sm:py-4">
-                    <div className="flex items-center gap-3">
-                      <Key className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0">
-                        <span className="break-all font-mono text-sm font-bold text-foreground sm:break-normal">{secret.name}</span>
-                        <span className="mt-1 block text-xs text-muted-foreground sm:hidden">Created {formatDate(secret.createdAt)}</span>
+              {secrets.map((secret) => {
+                const changedAt = formatDate(secret.updatedAt ?? secret.createdAt)
+                return (
+                  <tr key={secret.name} className="transition-colors hover:bg-surface-container-high">
+                    <td className="py-3 pl-4 pr-1 sm:px-6">
+                      <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+                        <Key className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        <div className="min-w-0">
+                          <span className="font-mono text-[13px] font-semibold text-foreground [overflow-wrap:anywhere] sm:text-sm">{secret.name}</span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">Updated {changedAt}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="hidden px-6 py-4 sm:table-cell">
-                    <code className="text-xs font-mono text-muted-foreground bg-surface-container-high px-2 py-1 rounded">
-                      ••••••••••••••••
-                    </code>
-                  </td>
-                  <td className="hidden px-6 py-4 text-right sm:table-cell">
-                    <span className="text-xs text-muted-foreground">{formatDate(secret.createdAt)}</span>
-                  </td>
-                  <td className="px-3 py-3 sm:px-6 sm:py-4">
-                    <button
-                      type="button"
-                      onClick={() => setDeleteTarget(secret.name)}
-                      className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                      aria-label={`Delete ${secret.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <span className="font-mono text-xs tracking-widest text-muted-foreground" aria-label="Value hidden">••••••••••••</span>
+                    </td>
+                    <td className="hidden whitespace-nowrap px-4 py-3 text-right text-xs text-muted-foreground sm:table-cell">{changedAt}</td>
+                    <td className="whitespace-nowrap py-3 pl-1 pr-3 sm:px-4 sm:pr-6">
+                      <div className="flex items-center justify-end gap-1">
+                        {canReplace && (
+                          <button
+                            type="button"
+                            onClick={() => openReplace(secret.name)}
+                            className="rounded-md px-2 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface-container-high"
+                            aria-label={`Replace value of ${secret.name}`}
+                          >
+                            Replace
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(secret.name)}
+                          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Delete ${secret.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
-      </div>
-
-      {/* Bottom info section */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
-              <Shield className="h-5 w-5" />
-            </div>
-            <h3 className="text-sm font-bold text-foreground">Encryption Standard</h3>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Your secrets are encrypted using AES-256-GCM at rest and TLS 1.3 in transit. Hardware Security Modules manage all root keys.
-          </p>
-        </div>
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
-              <Lock className="h-5 w-5" />
-            </div>
-            <h3 className="text-sm font-bold text-foreground">Access Policy</h3>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Secrets are injected at sandbox creation time and are never exposed in logs, API responses, or container metadata.
-          </p>
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

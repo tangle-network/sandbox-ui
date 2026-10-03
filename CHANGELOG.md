@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.120.0
+
+- Add `WorkspaceFilesPane` for compact workspace browsing and preview navigation. It accepts recursive roots or canonical paths, preserves empty folders and node metadata, retains the tree across previews, and restores keyboard focus on Back.
+- Export `WorkspaceArtifactView` so composed agent shells and existing workbenches share one file, Markdown, OpenUI, and custom artifact renderer.
+- Require UI 11.15.2, which keeps file-tree callbacks current and clears controlled selection so the same file can reopen after Back.
+
 ## 0.119.0
 
 - Let `SecretsPage` fill a workspace pane with `variant="pane"`: a header bar above an edge-to-edge list that scrolls in the available height. The default `page` variant keeps the padded, bordered layout.

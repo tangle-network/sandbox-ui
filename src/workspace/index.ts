@@ -65,3 +65,5 @@ export {
   type ApprovalItem,
   type ApprovalConfidenceStat,
 } from "./approval-queue";
+export { WorkspaceFilesPane, type WorkspaceFilesPaneProps, type WorkspaceFilesPreview } from "./workspace-files-pane";
+export { WorkspaceArtifactView, type WorkspaceArtifactViewProps } from "./workspace-artifact-view";

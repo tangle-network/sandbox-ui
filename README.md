@@ -232,6 +232,36 @@ function App() {
 }
 ```
 
+### Compact workspace files
+
+New agent products compose their application shell with `AgentWorkspaceCompanion` from `@tangle-network/agent-app/workspace-react`.
+Use `WorkspaceFilesPane` for its Files content and `WorkspaceArtifactView` for technical artifact rendering.
+Both are exported from `@tangle-network/sandbox-ui/workspace`.
+
+```tsx
+<WorkspaceFilesPane
+  paths={workspacePaths}
+  selectedPath={selectedPath}
+  onSelect={openFile}
+  onBack={closePreview}
+  preview={selectedArtifact ? {
+    path: selectedArtifact.path,
+    content: <WorkspaceArtifactView artifact={selectedArtifact} />,
+    actions: <DownloadFile artifact={selectedArtifact} />,
+  } : undefined}
+/>
+```
+
+Pass either a recursive `root: FileNode` or canonical `paths`, including trailing slashes for empty folders.
+A root input returns its original node as the second `onSelect` argument; flat paths have no node metadata.
+The pane uses the shared searchable file tree and retains it while a preview is open.
+Returning to files preserves expansion, selection, and scroll.
+Native search ends when a result is selected.
+Adapters own loading, permissions, errors, file reads, and actions; `emptyState` customizes an empty workspace.
+The preview header exposes Back to files, the selected path, and supplied actions without a second title frame.
+
+### Existing sandbox workbench
+
 Compose sandbox applications around `SandboxWorkbench` when you want the library’s default operating model:
 
 ```tsx
@@ -437,7 +467,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/primitives` | Button, Card, Dialog, Badge, Input, Select, Table, Tabs, Toast, etc. |
 | `/chat` | ChatContainer, ChatInput, ChatMessage, AgentTimeline, ThinkingIndicator |
 | `/run` | ToolCallFeed, RunGroup, InlineToolItem, ExpandedToolDetail |
-| `/workspace` | SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
+| `/workspace` | WorkspaceFilesPane, WorkspaceArtifactView, SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
 | `/workbench` | DiffView, ChangesPane, CodeView, artifact and preview components |
 | `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
 | `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane |

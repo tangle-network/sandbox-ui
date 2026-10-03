@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import type { FileNode } from "@tangle-network/ui/files";
 import { WorkspaceFilesPane } from "./workspace-files-pane";
@@ -30,24 +31,25 @@ describe("WorkspaceFilesPane", () => {
         onBack={() => setPath(undefined)}
       />;
     }
+    const user = userEvent.setup();
     const { container, getByRole, getByText, queryByRole } = render(<Consumer />);
     const shadow = treeShadow(container);
     const search = queryInput(shadow);
     const folder = shadow.querySelector('[data-item-path="research/"]');
     if (!folder) throw new Error("Expected the research folder");
-    fireEvent.click(folder);
+    await user.click(folder);
     await waitFor(() => expect(shadow.querySelector('[data-item-path="research/"]')).toHaveAttribute("aria-expanded", "false"));
     fireEvent.input(search, { target: { value: "outreach" } });
     await waitFor(() => expect(shadow.querySelector('[data-item-path="campaigns/outreach.md"]')).not.toBeNull());
     expect(search.value).toBe("outreach");
     const row = shadow.querySelector('[data-item-path="campaigns/outreach.md"]');
     if (!row) throw new Error(shadow.innerHTML.replace(/<style[\s\S]*?<\/style>/g, ""));
-    fireEvent.click(row);
+    await user.click(row);
     await waitFor(() => expect(getByText("Reviewed output")).toBeVisible());
     expect(getByRole("button", { name: "Back to files" })).toHaveFocus();
     expect(getByRole("button", { name: "Download" })).toBeVisible();
     expect(container.querySelector('[aria-label="Workspace files"]')).toHaveAttribute("hidden");
-    fireEvent.click(getByRole("button", { name: "Back to files" }));
+    await user.click(getByRole("button", { name: "Back to files" }));
     expect(queryByRole("article")).not.toBeInTheDocument();
     expect(treeShadow(container)).toBe(shadow);
     expect(queryInput(shadow)).toBe(search);
@@ -59,7 +61,11 @@ describe("WorkspaceFilesPane", () => {
     expect(treeRegion === document.activeElement || treeRegion?.contains(document.activeElement)).toBe(true);
     const sameFile = shadow.querySelector('[data-item-path="campaigns/outreach.md"]');
     if (!sameFile) throw new Error("Expected the previously opened file");
-    fireEvent.click(sameFile);
+    await user.click(sameFile);
+    await waitFor(() => expect(getByText("Reviewed output")).toBeVisible());
+    await user.click(getByRole("button", { name: "Back to files" }));
+    expect(shadow.activeElement).toBe(sameFile);
+    await user.keyboard("{Enter}");
     await waitFor(() => expect(getByText("Reviewed output")).toBeVisible());
   });
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.120.1
+
+- Let `WorkspaceArtifactView` hide an identity block already supplied by its containing Files pane, while preserving download, format, toolbar, and content controls. Standalone rendering keeps its existing defaults.
+
 ## 0.120.0
 
 - Add `WorkspaceFilesPane` for compact workspace browsing and preview navigation. It accepts recursive roots or canonical paths, preserves empty folders and node metadata, retains the tree across previews, and restores keyboard focus on Back.

@@ -246,7 +246,7 @@ Both are exported from `@tangle-network/sandbox-ui/workspace`.
   onBack={closePreview}
   preview={selectedArtifact ? {
     path: selectedArtifact.path,
-    content: <WorkspaceArtifactView artifact={selectedArtifact} />,
+    content: <WorkspaceArtifactView artifact={selectedArtifact} hideTitleBlock />,
     actions: <DownloadFile artifact={selectedArtifact} />,
   } : undefined}
 />
@@ -259,6 +259,8 @@ Returning to files preserves expansion, selection, and scroll.
 Native search ends when a result is selected.
 Adapters own loading, permissions, errors, file reads, and actions; `emptyState` customizes an empty workspace.
 The preview header exposes Back to files, the selected path, and supplied actions without a second title frame.
+Set `hideTitleBlock` on the nested artifact renderer when the containing pane already identifies the file.
+Download, format, toolbar, and content controls remain available; standalone rendering keeps its existing title defaults.
 
 ### Existing sandbox workbench
 

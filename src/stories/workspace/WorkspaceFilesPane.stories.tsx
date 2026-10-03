@@ -24,10 +24,13 @@ function FilesAndPreview() {
       preview={selected ? {
         path: selected,
         actions: <a href="#download" className="text-sm text-primary">Download</a>,
-        content: <WorkspaceArtifactView artifact={{
+        content: <WorkspaceArtifactView hideTitleBlock artifact={{
           id: selected,
-          kind: "markdown",
-          title: "Customer brief",
+          kind: "file",
+          title: selected.split("/").pop() ?? selected,
+          filename: selected.split("/").pop() ?? selected,
+          path: selected,
+          mimeType: "text/markdown",
           content: "## Current goal\n\nMake the first routing integration reliable.\n\n- Check current traffic\n- Review latency and error rates\n- Share a focused rollout plan",
         }} />,
       } : undefined}

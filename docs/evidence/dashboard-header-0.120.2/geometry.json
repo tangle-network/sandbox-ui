@@ -1,0 +1,88 @@
+{
+  "checkedAt": "2026-10-03T05:32:58.409Z",
+  "source": "1bced0c plus responsive header patch",
+  "target": "real built Storybook",
+  "cases": [
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "before": {
+        "x": 248,
+        "y": 0,
+        "width": 1192,
+        "height": 56
+      },
+      "after": {
+        "x": 56,
+        "y": 0,
+        "width": 1384,
+        "height": 56
+      },
+      "actualTheme": "light"
+    },
+    {
+      "theme": "light",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 56
+      },
+      "after": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 56
+      },
+      "actualTheme": "light"
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "before": {
+        "x": 248,
+        "y": 0,
+        "width": 1192,
+        "height": 56
+      },
+      "after": {
+        "x": 56,
+        "y": 0,
+        "width": 1384,
+        "height": 56
+      },
+      "actualTheme": "dark"
+    },
+    {
+      "theme": "dark",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "before": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 56
+      },
+      "after": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 56
+      },
+      "actualTheme": "dark"
+    }
+  ],
+  "limitation": "Existing catalog theme globals do not toggle the root dark class. These captures and geometry cases explicitly set and assert the actual theme. Global catalog theme correction is separate."
+}

@@ -427,17 +427,14 @@ function DashboardLayoutInner({
     <div className={cn("min-h-screen bg-surface text-foreground", className)}>
       {/* Top nav bar */}
       <nav
-        // Left/width are driven by the rail's collapse, so this bar travels on
-        // the rail's tier — anything faster and the top bar arrives before the
-        // edge it is measured from.
+        // Match the rail only at its desktop breakpoint; mobile uses the full viewport.
         className={cn(
-          "fixed top-0 z-50 bg-surface-container-low border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width]",
+          "fixed top-0 left-0 right-0 lg:left-[var(--sb-content-margin)] z-50 bg-surface-container-low border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width]",
           MOTION_TRAVEL,
         )}
         style={{
-          left: hidden ? 0 : contentMargin,
-          width: hidden ? "100%" : `calc(100% - ${contentMargin}px)`,
-        }}
+          "--sb-content-margin": `${hidden ? 0 : contentMargin}px`,
+        } as React.CSSProperties}
       >
         <div className="flex items-center gap-8">
           {/* Mobile-only brand — the desktop sidebar rail carries the logo

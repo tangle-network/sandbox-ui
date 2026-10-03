@@ -21,3 +21,13 @@ type Story = StoryObj<typeof meta>
 
 export const WorkspaceNavigation: Story = {}
 export const LabeledRail: Story = { args: { labeledRail: true } }
+
+export const CompactPage: Story = {
+  args: {
+    onNewSandbox: undefined,
+    notificationsEnabled: false,
+    collapseEmptyTopBar: true,
+    defaultPanelOpen: false,
+    contentClassName: "px-0 pb-0 lg:px-0",
+  },
+}

@@ -38,6 +38,10 @@ Import styles in your app root:
 import "@tangle-network/sandbox-ui/styles";
 ```
 
+### Dashboard page spacing
+
+For apps whose pages already provide their own gutters, pass `contentClassName="px-0 pb-0 lg:px-0"` to `DashboardLayout`. Set `notificationsEnabled={false}` when the app has no notification feed. Add `collapseEmptyTopBar` to reclaim the desktop header space when no top-bar controls remain; the mobile menu stays available. Existing defaults are unchanged.
+
 ### Workspace integration access
 
 Use `IntegrationsPanel` from `/integrations` for the provider catalog, logos, search, connection status, and account actions.

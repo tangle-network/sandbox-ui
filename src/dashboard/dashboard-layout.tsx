@@ -123,6 +123,10 @@ export interface DashboardLayoutProps {
    * old standalone rail theme toggle.
    */
   appearance?: AppearanceController
+  /** Keep notification access available even when data is still loading. Defaults to true. */
+  notificationsEnabled?: boolean
+  /** Collapse the desktop bar when no host controls or notifications are enabled. */
+  collapseEmptyTopBar?: boolean
   /** Notification data for the bell dropdown */
   notifications?: {
     items: { id: string; title: string; message: string; read: boolean; createdAt: string }[]
@@ -214,6 +218,8 @@ function DashboardLayoutInner({
   profileMenuItems,
   appearance,
   notifications: notifData,
+  notificationsEnabled = true,
+  collapseEmptyTopBar = false,
 }: DashboardLayoutProps) {
   // Keep light/dark tokens switching correctly under brand 0.6 regardless of which
   // control toggled the theme (see useBrandThemeSync).
@@ -243,6 +249,12 @@ function DashboardLayoutInner({
   const { contentMargin, hidden, mode, hasPanels, panelOpen, toggleRail, railCollapsed } =
     useSidebar()
   const modeSet = React.useMemo(() => new Set(modeItems), [modeItems])
+  const collapseDesktopTopBar =
+    collapseEmptyTopBar &&
+    React.Children.toArray(topBarLeading).length === 0 &&
+    (topNavLinks?.length ?? 0) === 0 &&
+    !onNewSandbox &&
+    !notificationsEnabled
 
   // Memoised so the `buildSidebarContent` callback below (which depends on
   // this value) doesn't recreate on every render — that was silently
@@ -431,6 +443,7 @@ function DashboardLayoutInner({
         className={cn(
           "fixed top-0 left-0 right-0 lg:left-[var(--sb-content-margin)] z-50 bg-surface-container-low border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width]",
           MOTION_TRAVEL,
+          collapseDesktopTopBar && "lg:hidden",
         )}
         style={{
           "--sb-content-margin": `${hidden ? 0 : contentMargin}px`,
@@ -476,66 +489,68 @@ function DashboardLayoutInner({
               New Sandbox
             </button>
           )}
-          <div className="relative" ref={notifRef}>
-            <button
-              type="button"
-              className={cn("relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-surface-container-high", MOTION_CONTROL)}
-              onClick={() => setNotificationsOpen(!notificationsOpen)}
-              aria-label="Notifications"
-              aria-expanded={notificationsOpen}
-            >
-              <Bell className="h-4 w-4" />
-              {(notifData?.unreadCount ?? 0) > 0 && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
-              )}
-            </button>
-            {notificationsOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14] z-50">
-                <div className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] px-4 py-3">
-                  <p className="font-bold text-foreground text-sm">Notifications</p>
-                  {(notifData?.unreadCount ?? 0) > 0 && notifData?.onMarkAllRead && (
-                    <button
-                      type="button"
-                      onClick={() => { notifData.onMarkAllRead?.(); }}
-                      className="text-primary text-xs font-medium hover:underline"
-                    >
-                      Mark all read
-                    </button>
+          {notificationsEnabled && (
+            <div className="relative" ref={notifRef}>
+              <button
+                type="button"
+                className={cn("relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-surface-container-high", MOTION_CONTROL)}
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                aria-label="Notifications"
+                aria-expanded={notificationsOpen}
+              >
+                <Bell className="h-4 w-4" />
+                {(notifData?.unreadCount ?? 0) > 0 && (
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14] z-50">
+                  <div className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] px-4 py-3">
+                    <p className="font-bold text-foreground text-sm">Notifications</p>
+                    {(notifData?.unreadCount ?? 0) > 0 && notifData?.onMarkAllRead && (
+                      <button
+                        type="button"
+                        onClick={() => { notifData.onMarkAllRead?.(); }}
+                        className="text-primary text-xs font-medium hover:underline"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  {(!notifData?.items || notifData.items.length === 0) ? (
+                    <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
+                      <Bell className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                      <p className="text-muted-foreground text-sm">No notifications yet</p>
+                      <p className="text-muted-foreground/60 text-xs mt-1">We'll notify you about important updates</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifData.items.map((n) => (
+                        <button
+                          key={n.id}
+                          type="button"
+                          className={cn(
+                            "w-full text-left px-4 py-3 border-b border-[var(--md3-outline-variant)] last:border-0 transition-colors",
+                            MOTION_CONTROL,
+                            n.read ? "cursor-default" : "bg-primary/5 hover:bg-white/5",
+                          )}
+                          onClick={() => { if (!n.read) notifData.onMarkRead?.(n.id); }}
+                        >
+                          <p className={cn("text-sm", !n.read ? "font-semibold text-foreground" : "text-muted-foreground")}>
+                            {n.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                          <p className="text-[10px] text-muted-foreground/50 mt-1">
+                            {formatNotifDate(n.createdAt)}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
-                {(!notifData?.items || notifData.items.length === 0) ? (
-                  <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
-                    <Bell className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                    <p className="text-muted-foreground text-sm">No notifications yet</p>
-                    <p className="text-muted-foreground/60 text-xs mt-1">We'll notify you about important updates</p>
-                  </div>
-                ) : (
-                  <div className="max-h-80 overflow-y-auto">
-                    {notifData.items.map((n) => (
-                      <button
-                        key={n.id}
-                        type="button"
-                        className={cn(
-                          "w-full text-left px-4 py-3 border-b border-[var(--md3-outline-variant)] last:border-0 transition-colors",
-                          MOTION_CONTROL,
-                          n.read ? "cursor-default" : "bg-primary/5 hover:bg-white/5"
-                        )}
-                        onClick={() => { if (!n.read) notifData.onMarkRead?.(n.id); }}
-                      >
-                        <p className={cn("text-sm", !n.read ? "font-semibold text-foreground" : "text-muted-foreground")}>
-                          {n.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
-                        <p className="text-[10px] text-muted-foreground/50 mt-1">
-                          {formatNotifDate(n.createdAt)}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
         {/* Mobile menu toggle */}
         <button
@@ -582,7 +597,13 @@ function DashboardLayoutInner({
       {/* Single responsive main landmark — SidebarContent only applies the
           desktop sidebar margin at lg+, so this one <main> works for both
           viewports and keeps screen-reader landmarks unambiguous. */}
-      <SidebarContent className={cn("pt-16 px-6 pb-8 lg:px-8 bg-surface", contentClassName)}>
+      <SidebarContent
+        className={cn(
+          "pt-16 px-6 pb-8 lg:px-8 bg-surface",
+          collapseDesktopTopBar && "lg:pt-0",
+          contentClassName,
+        )}
+      >
         {children}
       </SidebarContent>
 

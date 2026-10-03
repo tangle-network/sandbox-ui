@@ -240,3 +240,37 @@ describe("DashboardLayout — notification dropdown", () => {
     expect(screen.queryByText("Invalid Date")).not.toBeInTheDocument()
   })
 })
+
+
+describe("DashboardLayout — optional empty desktop header", () => {
+  it("removes unused notification controls while retaining mobile navigation", async () => {
+    const user = userEvent.setup()
+    render(
+      <DashboardLayout navItems={[]} notificationsEnabled={false} collapseEmptyTopBar>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    expect(screen.queryByRole("button", { name: "Notifications" })).toBeNull()
+    const menu = screen.getByRole("button", { name: "Open menu" })
+    expect(menu.closest("nav")).toHaveClass("lg:hidden")
+    expect(screen.getByRole("main")).toHaveClass("lg:pt-0")
+    await user.click(menu)
+    expect(screen.getByRole("button", { name: "Close menu" })).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it.each([
+    { topBarLeading: <button type="button">Workspace</button> },
+    { topNavLinks: [{ label: "Billing", href: "/billing" }] },
+    { onNewSandbox: () => {} },
+    { notificationsEnabled: true },
+  ])("retains the header when a host supplies controls: %j", (controls) => {
+    render(
+      <DashboardLayout navItems={[]} collapseEmptyTopBar notificationsEnabled={false} {...controls}>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    const menu = screen.getByRole("button", { name: "Open menu" })
+    expect(menu.closest("nav")).not.toHaveClass("lg:hidden")
+    expect(screen.getByRole("main")).not.toHaveClass("lg:pt-0")
+  })
+})

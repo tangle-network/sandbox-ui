@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.121.0
+
+- Let hosts disable unused notification controls and collapse an empty desktop dashboard header. Mobile navigation remains available; headers with host controls and existing defaults remain unchanged.
+
 ## 0.120.2
 
 - Keep the dashboard header full width when the desktop sidebar is hidden on mobile. Desktop rail and panel offsets still follow collapse state.

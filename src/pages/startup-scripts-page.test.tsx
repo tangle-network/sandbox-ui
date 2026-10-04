@@ -122,6 +122,19 @@ describe("StartupScriptsPage", () => {
     expect(screen.queryByText(/Unexpected token/)).not.toBeInTheDocument()
   })
 
+  it("shows a current action failure ahead of an earlier options warning", async () => {
+    const user = userEvent.setup()
+    api.listScripts = vi.fn().mockResolvedValue([makeScript({ name: "Loaded script" })])
+    api.listEnvironments = vi.fn().mockRejectedValue(new Error("Options unavailable"))
+    api.toggleScript = vi.fn().mockRejectedValue(new Error("You cannot disable this script"))
+    render(<StartupScriptsPage apiClient={api} />)
+    expect(await screen.findByRole("alert")).toHaveTextContent("Some script options couldn't load.")
+    await user.click(screen.getByRole("button", { name: "Disable" }))
+    expect(screen.getByRole("alert")).toHaveTextContent("You cannot disable this script")
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument()
+    expect(screen.getByText("Loaded script")).toBeInTheDocument()
+  })
+
   it("opens create dialog with picker step", async () => {
     const user = userEvent.setup()
     render(<StartupScriptsPage apiClient={api} />)

@@ -468,8 +468,8 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       {(loadError || error) && (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
-          <p className="flex-1 text-sm font-medium text-destructive">{loadError ?? error}</p>
-          {loadError && <button type="button" onClick={() => void loadData()} disabled={loading}
+          <p className="flex-1 text-sm font-medium text-destructive">{error ?? loadError}</p>
+          {loadError && !error && <button type="button" onClick={() => void loadData()} disabled={loading}
             className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-surface-container-high px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-surface-container-highest disabled:opacity-50">
             Retry
           </button>}

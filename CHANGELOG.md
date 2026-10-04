@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.121.1
+
+- Hide the empty Modes heading in AgentProfilePicker when the app supplies only custom profiles. Existing options, selection, and authoring controls are unchanged.
+
 ## 0.121.0
 
 - Let hosts disable unused notification controls and collapse an empty desktop dashboard header. Mobile navigation remains available; headers with host controls and existing defaults remain unchanged.

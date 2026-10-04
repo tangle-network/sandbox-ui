@@ -204,7 +204,7 @@ export function AgentProfilePicker({
             />
           ) : (
             <div className="max-h-[min(60vh,420px)] overflow-y-auto">
-              <SectionHeader>Modes</SectionHeader>
+              {builtins.length > 0 && <SectionHeader>Modes</SectionHeader>}
               {builtins.map((profile) => (
                 <ProfileRow
                   key={profile.id}

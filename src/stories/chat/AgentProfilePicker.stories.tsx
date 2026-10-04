@@ -18,9 +18,9 @@ const capabilities = [
   { id: 'browser', label: 'Browser', description: 'Inspect the rendered product.' },
 ]
 
-function LivePicker({ locked = false, authoring = false }: { locked?: boolean; authoring?: boolean }) {
-  const [profiles, setProfiles] = useState(initialProfiles)
-  const [value, setValue] = useState('assistant')
+function LivePicker({ locked = false, authoring = false, customOnly = false }: { locked?: boolean; authoring?: boolean; customOnly?: boolean }) {
+  const [profiles, setProfiles] = useState(customOnly ? initialProfiles.filter((profile) => !profile.builtin) : initialProfiles)
+  const [value, setValue] = useState(customOnly ? 'reviewer' : 'assistant')
   const save = (draft: AgentProfileDraft) => {
     const id = draft.id ?? `custom-${profiles.length}`
     setProfiles((current) => draft.id
@@ -59,3 +59,5 @@ type Story = StoryObj<typeof meta>
 export const ChooseProfile: Story = { render: () => <LivePicker /> }
 export const ManageCustomAgents: Story = { render: () => <LivePicker authoring /> }
 export const LockedConversation: Story = { render: () => <LivePicker locked /> }
+
+export const CustomProfilesOnly: Story = { render: () => <LivePicker customOnly /> }

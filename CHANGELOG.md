@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.122.2
+
+- Show the current script action error ahead of an earlier load/options warning. Hide the load-only Retry action while displaying a mutation failure.
+
 ## 0.122.1
 
 - Keep Startup Scripts load failures separate from a verified empty list, offer Retry, and retain last-good rows when refresh fails. Optional secret/environment failures no longer discard a successful scripts response.

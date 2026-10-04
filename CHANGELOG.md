@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.122.1
+
+- Keep Startup Scripts load failures separate from a verified empty list, offer Retry, and retain last-good rows when refresh fails. Optional secret/environment failures no longer discard a successful scripts response.
+
 ## 0.122.0
 
 - Export `SandboxPageShell` and `DashboardPageHeader` for broad, consistently spaced dashboard pages. Generic UI primitive exports stay unchanged.

@@ -33,3 +33,8 @@ type Story = StoryObj<typeof meta>
 
 export const ManageScripts: Story = { render: () => <StartupScriptsPage apiClient={makeApiClient()} className="p-6" /> }
 export const Empty: Story = { render: () => <StartupScriptsPage apiClient={makeApiClient([])} className="p-6" /> }
+
+
+export const LoadFailure: Story = {
+  render: () => <StartupScriptsPage apiClient={{ ...makeApiClient(), listScripts: async () => { throw new SyntaxError("Unexpected token <") } }} className="p-6" />,
+}

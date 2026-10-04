@@ -86,13 +86,40 @@ describe("StartupScriptsPage", () => {
     expect(screen.getByText("Second script")).toBeInTheDocument()
   })
 
-  it("shows error banner when loading fails", async () => {
-    api.listScripts = vi.fn().mockRejectedValue(new Error("Network error"))
+  it("shows a retryable load failure without raw errors or a false empty account", async () => {
+    const user = userEvent.setup()
+    api.listScripts = vi.fn().mockRejectedValueOnce(new SyntaxError("Unexpected token <"))
+      .mockResolvedValueOnce([])
     render(<StartupScriptsPage apiClient={api} />)
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load startup scripts.")
+    expect(screen.queryByText("No startup scripts yet")).not.toBeInTheDocument()
+    expect(screen.queryByText("0 scripts")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Unexpected token/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Retry" }))
+    expect(await screen.findByText("No startup scripts yet")).toBeInTheDocument()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
 
-    await waitFor(() => {
-      expect(screen.getByText("Network error")).toBeInTheDocument()
-    })
+  it("retains last-good scripts when a mutation refresh fails", async () => {
+    const user = userEvent.setup()
+    const script = makeScript({ name: "Retained script" })
+    api.listScripts = vi.fn().mockResolvedValueOnce([script]).mockRejectedValueOnce(new Error("Read failed"))
+    render(<StartupScriptsPage apiClient={api} />)
+    expect(await screen.findByText("Retained script")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Disable" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load startup scripts.")
+    expect(screen.getByText("Retained script")).toBeInTheDocument()
+    expect(screen.queryByText("No startup scripts yet")).not.toBeInTheDocument()
+  })
+
+  it("shows successful scripts even when optional form options fail", async () => {
+    api.listScripts = vi.fn().mockResolvedValue([makeScript({ name: "Loaded script" })])
+    api.listEnvironments = vi.fn().mockRejectedValue(new SyntaxError("Unexpected token <"))
+    render(<StartupScriptsPage apiClient={api} />)
+    expect(await screen.findByText("Loaded script")).toBeInTheDocument()
+    expect(screen.getByRole("alert")).toHaveTextContent("Some script options couldn't load.")
+    expect(screen.queryByText("No startup scripts yet")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Unexpected token/)).not.toBeInTheDocument()
   })
 
   it("opens create dialog with picker step", async () => {

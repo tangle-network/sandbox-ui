@@ -265,6 +265,8 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
   const [secrets, setSecrets] = React.useState<{ name: string }[]>([])
   const [environments, setEnvironments] = React.useState<{ id: string; name?: string }[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [hasLoaded, setHasLoaded] = React.useState(false)
+  const [loadError, setLoadError] = React.useState<string | null>(null)
   const [error, setError] = React.useState<string | null>(null)
 
   // Dialog state — single dialog with step-based content
@@ -288,23 +290,31 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
   apiRef.current = apiClient
   const loadGenRef = React.useRef(0)
 
-  const loadData = React.useCallback(async (showSpinner = true) => {
+  const loadData = React.useCallback(async () => {
     const gen = ++loadGenRef.current
+    setLoading(true)
+    setLoadError(null)
+    setError(null)
     try {
-      if (showSpinner) setLoading(true)
-      setError(null)
-      const [scriptData, secretData, envData] = await Promise.all([
+      const [scriptResult, secretResult, envResult] = await Promise.allSettled([
         apiRef.current.listScripts(),
         apiRef.current.listSecrets?.() ?? Promise.resolve([]),
         apiRef.current.listEnvironments?.() ?? Promise.resolve([]),
       ])
       if (gen !== loadGenRef.current) return
-      setScripts(scriptData)
-      setSecrets(secretData)
-      setEnvironments(envData)
-    } catch (err) {
-      if (gen !== loadGenRef.current) return
-      setError(err instanceof Error ? err.message : "Failed to load startup scripts")
+      if (scriptResult.status === "fulfilled") {
+        setScripts(scriptResult.value)
+        setHasLoaded(true)
+      }
+      if (secretResult.status === "fulfilled") setSecrets(secretResult.value)
+      if (envResult.status === "fulfilled") setEnvironments(envResult.value)
+      if (scriptResult.status === "rejected") {
+        setLoadError("Couldn't load startup scripts.")
+      } else if (secretResult.status === "rejected" || envResult.status === "rejected") {
+        setLoadError("Some script options couldn't load.")
+      }
+    } catch {
+      if (gen === loadGenRef.current) setLoadError("Couldn't load startup scripts.")
     } finally {
       if (gen === loadGenRef.current) setLoading(false)
     }
@@ -388,7 +398,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         await apiRef.current.createScript(formData)
       }
       setIsDialogOpen(false)
-      await loadData(false)
+      await loadData()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Failed to save script")
     } finally {
@@ -399,7 +409,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
   const handleToggle = async (script: StartupScript) => {
     try {
       await apiRef.current.toggleScript(script.id)
-      await loadData(false)
+      await loadData()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to toggle script")
     }
@@ -411,7 +421,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
     try {
       await apiRef.current.deleteScript(deleteTarget.id)
       setDeleteTarget(null)
-      await loadData(false)
+      await loadData()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete script")
     } finally {
@@ -455,10 +465,14 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       />
 
       {/* Error */}
-      {error && (
-        <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+      {(loadError || error) && (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4">
           <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
-          <p className="text-sm font-medium text-destructive">{error}</p>
+          <p className="flex-1 text-sm font-medium text-destructive">{loadError ?? error}</p>
+          {loadError && <button type="button" onClick={() => void loadData()} disabled={loading}
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-surface-container-high px-4 text-sm font-semibold text-foreground shadow-sm hover:bg-surface-container-highest disabled:opacity-50">
+            Retry
+          </button>}
         </div>
       )}
 
@@ -900,18 +914,18 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       </Dialog>
 
       {/* Scripts List */}
-      <div className="overflow-hidden rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-card)]">
+      {(loading || hasLoaded) && <div className="overflow-hidden rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-card)]">
         <div className="border-b border-[var(--md3-outline-variant)] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button className="text-xs font-bold uppercase tracking-widest text-foreground">
               All Scripts
             </button>
           </div>
-          <span className="text-xs text-muted-foreground font-mono">{scripts.length} script{scripts.length !== 1 ? "s" : ""}</span>
+          {hasLoaded && <span className="text-xs text-muted-foreground font-mono">{scripts.length} script{scripts.length !== 1 ? "s" : ""}</span>}
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
+        {loading && !hasLoaded ? (
+          <div role="status" aria-label="Loading startup scripts" className="flex items-center justify-center py-16">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" data-motion="essential" />
           </div>
         ) : scripts.length === 0 ? (
@@ -1029,8 +1043,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
             ))}
           </div>
         )}
-      </div>
-
+      </div>}
 
     </div>
   )

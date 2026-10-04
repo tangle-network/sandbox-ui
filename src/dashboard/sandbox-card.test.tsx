@@ -57,9 +57,10 @@ describe("SandboxCard", () => {
     expect(screen.getByText("Test Box")).toBeInTheDocument()
   })
 
-  it("shows missing live metrics as unknown and keeps measured zero", () => {
+  it("hides missing live metrics and keeps measured zero", () => {
     const { unmount } = render(<SandboxCard sandbox={makeSandbox()} />)
-    expect(screen.getAllByText("Unknown")).toHaveLength(2)
+    expect(screen.queryByText("Unknown")).not.toBeInTheDocument()
+    expect(screen.queryByText("CPU")).not.toBeInTheDocument()
     expect(screen.queryByText("0%")).not.toBeInTheDocument()
     unmount()
 
@@ -310,5 +311,17 @@ describe("SandboxCard resume/wake resolution", () => {
     expect(
       screen.queryByRole("menuitem", { name: /resume sandbox/i }),
     ).not.toBeInTheDocument()
+  })
+})
+
+
+describe("expired sandbox", () => {
+  it("shows its terminal status without offering resume", async () => {
+    const user = userEvent.setup()
+    render(<SandboxCard sandbox={makeSandbox({ status: "expired" })} onResume={vi.fn()} onFork={vi.fn()} />)
+    expect(screen.getByText("Expired")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /resume/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Sandbox options" }))
+    expect(screen.queryByRole("menuitem", { name: /resume|fork/i })).not.toBeInTheDocument()
   })
 })

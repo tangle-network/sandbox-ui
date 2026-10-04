@@ -24,12 +24,12 @@ function makeApiClient(start: StartupScript[] = [initial]): StartupScriptsApiCli
 const meta = {
   title: 'Pages/StartupScriptsPage',
   component: StartupScriptsPage,
-  args: { apiClient: makeApiClient(), className: 'mx-auto max-w-5xl p-6' },
+  args: { apiClient: makeApiClient(), className: 'p-6' },
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof StartupScriptsPage>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const ManageScripts: Story = { render: () => <StartupScriptsPage apiClient={makeApiClient()} className="mx-auto max-w-5xl p-6" /> }
-export const Empty: Story = { render: () => <StartupScriptsPage apiClient={makeApiClient([])} className="mx-auto max-w-5xl p-6" /> }
+export const ManageScripts: Story = { render: () => <StartupScriptsPage apiClient={makeApiClient()} className="p-6" /> }
+export const Empty: Story = { render: () => <StartupScriptsPage apiClient={makeApiClient([])} className="p-6" /> }

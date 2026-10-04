@@ -240,3 +240,9 @@ export {
   InfoPanel,
   type InfoPanelProps,
 } from "./info-panel";
+export {
+  SandboxPageShell,
+  DashboardPageHeader,
+  type SandboxPageShellProps,
+  type DashboardPageHeaderProps,
+} from "./page-layout";

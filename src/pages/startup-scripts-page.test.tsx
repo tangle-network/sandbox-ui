@@ -52,7 +52,7 @@ describe("StartupScriptsPage", () => {
   it("renders the page header", async () => {
     render(<StartupScriptsPage apiClient={api} />)
     expect(screen.getByText("Startup Scripts")).toBeInTheDocument()
-    expect(screen.getByText(/Define scripts that run automatically/)).toBeInTheDocument()
+    expect(screen.getByText("Run scripts when your sandboxes start.")).toBeInTheDocument()
   })
 
   it("shows loading spinner initially", () => {
@@ -84,21 +84,6 @@ describe("StartupScriptsPage", () => {
     expect(screen.getByText("Script B")).toBeInTheDocument()
     expect(screen.getByText("First script")).toBeInTheDocument()
     expect(screen.getByText("Second script")).toBeInTheDocument()
-  })
-
-  it("displays correct stats", async () => {
-    const scripts = [
-      makeScript({ id: "1", name: "Active", enabled: true }),
-      makeScript({ id: "2", name: "Disabled", enabled: false }),
-      makeScript({ id: "3", name: "Also Active", enabled: true }),
-    ]
-    api.listScripts = vi.fn().mockResolvedValue(scripts)
-    render(<StartupScriptsPage apiClient={api} />)
-
-    await waitFor(() => {
-      expect(screen.getByText("3")).toBeInTheDocument() // total
-    })
-    expect(screen.getByText("2")).toBeInTheDocument() // active count
   })
 
   it("shows error banner when loading fails", async () => {
@@ -338,16 +323,8 @@ describe("StartupScriptsPage", () => {
     expect(nameInput).toBeInTheDocument()
   })
 
-  it("renders inside the standard constrained page wrapper", () => {
-    const { container } = render(
-      <StartupScriptsPage apiClient={api} className="test-class" />,
-    )
-    expect(container.firstElementChild).toHaveClass(
-      "mx-auto",
-      "w-full",
-      "max-w-6xl",
-      "space-y-8",
-      "test-class",
-    )
+  it("preserves the caller's className", () => {
+    const { container } = render(<StartupScriptsPage apiClient={api} className="test-class" />)
+    expect(container.firstElementChild).toHaveClass("test-class")
   })
 })

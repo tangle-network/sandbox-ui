@@ -30,7 +30,7 @@ describe("SecretsPage", () => {
   it("renders the page header", async () => {
     render(<SecretsPage apiClient={api} />)
     expect(screen.getByText("Environment Secrets")).toBeInTheDocument()
-    expect(screen.getByText(/Secrets are securely stored/)).toBeInTheDocument()
+    expect(screen.getByText("Manage environment variables for your sandboxes.")).toBeInTheDocument()
   })
 
   it("shows empty state when no secrets exist", async () => {
@@ -188,15 +188,14 @@ describe("SecretsPage", () => {
     expect(container.firstElementChild).toHaveClass("test-class")
   })
 
-  // --- teamSecretsHint banner tests ---
+  // Team-secret navigation stays available without a promotional banner.
 
   describe("teamSecretsHint", () => {
-    it("renders the team-secrets hint banner when prop is provided", async () => {
+    it("renders team navigation when provided", async () => {
       const onNavigate = vi.fn()
       render(<SecretsPage apiClient={api} teamSecretsHint={{ onNavigate }} />)
 
-      expect(screen.getByText("Setting up secrets for a team?")).toBeInTheDocument()
-      expect(screen.getByText(/Secrets here are/)).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "Team secrets" })).toBeInTheDocument()
     })
 
     it("does not render the team-secrets hint banner when prop is omitted", async () => {
@@ -209,7 +208,7 @@ describe("SecretsPage", () => {
       const onNavigate = vi.fn()
       render(<SecretsPage apiClient={api} teamSecretsHint={{ onNavigate }} />)
 
-      expect(screen.getByRole("button", { name: /manage team secrets/i })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /^team secrets$/i })).toBeInTheDocument()
     })
 
     it("uses custom CTA label when provided", async () => {
@@ -229,7 +228,7 @@ describe("SecretsPage", () => {
       const onNavigate = vi.fn()
       render(<SecretsPage apiClient={api} teamSecretsHint={{ onNavigate }} />)
 
-      await user.click(screen.getByRole("button", { name: /manage team secrets/i }))
+      await user.click(screen.getByRole("button", { name: /^team secrets$/i }))
 
       expect(onNavigate).toHaveBeenCalledTimes(1)
     })

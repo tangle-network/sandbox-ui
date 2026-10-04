@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.122.0
+
+- Export `SandboxPageShell` and `DashboardPageHeader` for broad, consistently spaced dashboard pages. Generic UI primitive exports stay unchanged.
+- Compact sandbox table rows, remove Environment, keep Open or Resume as the primary action, and move secondary actions including Delete into the permission-aware menu. Hide unavailable or invalid resource gauges in tables and cards while retaining measured zero.
+- Preserve Expired as a distinct terminal status with no Resume action.
+- Simplify Secrets and Startup Scripts pages: keep the working lists, forms, and navigation; remove duplicate statistics and explanatory banners. Give Billing tabs a raised surface and a clear selected state.
+
 ## 0.121.1
 
 - Hide the empty Modes heading in AgentProfilePicker when the app supplies only custom profiles. Existing options, selection, and authoring controls are unchanged.

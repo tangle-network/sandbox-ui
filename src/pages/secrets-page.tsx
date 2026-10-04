@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, CheckCircle, Users, ArrowRight, Upload } from "lucide-react"
+import { Lock, Plus, Trash2, Eye, EyeOff, AlertCircle, Key, CheckCircle, Upload } from "lucide-react"
 import { cn } from "../lib/utils"
-import { PageHeader } from "../primitives"
+import { DashboardPageHeader } from "../dashboard/page-layout"
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,7 @@ export interface SecretsApiClient {
 
 type ImportRowStatus = "idle" | "success" | "error"
 
-const DEFAULT_DESCRIPTION = "Secrets are securely stored and automatically exposed as environment variables across all your sandboxes."
+const DEFAULT_DESCRIPTION = "Manage environment variables for your sandboxes."
 const DEFAULT_CREATE_DESCRIPTION = "Secrets are automatically exposed as environment variables across all your new sandboxes."
 const DEFAULT_EMPTY_DESCRIPTION = "Create a secret to inject into your sandboxes."
 const DEFAULT_DELETE_CONSEQUENCE = "Sandboxes using this secret will lose access to it."
@@ -61,16 +61,9 @@ export interface SecretsPageProps {
    * edge-to-edge list that scrolls inside the available height.
    */
   variant?: "page" | "pane"
-  /**
-   * Optional hint pointing users at team-level secrets. When provided,
-   * renders a persistent informational banner below the header clarifying
-   * that personal secrets are NOT shared with teams and linking the
-   * user to their team-management page to configure shared secrets
-   * there. Omit entirely to hide the banner (e.g. in deployments
-   * without teams).
-   */
+  /** Optional navigation to team-scoped credentials, shown beside the page actions. */
   teamSecretsHint?: {
-    /** Callback fired when the user clicks the banner's CTA. */
+    /** Navigate to team-scoped credentials. */
     onNavigate: () => void
     /** CTA label. Defaults to "Manage team secrets". */
     label?: string
@@ -310,10 +303,14 @@ export function SecretsPage({
 
   const actions = (
     <>
+      {teamSecretsHint && <button type="button" onClick={teamSecretsHint.onNavigate}
+        className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-surface-container-high px-3 text-sm font-medium text-foreground shadow-sm hover:bg-surface-container-highest">
+        {teamSecretsHint.label ?? "Team secrets"}
+      </button>}
       <button
         type="button"
         onClick={() => setIsImportOpen(true)}
-        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-container-high active:scale-[0.97] sm:gap-2"
+        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-high px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-container-high active:scale-[0.97] sm:gap-2"
       >
         <Upload className="h-4 w-4" aria-hidden="true" />
         Import .env
@@ -332,7 +329,7 @@ export function SecretsPage({
   return (
     <div
       className={cn(
-        pane ? "flex h-full min-h-0 w-full flex-col" : "mx-auto w-full max-w-6xl space-y-6",
+        pane ? "flex h-full min-h-0 w-full flex-col" : "w-full min-w-0 space-y-5",
         className,
       )}
     >
@@ -345,38 +342,7 @@ export function SecretsPage({
           <div className="flex shrink-0 items-center gap-2">{actions}</div>
         </header>
       ) : (
-        <PageHeader title={title} description={description} action={actions} />
-      )}
-
-      {/* Team-secrets hint — rendered only when the host app opts in.
-          These secrets are personal; team-scoped credentials live on the
-          team management page. The banner prevents users from pasting
-          shared credentials here and wondering why teammates can't see
-          them. */}
-      {teamSecretsHint && (
-        <div className={cn(
-          "flex flex-wrap items-center gap-3 border-[var(--md3-outline-variant)] bg-[var(--accent-surface-soft)]/40 px-4 py-3",
-          pane ? "shrink-0 border-b sm:px-6" : "rounded-lg border",
-        )}>
-          <div className="flex min-w-[min(100%,18rem)] flex-1 items-start gap-3">
-            <Users className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent-text)]" aria-hidden="true" />
-            <div className="min-w-0 text-sm">
-              <p className="font-semibold text-foreground">Setting up secrets for a team?</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Secrets here are <strong>personal</strong> and only available in sandboxes you create.
-                Add shared credentials on the team page.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={teamSecretsHint.onNavigate}
-            className="inline-flex w-full shrink-0 items-center justify-center gap-1 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface-container-high sm:w-auto"
-          >
-            {teamSecretsHint.label ?? "Manage team secrets"}
-            <ArrowRight className="h-3 w-3" aria-hidden="true" />
-          </button>
-        </div>
+        <DashboardPageHeader title={title} description={description} actions={actions} />
       )}
 
       {/* Error banner. A failed first load renders its own retry state in the list. */}

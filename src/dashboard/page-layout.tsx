@@ -21,5 +21,5 @@ export interface DashboardPageHeaderProps {
 
 export function DashboardPageHeader({ title, description, actions, className }: DashboardPageHeaderProps) {
   return <PageHeader title={title} description={description} actions={actions}
-    className={cn("rounded-xl border border-border bg-surface-container px-5 py-5 sm:px-6 [&_h1]:text-2xl sm:[&_h1]:text-[28px] [&_h1]:font-semibold [&_p]:text-base [&_p]:leading-relaxed", className)} />;
+    className={cn("gap-3 [&_h1]:text-2xl sm:[&_h1]:text-[28px] [&_h1]:font-semibold [&_p]:text-base [&_p]:leading-relaxed", className)} />;
 }

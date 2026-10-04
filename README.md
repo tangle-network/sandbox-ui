@@ -40,7 +40,9 @@ import "@tangle-network/sandbox-ui/styles";
 
 ### Dashboard page spacing
 
-For apps whose pages already provide their own gutters, pass `contentClassName="px-0 pb-0 lg:px-0"` to `DashboardLayout`. Set `notificationsEnabled={false}` when the app has no notification feed. Add `collapseEmptyTopBar` to reclaim the desktop header space when no top-bar controls remain; the mobile menu stays available. Existing defaults are unchanged.
+For apps whose pages already provide their own gutters, pass `contentClassName="px-0 pb-0 lg:px-0"` to `DashboardLayout`. New Sandbox is at the top of the sidebar; notifications sit above the account menu. Set `notificationsEnabled={false}` when the app has no notification feed. The desktop has no top bar; the mobile menu opens a focus-managed drawer.
+
+Use `sidebarLeading={({ collapsed }) => <WorkspaceSwitcher compact={collapsed} />}` for workspace controls; the mobile drawer supplies `collapsed: false`. A static node opens in a Workspace menu on the collapsed rail. `topBarLeading` remains a relocated legacy alias, and `topNavLinks` render as sidebar links. `collapseEmptyTopBar` is retained as a no-op. `DashboardPageHeader` keeps title, description and actions aligned without adding a card.
 
 ### Workspace integration access
 

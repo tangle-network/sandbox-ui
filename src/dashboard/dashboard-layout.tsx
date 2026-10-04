@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Bell } from "lucide-react"
+import { Plus, Bell, Users, ExternalLink } from "lucide-react"
+import { focusRing } from "@tangle-network/ui/utils"
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
-import { MOTION_CONTROL, MOTION_TRAVEL } from "../lib/motion"
+import { MOTION_CONTROL } from "../lib/motion"
 import { useBrandThemeSync } from "./use-brand-theme-sync"
 import { Logo } from "../primitives"
 import {
@@ -78,8 +80,9 @@ export interface DashboardLayoutProps {
   contentClassName?: string
   topNavLinks?: TopNavLink[]
   activeTopNavHref?: string
-  /** Arbitrary content rendered at the leading (left) edge of the top bar —
-   * e.g. a workspace/team switcher — so consumers don't need a second bar. */
+  /** Workspace controls below the sidebar brand. The mobile drawer is never collapsed. */
+  sidebarLeading?: React.ReactNode | ((state: { collapsed: boolean }) => React.ReactNode)
+  /** @deprecated Use sidebarLeading. Relocated into the sidebar; collapsed rails open a Workspace menu. */
   topBarLeading?: React.ReactNode
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
@@ -125,7 +128,7 @@ export interface DashboardLayoutProps {
   appearance?: AppearanceController
   /** Keep notification access available even when data is still loading. Defaults to true. */
   notificationsEnabled?: boolean
-  /** Collapse the desktop bar when no host controls or notifications are enabled. */
+  /** @deprecated The desktop top bar is always removed; controls live in the sidebar. */
   collapseEmptyTopBar?: boolean
   /** Notification data for the bell dropdown */
   notifications?: {
@@ -187,6 +190,54 @@ function DefaultLink({
   )
 }
 
+/** Notifications use the shared menu's collision handling, keyboard movement and focus return. */
+function SidebarNotifications({ data, showLabels, mobile }: {
+  data: DashboardLayoutProps["notifications"]
+  showLabels: boolean
+  mobile: boolean
+}) {
+  const unread = data?.unreadCount ?? 0
+  const NotificationIcon = ({ className }: { className?: string }) => <span className="relative">
+    <Bell className={className} aria-hidden="true" />
+    {unread > 0 && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-surface-container-low" aria-hidden="true" />}
+  </span>
+  const content = (item: NonNullable<DashboardLayoutProps["notifications"]>["items"][number]) => <>
+    <p className={cn("text-sm", item.read ? "text-muted-foreground" : "font-semibold text-foreground")}>{item.title}</p>
+    <p className="mt-1 text-sm text-muted-foreground">{item.message}</p>
+    <time className="mt-1 block text-xs text-muted-foreground" dateTime={item.createdAt}>{formatNotifDate(item.createdAt)}</time>
+  </>
+  return <DropdownMenu modal={false}>
+    <RailButton icon={NotificationIcon} label="Notifications" showLabel={showLabels} asChild>
+      <DropdownMenuTrigger aria-label="Notifications" aria-description={unread > 0 ? `${unread} unread` : undefined} />
+    </RailButton>
+    <DropdownMenuContent aria-label="Notifications" side={mobile ? "top" : "right"} align={mobile ? "start" : "end"} sideOffset={12} collisionPadding={12}
+      className="w-80 max-w-[calc(100vw-24px)] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto p-1.5">
+      <DropdownMenuLabel className="px-2.5 py-2 text-sm">Notifications</DropdownMenuLabel>
+      {unread > 0 && data?.onMarkAllRead && <DropdownMenuItem onSelect={(event) => { event.preventDefault(); data.onMarkAllRead?.() }}>Mark all read</DropdownMenuItem>}
+      <DropdownMenuSeparator />
+      {!data?.items.length ? <p className="px-2.5 py-5 text-sm text-muted-foreground">No notifications yet</p> : data.items.map((item) =>
+        !item.read && data.onMarkRead ? <DropdownMenuItem key={item.id} className="block whitespace-normal px-2.5 py-3" onSelect={(event) => { event.preventDefault(); data.onMarkRead?.(item.id) }}>{content(item)}</DropdownMenuItem>
+          : <div key={item.id} className="px-2.5 py-3">{content(item)}</div>
+      )}
+    </DropdownMenuContent>
+  </DropdownMenu>
+}
+
+function SidebarLeading({ content, legacy, collapsed }: {
+  content: DashboardLayoutProps["sidebarLeading"]
+  legacy: React.ReactNode
+  collapsed: boolean
+}) {
+  if (typeof content === "function") return content({ collapsed })
+  const node = content ?? legacy
+  if (!node) return null
+  if (!collapsed) return node
+  return <DropdownMenu modal={false}>
+    <RailButton icon={Users} label="Workspace" asChild><DropdownMenuTrigger /></RailButton>
+    <DropdownMenuContent aria-label="Workspace" side="right" align="start" sideOffset={12} collisionPadding={12} className="w-64 max-w-[calc(100vw-24px)] p-3">{node}</DropdownMenuContent>
+  </DropdownMenu>
+}
+
 // ============================================================================
 // Inner layout (consumes sidebar context)
 // ============================================================================
@@ -210,6 +261,7 @@ function DashboardLayoutInner({
   topNavLinks,
   activeTopNavHref,
   topBarLeading,
+  sidebarLeading,
   LinkComponent = DefaultLink,
   logoHref = "/",
   labeledRail = false,
@@ -219,42 +271,21 @@ function DashboardLayoutInner({
   appearance,
   notifications: notifData,
   notificationsEnabled = true,
-  collapseEmptyTopBar = false,
 }: DashboardLayoutProps) {
   // Keep light/dark tokens switching correctly under brand 0.6 regardless of which
   // control toggled the theme (see useBrandThemeSync).
   useBrandThemeSync()
   const Link = LinkComponent
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
-  const [notificationsOpen, setNotificationsOpen] = React.useState(false)
-  const notifRef = React.useRef<HTMLDivElement>(null)
-
   React.useEffect(() => {
-    if (!notificationsOpen) return
-    const handler = (e: MouseEvent) => {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setNotificationsOpen(false)
-      }
-    }
-    const keyHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setNotificationsOpen(false)
-    }
-    document.addEventListener("mousedown", handler)
-    document.addEventListener("keydown", keyHandler)
-    return () => {
-      document.removeEventListener("mousedown", handler)
-      document.removeEventListener("keydown", keyHandler)
-    }
-  }, [notificationsOpen])
-  const { contentMargin, hidden, mode, hasPanels, panelOpen, toggleRail, railCollapsed } =
-    useSidebar()
+    if (typeof window.matchMedia !== "function") return
+    const desktop = window.matchMedia("(min-width: 1024px)")
+    const closeOnDesktop = () => { if (desktop.matches) setMobileMenuOpen(false) }
+    desktop.addEventListener("change", closeOnDesktop)
+    return () => desktop.removeEventListener("change", closeOnDesktop)
+  }, [])
+  const { mode, hasPanels, panelOpen, toggleRail, railCollapsed } = useSidebar()
   const modeSet = React.useMemo(() => new Set(modeItems), [modeItems])
-  const collapseDesktopTopBar =
-    collapseEmptyTopBar &&
-    React.Children.toArray(topBarLeading).length === 0 &&
-    (topNavLinks?.length ?? 0) === 0 &&
-    !onNewSandbox &&
-    !notificationsEnabled
 
   // Memoised so the `buildSidebarContent` callback below (which depends on
   // this value) doesn't recreate on every render — that was silently
@@ -274,7 +305,7 @@ function DashboardLayoutInner({
   // trees so a state change that only affects one (e.g. toggling
   // `mobileMenuOpen`) doesn't force the other to reconcile.
   const buildSidebarContent = React.useCallback(
-    (showLabels: boolean, allowCollapse: boolean) => (
+    (showLabels: boolean, allowCollapse: boolean, mobile = false) => (
       <>
         <SidebarRail wide={showLabels}>
           <RailHeader
@@ -285,6 +316,11 @@ function DashboardLayoutInner({
             collapsible={allowCollapse}
             LinkComponent={Link}
           />
+
+          {(sidebarLeading != null || topBarLeading != null || onNewSandbox) && <div className={cn("flex shrink-0 flex-col gap-2 pt-3", showLabels ? "px-2" : "items-center px-1")}>
+            {(sidebarLeading != null || topBarLeading != null) && <SidebarLeading content={sidebarLeading} legacy={topBarLeading} collapsed={!showLabels} />}
+            {onNewSandbox && <RailButton icon={Plus} label="New Sandbox" variant="primary" showLabel={showLabels} className="min-h-11" onClick={() => { if (mobile) setMobileMenuOpen(false); onNewSandbox() }} />}
+          </div>}
 
           <SidebarRailNav
             className={cn(showLabels ? "px-2" : undefined, !showLabels && allowCollapse && "cursor-pointer")}
@@ -333,12 +369,13 @@ function DashboardLayoutInner({
                 </React.Fragment>
               )
             })}
+            {topNavLinks?.map((link) => <RailButton key={link.href} icon={ExternalLink} label={link.label} isActive={activeTopNavHref === link.href} showLabel={showLabels} asChild>
+              <Link href={link.href} to={link.href} />
+            </RailButton>)}
           </SidebarRailNav>
 
           <SidebarRailFooter className={cn("border-t border-[var(--md3-outline-variant)] pt-2", showLabels && "items-stretch px-2")}>
-            {/* No nav items live in the footer anymore — Settings moved into the
-                account menu, collapse moved into the header. The footer is just
-                the account avatar (plus any host-provided railFooter content). */}
+            {notificationsEnabled && <SidebarNotifications data={notifData} showLabels={showLabels} mobile={mobile} />}
             {railFooter !== undefined ? (
               showLabels ? (
                 <div className="flex w-full items-center gap-1">
@@ -346,8 +383,8 @@ function DashboardLayoutInner({
                     <ProfileAvatar
                       user={sidebarUser}
                       isLoading={isLoading}
-                      onLogout={onLogout}
-                      onSettingsClick={onSettingsClick}
+                      onLogout={onLogout ? () => { if (mobile) setMobileMenuOpen(false); onLogout() } : undefined}
+                      onSettingsClick={onSettingsClick ? () => { if (mobile) setMobileMenuOpen(false); onSettingsClick() } : undefined}
                       settingsHref={settingsHref}
                       showDetails={showLabels}
                       appearance={appearance}
@@ -364,8 +401,8 @@ function DashboardLayoutInner({
                   <ProfileAvatar
                     user={sidebarUser}
                     isLoading={isLoading}
-                    onLogout={onLogout}
-                    onSettingsClick={onSettingsClick}
+                    onLogout={onLogout ? () => { if (mobile) setMobileMenuOpen(false); onLogout() } : undefined}
+                    onSettingsClick={onSettingsClick ? () => { if (mobile) setMobileMenuOpen(false); onSettingsClick() } : undefined}
                     settingsHref={settingsHref}
                     showDetails={showLabels}
                     appearance={appearance}
@@ -379,8 +416,8 @@ function DashboardLayoutInner({
               <ProfileAvatar
                 user={sidebarUser}
                 isLoading={isLoading}
-                onLogout={onLogout}
-                onSettingsClick={onSettingsClick}
+                onLogout={onLogout ? () => { if (mobile) setMobileMenuOpen(false); onLogout() } : undefined}
+                onSettingsClick={onSettingsClick ? () => { if (mobile) setMobileMenuOpen(false); onSettingsClick() } : undefined}
                 settingsHref={settingsHref}
                 showDetails={showLabels}
                 appearance={appearance}
@@ -403,6 +440,13 @@ function DashboardLayoutInner({
     // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — only the inputs that actually affect the sidebar tree
     [
       Link,
+      onNewSandbox,
+      sidebarLeading,
+      topBarLeading,
+      topNavLinks,
+      activeTopNavHref,
+      notificationsEnabled,
+      notifData,
       variant,
       logoHref,
       labeledRail,
@@ -433,161 +477,24 @@ function DashboardLayoutInner({
     () => buildSidebarContent(labeledRail && !railCollapsed, labeledRail),
     [buildSidebarContent, labeledRail, railCollapsed],
   )
-  const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true, false), [buildSidebarContent])
+  const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true, false, true), [buildSidebarContent])
 
   return (
     <div className={cn("min-h-screen bg-surface text-foreground", className)}>
-      {/* Top nav bar */}
-      <nav
-        // Match the rail only at its desktop breakpoint; mobile uses the full viewport.
-        className={cn(
-          "fixed top-0 left-0 right-0 lg:left-[var(--sb-content-margin)] z-50 bg-surface-container-low border-b border-[var(--md3-outline-variant)] flex justify-between items-center px-8 h-14 font-sans text-[13px] tracking-tight transition-[left,width]",
-          MOTION_TRAVEL,
-          collapseDesktopTopBar && "lg:hidden",
-        )}
-        style={{
-          "--sb-content-margin": `${hidden ? 0 : contentMargin}px`,
-        } as React.CSSProperties}
-      >
-        <div className="flex items-center gap-8">
-          {/* Mobile-only brand — the desktop sidebar rail carries the logo
-              on lg+, but on mobile the rail is hidden behind the drawer and
-              the top bar otherwise contained only a bell + hamburger. */}
-          <Link href={logoHref} to={logoHref} className={cn("lg:hidden flex items-center p-1 rounded-md hover:bg-surface-container-high transition-colors", MOTION_CONTROL)}>
-            <Logo variant={variant} size="sm" iconOnly />
-          </Link>
-          {topBarLeading}
-          {topNavLinks && topNavLinks.length > 0 && (
-            <div className="hidden md:flex gap-6">
-              {topNavLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  to={link.href}
-                  className={cn(
-                    "transition-all px-2 py-1 rounded",
-                    MOTION_CONTROL,
-                    activeTopNavHref === link.href
-                      ? "text-foreground border-b-2 border-primary pb-1"
-                      : "text-muted-foreground hover:text-foreground hover:bg-surface-container-high",
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-4">
-          {onNewSandbox && (
-            <button
-              type="button"
-              onClick={onNewSandbox}
-              className={cn("hidden md:flex items-center gap-2 bg-[var(--btn-primary-bg)] border border-[var(--border-accent)] text-[var(--btn-primary-text)] px-4 py-2 rounded-lg font-bold hover:bg-[var(--btn-primary-hover)] transition-all active:scale-95 text-xs", MOTION_CONTROL)}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Sandbox
-            </button>
-          )}
-          {notificationsEnabled && (
-            <div className="relative" ref={notifRef}>
-              <button
-                type="button"
-                className={cn("relative text-muted-foreground hover:text-foreground transition-colors p-2 rounded-lg hover:bg-surface-container-high", MOTION_CONTROL)}
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                aria-label="Notifications"
-                aria-expanded={notificationsOpen}
-              >
-                <Bell className="h-4 w-4" />
-                {(notifData?.unreadCount ?? 0) > 0 && (
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
-                )}
-              </button>
-              {notificationsOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14] z-50">
-                  <div className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] px-4 py-3">
-                    <p className="font-bold text-foreground text-sm">Notifications</p>
-                    {(notifData?.unreadCount ?? 0) > 0 && notifData?.onMarkAllRead && (
-                      <button
-                        type="button"
-                        onClick={() => { notifData.onMarkAllRead?.(); }}
-                        className="text-primary text-xs font-medium hover:underline"
-                      >
-                        Mark all read
-                      </button>
-                    )}
-                  </div>
-                  {(!notifData?.items || notifData.items.length === 0) ? (
-                    <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
-                      <Bell className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                      <p className="text-muted-foreground text-sm">No notifications yet</p>
-                      <p className="text-muted-foreground/60 text-xs mt-1">We'll notify you about important updates</p>
-                    </div>
-                  ) : (
-                    <div className="max-h-80 overflow-y-auto">
-                      {notifData.items.map((n) => (
-                        <button
-                          key={n.id}
-                          type="button"
-                          className={cn(
-                            "w-full text-left px-4 py-3 border-b border-[var(--md3-outline-variant)] last:border-0 transition-colors",
-                            MOTION_CONTROL,
-                            n.read ? "cursor-default" : "bg-primary/5 hover:bg-white/5",
-                          )}
-                          onClick={() => { if (!n.read) notifData.onMarkRead?.(n.id); }}
-                        >
-                          <p className={cn("text-sm", !n.read ? "font-semibold text-foreground" : "text-muted-foreground")}>
-                            {n.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
-                          <p className="text-[10px] text-muted-foreground/50 mt-1">
-                            {formatNotifDate(n.createdAt)}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-        {/* Mobile menu toggle */}
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="rounded-md p-2 hover:bg-surface-container-high lg:hidden"
-          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-          aria-expanded={mobileMenuOpen}
-        >
-          {mobileMenuOpen ? <XIcon className="h-6 w-6" /> : <MenuIcon className="h-6 w-6" />}
-        </button>
-      </nav>
-
-      {/* Mobile overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setMobileMenuOpen(false)} aria-hidden="true" />
-      )}
-
-      {/* Mobile sidebar drawer. The mobile rail renders labels beside
-          icons (see `SidebarRail` `wide` prop) so the drawer must be wider
-          than the 64px icon rail to avoid truncating them. When a panel
-          is open we extend by the panel width so both sit side-by-side. */}
-      <aside
-        className={cn(
-          "fixed top-14 bottom-0 left-0 z-30 flex bg-surface-container-low transition-transform lg:hidden",
-          MOTION_TRAVEL,
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-        )}
-        style={{
-          width:
-            panelOpen && hasPanels
-              ? SIDEBAR_MOBILE_WIDTH + SIDEBAR_PANEL_WIDTH
-              : SIDEBAR_MOBILE_WIDTH,
-        }}
-      >
-        {mobileSidebarContent}
-      </aside>
+      <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <nav aria-label="Mobile navigation" className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-4 lg:hidden">
+          <Link href={logoHref} to={logoHref} aria-label="Home" className={cn("rounded-md p-1", focusRing)}><Logo variant={variant} size="sm" iconOnly /></Link>
+          <DialogTrigger asChild><button type="button" aria-label="Open menu" className={cn("flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-container-high", focusRing)}><MenuIcon className="h-5 w-5" /></button></DialogTrigger>
+        </nav>
+        <DialogContent aria-describedby={undefined} hideCloseButton
+          className="inset-y-0 left-0 flex h-dvh max-w-[calc(100vw-24px)] translate-x-0 translate-y-0 gap-0 rounded-none border-y-0 border-l-0 bg-surface-container-low p-0 lg:hidden"
+          style={{ width: panelOpen && hasPanels ? SIDEBAR_MOBILE_WIDTH + SIDEBAR_PANEL_WIDTH : SIDEBAR_MOBILE_WIDTH }}
+          onClick={(event) => { if ((event.target as HTMLElement).closest("a[href]")) setMobileMenuOpen(false) }}>
+          <DialogTitle className="sr-only">Navigation</DialogTitle>
+          <DialogClose aria-label="Close menu" className={cn("absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-container-high", focusRing)}><XIcon className="h-5 w-5" /></DialogClose>
+          {mobileSidebarContent}
+        </DialogContent>
+      </Dialog>
 
       {/* Desktop sidebar */}
       <Sidebar className={cn("hidden lg:flex", sidebarClassName)}>
@@ -599,8 +506,7 @@ function DashboardLayoutInner({
           viewports and keeps screen-reader landmarks unambiguous. */}
       <SidebarContent
         className={cn(
-          "pt-16 px-6 pb-8 lg:px-8 bg-surface",
-          collapseDesktopTopBar && "lg:pt-0",
+          "pt-12 px-6 pb-8 lg:px-8 lg:pt-0 bg-surface",
           contentClassName,
         )}
       >

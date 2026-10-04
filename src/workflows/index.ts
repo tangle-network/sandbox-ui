@@ -47,3 +47,37 @@ export {
   ModelBrandStack,
   modelBrandFor,
 } from "../lib/model-brand";
+
+// The node's visual atoms, for a host that draws a run OUTSIDE the canvas — a
+// run page's pipeline strip, its step headers — and must read as the same system
+// as the graph: one glyph per kind, one colour and one word per status.
+// `StatusPill` is exported as `NodeStatusPill` because the root entry already
+// exports the generic `StatusPill` primitive under that name.
+export {
+  KIND_ICON,
+  NodeMark,
+  STATUS_COLOR,
+  STATUS_LABEL,
+  STATUS_PILL,
+  StatusPill as NodeStatusPill,
+} from "./node-ui";
+// The naming rules the graph labels nodes with, so a host titles a step the way
+// the graph does: `github.pulls.reviews.create` reads as "Create pull request
+// review", not as the identifier.
+export {
+  type ActionPathParts,
+  actionPathLabel,
+  humanizeIdentifier,
+  type LeadCase,
+  parseActionPath,
+  shortModel,
+} from "./naming";
+// The node's output classifier and body: a shallow JSON object as key/value rows,
+// text as a condensed preview. A host rendering a step's result falls back to the
+// same reading the canvas gives it.
+export {
+  classifyOutput,
+  condenseText,
+  NodeOutputBody,
+  type OutputShape,
+} from "./node-output";

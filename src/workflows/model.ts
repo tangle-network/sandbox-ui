@@ -700,7 +700,17 @@ function urlHost(url: string): string {
  * retry policy, and the failure policy. They are not actions and never name a
  * node.
  */
-const CONTROL_FLOW_KEYS = ["if", "retry", "onError"] as const;
+const CONTROL_FLOW_KEYS = [
+  "if",
+  "retry",
+  "onError",
+  // Graph topology: a graph-form step names itself (`id`), its dependencies
+  // (`needs`) and how they release it (`join`) beside its action key. Without
+  // these a graph definition titled every step after its `id` key ("ID").
+  "id",
+  "needs",
+  "join",
+] as const;
 const CONTROL_FLOW = new Set<string>(CONTROL_FLOW_KEYS);
 
 /**
@@ -737,7 +747,9 @@ const MINTED_PROFILE_ID = /^ap_[A-Za-z0-9_-]{16}$/;
  *  a minted catalog id, has no readable name here — the node is the generic agent
  *  rather than a mangled identifier. */
 function agentTitle(profile: unknown): string {
-  const named = str(profile);
+  // An inline profile carries its own name; that name is the role.
+  const inline = asRecord(profile).name;
+  const named = str(profile) ?? str(inline);
   if (!named || MINTED_PROFILE_ID.test(named)) return "AI Agent";
   return humanizeIdentifier(named);
 }

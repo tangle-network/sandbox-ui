@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.123.0
+
+- Export the workflow node atoms from `@tangle-network/sandbox-ui/workflows`: `KIND_ICON`, `NodeMark`, `STATUS_COLOR`, `STATUS_LABEL`, `STATUS_PILL` and `NodeStatusPill`, the naming helpers (`humanizeIdentifier`, `actionPathLabel`, `parseActionPath`, `shortModel`), and the output classifier (`classifyOutput`, `condenseText`, `NodeOutputBody`). A host drawing a run outside the canvas can now match the graph's glyphs, status colours and labels. Existing exports are unchanged.
+- `buildWorkflowGraph` reads graph-form steps: `id`, `needs` and `join` are step topology, not the action, so a graph definition no longer titles every step "ID". An agent step with an inline profile is titled by that profile's `name`.
+
 ## 0.122.3
 
 - Move New Sandbox and workspace switching to the sidebar, with notifications above the account menu. Remove the desktop top bar and page-title card styling.

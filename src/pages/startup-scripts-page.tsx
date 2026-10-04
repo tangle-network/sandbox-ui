@@ -2,14 +2,12 @@
 
 import * as React from "react"
 import {
-  Play,
   Plus,
   Trash2,
   Pencil,
   AlertCircle,
   Power,
   PowerOff,
-  Shield,
   Terminal,
   Clock,
   ChevronDown,
@@ -21,7 +19,7 @@ import {
   Layers,
 } from "lucide-react"
 import { cn } from "../lib/utils"
-import { PageHeader } from "../primitives"
+import { DashboardPageHeader } from "../dashboard/page-layout"
 import {
   Dialog,
   DialogContent,
@@ -30,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@tangle-network/ui/primitives"
-import { InfoPanel } from "../dashboard/info-panel"
 import { focusField } from "@tangle-network/ui/utils"
 
 export type ScriptType = "bash" | "python" | "node" | "ruby" | "custom"
@@ -440,14 +437,12 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
     }))
   }
 
-  const activeCount = scripts.filter((s) => s.enabled).length
-
   return (
-    <div className={cn("mx-auto w-full max-w-6xl space-y-8", className)}>
-      <PageHeader
+    <div className={cn("w-full min-w-0 space-y-5", className)}>
+      <DashboardPageHeader
         title="Startup Scripts"
-        description="Define scripts that run automatically when your sandboxes start. Scripts can access your encrypted secrets."
-        action={
+        description="Run scripts when your sandboxes start."
+        actions={
           <button
             type="button"
             onClick={openCreate}
@@ -458,29 +453,6 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
           </button>
         }
       />
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-[var(--shadow-card)]">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Scripts</p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="font-display text-2xl font-extrabold text-foreground">{scripts.length}</span>
-          </div>
-        </div>
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-5 shadow-[var(--shadow-card)]">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="font-display text-2xl font-extrabold text-foreground">{activeCount}</span>
-            <span className="text-xs text-muted-foreground">of {scripts.length}</span>
-          </div>
-        </div>
-        <InfoPanel
-          className="md:col-span-2"
-          label="Execution"
-          title="Scripts run before your agent starts."
-          description="They execute in order, with full access to injected secrets as environment variables."
-        />
-      </div>
 
       {/* Error */}
       {error && (
@@ -1059,31 +1031,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
         )}
       </div>
 
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
-              <Play className="h-5 w-5" />
-            </div>
-            <h3 className="text-sm font-bold text-foreground">How Scripts Run</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Scripts execute in order after the container starts but before the AI agent. They run as bash scripts with full access to mounted tools (Nix profile) and workspace. Failed scripts abort sandbox creation unless "continue on failure" is enabled.
-          </p>
-        </div>
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-[var(--brand-primary,hsl(var(--primary)))] text-[var(--btn-primary-text)]">
-              <Shield className="h-5 w-5" />
-            </div>
-            <h3 className="text-sm font-bold text-foreground">Security & Secrets</h3>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Selected secrets are injected as environment variables at execution time. Secret values are never stored in the script itself — they are decrypted and injected only when the sandbox starts. Scripts can use conditions to restrict execution to specific environments or resource tiers.
-          </p>
-        </div>
-      </div>
+
     </div>
   )
 }

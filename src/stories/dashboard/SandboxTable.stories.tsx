@@ -67,7 +67,7 @@ function LongNameTable({ withScope = false }: { withScope?: boolean }) {
 export const LongNames: Story = { render: () => <LongNameTable /> }
 export const LongNamesWithScope: Story = { render: () => <LongNameTable withScope /> }
 
-const statusRows: SandboxCardData[] = (['running', 'failed', 'provisioning', 'creating', 'stopped', 'hibernating', 'archived'] as const).map((status, index) => ({
+const statusRows: SandboxCardData[] = (['running', 'failed', 'provisioning', 'creating', 'stopped', 'hibernating', 'archived', 'expired'] as const).map((status, index) => ({
   id: status,
   name: `${status}-workspace`,
   status,

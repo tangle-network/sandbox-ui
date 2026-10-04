@@ -94,7 +94,7 @@ function BillingPageSkeleton({
   variant?: ProductVariant;
 }) {
   return (
-    <div className="space-y-8">
+    <div className="w-full min-w-0 space-y-5">
       <div className="grid gap-6 lg:grid-cols-3">
         <SkeletonCard />
         <SkeletonCard />
@@ -263,9 +263,9 @@ export function BillingPage({
   const data = state.data || defaultBillingData;
 
   return (
-    <div className="space-y-8">
+    <div className="w-full min-w-0 space-y-5">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="mb-6">
+        <TabsList className="mb-5 h-auto gap-1 rounded-xl border border-border bg-surface-container p-1.5 [&_[role=tab]]:min-h-11 [&_[role=tab]]:px-4 [&_[role=tab]]:text-sm [&_[role=tab][data-state=active]]:bg-[var(--accent-surface-strong)] [&_[role=tab][data-state=active]]:text-[var(--accent-text)] [&_[role=tab][data-state=active]]:shadow-sm">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="plans">Plans</TabsTrigger>
           <TabsTrigger value="usage">Usage History</TabsTrigger>
@@ -302,7 +302,7 @@ export function BillingPage({
               unit="credits"
             />
           ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container p-12 text-center">
+            <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface-container p-8 text-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -318,9 +318,6 @@ export function BillingPage({
                 <path d="m19 9-5 5-4-4-3 3" />
               </svg>
               <h3 className="font-semibold text-lg">No usage data yet</h3>
-              <p className="text-muted-foreground text-sm">
-                Start using credits to see your usage history here.
-              </p>
             </div>
           )}
         </TabsContent>

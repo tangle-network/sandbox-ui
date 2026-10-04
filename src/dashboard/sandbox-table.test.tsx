@@ -34,7 +34,7 @@ describe("SandboxTable", () => {
     expect(screen.queryByRole("button", { name: /Scroll sandbox table/ })).not.toBeInTheDocument()
   })
 
-  it("shows missing live telemetry as unknown and preserves measured zero", () => {
+  it("hides missing live telemetry and preserves measured zero", () => {
     render(
       <SandboxTable
         sandboxes={[
@@ -44,14 +44,14 @@ describe("SandboxTable", () => {
       />,
     )
 
-    expect(screen.getAllByText("Unknown")).toHaveLength(4)
-    expect(screen.getAllByText("0%")).toHaveLength(4)
+    expect(screen.queryByText("Unknown")).not.toBeInTheDocument()
+    expect(screen.getAllByText("0%")).toHaveLength(2)
   })
 
   it("does not report zero resource use for hibernating sandboxes", () => {
     render(<SandboxTable sandboxes={[makeSandbox({ status: "hibernating" })]} />)
 
-    expect(screen.getAllByText("Not running")).toHaveLength(2)
+    expect(screen.queryByText("Resources")).not.toBeInTheDocument()
     expect(screen.queryByText("0%")).not.toBeInTheDocument()
   })
 
@@ -104,7 +104,7 @@ describe("SandboxTable", () => {
       makeSandbox({ team: { id: "t1", name: "DevOps", role: "admin" } }),
     ]
     render(<SandboxTable sandboxes={sandboxes} />)
-    expect(screen.getByText("DevOps - admin")).toBeInTheDocument()
+    expect(screen.getByText("DevOps · admin")).toBeInTheDocument()
     expect(screen.getAllByText(/admin/)).toHaveLength(2)
   })
 
@@ -120,72 +120,42 @@ describe("SandboxTable", () => {
       makeSandbox({ id: "2", team: { id: "t1", name: "Infra", role: "admin" } }),
     ]
     render(<SandboxTable sandboxes={sandboxes} />)
-    expect(screen.getAllByText("Scope")).toHaveLength(3)
+    expect(screen.getAllByText("Scope")).toHaveLength(1)
     expect(screen.getAllByText("Personal")).toHaveLength(2)
-    expect(screen.getByText("Infra - admin")).toBeInTheDocument()
+    expect(screen.getByText("Infra · admin")).toBeInTheDocument()
   })
 
-  // --- RBAC: delete button visibility ---
-
-  it("shows Delete button for personal sandboxes when onDelete is provided", () => {
-    const onDelete = vi.fn()
-    render(
-      <SandboxTable
-        sandboxes={[makeSandbox()]}
-        onDelete={onDelete}
-      />,
-    )
-    expect(screen.getByTitle("Delete")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Delete My Sandbox" })).toBeInTheDocument()
+  it.each([undefined, "owner", "admin"] as const)("keeps deletion in the menu for an authorized %s sandbox", async (role) => {
+    render(<SandboxTable sandboxes={[makeSandbox({ team: role ? { id: "t1", role } : undefined })]} onDelete={vi.fn()} />)
+    expect(screen.queryByRole("button", { name: "Delete My Sandbox" })).not.toBeInTheDocument()
+    await userEvent.setup().click(screen.getByRole("button", { name: "More actions for My Sandbox" }))
+    expect(screen.getByRole("menuitem", { name: "Delete My Sandbox" })).toBeInTheDocument()
   })
 
-  it("shows Delete button for team owner", () => {
-    const onDelete = vi.fn()
-    render(
-      <SandboxTable
-        sandboxes={[makeSandbox({ team: { id: "t1", role: "owner" } })]}
-        onDelete={onDelete}
-      />,
-    )
-    expect(screen.getByTitle("Delete")).toBeInTheDocument()
+  it.each(["member", "viewer"] as const)("does not expose deletion for a team %s", async (role) => {
+    render(<SandboxTable sandboxes={[makeSandbox({ team: { id: "t1", role } })]} onDelete={vi.fn()} onMore={vi.fn()} />)
+    await userEvent.setup().click(screen.getByRole("button", { name: "More actions for My Sandbox" }))
+    expect(screen.queryByRole("menuitem", { name: "Delete My Sandbox" })).not.toBeInTheDocument()
   })
 
-  it("shows Delete button for team admin", () => {
-    const onDelete = vi.fn()
-    render(
-      <SandboxTable
-        sandboxes={[makeSandbox({ team: { id: "t1", role: "admin" } })]}
-        onDelete={onDelete}
-      />,
-    )
-    expect(screen.getByTitle("Delete")).toBeInTheDocument()
-  })
-
-  it("hides Delete button for team member", () => {
-    const onDelete = vi.fn()
-    render(
-      <SandboxTable
-        sandboxes={[makeSandbox({ team: { id: "t1", role: "member" } })]}
-        onDelete={onDelete}
-      />,
-    )
-    expect(screen.queryByTitle("Delete")).not.toBeInTheDocument()
-  })
-
-  it("hides Delete button for team viewer", () => {
-    const onDelete = vi.fn()
-    render(
-      <SandboxTable
-        sandboxes={[makeSandbox({ team: { id: "t1", role: "viewer" } })]}
-        onDelete={onDelete}
-      />,
-    )
-    expect(screen.queryByTitle("Delete")).not.toBeInTheDocument()
-  })
-
-  it("hides Delete button entirely when onDelete is not provided", () => {
+  it("omits unavailable actions rather than showing inert controls", () => {
     render(<SandboxTable sandboxes={[makeSandbox()]} />)
-    expect(screen.queryByTitle("Delete")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
+  })
+
+  it("rejects infinite RAM capacity instead of displaying a fabricated zero", () => {
+    render(<SandboxTable sandboxes={[makeSandbox({ ramUsed: 4, ramTotal: Infinity })]} />)
+    expect(screen.queryByText("Resources")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("RAM 0%")).not.toBeInTheDocument()
+  })
+
+  it("omits invalid telemetry and the obsolete environment column", () => {
+    render(<SandboxTable sandboxes={[makeSandbox({ cpuPercent: NaN, ramUsed: 8, ramTotal: 0, image: "NixOS" })]} />)
+    expect(screen.queryByText("CPU")).not.toBeInTheDocument()
+    expect(screen.queryByText("RAM")).not.toBeInTheDocument()
+    expect(screen.queryByText("Resources")).not.toBeInTheDocument()
+    expect(screen.queryByText("Environment")).not.toBeInTheDocument()
+    expect(screen.queryByText("NixOS")).not.toBeInTheDocument()
   })
 
   // --- Resume / Wake affordances for non-running sandboxes ---
@@ -329,7 +299,7 @@ describe("SandboxTable", () => {
     expect(onOpenIDE).not.toHaveBeenCalled()
   })
 
-  it("stops row-click propagation from action buttons", () => {
+  it("stops row-click propagation from menu deletion", async () => {
     // The Delete trash button sits inside the clickable row. Without
     // stopPropagation the same click would also fire the row's
     // onResume — the user would see a delete dialog AND a resume
@@ -343,7 +313,8 @@ describe("SandboxTable", () => {
         onDelete={onDelete}
       />,
     )
-    fireEvent.click(screen.getByTitle("Delete"))
+    await userEvent.setup().click(screen.getByTitle("More actions"))
+    await userEvent.setup().click(screen.getByRole("menuitem", { name: "Delete My Sandbox" }))
     expect(onDelete).toHaveBeenCalledWith("sb-1")
     expect(onResume).not.toHaveBeenCalled()
   })
@@ -380,16 +351,10 @@ describe("SandboxTable", () => {
     expect(screen.getAllByTitle("Open IDE")).toHaveLength(1)
     expect(screen.getByTitle("More actions")).toBeInTheDocument()
 
-    const iconActions = [
-      screen.getByRole("button", { name: "Open IDE" }),
-      screen.getByRole("button", { name: "Open terminal" }),
-      screen.getByRole("button", { name: "Open SSH details" }),
-      screen.getByRole("button", { name: "More actions for My Sandbox" }),
-      screen.getByRole("button", { name: "Delete My Sandbox" }),
-    ]
-    for (const action of iconActions) {
-      expect(action).toHaveClass("min-h-11", "min-w-11")
-    }
+    expect(screen.getAllByRole("button")).toHaveLength(2)
+    expect(screen.getByRole("button", { name: "More actions for My Sandbox" })).toHaveClass("items-center", "justify-center")
+    expect(screen.queryByRole("button", { name: "Open terminal" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Delete My Sandbox" })).not.toBeInTheDocument()
   })
 
   it("hides the overflow trigger when no overflow callbacks are passed", () => {
@@ -421,6 +386,9 @@ describe("SandboxTable", () => {
   it("exposes the full action set on running rows", async () => {
     const user = userEvent.setup()
     const handlers = {
+      onOpenTerminal: vi.fn(),
+      onSSH: vi.fn(),
+      onDelete: vi.fn(),
       onStop: vi.fn(),
       onKeepAlive: vi.fn(),
       onUsage: vi.fn(),
@@ -436,6 +404,9 @@ describe("SandboxTable", () => {
     )
     await user.click(screen.getByTitle("More actions"))
     expect(await screen.findByText("Stop Sandbox")).toBeInTheDocument()
+    expect(screen.getByText("Open terminal")).toBeInTheDocument()
+    expect(screen.getByText("SSH details")).toBeInTheDocument()
+    expect(screen.getByText("Delete")).toBeInTheDocument()
     expect(screen.getByText("Keep Alive")).toBeInTheDocument()
     expect(screen.getByText("View Usage")).toBeInTheDocument()
     expect(screen.getByText("Health Check")).toBeInTheDocument()
@@ -444,6 +415,9 @@ describe("SandboxTable", () => {
   })
 
   it.each([
+    { item: "Open terminal", prop: "onOpenTerminal" as const },
+    { item: "SSH details", prop: "onSSH" as const },
+    { item: "Delete", prop: "onDelete" as const },
     { item: "Stop Sandbox", prop: "onStop" as const },
     { item: "Keep Alive", prop: "onKeepAlive" as const },
     { item: "View Usage", prop: "onUsage" as const },
@@ -548,4 +522,14 @@ describe("SandboxTable", () => {
     expect(onStop).toHaveBeenCalledWith("sb-1")
     expect(onOpenIDE).not.toHaveBeenCalled()
   })
+})
+
+
+it("keeps expired sandboxes visible without a resume action", () => {
+  const onResume = vi.fn()
+  render(<SandboxTable sandboxes={[makeSandbox({ status: "expired" })]} onResume={onResume} />)
+  expect(screen.getAllByText("Expired").length).toBeGreaterThan(0)
+  expect(screen.queryByRole("button", { name: /resume/i })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByText("My Sandbox"))
+  expect(onResume).not.toHaveBeenCalled()
 })

@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { focusRing } from "@tangle-network/ui/utils"
 
-export type SandboxStatus = "running" | "hibernating" | "provisioning" | "stopped" | "failed" | "archived" | "creating"
+export type SandboxStatus = "running" | "hibernating" | "provisioning" | "stopped" | "failed" | "archived" | "creating" | "expired"
 
 export type TeamRole = "owner" | "admin" | "member" | "viewer"
 
@@ -101,6 +101,7 @@ const STATUS_META: Record<SandboxStatus, { label: string; color: string }> = {
   creating: { label: "Creating", color: "var(--status-creating)" },
   stopped: { label: "Stopped", color: "var(--status-stopped)" },
   failed: { label: "Failed", color: "var(--status-error)" },
+  expired: { label: "Expired", color: "var(--status-deleted)" },
   archived: { label: "Archived", color: "var(--status-deleted)" },
 }
 
@@ -114,13 +115,8 @@ function Spec({ icon, value, unit }: { icon: React.ReactNode; value: number; uni
   )
 }
 
-function UnknownMetric({ label }: { label: string }) {
-  return (
-    <div className="flex items-center justify-between text-xs font-mono uppercase tracking-wide text-muted-foreground">
-      <span>{label}</span>
-      <span>Unknown</span>
-    </div>
-  )
+function validMetric(value: number | undefined, max: number | undefined): boolean {
+  return value != null && max != null && Number.isFinite(value) && Number.isFinite(max) && max > 0 && value >= 0 && value <= max
 }
 
 export function SandboxCard({
@@ -129,7 +125,7 @@ export function SandboxCard({
 }: SandboxCardProps) {
   const isRunning = sandbox.status === "running"
   const isTransitioning = sandbox.status === "provisioning" || sandbox.status === "creating"
-  const isStopped = !isRunning && !isTransitioning
+  const isStopped = !isRunning && !isTransitioning && sandbox.status !== "expired"
   const isHibernating = sandbox.status === "hibernating"
 
   // Footer + dropdown share one resolved start handler so they can never
@@ -152,6 +148,9 @@ export function SandboxCard({
   const ramTotal = sandbox.ramTotal
   const diskUsed = sandbox.diskUsed
   const diskTotal = sandbox.diskTotal
+  const hasCpu = validMetric(cpuPercent, 100)
+  const hasRam = validMetric(ramUsed, ramTotal)
+  const hasDisk = validMetric(diskUsed, diskTotal)
 
   // Allocated-resource chips: render only the dimensions the caller provided.
   const specs = [
@@ -265,14 +264,12 @@ export function SandboxCard({
         </div>
 
         {/* Live metrics — only meaningful while the sandbox is running */}
-        {isRunning ? (
+        {isRunning && (hasCpu || hasRam || hasDisk) ? (
           <div className="space-y-2 rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-high p-3">
-            {cpuPercent != null ? (
+            {hasCpu && cpuPercent != null && (
               <ResourceMeter label="CPU" value={cpuPercent} max={100} icon={<Cpu className="h-3 w-3" />} />
-            ) : (
-              <UnknownMetric label="CPU" />
             )}
-            {ramUsed != null && ramTotal != null && ramTotal > 0 ? (
+            {hasRam && ramUsed != null && ramTotal != null && (
               <ResourceMeter
                 label="RAM"
                 value={ramUsed}
@@ -280,15 +277,8 @@ export function SandboxCard({
                 valueLabel={String(ramUsed) + " / " + String(ramTotal) + " GB"}
                 icon={<MemoryStick className="h-3 w-3" />}
               />
-            ) : ramUsed != null ? (
-              <p className="flex items-center justify-between text-xs font-mono uppercase tracking-wide text-muted-foreground">
-                <span>RAM</span>
-                <span>{String(ramUsed)} GB used; capacity unknown</span>
-              </p>
-            ) : (
-              <UnknownMetric label="RAM" />
             )}
-            {diskUsed != null && diskTotal != null && diskTotal > 0 && (
+            {hasDisk && diskUsed != null && diskTotal != null && (
               <ResourceMeter
                 label="DISK"
                 value={diskUsed}
@@ -334,7 +324,7 @@ export function SandboxCard({
       </div>
 
       {/* Footer Action */}
-      <div className="border-t border-[var(--md3-outline-variant)] pt-3">
+      {sandbox.status !== "expired" && <div className="border-t border-[var(--md3-outline-variant)] pt-3">
         {isRunning ? (
           <button
             type="button"
@@ -361,7 +351,7 @@ export function SandboxCard({
             {isTransitioning ? "Starting..." : resumeLabel}
           </button>
         )}
-      </div>
+      </div>}
     </div>
   )
 }

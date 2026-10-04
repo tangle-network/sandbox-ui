@@ -16,12 +16,12 @@ function makeApiClient(initial: Secret[] = [
 const meta = {
   title: 'Pages/SecretsPage',
   component: SecretsPage,
-  args: { apiClient: makeApiClient(), className: 'mx-auto max-w-5xl p-6' },
+  args: { apiClient: makeApiClient(), className: 'p-6' },
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof SecretsPage>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const ManageSecrets: Story = { render: () => <SecretsPage apiClient={makeApiClient()} className="mx-auto max-w-5xl p-6" teamSecretsHint={{ onNavigate: () => {} }} /> }
-export const Empty: Story = { render: () => <SecretsPage apiClient={makeApiClient([])} className="mx-auto max-w-5xl p-6" /> }
+export const ManageSecrets: Story = { render: () => <SecretsPage apiClient={makeApiClient()} className="p-6" teamSecretsHint={{ onNavigate: () => {} }} /> }
+export const Empty: Story = { render: () => <SecretsPage apiClient={makeApiClient([])} className="p-6" /> }

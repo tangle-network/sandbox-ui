@@ -14,7 +14,6 @@ import {
   MoreVertical,
   Play,
   PowerOff,
-  RefreshCw,
   Terminal,
   Trash2,
   User,
@@ -75,6 +74,7 @@ const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: stri
   creating: { dot: "bg-primary animate-pulse", text: "text-[var(--accent-text)]", bar: "bg-primary" },
   stopped: { dot: "bg-muted-foreground", text: "text-foreground", bar: "bg-muted-foreground" },
   failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--surface-danger-text)]", bar: "bg-[var(--code-error)]" },
+  expired: { dot: "bg-border", text: "text-muted-foreground", bar: "bg-border" },
   archived: { dot: "bg-border", text: "text-muted-foreground", bar: "bg-border" },
 }
 
@@ -84,24 +84,28 @@ const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: stri
 // requests. Every other status (stopped, failed, hibernating, archived)
 // goes through the same `/resume` API endpoint downstream.
 function isResumable(status: SandboxStatus): boolean {
-  return status !== "running" && status !== "provisioning" && status !== "creating"
+  return status !== "running" && status !== "provisioning" && status !== "creating" && status !== "expired"
 }
 
-function MiniMeter({ label, percent, className }: { label: string; percent?: number; className?: string }) {
-  const hasValue = percent != null && Number.isFinite(percent)
+function validPercent(value: number | undefined): value is number {
+  return value != null && Number.isFinite(value) && value >= 0 && value <= 100
+}
 
+function ramPercent(sandbox: SandboxCardData): number | undefined {
+  if (sandbox.ramUsed == null || sandbox.ramTotal == null || !Number.isFinite(sandbox.ramUsed) || !Number.isFinite(sandbox.ramTotal) || sandbox.ramTotal <= 0) return undefined
+  const value = sandbox.ramUsed / sandbox.ramTotal * 100
+  return validPercent(value) ? Math.round(value) : undefined
+}
+
+function MiniMeter({ label, percent }: { label: string; percent?: number }) {
+  if (!validPercent(percent)) return null
   return (
-    <div className={cn("space-y-1", className)}>
-      <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
-        <span className="font-bold">{label}</span>
-        <span className={hasValue ? "text-[var(--accent-text)]" : "text-muted-foreground"}>
-          {hasValue ? String(percent) + "%" : "Unknown"}
-        </span>
+    <div className="min-w-0 flex-1 space-y-1.5" aria-label={`${label} ${percent}%`}>
+      <div className="flex justify-between gap-2 text-xs text-muted-foreground">
+        <span>{label}</span><span className="tabular-nums text-foreground">{percent}%</span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
-        {hasValue && (
-          <div className="h-full rounded-full bg-primary" style={{ width: String(percent) + "%" }} />
-        )}
+      <div className="h-1 w-full overflow-hidden rounded-full bg-surface-container-high" aria-hidden="true">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
       </div>
     </div>
   )
@@ -117,43 +121,21 @@ function StatusIndicator({ status }: { status: SandboxStatus }) {
         aria-hidden="true"
         {...(sc.dot.includes("animate-") ? { "data-motion": "essential" } : {})}
       />
-      <span className={cn("text-xs font-bold uppercase tracking-wide", sc.text)}>
+      <span className={cn("text-xs font-medium", sc.text)}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     </div>
   )
 }
 
-function SandboxResources({ sandbox, className }: { sandbox: SandboxCardData; className?: string }) {
-  if (sandbox.status === "running") {
-    const ramPercent = sandbox.ramUsed != null && sandbox.ramTotal != null && sandbox.ramTotal > 0
-      ? Math.round((sandbox.ramUsed / sandbox.ramTotal) * 100)
-      : undefined
-
-    return (
-      <div className={cn("min-w-0 space-y-3", className)}>
-        <MiniMeter label="CPU" percent={sandbox.cpuPercent} />
-        <MiniMeter label="RAM" percent={ramPercent} />
-      </div>
-    )
-  }
-
-  if (sandbox.status === "provisioning" || sandbox.status === "creating") {
-    return (
-      <div className={cn("flex min-w-0 items-center gap-2 text-[var(--accent-text)] italic text-[10px] font-bold", className)}>
-        <RefreshCw className="h-3.5 w-3.5 shrink-0 animate-spin" data-motion="essential" />
-        <span className="min-w-0 truncate" title={sandbox.provisioningMessage ?? "Allocating nodes..."}>
-          {sandbox.provisioningMessage ?? "Allocating nodes..."}
-        </span>
-      </div>
-    )
-  }
-
-  if (sandbox.status === "hibernating") {
-    return <p className={cn("text-xs text-muted-foreground", className)}>Not running</p>
-  }
-
-  return null
+function SandboxResources({ sandbox }: { sandbox: SandboxCardData }) {
+  if (sandbox.status !== "running") return null
+  const ram = ramPercent(sandbox)
+  if (!validPercent(sandbox.cpuPercent) && ram == null) return null
+  return <div className="flex min-w-0 items-center gap-4">
+    <MiniMeter label="CPU" percent={sandbox.cpuPercent} />
+    <MiniMeter label="RAM" percent={ram} />
+  </div>
 }
 
 function getPageItems(page: number, totalPages: number): Array<number | "start-ellipsis" | "end-ellipsis"> {
@@ -206,6 +188,7 @@ export function SandboxTable({
   const rangeStart = totalCount === 0 || sandboxes.length === 0 ? 0 : (currentPage - 1) * safePageSize + 1
   const rangeEnd = rangeStart === 0 ? 0 : Math.min(rangeStart + sandboxes.length - 1, totalCount)
   const hasTeamSandboxes = sandboxes.some((sb) => sb.team !== undefined)
+  const hasResources = sandboxes.some((sb) => sb.status === "running" && (validPercent(sb.cpuPercent) || ramPercent(sb) != null))
 
   // Hibernating is the one status that historically wired up to `onWake`.
   // For that status we fall back to `onWake` when `onResume` is absent,
@@ -228,24 +211,22 @@ export function SandboxTable({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="w-full bg-surface-container rounded-2xl overflow-hidden border border-[var(--md3-outline-variant)]">
+      <div className="w-full bg-surface-container rounded-xl overflow-hidden border border-[var(--md3-outline-variant)]">
         <div className={cn("max-h-[min(60vh,35rem)] overflow-x-hidden overflow-y-auto", focusRingInset)} role="region" aria-label="Sandbox list" tabIndex={0}>
           <table className="w-full table-fixed border-collapse text-left">
             <thead className="sticky top-0 z-10">
               <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
-                <th scope="col" className="hidden w-36 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Status</th>
-                <th scope="col" className="px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:px-6">Sandbox</th>
-                {hasTeamSandboxes && <th scope="col" className="hidden w-32 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Scope</th>}
-                <th scope="col" className="hidden w-28 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Environment</th>
-                <th scope="col" className="hidden w-48 px-3 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">Resources</th>
-                <th scope="col" className="w-28 px-2 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:w-72 xl:px-4">Actions</th>
+                <th scope="col" className="hidden w-36 px-4 py-3 text-xs font-medium text-muted-foreground md:table-cell">Status</th>
+                <th scope="col" className="px-4 py-3 text-xs font-medium text-muted-foreground">Sandbox</th>
+                {hasTeamSandboxes && <th scope="col" className="hidden w-40 px-4 py-3 text-xs font-medium text-muted-foreground xl:table-cell">Scope</th>}
+                {hasResources && <th scope="col" className="hidden w-52 px-4 py-3 text-xs font-medium text-muted-foreground lg:table-cell">Resources</th>}
+                <th scope="col" className="w-44 px-3 py-3 text-right text-xs font-medium text-muted-foreground sm:w-48 sm:px-4">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {sandboxes.map((sb) => {
                 const isActive = sb.status === "running"
                 const isHibernating = sb.status === "hibernating"
-                const isProvisioning = sb.status === "provisioning" || sb.status === "creating"
                 const resumeHandler = isResumable(sb.status) ? resolveResumeHandler(sb.status) : undefined
                 const onRowClick = resolveRowClick(sb)
                 const resumeLabel = isHibernating ? "Wake Up" : "Resume"
@@ -255,72 +236,30 @@ export function SandboxTable({
                 // resuming a sandbox the user is trying to delete.
                 const stopRowClick = (e: React.MouseEvent) => e.stopPropagation()
                 return (
-                  // onClick is a sighted-user convenience only. We
-                  // deliberately do NOT add role="button" / tabIndex /
-                  // an onKeyDown handler to the row — overriding a
-                  // <tr>'s implicit row role with "button" collapses
-                  // the per-cell announcements (Status, Environment,
-                  // Resources…) that screen-reader users navigate
-                  // through. Keyboard and assistive-tech users reach
-                  // the same actions through the real <button>
-                  // elements inside the actions cell (Resume, Open
-                  // IDE, Delete, …), which keep their native
-                  // semantics. Mouse users get the click-anywhere
-                  // affordance; nobody loses access.
+                  // Keep native table semantics; keyboard users use the real buttons.
                   <tr
                     key={sb.id}
                     className={cn(
-                      "group relative transition-colors",
+                      "group relative h-[72px] transition-colors",
                       onRowClick ? "cursor-pointer hover:bg-surface-container-high" : "hover:bg-surface-container-high",
                     )}
                     onClick={onRowClick}
                   >
-                    <td className="hidden px-3 py-4 align-top xl:table-cell xl:w-36 xl:px-4 xl:py-5">
+                    <td className="hidden px-4 py-3 align-middle md:table-cell">
                       <StatusIndicator status={sb.status} />
                     </td>
-                    <td className="min-w-0 px-3 py-4 align-top xl:px-6 xl:py-5">
-                      <div className="flex min-w-0 flex-col gap-2">
-                        <div className="flex min-w-0 items-start gap-2">
-                          <div className="shrink-0 xl:hidden">
-                            <StatusIndicator status={sb.status} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="block min-w-0 truncate text-sm font-bold text-foreground transition-colors group-hover:text-[var(--accent-text)]" title={sb.name} aria-label={sb.name}>{sb.name}</span>
-                            {sb.nodeId && <span className="block min-w-0 truncate text-[10px] font-mono text-muted-foreground" title={sb.nodeId}>{sb.nodeId}</span>}
-                          </div>
-                        </div>
-                        <div className="grid min-w-0 gap-1 text-[11px] xl:hidden">
-                          {hasTeamSandboxes && (
-                            <div className="flex min-w-0 gap-2">
-                              <span className="shrink-0 text-muted-foreground">Scope</span>
-                              {sb.team ? (
-                                <span className="min-w-0 truncate text-foreground" title={"Shared with " + (sb.team.name ?? "Team") + " \u00b7 " + sb.team.role}>
-                                  {sb.team.name ?? "Team"} - {sb.team.role}
-                                </span>
-                              ) : (
-                                <span className="text-foreground">Personal</span>
-                              )}
-                            </div>
-                          )}
-                          {(sb.customImage ?? sb.image) && (
-                            <div className="flex min-w-0 gap-2">
-                              <span className="shrink-0 text-muted-foreground">Environment</span>
-                              <span className="min-w-0 truncate text-foreground" title={sb.customImage ?? sb.image}>
-                                {sb.customImage ?? sb.image}
-                              </span>
-                            </div>
-                          )}
-                          {(isActive || isProvisioning || isHibernating) && (
-                            <div className="flex min-w-0 flex-col gap-1">
-                              <span className="text-muted-foreground">Resources</span>
-                              <SandboxResources sandbox={sb} />
-                            </div>
-                          )}
+                    <td className="min-w-0 px-4 py-3 align-middle">
+                      <div className="min-w-0 space-y-1">
+                        <span className="block truncate text-sm font-semibold text-foreground" title={sb.name} aria-label={sb.name}>{sb.name}</span>
+                        <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                          <span className="md:hidden"><StatusIndicator status={sb.status} /></span>
+                          {sb.nodeId && <span className="hidden truncate font-mono text-xs md:block" title={sb.nodeId}>{sb.nodeId}</span>}
+                          {hasTeamSandboxes && <span className="truncate xl:hidden" title={sb.team ? `${sb.team.name ?? "Team"} · ${sb.team.role}` : "Personal"}>{sb.team ? `${sb.team.name ?? "Team"} · ${sb.team.role}` : "Personal"}</span>}
                         </div>
                       </div>
                     </td>
                     {hasTeamSandboxes && (
-                      <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
+                      <td className="hidden px-4 py-3 align-middle xl:table-cell">
                         {sb.team ? (
                           <div
                             className="inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
@@ -343,46 +282,22 @@ export function SandboxTable({
                         )}
                       </td>
                     )}
-                    <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
-                      <div className="flex min-w-0 items-center gap-2">
-                        {sb.imageIcon && (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-container-high">
-                            {sb.imageIcon}
-                          </div>
-                        )}
-                        {(sb.customImage ?? sb.image) && (
-                          <span className="min-w-0 truncate text-xs font-bold text-foreground" title={sb.customImage ?? sb.image}>
-                            {sb.customImage ?? sb.image}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="hidden px-3 py-4 align-top xl:table-cell xl:px-4 xl:py-5">
-                      <SandboxResources sandbox={sb} />
-                    </td>
-                    <td className="w-28 px-2 py-3 text-right align-top xl:w-72 xl:px-4 xl:py-5">
-                      <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
-                        {isActive && (
-                          <>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenIDE?.(sb.id) }} className={cn("min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90", focusRing)} aria-label="Open IDE" title="Open IDE">
-                              <Code2 className="h-4 w-4" />
-                            </button>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onOpenTerminal?.(sb.id) }} className={cn("min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90", focusRing)} aria-label="Open terminal" title="Terminal">
-                              <Terminal className="h-4 w-4" />
-                            </button>
-                            <button type="button" onClick={(e) => { stopRowClick(e); onSSH?.(sb.id) }} className={cn("min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90", focusRing)} aria-label="Open SSH details" title="SSH">
-                              <Key className="h-4 w-4" />
-                            </button>
-                          </>
+                    {hasResources && <td className="hidden px-4 py-3 align-middle lg:table-cell"><SandboxResources sandbox={sb} /></td>}
+                    <td className="w-44 px-3 py-3 text-right align-middle sm:w-48 sm:px-4">
+                      <div className="flex min-w-0 items-center justify-end gap-2">
+                        {isActive && onOpenIDE && (
+                          <button type="button" onClick={(e) => { stopRowClick(e); onOpenIDE(sb.id) }} className={cn("inline-flex min-h-11 shrink-0 whitespace-nowrap items-center justify-center gap-2 rounded-lg border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-3 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition-colors hover:bg-[var(--accent-surface-strong)]", focusRing)} aria-label="Open IDE" title="Open IDE">
+                            <Code2 className="h-4 w-4 shrink-0" aria-hidden="true" /><span>Open</span>
+                          </button>
                         )}
                         {resumeHandler && (
                           <button
                             type="button"
                             onClick={(e) => { stopRowClick(e); resumeHandler(sb.id) }}
-                            className={cn("inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--md3-outline-variant)] text-[var(--accent-text)] text-[10px] font-bold uppercase tracking-wider hover:bg-[var(--accent-surface-soft)] active:scale-95 transition-all", focusRing)}
+                            className={cn("inline-flex min-h-11 shrink-0 whitespace-nowrap items-center justify-center gap-1.5 px-3 rounded-lg border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)] text-sm font-semibold shadow-sm hover:bg-[var(--accent-surface-strong)] transition-colors", focusRing)}
                             title={resumeLabel}
                           >
-                            <Play className="h-3 w-3" />
+                            <Play className="h-4 w-4 shrink-0" aria-hidden="true" />
                             {resumeLabel}
                           </button>
                         )}
@@ -395,6 +310,10 @@ export function SandboxTable({
                           }
                           const overflowSections: React.ReactNode[][] = []
                           if (isActive) {
+                            const access: React.ReactNode[] = []
+                            if (onOpenTerminal) access.push(<DropdownMenuItem key="terminal" onClick={runItem(onOpenTerminal)}><Terminal className="mr-2 h-4 w-4" /> Open terminal</DropdownMenuItem>)
+                            if (onSSH) access.push(<DropdownMenuItem key="ssh" onClick={runItem(onSSH)}><Key className="mr-2 h-4 w-4" /> SSH details</DropdownMenuItem>)
+                            if (access.length) overflowSections.push(access)
                             const lifecycle: React.ReactNode[] = []
                             if (onStop) lifecycle.push(
                               <DropdownMenuItem key="stop" onClick={runItem(onStop)}>
@@ -439,6 +358,9 @@ export function SandboxTable({
                             </DropdownMenuItem>,
                           ])
 
+                          if (onDelete && canAdminSandbox(sb)) overflowSections.push([
+                            <DropdownMenuItem key="delete" onClick={runItem(onDelete)} className="text-destructive focus:text-destructive" aria-label={`Delete ${sb.name}`}><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>,
+                          ])
                           if (overflowSections.length === 0) return null
                           return (
                             <DropdownMenu>
@@ -446,14 +368,14 @@ export function SandboxTable({
                                 <button
                                   type="button"
                                   onClick={stopRowClick}
-                                  className={`min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-surface-container-high text-muted-foreground hover:text-foreground transition-all active:scale-90 ${focusRing}`}
+                                  className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-container-high text-foreground shadow-sm transition-colors hover:bg-surface-container-highest ${focusRing}`}
                                   aria-label={`More actions for ${sb.name}`}
                                   title="More actions"
                                 >
                                   <MoreVertical className="h-4 w-4" />
                                 </button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="min-w-[180px]">
+                              <DropdownMenuContent align="end" className="min-w-[200px] border-border bg-surface-container-high shadow-xl [&_[role=menuitem]]:min-h-10 [&_[role=menuitem]]:text-sm">
                                 {overflowSections.map((section, sectionIdx) => (
                                   <React.Fragment key={sectionIdx}>
                                     {sectionIdx > 0 && <DropdownMenuSeparator />}
@@ -464,11 +386,7 @@ export function SandboxTable({
                             </DropdownMenu>
                           )
                         })()}
-                        {onDelete && canAdminSandbox(sb) && (
-                          <button type="button" aria-label={`Delete ${sb.name}`} onClick={(e) => { stopRowClick(e); onDelete(sb.id) }} className={`min-h-11 min-w-11 shrink-0 p-2 rounded-lg hover:bg-[var(--surface-danger-bg)] text-muted-foreground hover:text-[var(--surface-danger-text)] transition-all active:scale-90 ${focusRing}`} title="Delete">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+
                       </div>
                     </td>
                   </tr>
@@ -491,7 +409,7 @@ export function SandboxTable({
               onClick={() => onPageChange?.(currentPage - 1)}
               disabled={!onPageChange || currentPage <= 1}
               aria-label="Previous page"
-              className={cn("min-h-11 min-w-11 rounded-lg border border-[var(--md3-outline-variant)] p-2 transition-colors hover:bg-surface-container-high disabled:opacity-30", focusRing)}
+              className={cn("inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border bg-surface-container-high p-2 shadow-sm transition-colors hover:bg-surface-container-highest disabled:opacity-30", focusRing)}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -505,7 +423,7 @@ export function SandboxTable({
                   aria-label={"Go to page " + item}
                   aria-current={item === currentPage ? "page" : undefined}
                   className={cn(
-                    "min-h-11 min-w-11 rounded-lg px-2 py-1 transition-colors",
+                    "inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2 py-1 transition-colors",
                     item === currentPage
                       ? "border border-[var(--md3-outline)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
                       : "hover:bg-surface-container-high",
@@ -523,7 +441,7 @@ export function SandboxTable({
               onClick={() => onPageChange?.(currentPage + 1)}
               disabled={!onPageChange || currentPage >= totalPages}
               aria-label="Next page"
-              className={cn("min-h-11 min-w-11 rounded-lg border border-[var(--md3-outline-variant)] p-2 transition-colors hover:bg-surface-container-high disabled:opacity-30", focusRing)}
+              className={cn("inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border bg-surface-container-high p-2 shadow-sm transition-colors hover:bg-surface-container-highest disabled:opacity-30", focusRing)}
             >
               <ChevronRight className="h-4 w-4" />
             </button>

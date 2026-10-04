@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { DashboardLayout, type NavItem } from "./dashboard-layout"
 
@@ -242,35 +242,82 @@ describe("DashboardLayout — notification dropdown", () => {
 })
 
 
-describe("DashboardLayout — optional empty desktop header", () => {
-  it("removes unused notification controls while retaining mobile navigation", async () => {
+describe("DashboardLayout — sidebar controls", () => {
+  beforeEach(() => localStorage.clear())
+
+  it("keeps New Sandbox, workspace switching and host links in the sidebar", async () => {
     const user = userEvent.setup()
-    render(
-      <DashboardLayout navItems={[]} notificationsEnabled={false} collapseEmptyTopBar>
-        <div>content</div>
-      </DashboardLayout>,
-    )
-    expect(screen.queryByRole("button", { name: "Notifications" })).toBeNull()
-    const menu = screen.getByRole("button", { name: "Open menu" })
-    expect(menu.closest("nav")).toHaveClass("lg:hidden")
+    const onNewSandbox = vi.fn()
+    render(<DashboardLayout navItems={[]} labeledRail onNewSandbox={onNewSandbox}
+      sidebarLeading={({ collapsed }) => <button type="button">{collapsed ? "Workspace icon" : "Personal workspace"}</button>}
+      topNavLinks={[{ label: "Admin billing", href: "/billing" }]}><div>content</div></DashboardLayout>)
+    const sidebar = document.querySelector('[data-sidebar="true"]')!
+    expect(sidebar).toContainElement(screen.getByRole("button", { name: "New Sandbox" }))
+    expect(sidebar).toContainElement(screen.getByRole("button", { name: "Personal workspace" }))
+    expect(sidebar).toContainElement(screen.getByRole("link", { name: "Admin billing" }))
+    expect(screen.getByRole("navigation", { name: "Mobile navigation" })).toHaveClass("lg:hidden")
     expect(screen.getByRole("main")).toHaveClass("lg:pt-0")
-    await user.click(menu)
-    expect(screen.getByRole("button", { name: "Close menu" })).toHaveAttribute("aria-expanded", "true")
+    await user.click(screen.getByRole("button", { name: "New Sandbox" }))
+    expect(onNewSandbox).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
+    expect(screen.getByRole("button", { name: "Workspace icon" })).toBeInTheDocument()
   })
 
-  it.each([
-    { topBarLeading: <button type="button">Workspace</button> },
-    { topNavLinks: [{ label: "Billing", href: "/billing" }] },
-    { onNewSandbox: () => {} },
-    { notificationsEnabled: true },
-  ])("retains the header when a host supplies controls: %j", (controls) => {
-    render(
-      <DashboardLayout navItems={[]} collapseEmptyTopBar notificationsEnabled={false} {...controls}>
-        <div>content</div>
-      </DashboardLayout>,
-    )
-    const menu = screen.getByRole("button", { name: "Open menu" })
-    expect(menu.closest("nav")).not.toHaveClass("lg:hidden")
-    expect(screen.getByRole("main")).not.toHaveClass("lg:pt-0")
+  it("keeps legacy workspace content reachable from a collapsed rail", async () => {
+    const user = userEvent.setup()
+    render(<DashboardLayout navItems={[]} labeledRail defaultRailCollapsed topBarLeading={<button type="button">Choose team</button>}><div>content</div></DashboardLayout>)
+    await user.click(screen.getByRole("button", { name: "Workspace" }))
+    expect(screen.getByRole("button", { name: "Choose team" })).toBeInTheDocument()
+  })
+
+  it("places notifications above the account menu without making read-only entries clickable", async () => {
+    const user = userEvent.setup()
+    render(<DashboardLayout navItems={[]} user={{ email: "owner@example.com" }} notifications={{items:[{id:"read",title:"Completed",message:"Finished",read:true,createdAt:"2026-10-04T00:00:00Z"}],unreadCount:0}}><div>content</div></DashboardLayout>)
+    const bell = screen.getByRole("button", { name: "Notifications" })
+    const profile = screen.getByRole("button", { name: "User menu" })
+    expect(bell.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await user.click(bell)
+    expect(screen.getByRole("menu", { name: "Notifications" })).toHaveTextContent("Completed")
+    expect(screen.queryByRole("menuitem", { name: /Completed/ })).toBeNull()
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(bell).toHaveFocus())
+  })
+
+  it("keeps the mobile drawer open when its notification menu closes, then restores the menu trigger", async () => {
+    const user = userEvent.setup()
+    renderLayout({items:[],unreadCount:0})
+    const trigger = screen.getByRole("button", { name: "Open menu" })
+    await user.click(trigger)
+    const drawer = screen.getByRole("dialog", { name: "Navigation" })
+    const bell = within(drawer).getByRole("button", { name: "Notifications" })
+    await user.click(bell)
+    await user.keyboard("{Escape}")
+    expect(drawer).toBeInTheDocument()
+    await waitFor(() => expect(bell).toHaveFocus())
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull())
+    await waitFor(() => expect(trigger).toHaveFocus())
+  })
+
+  it("closes the mobile drawer before invoking callback-driven account navigation", async () => {
+    const user = userEvent.setup()
+    const onSettingsClick = vi.fn()
+    render(<DashboardLayout navItems={[]} user={{email:"owner@example.com"}} onSettingsClick={onSettingsClick}><div>content</div></DashboardLayout>)
+    await user.click(screen.getByRole("button", { name: "Open menu" }))
+    const drawer = screen.getByRole("dialog", { name: "Navigation" })
+    await user.click(within(drawer).getByRole("button", { name: "User menu" }))
+    await user.click(screen.getByRole("menuitem", { name: /Settings$/ }))
+    expect(onSettingsClick).toHaveBeenCalledOnce()
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull())
+  })
+
+  it("closes the mobile drawer when New Sandbox is selected", async () => {
+    const user = userEvent.setup()
+    const onNewSandbox = vi.fn()
+    render(<DashboardLayout navItems={[]} onNewSandbox={onNewSandbox}><div>content</div></DashboardLayout>)
+    await user.click(screen.getByRole("button", { name: "Open menu" }))
+    await user.click(within(screen.getByRole("dialog", { name: "Navigation" })).getByRole("button", { name: "New Sandbox" }))
+    expect(onNewSandbox).toHaveBeenCalledOnce()
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull())
   })
 })

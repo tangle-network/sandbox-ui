@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.122.3
+
+- Move New Sandbox and workspace switching to the sidebar, with notifications above the account menu. Remove the desktop top bar and page-title card styling.
+- Keep notification menus within the viewport, restore focus on Escape, and use a focused mobile navigation drawer. Existing custom session headers and page actions remain unchanged.
+
 ## 0.122.2
 
 - Show the current script action error ahead of an earlier load/options warning. Hide the load-only Retry action while displaying a mutation failure.

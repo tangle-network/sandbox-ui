@@ -11,6 +11,7 @@ import {
   escapeUtility,
   peerFloor,
   validateBuiltCss,
+  withoutComments,
 } from "./validate-built-css.mjs"
 
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), "..")
@@ -117,6 +118,22 @@ describe("collectForwardedTokenUtilities", () => {
       join(rootDir, "node_modules", "@tangle-network", "ui", "src"),
     )
     expect([...utilities.keys()]).not.toContain("text-[var(--x)]")
+  })
+})
+
+describe("withoutComments", () => {
+  it("drops classes named only in comments", () => {
+    const source = [
+      "// a bare `text-[var(--x)]` is a color",
+      "/* bg-[var(--y)] */",
+      "const c = \"text-[var(--text-dim)]\" // trailing note",
+      "const u = \"https://example.com/a\"",
+    ].join("\n")
+    const out = withoutComments(source)
+    expect(out).not.toContain("--x")
+    expect(out).not.toContain("--y")
+    expect(out).toContain("text-[var(--text-dim)]")
+    expect(out).toContain("https://example.com/a")
   })
 })
 

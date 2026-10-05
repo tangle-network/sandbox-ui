@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.123.1
+
+- `globals.css` and `tokens.css` carry `@tangle-network/brand` 1.10.2: the dark warning and danger fills are low-chroma raised tints, and the dark violet fill is a raised chip. The compiled styles include the classes `@tangle-network/ui` 11.16.6 uses for a quiet closed terminal command. The peer floors rise to `@tangle-network/ui` ^11.16.6 and `@tangle-network/brand` ^1.10.2, the versions the styles are built against. Existing exports are unchanged.
+
 ## 0.123.0
 
-- Export the workflow node atoms from `@tangle-network/sandbox-ui/workflows`: `KIND_ICON`, `NodeMark`, `STATUS_COLOR`, `STATUS_LABEL`, `STATUS_PILL` and `NodeStatusPill`, the naming helpers (`humanizeIdentifier`, `actionPathLabel`, `parseActionPath`, `shortModel`), and the output classifier (`classifyOutput`, `condenseText`, `NodeOutputBody`). A host drawing a run outside the canvas can now match the graph's glyphs, status colours and labels. Existing exports are unchanged.
+- Export the workflow node atoms from `@tangle-network/sandbox-ui/workflows`: `KIND_ICON`, `NodeMark`, `STATUS_COLOR`, `STATUS_LABEL`, `STATUS_PILL` and `NodeStatusPill`, the naming helpers (`humanizeIdentifier`, `actionPathLabel`, `parseActionPath`, `shortModel`), and the output classifier (`classifyOutput`, `condenseText`, `NodeOutputBody`). A host drawing a run outside the canvas can now match the graph's glyphs, status colours and labels. The peer floors rise to `@tangle-network/ui` ^11.16.6 and `@tangle-network/brand` ^1.10.2, the versions the styles are built against. Existing exports are unchanged.
 - `buildWorkflowGraph` reads graph-form steps: `id`, `needs` and `join` are step topology, not the action, so a graph definition no longer titles every step "ID". An agent step with an inline profile is titled by that profile's `name`.
 
 ## 0.122.3

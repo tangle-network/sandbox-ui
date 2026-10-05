@@ -83,6 +83,17 @@ export const escapeUtility = (utility) =>
  * A list that has to be maintained by the person who did not write the change
  * is not a gate. Reading the source is.
  */
+/**
+ * Source without its comments. A comment that names a class ("a bare
+ * `text-[var(--x)]` compiles to a color") is prose, not a rendered class, and
+ * requiring it would gate the bundle on a token that does not exist. A line
+ * comment counts only after whitespace or at a line start, so a URL in a
+ * string keeps its tail.
+ */
+export function withoutComments(source) {
+  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|\s)\/\/.*$/gm, "$1")
+}
+
 export function collectForwardedTokenUtilities(uiSrcDir) {
   const utilities = new Map()
   let entries
@@ -97,7 +108,7 @@ export function collectForwardedTokenUtilities(uiSrcDir) {
     if (!entry.isFile()) continue
     if (!RENDERABLE.test(entry.name) || NOT_RENDERABLE.test(entry.name)) continue
     const file = join(entry.parentPath ?? entry.path, entry.name)
-    for (const [, utility] of readFileSync(file, "utf8").matchAll(TOKEN_UTILITY)) {
+    for (const [, utility] of withoutComments(readFileSync(file, "utf8")).matchAll(TOKEN_UTILITY)) {
       if (!utilities.has(utility)) utilities.set(utility, file)
     }
   }

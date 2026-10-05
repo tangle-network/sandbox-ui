@@ -441,12 +441,12 @@ function wellRow(rows: number): number {
  * Demoted from a full header row because on a finished node the answer, not the
  * label, is what identifies the step.
  *
- * Measured at 19px in the browser, and it is the PILL that sets that height, not
- * the 18px mark beside it — so shrinking the mark alone would not buy anything
- * back. 22 carries the same ~3px headroom the other bands do against a
- * fractional rendered line.
+ * It is the PILL that sets that height, not the 18px mark beside it — so
+ * shrinking the mark alone would not buy anything back. ui's StatusPill renders
+ * 22px (12px text on a 16px line, 4px padding, 2px border); 25 carries the same
+ * ~3px headroom the other bands do against a fractional rendered line.
  */
-const SLIM_HEADER_ROW = 22;
+const SLIM_HEADER_ROW = 25;
 /**
  * Rendered line height of the answer body.
  *

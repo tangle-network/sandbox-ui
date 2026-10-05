@@ -95,7 +95,6 @@ export function canAdminSandbox(sandbox: SandboxCardData): boolean {
   return sandbox.team.role === "owner" || sandbox.team.role === "admin"
 }
 
-
 function Spec({ icon, value, unit }: { icon: React.ReactNode; value: number; unit: string }) {
   return (
     <span className="flex shrink-0 items-center gap-1.5">

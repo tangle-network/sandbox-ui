@@ -68,7 +68,6 @@ export interface SandboxTableProps {
   className?: string
 }
 
-
 // A row is "resumable" when there's a meaningful start-it action a user
 // can take. `running` is already up; `provisioning` / `creating` are
 // mid-transition and clicking a start there would either 409 or stack

@@ -59,6 +59,39 @@ export const TONE_ACCENT: Record<WfNodeTone, string> = {
   action: "hsl(var(--muted-foreground))",
 };
 
+/** Per-KIND resting accents. A tone is layout vocabulary; a kind is identity:
+ *  without this map every action node rests in the same neutral gray, and a
+ *  pipeline of agent steps reads as one flat field against the canvas. Each
+ *  accent is a semantic token (theme-reactive, defined by the host app), never
+ *  a palette literal:
+ *    agent.run          primary indigo — the workhorse carries the brand
+ *    script.run         info           — code/compute
+ *    sandbox.*          success        — provisioned infrastructure
+ *    integration/notify info           — the outside world
+ *  Run state still wins when a run is live: statusBorder recolors the border
+ *  and the glow, so the resting identity never competes with the run's front. */
+export const KIND_ACCENT: Record<string, string> = {
+  "agent.run": "hsl(var(--primary))",
+  "script.run": "var(--surface-info-text)",
+  "sandbox.spawn": "var(--surface-success-text)",
+  "sandbox.snapshot": "var(--surface-success-text)",
+  "integration.invoke": "var(--surface-info-text)",
+  "line.send": "var(--surface-info-text)",
+  notify: "var(--surface-info-text)",
+};
+
+/** The accent a node presents at rest: its kind's identity when it has one,
+ *  its tone otherwise (trigger/structural keep their tone-driven accents). */
+export function kindAccent(tone: WfNodeTone, kind: string | undefined): string {
+  return (kind !== undefined ? KIND_ACCENT[kind] : undefined) ?? TONE_ACCENT[tone];
+}
+
+/** Resting elevation: the quiet card still sits ON the canvas rather than in
+ *  it. Foreground-token shadows so both themes get depth without a dark-mode
+ *  black box. */
+export const RESTING_SHADOW =
+  "0 1px 2px hsl(var(--foreground) / 0.08), 0 10px 28px -16px hsl(var(--foreground) / 0.28)";
+
 // Status colors, shared by the node (dot/progress/border) and the edges so a node
 // and the hop pointing at it read as one. Each is a semantic token with a
 // per-theme value, so the run state is legible in light and dark alike.
@@ -519,7 +552,7 @@ export function NodeMark({
       style={{
         width: tile,
         height: tile,
-        background: `color-mix(in srgb, ${accent} 10%, hsl(var(--card)))`,
+        background: `color-mix(in srgb, ${accent} 14%, hsl(var(--card)))`,
       }}
     >
       {provider ? (

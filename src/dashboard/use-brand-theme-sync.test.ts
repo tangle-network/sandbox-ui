@@ -52,4 +52,20 @@ describe("useBrandThemeSync", () => {
     expect(document.documentElement.classList.contains("light")).toBe(true)
     expect(document.documentElement.getAttribute("data-theme")).toBe("light")
   })
+  it("keeps a Brand named theme the app selected instead of overwriting it", async () => {
+    const el = document.documentElement
+    el.setAttribute("data-theme", "aubergine")
+    el.classList.add("dark")
+    renderHook(() => useBrandThemeSync())
+    await flush()
+    expect(el.getAttribute("data-theme")).toBe("aubergine")
+    expect(el.classList.contains("light")).toBe(false)
+
+    // The app switches its own named family; the hook mirrors only `.light`.
+    el.setAttribute("data-theme", "aubergine-light")
+    el.classList.remove("dark")
+    await flush()
+    expect(el.getAttribute("data-theme")).toBe("aubergine-light")
+    expect(el.classList.contains("light")).toBe(true)
+  })
 })

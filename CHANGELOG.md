@@ -6,6 +6,9 @@
 - Add the sandbox lifecycle adapter: `SANDBOX_STATUS`, `sandboxStatus(status)` and `SandboxStatusPill`, ui's `StatusPill` over one mapping (running → success; creating and provisioning → running; failed → danger; hibernating, stopped, expired and archived → neutral). `SandboxCard` and `SandboxTable` both read it, so a state can no longer be green on the card and grey in the table.
 - The workflow `NodeStatusPill` renders ui's `StatusPill` from the new `STATUS_TONE` map, gaining the per-tone glyph. `STATUS_PILL` stays exported, deprecated.
 - The peer floors rise to `@tangle-network/ui` ^11.17.0 and `@tangle-network/brand` ^1.11.0. Existing exports are unchanged.
+## 0.123.3
+
+- The dashboard layouts' theme sync keeps a Brand named theme. When an app selects `data-theme="aubergine"` (or any other named theme), toggling `.dark` no longer rewrites it to plain `dark`/`light`, which dropped the named theme's tokens. The sync still mirrors `.light`, and still writes `dark`/`light` when the attribute is empty or already plain. Existing exports are unchanged.
 
 ## 0.123.2
 

@@ -16,6 +16,13 @@ import * as React from "react"
  * control flipped it — so apps no longer each reimplement this sync. Observing
  * the `class` attribute (rather than reading `useTheme`) catches every writer,
  * including an app's pre-React no-flash script.
+ *
+ * A Brand NAMED theme (`data-theme="aubergine"`, `"intelligence"`,
+ * `"tangle-light"`, …) belongs to the app that selected it. The hook still
+ * mirrors `.light`, but it never rewrites a named `data-theme` to plain
+ * `dark`/`light`: doing so drops the named scope's tokens and renders the app in
+ * the default palette. It writes `data-theme` only when the attribute is absent
+ * or already `dark`/`light`.
  */
 export function useBrandThemeSync(): void {
   React.useEffect(() => {
@@ -26,8 +33,10 @@ export function useBrandThemeSync(): void {
       // `toggle(name, force)` is a no-op (no mutation) when already in the target
       // state, so the observer settles after one pass instead of looping.
       el.classList.toggle("light", !dark)
+      const current = el.getAttribute("data-theme")
+      if (!isPlainTheme(current)) return
       const next = dark ? "dark" : "light"
-      if (el.getAttribute("data-theme") !== next) el.setAttribute("data-theme", next)
+      if (current !== next) el.setAttribute("data-theme", next)
     }
     sync()
     const observer = new MutationObserver(sync)
@@ -35,4 +44,8 @@ export function useBrandThemeSync(): void {
     observer.observe(el, { attributes: true, attributeFilter: ["class"] })
     return () => observer.disconnect()
   }, [])
+}
+
+function isPlainTheme(value: string | null): boolean {
+  return value === null || value === "" || value === "dark" || value === "light"
 }

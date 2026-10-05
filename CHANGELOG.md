@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.123.3
+
+- The dashboard layouts' theme sync keeps a Brand named theme. When an app selects `data-theme="aubergine"` (or any other named theme), toggling `.dark` no longer rewrites it to plain `dark`/`light`, which dropped the named theme's tokens. The sync still mirrors `.light`, and still writes `dark`/`light` when the attribute is empty or already plain. Existing exports are unchanged.
+
 ## 0.123.2
 
 - `globals.css` and `tokens.css` carry `@tangle-network/brand` 1.10.3: the dark danger fill is a rose-red tint at the warning fill weight. The brand peer floor rises to ^1.10.3, the version the styles are built against. Existing exports are unchanged.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.125.3
+
+- `AuthPage` follows the app's theme. Its page, card, text, borders, inputs and error text read Brand's semantic tokens (`--background`, `--card`, `--card-foreground`, `--muted-foreground`, `--border`, `--bg-input`, `--destructive`), each with the light value it used before, so an app with no token sheet renders as it did. The card sets its own ink, so the Tangle wordmark is readable on it in dark mode; before, the card stayed white and the wordmark inherited the page's near-white dark-mode text. The default Tangle button is the theme's ink with a canvas label, which inverts in dark mode; a product `accent` keeps its white label, and the new `accentForeground` prop sets the label explicitly. Existing exports are unchanged.
+
 ## 0.125.2
 
 - The user menu's open-state avatar takes the same theme accent pair as the rail trigger (0.125.1), so a named theme no longer reverts to violet once the menu is open. Existing exports are unchanged.

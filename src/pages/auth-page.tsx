@@ -6,12 +6,12 @@ import { Logo, TangleKnot } from "@tangle-network/brand";
 /**
  * Shared, self-contained sign-in / sign-up page for every Tangle vertical app.
  *
- * Ships its OWN palette (scoped CSS custom properties on the card) so it renders
- * identically in every app regardless of that app's theme tokens — the bug that
- * made per-app hand-rolled logins drift (e.g. a Tangle button rendering
- * dark-on-dark when an app didn't load the expected token sheet). Everything is
- * overridable via props for per-app customization (`accent`, `providers`, copy,
- * `className`/`style`).
+ * Paints from Brand's semantic tokens, so it follows the app's light, dark or
+ * named theme, and every token carries a light fallback, so an app that loads
+ * no token sheet still renders a complete light page (the bug that made per-app
+ * hand-rolled logins drift was a Tangle button rendering dark-on-dark when an
+ * app didn't load the expected token sheet). Everything is overridable via props
+ * for per-app customization (`accent`, `providers`, copy, `className`/`style`).
  *
  * Each app's login route becomes a thin wrapper:
  *   export default () => <AuthPage product="Legal" tangleAuthUrl="/auth/tangle/start" />
@@ -49,10 +49,12 @@ export interface AuthPageProps {
   collectName?: boolean;
   /** Footer link target for the opposite mode (signup from signin, vice versa). */
   altHref?: string;
-  /** Primary (Tangle) button background. Default Tangle ink `#0f172a`. */
+  /** Primary (Tangle) button background. Default the theme's ink (`--foreground`), which inverts in dark mode. */
   accent?: string;
-  /** Primary button hover background. Default `#1e293b`. */
+  /** Primary button hover background. Default the ink, or `accent`, at 88%. */
   accentHover?: string;
+  /** Primary button label colour. Default the theme's canvas (`--background`) on the default ink, white on a custom `accent`. */
+  accentForeground?: string;
   /** Optional brand-mark size in the lockup. Default "lg". */
   logoSize?: "sm" | "md" | "lg" | "xl";
   /** Escape hatch: extra class on the card. */
@@ -63,15 +65,21 @@ export interface AuthPageProps {
   children?: ReactNode;
 }
 
-// Self-contained palette — fixed values, NOT app theme tokens, so the page
-// looks the same everywhere. `accent` is the only commonly-overridden color.
+// Brand's shadcn channels, each with the light value the page used before it
+// read tokens. The card sets `color` so the Brand wordmark, which inherits its
+// ink, always matches the card it sits on.
 const C = {
-  pageBg: "#f7f7f8",
-  card: "#ffffff",
-  border: "rgba(15, 23, 42, 0.10)",
-  text: "#0f172a",
-  muted: "#71717a",
-  inputBg: "#f5f5f4",
+  pageBg: "hsl(var(--background, 240 5% 97%))",
+  card: "hsl(var(--card, 0 0% 100%))",
+  border: "hsl(var(--border, 214 32% 91%))",
+  text: "hsl(var(--card-foreground, 222 47% 11%))",
+  muted: "hsl(var(--muted-foreground, 240 4% 46%))",
+  inputBg: "var(--bg-input, #f5f5f4)",
+  hover: "hsl(var(--muted, 240 5% 96%))",
+  danger: "hsl(var(--destructive, 0 72% 42%))",
+  ink: "hsl(var(--foreground, 222 47% 11%))",
+  inkHover: "hsl(var(--foreground, 222 47% 11%) / 0.88)",
+  onInk: "hsl(var(--background, 0 0% 100%))",
 };
 
 function GithubIcon() {
@@ -106,8 +114,9 @@ export function AuthPage({
   onEmailSubmit,
   collectName,
   altHref,
-  accent = "#0f172a",
-  accentHover = "#1e293b",
+  accent,
+  accentHover,
+  accentForeground,
   logoSize = "lg",
   className,
   style,
@@ -118,6 +127,12 @@ export function AuthPage({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // A product accent keeps the white label it always had; the default ink is
+  // paired with the canvas so it inverts with the theme.
+  const buttonBg = accent ?? C.ink;
+  const buttonHoverBg = accentHover ?? (accent ? `color-mix(in oklch, ${accent} 88%, transparent)` : C.inkHover);
+  const buttonFg = accentForeground ?? (accent ? "#fff" : C.onInk);
 
   const isSignup = mode === "signup";
   const showName = collectName ?? isSignup;
@@ -176,6 +191,7 @@ export function AuthPage({
           width: "100%",
           maxWidth: 384,
           background: C.card,
+          color: C.text,
           border: `1px solid ${C.border}`,
           borderRadius: 16,
           padding: 32,
@@ -203,16 +219,16 @@ export function AuthPage({
             width: "100%",
             padding: "10px 12px",
             borderRadius: 8,
-            background: accent,
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "#fff",
+            background: buttonBg,
+            border: "1px solid transparent",
+            color: buttonFg,
             fontSize: 14,
             fontWeight: 600,
             textDecoration: "none",
             transition: "background 120ms",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = accentHover)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = accent)}
+          onMouseEnter={(e) => (e.currentTarget.style.background = buttonHoverBg)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = buttonBg)}
         >
           <TangleKnot size={16} />
           {tangleLabel}
@@ -228,7 +244,7 @@ export function AuthPage({
                 onClick={() => {
                   window.location.href = socialHref(p);
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(0,0,0,0.02)")}
+                onMouseEnter={(e) => (e.currentTarget.style.background = C.hover)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 {SOCIAL_ICON[p]}
@@ -253,7 +269,7 @@ export function AuthPage({
               <input type="email" required aria-label="Email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
               <input type="password" required aria-label="Password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
               {error && (
-                <p role="alert" style={{ fontSize: 14, color: "#b91c1c" }}>
+                <p role="alert" style={{ fontSize: 14, color: C.danger }}>
                   {error}
                 </p>
               )}

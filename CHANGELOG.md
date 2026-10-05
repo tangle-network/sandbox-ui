@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.123.2
+
+- `globals.css` and `tokens.css` carry `@tangle-network/brand` 1.10.3: the dark danger fill is a rose-red tint at the warning fill weight. The brand peer floor rises to ^1.10.3, the version the styles are built against. Existing exports are unchanged.
+
 ## 0.123.1
 
 - `globals.css` and `tokens.css` carry `@tangle-network/brand` 1.10.2: the dark warning and danger fills are low-chroma raised tints, and the dark violet fill is a raised chip. The compiled styles include the classes `@tangle-network/ui` 11.16.6 uses for a quiet closed terminal command. The peer floors rise to `@tangle-network/ui` ^11.16.6 and `@tangle-network/brand` ^1.10.2, the versions the styles are built against. Existing exports are unchanged.

@@ -91,6 +91,12 @@ export {
   type NewSandboxCardProps,
 } from "./sandbox-card";
 export {
+  SANDBOX_STATUS,
+  sandboxStatus,
+  SandboxStatusPill,
+  type SandboxStatusPillProps,
+} from "./sandbox-status";
+export {
   SandboxTable,
   type SandboxTableProps,
 } from "./sandbox-table";

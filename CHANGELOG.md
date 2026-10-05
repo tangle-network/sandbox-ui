@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.124.0
+
+- Re-export `Tag`, `Chip`, `IconTile`, `toneFor`, `initialsOf`, `CATEGORY_TONES` and `TONE_CLASSES` from `@tangle-network/ui` 11.17.0 through `./primitives` and the root, and compile their categorical tone classes into `styles`. `globals.css` and `tokens.css` carry `@tangle-network/brand` 1.11.0's eight categorical tones (`--tone-*`).
+- Add the sandbox lifecycle adapter: `SANDBOX_STATUS`, `sandboxStatus(status)` and `SandboxStatusPill`, ui's `StatusPill` over one mapping (running → success; creating and provisioning → running; failed → danger; hibernating, stopped, expired and archived → neutral). `SandboxCard` and `SandboxTable` both read it, so a state can no longer be green on the card and grey in the table. Visible changes: the card's running ping and the table's pulsing running/provisioning dot are replaced by the pill's glyph (the running sandbox is a solid success disc; in-progress states an open ring), hibernating is neutral instead of amber, and table labels take the body colour with a toned glyph.
+- The workflow `NodeStatusPill` renders ui's `StatusPill` from the new `STATUS_TONE` map, gaining the per-tone glyph. `STATUS_PILL` stays exported, deprecated; a host that built its own pill from it (Platform's run-page `StepStatusPill`) should move to ui's `StatusPill` with `STATUS_TONE` to keep matching the canvas. The agent card's identity strip is 25px for the taller pill.
+- The peer floors rise to `@tangle-network/ui` ^11.17.0 and `@tangle-network/brand` ^1.11.0. Existing exports are unchanged.
+
 ## 0.123.3
 
 - The dashboard layouts' theme sync keeps a Brand named theme. When an app selects `data-theme="aubergine"` (or any other named theme), toggling `.dark` no longer rewrites it to plain `dark`/`light`, which dropped the named theme's tokens. The sync still mirrors `.light`, and still writes `dark`/`light` when the attribute is empty or already plain. Existing exports are unchanged.

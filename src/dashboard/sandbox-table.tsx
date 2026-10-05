@@ -29,6 +29,7 @@ import {
 import { cn } from "../lib/utils"
 import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
 import { focusRing, focusRingInset } from "@tangle-network/ui/utils"
+import { SandboxStatusPill } from "./sandbox-status"
 
 export interface SandboxTableProps {
   sandboxes: SandboxCardData[]
@@ -67,17 +68,6 @@ export interface SandboxTableProps {
   className?: string
 }
 
-const statusColors: Record<SandboxStatus, { dot: string; text: string; bar: string }> = {
-  running: { dot: "bg-[var(--code-success)] animate-pulse", text: "text-[var(--surface-success-text)]", bar: "bg-[var(--code-success)]" },
-  hibernating: { dot: "bg-muted-foreground", text: "text-muted-foreground", bar: "bg-muted-foreground" },
-  provisioning: { dot: "bg-primary animate-pulse", text: "text-[var(--accent-text)]", bar: "bg-primary" },
-  creating: { dot: "bg-primary animate-pulse", text: "text-[var(--accent-text)]", bar: "bg-primary" },
-  stopped: { dot: "bg-muted-foreground", text: "text-foreground", bar: "bg-muted-foreground" },
-  failed: { dot: "bg-[var(--code-error)]", text: "text-[var(--surface-danger-text)]", bar: "bg-[var(--code-error)]" },
-  expired: { dot: "bg-border", text: "text-muted-foreground", bar: "bg-border" },
-  archived: { dot: "bg-border", text: "text-muted-foreground", bar: "bg-border" },
-}
-
 // A row is "resumable" when there's a meaningful start-it action a user
 // can take. `running` is already up; `provisioning` / `creating` are
 // mid-transition and clicking a start there would either 409 or stack
@@ -112,20 +102,8 @@ function MiniMeter({ label, percent }: { label: string; percent?: number }) {
 }
 
 function StatusIndicator({ status }: { status: SandboxStatus }) {
-  const sc = statusColors[status] ?? statusColors.stopped
-
-  return (
-    <div className="flex items-center gap-2 whitespace-nowrap">
-      <span
-        className={cn("flex h-2.5 w-2.5 shrink-0 rounded-full", sc.dot)}
-        aria-hidden="true"
-        {...(sc.dot.includes("animate-") ? { "data-motion": "essential" } : {})}
-      />
-      <span className={cn("text-xs font-medium", sc.text)}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    </div>
-  )
+  // Bare: a toned glyph beside the label, which is all a dense row needs.
+  return <SandboxStatusPill status={status} bare />
 }
 
 function SandboxResources({ sandbox }: { sandbox: SandboxCardData }) {

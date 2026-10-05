@@ -90,6 +90,8 @@ import {
   StatusFooter,
   StatusPill,
   statusBorder,
+  kindAccent,
+  RESTING_SHADOW,
   TONE_ACCENT,
 } from "./node-ui";
 
@@ -454,7 +456,7 @@ export function WorkflowNode({
   const isLR = direction === "LR";
   const targetPos = targetPosition ?? (isLR ? Position.Left : Position.Top);
   const sourcePos = sourcePosition ?? (isLR ? Position.Right : Position.Bottom);
-  const accent = TONE_ACCENT[d.tone];
+  const accent = kindAccent(d.tone, d.kind);
   const isAgent = d.kind === "agent.run";
   // What the card says the step IS. For an agent, the model a run ACTUALLY used
   // supersedes the requested one, so a fan-out branch / fallback model is visible
@@ -618,7 +620,8 @@ export function WorkflowNode({
               : problemSeverity
                 ? problemBorder(problemSeverity)
                 : {
-                    borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
+                    borderColor: `color-mix(in srgb, ${accent} 45%, hsl(var(--border)))`,
+                    boxShadow: RESTING_SHADOW,
                   }),
             // The TILE is the compact node (the name beside it is unboxed), so
             // the selection ring belongs to it and not to the wider box.
@@ -721,7 +724,8 @@ export function WorkflowNode({
           : problemSeverity
             ? problemBorder(problemSeverity)
             : {
-                borderColor: `color-mix(in srgb, ${accent} 40%, hsl(var(--border)))`,
+                borderColor: `color-mix(in srgb, ${accent} 45%, hsl(var(--border)))`,
+                boxShadow: RESTING_SHADOW,
               }),
         ...(selected ? SELECTION_OUTLINE : {}),
       }}
@@ -2102,7 +2106,11 @@ export function WorkflowGraph({
         minZoom={0.2}
         maxZoom={1.5}
       >
-        <Background gap={18} />
+        <Background
+          gap={18}
+          size={1.4}
+          color="hsl(var(--muted-foreground) / 0.38)"
+        />
         {/* The compact proposal-card preview is a glanceable thumbnail — the
             zoom/fit controls and density toggle only clutter it (it still pans +
             pinch-zooms and is always compact). */}

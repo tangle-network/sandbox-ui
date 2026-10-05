@@ -51,7 +51,7 @@ export interface AuthPageProps {
   altHref?: string;
   /** Primary (Tangle) button background. Default the theme's ink (`--foreground`), which inverts in dark mode. */
   accent?: string;
-  /** Primary button hover background. Default the ink at 88%, or `accent` when one is given. */
+  /** Primary button hover background. Default the ink, or `accent`, at 88%. */
   accentHover?: string;
   /** Primary button label colour. Default the theme's canvas (`--background`) on the default ink, white on a custom `accent`. */
   accentForeground?: string;
@@ -131,7 +131,7 @@ export function AuthPage({
   // A product accent keeps the white label it always had; the default ink is
   // paired with the canvas so it inverts with the theme.
   const buttonBg = accent ?? C.ink;
-  const buttonHoverBg = accentHover ?? (accent ? accent : C.inkHover);
+  const buttonHoverBg = accentHover ?? (accent ? `color-mix(in oklch, ${accent} 88%, transparent)` : C.inkHover);
   const buttonFg = accentForeground ?? (accent ? "#fff" : C.onInk);
 
   const isSignup = mode === "signup";

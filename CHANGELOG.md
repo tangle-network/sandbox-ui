@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.125.1
+
+- `styles`, `globals.css`, `tokens.css` and `tailwind.css` carry `@tangle-network/brand` 1.13.0, which adds the `hospitality`, `agents` and `website` named themes. An app selects one with `data-theme` on `<html>`; this package's precompiled sheet now has their rules, so an app no longer needs a local copy. The brand peer floor rises to ^1.13.0.
+- The user menu's avatar initials take the theme accent (`--accent-surface-strong` fill, `--accent-text` ink) instead of a fixed violet, so a named theme's identity reaches the rail's avatar. Existing exports are unchanged.
+
 ## 0.125.0
 
 - Add `@tangle-network/sandbox-ui/tailwind.css`, a Tailwind v4 source entry. An app that compiles Tailwind imports it after `tailwindcss` instead of linking `./styles` and hand-listing `@source` paths into `node_modules/@tangle-network/{sandbox-ui,ui}/dist`. It carries Brand's tokens, named themes and utility registrations, this package's runtime CSS, and `@source` lines for this package's `dist` and the `@tangle-network/ui` peer, resolved relative to the installed file under pnpm and npm.

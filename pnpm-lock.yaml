@@ -302,9 +302,6 @@ importers:
       postcss:
         specifier: ^8.5.28
         version: 8.5.28
-      postcss-import:
-        specifier: ^17.0.0
-        version: 17.0.0(postcss@8.5.28)
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -3363,15 +3360,6 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  postcss-import@17.0.0:
-    resolution: {integrity: sha512-qzVMJhcq39KweT7Fp0HcjE5YxL5yI854Q3CtufxDuZKO9HLQUp2rptB9+U0MIj3pT1ZEVXoqnpeC1mSkfYuz4Q==}
-    engines: {node: '>=22.0.0'}
-    peerDependencies:
-      postcss: ^8.0.0
-
-  postcss-value-parser@4.2.0:
-    resolution: {integrity: sha512-1NNCs6uurfkVbeXG4S8JFT9t19m45ICnif8zWLd5oPSZ50QnwMfK+H3jv408d4jw/7Bttv5axS5IiHoLaVNHeQ==}
-
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -3516,9 +3504,6 @@ packages:
   react@19.3.0:
     resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
     engines: {node: '>=0.10.0'}
-
-  read-cache@1.0.2:
-    resolution: {integrity: sha512-/peqiBB/n07gQGLsWaHho3WfvUyRscw0gYTsEFMhrIe/nWLkYaf5SbKYjGYqtRV3aPwykJgF2VEMo1ac4bnsGA==}
 
   readable-stream@3.6.2:
     resolution: {integrity: sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==}
@@ -6978,15 +6963,6 @@ snapshots:
     dependencies:
       playwright-core: 1.63.0
 
-  postcss-import@17.0.0(postcss@8.5.28):
-    dependencies:
-      postcss: 8.5.28
-      postcss-value-parser: 4.2.0
-      read-cache: 1.0.2
-      resolve: 1.22.12
-
-  postcss-value-parser@4.2.0: {}
-
   postcss@8.5.28:
     dependencies:
       nanoid: 3.3.19
@@ -7199,8 +7175,6 @@ snapshots:
       refractor: 5.0.0
 
   react@19.3.0: {}
-
-  read-cache@1.0.2: {}
 
   readable-stream@3.6.2:
     dependencies:

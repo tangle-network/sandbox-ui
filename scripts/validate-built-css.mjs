@@ -15,7 +15,7 @@ const TOKEN_UTILITY =
  * The brand text ramp, which the bundle must carry whatever `@tangle-network/ui`
  * happens to be installed at build time.
  *
- * These are declared with `@source inline(...)` in `src/styles/globals.css`
+ * These are declared with `@source inline(...)` in `src/styles/tailwind.css`
  * rather than discovered by the scan, so they are asserted from the built bytes
  * here — a safelist nobody checks is a safelist that gets deleted in a cleanup.
  * Their failure mode is the reason they are special-cased: an un-emitted colour
@@ -44,7 +44,7 @@ export function assertTextRamp(css) {
   if (missing.length > 0) {
     throw new Error(
       `dist/globals.css: the brand text ramp is missing ${missing.join(", ")}. ` +
-        `These are emitted via \`@source inline(...)\` in src/styles/globals.css precisely because the ` +
+        `These are emitted via \`@source inline(...)\` in src/styles/tailwind.css precisely because the ` +
         `@tangle-network/ui scan only covers the version installed at build time. Restore those lines — ` +
         `without them a consumer on a newer ui renders that tier at inherited body colour.`,
     )
@@ -176,7 +176,7 @@ export function validateBuiltCss(css, options = {}) {
   const match = stripped.match(URL_IMPORT)
   if (match) {
     throw new Error(
-      `dist/globals.css: URL @import is not allowed in the built output. Found: ${match[0].trim()}. Remove it from src/styles/globals.css — fonts are loaded by the consumer, not this library. See README "Fonts".`,
+      `dist/globals.css: URL @import is not allowed in the built output. Found: ${match[0].trim()}. Remove it from src/styles/tailwind.css — fonts are loaded by the consumer, not this library. See README "Fonts".`,
     )
   }
 

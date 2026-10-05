@@ -21,6 +21,21 @@ Keep imports moving in that direction so lower layers never depend on an app she
 | Integration logos | Sandbox's integration `ProviderIcon` resolves connector URLs and fallbacks. The model-provider SVG table resolves model vendors. | Keep both because they serve different identifiers and failure paths. |
 | Theme values | Brand's tokens style Sandbox and generic UI. Agent App has a light-default theme, dark scope, and Konva color mirror with contract tests. | Reconcile semantic values only after checking both theme scopes and the canvas mirror in real consumers. |
 
+## Stylesheet entries
+
+Shared components ship Tailwind class names, so the app's Tailwind must scan them.
+Each package declares the sources for its own `dist`, and a consumer imports one file.
+
+| Entry | Contains | Imported by |
+| --- | --- | --- |
+| `@tangle-network/sandbox-ui/tailwind.css` | Brand tokens, named themes and utility registrations; Sandbox runtime CSS; `@source` for Sandbox and `ui` dist | Apps without Agent App that compile Tailwind |
+| `@tangle-network/agent-app/tailwind.css` | The Sandbox entry, Agent App tokens, `@source` for Agent App dist | Agent apps |
+| `@tangle-network/sandbox-ui/styles` | The same runtime CSS, precompiled with its own preflight and utilities | Apps without a Tailwind compile |
+
+`src/styles/tailwind.css` is the one source for both Sandbox entries; `src/styles/globals.css` only wraps it for the precompiled build.
+Brand's registrations are imported as `theme(default)`, so an app's `@config` preset still decides a utility name it maps, as it did when the app's compile loaded after the precompiled bundle.
+`pnpm test:package` compiles the packed entry in a clean npm consumer and fails if a Sandbox or `ui` component utility is missing.
+
 ## Next consolidation sequence
 
 1. Add a model-provider logo entry to `ui` with the shared SVG table and a theme-safe fallback contract.

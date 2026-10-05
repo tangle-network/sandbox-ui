@@ -38,6 +38,16 @@ Import styles in your app root:
 import "@tangle-network/sandbox-ui/styles";
 ```
 
+An app that runs its own Tailwind v4 compile imports the source entry instead, and lists no `node_modules` paths:
+
+```css
+@import "tailwindcss";
+@import "@tangle-network/sandbox-ui/tailwind.css";
+```
+
+The entry carries Brand's tokens and utility registrations, this package's runtime CSS, and `@source` lines for its own `dist` and the `@tangle-network/ui` peer, so every component utility compiles once, in the app's own layer order.
+Agent apps import `@tangle-network/agent-app/tailwind.css`, which includes this entry.
+
 ### Dashboard page spacing
 
 For apps whose pages already provide their own gutters, pass `contentClassName="px-0 pb-0 lg:px-0"` to `DashboardLayout`. New Sandbox is at the top of the sidebar; notifications sit above the account menu. Set `notificationsEnabled={false}` when the app has no notification feed. The desktop has no top bar; the mobile menu opens a focus-managed drawer.
@@ -492,6 +502,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/types` | TypeScript types for messages, parts, runs, sessions |
 | `/utils` | cn, formatDuration, timeAgo, tool display helpers |
 | `/styles` | Compiled CSS bundle |
+| `/tailwind.css` | Tailwind v4 source entry: tokens, runtime CSS, and the `@source` lines for this package and `@tangle-network/ui` |
 
 ## Stack
 

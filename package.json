@@ -118,6 +118,7 @@
     "./styles": "./dist/styles.css",
     "./globals.css": "./dist/globals.css",
     "./tokens.css": "./dist/tokens.css",
+    "./tailwind.css": "./dist/tailwind.css",
     "./tailwind": "./tailwind.config.cjs"
   },
   "files": [
@@ -250,7 +251,6 @@
     "jsdom": "^30.1.1",
     "playwright": "^1.63.0",
     "postcss": "^8.5.28",
-    "postcss-import": "^17.0.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-syntax-highlighter": "^16.1.1",

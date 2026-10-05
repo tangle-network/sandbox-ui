@@ -34,7 +34,7 @@ import { describe, expect, it } from "vitest";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relative) => readFileSync(join(ROOT, relative), "utf8");
 
-const CSS = read("src/styles/globals.css");
+const CSS = read("src/styles/tailwind.css");
 
 /** Brace-matched body of the rule/at-rule starting at `start`. */
 function block(css, start) {

@@ -16,6 +16,7 @@ import {
   Cpu, MemoryStick, HardDrive, Box,
 } from "lucide-react"
 import { focusRing } from "@tangle-network/ui/utils"
+import { SandboxStatusPill } from "./sandbox-status"
 
 export type SandboxStatus = "running" | "hibernating" | "provisioning" | "stopped" | "failed" | "archived" | "creating" | "expired"
 
@@ -94,16 +95,6 @@ export function canAdminSandbox(sandbox: SandboxCardData): boolean {
   return sandbox.team.role === "owner" || sandbox.team.role === "admin"
 }
 
-const STATUS_META: Record<SandboxStatus, { label: string; color: string }> = {
-  running: { label: "Running", color: "var(--status-running)" },
-  hibernating: { label: "Hibernating", color: "var(--status-warm)" },
-  provisioning: { label: "Provisioning", color: "var(--status-creating)" },
-  creating: { label: "Creating", color: "var(--status-creating)" },
-  stopped: { label: "Stopped", color: "var(--status-stopped)" },
-  failed: { label: "Failed", color: "var(--status-error)" },
-  expired: { label: "Expired", color: "var(--status-deleted)" },
-  archived: { label: "Archived", color: "var(--status-deleted)" },
-}
 
 function Spec({ icon, value, unit }: { icon: React.ReactNode; value: number; unit: string }) {
   return (
@@ -141,7 +132,6 @@ export function SandboxCard({
   const resumeLabel = isHibernating ? "Wake Sandbox" : "Resume Sandbox"
   const resumeHandler = isStopped ? resolveResumeHandler(sandbox.status) : undefined
 
-  const status = STATUS_META[sandbox.status]
   const isArchived = sandbox.status === "archived"
   const cpuPercent = sandbox.cpuPercent
   const ramUsed = sandbox.ramUsed
@@ -240,22 +230,7 @@ export function SandboxCard({
       <div className="my-4 space-y-3">
         {/* Status + uptime */}
         <div className="flex items-center justify-between">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--md3-outline-variant)] bg-surface-container-high px-2 py-0.5 text-[11px] font-medium text-foreground">
-            <span className="relative flex h-1.5 w-1.5">
-              {isRunning && (
-                // The ping renders only while the sandbox IS running, so it is
-                // live state, not decoration — the same call SandboxTable makes
-                // for its running/provisioning dot.
-                <span
-                  className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-                  style={{ backgroundColor: status.color }}
-                  data-motion="essential"
-                />
-              )}
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: status.color }} />
-            </span>
-            {status.label}
-          </span>
+          <SandboxStatusPill status={sandbox.status} />
           {isRunning && sandbox.uptime && (
             <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
               up {sandbox.uptime}

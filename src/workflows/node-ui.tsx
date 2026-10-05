@@ -15,6 +15,7 @@
  * `var(--color-*)` would silently resolve to nothing. See the edge-color test.
  */
 
+import { StatusPill as UiStatusPill, type StatusTone } from "@tangle-network/ui/primitives";
 import {
   AlertTriangle,
   Bell,
@@ -92,7 +93,9 @@ export const STATUS_LABEL: Record<WfNodeStatus, string> = {
   failed: "Failed",
 };
 
-/** Status pill styling — a tinted well in the status color. Built from the
+/** @deprecated `StatusPill` now renders ui's StatusPill from `STATUS_TONE`;
+ *  kept for consumers that styled their own pill from it.
+ *  Status pill styling — a tinted well in the status color. Built from the
  *  semantic surface trio (bg/border/text) so the pill keeps its contrast in both
  *  themes rather than washing out in one of them. */
 export const STATUS_PILL: Record<
@@ -371,21 +374,25 @@ export function ProblemMarker({
   );
 }
 
+/** Run state to ui's status tone: waiting needs a person, queued has not started. */
+export const STATUS_TONE: Record<WfNodeStatus, StatusTone> = {
+  queued: "neutral",
+  running: "running",
+  waiting: "warning",
+  succeeded: "success",
+  failed: "danger",
+};
+
 /** The status pill in a card's header — the one place the run state is spelled
- *  out in words. */
+ *  out in words. ui's `StatusPill`, so a node's state carries the same glyph,
+ *  tone and label as every other status in the product. `shrink-0` because the
+ *  longest label is two words ("Waiting on you") and the pill is often nested a
+ *  level below the flex row it sits in. */
 export function StatusPill({ status }: { status: WfNodeStatus }) {
   return (
-    <span
-      // `whitespace-nowrap` because the pill states a status in words and the
-      // longest of them is two ("Waiting on you"). Its own `shrink-0` only holds
-      // while it is a direct flex item; nested one level down — in a wrapper that
-      // positions it — the label wraps to three lines and silently triples the
-      // height of whatever row it sits in.
-      className="shrink-0 whitespace-nowrap rounded-full border px-2 py-[1px] font-medium text-[10px]"
-      style={STATUS_PILL[status]}
-    >
+    <UiStatusPill tone={STATUS_TONE[status]} className="shrink-0">
       {STATUS_LABEL[status]}
-    </span>
+    </UiStatusPill>
   );
 }
 

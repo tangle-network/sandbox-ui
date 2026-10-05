@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.124.0
+
+- Re-export `Tag`, `Chip`, `IconTile`, `toneFor`, `initialsOf`, `CATEGORY_TONES` and `TONE_CLASSES` from `@tangle-network/ui` 11.17.0 through `./primitives` and the root, and compile their categorical tone classes into `styles`. `globals.css` and `tokens.css` carry `@tangle-network/brand` 1.11.0's eight categorical tones (`--tone-*`).
+- Add the sandbox lifecycle adapter: `SANDBOX_STATUS`, `sandboxStatus(status)` and `SandboxStatusPill`, ui's `StatusPill` over one mapping (running → success; creating and provisioning → running; failed → danger; hibernating, stopped, expired and archived → neutral). `SandboxCard` and `SandboxTable` both read it, so a state can no longer be green on the card and grey in the table.
+- The workflow `NodeStatusPill` renders ui's `StatusPill` from the new `STATUS_TONE` map, gaining the per-tone glyph. `STATUS_PILL` stays exported, deprecated.
+- The peer floors rise to `@tangle-network/ui` ^11.17.0 and `@tangle-network/brand` ^1.11.0. Existing exports are unchanged.
+
 ## 0.123.2
 
 - `globals.css` and `tokens.css` carry `@tangle-network/brand` 1.10.3: the dark danger fill is a rose-red tint at the warning fill weight. The brand peer floor rises to ^1.10.3, the version the styles are built against. Existing exports are unchanged.

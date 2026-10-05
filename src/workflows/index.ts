@@ -59,6 +59,7 @@ export {
   STATUS_COLOR,
   STATUS_LABEL,
   STATUS_PILL,
+  STATUS_TONE,
   StatusPill as NodeStatusPill,
 } from "./node-ui";
 // The naming rules the graph labels nodes with, so a host titles a step the way

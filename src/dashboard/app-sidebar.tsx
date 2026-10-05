@@ -1472,7 +1472,7 @@ export function ProfileAvatar({
           <div className="flex items-center gap-3 px-2 py-3">
             <Avatar className="h-12 w-12 shrink-0">
               {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
-              <AvatarFallback className="text-sm bg-[var(--surface-violet-bg)] text-[var(--surface-violet-text)]">
+              <AvatarFallback className="text-sm bg-[var(--accent-surface-strong)] text-[var(--accent-text)]">
                 {getInitials(user?.name, user?.email)}
               </AvatarFallback>
             </Avatar>

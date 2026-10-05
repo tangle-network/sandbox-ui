@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.125.2
+
+- The user menu's open-state avatar takes the same theme accent pair as the rail trigger (0.125.1), so a named theme no longer reverts to violet once the menu is open. Existing exports are unchanged.
+
 ## 0.125.1
 
 - `styles`, `globals.css`, `tokens.css` and `tailwind.css` carry `@tangle-network/brand` 1.13.0, which adds the `hospitality`, `agents` and `website` named themes. An app selects one with `data-theme` on `<html>`; this package's precompiled sheet now has their rules, so an app no longer needs a local copy. The brand peer floor rises to ^1.13.0.

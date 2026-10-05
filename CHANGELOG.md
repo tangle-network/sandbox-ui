@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.125.0
+
+- Add `@tangle-network/sandbox-ui/tailwind.css`, a Tailwind v4 source entry. An app that compiles Tailwind imports it after `tailwindcss` instead of linking `./styles` and hand-listing `@source` paths into `node_modules/@tangle-network/{sandbox-ui,ui}/dist`. It carries Brand's tokens, named themes and utility registrations, this package's runtime CSS, and `@source` lines for this package's `dist` and the `@tangle-network/ui` peer, resolved relative to the installed file under pnpm and npm.
+- Brand's registrations are imported as `theme(default)`, so an app's `@config` preset keeps deciding the utility names it maps.
+- `src/styles/tailwind.css` is the one source for both entries. `./styles` and `./globals.css` are declaration-for-declaration unchanged. Existing exports are unchanged.
+
 ## 0.124.0
 
 - Re-export `Tag`, `Chip`, `IconTile`, `toneFor`, `initialsOf`, `CATEGORY_TONES` and `TONE_CLASSES` from `@tangle-network/ui` 11.17.0 through `./primitives` and the root, and compile their categorical tone classes into `styles`. `globals.css` and `tokens.css` carry `@tangle-network/brand` 1.11.0's eight categorical tones (`--tone-*`).

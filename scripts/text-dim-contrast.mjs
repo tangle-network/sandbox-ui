@@ -294,7 +294,7 @@ const staticTokens = parseThemeTokens(
     nodeRequire.resolve("@tangle-network/brand/styles/tokens.css"),
     "utf8",
   ),
-  readFileSync(resolve(here, "..", "src", "styles", "globals.css"), "utf8"),
+  readFileSync(resolve(here, "..", "src", "styles", "tailwind.css"), "utf8"),
 );
 let drift = 0;
 for (const theme of ["dark", "light"]) {

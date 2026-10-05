@@ -49,7 +49,7 @@ const brandTokensCss = readFileSync(
   "utf8",
 );
 const globalsCss = readFileSync(
-  join(here, "..", "src", "styles", "globals.css"),
+  join(here, "..", "src", "styles", "tailwind.css"),
   "utf8",
 );
 
@@ -130,7 +130,7 @@ describe("--text-dim contrast against the surfaces this package ships", () => {
     // brand declares, in both themes.
     expect(
       globalsCss,
-      "src/styles/globals.css declares --text-dim — correct the value in brand's tokens.css instead",
+      "src/styles/tailwind.css declares --text-dim — correct the value in brand's tokens.css instead",
     ).not.toMatch(/--text-dim\s*:/);
     for (const theme of THEMES) {
       expect(SHIPPED[theme].get("--text-dim")).toBe(

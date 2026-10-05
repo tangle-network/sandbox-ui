@@ -260,7 +260,9 @@ try {
     const target = exportTarget(value);
     if (target?.endsWith(".js")) {
       jsSpecifiers.push(packageSpecifier(manifest.name, subpath));
-    } else if (target?.endsWith(".css")) {
+    } else if (target?.endsWith(".css") && subpath !== "./tailwind.css") {
+      // ./tailwind.css is Tailwind SOURCE, not browser CSS; the presentation
+      // contract compiles it the way a consumer does.
       cssSpecifiers.push(packageSpecifier(manifest.name, subpath));
     }
   }

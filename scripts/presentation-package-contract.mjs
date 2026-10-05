@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { build, preview } from "vite";
 import tailwindcss from "@tailwindcss/postcss";
@@ -48,17 +48,24 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
 @source "../node_modules/@tangle-network/ui/src/**/*.ts";
 @source "../node_modules/@tangle-network/sandbox-ui/dist/**/*.js";
 `);
+  // The published Tailwind source entry, written exactly as a consumer writes
+  // it: no node_modules paths. Its own `@source` lines must reach this
+  // package's dist and the installed ui peer.
+  writeFileSync(join(fixture, "entry.css"), `
+@import "tailwindcss" source(none);
+@import "@tangle-network/sandbox-ui/tailwind.css";
+`);
   const cssPath = join(consumerDir, "node_modules/@tangle-network/sandbox-ui/dist/globals.css");
   const cssSha256 = createHash("sha256").update(readFileSync(cssPath)).digest("hex");
   const browser = await chromium.launch({ headless: true });
   const states = [];
   try {
-    for (const lane of ["compiled", "host"]) {
+    for (const lane of ["compiled", "host", "entry"]) {
       writeFileSync(join(fixture, "main.tsx"), `
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { PresentationConsumer } from "./consumer";
-import ${JSON.stringify(lane === "compiled" ? "@tangle-network/sandbox-ui/globals.css" : "./host.css")};
+import ${JSON.stringify(lane === "compiled" ? "@tangle-network/sandbox-ui/globals.css" : `./${lane}.css`)};
 createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
 `);
       writeFileSync(join(fixture, "index.html"), '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module" src="/main.tsx"></script></body></html>');
@@ -66,10 +73,11 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
       await build({
         root: fixture, logLevel: "error",
         // In the compiled lane Vite consumes the published bytes without a
-        // Tailwind compiler. Only the host lane is allowed to emit utilities.
-        css: { postcss: { plugins: lane === "host" ? [tailwindcss()] : [] } },
+        // Tailwind compiler. Only the host and entry lanes emit utilities.
+        css: { postcss: { plugins: lane === "compiled" ? [] : [tailwindcss()] } },
         build: { outDir, emptyOutDir: true },
       });
+      if (lane === "entry") assertEntryUtilities({ consumerDir, outDir });
       const server = await preview({
         root: fixture, logLevel: "error", build: { outDir },
         preview: { host: "127.0.0.1", port: 0, strictPort: true },
@@ -200,11 +208,44 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
   } finally {
     await browser.close();
   }
-  for (const lane of ["compiled", "host"]) {
+  for (const lane of ["compiled", "host", "entry"]) {
     const light = states.find((state) => state.lane === lane && state.mode === "light");
     const dark = states.find((state) => state.lane === lane && state.mode === "dark");
     assert.notEqual(light.bodyColor, dark.bodyColor, `${lane}: mode switching did not resolve different colors`);
     assert.notEqual(light.cardBackground, dark.cardBackground, `${lane}: card surface did not follow the theme`);
   }
   console.log(JSON.stringify({ check: "packed-presentation", versions, cssSha256, states }, null, 2));
+}
+
+/**
+ * The fixture page renders a handful of components, so the browser check above
+ * cannot see whether the entry compiles what the REST of the packages write.
+ * Each marker is a class written by exactly one package's shipped JS, checked
+ * here before the emitted CSS is, so a marker that stops being unique fails
+ * loudly instead of passing for the wrong reason.
+ */
+function assertEntryUtilities({ consumerDir, outDir }) {
+  const assetsDir = join(outDir, "assets");
+  const css = readdirSync(assetsDir).filter((name) => name.endsWith(".css"))
+    .map((name) => readFileSync(join(assetsDir, name), "utf8")).join("\n");
+  const shippedJs = (pkg) => readdirSync(join(consumerDir, "node_modules", pkg, "dist"), { recursive: true })
+    .filter((name) => name.endsWith(".js"))
+    .map((name) => readFileSync(join(consumerDir, "node_modules", pkg, "dist", name), "utf8")).join("\n");
+  const owners = { "@tangle-network/sandbox-ui": shippedJs("@tangle-network/sandbox-ui"), "@tangle-network/ui": shippedJs("@tangle-network/ui") };
+  const markers = [
+    // sandbox-ui's own components.
+    { owner: "@tangle-network/sandbox-ui", candidate: "text-[13.5px]", selector: ".text-\\[13\\.5px\\]" },
+    // ui's Dialog panel: the class that went missing when apps scanned only sandbox-ui.
+    { owner: "@tangle-network/ui", candidate: "translate-x-[-50%]", selector: ".translate-x-\\[-50\\%\\]" },
+  ];
+  for (const { owner, candidate, selector } of markers) {
+    for (const [pkg, js] of Object.entries(owners)) {
+      assert.equal(js.includes(candidate), pkg === owner, `marker ${candidate} must appear only in ${owner}'s shipped JS; pick another marker`);
+    }
+    assert(css.includes(selector), `entry did not compile ${candidate} from ${owner}`);
+  }
+  // Classes no scanned file writes: the inline safelist and Brand's registrations.
+  for (const selector of [".text-\\[var\\(--text-dim\\)\\]", ".bg-\\[var\\(--run-mix-failed\\)\\]", ".tangle-prose", "--md3-surface-container-low"]) {
+    assert(css.includes(selector), `entry is missing ${selector}`);
+  }
 }

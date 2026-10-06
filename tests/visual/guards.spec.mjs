@@ -70,19 +70,20 @@ test('keeps desktop sandbox scope and actions within their cells', async ({ page
   const row = page.getByRole('region', { name: 'Sandbox list' }).locator('tbody tr').first()
   const scopeCell = row.locator('td').nth(2)
   const scopeBadge = scopeCell.locator('div[title]').first()
-  const environmentText = row.locator('td').nth(3).locator('span[title]').first()
+  const resourcesCell = row.locator('td').nth(3)
   await expect(scopeBadge).toBeVisible()
-  await expect(environmentText).toBeVisible()
+  await expect(resourcesCell.getByText('34%', { exact: true }).first()).toBeVisible()
   const scopeBounds = await scopeCell.boundingBox()
   const badgeBounds = await scopeBadge.boundingBox()
-  const environmentBounds = await environmentText.boundingBox()
+  const resourcesBounds = await resourcesCell.boundingBox()
   expect(badgeBounds.x + badgeBounds.width).toBeLessThanOrEqual(scopeBounds.x + scopeBounds.width)
-  expect(badgeBounds.x + badgeBounds.width + 8).toBeLessThanOrEqual(environmentBounds.x)
+  expect(badgeBounds.x + badgeBounds.width).toBeLessThanOrEqual(resourcesBounds.x)
 
+  // A running row keeps Open and the overflow menu on one line.
   const actionTops = await row.locator('td').last().getByRole('button').evaluateAll((buttons) =>
     buttons.map((button) => button.getBoundingClientRect().top),
   )
-  expect(actionTops).toHaveLength(5)
+  expect(actionTops).toHaveLength(2)
   expect(Math.max(...actionTops) - Math.min(...actionTops)).toBeLessThan(2)
   await assertStoryHealthy(page)
 })
@@ -91,9 +92,9 @@ test('keeps the desktop provisioning status clear of the sandbox name', async ({
   await openStory(page, 'dashboard-sandboxtable--long-names-with-scope', 'light', { width: 1440, height: 900 }, baseURL)
   const row = page.getByRole('region', { name: 'Sandbox list' }).locator('tbody tr').nth(2)
   const statusCell = row.locator('td').first()
-  const statusLabel = statusCell.locator('span').last()
+  const statusLabel = statusCell.getByText('Provisioning', { exact: true })
   const sandboxName = row.locator('td').nth(1).locator('span[title]').first()
-  await expect(statusLabel).toHaveText('Provisioning')
+  await expect(statusLabel).toBeVisible()
   await expect(sandboxName).toBeVisible()
 
   const cellBounds = await statusCell.boundingBox()
@@ -109,9 +110,8 @@ for (const theme of ['light', 'dark']) {
     await openStory(page, 'dashboard-sandboxtable--long-names-with-scope', theme, { width: 1440, height: 900 }, baseURL)
     const rows = page.getByRole('region', { name: 'Sandbox list' }).locator('tbody tr')
     const text = {
-      provisioning: rows.nth(2).locator('td').first().locator('span').last(),
+      provisioning: rows.nth(2).locator('td').first().getByText('Provisioning', { exact: true }),
       percentage: rows.first().getByText('34%', { exact: true }).first(),
-      allocation: rows.nth(2).locator('td').nth(4).locator('span[title]').first(),
       resume: rows.nth(1).getByRole('button', { name: 'Resume' }),
     }
 
@@ -129,8 +129,8 @@ for (const theme of ['light', 'dark']) {
     const statuses = ['Running', 'Failed', 'Provisioning', 'Creating', 'Stopped', 'Hibernating', 'Archived']
     for (const [index, status] of statuses.entries()) {
       const row = rows.nth(index)
-      const label = row.locator('td').first().locator('span').last()
-      await expect(label).toHaveText(status)
+      const label = row.locator('td').first().getByText(status, { exact: true })
+      await expect(label).toBeVisible()
       await label.scrollIntoViewIfNeeded()
       await expectReadable(theme, `${status} resting`, label)
       await row.hover()

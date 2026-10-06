@@ -50,12 +50,6 @@ export interface ProviderLogoProps {
   size?: number
 }
 
-/** True when a real brand mark exists for this provider key. */
-export function hasProviderLogo(provider?: string): boolean {
-  const key = ALIASES[provider ?? ''] ?? provider ?? ''
-  return key in LOGOS
-}
-
 /** Real brand mark when we have one; tinted monogram otherwise. */
 export function ProviderLogo({ provider, size = 16 }: ProviderLogoProps): ReactNode {
   const key = ALIASES[provider ?? ''] ?? provider ?? ''

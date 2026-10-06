@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.127.0
+
+- Remove `createFetchTransport` from `./chat`. No product imports it; hosts pass their own `ArtifactAgentDockTransport` to `ArtifactAgentDock`.
+- Remove the internal `clampReasoningLevel` and `hasProviderLogo` helpers, which nothing called.
+- `STATUS_PILL` (agent-dev-container's run page) and `HARNESS_REASONING_OPTIONS` (blueprint-agent's thinking control) stay, because products still import them. Every other export is unchanged.
+
 ## 0.126.1
 
 - `BackendSelector`'s `field` variant shows its label as written, in the same weight and colour as other form labels, instead of a small uppercase caption. The label is now tied to the trigger with `for`, so screen readers announce it with the field and clicking it focuses the field. Existing exports are unchanged.

@@ -25,39 +25,6 @@ export type ReasoningLevel = "auto" | ReasoningEffort;
 export const REASONING_LADDER: ReadonlyArray<ReasoningEffort> = reasoningLadder;
 
 /**
- * Snap a reasoning selection into the set a (harness, model) pair supports. The `auto` sentinel and
- * any value already in `available` pass through unchanged. An unsupported value snaps to the
- * strongest available effort that does not exceed the request. If every available effort is
- * stronger, it falls back to `auto` rather than silently increasing the user's selection. With no
- * capability set known (`available` omitted) the value is left untouched.
- */
-export function clampReasoningLevel(
-  value: ReasoningLevel,
-  available: ReadonlyArray<ReasoningEffort> | undefined,
-): ReasoningLevel {
-  if (
-    value === "auto" ||
-    !available ||
-    available.includes(value as ReasoningEffort)
-  ) {
-    return value;
-  }
-  const requestedRank = REASONING_LADDER.indexOf(value as ReasoningEffort);
-  let closest: ReasoningEffort | undefined;
-  let closestRank = -1;
-
-  for (const effort of available) {
-    const rank = REASONING_LADDER.indexOf(effort);
-    if (rank <= requestedRank && rank > closestRank) {
-      closest = effort;
-      closestRank = rank;
-    }
-  }
-
-  return closest ?? "auto";
-}
-
-/**
  * Proportional intensity meter. Auto shows a Sparkles glyph (no fixed depth);
  * every other level fills a fixed-width bar meter to its rank in the ladder, so
  * the rows read as an ascending scale regardless of how many levels exist.

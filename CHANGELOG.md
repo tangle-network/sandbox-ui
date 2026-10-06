@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.127.2
+
+- The rail's small text meets the 12px legibility floor: the user menu's avatar initials (10px, now medium weight), the nav badge count (9px) and the headings of rail flyouts and expandable groups (10px) are now `text-xs`. Existing exports are unchanged.
+
 ## 0.127.1
 
 - `.tangle-prose` lists show their markers again: Tailwind's preflight set `list-style: none`, so numbered lists rendered as loose lines and bulleted lists as indented paragraphs. Numbers and bullets use the muted foreground colour.

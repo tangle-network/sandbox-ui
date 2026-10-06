@@ -464,12 +464,13 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
   )
 
   // Badge anchored to the icon (not the row) so it stays on the icon corner in
-  // both icon-only and labeled modes, and through the collapse transition.
+  // both icon-only and labeled modes, and through the collapse transition. It
+  // grows leftward over the icon, never rightward into the row's label.
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
       <Icon className="h-[17px] w-[17px] shrink-0" />
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-[var(--md3-on-primary)] px-1">
+        <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -627,7 +628,7 @@ export function RailFlyout({
             RAIL_FLOATING_SURFACE,
           )}
         >
-          <p className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+          <p className="px-2 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
             {title ?? label}
           </p>
           {children}
@@ -980,7 +981,7 @@ export function RailExpandable({
               onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
               className={cn("agent-pop-in z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
             >
-              <p className="shrink-0 px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+              <p className="shrink-0 px-2 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
                 {label}
               </p>
               <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">{list}</div>
@@ -1333,7 +1334,7 @@ export function ProfileAvatar({
           ) : (
             <Avatar className="h-7 w-7 shrink-0">
               {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
-              <AvatarFallback className="text-[10px] bg-[var(--accent-surface-strong)] text-[var(--accent-text)]">
+              <AvatarFallback className="text-xs font-medium bg-[var(--accent-surface-strong)] text-[var(--accent-text)]">
                 {getInitials(user?.name, user?.email)}
               </AvatarFallback>
             </Avatar>

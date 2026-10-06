@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from "vitest"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { RailButton } from "./app-sidebar"
 import { DashboardLayout, type NavItem } from "./dashboard-layout"
 
 function NavIcon() {
@@ -319,5 +320,34 @@ describe("DashboardLayout — sidebar controls", () => {
     await user.click(within(screen.getByRole("dialog", { name: "Navigation" })).getByRole("button", { name: "New Sandbox" }))
     expect(onNewSandbox).toHaveBeenCalledOnce()
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull())
+  })
+})
+
+describe("DashboardLayout — rail text stays at the 12px legibility floor", () => {
+  // Arbitrary sizes below text-xs (12px) are unreadable in the rail's small
+  // chrome: the avatar initials and the nav badge count were 10px and 9px.
+  const belowFloor = (el: Element) =>
+    (el.getAttribute("class") ?? "")
+      .split(/\s+/)
+      .filter((c) => /^text-\[(\d+(?:\.\d+)?)px\]$/.test(c) && Number.parseFloat(c.slice(6)) < 12)
+
+  it("draws the user menu initials at text-xs", () => {
+    render(
+      <DashboardLayout navItems={[]} user={{ email: "ada@example.com", name: "Ada Lovelace" }}>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    for (const menu of screen.getAllByRole("button", { name: "User menu" })) {
+      expect(within(menu).getByText("AL").className).toMatch(/\btext-xs\b/)
+      for (const el of menu.querySelectorAll("*")) {
+        expect(belowFloor(el), el.outerHTML.slice(0, 120)).toEqual([])
+      }
+    }
+  })
+
+  it("draws a rail button's badge count at text-xs", () => {
+    render(<RailButton icon={NavIcon} label="Inbox" badge={7} />)
+    expect(screen.getByText("7").className).toMatch(/\btext-xs\b/)
+    expect(belowFloor(screen.getByText("7"))).toEqual([])
   })
 })

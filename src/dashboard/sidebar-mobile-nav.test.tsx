@@ -129,6 +129,20 @@ describe("SidebarLayout — mobile section nav", () => {
     expect(within(drawer).getByText("7")).toBeTruthy()
   })
 
+  it("forwards a nav item's badgeLabel to the rail link's description", () => {
+    render(
+      <SidebarLayout
+        navItems={[navItem({ id: "jobs", label: "jobs", badge: 3, badgeLabel: (n) => `${n} running` })]}
+        hideBelow="lg"
+      >
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    const links = screen.getAllByRole("link", { name: "jobs" })
+    expect(links.length).toBeGreaterThan(0)
+    for (const link of links) expect(link).toHaveAccessibleDescription("3 running")
+  })
+
   it("restores the page's own overflow when it closes", async () => {
     const user = userEvent.setup()
     document.body.style.overflow = "auto"

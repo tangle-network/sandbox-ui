@@ -464,12 +464,14 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
   )
 
   // Badge anchored to the icon (not the row) so it stays on the icon corner in
-  // both icon-only and labeled modes, and through the collapse transition.
+  // both icon-only and labeled modes, and through the collapse transition. Its
+  // left edge is pinned half a badge inside the icon, so a wider count at the
+  // 12px floor ("12", "99+") grows away from the icon instead of covering it.
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
       <Icon className="h-[17px] w-[17px] shrink-0" />
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
+        <span className="absolute -top-1.5 left-[calc(100%-0.5rem)] flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
           {badge > 99 ? "99+" : badge}
         </span>
       )}

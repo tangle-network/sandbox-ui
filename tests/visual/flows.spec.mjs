@@ -52,7 +52,6 @@ const flows = [
       await expect(page.getByRole('dialog', { name: 'Disconnect Slack?' })).toBeVisible()
     },
   },
-  },
 ]
 
 for (const flow of flows) {

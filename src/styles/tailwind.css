@@ -927,6 +927,10 @@
 .tangle-prose {
   color: hsl(var(--foreground));
   line-height: 1.7;
+  /* A long URL, email or identifier breaks inside the column instead of
+   * running past the card edge. `break-word` (not `anywhere`) leaves the
+   * column's min-content width alone, so it cannot squeeze a table. */
+  overflow-wrap: break-word;
 }
 /* Zero the browser's default block margins at zero specificity (:where) so the
  * owl selector below owns all vertical rhythm — a plain `.tangle-prose p` reset
@@ -944,6 +948,13 @@
 .tangle-prose h2 { font-size: 1.25em; }
 .tangle-prose h3 { font-size: 1.1em; }
 .tangle-prose ul, .tangle-prose ol { padding-left: 1.4em; }
+/* Tailwind's preflight sets `list-style: none` on every list, so without these
+ * a numbered list of filing dates reads as loose lines and a bulleted list as
+ * indented paragraphs. */
+.tangle-prose ul { list-style-type: disc; }
+.tangle-prose ol { list-style-type: decimal; }
+.tangle-prose ul ul { list-style-type: circle; }
+.tangle-prose li::marker { color: hsl(var(--muted-foreground)); }
 .tangle-prose li { margin: 0.25em 0; }
 .tangle-prose li > ul, .tangle-prose li > ol { margin-top: 0.25em; }
 .tangle-prose a {

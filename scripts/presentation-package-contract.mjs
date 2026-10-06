@@ -248,4 +248,13 @@ function assertEntryUtilities({ consumerDir, outDir }) {
   for (const selector of [".text-\\[var\\(--text-dim\\)\\]", ".bg-\\[var\\(--run-mix-failed\\)\\]", ".tangle-prose", "--md3-surface-container-low"]) {
     assert(css.includes(selector), `entry is missing ${selector}`);
   }
+  // Prose lists keep their markers through Tailwind's preflight, and a long URL
+  // wraps inside the column instead of running past the card edge.
+  for (const [rule, pattern] of [
+    ["ordered-list numbers", /\.tangle-prose ol\s*\{[^}]*list-style-type:\s*decimal/],
+    ["bullet markers", /\.tangle-prose ul\s*\{[^}]*list-style-type:\s*disc/],
+    ["long-word wrapping", /\.tangle-prose\s*\{[^}]*overflow-wrap:\s*break-word/],
+  ]) {
+    assert(pattern.test(css), `entry compiled no ${rule} for .tangle-prose`);
+  }
 }

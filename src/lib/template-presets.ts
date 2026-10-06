@@ -1,4 +1,4 @@
-import type { ProvisioningConfig } from "../pages/provisioning-wizard"
+import type { ProvisioningConfig } from "../pages/provisioning-types"
 
 export type TemplateCategory =
   | "blockchain"

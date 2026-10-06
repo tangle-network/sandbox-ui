@@ -3,7 +3,7 @@
 Build Storybook before running `pnpm test:visual`.
 The suite compares every built story in dark and light themes at desktop and mobile sizes.
 Five critical modules also run at tablet size.
-Five component interactions have separate screenshots.
+Four component interactions have separate screenshots.
 
 Run the checks on Linux with the project's Playwright Chromium version:
 

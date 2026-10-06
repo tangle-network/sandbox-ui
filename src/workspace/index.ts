@@ -31,10 +31,8 @@ export {
   type SessionOptimisticController,
   type UseOptimisticSessionItemsOptions,
 } from "./session-optimistic";
-export { SessionActivityMonitor, type SessionActivityMonitorProps } from "./session-activity-monitor";
 export {
   SandboxWorkbench,
-  AgentWorkbench,
   type SandboxWorkbenchProps,
   type SandboxWorkbenchLayoutOptions,
   type SandboxWorkbenchSessionProps,
@@ -46,7 +44,6 @@ export {
 } from "./sandbox-workbench";
 export { StatusBar, type StatusBarProps, type ContextBadge } from "./status-bar";
 export { StatusBanner, type StatusBannerProps, type BannerType } from "./status-banner";
-export { AuditResults, type AuditResultsProps, type FormAudit, type AuditCheck } from "./audit-results";
 export { TerminalPanel, type TerminalProps, type TerminalLine } from "./terminal-panel";
 export {
   TaskBoard,

@@ -1,7 +1,6 @@
 export {
   Sidebar,
   SidebarRail,
-  SidebarRailHeader,
   SidebarRailNav,
   SidebarRailFooter,
   SidebarPanel,
@@ -14,12 +13,9 @@ export {
   RailExpandable,
   RailModeButton,
   RailSeparator,
-  RailCollapseToggle,
-  RailThemeToggle,
   ProfileAvatar,
   type SidebarProps,
   type SidebarRailProps,
-  type SidebarRailHeaderProps,
   type SidebarRailNavProps,
   type SidebarRailFooterProps,
   type SidebarPanelProps,
@@ -33,12 +29,12 @@ export {
   type RailExpandableSubItem,
   type RailModeButtonProps,
   type RailSeparatorProps,
-  type RailCollapseToggleProps,
   type ProfileAvatarProps,
   type SidebarUser,
   type ThemeMode,
   type AppearanceController,
 } from "./app-sidebar";
+export { type McpServer } from "./mcp-server";
 export { RailTooltip, type RailTooltipProps } from "./rail-tooltip";
 export {
   SidebarProvider,
@@ -51,21 +47,12 @@ export {
   type SidebarProviderProps,
 } from "./sidebar-context";
 export {
-  CreditBalance,
-  type CreditBalanceProps,
-} from "./credit-balance";
-export {
   OutOfCreditsModal,
   type OutOfCreditsModalProps,
   parseInsufficientBalance,
   type InsufficientBalance,
   INSUFFICIENT_BALANCE_CODE,
 } from "./out-of-credits";
-export {
-  ClusterStatusBar,
-  type ClusterStatusBarProps,
-  type ClusterStatusItem,
-} from "./cluster-status-bar";
 export {
   ResourceMeter,
   type ResourceMeterProps,
@@ -100,17 +87,6 @@ export {
   SandboxTable,
   type SandboxTableProps,
 } from "./sandbox-table";
-export {
-  InvoiceTable,
-  type InvoiceTableProps,
-  type Invoice,
-} from "./invoice-table";
-export {
-  PlanCards,
-  type PlanCardsProps,
-  type PlanCardData,
-  type PlanFeature,
-} from "./plan-cards";
 export {
   BackendSelector,
   type BackendSelectorProps,
@@ -168,13 +144,6 @@ export {
   type PricingTier,
 } from "./pricing-page";
 export {
-  ProfileSelector,
-  ProfileComparison,
-  type ProfileSelectorProps,
-  type ProfileComparisonProps,
-  type Profile as DashboardProfile,
-} from "./profile-selector";
-export {
   MetricAreaChart,
   type MetricAreaChartProps,
   type MetricChartPoint,
@@ -185,13 +154,6 @@ export {
   type UsageChartProps,
   type UsageDataPoint,
 } from "./usage-chart";
-export {
-  VariantList,
-  type VariantListProps,
-  type Variant,
-  type VariantStatus,
-  type VariantOutcome,
-} from "./variant-list";
 export {
   SystemLogsViewer,
   type SystemLogsViewerProps,
@@ -223,17 +185,6 @@ export {
   type ProcessInfo,
 } from "./process-list";
 export {
-  NetworkConfig,
-  type NetworkConfigProps,
-  type NetworkConfigData,
-} from "./network-config";
-export {
-  BackendConfig,
-  type BackendConfigProps,
-  type BackendStatusData,
-  type McpServer,
-} from "./backend-config";
-export {
   SnapshotList,
   type SnapshotListProps,
   type SnapshotInfo as DashboardSnapshotInfo,
@@ -242,10 +193,6 @@ export {
   PromoBanner,
   type PromoBannerProps,
 } from "./promo-banner";
-export {
-  InfoPanel,
-  type InfoPanelProps,
-} from "./info-panel";
 export {
   SandboxPageShell,
   DashboardPageHeader,

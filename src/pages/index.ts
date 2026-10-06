@@ -1,26 +1,14 @@
 export { AuthPage, type AuthPageProps, type SocialProvider } from "./auth-page";
 export { BillingPage, type BillingPageProps, type BillingPageData, type ProductVariant } from "./billing-page";
-export { ProvisioningWizard, resolveEnvironment, type ProvisioningWizardProps, type ProvisioningConfig, type EnvironmentOption, type EnvironmentEntry, type StartupScriptEntry, type ResourceLimits, type PricingRates, type PlanTierInfo, type SshAccessConfig, type SshKeyOption } from "./provisioning-wizard";
+export type { ProvisioningConfig, EnvironmentOption, EnvironmentEntry, StartupScriptEntry, ResourceLimits, PricingRates, PlanTierInfo, SshAccessConfig, SshKeyOption } from "./provisioning-types";
 export { type ModelInfo } from "../lib/model-brand";
-export { StandalonePricingPage, type StandalonePricingPageProps } from "./standalone-pricing-page";
 export { type PricingTier } from "../dashboard/pricing-page";
-export {
-  ProfilesPage,
-  type ProfilesPageProps,
-  type Profile,
-  type ProfileFormData,
-  type ProfileMetrics,
-} from "./profiles-page";
 export {
   SecretsPage,
   type SecretsPageProps,
   type SecretsApiClient,
   type Secret,
 } from "./secrets-page";
-export {
-  TemplatesPage,
-  type TemplatesPageProps,
-} from "./templates-page";
 export {
   StartupScriptsPage,
   type StartupScriptsPageProps,

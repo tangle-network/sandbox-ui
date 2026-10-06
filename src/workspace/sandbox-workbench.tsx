@@ -563,20 +563,3 @@ export function SandboxWorkbench({
   );
 }
 
-export function AgentWorkbench(props: SandboxWorkbenchProps) {
-  return (
-    <SandboxWorkbench
-      {...props}
-      session={{
-        ...props.session,
-        eyebrow: props.session.eyebrow ?? "Agent Session",
-        title: props.session.title ?? (
-          <span className="inline-flex items-center gap-2">
-            <Bot className="h-4 w-4 text-primary" />
-            Execution timeline
-          </span>
-        ),
-      }}
-    />
-  );
-}

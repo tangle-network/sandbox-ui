@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react"
 import { createRef } from "react"
 import { describe, expect, it } from "vitest"
 import { Heading, PageHeader, SectionTitle } from "./heading"
-import { PageShell } from "./page-shell"
 
 describe("Heading", () => {
   it("renders the semantic default tag for each role", () => {
@@ -106,22 +105,6 @@ describe("SectionTitle", () => {
   })
 })
 
-describe("PageShell", () => {
-  it("constrains width and merges className", () => {
-    const { container } = render(
-      <PageShell className="test-class">
-        <span>body</span>
-      </PageShell>,
-    )
-    expect(screen.getByText("body")).toBeTruthy()
-    expect(container.firstElementChild).toHaveClass(
-      "mx-auto",
-      "w-full",
-      "max-w-6xl",
-      "test-class",
-    )
-  })
-})
 
 
 describe("canonical compatibility boundary", () => {

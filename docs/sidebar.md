@@ -40,7 +40,7 @@ import {
   SidebarProvider,
   Sidebar,
   SidebarRail,
-  SidebarRailHeader,
+  RailHeader,
   SidebarRailNav,
   SidebarRailFooter,
   SidebarPanel,
@@ -61,11 +61,13 @@ function App() {
     <SidebarProvider defaultMode="projects" defaultPanelOpen={true}>
       <Sidebar>
         <SidebarRail>
-          <SidebarRailHeader>
-            <a href="/">
-              <Logo variant="sandbox" size="sm" iconOnly />
-            </a>
-          </SidebarRailHeader>
+          <RailHeader
+            brand={
+              <a href="/">
+                <Logo variant="sandbox" size="sm" iconOnly />
+              </a>
+            }
+          />
 
           <SidebarRailNav>
             <RailButton icon={Home} label="Home" onClick={() => navigate("/")} />
@@ -161,7 +163,7 @@ Returns:
 
 Root container. Handles width animation and hide/show.
 
-### `SidebarRail` / `SidebarRailHeader` / `SidebarRailNav` / `SidebarRailFooter`
+### `SidebarRail` / `RailHeader` / `SidebarRailNav` / `SidebarRailFooter`
 
 Layout slots for the 64px icon strip. `SidebarRailNav` takes `flex-1` to fill remaining space.
 
@@ -255,27 +257,23 @@ What a reduced-motion user sees:
 | Indicator | Where | Classification | Under reduced motion |
 |---|---|---|---|
 | Responding session's title shimmer | `RailExpandable` sub-item, `SessionSidebar` row | essential | 1400ms sweep, still looping |
-| Session mid-turn spinner | `SessionActivityMonitor` | essential | still spinning |
-| Save / load / send spinner | composer, mention list, profiles, secrets, startup scripts, SSH key dialog, provisioning wizard, video preview | essential | still spinning |
+| Save / load / send spinner | composer, mention list, profiles, secrets, startup scripts, video preview | essential | still spinning |
 | Running / provisioning status dot | `SandboxTable`, `SandboxCard` | essential | still pulsing |
-| Live-latency dot | `ClusterStatusBar` | essential | still pinging |
-| Running-node pulse | `WorkflowGraph`, `StatusFooter`, `VariantList` | essential | still pulsing |
+| Running-node pulse | `WorkflowGraph`, `StatusFooter` | essential | still pulsing |
 | Provisioning / connecting banner icon | `StatusBanner` | essential | still spinning |
-| In-flight panel loaders | `ProcessList`, `NetworkConfig`, `SnapshotList`, `BackendConfig` | essential | still pulsing / spinning |
+| In-flight panel loaders | `ProcessList`, `SnapshotList` | essential | still pulsing / spinning |
 | Nav item and session-row entrance | rail, `SessionSidebar` | decorative | appears immediately, no travel, no stagger |
 | Tooltip and flyout pop-in | `RailTooltip`, `RailFlyout` | decorative | appears immediately |
 | Rail collapse, drawer, content margin | `Sidebar`, `SidebarContent` | decorative | jumps to its new width |
-| Status-bar entrance | `ClusterStatusBar` | decorative | appears immediately |
 | Dropdown and popover open / close | `BackendSelector`, `ReasoningLevelPicker` | decorative | appears immediately |
-| Panel and wizard step fades | `StartupScriptsPage`, `ProvisioningWizard` | decorative | appears immediately |
+| Panel fades | `StartupScriptsPage` | decorative | appears immediately |
 | Node body swap on a density change | `WorkflowGraph`, `node-ui` | decorative | frozen (`animation: none`) |
 | Hover / focus / active colour changes | everywhere | decorative | instant |
-| Skeleton placeholders | `GitPanel`, `IntegrationsPanel`, provisioning wizard | decorative | frozen — the shape is the message |
+| Skeleton placeholders | `GitPanel`, `IntegrationsPanel` | decorative | frozen — the shape is the message |
 | Header pulse, error-dot ping | `SystemLogs` | decorative | frozen — the sentence beside it is the message |
 | `.shimmer-text` | published class, no internal caller | decorative | frozen (`animation: none`) |
 | `.shimmer`, `.animate-row-in`, `.pulse-ring`, `.terminal-cursor`, `.status-dot-creating` | published classes, no internal caller | decorative | one 1ms pass, then still |
 
-`ClusterStatusBar` writes `animate-in slide-in-from-bottom`, but the precompiled bundle emits no rule for `slide-in-from-bottom`: this build is Tailwind v4 CSS-first with no `@config`, so the `tailwindcss-animate` plugin in `tailwind.config.cjs` never runs. The bar fades in place from this package's own `.animate-in`. An app that runs its own scan with that plugin gets the slide as well; both are decorative and both are floored.
 
 ## Constants
 

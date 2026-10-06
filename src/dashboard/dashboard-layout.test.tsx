@@ -321,3 +321,30 @@ describe("DashboardLayout — sidebar controls", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull())
   })
 })
+
+describe("DashboardLayout — rail text stays at the 12px legibility floor", () => {
+  // Arbitrary sizes below text-xs (12px) are unreadable in the rail's small
+  // chrome: the avatar initials and the nav badge count were 10px and 9px.
+  const belowFloor = (el: Element) =>
+    (el.getAttribute("class") ?? "")
+      .split(/\s+/)
+      .filter((c) => /^text-\[(\d+(?:\.\d+)?)px\]$/.test(c) && Number.parseFloat(c.slice(6)) < 12)
+
+  it("draws the user menu initials and the nav badge count at text-xs", () => {
+    render(
+      <DashboardLayout
+        navItems={[{ id: "inbox", label: "Inbox", href: "/inbox", icon: NavIcon, badge: 7 }]}
+        user={{ email: "ada@example.com", name: "Ada Lovelace" }}
+      >
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    const initials = within(screen.getAllByRole("button", { name: "User menu" })[0]).getByText("AL")
+    expect(initials.className).toMatch(/\btext-xs\b/)
+    const badge = screen.getAllByText("7")[0]
+    expect(badge.className).toMatch(/\btext-xs\b/)
+    for (const el of document.querySelectorAll("nav *, [aria-label='User menu'] *")) {
+      expect(belowFloor(el), el.outerHTML.slice(0, 120)).toEqual([])
+    }
+  })
+})

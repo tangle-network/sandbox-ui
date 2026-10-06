@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.126.1
+
+- `BackendSelector`'s `field` variant shows its label as written, in the same weight and colour as other form labels, instead of a small uppercase caption. The label is now tied to the trigger with `for`, so screen readers announce it with the field and clicking it focuses the field. Existing exports are unchanged.
+
 ## 0.126.0
 
 - Remove components and helpers that no Tangle product imports. An org-wide scan of every repository that depends on this package (agent-app, agent-dev-container, agent-builder, gtm-agent, hospitality-agent, relationships-agent, tax-agent, starter-foundry templates and twelve others) found no import or mention of them:

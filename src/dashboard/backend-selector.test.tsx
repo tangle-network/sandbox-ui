@@ -61,4 +61,12 @@ describe("BackendSelector", () => {
     renderSelector({ selected: "gone", placeholder: "Select a model" });
     expect(screen.getByRole("combobox")).toHaveTextContent("Select a model");
   });
+
+  it("labels the field trigger with the visible label as written", () => {
+    renderSelector({ variant: "field", label: "Runtime" });
+    const label = screen.getByText("Runtime");
+    expect(label.tagName).toBe("LABEL");
+    expect(label).toHaveAttribute("for", screen.getByRole("combobox").id);
+    expect(label.className).not.toMatch(/uppercase/);
+  });
 });

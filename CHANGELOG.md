@@ -7,6 +7,14 @@
 - Peer floors move to `@tangle-network/ui` ^11.25.0 and `@tangle-network/brand` ^1.17.0, which ui 11.25 requires. `dist/tokens.css` is copied from brand 1.17, so it carries brand 1.16's canonical surface ladder (indigo-lifted dark surfaces, a cool light canvas with white cards).
 - The direct Radix dependencies move to the generation ui 11.25 resolves (`@radix-ui/react-dialog` ^1.2.0, `@radix-ui/react-dropdown-menu` ^2.1.25, `@radix-ui/react-select` ^2.3.8), so each Radix package resolves to one copy.
 
+## 0.127.6
+
+- The package is MIT licensed. Earlier releases carried no licence field or LICENSE file, which left consumers without a grant to use it. Code and exports are unchanged.
+
+## 0.127.5
+
+- Accept agent-interface 3 as a peer and compile the UI's model, harness, reasoning, and interactive-session types against it. Existing interface 1 and 2 consumers remain supported; UI exports and behavior are unchanged.
+
 ## 0.127.4
 
 - The icon-only rail's badge dot (shown for counts of 10 or more) is filled with the accent text colour instead of the primary colour, and has a 2px ring in the rail's background colour that separates it from the icon. The dot has no digits, so its fill alone has to stand out: primary measured 2.09:1 against the dark rail, below the 3:1 minimum for graphics.

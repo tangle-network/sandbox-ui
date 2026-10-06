@@ -258,7 +258,8 @@ describe("SecretsPage", () => {
       const { user, dialog } = await openImportDialog()
 
       const textarea = within(dialog).getByLabelText("Paste .env contents")
-      await user.type(textarea, "API_KEY=secret-value\nDB_PASS=hunter2")
+      await user.click(textarea)
+      await user.paste("API_KEY=secret-value\nDB_PASS=hunter2")
       await user.click(within(dialog).getByRole("button", { name: /^Parse$/ }))
 
       expect(await within(dialog).findByLabelText("Import row 1 key")).toHaveValue("API_KEY")
@@ -284,7 +285,8 @@ describe("SecretsPage", () => {
       const { user, dialog } = await openImportDialog()
 
       const textarea = within(dialog).getByLabelText("Paste .env contents")
-      await user.type(textarea, "BROKEN_NO_EQUALS\nGOOD=1")
+      await user.click(textarea)
+      await user.paste("BROKEN_NO_EQUALS\nGOOD=1")
       await user.click(within(dialog).getByRole("button", { name: /^Parse$/ }))
 
       expect(await within(dialog).findByText(/could not be parsed/i)).toBeInTheDocument()
@@ -302,7 +304,8 @@ describe("SecretsPage", () => {
       const { user, dialog } = await openImportDialog()
 
       const textarea = within(dialog).getByLabelText("Paste .env contents")
-      await user.type(textarea, "first=1\nsecond=2")
+      await user.click(textarea)
+      await user.paste("first=1\nsecond=2")
       await user.click(within(dialog).getByRole("button", { name: /^Parse$/ }))
 
       const keyInput = await within(dialog).findByLabelText("Import row 1 key")
@@ -333,7 +336,8 @@ describe("SecretsPage", () => {
       const { user, dialog } = await openImportDialog()
 
       const textarea = within(dialog).getByLabelText("Paste .env contents")
-      await user.type(textarea, "API_KEY=aaa\nDB_PASS=bbb")
+      await user.click(textarea)
+      await user.paste("API_KEY=aaa\nDB_PASS=bbb")
       await user.click(within(dialog).getByRole("button", { name: /^Parse$/ }))
 
       const saveBtn = await within(dialog).findByRole("button", { name: /import 2 secrets/i })
@@ -365,7 +369,8 @@ describe("SecretsPage", () => {
       const { user, dialog } = await openImportDialog()
 
       const textarea = within(dialog).getByLabelText("Paste .env contents")
-      await user.type(textarea, "OK_ONE=1\nBAD_TWO=2")
+      await user.click(textarea)
+      await user.paste("OK_ONE=1\nBAD_TWO=2")
       await user.click(within(dialog).getByRole("button", { name: /^Parse$/ }))
 
       const saveBtn = await within(dialog).findByRole("button", { name: /import 2 secrets/i })
@@ -388,7 +393,8 @@ describe("SecretsPage", () => {
       const { user, dialog } = await openImportDialog()
 
       const textarea = within(dialog).getByLabelText("Paste .env contents")
-      await user.type(textarea, "SECRET_NAME=topsecret-value")
+      await user.click(textarea)
+      await user.paste("SECRET_NAME=topsecret-value")
       await user.click(within(dialog).getByRole("button", { name: /^Parse$/ }))
       expect(await within(dialog).findByLabelText("Import row 1 value")).toHaveValue("topsecret-value")
 
@@ -427,7 +433,8 @@ describe("SecretsPage", () => {
       const { user, dialog } = await openImportDialog()
 
       const textarea = within(dialog).getByLabelText("Paste .env contents")
-      await user.type(textarea, "ONE=1")
+      await user.click(textarea)
+      await user.paste("ONE=1")
       await user.click(within(dialog).getByRole("button", { name: /^Parse$/ }))
 
       const saveBtn = await within(dialog).findByRole("button", { name: /import 1 secret/i })

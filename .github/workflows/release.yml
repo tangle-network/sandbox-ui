@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   # Decides whether this package version still needs publishing and, when it
-  # does, proves the packed artifact before the hosted publish job starts.
+  # does, proves the packed artifact before the publish job starts.
   verify:
     runs-on: [self-hosted, ci-public]
     timeout-minutes: 30
@@ -106,17 +106,15 @@ jobs:
           compression-level: 0
           retention-days: 7
 
-  # npm accepts trusted publishing only from GitHub-hosted runners, so this job
-  # starts only when verify found work to do. It publishes the exact tarball
-  # verify tested.
+  # Publish the exact tarball verified on the self-hosted runner. npm's trusted
+  # publishing OIDC is unavailable there, so npmjs uses the repository token.
   publish:
     needs: verify
     if: needs.verify.outputs.publish == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ci-public]
     timeout-minutes: 30
     permissions:
       contents: write
-      id-token: write
       packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -141,16 +139,14 @@ jobs:
           fi
           echo "path=${packages[0]}" >> "$GITHUB_OUTPUT"
 
-      - name: Install trusted-publishing npm
-        run: npm install --global npm@12.1.0
-
       - name: Publish and verify npm artifact
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: >-
           node scripts/publish-package.mjs
           "${{ steps.package.outputs.path }}"
           https://registry.npmjs.org
           latest
-          --provenance
 
       - name: Publish and verify GitHub Packages artifact
         env:

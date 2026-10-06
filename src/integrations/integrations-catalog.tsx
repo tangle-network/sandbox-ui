@@ -81,7 +81,7 @@ function ConnectionMenu({ row, connection, onManage, onDisconnect, compact }: {
       <DropdownMenuTrigger asChild>
         <button type="button" data-testid={`menu-${row.providerId}`}
           aria-label={`More actions for ${row.title}`} title="More actions"
-          className={cn("relative z-20 flex shrink-0 items-center justify-center rounded-md transition-colors", compact ? "h-6 w-6 text-muted-foreground/70 hover:bg-background hover:text-foreground focus-visible:bg-background focus-visible:text-foreground" : "h-7 w-7 text-muted-foreground hover:bg-accent hover:text-foreground", focusRing)}>
+          className={cn("relative z-20 flex shrink-0 items-center justify-center rounded-md transition-colors", compact ? "h-6 w-6 text-muted-foreground hover:bg-background hover:text-foreground focus-visible:bg-background focus-visible:text-foreground" : "h-7 w-7 text-muted-foreground hover:bg-accent hover:text-foreground", focusRing)}>
           <MoreVertical className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
         </button>
       </DropdownMenuTrigger>
@@ -240,7 +240,7 @@ export function IntegrationsCatalog({
                 rel={connection?.manageInNewWindow ? "noopener noreferrer" : undefined}
                 aria-label={`Manage ${row.title}${connection?.manageInNewWindow ? " (opens in new window)" : ""}`}
                 data-testid={`manage-${row.providerId}`} className={cn("absolute inset-0 z-10 rounded-xl", focusRing)} /> : null}
-              {compact && active ? <span className="pointer-events-none absolute left-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--surface-success-text)] text-white"><Check className="h-3 w-3" strokeWidth={3} /></span> : null}
+              {compact && active ? <span className="pointer-events-none absolute left-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--surface-success-text)] text-[var(--surface-success-bg)]"><Check className="h-3 w-3" strokeWidth={3} /></span> : null}
               {header}
               {provider && (provider.connections.length > 1 || (active && !connection)) ? (
                 <div className="relative z-20 w-full min-w-0">

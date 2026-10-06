@@ -354,83 +354,88 @@ describe("DashboardLayout — rail text stays at the 12px legibility floor", () 
 
 describe("RailButton — badge count", () => {
   // The numeric pill grows leftward over the 17px icon, so the icon-only rail
-  // draws 10 or more as a dot; the full count stays in the description and tooltip.
-  const badgeOf = (button: HTMLElement) => button.querySelector("[data-badge]") as HTMLElement | null
+  // draws 10 or more as a dot. The full count is in the accessible name and the
+  // tooltip; the visual mark is hidden from assistive tech.
+  const badgeOf = (el: HTMLElement) => el.querySelector("[data-badge]") as HTMLElement | null
 
-  it("draws a dot with no number for 10 or more in the icon-only rail and keeps the full count accessible", async () => {
+  it("draws a dot with no number for 10 or more in the icon-only rail and names the full count", async () => {
     const user = userEvent.setup()
     render(<RailButton icon={NavIcon} label="Inbox" badge={12} />)
-    const button = screen.getByRole("button", { name: "Inbox" })
+    const button = screen.getByRole("button", { name: "Inbox, 12 new" })
     const badge = badgeOf(button)
     expect(badge?.dataset.badge).toBe("dot")
     expect(badge?.textContent).toBe("")
     expect(badge).toHaveAttribute("aria-hidden", "true")
     expect(button.textContent).not.toMatch(/\d/)
+    expect(button).not.toHaveAttribute("aria-description")
     // The dot has no digits to carry it, so its fill must contrast with the rail
     // on its own (accent text, not primary) and a ring separates it from the icon.
     expect(badge?.className).toMatch(/\bbg-\[var\(--accent-text\)\]/)
-    expect(badge?.className).not.toMatch(/\bbg-primary\b/)
     expect(badge?.className).toMatch(/\bring-2\b/)
     expect(badge?.className).toMatch(/\bring-surface-container-low\b/)
-    expect(button).toHaveAccessibleDescription("12 new")
     await user.hover(button)
     expect((await screen.findByRole("tooltip", { hidden: true })).textContent).toBe("Inbox · 12 new")
   })
 
   it("draws a dot for counts above 99 in the icon-only rail", () => {
     render(<RailButton icon={NavIcon} label="Inbox" badge={150} />)
-    const button = screen.getByRole("button", { name: "Inbox" })
-    expect(badgeOf(button)?.dataset.badge).toBe("dot")
-    expect(button).toHaveAccessibleDescription("150 new")
+    expect(badgeOf(screen.getByRole("button", { name: "Inbox, 150 new" }))?.dataset.badge).toBe("dot")
   })
 
   it.each([1, 9])("draws a single-digit count (%i) as-is in the icon-only rail", async (count) => {
     const user = userEvent.setup()
     render(<RailButton icon={NavIcon} label="Inbox" badge={count} />)
-    const button = screen.getByRole("button", { name: "Inbox" })
-    expect(badgeOf(button)?.dataset.badge).toBe("count")
-    expect(badgeOf(button)?.textContent).toBe(String(count))
-    expect(badgeOf(button)).toHaveAttribute("aria-hidden", "true")
-    expect(button).toHaveAccessibleDescription(`${count} new`)
+    const button = screen.getByRole("button", { name: `Inbox, ${count} new` })
+    const badge = badgeOf(button)
+    expect(badge?.dataset.badge).toBe("count")
+    expect(badge?.textContent).toBe(String(count))
+    expect(badge).toHaveAttribute("aria-hidden", "true")
+    // The pill's fill is held to 3:1 against the rail, so it is the accent text
+    // colour carrying a card-coloured digit, not primary carrying white.
+    expect(badge?.className).toMatch(/\bbg-\[var\(--accent-text\)\]/)
+    expect(badge?.className).toMatch(/\btext-card\b/)
     await user.hover(button)
     expect((await screen.findByRole("tooltip", { hidden: true })).textContent).toBe(`Inbox · ${count} new`)
   })
 
-  it("draws the full count in the labeled rail", () => {
+  it("draws and names the full count in the labeled rail", () => {
     render(<RailButton icon={NavIcon} label="Inbox" badge={12} showLabel />)
-    const button = screen.getByRole("button", { name: "Inbox" })
+    const button = screen.getByRole("button", { name: "Inbox, 12 new" })
     expect(badgeOf(button)?.textContent).toBe("12")
-    expect(button).toHaveAccessibleDescription("12 new")
   })
 
   it("keeps 99+ for counts above 99 in the labeled rail", () => {
     render(<RailButton icon={NavIcon} label="Inbox" badge={150} showLabel />)
-    expect(badgeOf(screen.getByRole("button", { name: "Inbox" }))?.textContent).toBe("99+")
+    expect(badgeOf(screen.getByRole("button", { name: "Inbox, 150 new" }))?.textContent).toBe("99+")
   })
 
-  it("adds no badge or description when the count is zero", () => {
+  it("keeps the bare label as the name when the count is zero", () => {
     render(<RailButton icon={NavIcon} label="Inbox" badge={0} />)
-    const button = screen.getByRole("button", { name: "Inbox" })
-    expect(badgeOf(button)).toBeNull()
-    expect(button).not.toHaveAttribute("aria-description")
+    expect(badgeOf(screen.getByRole("button", { name: "Inbox" }))).toBeNull()
   })
 
-  it("carries the count onto an asChild link", () => {
+  it("names the count on an asChild link", () => {
     render(
       <RailButton icon={NavIcon} label="Inbox" badge={12} asChild>
         <a href="/inbox">Inbox</a>
       </RailButton>,
     )
-    const link = screen.getByRole("link", { name: "Inbox" })
-    expect(badgeOf(link)?.dataset.badge).toBe("dot")
-    expect(link).toHaveAccessibleDescription("12 new")
+    expect(badgeOf(screen.getByRole("link", { name: "Inbox, 12 new" }))?.dataset.badge).toBe("dot")
   })
 
-  it("describes the count with badgeLabel when given", async () => {
+  it("appends the count to an asChild link's own aria-label", () => {
+    render(
+      <RailButton icon={NavIcon} label="Inbox" badge={3} asChild>
+        <a href="/inbox" aria-label="Team inbox">Inbox</a>
+      </RailButton>,
+    )
+    expect(screen.getByRole("link", { name: "Team inbox, 3 new" })).toBeInTheDocument()
+  })
+
+  it("words the count with badgeLabel when given", async () => {
     const user = userEvent.setup()
     render(<RailButton icon={NavIcon} label="Jobs" badge={3} badgeLabel={(n) => `${n} running`} />)
-    const button = screen.getByRole("button", { name: "Jobs" })
-    expect(button).toHaveAccessibleDescription("3 running")
+    const button = screen.getByRole("button", { name: "Jobs, 3 running" })
     await user.hover(button)
     expect((await screen.findByRole("tooltip", { hidden: true })).textContent).toBe("Jobs · 3 running")
   })

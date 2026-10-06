@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.127.5
+
+- The rail badge's 1-9 pill is filled with the accent text colour and draws its digit in the card colour, the token pair brand's Switch uses. The primary fill measured 2.36:1 against the dark Agent Builder rail, below the 3:1 a mark whose colour carries its meaning needs.
+- A `RailButton` badge count is now part of the item's accessible name ("Inbox, 12 new", worded by `badgeLabel`), in both the icon-only and labeled rail, and on `asChild` links (appended to the link's own `aria-label` when it has one). It was an `aria-description`, which not every screen reader announces. The visual pill and dot stay hidden from assistive tech, and the tooltip is unchanged. A test that finds a badged item by its bare label needs the count in the name.
+- On a connected integration tile (tiles layout), the "More actions" icon is solid `text-muted-foreground` instead of 70% opacity, which composited to 2.89:1 on the dark tile, and the check mark is drawn in the tile's colour on its success circle instead of white, which measured 1.79:1 in dark.
+- `scripts/rail-integration-contrast.test.mjs` reads these colours off the rendered components and holds each pair at 3:1 (4.5:1 for the badge digit) in every theme scope the package ships, including `agents` and `agents-light`.
+
 ## 0.127.4
 
 - The icon-only rail's badge dot (shown for counts of 10 or more) is filled with the accent text colour instead of the primary colour, and has a 2px ring in the rail's background colour that separates it from the icon. The dot has no digits, so its fill alone has to stand out: primary measured 2.09:1 against the dark rail, below the 3:1 minimum for graphics.

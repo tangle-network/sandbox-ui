@@ -421,8 +421,9 @@ export interface RailButtonProps {
   isActive?: boolean
   badge?: number
   /**
-   * Describes the badge count to assistive tech and in the icon-only rail's
-   * tooltip, e.g. `(n) => \`${n} running\``. Defaults to `"<n> new"`.
+   * Words the badge count in the item's accessible name ("Jobs, 3 running")
+   * and the icon-only rail's tooltip, e.g. `(n) => \`${n} running\``.
+   * Defaults to `"<n> new"`.
    */
   badgeLabel?: (count: number) => string
   onClick?: () => void
@@ -475,19 +476,25 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
   // numeric pill grows leftward over the icon, never rightward into the row's
   // label. A two-digit pill would cover most of the icon, so the icon-only rail
   // draws 10 or more as a dot centered on the icon's top-right corner. The full
-  // count reaches assistive tech through the accessible description and sighted
-  // users through the tooltip.
+  // count is part of the accessible name ("Inbox, 12 new") and the tooltip.
+  //
+  // Both marks are filled with the accent text colour, not the primary: primary
+  // is tuned to carry white text and measures about 2.1:1 against the dark rail,
+  // while the fill is what has to stand out (non-text, 3:1). The digit is the
+  // card colour on that fill, brand's Switch pair (thumb on track).
+  // `scripts/rail-integration-contrast.test.mjs` holds every pair in every theme.
   const hasBadge = badge !== undefined && badge > 0
   const badgeDot = hasBadge && !showLabel && badge > 9
-  const badgeDescription = hasBadge ? badgeLabel(badge) : undefined
-  const tooltipLabel = hasBadge ? `${label} · ${badgeDescription}` : label
+  const badgeText = hasBadge ? badgeLabel(badge) : undefined
+  const tooltipLabel = hasBadge ? `${label} · ${badgeText}` : label
+  const withCount = (name: string) => (hasBadge ? `${name}, ${badgeText}` : name)
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
       <Icon className="h-[17px] w-[17px] shrink-0" />
       {badgeDot ? (
         <span aria-hidden="true" data-badge="dot" className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--accent-text)] ring-2 ring-surface-container-low" />
       ) : hasBadge && (
-        <span aria-hidden="true" data-badge="count" className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
+        <span aria-hidden="true" data-badge="count" className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent-text)] text-xs leading-none font-bold text-card px-1">
           {badge > 99 ? "99+" : badge}
         </span>
       )}
@@ -508,8 +515,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
       child,
       {
         className: cn(classes, child.props.className),
-        "aria-label": child.props["aria-label"] ?? label,
-        "aria-description": child.props["aria-description"] ?? badgeDescription,
+        "aria-label": withCount(child.props["aria-label"] ?? label),
         // The layout's `style` wins the merge, not the child's. It is where
         // `--stagger-index` arrives, and a child that happened to carry a
         // `style` of its own would otherwise drop the variable silently and
@@ -528,7 +534,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
 
   return (
     <RailTooltip label={tooltipLabel} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
-      <button type="button" onClick={onClick} aria-label={label} aria-description={badgeDescription} className={classes} style={style}>
+      <button type="button" onClick={onClick} aria-label={withCount(label)} className={classes} style={style}>
         {content}
       </button>
     </RailTooltip>

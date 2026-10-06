@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.127.6
+
+- The package is MIT licensed. Earlier releases carried no licence field or LICENSE file, which left consumers without a grant to use it. Code and exports are unchanged.
+
 ## 0.127.5
 
 - Accept agent-interface 3 as a peer and compile the UI's model, harness, reasoning, and interactive-session types against it. Existing interface 1 and 2 consumers remain supported; UI exports and behavior are unchanged.

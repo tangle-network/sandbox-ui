@@ -353,43 +353,59 @@ describe("DashboardLayout — rail text stays at the 12px legibility floor", () 
 })
 
 describe("RailButton — badge count", () => {
-  // The badge pill grows leftward over the 17px icon, so the icon-only rail
-  // draws at most "9+"; the full count stays in the description and tooltip.
-  const pill = (button: HTMLElement) => button.querySelector('[aria-hidden="true"].rounded-full') as HTMLElement
+  // The numeric pill grows leftward over the 17px icon, so the icon-only rail
+  // draws 10 or more as a dot; the full count stays in the description and tooltip.
+  const badgeOf = (button: HTMLElement) => button.querySelector("[data-badge]") as HTMLElement | null
 
-  it("caps the drawn count at 9+ in the icon-only rail and keeps the full count accessible", async () => {
+  it("draws a dot with no number for 10 or more in the icon-only rail and keeps the full count accessible", async () => {
     const user = userEvent.setup()
     render(<RailButton icon={NavIcon} label="Inbox" badge={12} />)
     const button = screen.getByRole("button", { name: "Inbox" })
-    expect(pill(button).textContent).toBe("9+")
+    const badge = badgeOf(button)
+    expect(badge?.dataset.badge).toBe("dot")
+    expect(badge?.textContent).toBe("")
+    expect(badge).toHaveAttribute("aria-hidden", "true")
+    expect(button.textContent).not.toMatch(/\d/)
     expect(button).toHaveAccessibleDescription("12 new")
     await user.hover(button)
     expect((await screen.findByRole("tooltip", { hidden: true })).textContent).toBe("Inbox · 12 new")
   })
 
-  it.each([1, 9])("draws a single-digit count (%i) as-is in the icon-only rail", (count) => {
+  it("draws a dot for counts above 99 in the icon-only rail", () => {
+    render(<RailButton icon={NavIcon} label="Inbox" badge={150} />)
+    const button = screen.getByRole("button", { name: "Inbox" })
+    expect(badgeOf(button)?.dataset.badge).toBe("dot")
+    expect(button).toHaveAccessibleDescription("150 new")
+  })
+
+  it.each([1, 9])("draws a single-digit count (%i) as-is in the icon-only rail", async (count) => {
+    const user = userEvent.setup()
     render(<RailButton icon={NavIcon} label="Inbox" badge={count} />)
     const button = screen.getByRole("button", { name: "Inbox" })
-    expect(pill(button).textContent).toBe(String(count))
+    expect(badgeOf(button)?.dataset.badge).toBe("count")
+    expect(badgeOf(button)?.textContent).toBe(String(count))
+    expect(badgeOf(button)).toHaveAttribute("aria-hidden", "true")
     expect(button).toHaveAccessibleDescription(`${count} new`)
+    await user.hover(button)
+    expect((await screen.findByRole("tooltip", { hidden: true })).textContent).toBe(`Inbox · ${count} new`)
   })
 
   it("draws the full count in the labeled rail", () => {
     render(<RailButton icon={NavIcon} label="Inbox" badge={12} showLabel />)
     const button = screen.getByRole("button", { name: "Inbox" })
-    expect(pill(button).textContent).toBe("12")
+    expect(badgeOf(button)?.textContent).toBe("12")
     expect(button).toHaveAccessibleDescription("12 new")
   })
 
   it("keeps 99+ for counts above 99 in the labeled rail", () => {
     render(<RailButton icon={NavIcon} label="Inbox" badge={150} showLabel />)
-    expect(pill(screen.getByRole("button", { name: "Inbox" })).textContent).toBe("99+")
+    expect(badgeOf(screen.getByRole("button", { name: "Inbox" }))?.textContent).toBe("99+")
   })
 
-  it("adds no description when there is no badge", () => {
+  it("adds no badge or description when the count is zero", () => {
     render(<RailButton icon={NavIcon} label="Inbox" badge={0} />)
     const button = screen.getByRole("button", { name: "Inbox" })
-    expect(pill(button)).toBeNull()
+    expect(badgeOf(button)).toBeNull()
     expect(button).not.toHaveAttribute("aria-description")
   })
 
@@ -400,7 +416,7 @@ describe("RailButton — badge count", () => {
       </RailButton>,
     )
     const link = screen.getByRole("link", { name: "Inbox" })
-    expect(pill(link).textContent).toBe("9+")
+    expect(badgeOf(link)?.dataset.badge).toBe("dot")
     expect(link).toHaveAccessibleDescription("12 new")
   })
 })

@@ -464,21 +464,23 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
   )
 
   // Badge anchored to the icon (not the row) so it stays on the icon corner in
-  // both icon-only and labeled modes, and through the collapse transition. It
-  // grows leftward over the icon, never rightward into the row's label, so the
-  // icon-only rail caps the drawn count at "9+" to keep the icon visible. The
-  // full count reaches assistive tech through the accessible description and
-  // sighted users through the tooltip.
+  // both icon-only and labeled modes, and through the collapse transition. The
+  // numeric pill grows leftward over the icon, never rightward into the row's
+  // label. A two-digit pill would cover most of the icon, so the icon-only rail
+  // draws 10 or more as a dot centered on the icon's top-right corner. The full count reaches assistive tech through the
+  // accessible description and sighted users through the tooltip.
   const hasBadge = badge !== undefined && badge > 0
-  const badgeText = !hasBadge ? undefined : badge > 99 ? "99+" : !showLabel && badge > 9 ? "9+" : String(badge)
+  const badgeDot = hasBadge && !showLabel && badge > 9
   const badgeDescription = hasBadge ? `${badge} new` : undefined
   const tooltipLabel = hasBadge ? `${label} · ${badgeDescription}` : label
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
       <Icon className="h-[17px] w-[17px] shrink-0" />
-      {hasBadge && (
-        <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
-          {badgeText}
+      {badgeDot ? (
+        <span aria-hidden="true" data-badge="dot" className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
+      ) : hasBadge && (
+        <span aria-hidden="true" data-badge="count" className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
+          {badge > 99 ? "99+" : badge}
         </span>
       )}
     </span>

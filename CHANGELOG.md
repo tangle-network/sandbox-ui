@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.128.0
+
+- `./chat` forwards `MessageAuthor`, `isViewerMessage` and the `ChatAuthor` type from `@tangle-network/ui` 11.25, and `./types` forwards `ChatAuthor`. The forwarded `ChatMessage`, `UserMessage` and `AgentTimeline` take an optional `author` and the reader's `viewerId`, so a transcript shared by several people (a client, an attorney and the agent) names each of them: the reader's own messages keep the end-aligned bubble, and anyone else's sit at the start under their avatar, name and role. Without `author` they render as before.
+- `./primitives` and the root forward the primitives ui added since 11.17: `Alert` (with `AlertTitle`, `AlertDescription`, `AlertProps`, `AlertTone`), `AlertDialog` and its parts, `Checkbox`, `Collapsible` and its parts, `ContextMenu` and its parts, `Pagination` (with `PaginationProps`), `Popover` and its parts, `Separator`, `Sheet` and its parts, `Slider`, and `Tooltip` (with `TooltipProvider`, `TooltipTrigger`, `TooltipContent`). Each is ui's own binding.
+- Peer floors move to `@tangle-network/ui` ^11.25.0 and `@tangle-network/brand` ^1.17.0, which ui 11.25 requires. `dist/tokens.css` is copied from brand 1.17, so it carries brand 1.16's canonical surface ladder (indigo-lifted dark surfaces, a cool light canvas with white cards).
+- The direct Radix dependencies move to the generation ui 11.25 resolves (`@radix-ui/react-dialog` ^1.2.0, `@radix-ui/react-dropdown-menu` ^2.1.25, `@radix-ui/react-select` ^2.3.8), so each Radix package resolves to one copy.
+
 ## 0.127.4
 
 - The icon-only rail's badge dot (shown for counts of 10 or more) is filled with the accent text colour instead of the primary colour, and has a 2px ring in the rail's background colour that separates it from the icon. The dot has no digits, so its fill alone has to stand out: primary measured 2.09:1 against the dark rail, below the 3:1 minimum for graphics.

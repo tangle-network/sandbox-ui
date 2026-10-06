@@ -4,6 +4,8 @@ import { Button as B1 } from "@tangle-network/sandbox-ui/primitives";
 import { Button as B2 } from "@tangle-network/ui/primitives";
 import { ChatMessage as C1 } from "@tangle-network/sandbox-ui/chat";
 import { ChatMessage as C2 } from "@tangle-network/ui/chat";
+import { MessageAuthor as MA1, isViewerMessage as IV1 } from "@tangle-network/sandbox-ui/chat";
+import { MessageAuthor as MA2, isViewerMessage as IV2 } from "@tangle-network/ui/chat";
 import { RunGroup as R1 } from "@tangle-network/sandbox-ui/run";
 import { RunGroup as R2 } from "@tangle-network/ui/run";
 import { OpenUIArtifactRenderer as O1 } from "@tangle-network/sandbox-ui/openui";
@@ -48,6 +50,8 @@ const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
   ]),
   ["primitives.Button", B1, B2],
   ["chat.ChatMessage", C1, C2],
+  ["chat.MessageAuthor", MA1, MA2],
+  ["chat.isViewerMessage", IV1, IV2],
   ["run.RunGroup", R1, R2],
   ["openui.OpenUIArtifactRenderer", O1, O2],
   ["files.FileTree", F1, F2],

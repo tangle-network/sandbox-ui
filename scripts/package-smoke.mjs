@@ -36,9 +36,9 @@ const consumerDistDir = join(consumerDir, "dist");
 // rather than a silent pass.
 const stubMarker = (name) => `Could not resolve "${name}"`;
 
-const expectedAgentInterfaceRange = "^1.0.0 || ^2.0.0";
+const expectedAgentInterfaceRange = "^1.0.0 || ^2.0.0 || ^3.0.0";
 const expectedAgentInterfaceVersion =
-  process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "2.1.1";
+  process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "3.0.0";
 
 function packedManifest(tarballPath) {
   return JSON.parse(

@@ -31,7 +31,10 @@ Keep generic event adaptation in that owner instead of duplicating it here.
 ## Checks and releases
 
 Read [package scripts](package.json) for local checks.
-For code or export changes, run affected tests plus typecheck, build, packed-consumer checks, and the relevant UI or Storybook proof.
+For code or export changes, run `pnpm signoff` on a Linux host (gtr or a Beelink): typecheck, build, unit tests, the packed-consumer and bridge checks, then the Storybook visual suite.
+The visual suite takes about three minutes on gtr; its baselines are Linux renders, so do not run it on macOS.
+A screenshot timeout under heavy host load is a host problem; rerun with fewer workers (`--workers=8`) before reading it as a regression.
+When a change is meant to look different, update only the affected baselines and review every changed PNG before committing ([visual checks](tests/visual/README.md)).
 
 Read [the release workflow](.github/workflows/release.yml) before releasing.
 A version change triggers the release; update the changelog with the consumer-visible behavior.

@@ -73,7 +73,7 @@ export async function openStory(page, id, theme, viewport, baseURL) {
       }
     }
     return [...document.querySelectorAll('[role="dialog"]')].some(isVisible)
-  }, null, { timeout: 10_000 })
+  }, null, { timeout: 30_000 })
   await expect(page.locator('.sb-errordisplay')).not.toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-sandbox-ui', 'true')
   await page.waitForFunction(() => {
@@ -87,6 +87,9 @@ export async function openStory(page, id, theme, viewport, baseURL) {
     const visible = rect.top < innerHeight && rect.bottom > 0 && rect.left < innerWidth && rect.right > 0
     return !visible || (img.complete && img.naturalWidth > 0)
   }))
+  // Lazy chunks (syntax highlighting, diff renderers) arrive after first paint; on a
+  // busy host they can land after a stable screenshot unless the network is idle.
+  await page.waitForLoadState('networkidle')
   await page.evaluate(() => new Promise((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(resolve))
   }))

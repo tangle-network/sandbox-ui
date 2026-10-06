@@ -1,6 +1,7 @@
 # Storybook visual checks
 
-Build Storybook before running `pnpm test:visual`.
+`pnpm test:visual` builds Storybook, then compares it with the committed baselines.
+It is the last step of `pnpm signoff`, the local merge gate.
 The suite compares every built story in dark and light themes at desktop and mobile sizes.
 Five critical modules also run at tablet size.
 Four component interactions have separate screenshots.
@@ -9,12 +10,11 @@ Run the checks on Linux with the project's Playwright Chromium version:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm build-storybook
 pnpm exec playwright install chromium
-CI=1 pnpm test:visual
+pnpm test:visual
 ```
 
-To accept an intentional visual change, run `CI=1 pnpm exec playwright test -g '<story-or-flow>' --update-snapshots` after the Storybook build.
+To accept an intentional visual change, run `pnpm exec playwright test -g '<story-or-flow>' --update-snapshots=changed` after `pnpm build-storybook`.
 Review changed PNGs before committing them.
 Check both themes, mobile controls, long content, and the end of each pane.
 Run the complete gate without snapshot updates before pushing.

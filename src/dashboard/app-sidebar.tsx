@@ -467,8 +467,9 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
   // both icon-only and labeled modes, and through the collapse transition. The
   // numeric pill grows leftward over the icon, never rightward into the row's
   // label. A two-digit pill would cover most of the icon, so the icon-only rail
-  // draws 10 or more as a dot centered on the icon's top-right corner. The full count reaches assistive tech through the
-  // accessible description and sighted users through the tooltip.
+  // draws 10 or more as a dot centered on the icon's top-right corner. The full
+  // count reaches assistive tech through the accessible description and sighted
+  // users through the tooltip.
   const hasBadge = badge !== undefined && badge > 0
   const badgeDot = hasBadge && !showLabel && badge > 9
   const badgeDescription = hasBadge ? `${badge} new` : undefined

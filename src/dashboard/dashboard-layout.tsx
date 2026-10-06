@@ -38,6 +38,8 @@ export interface NavItem {
   href?: string
   icon: React.ComponentType<{ className?: string }>
   badge?: number
+  /** @see {@link RailButtonProps.badgeLabel} */
+  badgeLabel?: (count: number) => string
 }
 
 export interface DashboardUser {
@@ -351,6 +353,7 @@ function DashboardLayoutInner({
                       icon={item.icon}
                       label={item.label}
                       badge={item.badge}
+                      badgeLabel={item.badgeLabel}
                       showLabel={showLabels}
                       {...arrival}
                     />

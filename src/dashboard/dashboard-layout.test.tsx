@@ -366,6 +366,12 @@ describe("RailButton — badge count", () => {
     expect(badge?.textContent).toBe("")
     expect(badge).toHaveAttribute("aria-hidden", "true")
     expect(button.textContent).not.toMatch(/\d/)
+    // The dot has no digits to carry it, so its fill must contrast with the rail
+    // on its own (accent text, not primary) and a ring separates it from the icon.
+    expect(badge?.className).toMatch(/\bbg-\[var\(--accent-text\)\]/)
+    expect(badge?.className).not.toMatch(/\bbg-primary\b/)
+    expect(badge?.className).toMatch(/\bring-2\b/)
+    expect(badge?.className).toMatch(/\bring-surface-container-low\b/)
     expect(button).toHaveAccessibleDescription("12 new")
     await user.hover(button)
     expect((await screen.findByRole("tooltip", { hidden: true })).textContent).toBe("Inbox · 12 new")
@@ -418,5 +424,14 @@ describe("RailButton — badge count", () => {
     const link = screen.getByRole("link", { name: "Inbox" })
     expect(badgeOf(link)?.dataset.badge).toBe("dot")
     expect(link).toHaveAccessibleDescription("12 new")
+  })
+
+  it("describes the count with badgeLabel when given", async () => {
+    const user = userEvent.setup()
+    render(<RailButton icon={NavIcon} label="Jobs" badge={3} badgeLabel={(n) => `${n} running`} />)
+    const button = screen.getByRole("button", { name: "Jobs" })
+    expect(button).toHaveAccessibleDescription("3 running")
+    await user.hover(button)
+    expect((await screen.findByRole("tooltip", { hidden: true })).textContent).toBe("Jobs · 3 running")
   })
 })

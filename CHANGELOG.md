@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.127.4
+
+- The icon-only rail's badge dot (shown for counts of 10 or more) is filled with the accent text colour instead of the primary colour, and has a 2px ring in the rail's background colour that separates it from the icon. The dot has no digits, so its fill alone has to stand out: primary measured 2.09:1 against the dark rail, below the 3:1 minimum for graphics.
+- `RailButton` and `RailModeButton` accept an optional `badgeLabel(count)`, and the `SidebarLayout` and `DashboardLayout` nav items pass it through wherever they pass `badge`. It words the count for assistive tech and the tooltip, such as `(n) => \`${n} running\``. It defaults to "<n> new".
+
 ## 0.127.3
 
 - In the icon-only rail, a `RailButton` badge of 10 or more is drawn as an 8px dot in the badge colour, centred on the icon's top-right corner, instead of a numeric pill that covered most of the 17px icon. Counts from 1 to 9 keep the numeric pill, and the labeled rail still draws the full count (and "99+" above 99). The count is now announced: it is the button's accessible description ("12 new"), and the icon-only rail's tooltip shows it ("Inbox · 12 new"). The visual badge is hidden from assistive tech. Existing exports are unchanged.

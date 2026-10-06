@@ -420,6 +420,11 @@ export interface RailButtonProps {
   label: string
   isActive?: boolean
   badge?: number
+  /**
+   * Describes the badge count to assistive tech and in the icon-only rail's
+   * tooltip, e.g. `(n) => \`${n} running\``. Defaults to `"<n> new"`.
+   */
+  badgeLabel?: (count: number) => string
   onClick?: () => void
   className?: string
   /** Show label text next to icon (for mobile drawer) */
@@ -447,7 +452,9 @@ export interface RailButtonProps {
   style?: React.CSSProperties
 }
 
-export function RailButton({ icon: Icon, label, isActive, badge, onClick, className, showLabel, asChild, children, variant = "normal", style }: RailButtonProps) {
+const defaultBadgeLabel = (count: number) => `${count} new`
+
+export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = defaultBadgeLabel, onClick, className, showLabel, asChild, children, variant = "normal", style }: RailButtonProps) {
   const classes = cn(
     "relative flex shrink-0 items-center justify-center rounded-md transition-colors",
     MOTION_CONTROL,
@@ -472,13 +479,13 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
   // users through the tooltip.
   const hasBadge = badge !== undefined && badge > 0
   const badgeDot = hasBadge && !showLabel && badge > 9
-  const badgeDescription = hasBadge ? `${badge} new` : undefined
+  const badgeDescription = hasBadge ? badgeLabel(badge) : undefined
   const tooltipLabel = hasBadge ? `${label} · ${badgeDescription}` : label
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
       <Icon className="h-[17px] w-[17px] shrink-0" />
       {badgeDot ? (
-        <span aria-hidden="true" data-badge="dot" className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
+        <span aria-hidden="true" data-badge="dot" className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--accent-text)] ring-2 ring-surface-container-low" />
       ) : hasBadge && (
         <span aria-hidden="true" data-badge="count" className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
           {badge > 99 ? "99+" : badge}
@@ -1093,6 +1100,8 @@ export interface RailModeButtonProps {
   icon: React.ComponentType<{ className?: string }>
   label: string
   badge?: number
+  /** @see {@link RailButtonProps.badgeLabel} */
+  badgeLabel?: (count: number) => string
   className?: string
   /** Show label text next to icon (for mobile drawer) */
   showLabel?: boolean
@@ -1100,7 +1109,7 @@ export interface RailModeButtonProps {
   style?: React.CSSProperties
 }
 
-export function RailModeButton({ mode, icon, label, badge, className, showLabel, style }: RailModeButtonProps) {
+export function RailModeButton({ mode, icon, label, badge, badgeLabel, className, showLabel, style }: RailModeButtonProps) {
   const { panelOpen, mode: currentMode, switchMode } = useSidebar()
   return (
     <RailButton
@@ -1108,6 +1117,7 @@ export function RailModeButton({ mode, icon, label, badge, className, showLabel,
       label={label}
       isActive={mode === currentMode && panelOpen}
       badge={badge}
+      badgeLabel={badgeLabel}
       onClick={() => switchMode(mode)}
       className={className}
       showLabel={showLabel}

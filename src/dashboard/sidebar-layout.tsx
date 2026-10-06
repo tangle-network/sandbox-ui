@@ -72,6 +72,8 @@ export interface SidebarLayoutNavItem {
   /** Start an `expandable` item expanded on mount (labeled rail). */
   defaultOpen?: boolean
   badge?: number
+  /** @see {@link RailButtonProps.badgeLabel} */
+  badgeLabel?: (count: number) => string
   /**
    * React Router prefetch behavior for this link, forwarded to the underlying
    * `<Link prefetch>`. Omit to preserve the router's default (no prefetch).
@@ -355,6 +357,7 @@ function SidebarLayoutInner({
           icon={item.icon}
           label={item.label}
           badge={item.badge}
+          badgeLabel={item.badgeLabel}
           isActive={panelOpen}
           onClick={() => {
             togglePanel()
@@ -364,7 +367,7 @@ function SidebarLayoutInner({
           {...arrival}
         />
       ) : (
-        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild {...arrival}>
+        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} badgeLabel={item.badgeLabel} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild {...arrival}>
           <Link
             href={item.href}
             to={item.href}

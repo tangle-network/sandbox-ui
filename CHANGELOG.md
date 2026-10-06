@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.127.5
+
+- Accept agent-interface 3 as a peer and compile the UI's model, harness, reasoning, and interactive-session types against it. Existing interface 1 and 2 consumers remain supported; UI exports and behavior are unchanged.
+
 ## 0.127.4
 
 - The icon-only rail's badge dot (shown for counts of 10 or more) is filled with the accent text colour instead of the primary colour, and has a 2px ring in the rail's background colour that separates it from the icon. The dot has no digits, so its fill alone has to stand out: primary measured 2.09:1 against the dark rail, below the 3:1 minimum for graphics.

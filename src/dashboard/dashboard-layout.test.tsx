@@ -351,3 +351,56 @@ describe("DashboardLayout — rail text stays at the 12px legibility floor", () 
     expect(belowFloor(screen.getByText("7"))).toEqual([])
   })
 })
+
+describe("RailButton — badge count", () => {
+  // The badge pill grows leftward over the 17px icon, so the icon-only rail
+  // draws at most "9+"; the full count stays in the description and tooltip.
+  const pill = (button: HTMLElement) => button.querySelector('[aria-hidden="true"].rounded-full') as HTMLElement
+
+  it("caps the drawn count at 9+ in the icon-only rail and keeps the full count accessible", async () => {
+    const user = userEvent.setup()
+    render(<RailButton icon={NavIcon} label="Inbox" badge={12} />)
+    const button = screen.getByRole("button", { name: "Inbox" })
+    expect(pill(button).textContent).toBe("9+")
+    expect(button).toHaveAccessibleDescription("12 new")
+    await user.hover(button)
+    expect((await screen.findByRole("tooltip", { hidden: true })).textContent).toBe("Inbox · 12 new")
+  })
+
+  it.each([1, 9])("draws a single-digit count (%i) as-is in the icon-only rail", (count) => {
+    render(<RailButton icon={NavIcon} label="Inbox" badge={count} />)
+    const button = screen.getByRole("button", { name: "Inbox" })
+    expect(pill(button).textContent).toBe(String(count))
+    expect(button).toHaveAccessibleDescription(`${count} new`)
+  })
+
+  it("draws the full count in the labeled rail", () => {
+    render(<RailButton icon={NavIcon} label="Inbox" badge={12} showLabel />)
+    const button = screen.getByRole("button", { name: "Inbox" })
+    expect(pill(button).textContent).toBe("12")
+    expect(button).toHaveAccessibleDescription("12 new")
+  })
+
+  it("keeps 99+ for counts above 99 in the labeled rail", () => {
+    render(<RailButton icon={NavIcon} label="Inbox" badge={150} showLabel />)
+    expect(pill(screen.getByRole("button", { name: "Inbox" })).textContent).toBe("99+")
+  })
+
+  it("adds no description when there is no badge", () => {
+    render(<RailButton icon={NavIcon} label="Inbox" badge={0} />)
+    const button = screen.getByRole("button", { name: "Inbox" })
+    expect(pill(button)).toBeNull()
+    expect(button).not.toHaveAttribute("aria-description")
+  })
+
+  it("carries the count onto an asChild link", () => {
+    render(
+      <RailButton icon={NavIcon} label="Inbox" badge={12} asChild>
+        <a href="/inbox">Inbox</a>
+      </RailButton>,
+    )
+    const link = screen.getByRole("link", { name: "Inbox" })
+    expect(pill(link).textContent).toBe("9+")
+    expect(link).toHaveAccessibleDescription("12 new")
+  })
+})

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.127.3
+
+- In the icon-only rail, a `RailButton` badge of 10 or more is drawn as "9+", so the 12px pill no longer covers most of the 17px icon. The labeled rail still draws the full count (and "99+" above 99). The full count is the button's accessible description ("12 new"), and the icon-only rail's tooltip shows it ("Inbox · 12 new"). The badge pill is hidden from assistive tech, because the description carries the count. Existing exports are unchanged.
+
 ## 0.127.2
 
 - The rail's small text meets the 12px legibility floor: the user menu's avatar initials (10px, now medium weight), the nav badge count (9px) and the headings of rail flyouts and expandable groups (10px) are now `text-xs`. Existing exports are unchanged.

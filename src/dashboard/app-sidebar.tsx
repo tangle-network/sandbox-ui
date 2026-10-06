@@ -465,13 +465,20 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
 
   // Badge anchored to the icon (not the row) so it stays on the icon corner in
   // both icon-only and labeled modes, and through the collapse transition. It
-  // grows leftward over the icon, never rightward into the row's label.
+  // grows leftward over the icon, never rightward into the row's label, so the
+  // icon-only rail caps the drawn count at "9+" to keep the icon visible. The
+  // full count reaches assistive tech through the accessible description and
+  // sighted users through the tooltip.
+  const hasBadge = badge !== undefined && badge > 0
+  const badgeText = !hasBadge ? undefined : badge > 99 ? "99+" : !showLabel && badge > 9 ? "9+" : String(badge)
+  const badgeDescription = hasBadge ? `${badge} new` : undefined
+  const tooltipLabel = hasBadge ? `${label} · ${badgeDescription}` : label
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
       <Icon className="h-[17px] w-[17px] shrink-0" />
-      {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
-          {badge > 99 ? "99+" : badge}
+      {hasBadge && (
+        <span aria-hidden="true" className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary text-xs leading-none font-bold text-[var(--md3-on-primary)] px-1">
+          {badgeText}
         </span>
       )}
     </span>
@@ -492,6 +499,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
       {
         className: cn(classes, child.props.className),
         "aria-label": child.props["aria-label"] ?? label,
+        "aria-description": child.props["aria-description"] ?? badgeDescription,
         // The layout's `style` wins the merge, not the child's. It is where
         // `--stagger-index` arrives, and a child that happened to carry a
         // `style` of its own would otherwise drop the variable silently and
@@ -502,15 +510,15 @@ export function RailButton({ icon: Icon, label, isActive, badge, onClick, classN
       content,
     )
     return (
-      <RailTooltip label={label} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
+      <RailTooltip label={tooltipLabel} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
         {merged}
       </RailTooltip>
     )
   }
 
   return (
-    <RailTooltip label={label} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
-      <button type="button" onClick={onClick} aria-label={label} className={classes} style={style}>
+    <RailTooltip label={tooltipLabel} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
+      <button type="button" onClick={onClick} aria-label={label} aria-description={badgeDescription} className={classes} style={style}>
         {content}
       </button>
     </RailTooltip>

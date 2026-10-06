@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from "vitest"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { RailButton } from "./app-sidebar"
 import { DashboardLayout, type NavItem } from "./dashboard-layout"
 
 function NavIcon() {
@@ -330,21 +331,23 @@ describe("DashboardLayout — rail text stays at the 12px legibility floor", () 
       .split(/\s+/)
       .filter((c) => /^text-\[(\d+(?:\.\d+)?)px\]$/.test(c) && Number.parseFloat(c.slice(6)) < 12)
 
-  it("draws the user menu initials and the nav badge count at text-xs", () => {
+  it("draws the user menu initials at text-xs", () => {
     render(
-      <DashboardLayout
-        navItems={[{ id: "inbox", label: "Inbox", href: "/inbox", icon: NavIcon, badge: 7 }]}
-        user={{ email: "ada@example.com", name: "Ada Lovelace" }}
-      >
+      <DashboardLayout navItems={[]} user={{ email: "ada@example.com", name: "Ada Lovelace" }}>
         <div>content</div>
       </DashboardLayout>,
     )
-    const initials = within(screen.getAllByRole("button", { name: "User menu" })[0]).getByText("AL")
-    expect(initials.className).toMatch(/\btext-xs\b/)
-    const badge = screen.getAllByText("7")[0]
-    expect(badge.className).toMatch(/\btext-xs\b/)
-    for (const el of document.querySelectorAll("nav *, [aria-label='User menu'] *")) {
-      expect(belowFloor(el), el.outerHTML.slice(0, 120)).toEqual([])
+    for (const menu of screen.getAllByRole("button", { name: "User menu" })) {
+      expect(within(menu).getByText("AL").className).toMatch(/\btext-xs\b/)
+      for (const el of menu.querySelectorAll("*")) {
+        expect(belowFloor(el), el.outerHTML.slice(0, 120)).toEqual([])
+      }
     }
+  })
+
+  it("draws a rail button's badge count at text-xs", () => {
+    render(<RailButton icon={NavIcon} label="Inbox" badge={7} />)
+    expect(screen.getByText("7").className).toMatch(/\btext-xs\b/)
+    expect(belowFloor(screen.getByText("7"))).toEqual([])
   })
 })

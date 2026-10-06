@@ -46,7 +46,6 @@ export {
 
 export {
   ArtifactAgentDock,
-  createFetchTransport,
   type ArtifactAgentDockProps,
   type ArtifactAgentDockTransport,
   type ArtifactDockMessage,

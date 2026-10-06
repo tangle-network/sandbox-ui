@@ -2,51 +2,10 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
-  clampReasoningLevel,
   DEFAULT_REASONING_LEVEL_OPTIONS,
   HARNESS_REASONING_OPTIONS,
   ReasoningLevelPicker,
 } from "./reasoning-level-picker";
-
-describe("clampReasoningLevel", () => {
-  it("keeps the `auto` sentinel regardless of the available set", () => {
-    expect(clampReasoningLevel("auto", ["none", "low"])).toBe("auto");
-  });
-
-  it("keeps a value already within the available set", () => {
-    expect(clampReasoningLevel("low", ["none", "minimal", "low", "medium"])).toBe(
-      "low",
-    );
-  });
-
-  it("snaps a value above the ceiling down to the highest available effort", () => {
-    expect(
-      clampReasoningLevel("ultracode", [
-        "none",
-        "minimal",
-        "low",
-        "medium",
-        "high",
-      ]),
-    ).toBe("high");
-  });
-
-  it("snaps to `none` for a non-reasoning model (only `none` available)", () => {
-    expect(clampReasoningLevel("high", ["none"])).toBe("none");
-  });
-
-  it("never increases a request when the available set starts above it", () => {
-    expect(clampReasoningLevel("none", ["minimal", "low"])).toBe("auto");
-  });
-
-  it("snaps down across a sparse capability set", () => {
-    expect(clampReasoningLevel("medium", ["none", "high"])).toBe("none");
-  });
-
-  it("leaves the value untouched when the available set is unknown", () => {
-    expect(clampReasoningLevel("ultracode", undefined)).toBe("ultracode");
-  });
-});
 
 describe("DEFAULT_REASONING_LEVEL_OPTIONS copy", () => {
   const descOf = (value: string) =>

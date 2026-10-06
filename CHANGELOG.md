@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.127.1
+
+- `.tangle-prose` lists show their markers again: Tailwind's preflight set `list-style: none`, so numbered lists rendered as loose lines and bulleted lists as indented paragraphs. Numbers and bullets use the muted foreground colour.
+- Long URLs, emails and identifiers in `.tangle-prose` wrap inside the column instead of running past the card edge.
+
 ## 0.127.0
 
 - Remove `createFetchTransport` from `./chat`. No product imports it; hosts pass their own `ArtifactAgentDockTransport` to `ArtifactAgentDock`.

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import * as Select from "@radix-ui/react-select";
 import { cn } from "../lib/utils";
@@ -47,6 +47,7 @@ export function BackendSelector({
   const current = backends.find((b) => b.type === selected);
   const triggerText = current?.label ?? placeholder;
   const ariaLabel = label ? `${label}: ${triggerText}` : triggerText;
+  const triggerId = useId();
 
   const trigger =
     variant === "pill" ? (
@@ -75,6 +76,7 @@ export function BackendSelector({
       </Select.Trigger>
     ) : (
       <Select.Trigger
+        id={triggerId}
         aria-label={ariaLabel}
         className={cn(
           "flex w-full items-center justify-between gap-2 rounded-[var(--radius-md)]",
@@ -103,7 +105,7 @@ export function BackendSelector({
   return (
     <div className={cn(variant === "field" ? "space-y-1.5" : "inline-flex", className)}>
       {variant === "field" && label && (
-        <label className="block text-xs font-medium text-muted-foreground uppercase tracking-[0.06em]">
+        <label htmlFor={triggerId} className="block text-sm font-medium text-foreground">
           {label}
         </label>
       )}

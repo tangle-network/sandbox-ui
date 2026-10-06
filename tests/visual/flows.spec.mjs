@@ -52,17 +52,6 @@ const flows = [
       await expect(page.getByRole('dialog', { name: 'Disconnect Slack?' })).toBeVisible()
     },
   },
-  {
-    name: 'provisioning-options',
-    story: 'pages-provisioningwizard--one-page',
-    act: async (page) => {
-      await page.getByRole('button', { name: 'Show Advanced Options' }).click()
-      await page.getByPlaceholder('my-cool-sandbox').fill('review-sandbox')
-      await expect(page.getByPlaceholder('my-cool-sandbox')).toHaveValue('review-sandbox')
-      const perSecond = page.getByRole('button', { name: 'Per Second' })
-      await perSecond.click()
-      await expect(perSecond).toHaveAttribute('aria-pressed', 'true')
-    },
   },
 ]
 

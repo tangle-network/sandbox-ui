@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.126.0
+
+- Remove components and helpers that no Tangle product imports. An org-wide scan of every repository that depends on this package (agent-app, agent-dev-container, agent-builder, gtm-agent, hospitality-agent, relationships-agent, tax-agent, starter-foundry templates and twelve others) found no import or mention of them:
+  - `./dashboard`: `BackendConfig`, `ClusterStatusBar`, `CreditBalance`, `InfoPanel`, `InvoiceTable`, `NetworkConfig`, `PlanCards`, `ProfileSelector`, `ProfileComparison`, `VariantList`, and the deprecated `RailThemeToggle`, `RailCollapseToggle` and `SidebarRailHeader` (use `RailHeader` and the `appearance` menu), with their prop and data types.
+  - `./pages`: `ProvisioningWizard`, `resolveEnvironment`, `ProfilesPage`, `TemplatesPage` and `StandalonePricingPage`. The provisioning types that products import (`ProvisioningConfig`, `PlanTierInfo`, `PricingRates`, `ResourceLimits`, `StartupScriptEntry`, `SshKeyOption`, `SshAccessConfig`, `EnvironmentOption`, `EnvironmentEntry`) are unchanged.
+  - `./workspace`: `AuditResults`, `SessionActivityMonitor` and the `AgentWorkbench` alias of `SandboxWorkbench`.
+  - `./assets`: `VariantCompare`.
+- `McpServer` stays exported from `./dashboard`. Every other export is unchanged.
+
 ## 0.125.3
 
 - `AuthPage` follows the app's theme. Its page, card, text, borders, inputs and error text read Brand's semantic tokens (`--background`, `--card`, `--card-foreground`, `--muted-foreground`, `--border`, `--bg-input`, `--destructive`), each with the light value it used before, so an app with no token sheet renders as it did. The card sets its own ink, so the Tangle wordmark is readable on it in dark mode; before, the card stayed white and the wordmark inherited the page's near-white dark-mode text. The default Tangle button is the theme's ink with a canvas label, which inverts in dark mode; a product `accent` keeps its white label, and the new `accentForeground` prop sets the label explicitly. Existing exports are unchanged.

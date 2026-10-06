@@ -457,7 +457,6 @@ The higher-order dashboard/billing surfaces are now accent-token driven rather t
 - `BillingDashboard.className`, `cardClassName`
 - `PricingCards.className`, `cardClassName`
 - `UsageChart.className`
-- `StandalonePricingPage.className`
 
 For that, compose directly from:
 
@@ -490,7 +489,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
 | `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane |
 | `/workbench/embedded-app` | EmbeddedAppView and preview status types without terminal or editor modules |
-| `/dashboard` | [Sidebar](./docs/sidebar.md), DashboardLayout, BillingDashboard, UsageChart, ProfileSelector |
+| `/dashboard` | [Sidebar](./docs/sidebar.md), DashboardLayout, BillingDashboard, UsageChart |
 | `/editor` | TipTap collaborative editor (requires optional peers) |
 | `/terminal` | xterm.js terminal view (requires optional peers) |
 | `/markdown` | Markdown renderer with GFM, code blocks, copy button |

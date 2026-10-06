@@ -123,100 +123,6 @@ function MoonIcon({ className }: { className?: string }) {
   )
 }
 
-/**
- * Compact light/dark switch driven by the shared `useTheme` hook.
- *
- * @deprecated The redesigned rail no longer renders a standalone theme toggle —
- * theme lives in the account menu as a Light/Dark/System control via the
- * `appearance` controller on {@link ProfileAvatar} (and both layouts). Kept for
- * backward compatibility; not used by `SidebarLayout`/`DashboardLayout`.
- */
-export function RailThemeToggle({ className }: { className?: string }) {
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
-  React.useEffect(() => setMounted(true), [])
-  const isDark =
-    mounted &&
-    (theme === "dark" ||
-      (theme === "system" &&
-        typeof window !== "undefined" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches))
-
-  return (
-    <button
-      type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label="Toggle theme"
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className={cn(
-        "flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
-        MOTION_CONTROL,
-        "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-        focusRing,
-        className,
-      )}
-    >
-      {isDark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
-    </button>
-  )
-}
-
-function ChevronsLeftIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Collapse sidebar</title>
-      <path d="m11 17-5-5 5-5M18 17l-5-5 5-5" />
-    </svg>
-  )
-}
-
-function ChevronsRightIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Expand sidebar</title>
-      <path d="m6 17 5-5-5-5M13 17l5-5-5-5" />
-    </svg>
-  )
-}
-
-export interface RailCollapseToggleProps {
-  /** Whether the rail is currently collapsed (icon-only). */
-  collapsed: boolean
-  /** Render with a label beside the chevron (expanded/labeled rail) vs. icon-only. */
-  showLabel?: boolean
-  onToggle: () => void
-  className?: string
-}
-
-// Collapse/expand control for the labeled nav rail. A chevron-only button when
-// collapsed (with a styled hover tooltip), a labeled row when expanded.
-// Independent of the panel toggle — this only changes the rail width.
-export function RailCollapseToggle({ collapsed, showLabel, onToggle, className }: RailCollapseToggleProps) {
-  const label = collapsed ? "Expand sidebar" : "Collapse sidebar"
-  const Icon = collapsed ? ChevronsRightIcon : ChevronsLeftIcon
-  return (
-    <RailTooltip label={label} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={label}
-        aria-pressed={collapsed}
-        className={cn(
-          "flex shrink-0 items-center rounded-md text-muted-foreground transition-colors",
-          MOTION_CONTROL,
-          showLabel ? "h-9 w-full justify-start gap-2.5 px-2.5" : "h-9 w-9 justify-center",
-          "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-          focusRing,
-          className,
-        )}
-      >
-        <Icon className="h-[17px] w-[17px] shrink-0" />
-        {showLabel && <span className="text-[13.5px] font-medium">{label}</span>}
-      </button>
-    </RailTooltip>
-  )
-}
-
 // ============================================================================
 // RailHeader — three-slot rail header (brand · middle · panel toggle)
 // ============================================================================
@@ -448,28 +354,6 @@ export function SidebarRail({ children, className, wide = false }: SidebarRailPr
       )}
       style={wide ? undefined : { width: railWidth }}
     >
-      {children}
-    </div>
-  )
-}
-
-// ============================================================================
-// SidebarRailHeader — top section of the rail (logo area)
-// ============================================================================
-
-export interface SidebarRailHeaderProps {
-  children: React.ReactNode
-  className?: string
-}
-
-/**
- * @deprecated Superseded by {@link RailHeader}, the three-slot header
- * (brand · middle · panel toggle) used by both shells. Kept for backward
- * compatibility; no longer rendered by `SidebarLayout`/`DashboardLayout`.
- */
-export function SidebarRailHeader({ children, className }: SidebarRailHeaderProps) {
-  return (
-    <div className={cn("flex h-14 shrink-0 items-center justify-center border-b border-[var(--md3-outline-variant)]", className)}>
       {children}
     </div>
   )

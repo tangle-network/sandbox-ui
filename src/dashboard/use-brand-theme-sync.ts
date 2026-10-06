@@ -5,7 +5,7 @@ import * as React from "react"
  * `.dark` class.
  *
  * The shared theme hook (`@tangle-network/ui`'s `useTheme`, used by
- * {@link RailThemeToggle} and the `appearance` menu) only toggles `.dark`. But
+ * the `appearance` menu) only toggles `.dark`. But
  * `@tangle-network/brand` 0.6 defaults to dark via `[data-sandbox-ui]` (always
  * present on the app's `<html>`) and scopes its light tokens to `.light` /
  * `[data-theme="light"]`. So removing `.dark` alone does NOT switch to light —

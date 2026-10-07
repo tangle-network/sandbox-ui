@@ -222,7 +222,7 @@ export function AgentProfilePicker({
                   title={profile.name}
                   subtitle={profileSubtitle(profile)}
                   onSelect={() => select(profile.id)}
-                  onEdit={canAuthor ? () => setComposing(profile) : undefined}
+                  onEdit={onUpdate ? () => setComposing(profile) : undefined}
                   onDelete={onDelete ? () => void onDelete(profile.id) : undefined}
                 />
               ))}

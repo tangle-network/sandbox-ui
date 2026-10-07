@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.128.2
+
+- A create-only agent profile picker no longer offers an Edit action that cannot save. Apps can enable profile creation without implementing profile updates.
+
 ## 0.128.1
 
 - `./files` and the root forward `@tangle-network/ui` 11.26's document primitives: `PdfViewer`, which renders PDF pages with pdf.js so a file reads on Android Chrome and iOS Safari, `configurePdfViewer` for its worker and decoder assets, `FileCard`, and `FileList`, with their prop types. `FilePreview` and `FileArtifactPane` now show PDFs through `PdfViewer`.

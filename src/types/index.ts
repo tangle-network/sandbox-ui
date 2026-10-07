@@ -1,5 +1,6 @@
 export type {
   AgentBranding,
+  ChatAuthor,
   CustomToolRenderer,
   DisplayVariant,
   FinalTextPart,

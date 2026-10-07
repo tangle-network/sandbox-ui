@@ -19,7 +19,7 @@ npm install @tangle-network/sandbox-ui
 ```
 
 **Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0 || ^2.0.0`, `@tangle-network/brand ^1.6.0`, and `@tangle-network/ui ^11.10.0`.
-Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which.
+Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which. `/files` needs `pdfjs-dist` only for `PdfViewer`, which `FilePreview` uses for PDFs; without it the viewer says so and falls back to the browser's own PDF viewer. The `ui` README covers its worker and asset setup through `configurePdfViewer`.
 
 ## Usage
 
@@ -487,7 +487,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/workspace` | WorkspaceFilesPane, WorkspaceArtifactView, SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
 | `/workbench` | DiffView, ChangesPane, CodeView, artifact and preview components |
 | `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
-| `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane |
+| `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane, PdfViewer, FileCard, FileList |
 | `/workbench/embedded-app` | EmbeddedAppView and preview status types without terminal or editor modules |
 | `/dashboard` | [Sidebar](./docs/sidebar.md), DashboardLayout, BillingDashboard, UsageChart |
 | `/editor` | TipTap collaborative editor (requires optional peers) |

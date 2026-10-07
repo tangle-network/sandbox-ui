@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.128.1
+
+- `./files` and the root forward `@tangle-network/ui` 11.26's document primitives: `PdfViewer`, which renders PDF pages with pdf.js so a file reads on Android Chrome and iOS Safari, `configurePdfViewer` for its worker and decoder assets, `FileCard`, and `FileList`, with their prop types. `FilePreview` and `FileArtifactPane` now show PDFs through `PdfViewer`.
+- `pdfjs-dist` 6 is a new optional peer, needed only to render PDF pages. Without it, a PDF falls back to the browser's own viewer with a notice.
+- The `@tangle-network/ui` peer floor moves to ^11.26.0.
+
 ## 0.128.0
 
 - `./chat` forwards `MessageAuthor`, `isViewerMessage` and the `ChatAuthor` type from `@tangle-network/ui` 11.25, and `./types` forwards `ChatAuthor`. The forwarded `ChatMessage`, `UserMessage` and `AgentTimeline` take an optional `author` and the reader's `viewerId`, so a transcript shared by several people (a client, an attorney and the agent) names each of them: the reader's own messages keep the end-aligned bubble, and anyone else's sit at the start under their avatar, name and role. Without `author` they render as before.

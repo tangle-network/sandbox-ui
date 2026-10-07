@@ -10,8 +10,20 @@ import { RunGroup as R1 } from "@tangle-network/sandbox-ui/run";
 import { RunGroup as R2 } from "@tangle-network/ui/run";
 import { OpenUIArtifactRenderer as O1 } from "@tangle-network/sandbox-ui/openui";
 import { OpenUIArtifactRenderer as O2 } from "@tangle-network/ui/openui";
-import { FileTree as F1 } from "@tangle-network/sandbox-ui/files";
-import { FileTree as F2 } from "@tangle-network/ui/files";
+import {
+  configurePdfViewer as CP1,
+  FileCard as FC1,
+  FileList as FL1,
+  FileTree as F1,
+  PdfViewer as PV1,
+} from "@tangle-network/sandbox-ui/files";
+import {
+  configurePdfViewer as CP2,
+  FileCard as FC2,
+  FileList as FL2,
+  FileTree as F2,
+  PdfViewer as PV2,
+} from "@tangle-network/ui/files";
 import { TiptapEditor as E1 } from "@tangle-network/sandbox-ui/editor";
 import { TiptapEditor as E2 } from "@tangle-network/ui/editor";
 import { Markdown as M1 } from "@tangle-network/sandbox-ui/markdown";
@@ -55,6 +67,11 @@ const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
   ["run.RunGroup", R1, R2],
   ["openui.OpenUIArtifactRenderer", O1, O2],
   ["files.FileTree", F1, F2],
+  ["files.PdfViewer", PV1, PV2],
+  ["files.configurePdfViewer", CP1, CP2],
+  ["files.FileCard", FC1, FC2],
+  ["files.FileList", FL1, FL2],
+  ["root.PdfViewer", sandboxRoot.PdfViewer, PV2],
   ["editor.TiptapEditor", E1, E2],
   ["markdown.Markdown", M1, M2],
   ["markdown.getSanitizedMarkdownHeadingIdFromRawFragment", MH1, MH2],

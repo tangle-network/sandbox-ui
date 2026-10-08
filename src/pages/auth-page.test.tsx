@@ -29,4 +29,20 @@ describe("AuthPage theming", () => {
     expect(link.style.background).toBe("rgb(80, 71, 235)")
     expect(link.style.color).toBe("rgb(255, 255, 255)")
   })
+
+  it("puts every control on the control scale's 44px lg row", () => {
+    render(<AuthPage providers={["github"]} onEmailSubmit={async () => null} />)
+    const controls = [
+      screen.getByRole("link", { name: /continue with tangle/i }),
+      screen.getByRole("button", { name: /continue with github/i }),
+      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByLabelText("Password"),
+      screen.getByRole("button", { name: /sign in with email/i }),
+    ]
+    for (const control of controls) {
+      const style = control.getAttribute("style") ?? ""
+      expect(style).toContain("var(--control-height-lg, 2.75rem)")
+      expect(style).toContain("var(--control-text-lg, 1rem)")
+    }
+  })
 })

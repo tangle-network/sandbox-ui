@@ -90,6 +90,8 @@ export {
   FilterField,
   type FilterFieldProps,
   Heading,
+  HelpText,
+  type HelpTextProps,
   type HeadingVariant,
   InlineCode,
   type InlineCodeProps,

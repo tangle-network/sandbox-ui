@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.129.0
+
+- `./primitives` and the root forward `@tangle-network/ui` 11.28's control scale: `Button`, `Input`, `Textarea` and `SelectTrigger` share `sm` 32px, `md` (default) 36px and `lg` 44px heights with 12/14/16px text, read from Brand 1.18's control tokens. A default `Input` is now 36px (was 44px), matching the default `Button` and `SelectTrigger`; fields use 16px text on touch screens. New `HelpText` (with `HelpTextProps`) renders field hints and errors at 12px; `Button` adds `icon-sm` and `icon-lg`. See Brand's `docs/control-scale.md`.
+- The dashboard sidebar's item and section labels use 14px text (were 13.5px, the one off-scale size every product rendered).
+- Peer floors move to `@tangle-network/ui` ^11.28.0 and `@tangle-network/brand` ^1.18.0. `dist/tokens.css` is copied from brand 1.18, so it carries the control and form-text tokens.
+
 ## 0.128.3
 
 - Connected integration catalogs use singular account wording when exactly one account needs selection.

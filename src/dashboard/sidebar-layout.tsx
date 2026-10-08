@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import * as Dialog from "@radix-ui/react-dialog"
 import { cn } from "../lib/utils"
 import { MOTION_CONTROL, MOTION_TRAVEL } from "../lib/motion"
 import { useBrandThemeSync } from "./use-brand-theme-sync"
@@ -273,6 +274,20 @@ function SidebarLayoutInner({
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false)
   const closeMobileNav = React.useCallback(() => setMobileNavOpen(false), [])
 
+  // A hidden modal must not keep the desktop inert after a responsive resize.
+  React.useEffect(() => {
+    if (!mobileNavOpen) return
+    if (!hideBelow) {
+      setMobileNavOpen(false)
+      return
+    }
+    const desktop = window.matchMedia(hideBelow === "md" ? "(min-width: 48rem)" : "(min-width: 64rem)")
+    const closeOnDesktop = () => { if (desktop.matches) setMobileNavOpen(false) }
+    closeOnDesktop()
+    desktop.addEventListener("change", closeOnDesktop)
+    return () => desktop.removeEventListener("change", closeOnDesktop)
+  }, [hideBelow, mobileNavOpen])
+
   /**
    * One nav list, rendered twice — once in the desktop rail, once in the mobile
    * drawer. Sharing the renderer is the point: a product adds a destination to
@@ -380,148 +395,150 @@ function SidebarLayoutInner({
   }
 
   return (
-    <div className={cn("min-h-screen bg-surface text-foreground", className)}>
-      {/* Wrap the fixed sidebar so the responsive-hide class lands on an
-          element with no competing `display` utility. The rail itself carries
-          `flex`; once the consumer's Tailwind redefines `.flex` (its stylesheet
-          loads after this library's) that would win the equal-specificity
-          cascade against `max-lg:hidden`. A bare wrapper has no such conflict. */}
-      <div className={cn(hideBelow && HIDE_BELOW_CLASS[hideBelow])}>
-        <Sidebar className={sidebarClassName}>
-          <SidebarRail>
-            {(logo !== undefined || railHeaderContent !== undefined || railLabels) && (
-              <RailHeader
-                brand={logo}
-                brandHref={logoHref}
-                collapsed={!showLabels}
-                onToggle={toggleRail}
-                collapsible={railLabels}
-                LinkComponent={LinkComponent}
-              >
-                {railHeaderContent}
-              </RailHeader>
-            )}
-
-            <SidebarRailNav className={cn(showLabels ? "px-2" : undefined, expandOnEmptyClick && "cursor-pointer")} onClick={expandOnEmptyClick}>
-              {renderNavItems({ showLabels, onNavigate: handleNavClick })}
-            </SidebarRailNav>
-
-            {(railFooter !== undefined || hasProfile) && (
-              <SidebarRailFooter className={cn("border-t border-[var(--md3-outline-variant)] pt-2", showLabels && "items-stretch px-2")}>
-                {railFooter}
-                {hasProfile && (
-                  <ProfileAvatar
-                    user={user ?? undefined}
-                    isLoading={isLoading}
-                    onLogout={onLogout}
-                    onSettingsClick={onSettingsClick}
-                    settingsHref={settingsHref}
-                    showDetails={showLabels}
-                    appearance={appearance}
-                    LinkComponent={Link}
-                  >
-                    {profileMenuItems}
-                  </ProfileAvatar>
-                )}
-              </SidebarRailFooter>
-            )}
-          </SidebarRail>
-
-          {panel != null && <SidebarPanel>{panel}</SidebarPanel>}
-        </Sidebar>
-      </div>
-
-      <SidebarContent className={contentClassName}>
-        {/* Below `hideBelow` the rail is display:none, so without this bar the
-            app's sections have no entry point at all on a phone. It renders as
-            the first child of <main> rather than a sibling so a consumer's
-            `h-screen flex-col` content class keeps working: the bar is a
-            shrink-0 row and the app's own content flexes beneath it. */}
-        {hideBelow && (
-          <header
-            className={cn(
-              "flex h-14 shrink-0 items-center gap-1 border-b border-[var(--md3-outline-variant)] bg-surface px-2",
-              SHOW_BELOW_CLASS[hideBelow],
-            )}
-          >
-            <button
-              type="button"
-              aria-label="Open navigation"
-              aria-expanded={mobileNavOpen}
-              aria-controls="sidebar-mobile-nav"
-              aria-haspopup="dialog"
-              onClick={() => setMobileNavOpen(true)}
-              className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
-            >
-              <MenuIcon className="size-5" />
-            </button>
-            <div className="flex min-w-0 flex-1 items-center">
-              {railHeaderContent ?? (
-                logo !== undefined ? (
-                  <Link href={logoHref} to={logoHref} className="flex min-w-0 items-center">
-                    {logo}
-                  </Link>
-                ) : null
+    <Dialog.Root open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+      <div className={cn("min-h-screen bg-surface text-foreground", className)}>
+        {/* Wrap the fixed sidebar so the responsive-hide class lands on an
+            element with no competing `display` utility. The rail itself carries
+            `flex`; once the consumer's Tailwind redefines `.flex` (its stylesheet
+            loads after this library's) that would win the equal-specificity
+            cascade against `max-lg:hidden`. A bare wrapper has no such conflict. */}
+        <div className={cn(hideBelow && HIDE_BELOW_CLASS[hideBelow])}>
+          <Sidebar className={sidebarClassName}>
+            <SidebarRail>
+              {(logo !== undefined || railHeaderContent !== undefined || railLabels) && (
+                <RailHeader
+                  brand={logo}
+                  brandHref={logoHref}
+                  collapsed={!showLabels}
+                  onToggle={toggleRail}
+                  collapsible={railLabels}
+                  LinkComponent={LinkComponent}
+                >
+                  {railHeaderContent}
+                </RailHeader>
               )}
-            </div>
-            {hasProfile && (
-              <ProfileAvatar
-                user={user ?? undefined}
-                isLoading={isLoading}
-                onLogout={onLogout}
-                onSettingsClick={onSettingsClick}
-                settingsHref={settingsHref}
-                appearance={appearance}
-                LinkComponent={Link}
-              >
-                {profileMenuItems}
-              </ProfileAvatar>
-            )}
-          </header>
-        )}
-        {children}
-      </SidebarContent>
 
-      {hideBelow && mobileNavOpen && (
-        <MobileNavDrawer
-          breakpoint={hideBelow}
-          onClose={closeMobileNav}
-          header={railHeaderContent ?? logo}
-          footer={
-            railFooter !== undefined || hasProfile ? (
-              <>
-                {railFooter}
-                {hasProfile && (
-                  <ProfileAvatar
-                    user={user ?? undefined}
-                    isLoading={isLoading}
-                    onLogout={onLogout}
-                    onSettingsClick={onSettingsClick}
-                    settingsHref={settingsHref}
-                    showDetails
-                    appearance={appearance}
-                    LinkComponent={Link}
-                  >
-                    {profileMenuItems}
-                  </ProfileAvatar>
+              <SidebarRailNav className={cn(showLabels ? "px-2" : undefined, expandOnEmptyClick && "cursor-pointer")} onClick={expandOnEmptyClick}>
+                {renderNavItems({ showLabels, onNavigate: handleNavClick })}
+              </SidebarRailNav>
+
+              {(railFooter !== undefined || hasProfile) && (
+                <SidebarRailFooter className={cn("border-t border-[var(--md3-outline-variant)] pt-2", showLabels && "items-stretch px-2")}>
+                  {railFooter}
+                  {hasProfile && (
+                    <ProfileAvatar
+                      user={user ?? undefined}
+                      isLoading={isLoading}
+                      onLogout={onLogout}
+                      onSettingsClick={onSettingsClick}
+                      settingsHref={settingsHref}
+                      showDetails={showLabels}
+                      appearance={appearance}
+                      LinkComponent={Link}
+                    >
+                      {profileMenuItems}
+                    </ProfileAvatar>
+                  )}
+                </SidebarRailFooter>
+              )}
+            </SidebarRail>
+
+            {panel != null && <SidebarPanel>{panel}</SidebarPanel>}
+          </Sidebar>
+        </div>
+
+        <SidebarContent className={contentClassName}>
+          {/* Below `hideBelow` the rail is display:none, so without this bar the
+              app's sections have no entry point at all on a phone. It renders as
+              the first child of <main> rather than a sibling so a consumer's
+              `h-screen flex-col` content class keeps working: the bar is a
+              shrink-0 row and the app's own content flexes beneath it. */}
+          {hideBelow && (
+            <header
+              className={cn(
+                "flex h-14 shrink-0 items-center gap-1 border-b border-[var(--md3-outline-variant)] bg-surface px-2",
+                SHOW_BELOW_CLASS[hideBelow],
+              )}
+            >
+              <Dialog.Trigger asChild>
+                <button
+                  type="button"
+                  aria-label="Open navigation"
+                  aria-expanded={mobileNavOpen}
+                  aria-controls="sidebar-mobile-nav"
+                  aria-haspopup="dialog"
+                  className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
+                >
+                  <MenuIcon className="size-5" />
+                </button>
+              </Dialog.Trigger>
+              <div className="flex min-w-0 flex-1 items-center">
+                {railHeaderContent ?? (
+                  logo !== undefined ? (
+                    <Link href={logoHref} to={logoHref} className="flex min-w-0 items-center">
+                      {logo}
+                    </Link>
+                  ) : null
                 )}
-              </>
-            ) : null
-          }
-          panel={panel}
-        >
-          {/* Labels always show here — the drawer has the width the rail does
-              not, and an icon-only phone drawer would be a worse rail. */}
-          {renderNavItems({
-            showLabels: true,
-            onNavigate: () => {
-              handleNavClick?.()
-              closeMobileNav()
-            },
-          })}
-        </MobileNavDrawer>
-      )}
-    </div>
+              </div>
+              {hasProfile && (
+                <ProfileAvatar
+                  user={user ?? undefined}
+                  isLoading={isLoading}
+                  onLogout={onLogout}
+                  onSettingsClick={onSettingsClick}
+                  settingsHref={settingsHref}
+                  appearance={appearance}
+                  LinkComponent={Link}
+                >
+                  {profileMenuItems}
+                </ProfileAvatar>
+              )}
+            </header>
+          )}
+          {children}
+        </SidebarContent>
+
+        {hideBelow && mobileNavOpen && (
+          <MobileNavDrawer
+            breakpoint={hideBelow}
+            header={railHeaderContent ?? logo}
+            footer={
+              railFooter !== undefined || hasProfile ? (
+                <>
+                  {railFooter}
+                  {hasProfile && (
+                    <ProfileAvatar
+                      user={user ?? undefined}
+                      isLoading={isLoading}
+                      onLogout={onLogout}
+                      onSettingsClick={onSettingsClick}
+                      settingsHref={settingsHref}
+                      showDetails
+                      appearance={appearance}
+                      LinkComponent={Link}
+                    >
+                      {profileMenuItems}
+                    </ProfileAvatar>
+                  )}
+                </>
+              ) : null
+            }
+            panel={panel}
+          >
+            {/* Labels always show here — the drawer has the width the rail does
+                not, and an icon-only phone drawer would be a worse rail. */}
+            {renderNavItems({
+              showLabels: true,
+              onNavigate: () => {
+                handleNavClick?.()
+                closeMobileNav()
+              },
+            })}
+          </MobileNavDrawer>
+        )}
+      </div>
+    </Dialog.Root>
   )
 }
 
@@ -534,104 +551,43 @@ function SidebarLayoutInner({
  * slide-out panel's content when the app has one (on a phone there is no room
  * to dock a panel beside a rail, so the two stack in one surface).
  *
- * Deliberately built on plain elements rather than a dialog dependency: the
- * package ships no modal primitive, and a nav drawer needs only a backdrop,
- * Escape, a focus trap and a scroll lock.
+ * Use the same modal layer as the account menu and other shared disclosures:
+ * only the top layer handles Escape, and the trigger owns return focus.
  */
 function MobileNavDrawer({
   breakpoint,
-  onClose,
   header,
   footer,
   panel,
   children,
 }: {
   breakpoint: "md" | "lg"
-  onClose: () => void
   header?: React.ReactNode
   footer?: React.ReactNode
   panel?: React.ReactNode
   children: React.ReactNode
 }) {
-  const panelRef = React.useRef<HTMLDivElement>(null)
-
-  // Escape closes, and Tab cycles inside the drawer. Without the trap, tabbing
-  // walks into the page behind the backdrop, which a screen reader then reads
-  // as if the drawer were not there.
-  React.useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.stopPropagation()
-        onClose()
-        return
-      }
-      if (event.key !== "Tab") return
-      const root = panelRef.current
-      if (!root) return
-      const focusable = root.querySelectorAll<HTMLElement>(
-        'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
-      )
-      if (focusable.length === 0) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-    document.addEventListener("keydown", onKeyDown, true)
-    return () => document.removeEventListener("keydown", onKeyDown, true)
-  }, [onClose])
-
-  // Scroll lock, restoring whatever the page had rather than assuming "".
-  React.useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [])
-
-  // Move focus in on open so a keyboard or screen-reader user lands inside the
-  // drawer instead of on the page behind it.
-  React.useEffect(() => {
-    panelRef.current?.querySelector<HTMLElement>("button,a[href]")?.focus()
-  }, [])
-
   return (
-    <div className={cn("fixed inset-0 z-50", SHOW_BELOW_CLASS[breakpoint])}>
-      <button
-        type="button"
-        aria-label="Close navigation"
-        tabIndex={-1}
-        onClick={onClose}
-        className="absolute inset-0 bg-black/50"
-      />
-      <div
-        ref={panelRef}
+    <Dialog.Portal>
+      <Dialog.Overlay className={cn("fixed inset-0 z-50 bg-black/50", SHOW_BELOW_CLASS[breakpoint])} />
+      <Dialog.Content
         id="sidebar-mobile-nav"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Navigation"
+        aria-describedby={undefined}
         style={{ width: SIDEBAR_MOBILE_WIDTH }}
-        // The drawer arrives on the shared entrance rather than snapping into
-        // place; its nav items then arrive staggered inside it, so the surface
-        // and its contents read as one movement instead of two events.
-        className="agent-arrive absolute inset-y-0 left-0 flex max-w-[85vw] flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low shadow-xl"
+        className={cn("agent-arrive fixed inset-y-0 left-0 z-50 flex max-w-[85vw] flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low shadow-xl", SHOW_BELOW_CLASS[breakpoint])}
       >
+        <Dialog.Title className="sr-only">Navigation</Dialog.Title>
         <div className="flex h-14 shrink-0 items-center gap-1 border-b border-[var(--md3-outline-variant)] px-2">
           <div className="flex min-w-0 flex-1 items-center">{header}</div>
-          <button
-            type="button"
-            aria-label="Close navigation"
-            onClick={onClose}
-            className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
-          >
-            <CloseIcon className="size-5" />
-          </button>
+          <Dialog.Close asChild>
+            <button
+              type="button"
+              aria-label="Close navigation"
+              className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
+            >
+              <CloseIcon className="size-5" />
+            </button>
+          </Dialog.Close>
         </div>
 
         <nav aria-label="Sections" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2">
@@ -644,8 +600,8 @@ function MobileNavDrawer({
         {footer != null && (
           <div className="shrink-0 border-t border-[var(--md3-outline-variant)] px-2 py-2">{footer}</div>
         )}
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Portal>
   )
 }
 

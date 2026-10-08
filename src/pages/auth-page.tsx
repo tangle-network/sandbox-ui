@@ -82,6 +82,18 @@ const C = {
   onInk: "hsl(var(--background, 0 0% 100%))",
 };
 
+// Brand's control scale at lg, the touch size: every control on the card is one
+// 44px row with 16px text, so iOS never zooms a field on focus. Inline styles
+// keep the page complete for an app that loads no stylesheet; each token
+// carries the scale's pixel fallback.
+const CONTROL: CSSProperties = {
+  boxSizing: "border-box",
+  height: "var(--control-height-lg, 2.75rem)",
+  borderRadius: "var(--radius-lg, 10px)",
+  fontSize: "var(--control-text-lg, 1rem)",
+  lineHeight: 1.5,
+};
+
 function GithubIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -160,24 +172,22 @@ export function AuthPage({
     justifyContent: "center",
     gap: 10,
     width: "100%",
-    padding: "10px 12px",
-    borderRadius: 8,
+    padding: "0 16px",
+    ...CONTROL,
     border: `1px solid ${C.border}`,
     background: "transparent",
     color: C.text,
-    fontSize: 14,
     fontWeight: 500,
     cursor: "pointer",
     transition: "background 120ms",
   };
   const inputStyle: CSSProperties = {
     width: "100%",
-    padding: "10px 12px",
-    borderRadius: 8,
+    padding: "0 16px",
+    ...CONTROL,
     border: `1px solid ${C.border}`,
     background: C.inputBg,
     color: C.text,
-    fontSize: 14,
     outline: "none",
   };
 
@@ -217,12 +227,11 @@ export function AuthPage({
             justifyContent: "center",
             gap: 10,
             width: "100%",
-            padding: "10px 12px",
-            borderRadius: 8,
+            padding: "0 16px",
+            ...CONTROL,
             background: buttonBg,
             border: "1px solid transparent",
             color: buttonFg,
-            fontSize: 14,
             fontWeight: 600,
             textDecoration: "none",
             transition: "background 120ms",

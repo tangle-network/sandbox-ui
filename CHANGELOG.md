@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.129.1
+
+- `AuthPage` controls use the control scale's lg row: the Tangle, social and email buttons and the name, email and password fields are 44px with 16px text (were about 43px with 14px text), so every control on the card is one height and iOS no longer zooms a field on focus. The page keeps its inline styles, so it still renders completely in an app that loads no stylesheet.
+
 ## 0.129.0
 
 - `./primitives` and the root forward `@tangle-network/ui` 11.28's control scale: `Button`, `Input`, `Textarea` and `SelectTrigger` share `sm` 32px, `md` (default) 36px and `lg` 44px heights with 12/14/16px text, read from Brand 1.18's control tokens. A default `Input` is now 36px (was 44px), matching the default `Button` and `SelectTrigger`; fields use 16px text on touch screens. New `HelpText` (with `HelpTextProps`) renders field hints and errors at 12px; `Button` adds `icon-sm` and `icon-lg`. See Brand's `docs/control-scale.md`.

@@ -1,6 +1,6 @@
-import { jsxs, jsx } from "react/jsx-runtime";
+import type { CSSProperties, ReactNode } from "react";
 import { cn } from "../../lib/utils";
-import type { EmailContent, BrandTokens } from "../types";
+import type { EmailContent, EmailSection, BrandTokens } from "../types";
 
 export interface EmailPreviewProps {
   content: EmailContent;
@@ -9,93 +9,136 @@ export interface EmailPreviewProps {
   className?: string;
 }
 
-export function EmailPreview({ content, brand, previewUrl, className }: EmailPreviewProps) {
-  if (previewUrl) {
-    return jsxs("div", { className: cn("flex flex-col gap-1", className), children: [
-      jsx("div", { className: "text-xs text-muted-foreground font-medium truncate", children: content.subject }),
-      content.preheader && jsx("div", { className: "text-xs text-muted-foreground/60 truncate", children: content.preheader }),
-      jsx(
-        "iframe",
-        {
-          src: previewUrl,
-          className: "w-full rounded border border-border",
-          style: { height: 480, background: "#fff" },
-          title: "Email preview",
-          sandbox: "allow-same-origin"
-        }
-      )
-    ] });
+/** sRGB relative luminance of a #rgb or #rrggbb colour; null for anything else. */
+function luminance(color: string): number | null {
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim())?.[1];
+  if (!hex) return null;
+  const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+  const [r, g, b] = [0, 2, 4].map((i) => {
+    const channel = parseInt(full.slice(i, i + 2), 16) / 255;
+    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a: number, b: number): number {
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+const PAPER = { light: "#ffffff", dark: "#111218" } as const;
+const INK = { light: "#16171d", dark: "#f4f4f6" } as const;
+
+/**
+ * The colours an email body renders in. A brand whose text colour is light
+ * writes on a dark page; any brand colour that would not read on that page
+ * falls back to the page's own ink.
+ */
+export function emailPalette(brand: BrandTokens) {
+  const text = luminance(brand.textColor);
+  const scheme = text !== null && text > 0.5 ? "dark" : "light";
+  const paper = PAPER[scheme];
+  const paperLum = luminance(paper)!;
+  const readable = (color: string, minimum: number) => {
+    const lum = luminance(color);
+    return lum !== null && contrast(lum, paperLum) >= minimum;
+  };
+  const ink = readable(brand.textColor, 4.5) ? brand.textColor : INK[scheme];
+  const accent = readable(brand.primaryColor, 3) ? brand.primaryColor : ink;
+  const primary = luminance(brand.primaryColor);
+  // The label colour that reads best on the button, white unless near-black reads better.
+  const buttonText = primary !== null && contrast(primary, 1) < contrast(primary, 0) ? "#111111" : "#ffffff";
+  return { scheme, paper, ink, accent, button: brand.primaryColor, buttonText, quote: brand.accentColor };
+}
+
+function Button({ href, label, palette }: { href: string; label: string; palette: ReturnType<typeof emailPalette> }) {
+  return (
+    <a
+      href={href}
+      onClick={(event) => event.preventDefault()}
+      className="inline-block rounded-md px-5 py-2.5 text-sm font-semibold no-underline"
+      style={{ background: palette.button, color: palette.buttonText }}
+    >
+      {label}
+    </a>
+  );
+}
+
+function Section({ section, palette }: { section: EmailSection; palette: ReturnType<typeof emailPalette> }): ReactNode {
+  const muted: CSSProperties = { color: palette.ink, opacity: 0.72 };
+  switch (section.type) {
+    case "hero":
+      return (
+        <div className="flex flex-col items-center gap-3 py-2 text-center">
+          {section.imageUrl && <img src={section.imageUrl} alt="" className="w-full rounded-md object-cover" />}
+          <h2 className="text-2xl font-bold leading-tight tracking-tight" style={{ color: palette.accent }}>{section.headline}</h2>
+          {section.subheadline && <p className="text-base leading-relaxed" style={muted}>{section.subheadline}</p>}
+          {section.ctaLabel && <div className="pt-1"><Button href={section.ctaUrl ?? "#"} label={section.ctaLabel} palette={palette} /></div>}
+        </div>
+      );
+    case "body":
+      return <p className="text-base leading-7 whitespace-pre-wrap">{section.text}</p>;
+    case "feature":
+      return (
+        <div className="flex items-start gap-4">
+          {section.imageUrl && <img src={section.imageUrl} alt="" className="size-16 shrink-0 rounded-md object-cover" />}
+          <div className="flex flex-col gap-1">
+            <div className="text-base font-semibold">{section.headline}</div>
+            <div className="text-sm leading-relaxed" style={muted}>{section.description}</div>
+          </div>
+        </div>
+      );
+    case "testimonial":
+      return (
+        <blockquote className="border-l-4 pl-4" style={{ borderColor: palette.quote }}>
+          <p className="text-base italic leading-relaxed">“{section.quote}”</p>
+          <footer className="mt-2 text-sm font-medium" style={muted}>{section.author}{section.role ? `, ${section.role}` : ""}</footer>
+        </blockquote>
+      );
+    case "cta":
+      return (
+        <div className="flex flex-col items-center gap-2 py-2 text-center">
+          <Button href={section.url} label={section.label} palette={palette} />
+          {section.subtext && <p className="text-sm" style={muted}>{section.subtext}</p>}
+        </div>
+      );
+    case "divider":
+      return <hr className="border-0 border-t" style={{ borderColor: palette.ink, opacity: 0.15 }} />;
+    default:
+      return null;
   }
-  return jsxs("div", { className: cn("flex flex-col gap-2", className), children: [
-    jsx("div", { className: "text-sm font-semibold truncate", children: content.subject }),
-    content.preheader && jsx("div", { className: "text-xs text-muted-foreground truncate", children: content.preheader }),
-    jsx(
-      "div",
-      {
-        className: "rounded border border-border p-4 space-y-3 overflow-y-auto",
-        style: { maxHeight: 480, fontFamily: brand.fontFamily, color: brand.textColor },
-        children: content.sections.map((section, i) => {
-          if (section.type === "hero") {
-            return jsxs("div", { className: "text-center py-4 space-y-2", children: [
-              section.imageUrl && jsx("img", { src: section.imageUrl, alt: "", className: "mx-auto max-h-40 object-cover rounded" }),
-              jsx("div", { className: "text-xl font-bold", style: { color: brand.primaryColor }, children: section.headline }),
-              section.subheadline && jsx("div", { className: "text-sm text-muted-foreground", children: section.subheadline }),
-              section.ctaLabel && jsx(
-                "a",
-                {
-                  href: section.ctaUrl ?? "#",
-                  className: "inline-block px-4 py-2 rounded text-sm font-medium text-white",
-                  style: { background: brand.primaryColor },
-                  children: section.ctaLabel
-                }
-              )
-            ] }, i);
-          }
-          if (section.type === "body") {
-            return jsx("p", { className: "text-sm leading-relaxed whitespace-pre-wrap", children: section.text }, i);
-          }
-          if (section.type === "feature") {
-            return jsxs("div", { className: "flex gap-3 items-start", children: [
-              section.imageUrl && jsx("img", { src: section.imageUrl, alt: "", className: "w-16 h-16 object-cover rounded shrink-0" }),
-              jsxs("div", { children: [
-                jsx("div", { className: "text-sm font-semibold", children: section.headline }),
-                jsx("div", { className: "text-xs text-muted-foreground mt-0.5", children: section.description })
-              ] })
-            ] }, i);
-          }
-          if (section.type === "testimonial") {
-            return jsxs("blockquote", { className: "border-l-2 pl-3 italic text-sm text-muted-foreground", style: { borderColor: brand.accentColor }, children: [
-              jsxs("p", { children: [
-                '"',
-                section.quote,
-                '"'
-              ] }),
-              jsxs("footer", { className: "mt-1 text-xs not-italic font-medium", children: [
-                section.author,
-                section.role ? `, ${section.role}` : ""
-              ] })
-            ] }, i);
-          }
-          if (section.type === "cta") {
-            return jsxs("div", { className: "text-center py-3 space-y-1", children: [
-              jsx(
-                "a",
-                {
-                  href: section.url,
-                  className: "inline-block px-5 py-2.5 rounded font-medium text-white text-sm",
-                  style: { background: brand.primaryColor },
-                  children: section.label
-                }
-              ),
-              section.subtext && jsx("p", { className: "text-xs text-muted-foreground", children: section.subtext })
-            ] }, i);
-          }
-          if (section.type === "divider") {
-            return jsx("hr", { className: "border-border" }, i);
-          }
-          return null;
-        })
-      }
-    )
-  ] });
+}
+
+/**
+ * An email as a reader meets it: who it is from, the subject and the inbox
+ * preview line, then the body on the brand's page and in its typeface.
+ */
+export function EmailPreview({ content, brand, previewUrl, className }: EmailPreviewProps) {
+  const palette = emailPalette(brand);
+  return (
+    <article className={cn("overflow-hidden rounded-lg border border-border bg-card shadow-sm", className)}>
+      <header className="flex flex-col gap-1 border-b border-border px-5 py-4">
+        <div className="flex items-center gap-2 text-sm">
+          <span
+            aria-hidden
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+            style={{ background: palette.button, color: palette.buttonText }}
+          >
+            {brand.businessName.trim().charAt(0).toUpperCase() || "?"}
+          </span>
+          <span className="font-medium">{brand.businessName}</span>
+        </div>
+        <h3 className="text-base font-semibold leading-snug">{content.subject}</h3>
+        {content.preheader && <p className="text-sm text-muted-foreground">{content.preheader}</p>}
+      </header>
+      {previewUrl ? (
+        <iframe src={previewUrl} title="Email preview" sandbox="allow-same-origin" className="block h-[480px] w-full bg-white" />
+      ) : (
+        <div className="px-5 py-8 sm:px-8" style={{ background: palette.paper, color: palette.ink, fontFamily: brand.fontFamily }}>
+          <div className="mx-auto flex max-w-[560px] flex-col gap-5">
+            {content.sections.map((section, index) => <Section key={index} section={section} palette={palette} />)}
+          </div>
+        </div>
+      )}
+    </article>
+  );
 }

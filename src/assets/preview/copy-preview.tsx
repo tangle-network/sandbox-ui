@@ -1,3 +1,4 @@
+import { Badge } from "@tangle-network/ui/primitives";
 import { cn } from "../../lib/utils";
 import type { CopyContent, CopyPlatform } from "../types";
 
@@ -15,42 +16,38 @@ const PLATFORM_LIMITS: Record<CopyPlatform, number | null> = {
   "email-subject": 60
 };
 
-const PLATFORM_LABELS: Record<CopyPlatform, string> = {
+export const COPY_PLATFORM_LABEL: Record<CopyPlatform, string> = {
   instagram: "Instagram",
   tiktok: "TikTok",
-  x: "X / Twitter",
+  x: "X",
   linkedin: "LinkedIn",
   sms: "SMS",
-  "email-subject": "Email Subject"
+  "email-subject": "Email subject"
 };
 
+/** Copy as it will read: the channel and its length budget, the headline, the body and its hashtags. */
 export function CopyPreview({ content, className }: CopyPreviewProps) {
   const limit = PLATFORM_LIMITS[content.platform];
-  const bodyLen = content.body.length;
-  const isOverLimit = limit !== null && bodyLen > limit;
-  const warningThreshold = limit !== null ? limit * 0.9 : null;
-  const isNearLimit = !isOverLimit && warningThreshold !== null && bodyLen >= warningThreshold;
+  const length = content.body.length;
+  const over = limit !== null && length > limit;
+  const near = !over && limit !== null && length >= limit * 0.9;
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">{PLATFORM_LABELS[content.platform]}</span>
+    <article className={cn("flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-sm", className)}>
+      <div className="flex items-center justify-between gap-3">
+        <Badge variant="secondary" className="text-xs">{COPY_PLATFORM_LABEL[content.platform] ?? content.platform}</Badge>
         {limit !== null && (
-          <span className={cn("text-xs tabular-nums", isOverLimit ? "text-destructive font-medium" : isNearLimit ? "text-warning" : "text-muted-foreground")}>
-            {bodyLen} / {limit}
+          <span className={cn("text-xs tabular-nums", over ? "font-medium text-destructive" : near ? "text-warning" : "text-muted-foreground")}>
+            {length} / {limit} characters
           </span>
         )}
       </div>
-      <div className="rounded border border-border p-3 space-y-2 bg-card">
-        {content.headline && <div className="text-sm font-semibold">{content.headline}</div>}
-        <p className="text-sm whitespace-pre-wrap leading-relaxed">{content.body}</p>
-        {content.hashtags && content.hashtags.length > 0 && (
-          <div className="text-sm text-blue-500 flex flex-wrap gap-1">
-            {content.hashtags.map((tag) => (
-              <span key={tag}>#{tag}</span>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      {content.headline && <h3 className="text-xl font-semibold leading-snug tracking-tight">{content.headline}</h3>}
+      <p className="text-base leading-7 whitespace-pre-wrap [overflow-wrap:anywhere]">{content.body}</p>
+      {content.hashtags && content.hashtags.length > 0 && (
+        <div className="flex flex-wrap gap-x-2 gap-y-1 text-sm text-primary">
+          {content.hashtags.map((tag) => <span key={tag}>#{tag.replace(/^#/, "")}</span>)}
+        </div>
+      )}
+    </article>
   );
 }

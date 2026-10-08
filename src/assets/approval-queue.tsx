@@ -15,6 +15,8 @@ export interface ApprovalQueueProps {
   onSave?: (spec: AssetSpec) => void;
   onRevisionRequest?: (id: string, instruction: string) => void;
   onRenderRequest?: (id: string) => void;
+  /** Opens one asset's detail view, with the ids the queue shows, in order, for previous and next. */
+  onOpen?: (id: string, visibleIds: string[]) => void;
   renderingIds?: Set<string>;
   previewUrls?: Record<string, string>;
   className?: string;
@@ -51,6 +53,7 @@ export function ApprovalQueue({
   onSave,
   onRevisionRequest,
   onRenderRequest,
+  onOpen,
   renderingIds = new Set(),
   previewUrls = {},
   className
@@ -172,6 +175,7 @@ export function ApprovalQueue({
               onApprove={onApprove}
               onReject={onReject}
               onEdit={() => setEditingId(a.id)}
+              onOpen={onOpen ? (id) => onOpen(id, filtered.map((asset) => asset.id)) : undefined}
             />
           ))}
         </div>

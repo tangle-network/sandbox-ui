@@ -497,7 +497,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
   const content = (
     <>
       {iconWithBadge}
-      {showLabel && <span className="text-[13.5px] font-medium">{label}</span>}
+      {showLabel && <span className="text-sm font-medium">{label}</span>}
     </>
   )
 
@@ -1060,7 +1060,7 @@ export function RailExpandable({
             href={href}
             to={href}
             onClick={onNavigate}
-            className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-[13.5px] font-medium"
+            className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-sm font-medium"
           >
             <span className="truncate">{label}</span>
           </Link>
@@ -1068,7 +1068,7 @@ export function RailExpandable({
           <button
             type="button"
             onClick={toggle}
-            className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-left text-[13.5px] font-medium"
+            className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-left text-sm font-medium"
           >
             <span className="truncate">{label}</span>
           </button>

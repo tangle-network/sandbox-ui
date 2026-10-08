@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.129.2
+
+- `SidebarLayout`'s mobile drawer and `WorkspaceLayout`'s desktop query skip their media-query listeners where `window.matchMedia` is missing (jsdom, older embedded webviews), as `DashboardLayout` already did, instead of throwing from an effect.
+
 ## 0.129.1
 
 - `AuthPage` controls use the control scale's lg row: the Tangle, social and email buttons and the name, email and password fields are 44px with 16px text (were about 43px with 14px text), so every control on the card is one height and iOS no longer zooms a field on focus. The page keeps its inline styles, so it still renders completely in an app that loads no stylesheet.

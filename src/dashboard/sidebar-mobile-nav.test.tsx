@@ -73,6 +73,14 @@ describe("SidebarLayout — mobile section nav", () => {
     expect(onSettingsClick).toHaveBeenCalledTimes(1)
   })
 
+  it("opens the drawer on a host without matchMedia", async () => {
+    vi.stubGlobal("matchMedia", undefined)
+    const user = userEvent.setup()
+    renderShell()
+    await user.click(screen.getByRole("button", { name: "Open navigation" }))
+    expect(screen.getByRole("dialog")).toBeTruthy()
+  })
+
   it("exposes a menu trigger whenever the rail is hidden below a breakpoint", () => {
     renderShell()
     expect(screen.getByRole("button", { name: "Open navigation" })).toBeTruthy()

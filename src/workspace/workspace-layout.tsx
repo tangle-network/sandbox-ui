@@ -177,12 +177,12 @@ function readStoredLayout(key: string): WorkspaceLayoutStorage | null {
 
 function useDesktopMediaQuery(query: string) {
   const [matches, setMatches] = useState(() => {
-    if (typeof window === "undefined") return true;
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
     return window.matchMedia(query).matches;
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
 
     const media = window.matchMedia(query);
     const handleChange = (event: MediaQueryListEvent) => {

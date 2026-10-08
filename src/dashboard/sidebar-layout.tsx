@@ -281,6 +281,9 @@ function SidebarLayoutInner({
       setMobileNavOpen(false)
       return
     }
+    // Same guard as DashboardLayout: a host without matchMedia (jsdom, an old
+    // embedded webview) keeps the drawer open rather than crashing the effect.
+    if (typeof window.matchMedia !== "function") return
     const desktop = window.matchMedia(hideBelow === "md" ? "(min-width: 48rem)" : "(min-width: 64rem)")
     const closeOnDesktop = () => { if (desktop.matches) setMobileNavOpen(false) }
     closeOnDesktop()

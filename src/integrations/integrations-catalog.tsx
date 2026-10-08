@@ -251,7 +251,7 @@ export function IntegrationsCatalog({
               {connection?.detail ? <span className="w-full truncate text-[11px] leading-4 text-muted-foreground" title={connection.detail}>{connection.detail}</span> : null}
               {!compact ? <p className={cn("min-h-8 text-sm", TONES[connection?.statusTone ?? "neutral"])}>
                 {row.kind === "app" ? (row.installedCount ? `Installed · ${row.installedCount} ${row.installedCount === 1 ? "account" : "accounts"}` : "Not installed") :
-                  connection?.statusLabel ?? (active ? `${provider?.connections.length} accounts · select one to manage` : "Not connected")}
+                  connection?.statusLabel ?? (active ? `${provider?.connections.length} ${provider?.connections.length === 1 ? "account" : "accounts"} · select one to manage` : "Not connected")}
               </p> : null}
               {!compact ? <div className="mt-auto flex min-h-9 items-center gap-2 border-t border-border pt-3">
                 {row.kind === "app" ? <a href={row.to} className={cn("text-sm font-medium hover:underline", focusRing)}>{row.installedCount ? "Manage" : "Set up"}</a> :

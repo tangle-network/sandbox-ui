@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.131.1
+
+- `ApprovalQueue`'s filter bar is a `Toolbar`: shared `Select`s for format and status and a `DatePicker` for the bulk-approve schedule replace two native `<select>`s and an `<input type="date">` that rendered a `mm/dd/yyyy` mask on the page background. The filters carry visible labels and sit on the raised card surface at the 36px control height.
+- `./primitives` and the root forward ui 11.30's `Calendar`, `DatePicker`, `TimeSelect`, `RadioGroup` and `RadioGroupItem`, with their date helpers and prop types. Peer floors move to `@tangle-network/ui` ^11.30.0 and `@tangle-network/brand` ^1.19.2.
+
 ## 0.131.0
 
 - `AssetCard` takes `onOpen(id)`. When set, the thumbnail and card body are one click target with a pointer cursor, a hover border and shadow, an expand mark, and a keyboard focus ring; Edit, Reject and Approve keep their own actions. `ApprovalQueue` takes `onOpen(id, visibleIds)` and passes the ids it currently shows, in order, so a detail view can step to the previous and next asset.

@@ -1,5 +1,17 @@
 import * as React from "react";
-import { Button, Input } from "@tangle-network/ui/primitives";
+import {
+  Button,
+  DatePicker,
+  FilterField,
+  Input,
+  localToday,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Toolbar,
+} from "@tangle-network/ui/primitives";
 import { Search, CheckCheck } from "lucide-react";
 import { cn } from "../lib/utils";
 import { AssetCard } from "./asset-card";
@@ -63,6 +75,9 @@ export function ApprovalQueue({
   const [statusFilter, setStatusFilter] = React.useState("pending_review");
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [scheduleDate, setScheduleDate] = React.useState("");
+  const formatId = React.useId();
+  const statusId = React.useId();
+  const scheduleId = React.useId();
   const filtered = assets.filter((a) => {
     if (formatFilter !== "all" && a.format !== formatFilter) return false;
     if (statusFilter !== "all" && a.status !== statusFilter) return false;
@@ -120,49 +135,65 @@ export function ApprovalQueue({
   }
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative flex-1 min-w-40">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Filter assets…"
-            className="h-8 pl-7 text-sm"
-          />
-        </div>
-        <select
-          value={formatFilter}
-          onChange={(e) => setFormatFilter(e.target.value)}
-          className="h-8 px-2 text-xs rounded border border-input bg-background"
-        >
-          {FORMAT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-8 px-2 text-xs rounded border border-input bg-background"
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        {pendingCount > 0 && onApprove && (
-          <div className="flex items-center gap-1.5">
-            <input
-              type="date"
-              value={scheduleDate}
-              onChange={(e) => setScheduleDate(e.target.value)}
-              className="h-8 px-2 text-xs rounded border border-input bg-background w-32"
+      {/* One Toolbar row: shared Select and DatePicker on the raised field
+          surface, labelled filters, and the bulk action pinned to the end. */}
+      <Toolbar
+        className="mb-0"
+        search={
+          <div className="relative">
+            <Search size={14} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter assets…"
+              aria-label="Filter assets"
+              className="pl-9"
             />
-            <Button size="sm" variant="outline" onClick={handleBulkApprove} className="h-8 gap-1.5 text-xs">
-              <CheckCheck size={13} />
-              Approve all ({pendingCount})
-            </Button>
           </div>
-        )}
-      </div>
+        }
+        filters={
+          <>
+            <FilterField label="Format" htmlFor={formatId}>
+              <Select value={formatFilter} onValueChange={setFormatFilter}>
+                <SelectTrigger id={formatId} className="w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {FORMAT_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
+            <FilterField label="Status" htmlFor={statusId}>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger id={statusId} className="w-36"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FilterField>
+            {pendingCount > 0 && onApprove && (
+              <FilterField label="Schedule for" htmlFor={scheduleId}>
+                <DatePicker
+                  id={scheduleId}
+                  className="w-40"
+                  placeholder="Not scheduled"
+                  min={localToday()}
+                  value={scheduleDate}
+                  onChange={setScheduleDate}
+                />
+              </FilterField>
+            )}
+          </>
+        }
+        actions={pendingCount > 0 && onApprove ? (
+          <Button variant="outline" onClick={handleBulkApprove}>
+            <CheckCheck />
+            Approve all ({pendingCount})
+          </Button>
+        ) : undefined}
+      />
       {filtered.length === 0 ? (
         <div className="py-12 text-center text-sm text-muted-foreground">No assets match your filters.</div>
       ) : (

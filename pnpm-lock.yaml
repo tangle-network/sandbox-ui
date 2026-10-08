@@ -234,11 +234,11 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       '@tangle-network/brand':
-        specifier: 1.18.0
-        version: 1.18.0(react@19.3.0)
+        specifier: 1.19.2
+        version: 1.19.2(react@19.3.0)
       '@tangle-network/ui':
-        specifier: 11.28.0
-        version: 11.28.0(6e85831b6e2791041e6100abe9d3f845)
+        specifier: 11.30.0
+        version: 11.30.0(795c7844e88deb3bab05ae48543a034c)
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.3.0)
@@ -1415,6 +1415,19 @@ packages:
       '@types/react-dom':
         optional: true
 
+  '@radix-ui/react-radio-group@1.4.8':
+    resolution: {integrity: sha512-MaOOZ1TlaYoOeSDnHeVIONss0rp5ngOTY5HJY+Xkq16PAopnj21iU9r9m0O/77cBYu8Ksaq3BcjlaOdpbfbzzg==}
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+
   '@radix-ui/react-roving-focus@1.1.20':
     resolution: {integrity: sha512-+ZjbkU21fTSJdn4nq/IFKUdKS+JSZHORBZ8ma1f6YpOMNzRt0xf3sVAWVK/+ktHCajPy4HYDsyHXZIZmOMxzIA==}
     peerDependencies:
@@ -1898,8 +1911,8 @@ packages:
   '@tangle-network/agent-interface@3.0.0':
     resolution: {integrity: sha512-x7yZPT/gsQILyuLfoOFZJ4Xe3mtSpX59wPQ3JsC2dpeKCCaVJsTq/8QEZ02vr/8HuQMQ6RF71tKy21QT2vJl5Q==}
 
-  '@tangle-network/brand@1.18.0':
-    resolution: {integrity: sha512-OWTT6gDVCCEmLhOW5gjguE5fpuRsakw90VUovKVAEouumQn5Ru4BGogxeDOV7UnoIeLm5W64FfaeEJT40jKPTw==}
+  '@tangle-network/brand@1.19.2':
+    resolution: {integrity: sha512-f4jnuZBHp8uZctA5VU3eZ5IE19dTeYnXoynU5r0ZCFdYiPPcKhTX9B60KKfGMosNuYK7qkNuQn0+lwwCHH8fvw==}
     hasBin: true
     peerDependencies:
       react: '>=18'
@@ -1907,12 +1920,12 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/ui@11.28.0':
-    resolution: {integrity: sha512-5Y4ZMlmoVpqdKv0ENhmr8a70u95e2ibY1u5ihcd8IHJQQjePqKhpWu1owfmuv54sKdJYikyTQH4N7rzkEWKtkg==}
+  '@tangle-network/ui@11.30.0':
+    resolution: {integrity: sha512-qPF41JoovGWE98o2zc2kCTMjDRT/RyYTmliNhN/dACgFXKwTbB5jIU0Z7KkzAQqp3kVRNyS4tvoSRdkZaSdIGg==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <3.0.0'
-      '@tangle-network/brand': ^1.18.0
+      '@tangle-network/brand': ^1.19.2
       '@tiptap/core': '>=3.20.4 <4.0.0'
       '@tiptap/extension-collaboration': '>=3.20.4 <4.0.0'
       '@tiptap/extension-collaboration-caret': '>=3.7.0 <4.0.0'
@@ -5140,6 +5153,23 @@ snapshots:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
+  '@radix-ui/react-radio-group@1.4.8(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      '@radix-ui/primitive': 1.1.7
+      '@radix-ui/react-compose-refs': 1.1.5(@types/react@19.3.0)(react@19.3.0)
+      '@radix-ui/react-context': 1.2.2(@types/react@19.3.0)(react@19.3.0)
+      '@radix-ui/react-direction': 1.1.5(@types/react@19.3.0)(react@19.3.0)
+      '@radix-ui/react-presence': 1.1.11(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-primitive': 2.1.11(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-roving-focus': 1.1.20(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-use-controllable-state': 1.2.6(@types/react@19.3.0)(react@19.3.0)
+      '@radix-ui/react-use-size': 1.1.5(@types/react@19.3.0)(react@19.3.0)
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
+
   '@radix-ui/react-roving-focus@1.1.20(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@radix-ui/primitive': 1.1.7
@@ -5573,11 +5603,11 @@ snapshots:
       spdx-expression-parse: 5.0.0
       zod: 4.6.5
 
-  '@tangle-network/brand@1.18.0(react@19.3.0)':
+  '@tangle-network/brand@1.19.2(react@19.3.0)':
     optionalDependencies:
       react: 19.3.0
 
-  '@tangle-network/ui@11.28.0(6e85831b6e2791041e6100abe9d3f845)':
+  '@tangle-network/ui@11.30.0(795c7844e88deb3bab05ae48543a034c)':
     dependencies:
       '@pierre/theme': 1.1.0
       '@pierre/trees': 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(shiki@4.4.3)
@@ -5591,6 +5621,7 @@ snapshots:
       '@radix-ui/react-label': 2.1.16(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-popover': 1.2.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-progress': 1.1.17(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@radix-ui/react-radio-group': 1.4.8(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-select': 2.3.8(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-separator': 1.1.16(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-slider': 1.5.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -5598,7 +5629,7 @@ snapshots:
       '@radix-ui/react-switch': 1.3.8(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-tabs': 1.1.22(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@radix-ui/react-tooltip': 1.3.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@tangle-network/brand': 1.18.0(react@19.3.0)
+      '@tangle-network/brand': 1.19.2(react@19.3.0)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       github-slugger: 2.0.0

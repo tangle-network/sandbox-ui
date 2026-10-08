@@ -54,6 +54,7 @@ const presentationNames = [
   "TableBody", "TableFooter", "TableHead", "TableRow", "TableCell", "TableCaption",
   "StatusPill", "Tag", "Chip", "IconTile", "toneFor",
   "Button", "Input", "Textarea", "SelectTrigger", "Label", "HelpText",
+  "Calendar", "DatePicker", "TimeSelect", "RadioGroup", "RadioGroupItem",
 ] as const;
 
 const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [

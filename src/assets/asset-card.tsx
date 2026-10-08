@@ -42,6 +42,9 @@ export function videoPosterUrl(content: VideoContent): string | null {
   return null;
 }
 
+// Text that runs past a thumbnail fades out instead of stopping halfway through a line.
+const FADE_OUT = "[mask-image:linear-gradient(to_bottom,black_75%,transparent)]";
+
 function formatDuration(seconds: number): string {
   const whole = Math.max(0, Math.round(seconds));
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
@@ -64,14 +67,14 @@ function Thumbnail({ spec }: { spec: AssetSpec }) {
     return (
       <div className="flex h-full flex-col p-3">
         <div className="flex h-full flex-col overflow-hidden rounded-md border border-border bg-card shadow-sm">
-          <div className="flex flex-col gap-0.5 border-b border-border px-3 py-2">
+          <div className="flex shrink-0 flex-col gap-0.5 border-b border-border px-3 py-2">
             <div className="truncate text-xs text-muted-foreground">{brand.businessName}</div>
             <div className="line-clamp-2 text-sm font-semibold leading-snug">{ec.subject}</div>
             {ec.preheader && <div className="truncate text-xs text-muted-foreground">{ec.preheader}</div>}
           </div>
-          <div className="flex flex-1 flex-col gap-1 overflow-hidden px-3 py-2" style={{ background: palette.paper, color: palette.ink, fontFamily: brand.fontFamily }}>
-            {hero?.type === "hero" && <div className="line-clamp-2 text-sm font-bold leading-snug" style={{ color: palette.accent }}>{hero.headline}</div>}
-            {body?.type === "body" && <div className="line-clamp-4 text-xs leading-relaxed opacity-75">{body.text}</div>}
+          <div className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-3 py-2", FADE_OUT)} style={{ background: palette.paper, color: palette.ink, fontFamily: brand.fontFamily }}>
+            {hero?.type === "hero" && <div className="line-clamp-2 shrink-0 text-sm font-bold leading-snug" style={{ color: palette.accent }}>{hero.headline}</div>}
+            {body?.type === "body" && <div className="text-xs leading-relaxed opacity-75">{body.text}</div>}
           </div>
         </div>
       </div>
@@ -114,9 +117,9 @@ function Thumbnail({ spec }: { spec: AssetSpec }) {
     const cc = content as CopyContent;
     return (
       <div className="flex h-full flex-col gap-2 overflow-hidden p-4">
-        <span className="text-xs font-medium text-muted-foreground">{COPY_PLATFORM_LABEL[cc.platform] ?? cc.platform}</span>
-        {cc.headline && <div className="line-clamp-3 text-base font-semibold leading-snug">{cc.headline}</div>}
-        <div className="line-clamp-5 text-sm leading-relaxed text-muted-foreground">{cc.body}</div>
+        <span className="shrink-0 text-xs font-medium text-muted-foreground">{COPY_PLATFORM_LABEL[cc.platform] ?? cc.platform}</span>
+        {cc.headline && <div className="line-clamp-2 shrink-0 text-base font-semibold leading-snug sm:line-clamp-3">{cc.headline}</div>}
+        <div className={cn("min-h-0 flex-1 overflow-hidden text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]", FADE_OUT)}>{cc.body}</div>
       </div>
     );
   }
@@ -157,8 +160,8 @@ export function AssetCard({ spec, variantCount, onApprove, onReject, onEdit, onO
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2 px-2.5 py-2">
-        <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{formatLabel}</span>
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-2.5 py-2">
+        <span className="min-w-0 truncate text-xs text-muted-foreground">{formatLabel}</span>
         <Badge variant={STATUS_VARIANT[spec.status]} className="shrink-0 text-xs">{statusLabel}</Badge>
         {variantCount !== undefined && variantCount > 0 && (
           <span className="flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground">

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.131.3
+
+- `AssetCard` thumbnails keep whole lines on a phone: email and copy text that runs past the thumbnail fades out instead of stopping halfway through a line, and headlines no longer shrink under the body. The format label and status badge wrap onto two lines when the card is narrow instead of cutting the label short.
+
 ## 0.131.2
 
 - `EmailPreview` reads like a received email: the sender, subject and inbox line, then the body on the brand's page and typeface. A brand whose text colour is light gets a dark page; brand colours that would not read on the page fall back to its ink, and button labels take the more legible of white or near-black.

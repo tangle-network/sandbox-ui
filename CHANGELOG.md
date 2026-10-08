@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.130.1
+
+- `WorkspaceFilesPane` reports folder clicks again: `onSelect` fires on every folder row click with the folder's path and a trailing `/` (for example `research/`) and its directory node, as it did under `RichFileTree`, while the folder expands or collapses. 0.130.0 had stopped calling it for folders. `VaultTree` adds `onFolderSelect` for the same event.
+
 ## 0.130.0
 
 - New `./vault-tree` entry (also on the root): `VaultTree`, the file tree the vault page and Files panels share. Folders start collapsed; `storageKey` remembers the reader's expansion in this browser (`localStorage`, `tangle:vault-tree:<key>`); opening or linking to a file reveals only that file's folders; only open folders' children render, 200 at a time; ARIA tree keyboard navigation with one tab stop. With `fileTreeFromPaths` and `filterFileNodes`.

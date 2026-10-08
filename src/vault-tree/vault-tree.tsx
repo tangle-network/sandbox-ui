@@ -47,6 +47,11 @@ export interface VaultTreeProps {
   /** Called after the reader expands or collapses a folder. */
   onFolderToggle?: (path: string, expanded: boolean) => void
   /**
+   * Called every time the reader activates a folder row (click, Enter or
+   * Space), whether or not that changes its expansion, as when filtering.
+   */
+  onFolderSelect?: (path: string) => void
+  /**
    * Remembers folder expansion in this browser under this key, for example
    * `${userId}:${workspaceId}`. Omit to keep expansion for the mounted tree only.
    */
@@ -153,6 +158,7 @@ export function VaultTree({
   activeFolder,
   onSelect,
   onFolderToggle,
+  onFolderSelect,
   storageKey,
   expandAll = false,
   label = 'Files',
@@ -292,9 +298,11 @@ export function VaultTree({
 
   const activate = useCallback((node: FileNode) => {
     setFocusedPath(node.path)
-    if (node.type === 'directory') setFolderOpen(node.path, !isOpen(node.path))
-    else onSelect(node.path)
-  }, [isOpen, onSelect, setFolderOpen])
+    if (node.type === 'directory') {
+      setFolderOpen(node.path, !isOpen(node.path))
+      onFolderSelect?.(node.path)
+    } else onSelect(node.path)
+  }, [isOpen, onSelect, onFolderSelect, setFolderOpen])
 
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>, node: FileNode) => {
     const at = nodeRows.findIndex((row) => row.node.path === node.path)

@@ -80,9 +80,42 @@ describe("WorkspaceFilesPane", () => {
     const { getByRole } = render(<WorkspaceFilesPane root={root} onSelect={onSelect} />);
     expect(getByRole("treeitem", { name: "drafts" })).toBeVisible();
     await user.click(getByRole("treeitem", { name: "campaigns" }));
-    expect(onSelect).not.toHaveBeenCalled();
+    expect(onSelect).toHaveBeenLastCalledWith("campaigns/", root.children![0]);
     await user.click(getByRole("treeitem", { name: "plan.md" }));
-    expect(onSelect).toHaveBeenCalledWith("campaigns/plan.md", file);
+    expect(onSelect).toHaveBeenLastCalledWith("campaigns/plan.md", file);
+  });
+
+  // The pre-0.130 contract, pinned: agent-dev-container's sandbox workspace
+  // forwards every selection that carries a node (`if (node) directory.onSelect(path, node)`),
+  // so a folder click must still arrive, with RichFileTree's trailing-slash path,
+  // on every click whether it expands, collapses, or the tree is filtered.
+  it("reports every folder click with its trailing-slash path and node, as consumers relied on", async () => {
+    const forwarded: Array<[string, FileNode["type"]]> = [];
+    const directory = { onSelect: (path: string, node: FileNode) => forwarded.push([path, node.type]) };
+    const user = userEvent.setup();
+    const { getByRole } = render(<WorkspaceFilesPane
+      root={{ name: "workspace", path: "", type: "directory", children: [
+        { name: "src", path: "src", type: "directory", children: [{ name: "index.ts", path: "src/index.ts", type: "file" }] },
+        { name: "notes.txt", path: "notes.txt", type: "file" },
+      ] }}
+      onSelect={(path, node) => { if (node) directory.onSelect(path, node); }}
+    />);
+    await user.click(getByRole("treeitem", { name: "src" }));
+    await user.click(getByRole("treeitem", { name: "index.ts" }));
+    await user.click(getByRole("treeitem", { name: "src" }));
+    getByRole("treeitem", { name: "src" }).focus();
+    await user.keyboard("{Enter}");
+    fireEvent.change(getByRole("searchbox", { name: "Search files" }), { target: { value: "index" } });
+    await user.click(getByRole("treeitem", { name: "src" }));
+    await user.click(getByRole("treeitem", { name: "index.ts" }));
+    expect(forwarded).toEqual([
+      ["src/", "directory"],
+      ["src/index.ts", "file"],
+      ["src/", "directory"],
+      ["src/", "directory"],
+      ["src/", "directory"],
+      ["src/index.ts", "file"],
+    ]);
   });
 
   it("selects current root metadata after a listing refresh", () => {

@@ -20,7 +20,12 @@ type WorkspaceFilesSource =
 export type WorkspaceFilesPaneProps = WorkspaceFilesSource & {
   /** The open file. Its row is selected and its folders are revealed when it changes. */
   selectedPath?: string;
-  /** Called when the reader opens a file. Folder rows expand and collapse instead. */
+  /**
+   * Called when the reader opens a file, and on every folder row click (the
+   * folder also expands or collapses). A folder's path carries a trailing `/`,
+   * as it did when this pane rendered RichFileTree; check `node.type` to tell
+   * them apart.
+   */
   onSelect?: (path: string, node?: FileNode) => void;
   preview?: WorkspaceFilesPreview;
   onBack?: () => void;
@@ -162,6 +167,7 @@ export function WorkspaceFilesPane({
                   if (treeRef.current) returnFocusRef.current = activeElementWithin(treeRef.current);
                   onSelect?.(path, index.get(path));
                 }}
+                onFolderSelect={(path) => onSelect?.(`${path}/`, index.get(path))}
                 storageKey={expansionKey}
                 expandAll={query.trim().length > 0}
                 label={label}

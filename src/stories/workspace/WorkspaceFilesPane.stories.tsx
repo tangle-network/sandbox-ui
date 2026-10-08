@@ -21,6 +21,7 @@ function FilesAndPreview() {
       selectedPath={selected}
       onSelect={(path) => { if (!path.endsWith("/") && path.includes(".")) setSelected(path); }}
       onBack={() => setSelected(undefined)}
+      expansionKey="storybook:workspace-files"
       preview={selected ? {
         path: selected,
         actions: <a href="#download" className="text-sm text-primary">Download</a>,

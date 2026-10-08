@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.130.0
+
+- New `./vault-tree` entry (also on the root): `VaultTree`, the file tree the vault page and Files panels share. Folders start collapsed; `storageKey` remembers the reader's expansion in this browser (`localStorage`, `tangle:vault-tree:<key>`); opening or linking to a file reveals only that file's folders; only open folders' children render, 200 at a time; ARIA tree keyboard navigation with one tab stop. With `fileTreeFromPaths` and `filterFileNodes`.
+- `WorkspaceFilesPane` renders `VaultTree` in a contained surface (card, border, header with `label` and `headerActions`, a name filter) instead of `RichFileTree`, so companion Files panels start collapsed. New `expansionKey` remembers expansion; pass the vault page's `treeStateKey` to share one expansion with it. `onSelect` now fires for files only; folder rows expand and collapse. The `RichFileTree` pass-through props (`initialExpansion`, `gitStatus`, `renderContextMenu`, `themeOverrides`, `header`, `height`) are removed; `search`, `className` and `style` remain.
+
 ## 0.129.2
 
 - `SidebarLayout`'s mobile drawer and `WorkspaceLayout`'s desktop query skip their media-query listeners where `window.matchMedia` is missing (jsdom, older embedded webviews), as `DashboardLayout` already did, instead of throwing from an effect.

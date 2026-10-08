@@ -86,6 +86,18 @@ describe('VaultTree — collapsed by default', () => {
     expect(onFolderToggle).toHaveBeenLastCalledWith('playbooks', false)
   })
 
+  it('reports every folder activation, including while every folder is shown open', () => {
+    const onFolderSelect = vi.fn()
+    const { rerender } = mountTree({ onFolderSelect })
+    fireEvent.click(row('playbooks'))
+    fireEvent.click(row('playbooks'))
+    expect(onFolderSelect.mock.calls).toEqual([['playbooks'], ['playbooks']])
+    rerender(createElement(VaultTree, { root: ROOT, onSelect: vi.fn(), onFolderSelect, expandAll: true }))
+    fireEvent.click(row('research'))
+    expect(onFolderSelect).toHaveBeenLastCalledWith('research')
+    expect(row('research').getAttribute('aria-expanded')).toBe('true')
+  })
+
   it('opens a file on click without touching folders', () => {
     const { onSelect, onFolderToggle } = mountTree()
     fireEvent.click(row('readme.md'))

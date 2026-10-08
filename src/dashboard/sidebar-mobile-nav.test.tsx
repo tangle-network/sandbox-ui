@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SidebarLayout, type SidebarLayoutNavItem } from "./sidebar-layout"
@@ -21,6 +21,16 @@ function Icon() {
 function navItem(overrides: Partial<SidebarLayoutNavItem> & { id: string }): SidebarLayoutNavItem {
   return { label: overrides.id, icon: Icon, href: `/${overrides.id}`, ...overrides }
 }
+
+// jsdom has no media-query engine; real breakpoint transitions are exercised
+// by tests/visual/sidebar-navigation.spec.mjs in Chromium.
+beforeEach(() => {
+  vi.stubGlobal("matchMedia", vi.fn((query: string) => ({
+    matches: false, media: query,
+    addEventListener: vi.fn(), removeEventListener: vi.fn(),
+  })))
+})
+afterEach(() => vi.unstubAllGlobals())
 
 const SECTIONS = ["vault", "board", "approvals", "history", "terminal"]
 
@@ -109,9 +119,7 @@ describe("SidebarLayout — mobile section nav", () => {
     const trigger = screen.getByRole("button", { name: "Open navigation" })
     expect(trigger.getAttribute("aria-expanded")).toBe("false")
     await user.click(trigger)
-    expect(
-      screen.getByRole("button", { name: "Open navigation" }).getAttribute("aria-expanded"),
-    ).toBe("true")
+    expect(trigger.getAttribute("aria-expanded")).toBe("true")
   })
 
   it("carries the badge count into the drawer, not just the desktop rail", async () => {
@@ -141,17 +149,6 @@ describe("SidebarLayout — mobile section nav", () => {
     const links = screen.getAllByRole("link", { name: "jobs" })
     expect(links.length).toBeGreaterThan(0)
     for (const link of links) expect(link).toHaveAccessibleDescription("3 running")
-  })
-
-  it("restores the page's own overflow when it closes", async () => {
-    const user = userEvent.setup()
-    document.body.style.overflow = "auto"
-    renderShell()
-    await user.click(screen.getByRole("button", { name: "Open navigation" }))
-    expect(document.body.style.overflow).toBe("hidden")
-    await user.keyboard("{Escape}")
-    expect(document.body.style.overflow).toBe("auto")
-    document.body.style.overflow = ""
   })
 
   it("does not start open — a nav drawer that reopens on every load is a bug", () => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.128.3
+
+- The mobile workspace drawer uses the shared Radix modal layer. Escape dismisses a nested account/Appearance menu before navigation, Tab stays in the active disclosure, and closing navigation restores focus to its opener. Crossing the desktop breakpoint closes the drawer and releases the page. Desktop navigation and public props are unchanged.
+- Restore supported Radix dependency floors: dialog ^1.1.23, dropdown-menu ^2.1.24 and select ^2.3.7. These are the ui 11.26 peer cohort and allow consumers with a release-age policy to retain their qualified versions; newer compatible versions remain supported.
+
 ## 0.128.2
 
 - A create-only agent profile picker no longer offers an Edit action that cannot save. Apps can enable profile creation without implementing profile updates.

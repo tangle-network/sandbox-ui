@@ -63,6 +63,7 @@ const base = {
   logoHref: "/",
   user: { name: "Drew Stone", email: "drew@tangle.tools" },
   onLogout: () => {},
+  appearance: { value: "system", onChange: () => {} },
   contentClassName: "flex h-screen flex-col overflow-hidden",
   children: <Body />,
 } satisfies Partial<React.ComponentProps<typeof SidebarLayout>>

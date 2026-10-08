@@ -2,6 +2,8 @@ import { Badge } from "@tangle-network/ui/primitives";
 import { Check, X, Pencil, GitBranch, Maximize2, Play } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ImagePreview } from "./preview/image-preview";
+import { emailPalette } from "./preview/email-preview";
+import { COPY_PLATFORM_LABEL } from "./preview/copy-preview";
 import { ASSET_FORMAT_LABEL, ASSET_STATUS_LABEL } from "./labels";
 import type { AssetSpec, AssetStatus, CopyContent, EmailContent, ImageContent, VideoContent } from "./types";
 
@@ -56,10 +58,22 @@ function Thumbnail({ spec }: { spec: AssetSpec }) {
   const { format, brand, content } = spec;
   if (format === "email") {
     const ec = content as EmailContent;
+    const palette = emailPalette(brand);
+    const hero = ec.sections.find((section) => section.type === "hero");
+    const body = ec.sections.find((section) => section.type === "body");
     return (
-      <div className="flex h-full flex-col gap-1 p-3 text-sm">
-        <div className="line-clamp-3 font-medium">{ec.subject}</div>
-        <div className="text-xs text-muted-foreground">{ec.sections.length} sections</div>
+      <div className="flex h-full flex-col p-3">
+        <div className="flex h-full flex-col overflow-hidden rounded-md border border-border bg-card shadow-sm">
+          <div className="flex flex-col gap-0.5 border-b border-border px-3 py-2">
+            <div className="truncate text-xs text-muted-foreground">{brand.businessName}</div>
+            <div className="line-clamp-2 text-sm font-semibold leading-snug">{ec.subject}</div>
+            {ec.preheader && <div className="truncate text-xs text-muted-foreground">{ec.preheader}</div>}
+          </div>
+          <div className="flex flex-1 flex-col gap-1 overflow-hidden px-3 py-2" style={{ background: palette.paper, color: palette.ink, fontFamily: brand.fontFamily }}>
+            {hero?.type === "hero" && <div className="line-clamp-2 text-sm font-bold leading-snug" style={{ color: palette.accent }}>{hero.headline}</div>}
+            {body?.type === "body" && <div className="line-clamp-4 text-xs leading-relaxed opacity-75">{body.text}</div>}
+          </div>
+        </div>
       </div>
     );
   }
@@ -67,7 +81,7 @@ function Thumbnail({ spec }: { spec: AssetSpec }) {
     const ic = content as ImageContent;
     const url = imageOnlyUrl(ic);
     if (url) {
-      return <img src={url} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />;
+      return <img src={url} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain p-2" />;
     }
     return (
       <div className="h-full overflow-hidden">
@@ -81,7 +95,7 @@ function Thumbnail({ spec }: { spec: AssetSpec }) {
     return (
       <div className="relative h-full w-full">
         {poster ? (
-          <img src={poster} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
+          <img src={poster} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain p-2" />
         ) : (
           <div className="flex h-full flex-col gap-1 p-3 text-sm">
             <div className="font-medium">{vc.scenes.length} scenes</div>
@@ -99,9 +113,10 @@ function Thumbnail({ spec }: { spec: AssetSpec }) {
   if (format.startsWith("copy:")) {
     const cc = content as CopyContent;
     return (
-      <div className="flex h-full flex-col gap-1 p-3 text-sm">
-        <div className="line-clamp-2 font-medium">{cc.headline}</div>
-        <div className="line-clamp-4 text-xs text-muted-foreground">{cc.body}</div>
+      <div className="flex h-full flex-col gap-2 overflow-hidden p-4">
+        <span className="text-xs font-medium text-muted-foreground">{COPY_PLATFORM_LABEL[cc.platform] ?? cc.platform}</span>
+        {cc.headline && <div className="line-clamp-3 text-base font-semibold leading-snug">{cc.headline}</div>}
+        <div className="line-clamp-5 text-sm leading-relaxed text-muted-foreground">{cc.body}</div>
       </div>
     );
   }

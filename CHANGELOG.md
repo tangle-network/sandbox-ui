@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.131.2
+
+- `EmailPreview` reads like a received email: the sender, subject and inbox line, then the body on the brand's page and typeface. A brand whose text colour is light gets a dark page; brand colours that would not read on the page fall back to its ink, and button labels take the more legible of white or near-black.
+- `CopyPreview` is a typographic card: the channel and its character budget, the headline, the body and its hashtags. `COPY_PLATFORM_LABEL` names each channel.
+- `AssetCard` thumbnails follow the same rules: images and video posters fit whole inside the frame with a margin, an email shows its sender, subject, inbox line and opening, and copy shows its channel, headline and body.
+- New export: `emailPalette`.
+
 ## 0.131.1
 
 - `ApprovalQueue`'s filter bar is a `Toolbar`: shared `Select`s for format and status and a `DatePicker` for the bulk-approve schedule replace two native `<select>`s and an `<input type="date">` that rendered a `mm/dd/yyyy` mask on the page background. The filters carry visible labels and sit on the raised card surface at the 36px control height.

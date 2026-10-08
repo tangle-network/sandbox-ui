@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.131.0
+
+- `AssetCard` takes `onOpen(id)`. When set, the thumbnail and card body are one click target with a pointer cursor, a hover border and shadow, an expand mark, and a keyboard focus ring; Edit, Reject and Approve keep their own actions. `ApprovalQueue` takes `onOpen(id, visibleIds)` and passes the ids it currently shows, in order, so a detail view can step to the previous and next asset.
+- Card thumbnails show a one-picture image slide as the image itself, fitted to a square, and a video's poster frame with a play mark and its length. Format and status read as words ("Feed image", "Pending review") at 12px or larger.
+- New exports: `ASSET_FORMAT_LABEL`, `ASSET_STATUS_LABEL`, `imageOnlyUrl` and `videoPosterUrl`.
+
 ## 0.130.1
 
 - `WorkspaceFilesPane` reports folder clicks again: `onSelect` fires on every folder row click with the folder's path and a trailing `/` (for example `research/`) and its directory node, as it did under `RichFileTree`, while the folder expands or collapses. 0.130.0 had stopped calling it for folders. `VaultTree` adds `onFolderSelect` for the same event.

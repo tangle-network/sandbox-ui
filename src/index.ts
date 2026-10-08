@@ -256,6 +256,7 @@ export {
 
 // --- Files ---
 export * from "./files";
+export * from "./vault-tree";
 
 // --- Dashboard ---
 export * from "./dashboard";

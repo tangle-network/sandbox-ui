@@ -12,6 +12,7 @@ export default defineConfig({
     "workbench/embedded-app": "src/workbench/embedded-app.ts",
     openui: "src/openui/index.ts",
     files: "src/files/index.ts",
+    "vault-tree": "src/vault-tree/index.ts",
     dashboard: "src/dashboard/index.ts",
     editor: "src/editor/index.ts",
     terminal: "src/terminal/index.ts",

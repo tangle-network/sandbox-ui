@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import type { FileNode } from "@tangle-network/ui/files";
@@ -7,81 +7,81 @@ import { WorkspaceFilesPane } from "./workspace-files-pane";
 
 const paths = ["campaigns/outreach.md", "campaigns/plan.md", "research/sources.md"];
 
-function treeShadow(container: HTMLElement): ShadowRoot {
-  const element = Array.from(container.querySelectorAll("*")).find((node) => node.shadowRoot);
-  if (!element?.shadowRoot) throw new Error("Expected the real RichFileTree shadow root");
-  return element.shadowRoot;
-}
-
-function queryInput(shadow: ShadowRoot): HTMLInputElement {
-  const input = shadow.querySelector("input");
-  if (!input) throw new Error("Expected native file search");
-  return input;
-}
+beforeEach(() => window.localStorage.clear());
 
 describe("WorkspaceFilesPane", () => {
-  it("renders the native searchable path tree and preserves it through a preview", async () => {
+  it("starts collapsed in its own surface, filters, previews, and returns to the same tree", async () => {
     function Consumer() {
       const [path, setPath] = useState<string>();
       return <WorkspaceFilesPane
         paths={paths}
         selectedPath={path}
-        onSelect={(next) => { if (!next.endsWith("/")) setPath(next); }}
+        onSelect={setPath}
         preview={path ? { path, content: <article>Reviewed output</article>, actions: <button>Download</button> } : undefined}
         onBack={() => setPath(undefined)}
       />;
     }
     const user = userEvent.setup();
     const { container, getByRole, getByText, queryByRole } = render(<Consumer />);
-    const shadow = treeShadow(container);
-    const search = queryInput(shadow);
-    const folder = shadow.querySelector('[data-item-path="research/"]');
-    if (!folder) throw new Error("Expected the research folder");
-    await user.click(folder);
-    await waitFor(() => expect(shadow.querySelector('[data-item-path="research/"]')).toHaveAttribute("aria-expanded", "false"));
-    fireEvent.input(search, { target: { value: "outreach" } });
-    await waitFor(() => expect(shadow.querySelector('[data-item-path="campaigns/outreach.md"]')).not.toBeNull());
-    expect(search.value).toBe("outreach");
-    const row = shadow.querySelector('[data-item-path="campaigns/outreach.md"]');
-    if (!row) throw new Error(shadow.innerHTML.replace(/<style[\s\S]*?<\/style>/g, ""));
+    const surface = getByRole("region", { name: "Files" });
+    expect(surface).toHaveAttribute("data-workspace-files-surface");
+    const tree = within(surface).getByRole("tree");
+    expect(within(tree).getByRole("treeitem", { name: "campaigns" })).toHaveAttribute("aria-expanded", "false");
+    expect(within(tree).getByRole("treeitem", { name: "research" })).toHaveAttribute("aria-expanded", "false");
+    expect(within(tree).queryByRole("treeitem", { name: "outreach.md" })).toBeNull();
+
+    const search = getByRole("searchbox", { name: "Search files" });
+    fireEvent.change(search, { target: { value: "outreach" } });
+    const row = within(tree).getByRole("treeitem", { name: "outreach.md" });
+    expect(within(tree).queryByRole("treeitem", { name: "sources.md" })).toBeNull();
     await user.click(row);
-    await waitFor(() => expect(getByText("Reviewed output")).toBeVisible());
+    expect(getByText("Reviewed output")).toBeVisible();
     expect(getByRole("button", { name: "Back to files" })).toHaveFocus();
     expect(getByRole("button", { name: "Download" })).toBeVisible();
     expect(container.querySelector('[aria-label="Workspace files"]')).toHaveAttribute("hidden");
+
     await user.click(getByRole("button", { name: "Back to files" }));
     expect(queryByRole("article")).not.toBeInTheDocument();
-    expect(treeShadow(container)).toBe(shadow);
-    expect(queryInput(shadow)).toBe(search);
-    // Native tree search ends when a result is selected; navigation does not reset the tree.
-    expect(search.value).toBe("");
-    expect(shadow.querySelector('[data-item-path="research/"]')).toHaveAttribute("aria-expanded", "false");
-    const treeRegion = container.querySelector('[aria-label="Workspace files"]');
-    expect(treeRegion).not.toHaveAttribute("hidden");
-    expect(treeRegion === document.activeElement || treeRegion?.contains(document.activeElement)).toBe(true);
-    const sameFile = shadow.querySelector('[data-item-path="campaigns/outreach.md"]');
-    if (!sameFile) throw new Error("Expected the previously opened file");
-    await user.click(sameFile);
-    await waitFor(() => expect(getByText("Reviewed output")).toBeVisible());
-    await user.click(getByRole("button", { name: "Back to files" }));
-    expect(shadow.activeElement).toBe(sameFile);
+    // The tree, its filter and its focus survive the preview.
+    expect((getByRole("searchbox", { name: "Search files" }) as HTMLInputElement).value).toBe("outreach");
+    expect(document.activeElement).toBe(getByRole("treeitem", { name: "outreach.md" }));
     await user.keyboard("{Enter}");
-    await waitFor(() => expect(getByText("Reviewed output")).toBeVisible());
+    expect(getByText("Reviewed output")).toBeVisible();
   });
 
-  it("retains root node metadata and empty directories", async () => {
+  it("expands on click and remembers expansion under expansionKey across a remount", async () => {
+    const user = userEvent.setup();
+    const first = render(<WorkspaceFilesPane paths={paths} expansionKey="user-1:ws-1" />);
+    await user.click(first.getByRole("treeitem", { name: "research" }));
+    expect(first.getByRole("treeitem", { name: "research" })).toHaveAttribute("aria-expanded", "true");
+    expect(first.getByRole("treeitem", { name: "sources.md" })).toBeVisible();
+    first.unmount();
+
+    const second = render(<WorkspaceFilesPane paths={paths} expansionKey="user-1:ws-1" />);
+    expect(second.getByRole("treeitem", { name: "research" })).toHaveAttribute("aria-expanded", "true");
+    expect(second.getByRole("treeitem", { name: "campaigns" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("reveals only the selected file's folders", () => {
+    const { getByRole } = render(<WorkspaceFilesPane paths={paths} selectedPath="research/sources.md" />);
+    expect(getByRole("treeitem", { name: "research" })).toHaveAttribute("aria-expanded", "true");
+    expect(getByRole("treeitem", { name: "sources.md" })).toHaveAttribute("aria-selected", "true");
+    expect(getByRole("treeitem", { name: "campaigns" })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("reports files with their root metadata and keeps empty directories", async () => {
     const file: FileNode = { name: "plan.md", path: "campaigns/plan.md", type: "file", size: 64 };
     const root: FileNode = { name: "workspace", path: "", type: "directory", children: [
       { name: "campaigns", path: "campaigns", type: "directory", children: [file] },
       { name: "drafts", path: "drafts", type: "directory", children: [] },
     ] };
     const onSelect = vi.fn();
-    const { container } = render(<WorkspaceFilesPane root={root} onSelect={onSelect} />);
-    const shadow = treeShadow(container);
-    await waitFor(() => expect(shadow.querySelector('[data-item-path="drafts/"]')).not.toBeNull());
-    const fileRow = shadow.querySelector('[data-item-path="campaigns/plan.md"]');
-    if (!fileRow) throw new Error(shadow.innerHTML.replace(/<style[\s\S]*?<\/style>/g, ""));
-    fireEvent.click(fileRow);
+    const user = userEvent.setup();
+    const { getByRole } = render(<WorkspaceFilesPane root={root} onSelect={onSelect} />);
+    expect(getByRole("treeitem", { name: "drafts" })).toBeVisible();
+    await user.click(getByRole("treeitem", { name: "campaigns" }));
+    expect(onSelect).not.toHaveBeenCalled();
+    await user.click(getByRole("treeitem", { name: "plan.md" }));
     expect(onSelect).toHaveBeenCalledWith("campaigns/plan.md", file);
   });
 
@@ -90,11 +90,9 @@ describe("WorkspaceFilesPane", () => {
     const currentFile: FileNode = { ...oldFile, size: 128 };
     const oldCallback = vi.fn();
     const currentCallback = vi.fn();
-    const { container, rerender } = render(<WorkspaceFilesPane root={oldFile} onSelect={oldCallback} />);
+    const { getByRole, rerender } = render(<WorkspaceFilesPane root={oldFile} onSelect={oldCallback} />);
     rerender(<WorkspaceFilesPane root={currentFile} onSelect={currentCallback} />);
-    const fileRow = treeShadow(container).querySelector('[data-item-path="plan.md"]');
-    if (!fileRow) throw new Error("Expected the refreshed file");
-    fireEvent.click(fileRow);
+    fireEvent.click(getByRole("treeitem", { name: "plan.md" }));
     expect(currentCallback).toHaveBeenCalledWith("plan.md", currentFile);
     expect(oldCallback).not.toHaveBeenCalled();
   });
@@ -113,9 +111,17 @@ describe("WorkspaceFilesPane", () => {
     expect(queryByText("No files yet")).not.toBeInTheDocument();
   });
 
-  it("keeps a named empty directory instead of replacing it with an empty state", async () => {
-    const { container, queryByText } = render(<WorkspaceFilesPane root={{ name: "drafts", path: "drafts", type: "directory" }} />);
-    await waitFor(() => expect(treeShadow(container).querySelector('[data-item-path="drafts/"]')).not.toBeNull());
+  it("keeps a named empty directory instead of replacing it with an empty state", () => {
+    const { getByRole, queryByText } = render(<WorkspaceFilesPane root={{ name: "drafts", path: "drafts", type: "directory" }} />);
+    expect(getByRole("treeitem", { name: "drafts" })).toBeVisible();
     expect(queryByText("No files yet")).not.toBeInTheDocument();
+  });
+
+  it("says when the filter matches nothing and clears it", () => {
+    const { getByRole, getByText } = render(<WorkspaceFilesPane paths={paths} />);
+    fireEvent.change(getByRole("searchbox", { name: "Search files" }), { target: { value: "zzz" } });
+    expect(getByText("No files match “zzz”.")).toBeVisible();
+    fireEvent.click(getByRole("button", { name: "Clear search" }));
+    expect(getByRole("treeitem", { name: "campaigns" })).toBeVisible();
   });
 });

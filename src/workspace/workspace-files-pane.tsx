@@ -1,8 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowLeft, FolderOpen } from "lucide-react";
 import type { FileNode } from "@tangle-network/ui/files";
-import { EmptyState } from "@tangle-network/ui/primitives";
-import { focusRing } from "@tangle-network/ui/utils";
+import { Button, EmptyState, Input } from "@tangle-network/ui/primitives";
 import { cn } from "../lib/utils";
 import { VaultTree } from "../vault-tree/vault-tree";
 import { fileTreeFromPaths, filterFileNodes } from "../vault-tree/tree-data";
@@ -135,13 +134,13 @@ export function WorkspaceFilesPane({
           </div>
           {search && !isEmpty && (
             <div className="shrink-0 px-3 pb-2">
-              <input
+              <Input
                 type="search"
+                size="sm"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={`Search ${label.toLowerCase()}…`}
                 aria-label={`Search ${label.toLowerCase()}`}
-                className="h-8 w-full rounded-md border border-border bg-input px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:text-base"
               />
             </div>
           )}
@@ -151,13 +150,9 @@ export function WorkspaceFilesPane({
             ) : visible.length === 0 ? (
               <div className="flex flex-col items-center gap-3 p-6 text-center">
                 <p className="max-w-xs break-words text-xs text-muted-foreground">No files match “{query.trim()}”.</p>
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className={cn("inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted", focusRing)}
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => setQuery("")}>
                   Clear search
-                </button>
+                </Button>
               </div>
             ) : (
               <VaultTree
@@ -180,15 +175,16 @@ export function WorkspaceFilesPane({
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex min-h-10 shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2">
             {onBack && (
-              <button
+              <Button
                 ref={backRef}
                 type="button"
+                variant="bare"
                 onClick={onBack}
-                className={cn("inline-flex shrink-0 items-center gap-1 rounded-md px-1 py-1 text-sm text-muted-foreground hover:text-foreground", focusRing)}
+                className="inline-flex shrink-0 items-center gap-1 rounded-md px-1 py-1 text-sm text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" />
                 Back to files
-              </button>
+              </Button>
             )}
             <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground" title={preview.path}>
               {preview.path}

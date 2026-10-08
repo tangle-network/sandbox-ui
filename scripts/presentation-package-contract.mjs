@@ -234,7 +234,7 @@ function assertEntryUtilities({ consumerDir, outDir }) {
   const owners = { "@tangle-network/sandbox-ui": shippedJs("@tangle-network/sandbox-ui"), "@tangle-network/ui": shippedJs("@tangle-network/ui") };
   const markers = [
     // sandbox-ui's own components.
-    { owner: "@tangle-network/sandbox-ui", candidate: "text-[13.5px]", selector: ".text-\\[13\\.5px\\]" },
+    { owner: "@tangle-network/sandbox-ui", candidate: "w-[268px]", selector: ".w-\\[268px\\]" },
     // ui's Dialog panel: the class that went missing when apps scanned only sandbox-ui.
     { owner: "@tangle-network/ui", candidate: "translate-x-[-50%]", selector: ".translate-x-\\[-50\\%\\]" },
   ];

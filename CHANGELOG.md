@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.132.1
+
+- `WorkspaceFilesPane` takes `surface="plain"` for a pane that already names the files, such as a companion's Files tab. The tree sits on the pane's own surface, with no nested card, gutter, or second "Files" heading; the heading stays for assistive technology. The default `card` surface is unchanged. Story: `Workspace/WorkspaceFilesPane` In Pane.
+
 ## 0.132.0
 
 - `WorkspaceLayout` takes `surface="inset"`: the center and right panes become one raised surface inside an even gutter on the `--md3-surface-dim` backdrop. The center always has a 48px header row whose top-right corner holds the right-pane toggle as a flat 32px icon button; an open right pane shares that header height, the same surface, and one divider. A closed pane leaves no edge column, so the surface ends one gutter from the shell edge. The default `flat` surface is unchanged.

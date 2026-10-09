@@ -157,4 +157,21 @@ describe("WorkspaceFilesPane", () => {
     fireEvent.click(getByRole("button", { name: "Clear search" }));
     expect(getByRole("treeitem", { name: "campaigns" })).toBeVisible();
   });
+
+  it("sits on the host pane with an assistive-only heading when the pane already names it", () => {
+    const { getByRole, getByText } = render(<WorkspaceFilesPane paths={paths} surface="plain" headerActions={<button>Refresh</button>} />);
+    const surface = getByRole("region", { name: "Files" });
+    expect(surface).toHaveAttribute("data-workspace-files-surface", "plain");
+    for (const name of ["rounded-xl", "border", "bg-card", "shadow-sm"]) expect(surface).not.toHaveClass(name);
+    expect(surface.parentElement).not.toHaveClass("p-2");
+    expect(getByText("Files", { selector: "h2" })).toHaveClass("sr-only");
+    expect(getByRole("button", { name: "Refresh" })).toBeVisible();
+    expect(getByRole("searchbox", { name: "Search files" })).toBeVisible();
+  });
+
+  it("keeps its own card surface and visible heading by default", () => {
+    const { getByRole, getByText } = render(<WorkspaceFilesPane paths={paths} />);
+    expect(getByRole("region", { name: "Files" })).toHaveClass("rounded-xl", "border", "bg-card");
+    expect(getByText("Files", { selector: "h2" })).not.toHaveClass("sr-only");
+  });
 });

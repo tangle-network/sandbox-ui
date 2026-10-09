@@ -55,3 +55,13 @@ export const Empty: Story = { args: { paths: [], className: "h-[360px] w-full ma
 export const EmptyFolder: Story = {
   render: () => <WorkspaceFilesPane root={{ name: "drafts", path: "drafts", type: "directory", children: [] }} className="h-[360px] w-full max-w-[480px]" />,
 };
+
+/** Inside a pane that already names the files, such as a companion's Files tab. */
+export const InPane: Story = {
+  render: () => (
+    <div className="flex h-[560px] w-full max-w-[480px] flex-col border border-border bg-background">
+      <div className="flex h-12 shrink-0 items-center border-b border-border px-4 text-sm font-medium">Files</div>
+      <WorkspaceFilesPane paths={paths} surface="plain" expansionKey="storybook:workspace-files-pane" className="min-h-0 flex-1" />
+    </div>
+  ),
+};

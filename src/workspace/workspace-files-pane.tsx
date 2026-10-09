@@ -42,6 +42,13 @@ export type WorkspaceFilesPaneProps = WorkspaceFilesSource & {
   label?: string;
   /** Controls rendered in the files surface header. */
   headerActions?: ReactNode;
+  /**
+   * `card` (default) sets the tree in its own raised surface under a visible
+   * heading. `plain` is for a pane that already names the files, such as a
+   * companion tab: the tree sits on the pane's own surface, and the heading is
+   * kept for assistive technology only.
+   */
+  surface?: "card" | "plain";
   className?: string;
   style?: CSSProperties;
 };
@@ -80,9 +87,11 @@ export function WorkspaceFilesPane({
   search = true,
   label = "Files",
   headerActions,
+  surface = "card",
   className,
   style,
 }: WorkspaceFilesPaneProps) {
+  const plain = surface === "plain";
   // A root with a path is itself a row (a file, or a named and possibly empty
   // folder); a pathless root is the container whose children are the rows.
   const nodes = useMemo<FileNode[]>(
@@ -121,19 +130,29 @@ export function WorkspaceFilesPane({
         tabIndex={-1}
         role="region"
         aria-label="Workspace files"
-        className={cn("flex min-h-0 flex-1 flex-col p-2", hasPreview && "hidden")}
+        className={cn("flex min-h-0 flex-1 flex-col", !plain && "p-2", hasPreview && "hidden")}
       >
         <section
           aria-labelledby={headingId}
-          data-workspace-files-surface
-          className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm"
+          data-workspace-files-surface={surface}
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            !plain && "rounded-xl border border-border bg-card text-card-foreground shadow-sm",
+          )}
         >
-          <div className="flex shrink-0 items-center gap-2 px-3 pb-2 pt-3">
-            <h2 id={headingId} className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{label}</h2>
-            {headerActions && <div className="flex shrink-0 items-center gap-1">{headerActions}</div>}
-          </div>
+          {plain ? (
+            <>
+              <h2 id={headingId} className="sr-only">{label}</h2>
+              {headerActions && <div className="flex shrink-0 items-center justify-end gap-1 px-3 pt-3">{headerActions}</div>}
+            </>
+          ) : (
+            <div className="flex shrink-0 items-center gap-2 px-3 pb-2 pt-3">
+              <h2 id={headingId} className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{label}</h2>
+              {headerActions && <div className="flex shrink-0 items-center gap-1">{headerActions}</div>}
+            </div>
+          )}
           {search && !isEmpty && (
-            <div className="shrink-0 px-3 pb-2">
+            <div className={cn("shrink-0 px-3 pb-2", plain && "pt-3")}>
               <Input
                 type="search"
                 size="sm"
@@ -144,7 +163,7 @@ export function WorkspaceFilesPane({
               />
             </div>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto border-t border-border px-1.5 py-1.5">
+          <div className={cn("min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5", (!plain || (search && !isEmpty)) && "border-t border-border")}>
             {isEmpty ? (
               emptyState !== undefined ? emptyState : <EmptyState icon={<FolderOpen className="h-6 w-6" />} title="No files yet" />
             ) : visible.length === 0 ? (

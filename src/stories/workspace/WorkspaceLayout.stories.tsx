@@ -406,3 +406,44 @@ export const RetainedCompanion: Story = {
     />
   ),
 }
+
+function InsetHeader() {
+  return <p className="truncate px-2 text-sm font-medium text-muted-foreground">Retry logic review</p>
+}
+
+/** The chat-first composition: one raised surface in an even gutter, the
+ *  panel toggle flat in the conversation header, nothing at the closed edge. */
+export const InsetSurface: Story = {
+  name: 'Inset Surface — Closed Panel',
+  render: () => (
+    <WorkspaceLayout
+      surface="inset"
+      center={<ChatArea />}
+      centerHeader={<InsetHeader />}
+      right={<ArtifactContent />}
+      rightHeader={<span className="px-2 text-sm font-medium">Files</span>}
+      rightOpenLabel="Open workspace tools"
+      rightCloseLabel="Close workspace tools"
+      rightControlHint="Files, Agent, Terminal"
+      className="h-full"
+    />
+  ),
+}
+
+export const InsetSurfaceOpen: Story = {
+  name: 'Inset Surface — Open Panel',
+  render: () => (
+    <WorkspaceLayout
+      surface="inset"
+      center={<ChatArea />}
+      centerHeader={<InsetHeader />}
+      right={<ArtifactContent />}
+      rightHeader={<span className="px-2 text-sm font-medium">Files</span>}
+      rightOpenLabel="Open workspace tools"
+      rightCloseLabel="Close workspace tools"
+      rightControlHint="Files, Agent, Terminal"
+      defaultRightOpen
+      className="h-full"
+    />
+  ),
+}

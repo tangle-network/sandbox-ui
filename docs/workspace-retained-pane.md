@@ -10,6 +10,7 @@ This does not open a PTY or provision a resource; the supplied component owns th
 Set `collapsedControlsPlacement="overlay"` to float reopen buttons over the center instead of reserving edge columns.
 The default remains `"edge"`.
 Omit `centerHeader` and retain the default `centerHeaderVisibility="auto"` for a full-height conversation.
+With `surface="inset"`, the center header always holds the closed-pane controls; placement and header visibility do not apply.
 
 Story: `workspace-workspacelayout--retained-companion`.
 The editable terminal field is a fixture that demonstrates retained state without a live runtime.

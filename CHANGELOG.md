@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.131.5
+
+- Peer floor moves to `@tangle-network/ui` ^11.30.2, whose `Toolbar` keeps its filters at content width above a 16rem search floor. At 1440px `ApprovalQueue`'s Schedule for field had been cut at the filter row's scroll edge.
+
 ## 0.131.4
 
 - The ph0ny integration shows its wordmark whole. Its own favicon sets "ph0ny" wider than the 64px canvas, so account rows and catalog tiles showed "h0n" with the ends cut off; `ProviderIcon` now draws the same wordmark fitted inside the tile for `phony` and `ph0ny`.

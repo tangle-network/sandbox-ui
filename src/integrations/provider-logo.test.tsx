@@ -25,6 +25,18 @@ describe("providerLogoCandidates", () => {
     ]);
   });
 
+  it("draws ph0ny's wordmark inside the tile instead of its clipped favicon", () => {
+    for (const id of ["phony", "ph0ny"]) {
+      const [first] = providerLogoCandidates({ id });
+      expect(first.startsWith("data:image/svg+xml,")).toBe(true);
+      const svg = decodeURIComponent(first.slice("data:image/svg+xml,".length));
+      expect(svg).toContain('viewBox="0 0 64 64"');
+      expect(svg).toContain('textLength="50"');
+      expect(svg).toContain(">ph0ny</text>");
+      expect(first).not.toContain("google.com/s2/favicons");
+    }
+  });
+
   it("puts the ActivePieces CDN first for a long-tail provider", () => {
     expect(providerLogoCandidates({ id: "attio" })[0]).toBe(
       "https://cdn.activepieces.com/pieces/attio.png",

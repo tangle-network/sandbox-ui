@@ -25,6 +25,14 @@ export function normalizeProviderId(id: string): string {
  * normalized id does not match the simpleicons slug (compound brands,
  * Google/Microsoft suite members, renamed brands).
  */
+const PH0NY_MARK = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+    '<rect width="64" height="64" rx="12" fill="#ffffff"/>' +
+    '<text x="32" y="38.5" text-anchor="middle" textLength="50" lengthAdjust="spacingAndGlyphs" ' +
+    'font-family="Inter, system-ui, -apple-system, Segoe UI, sans-serif" font-size="19" font-weight="500" fill="#533afd">ph0ny</text>' +
+    "</svg>",
+)}`;
+
 export const PROVIDER_LOGO_SLUGS: Record<string, string> = {
   gmail: "gmail",
   googlemail: "gmail",
@@ -192,8 +200,11 @@ export const PROVIDER_LOGO_URLS: Record<string, string> = {
   sanity: "https://cdn.simpleicons.org/sanity",
   sentry: "https://cdn.simpleicons.org/sentry",
   opsgenie: "https://cdn.simpleicons.org/opsgenie",
-  phony:
-    "https://www.google.com/s2/favicons?sz=64&domain_url=https://ph0ny.com",
+  // ph0ny's own favicon sets its wordmark wider than its 64px canvas, so every
+  // rendering of it (the site icon and the favicon service) cuts off the "p"
+  // and the "y". This draws the same wordmark fitted inside the tile.
+  phony: PH0NY_MARK,
+  ph0ny: PH0NY_MARK,
   docuseal:
     "https://www.google.com/s2/favicons?sz=64&domain_url=https://docuseal.com",
   braze:

@@ -237,8 +237,8 @@ importers:
         specifier: 1.19.3
         version: 1.19.3(react@19.3.0)
       '@tangle-network/ui':
-        specifier: 11.30.1
-        version: 11.30.1(9ed8732aeb4aae80734609a72b6ae704)
+        specifier: 11.30.2
+        version: 11.30.2(9ed8732aeb4aae80734609a72b6ae704)
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.3.0)
@@ -1920,8 +1920,8 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/ui@11.30.1':
-    resolution: {integrity: sha512-+21bFH9AS2OK3MjZZDX9WHbCU6/v+w2/z5Gx7PaayJZPTT/isXXrFSQQBIAvpWvuZz/CBs/6zYNiUmHZjpOcwA==}
+  '@tangle-network/ui@11.30.2':
+    resolution: {integrity: sha512-mQ3vPqlUeFgE431rQkXUc5ggkqJ1rw9evE4XVETTWPMuzFFYm0P1zM/xLT0JDObq47Fo3KoNGahdnTGCjDEPkA==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <3.0.0'
@@ -5607,7 +5607,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.0
 
-  '@tangle-network/ui@11.30.1(9ed8732aeb4aae80734609a72b6ae704)':
+  '@tangle-network/ui@11.30.2(9ed8732aeb4aae80734609a72b6ae704)':
     dependencies:
       '@pierre/theme': 1.1.0
       '@pierre/trees': 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(shiki@4.4.3)

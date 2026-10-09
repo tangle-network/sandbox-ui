@@ -3,7 +3,7 @@
 ## 0.131.4
 
 - The ph0ny integration shows its wordmark whole. Its own favicon sets "ph0ny" wider than the 64px canvas, so account rows and catalog tiles showed "h0n" with the ends cut off; `ProviderIcon` now draws the same wordmark fitted inside the tile for `phony` and `ph0ny`.
-- Dev pin moves to `@tangle-network/ui` 11.30.1, whose `Toolbar` wraps its filters on phones; `ApprovalQueue`'s filter bar now shows Format, Status and Schedule for within a 390px screen.
+- The `@tangle-network/ui` peer floor moves to ^11.30.1, whose `Toolbar` wraps its filters on phones; `ApprovalQueue`'s filter bar now shows Format, Status and Schedule for within a 390px screen.
 
 ## 0.131.3
 

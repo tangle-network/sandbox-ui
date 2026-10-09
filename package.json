@@ -149,7 +149,7 @@
     "@nanostores/react": ">=0.8.4 <2.0.0",
     "@tangle-network/agent-interface": "^1.0.0 || ^2.0.0 || ^3.0.0",
     "@tangle-network/brand": "^1.19.2",
-    "@tangle-network/ui": "^11.30.0",
+    "@tangle-network/ui": "^11.30.1",
     "@tanstack/react-query": "^5.0.0",
     "@tiptap/core": ">=3.20.4 <4.0.0",
     "@tiptap/extension-collaboration": ">=3.20.4 <4.0.0",

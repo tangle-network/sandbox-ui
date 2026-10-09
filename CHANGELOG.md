@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.132.0
+
+- `WorkspaceLayout` takes `surface="inset"`: the center and right panes become one raised surface inside an even gutter on the `--md3-surface-dim` backdrop. The center always has a 48px header row whose top-right corner holds the right-pane toggle as a flat 32px icon button; an open right pane shares that header height, the same surface, and one divider. A closed pane leaves no edge column, so the surface ends one gutter from the shell edge. The default `flat` surface is unchanged.
+- `rightOpenLabel`, `rightCloseLabel`, and `rightControlHint` name the right-pane controls; both controls show a tooltip with the label and hint, and carry `aria-expanded`. Defaults keep "Open right panel" and "Collapse right panel".
+- Stories: `Workspace/WorkspaceLayout` Inset Surface (closed and open). `tests/visual/workspace-inset-surface.spec.mjs` checks the closed surface reaches the gutter at the viewport edge, the toggle sits inside the center header, and no right-pane element renders while closed, in both themes at desktop and phone widths.
+
 ## 0.131.5
 
 - Peer floor moves to `@tangle-network/ui` ^11.30.2, whose `Toolbar` keeps its filters at content width above a 16rem search floor. At 1440px `ApprovalQueue`'s Schedule for field had been cut at the filter row's scroll edge.

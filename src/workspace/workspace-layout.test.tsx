@@ -403,3 +403,76 @@ describe("WorkspaceLayout — center width floor", () => {
     expect(left.style.width).toBe("280px")
   })
 })
+
+describe("WorkspaceLayout — inset surface", () => {
+  const inset = (props: Partial<Parameters<typeof WorkspaceLayout>[0]> = {}) => (
+    <WorkspaceLayout
+      surface="inset"
+      center={<div>Conversation</div>}
+      centerHeader={<span>Launch plan</span>}
+      right={<div>Files content</div>}
+      rightHeader={<span>Tools</span>}
+      rightOpenLabel="Open workspace tools"
+      rightCloseLabel="Close workspace tools"
+      rightControlHint="Files, Agent, Terminal"
+      {...props}
+    />
+  )
+
+  it("keeps a closed right pane's control flat inside the center header and leaves nothing at the edge", () => {
+    const { container, getByRole } = render(inset())
+    const surface = container.querySelector("[data-workspace-surface]")
+    const header = container.querySelector('[data-workspace-header="center"]')
+    const toggle = getByRole("button", { name: "Open workspace tools" })
+    expect(surface).not.toBeNull()
+    expect(header).not.toBeNull()
+    expect(surface?.contains(header)).toBe(true)
+    expect(header?.contains(toggle)).toBe(true)
+    expect(header).toHaveClass("h-12")
+    expect(toggle).toHaveClass("size-8")
+    expect(toggle.className.split(" ").filter((name) => name === "border" || name.startsWith("shadow") || name.startsWith("bg-card"))).toEqual([])
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(container.querySelector('[data-workspace-pane="right"]')).toBeNull()
+    // The surface is the shell's last column: no edge column follows it.
+    expect(surface?.parentElement?.nextElementSibling).toBeNull()
+    expect(surface?.parentElement).toHaveClass("p-1.5", "sm:p-2")
+  })
+
+  it("opens the right pane inside the same surface with an aligned header and returns focus on close", async () => {
+    const user = userEvent.setup()
+    const { container, getByRole } = render(inset())
+    await user.click(getByRole("button", { name: "Open workspace tools" }))
+    const surface = container.querySelector("[data-workspace-surface]")
+    const pane = container.querySelector('[data-workspace-pane="right"]')
+    expect(surface?.contains(pane)).toBe(true)
+    expect(pane).toHaveClass("bg-transparent")
+    const paneHeader = pane?.firstElementChild
+    expect(paneHeader).toHaveClass("h-12")
+    expect(container.querySelector('[data-workspace-header="center"]')).toHaveClass("h-12")
+    expect(getByRole("separator", { name: "Resize right panel" })).toBeTruthy()
+    const close = getByRole("button", { name: "Close workspace tools" })
+    expect(close).toHaveAttribute("aria-expanded", "true")
+    await user.click(close)
+    await waitFor(() => expect(document.activeElement).toBe(getByRole("button", { name: "Open workspace tools" })))
+  })
+
+  it("names the pane's tools in the toggle's tooltip on keyboard focus", async () => {
+    const user = userEvent.setup()
+    const { getByRole, findAllByText } = render(inset())
+    await user.tab()
+    expect(document.activeElement).toBe(getByRole("button", { name: "Open workspace tools" }))
+    expect((await findAllByText("Files, Agent, Terminal")).length).toBeGreaterThan(0)
+  })
+
+  it("keeps the header row even without header content so a closed pane still has its control", () => {
+    const { container, getByRole } = render(inset({ centerHeader: undefined }))
+    const header = container.querySelector('[data-workspace-header="center"]')
+    expect(header?.contains(getByRole("button", { name: "Open workspace tools" }))).toBe(true)
+  })
+
+  it("defaults to the flat edge layout", () => {
+    const { container, getByRole } = render(<WorkspaceLayout center={<div>Chat</div>} right={<div>Right</div>} />)
+    expect(container.querySelector("[data-workspace-surface]")).toBeNull()
+    expect(getByRole("button", { name: "Open right panel" })).toHaveClass("h-10", "w-8")
+  })
+})

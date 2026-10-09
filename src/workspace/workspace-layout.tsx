@@ -23,6 +23,7 @@ import {
 import { cn } from "../lib/utils";
 import { WorkspacePaneHeader } from "./workspace-pane-header";
 import { focusRing } from "@tangle-network/ui/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@tangle-network/ui/primitives";
 
 const DESKTOP_BREAKPOINT = "(min-width: 1024px)";
 
@@ -141,6 +142,21 @@ export interface WorkspaceLayoutProps {
   keepRightMounted?: boolean;
   /** Closed controls use edge columns by default; overlay preserves center width. */
   collapsedControlsPlacement?: "edge" | "overlay";
+  /**
+   * `flat` (default) fills the shell edge to edge. `inset` raises the center
+   * and right panes as one surface on the recessed backdrop, inside an even
+   * gutter on every side. The center always has a header row: closed-pane
+   * controls sit flat in it, an open right pane shares its height and a
+   * divider, and a closed pane leaves nothing at the shell's edge.
+   * `collapsedControlsPlacement` and `centerHeaderVisibility` do not apply.
+   */
+  surface?: "flat" | "inset";
+  /** Accessible name and tooltip of the control that opens the right pane. */
+  rightOpenLabel?: string;
+  /** Accessible name and tooltip of the control that closes the right pane. */
+  rightCloseLabel?: string;
+  /** Second tooltip line for both right-pane controls, such as the tools the pane holds. */
+  rightControlHint?: string;
   className?: string;
 }
 
@@ -291,6 +307,18 @@ interface MobileDrawerProps {
   children: ReactNode;
 }
 
+function PaneControlTooltip({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="bottom" align="end">
+        <span className="block font-medium">{label}</span>
+        {hint && <span className="block opacity-80">{hint}</span>}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function MobileDrawer({ side, title, header, onClose, onReturnFocus, theme, density, children }: MobileDrawerProps) {
   return (
     <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -369,6 +397,10 @@ export function WorkspaceLayout({
   keepRightMounted = false,
   collapsedControlsPlacement = "edge",
   centerHeaderVisibility = "auto",
+  surface = "flat",
+  rightOpenLabel = "Open right panel",
+  rightCloseLabel = "Collapse right panel",
+  rightControlHint,
   className,
 }: WorkspaceLayoutProps) {
   const desktop = useDesktopMediaQuery(DESKTOP_BREAKPOINT);
@@ -441,12 +473,20 @@ export function WorkspaceLayout({
   const [bottomHeight, setBottomHeight] = useState(
     clamp(storedLayout?.bottomHeight ?? defaultBottomHeight, minBottomHeight, maxBottomHeight),
   );
+  const inset = surface === "inset";
   const showCenterHeader =
-    centerHeaderVisibility === "auto"
+    inset ||
+    (centerHeaderVisibility === "auto"
       ? Boolean(centerHeader)
-      : Boolean(centerHeader || left || right || bottom);
+      : Boolean(centerHeader || left || right || bottom));
+  // Inset headers carry their controls as flat 32px icon buttons, so the
+  // center's expander and the right pane's collapse land on the same spot.
+  const paneControlClassName = inset
+    ? `inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`
+    : `rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`;
+  const insetHeaderClassName = inset ? "h-12 bg-transparent px-2" : undefined;
   const reopenClassName = showCenterHeader
-    ? `rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`
+    ? paneControlClassName
     : `flex h-10 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground ${focusRing}`;
   const leftReopenControl = left && !leftOpen
     ? leftCollapsedControl ?? (
@@ -461,9 +501,11 @@ export function WorkspaceLayout({
     </button>
   ) : null;
   const rightReopenControl = right && !rightOpen ? (
-    <button type="button" aria-label="Open right panel" onClick={() => setRightOpen(true)} className={reopenClassName}>
-      <PanelRightOpen className="h-4 w-4" />
-    </button>
+    <PaneControlTooltip label={rightOpenLabel} hint={rightControlHint}>
+      <button type="button" aria-label={rightOpenLabel} aria-expanded={false} onClick={() => setRightOpen(true)} className={reopenClassName}>
+        <PanelRightOpen className="h-4 w-4" />
+      </button>
+    </PaneControlTooltip>
   ) : null;
   const leftReopenRef = useRef<HTMLDivElement | null>(null);
   const rightReopenRef = useRef<HTMLDivElement | null>(null);
@@ -552,7 +594,7 @@ export function WorkspaceLayout({
       target.focus();
       return;
     }
-    shellRef.current?.querySelector<HTMLElement>(`[aria-label="Collapse ${side} panel"]`)?.focus();
+    shellRef.current?.querySelector<HTMLElement>(`[data-pane-collapse="${side}"]`)?.focus();
   };
   const [shellWidth, setShellWidth] = useState<number | null>(null);
   useEffect(() => {
@@ -615,12 +657,132 @@ export function WorkspaceLayout({
     setBottomHeight((current) => clamp(current + delta, minBottomHeight, maxBottomHeight));
   };
 
+  const centerPane = (
+    <main className="relative flex min-w-0 flex-1 flex-col">
+      {showCenterHeader && (
+        <WorkspacePaneHeader data-workspace-header="center" className={cn("gap-2", inset && "gap-1", insetHeaderClassName)}>
+          {leftReopenControl && <div ref={leftReopenRef} className="shrink-0">{leftReopenControl}</div>}
+          <div className="min-w-0 flex-1">{centerHeader}</div>
+          {bottomReopenControl}
+          {rightReopenControl && <div ref={rightReopenRef} className="shrink-0">{rightReopenControl}</div>}
+        </WorkspacePaneHeader>
+      )}
+
+      <div className="relative flex min-h-0 flex-1">
+        {!showCenterHeader && leftReopenControl && (
+          <div ref={leftReopenRef} className={cn("shrink-0 pt-2", collapsedControlsPlacement === "overlay" && "absolute left-2 top-2 z-20 pt-0")}>{leftReopenControl}</div>
+        )}
+        <div className="min-w-0 flex-1 overflow-auto">{center}</div>
+        {!showCenterHeader && (bottomReopenControl || rightReopenControl) && (
+          <div className={cn("flex shrink-0 flex-col gap-1 pt-2", collapsedControlsPlacement === "overlay" && "absolute right-2 top-2 z-20 pt-0")}>
+            {bottomReopenControl}
+            {rightReopenControl && <div ref={rightReopenRef}>{rightReopenControl}</div>}
+          </div>
+        )}
+      </div>
+
+      {bottom && bottomOpen && (
+        <>
+          {resizable && (
+            <HorizontalResizeHandle
+              label="Resize bottom panel"
+              onDragStart={startBottomResize}
+              onStep={stepBottomHeight}
+            />
+          )}
+          <section
+            aria-label={bottomLabel}
+            className={cn(
+              "shrink-0 bg-card",
+              !resizable && "border-t border-border",
+            )}
+            style={{ height: `${bottomHeight}px` }}
+          >
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between gap-2 border-b border-border bg-background px-3 py-1.5 shrink-0">
+                <div className="min-w-0 flex-1">
+                  {bottomHeader ?? (
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Runtime
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  aria-label="Collapse bottom panel"
+                  onClick={() => setBottomOpen(false)}
+                  className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
+                >
+                  <PanelBottomClose className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto">{bottom}</div>
+            </div>
+          </section>
+        </>
+      )}
+
+      {centerFooter && (
+        <div className="shrink-0 border-t border-border bg-card">
+          {centerFooter}
+        </div>
+      )}
+    </main>
+  );
+
+  const rightPane = desktop && right && rightOpen && (
+    <>
+      {resizable && (
+        <ResizeHandle
+          label="Resize right panel"
+          onDragStart={(clientX) => startResize("right", clientX)}
+          onStep={stepRightWidth}
+        />
+      )}
+      <aside
+        aria-label={rightLabel}
+        data-workspace-pane="right"
+        style={rightStyle}
+        className={cn(
+          "hidden shrink-0 lg:flex lg:flex-col",
+          inset ? "bg-transparent" : "bg-card",
+          !resizable && "border-l border-border",
+        )}
+      >
+        <WorkspacePaneHeader className={cn("justify-between gap-2", insetHeaderClassName)}>
+          <div className="min-w-0 flex-1">
+            {rightHeader ?? <span className="text-[13px] font-medium text-foreground">Artifacts</span>}
+          </div>
+          <PaneControlTooltip label={rightCloseLabel} hint={rightControlHint}>
+            <button
+              type="button"
+              aria-label={rightCloseLabel}
+              aria-expanded
+              data-pane-collapse="right"
+              onClick={() => {
+                setRightOpen(false);
+                requestAnimationFrame(() => focusSideControl("right"));
+              }}
+              className={paneControlClassName}
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </button>
+          </PaneControlTooltip>
+        </WorkspacePaneHeader>
+        <div className={cn("min-h-0 flex-1 overflow-auto", rightContentClassName)}>{rightContent}</div>
+      </aside>
+    </>
+  );
+
   return (
+    <TooltipProvider>
     <div
       {...(theme ? { "data-sandbox-ui": "true", "data-sandbox-theme": theme } : {})}
       data-density={density}
+      data-surface={surface}
       className={cn(
-        "flex h-screen flex-col overflow-hidden bg-background text-foreground font-sans",
+        "flex h-screen flex-col overflow-hidden text-foreground font-sans",
+        inset ? "bg-[var(--md3-surface-dim)]" : "bg-background",
         className,
       )}
     >
@@ -641,11 +803,12 @@ export function WorkspaceLayout({
                   <button
                     type="button"
                     aria-label="Collapse left panel"
+                    data-pane-collapse="left"
                     onClick={() => {
                       setLeftOpen(false);
                       requestAnimationFrame(() => focusSideControl("left"));
                     }}
-                    className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
+                    className={paneControlClassName}
                   >
                     <PanelLeftClose className="h-4 w-4" />
                   </button>
@@ -663,112 +826,22 @@ export function WorkspaceLayout({
           </>
         )}
 
-        <main className="relative flex min-w-0 flex-1 flex-col">
-          {showCenterHeader && (
-            <WorkspacePaneHeader className="gap-2">
-              {leftReopenControl && <div ref={leftReopenRef} className="shrink-0">{leftReopenControl}</div>}
-              <div className="min-w-0 flex-1">{centerHeader}</div>
-              {bottomReopenControl}
-              {rightReopenControl && <div ref={rightReopenRef} className="shrink-0">{rightReopenControl}</div>}
-            </WorkspacePaneHeader>
-          )}
-
-          <div className="relative flex min-h-0 flex-1">
-            {!showCenterHeader && leftReopenControl && (
-              <div ref={leftReopenRef} className={cn("shrink-0 pt-2", collapsedControlsPlacement === "overlay" && "absolute left-2 top-2 z-20 pt-0")}>{leftReopenControl}</div>
-            )}
-            <div className="min-w-0 flex-1 overflow-auto">{center}</div>
-            {!showCenterHeader && (bottomReopenControl || rightReopenControl) && (
-              <div className={cn("flex shrink-0 flex-col gap-1 pt-2", collapsedControlsPlacement === "overlay" && "absolute right-2 top-2 z-20 pt-0")}>
-                {bottomReopenControl}
-                {rightReopenControl && <div ref={rightReopenRef}>{rightReopenControl}</div>}
-              </div>
-            )}
-          </div>
-
-          {bottom && bottomOpen && (
-            <>
-              {resizable && (
-                <HorizontalResizeHandle
-                  label="Resize bottom panel"
-                  onDragStart={startBottomResize}
-                  onStep={stepBottomHeight}
-                />
-              )}
-              <section
-                aria-label={bottomLabel}
-                className={cn(
-                  "shrink-0 bg-card",
-                  !resizable && "border-t border-border",
-                )}
-                style={{ height: `${bottomHeight}px` }}
-              >
-                <div className="flex h-full flex-col">
-                  <div className="flex items-center justify-between gap-2 border-b border-border bg-background px-3 py-1.5 shrink-0">
-                    <div className="min-w-0 flex-1">
-                      {bottomHeader ?? (
-                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Runtime
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      aria-label="Collapse bottom panel"
-                      onClick={() => setBottomOpen(false)}
-                      className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
-                    >
-                      <PanelBottomClose className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="min-h-0 flex-1 overflow-auto">{bottom}</div>
-                </div>
-              </section>
-            </>
-          )}
-
-          {centerFooter && (
-            <div className="shrink-0 border-t border-border bg-card">
-              {centerFooter}
-            </div>
-          )}
-        </main>
-
-        {desktop && right && rightOpen && (
-          <>
-            {resizable && (
-              <ResizeHandle
-                label="Resize right panel"
-                onDragStart={(clientX) => startResize("right", clientX)}
-                onStep={stepRightWidth}
-              />
-            )}
-            <aside
-              aria-label={rightLabel}
-              style={rightStyle}
-              className={cn(
-                "hidden shrink-0 bg-card lg:flex lg:flex-col",
-                !resizable && "border-l border-border",
-              )}
+        {inset ? (
+          // The gutter shows the recessed backdrop evenly on every side, so a
+          // closed right pane ends the surface one gutter from the shell edge.
+          <div className="flex min-h-0 min-w-0 flex-1 p-1.5 sm:p-2">
+            <div
+              data-workspace-surface
+              className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--md3-outline-variant)] bg-background shadow-[var(--shadow-card)]"
             >
-              <WorkspacePaneHeader className="justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  {rightHeader ?? <span className="text-[13px] font-medium text-foreground">Artifacts</span>}
-                </div>
-                <button
-                  type="button"
-                  aria-label="Collapse right panel"
-                  onClick={() => {
-                    setRightOpen(false);
-                    requestAnimationFrame(() => focusSideControl("right"));
-                  }}
-                  className={`rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`}
-                >
-                  <PanelRightClose className="h-4 w-4" />
-                </button>
-              </WorkspacePaneHeader>
-              <div className={cn("min-h-0 flex-1 overflow-auto", rightContentClassName)}>{rightContent}</div>
-            </aside>
+              {centerPane}
+              {rightPane}
+            </div>
+          </div>
+        ) : (
+          <>
+            {centerPane}
+            {rightPane}
           </>
         )}
       </div>
@@ -807,5 +880,6 @@ export function WorkspaceLayout({
         </MobileDrawer>
       )}
     </div>
+    </TooltipProvider>
   );
 }

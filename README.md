@@ -323,6 +323,9 @@ The default places the session title and status in the transcript pane header wi
 Use `centerHeader={null}` when the transcript should have no pane frame either.
 `WorkspaceLayout` leaves its center row out until a caller supplies `centerHeader`.
 Closed panes get compact edge controls with reserved space beside the transcript.
+`surface="inset"` raises the center and right panes as one surface inside an even gutter on the recessed backdrop.
+Its center always has a 48px header: closed-pane controls sit flat in its top-right corner, and an open right pane shares that header height and a divider.
+`rightOpenLabel`, `rightCloseLabel`, and `rightControlHint` name the right-pane controls and their tooltip.
 It owns pane sizes and, when you pass `layout.leftOpen` / `layout.onLeftOpenChange`, the open state too.
 
 ```tsx

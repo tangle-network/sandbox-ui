@@ -59,9 +59,9 @@ describe("WorkspaceLayout — top header alignment", () => {
     )
 
     for (const label of ["Left header", "Center header", "Right header"]) {
-      const header = getByText(label).closest("div.flex.h-14")
+      const header = getByText(label).closest("[data-shell-header]")
       expect(header).not.toBeNull()
-      expect(header).toHaveClass("h-14", "shrink-0")
+      expect(header).toHaveStyle({ height: "var(--shell-header-height, 3.5rem)" })
       expect(header?.className).not.toMatch(/\bpy-/)
     }
   })
@@ -78,9 +78,9 @@ describe("WorkspaceLayout — top header alignment", () => {
     )
 
     expect(getByRole("dialog", { name: "Left workspace panel" })).toBeInTheDocument()
-    const header = getByText("Left header").closest("div.flex.h-14")
+    const header = getByText("Left header").closest("[data-shell-header]")
     expect(header).not.toBeNull()
-    expect(header).toHaveClass("h-14", "shrink-0")
+    expect(header).toHaveStyle({ height: "var(--shell-header-height, 3.5rem)" })
     expect(header?.className).not.toMatch(/\bpy-/)
   })
 })
@@ -215,7 +215,7 @@ describe("WorkspaceLayout — collapsed left control", () => {
     expect(control).toBeInTheDocument()
     expect(queryByLabelText("Open left panel")).toBeNull()
     const main = control.closest("main") as HTMLElement
-    expect(main.querySelector("div.h-14")).toBeNull()
+    expect(main.querySelector("[data-shell-header]")).toBeNull()
     expect(control.parentElement).toHaveClass("shrink-0", "pt-2")
   })
 
@@ -255,14 +255,14 @@ describe("WorkspaceLayout — center header visibility", () => {
       <WorkspaceLayout left={<div>Left content</div>} center={<div>Center content</div>} resizable={false} />,
     )
     const main = getByText("Center content").closest("main") as HTMLElement
-    expect(main.querySelector("div.h-14")).toBeNull()
+    expect(main.querySelector("[data-shell-header]")).toBeNull()
   })
 
   it("keeps the aligned row when explicitly requested", () => {
     const { getByText } = render(
       <WorkspaceLayout left={<div>Left content</div>} center={<div>Center content</div>} centerHeaderVisibility="always" />,
     )
-    expect(getByText("Center content").closest("main")?.querySelector("div.h-14")).not.toBeNull()
+    expect(getByText("Center content").closest("main")?.querySelector("[data-shell-header]")).not.toBeNull()
   })
 
   it("auto keeps the center row absent when a pane closes", () => {
@@ -276,11 +276,11 @@ describe("WorkspaceLayout — center header visibility", () => {
       />,
     )
     const main = getByText("Center content").closest("main") as HTMLElement
-    expect(main.querySelector("div.h-14")).toBeNull()
+    expect(main.querySelector("[data-shell-header]")).toBeNull()
     expect(queryByLabelText("Open left panel")).toBeNull()
 
     fireEvent.click(getByLabelText("Collapse left panel"))
-    expect(main.querySelector("div.h-14")).toBeNull()
+    expect(main.querySelector("[data-shell-header]")).toBeNull()
     const reopen = getByLabelText("Open left panel")
     expect(reopen).toBeInTheDocument()
     expect(reopen.parentElement).toHaveClass("shrink-0", "pt-2")
@@ -299,7 +299,7 @@ describe("WorkspaceLayout — center header visibility", () => {
         resizable={false}
       />,
     )
-    expect(getByText("Title").closest("div.h-14")).not.toBeNull()
+    expect(getByText("Title").closest("[data-shell-header]")).not.toBeNull()
   })
 })
 
@@ -428,14 +428,14 @@ describe("WorkspaceLayout — inset surface", () => {
     expect(header).not.toBeNull()
     expect(surface?.contains(header)).toBe(true)
     expect(header?.contains(toggle)).toBe(true)
-    expect(header).toHaveClass("h-12")
+    expect(header).toHaveAttribute("data-shell-header", "inset")
     expect(toggle).toHaveClass("size-8")
     expect(toggle.className.split(" ").filter((name) => name === "border" || name.startsWith("shadow") || name.startsWith("bg-card"))).toEqual([])
     expect(toggle).toHaveAttribute("aria-expanded", "false")
     expect(container.querySelector('[data-workspace-pane="right"]')).toBeNull()
     // The surface is the shell's last column: no edge column follows it.
     expect(surface?.parentElement?.nextElementSibling).toBeNull()
-    expect(surface?.parentElement).toHaveClass("p-1.5", "sm:p-2")
+    expect(surface?.parentElement).toHaveClass("p-[var(--shell-inset-gutter,0.5rem)]")
   })
 
   it("opens the right pane inside the same surface with an aligned header and returns focus on close", async () => {
@@ -447,8 +447,8 @@ describe("WorkspaceLayout — inset surface", () => {
     expect(surface?.contains(pane)).toBe(true)
     expect(pane).toHaveClass("bg-transparent")
     const paneHeader = pane?.firstElementChild
-    expect(paneHeader).toHaveClass("h-12")
-    expect(container.querySelector('[data-workspace-header="center"]')).toHaveClass("h-12")
+    expect(paneHeader).toHaveAttribute("data-shell-header", "inset")
+    expect(container.querySelector('[data-workspace-header="center"]')).toHaveAttribute("data-shell-header", "inset")
     expect(getByRole("separator", { name: "Resize right panel" })).toBeTruthy()
     const close = getByRole("button", { name: "Close workspace tools" })
     expect(close).toHaveAttribute("aria-expanded", "true")

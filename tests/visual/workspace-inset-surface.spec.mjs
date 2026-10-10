@@ -4,8 +4,8 @@ import { assertStoryHealthy, openStory } from './story-ready.mjs'
 test.afterEach(async ({ page }) => { await assertStoryHealthy(page) })
 
 const viewports = { desktop: { width: 1440, height: 900 }, phone: { width: 390, height: 844 } }
-// sm:p-2 on desktop, p-1.5 on a phone, plus the surface's 1px border.
-const gutter = { desktop: 9, phone: 7 }
+// --shell-inset-gutter (8px) at every width, plus the surface's 1px border.
+const gutter = { desktop: 9, phone: 9 }
 
 for (const theme of ['light', 'dark']) {
   for (const [name, viewport] of Object.entries(viewports)) {

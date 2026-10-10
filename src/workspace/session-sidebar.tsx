@@ -10,7 +10,7 @@ import {
   type SessionOptimisticController,
   type UseOptimisticSessionItemsOptions,
 } from "./session-optimistic";
-import { WorkspacePaneHeader } from "./workspace-pane-header";
+import { ShellHeader } from "./shell-header";
 import { focusField, focusRing } from "@tangle-network/ui/utils";
 
 export interface SessionSidebarItem {
@@ -524,7 +524,7 @@ export function SessionSidebar({
       style={fillsParent ? undefined : { width: resizable ? resize.width : defaultWidth }}
     >
       {quiet ? (
-        <div className="flex h-14 shrink-0 items-center justify-between gap-2 px-3">
+        <ShellHeader divider={false} className="justify-between gap-2 bg-transparent">
           <span className="sr-only">{title}</span>
           {onCreate ? (
             <button
@@ -548,9 +548,9 @@ export function SessionSidebar({
               <PanelLeftClose className="h-4 w-4" />
             </button>
           )}
-        </div>
+        </ShellHeader>
       ) : (
-        <WorkspacePaneHeader>
+        <ShellHeader>
           <div className="flex w-full items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary">
@@ -581,7 +581,7 @@ export function SessionSidebar({
               )}
             </div>
           </div>
-        </WorkspacePaneHeader>
+        </ShellHeader>
       )}
 
       {/* Search + filters */}

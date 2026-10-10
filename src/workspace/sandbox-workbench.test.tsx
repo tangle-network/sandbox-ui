@@ -70,9 +70,9 @@ describe("SandboxWorkbench — centerHeader", () => {
     expect(getByText("Share")).toBeInTheDocument();
     expect(queryByText("Tangle Sandbox")).toBeNull();
     expect(queryByText("Execution timeline")).toBeNull();
-    const centerHeader = getByText("Tax filing").closest("div.h-14");
+    const centerHeader = getByText("Tax filing").closest("[data-shell-header]");
     expect(centerHeader).not.toBeNull();
-    expect(centerHeader?.closest("main")?.querySelectorAll("div.h-14")).toHaveLength(1);
+    expect(centerHeader?.closest("main")?.querySelectorAll("[data-shell-header]")).toHaveLength(1);
   });
 
   it("null hides the card and renders the transcript directly on bg-background", () => {
@@ -102,9 +102,9 @@ describe("SandboxWorkbench — centerHeader", () => {
       />,
     );
     const main = getByText("Start a conversation.").closest("main") as HTMLElement;
-    expect(main.querySelector("div.h-14")).toBeNull();
+    expect(main.querySelector("[data-shell-header]")).toBeNull();
     fireEvent.click(getByLabelText("Collapse right panel"));
-    expect(main.querySelector("div.h-14")).toBeNull();
+    expect(main.querySelector("[data-shell-header]")).toBeNull();
     expect(getByLabelText("Open right panel").parentElement?.parentElement).toHaveClass("shrink-0", "pt-2");
   });
 

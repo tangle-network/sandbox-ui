@@ -646,7 +646,7 @@ export function RailFlyout({
             RAIL_FLOATING_SURFACE,
           )}
         >
-          <p className="px-2 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+          <p className="px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
             {title ?? label}
           </p>
           {children}
@@ -922,7 +922,7 @@ export function RailExpandable({
     ? <SubItemsSkeleton />
     : items && items.length > 0
       ? items.map(subLink)
-      : <p className="px-2.5 py-1.5 text-xs text-muted-foreground">{emptyLabel}</p>
+      : <p className="px-2.5 py-1.5 text-sm text-muted-foreground">{emptyLabel}</p>
 
   // ---- Collapsed (icon-only) rail: hover-triggered right flyout (portaled) ----
   if (!showLabel) {
@@ -999,7 +999,7 @@ export function RailExpandable({
               onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
               className={cn("agent-pop-in z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
             >
-              <p className="shrink-0 px-2 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+              <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
                 {label}
               </p>
               <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">{list}</div>
@@ -1291,7 +1291,7 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
           </span>
           <div className="flex min-w-0 flex-col leading-tight">
             <span>Appearance</span>
-            <span className="text-xs text-muted-foreground">{caption}</span>
+            <span className="text-sm text-muted-foreground">{caption}</span>
           </div>
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent sideOffset={6} className="min-w-[12rem]">
@@ -1355,7 +1355,7 @@ export function ProfileAvatar({
           ) : (
             <Avatar className="h-7 w-7 shrink-0">
               {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
-              <AvatarFallback className="text-xs font-medium bg-[var(--accent-surface-strong)] text-[var(--accent-text)]">
+              <AvatarFallback className="text-sm font-medium bg-[var(--accent-surface-strong)] text-[var(--accent-text)]">
                 {getInitials(user?.name, user?.email)}
               </AvatarFallback>
             </Avatar>
@@ -1392,10 +1392,10 @@ export function ProfileAvatar({
                 <>
                   <p className="text-sm font-semibold truncate">{user?.name ?? user?.email ?? "Not logged in"}</p>
                   {user?.email && user?.name && (
-                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   )}
                   {user?.tier && (
-                    <p className="text-xs text-muted-foreground capitalize">{user.tier} Plan</p>
+                    <p className="text-sm text-muted-foreground capitalize">{user.tier} Plan</p>
                   )}
                 </>
               )}

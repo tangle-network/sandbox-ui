@@ -323,32 +323,49 @@ describe("DashboardLayout — sidebar controls", () => {
   })
 })
 
-describe("DashboardLayout — rail text stays at the 12px legibility floor", () => {
-  // Arbitrary sizes below text-xs (12px) are unreadable in the rail's small
-  // chrome: the avatar initials and the nav badge count were 10px and 9px.
+describe("DashboardLayout — rail text stays at the 14px floor", () => {
+  // Tangle products hold one type scale with nothing under 14px (text-sm). The
+  // rail's labels and the account menu meet it; the badge count is the one
+  // exemption, a glyph inside a 16px dot on an icon.
   const belowFloor = (el: Element) =>
     (el.getAttribute("class") ?? "")
       .split(/\s+/)
-      .filter((c) => /^text-\[(\d+(?:\.\d+)?)px\]$/.test(c) && Number.parseFloat(c.slice(6)) < 12)
+      .filter((c) => c === "text-xs" || (/^text-\[(\d+(?:\.\d+)?)px\]$/.test(c) && Number.parseFloat(c.slice(6)) < 14))
 
-  it("draws the user menu initials at text-xs", () => {
+  it("draws the user menu initials at text-sm", () => {
     render(
       <DashboardLayout navItems={[]} user={{ email: "ada@example.com", name: "Ada Lovelace" }}>
         <div>content</div>
       </DashboardLayout>,
     )
     for (const menu of screen.getAllByRole("button", { name: "User menu" })) {
-      expect(within(menu).getByText("AL").className).toMatch(/\btext-xs\b/)
+      expect(within(menu).getByText("AL").className).toMatch(/\btext-sm\b/)
       for (const el of menu.querySelectorAll("*")) {
         expect(belowFloor(el), el.outerHTML.slice(0, 120)).toEqual([])
       }
     }
   })
 
-  it("draws a rail button's badge count at text-xs", () => {
+  it("draws the open account menu's email and plan at text-sm", async () => {
+    const user = userEvent.setup()
+    render(
+      <DashboardLayout navItems={[]} user={{ email: "ada@example.com", name: "Ada Lovelace", tier: "pro" }}>
+        <div>content</div>
+      </DashboardLayout>,
+    )
+    await user.click(screen.getAllByRole("button", { name: "User menu" })[0]!)
+    for (const text of ["ada@example.com", "pro Plan"]) {
+      const el = await screen.findByText(text)
+      expect(el.className).toMatch(/\btext-sm\b/)
+      expect(belowFloor(el)).toEqual([])
+    }
+  })
+
+  it("keeps a rail button's badge count as the one glyph-sized exemption", () => {
     render(<RailButton icon={NavIcon} label="Inbox" badge={7} />)
-    expect(screen.getByText("7").className).toMatch(/\btext-xs\b/)
-    expect(belowFloor(screen.getByText("7"))).toEqual([])
+    const count = screen.getByText("7")
+    expect(count.getAttribute("data-badge")).toBe("count")
+    expect(count.className).toMatch(/\btext-xs\b/)
   })
 })
 

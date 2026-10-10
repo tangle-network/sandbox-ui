@@ -14,6 +14,7 @@ import {
 } from "@tangle-network/ui/primitives"
 import { parseEnvText, type EnvImportResult } from "./env-importer"
 import { focusField } from "@tangle-network/ui/utils"
+import { ShellHeader } from "../workspace/shell-header"
 
 /** Cap pasted/uploaded import sources so a pathological file cannot blow up the parser/UI. */
 const MAX_IMPORT_FILE_BYTES = 256 * 1024 // 256 KiB
@@ -334,13 +335,15 @@ export function SecretsPage({
       )}
     >
       {pane ? (
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border px-4 py-4 sm:px-6">
-          <div className="min-w-0 flex-1 basis-64">
-            <h1 className="text-lg font-semibold tracking-tight text-foreground">{title}</h1>
-            {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">{actions}</div>
-        </header>
+        <>
+          {/* A ShellHeader row, so the pane's divider continues the rail's; the
+              description reads under it instead of growing the row. */}
+          <ShellHeader as="header" className="justify-between gap-4 bg-transparent px-4 sm:px-6">
+            <h1 className="min-w-0 truncate text-base font-semibold tracking-tight text-foreground">{title}</h1>
+            <div className="flex shrink-0 items-center gap-2">{actions}</div>
+          </ShellHeader>
+          {description && <p className="shrink-0 px-4 pt-4 text-sm text-muted-foreground sm:px-6">{description}</p>}
+        </>
       ) : (
         <DashboardPageHeader title={title} description={description} actions={actions} />
       )}

@@ -1,8 +1,12 @@
 export { WorkspaceLayout, type WorkspaceLayoutProps } from "./workspace-layout";
 export {
+  ShellHeader,
+  SHELL_HEADER_HEIGHT,
+  SHELL_INSET_GUTTER,
   WorkspacePaneHeader,
+  type ShellHeaderProps,
   type WorkspacePaneHeaderProps,
-} from "./workspace-pane-header";
+} from "./shell-header";
 export { ArtifactPane, type ArtifactPaneProps } from "@tangle-network/ui/primitives";
 export { DirectoryPane, type DirectoryPaneProps } from "./directory-pane";
 export { RuntimePane, type RuntimePaneProps } from "./runtime-pane";

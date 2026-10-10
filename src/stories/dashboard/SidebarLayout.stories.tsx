@@ -10,6 +10,8 @@ import {
   Terminal,
 } from "lucide-react"
 import { SidebarLayout, type SidebarLayoutNavItem } from "../../dashboard/sidebar-layout"
+import { ShellHeader } from "../../workspace/shell-header"
+import { WorkspaceLayout } from "../../workspace/workspace-layout"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -159,4 +161,43 @@ export const ControlledHeaderMenuStory: Story = {
   name: "Controlled header menu",
   args: base,
   render: () => <ControlledHeaderMenu />,
+}
+
+/**
+ * The shell with an inset conversation pane and a flat page header beside the
+ * rail: every header row is a `ShellHeader`, so each bottom divider lands on the
+ * rail's first divider. `tests/visual/shell-header-alignment.spec.mjs` measures it.
+ */
+export const ShellHeaderAlignment: Story = {
+  args: {
+    ...base,
+    children: (
+      <WorkspaceLayout
+        surface="inset"
+        className="min-h-0 flex-1"
+        center={<div className="p-6 text-sm text-muted-foreground">Conversation</div>}
+        centerHeader={<span className="px-2 text-sm font-medium text-foreground">Luz confirms the 3 pm massage for Villa 4, long title that must truncate inside the row</span>}
+        right={<div className="p-4 text-sm">Files</div>}
+        rightHeader={<span className="px-2 text-sm font-medium">Files</span>}
+        rightOpenLabel="Open workspace tools"
+        rightCloseLabel="Close workspace tools"
+        defaultRightOpen
+      />
+    ),
+  },
+}
+
+/** A flat page beside the rail: the page header is a `ShellHeader`, never a local height. */
+export const ShellHeaderAlignmentPage: Story = {
+  args: {
+    ...base,
+    children: (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <ShellHeader as="header" data-testid="page-header" className="h-24 min-h-24 px-6" style={{ height: 96 }}>
+          <h1 className="text-base font-semibold text-foreground">Messages</h1>
+        </ShellHeader>
+        <Body />
+      </div>
+    ),
+  },
 }

@@ -21,6 +21,15 @@ Keep imports moving in that direction so lower layers never depend on an app she
 | Integration logos | Sandbox's integration `ProviderIcon` resolves connector URLs and fallbacks. The model-provider SVG table resolves model vendors. | Keep both because they serve different identifiers and failure paths. |
 | Theme values | Brand's tokens style Sandbox and generic UI. Agent App has a light-default theme, dark scope, and Konva color mirror with contract tests. | Reconcile semantic values only after checking both theme scopes and the canvas mirror in real consumers. |
 
+## Shell header
+
+Every header row in the shell is a `ShellHeader` (`@tangle-network/sandbox-ui/workspace`): the rail's top row (`RailHeader`, `SidebarPanelHeader`), the phone bar and navigation drawer, `WorkspaceLayout`'s center, right and drawer headers, and `SessionSidebar`. It reads Brand's `--shell-header-height` (56px), so every bottom divider lands on the rail's first divider.
+
+- Content fills the row; nothing changes its height. The height is set inline after `style`, so a consumer class or style cannot move the divider.
+- `inset` is for a pane raised inside `--shell-inset-gutter`. Its header is shorter by the gutter and the surface's 1px border, so the divider still lands on the shared line. Before this change, the inset header was 48px inside an 8px gutter, which put its divider at 57px against the rail's 56px.
+- `as="header"` renders a landmark. `WorkspacePaneHeader` remains as a deprecated alias.
+- `tests/visual/shell-header-alignment.spec.mjs` measures the rail divider against the inset center and right headers and a flat page header at desktop (≤0.5px) and phone widths, in both themes. Brand's `tangle-drift` `header_height_literal` keeps products from re-setting header heights.
+
 ## Stylesheet entries
 
 Shared components ship Tailwind class names, so the app's Tailwind must scan them.

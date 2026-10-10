@@ -25,6 +25,7 @@ import {
 } from "./sidebar-context"
 import { RailTooltip, RAIL_FLOATING_SURFACE } from "./rail-tooltip"
 import { focusRing } from "@tangle-network/ui/utils"
+import { ShellHeader } from "../workspace/shell-header"
 
 // ============================================================================
 // Types
@@ -188,7 +189,8 @@ function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: bool
  * box) so the collapse affordance is discoverable without spending rail width.
  * With no `brand` but `children`, the collapsed rail falls back to `children` —
  * the consumer's header content is then the only mark it has.
- * Renders its own `h-14` bordered bar — drop it in at the top of {@link SidebarRail}.
+ * Renders a bordered `ShellHeader` row, so its divider is the line every main-pane
+ * header meets — drop it in at the top of {@link SidebarRail}.
  */
 /**
  * React renders nothing for `null`, `undefined`, booleans, empty (or
@@ -229,9 +231,10 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
     )
 
   return (
-    <div
+    <ShellHeader
+      divider={false}
       className={cn(
-        "flex h-14 shrink-0 items-center border-b border-[var(--md3-outline-variant)]",
+        "border-b border-[var(--md3-outline-variant)] bg-transparent",
         collapsed ? "justify-center px-2" : "gap-2 px-3",
         className,
       )}
@@ -292,7 +295,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
           {collapsible && <PanelToggleButton collapsed={collapsed} onToggle={onToggle} />}
         </>
       )}
-    </div>
+    </ShellHeader>
   )
 }
 
@@ -1166,11 +1169,11 @@ export interface SidebarPanelHeaderProps {
 
 export function SidebarPanelHeader({ children, title, className }: SidebarPanelHeaderProps) {
   return (
-    <div className={cn("flex h-14 items-center px-4 border-b border-[var(--md3-outline-variant)] shrink-0", className)}>
+    <ShellHeader divider={false} className={cn("border-b border-[var(--md3-outline-variant)] bg-transparent px-4", className)}>
       {children ?? (
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       )}
-    </div>
+    </ShellHeader>
   )
 }
 

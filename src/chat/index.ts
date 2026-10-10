@@ -22,6 +22,7 @@ export {
   type MessageRole,
   ThinkingIndicator,
   type ThinkingIndicatorProps,
+  TRANSCRIPT_TEXT,
   UserMessage,
   type UserMessageProps,
 } from "@tangle-network/ui/chat";

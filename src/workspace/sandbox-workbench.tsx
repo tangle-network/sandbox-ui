@@ -19,7 +19,7 @@ import { WorkspaceArtifactView } from "./workspace-artifact-view";
 import { DirectoryPane, type DirectoryPaneProps } from "./directory-pane";
 import { RuntimePane, type RuntimePaneProps } from "./runtime-pane";
 import { WorkspaceLayout, type WorkspaceLayoutProps } from "./workspace-layout";
-import { WorkspacePaneHeader } from "./workspace-pane-header";
+import { ShellHeader } from "./shell-header";
 import { focusRing, focusRingInset } from "@tangle-network/ui/utils";
 
 export type SandboxWorkbenchPlacement = "left" | "right" | "bottom" | "hidden";
@@ -418,7 +418,7 @@ export function SandboxWorkbench({
   const paneSubtitle = subtitle ?? session.subtitle;
   const center = quiet ? transcript : (
     <section className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground">
-      <WorkspacePaneHeader className="gap-3">
+      <ShellHeader className="gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             {session.eyebrow && (
@@ -439,7 +439,7 @@ export function SandboxWorkbench({
           )}
         </div>
         {session.headerActions && <div className="flex shrink-0 items-center gap-1.5">{session.headerActions}</div>}
-      </WorkspacePaneHeader>
+      </ShellHeader>
       <div className="min-h-0 flex-1 overflow-auto bg-background">{transcript}</div>
     </section>
   );

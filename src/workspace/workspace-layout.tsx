@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { WorkspacePaneHeader } from "./workspace-pane-header";
+import { ShellHeader } from "./shell-header";
 import { focusRing } from "@tangle-network/ui/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@tangle-network/ui/primitives";
 
@@ -337,7 +337,7 @@ function MobileDrawer({ side, title, header, onClose, onReturnFocus, theme, dens
           )}
         >
           <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
-          <WorkspacePaneHeader className="justify-between gap-3">
+          <ShellHeader className="justify-between gap-3">
             <div className="min-w-0 flex-1">{header ?? <span className="text-[13px] font-medium text-foreground">{title}</span>}</div>
             <DialogPrimitive.Close asChild>
               <button
@@ -348,7 +348,7 @@ function MobileDrawer({ side, title, header, onClose, onReturnFocus, theme, dens
                 <X className="h-4 w-4" />
               </button>
             </DialogPrimitive.Close>
-          </WorkspacePaneHeader>
+          </ShellHeader>
           <div className="min-h-0 flex-1 overflow-auto">{children}</div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -484,7 +484,6 @@ export function WorkspaceLayout({
   const paneControlClassName = inset
     ? `inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`
     : `rounded-[2px] p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${focusRing}`;
-  const insetHeaderClassName = inset ? "h-12 bg-transparent px-2" : undefined;
   const reopenClassName = showCenterHeader
     ? paneControlClassName
     : `flex h-10 w-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-foreground ${focusRing}`;
@@ -660,12 +659,12 @@ export function WorkspaceLayout({
   const centerPane = (
     <main className="relative flex min-w-0 flex-1 flex-col">
       {showCenterHeader && (
-        <WorkspacePaneHeader data-workspace-header="center" className={cn("gap-2", inset && "gap-1", insetHeaderClassName)}>
+        <ShellHeader inset={inset} data-workspace-header="center" className={cn("gap-2", inset && "gap-1")}>
           {leftReopenControl && <div ref={leftReopenRef} className="shrink-0">{leftReopenControl}</div>}
           <div className="min-w-0 flex-1">{centerHeader}</div>
           {bottomReopenControl}
           {rightReopenControl && <div ref={rightReopenRef} className="shrink-0">{rightReopenControl}</div>}
-        </WorkspacePaneHeader>
+        </ShellHeader>
       )}
 
       <div className="relative flex min-h-0 flex-1">
@@ -749,7 +748,7 @@ export function WorkspaceLayout({
           !resizable && "border-l border-border",
         )}
       >
-        <WorkspacePaneHeader className={cn("justify-between gap-2", insetHeaderClassName)}>
+        <ShellHeader inset={inset} className="justify-between gap-2">
           <div className="min-w-0 flex-1">
             {rightHeader ?? <span className="text-[13px] font-medium text-foreground">Artifacts</span>}
           </div>
@@ -768,7 +767,7 @@ export function WorkspaceLayout({
               <PanelRightClose className="h-4 w-4" />
             </button>
           </PaneControlTooltip>
-        </WorkspacePaneHeader>
+        </ShellHeader>
         <div className={cn("min-h-0 flex-1 overflow-auto", rightContentClassName)}>{rightContent}</div>
       </aside>
     </>
@@ -798,7 +797,7 @@ export function WorkspaceLayout({
               )}
             >
               {leftHeader && (
-                <WorkspacePaneHeader className="justify-between gap-2">
+                <ShellHeader className="justify-between gap-2">
                   <div className="min-w-0 flex-1">{leftHeader}</div>
                   <button
                     type="button"
@@ -812,7 +811,7 @@ export function WorkspaceLayout({
                   >
                     <PanelLeftClose className="h-4 w-4" />
                   </button>
-                </WorkspacePaneHeader>
+                </ShellHeader>
               )}
               <div className={cn("min-h-0 flex-1 overflow-auto py-1", leftContentClassName)}>{left}</div>
             </aside>
@@ -829,7 +828,7 @@ export function WorkspaceLayout({
         {inset ? (
           // The gutter shows the recessed backdrop evenly on every side, so a
           // closed right pane ends the surface one gutter from the shell edge.
-          <div className="flex min-h-0 min-w-0 flex-1 p-1.5 sm:p-2">
+          <div className="flex min-h-0 min-w-0 flex-1 p-[var(--shell-inset-gutter,0.5rem)]">
             <div
               data-workspace-surface
               className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--md3-outline-variant)] bg-background shadow-[var(--shadow-card)]"

@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as Dialog from "@radix-ui/react-dialog"
 import { cn } from "../lib/utils"
+import { ShellHeader } from "../workspace/shell-header"
 import { MOTION_CONTROL, MOTION_TRAVEL } from "../lib/motion"
 import { useBrandThemeSync } from "./use-brand-theme-sync"
 import {
@@ -99,7 +100,7 @@ export interface SidebarLayoutProps {
    * Content rendered in the rail header in place of the logo link — e.g. a
    * project/workspace switcher. Spans the header so the app's primary
    * orientation control sits at the top of the rail. When set, `logo`/`logoHref`
-   * are ignored. The header keeps its `h-14` height for cross-view alignment.
+   * are ignored. The header is a `ShellHeader`, so its divider is the line main-pane headers meet.
    */
   railHeaderContent?: React.ReactNode
   user?: SidebarUser | null
@@ -486,9 +487,11 @@ function SidebarLayoutInner({
               `h-screen flex-col` content class keeps working: the bar is a
               shrink-0 row and the app's own content flexes beneath it. */}
           {hideBelow && (
-            <header
+            <ShellHeader
+              as="header"
+              divider={false}
               className={cn(
-                "flex h-14 shrink-0 items-center gap-1 border-b border-[var(--md3-outline-variant)] bg-surface px-2",
+                "gap-1 border-b border-[var(--md3-outline-variant)] bg-surface px-2",
                 SHOW_BELOW_CLASS[hideBelow],
               )}
             >
@@ -526,7 +529,7 @@ function SidebarLayoutInner({
                   {profileMenuItems}
                 </ProfileAvatar>
               )}
-            </header>
+            </ShellHeader>
           )}
           {children}
         </SidebarContent>
@@ -609,7 +612,7 @@ function MobileNavDrawer({
         className={cn("agent-arrive fixed inset-y-0 left-0 z-50 flex max-w-[85vw] flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low shadow-xl", SHOW_BELOW_CLASS[breakpoint])}
       >
         <Dialog.Title className="sr-only">Navigation</Dialog.Title>
-        <div className="flex h-14 shrink-0 items-center gap-1 border-b border-[var(--md3-outline-variant)] px-2">
+        <ShellHeader divider={false} className="gap-1 border-b border-[var(--md3-outline-variant)] bg-transparent px-2">
           <div className="flex min-w-0 flex-1 items-center">{header}</div>
           <Dialog.Close asChild>
             <button
@@ -620,7 +623,7 @@ function MobileNavDrawer({
               <CloseIcon className="size-5" />
             </button>
           </Dialog.Close>
-        </div>
+        </ShellHeader>
 
         <nav aria-label="Sections" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2">
           {children}

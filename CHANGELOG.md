@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.132.3
+
+- `SidebarLayout` mounts `railHeaderContent` in one place at a time: the rail on a desktop, the phone bar below `hideBelow`, and the drawer while it is open. It used to mount in the rail and the hidden phone bar at once, so a product-controlled menu such as a workspace switcher opened one menu per copy (Hospitality showed two offset workspace menus). Story: `Dashboard/SidebarLayout` Controlled header menu; visual check in `tests/visual/sidebar-navigation.spec.mjs`.
+
 ## 0.132.2
 
 - The sidebar's labels read at 14px (`text-sm`) instead of 12px: flyout section titles, empty states, the account avatar initials, and the account menu's email, plan and appearance caption. The unread count inside its dot on an icon is the one glyph-sized exemption. The rail floor test in `dashboard-layout.test.tsx` now holds 14px.

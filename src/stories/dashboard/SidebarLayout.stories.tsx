@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react"
+import { useState } from "react"
 import {
   CheckCircle,
   CirclePlus,
@@ -9,6 +10,12 @@ import {
   Terminal,
 } from "lucide-react"
 import { SidebarLayout, type SidebarLayoutNavItem } from "../../dashboard/sidebar-layout"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../primitives"
 
 /**
  * The app shell four Tangle agent products render. Stories exist mainly to pin
@@ -124,4 +131,32 @@ export const MobileWithPanel: Story = {
     ),
   },
   globals: { viewport: { value: "mobile2", isRotated: false } },
+}
+
+/**
+ * A workspace menu whose `open` the product owns, as Hospitality's switcher
+ * does. The shell must mount it once, or one click opens one menu per copy.
+ */
+function ControlledHeaderMenu() {
+  const [open, setOpen] = useState(false)
+  const header = (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="min-w-0 truncate rounded-lg px-2 py-1 text-sm font-semibold text-foreground">
+          ReCenter
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem>ReCenter</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setOpen(false)}>Create workspace</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+  return <SidebarLayout {...base} railHeaderContent={header} />
+}
+
+export const ControlledHeaderMenuStory: Story = {
+  name: "Controlled header menu",
+  args: base,
+  render: () => <ControlledHeaderMenu />,
 }

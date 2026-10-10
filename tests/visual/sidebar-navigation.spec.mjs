@@ -83,3 +83,26 @@ for (const [breakpoint, width] of [['md', 768], ['lg', 1024]]) {
     await expect(page.getByRole('heading', { name: 'Vault destination' })).toBeVisible()
   })
 }
+
+// A product-owned `open` on the rail header (Hospitality's workspace switcher)
+// once opened a second, offset menu from the copy mounted in the hidden phone bar.
+for (const theme of ['light', 'dark']) {
+  for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+    test(`controlled header menu opens exactly one menu on ${device} ${theme}`, async ({ page, baseURL }, info) => {
+      await openStory(page, 'dashboard-sidebarlayout--controlled-header-menu-story', theme, viewport, baseURL)
+      await expect(page.getByRole('button', { name: 'ReCenter', exact: true })).toHaveCount(1)
+      await page.getByRole('button', { name: 'ReCenter', exact: true }).click()
+      await expect(page.getByRole('menu')).toHaveCount(1)
+      await expect(page.getByRole('menuitem', { name: 'Create workspace', exact: true })).toHaveCount(1)
+      await page.screenshot({ path: info.outputPath(`header-menu-${device}-${theme}.png`), animations: 'disabled' })
+      if (device !== 'phone') return
+      await page.keyboard.press('Escape')
+      await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+      const drawer = page.getByRole('dialog', { name: 'Navigation', exact: true })
+      await drawer.getByRole('button', { name: 'ReCenter', exact: true }).click()
+      await expect(page.getByRole('menu')).toHaveCount(1)
+      await page.screenshot({ path: info.outputPath(`header-menu-drawer-${theme}.png`), animations: 'disabled' })
+    })
+  }
+}
+

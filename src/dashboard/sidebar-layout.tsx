@@ -177,6 +177,28 @@ const HIDE_BELOW_CLASS = {
   lg: "max-lg:hidden",
 } as const
 
+/** The width at which each `hideBelow` breakpoint shows the rail again. */
+const DESKTOP_QUERY = {
+  md: "(min-width: 48rem)",
+  lg: "(min-width: 64rem)",
+} as const
+
+/**
+ * Whether the rail is showing. A host without matchMedia (jsdom, an old
+ * embedded webview) and the server both count as desktop.
+ */
+function useRailVisible(hideBelow: "md" | "lg" | undefined) {
+  const query = hideBelow ? DESKTOP_QUERY[hideBelow] : undefined
+  const subscribe = React.useCallback((onChange: () => void) => {
+    if (!query || typeof window.matchMedia !== "function") return () => {}
+    const media = window.matchMedia(query)
+    media.addEventListener("change", onChange)
+    return () => media.removeEventListener("change", onChange)
+  }, [query])
+  const read = () => !query || typeof window.matchMedia !== "function" || window.matchMedia(query).matches
+  return React.useSyncExternalStore(subscribe, read, () => true)
+}
+
 /** Inverse of {@link HIDE_BELOW_CLASS} — the mobile surfaces that stand in for
  *  the hidden rail show exactly where the rail does not. */
 const SHOW_BELOW_CLASS = {
@@ -284,12 +306,19 @@ function SidebarLayoutInner({
     // Same guard as DashboardLayout: a host without matchMedia (jsdom, an old
     // embedded webview) keeps the drawer open rather than crashing the effect.
     if (typeof window.matchMedia !== "function") return
-    const desktop = window.matchMedia(hideBelow === "md" ? "(min-width: 48rem)" : "(min-width: 64rem)")
+    const desktop = window.matchMedia(DESKTOP_QUERY[hideBelow])
     const closeOnDesktop = () => { if (desktop.matches) setMobileNavOpen(false) }
     closeOnDesktop()
     desktop.addEventListener("change", closeOnDesktop)
     return () => desktop.removeEventListener("change", closeOnDesktop)
   }, [hideBelow, mobileNavOpen])
+
+  // `railHeaderContent` is often a stateful control such as a workspace
+  // switcher whose `open` the product owns. Mounting it in the rail, the phone
+  // bar and the drawer at once (the hidden copies are only display:none) made
+  // one click open one portalled menu per copy, so it lives in one slot only.
+  const railVisible = useRailVisible(hideBelow)
+  const headerSlot = mobileNavOpen ? "drawer" : railVisible ? "rail" : "bar"
 
   /**
    * One nav list, rendered twice — once in the desktop rail, once in the mobile
@@ -417,7 +446,7 @@ function SidebarLayoutInner({
                   collapsible={railLabels}
                   LinkComponent={LinkComponent}
                 >
-                  {railHeaderContent}
+                  {headerSlot === "rail" ? railHeaderContent : undefined}
                 </RailHeader>
               )}
 
@@ -476,7 +505,7 @@ function SidebarLayoutInner({
                 </button>
               </Dialog.Trigger>
               <div className="flex min-w-0 flex-1 items-center">
-                {railHeaderContent ?? (
+                {(headerSlot === "bar" ? railHeaderContent : undefined) ?? (
                   logo !== undefined ? (
                     <Link href={logoHref} to={logoHref} className="flex min-w-0 items-center">
                       {logo}

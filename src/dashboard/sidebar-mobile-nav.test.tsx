@@ -1,3 +1,4 @@
+import * as React from "react"
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -192,4 +193,39 @@ describe("SidebarLayout — mobile section nav", () => {
     expect(onPanelOpenChange).toHaveBeenCalledTimes(1)
     expect(onPanelOpenChange).toHaveBeenCalledWith(true)
   })
+
+  // A product-controlled switcher (Hospitality's workspace menu) shares one
+  // `open` across every mounted copy, so each copy is one more menu on screen.
+  function ControlledSwitcher() {
+    const [open, setOpen] = React.useState(false)
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(!open)}>Workspace</button>
+        {open && <div role="menu">Create workspace</div>}
+      </>
+    )
+  }
+
+  it("mounts the rail header content once on a phone, whether or not the drawer is open", async () => {
+    const user = userEvent.setup()
+    renderShell({ railLabels: true, railHeaderContent: <ControlledSwitcher /> })
+    expect(screen.getAllByRole("button", { name: "Workspace" })).toHaveLength(1)
+    await user.click(screen.getByRole("button", { name: "Workspace" }))
+    expect(screen.getAllByRole("menu")).toHaveLength(1)
+
+    await user.click(screen.getByRole("button", { name: "Open navigation" }))
+    const drawer = screen.getByRole("dialog", { name: "Navigation" })
+    expect(screen.getAllByRole("button", { name: "Workspace", hidden: true })).toHaveLength(1)
+    expect(within(drawer).getByRole("button", { name: "Workspace" })).toBeTruthy()
+  })
+
+  it("mounts the rail header content once on a desktop", () => {
+    vi.stubGlobal("matchMedia", vi.fn((query: string) => ({
+      matches: true, media: query,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    })))
+    renderShell({ railLabels: true, railHeaderContent: <ControlledSwitcher /> })
+    expect(screen.getAllByRole("button", { name: "Workspace" })).toHaveLength(1)
+  })
 })
+

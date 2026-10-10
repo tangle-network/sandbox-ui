@@ -98,11 +98,16 @@ describe("buildStyledEdges", () => {
       [edge("a", "b"), edge("b", "c"), edge("c", "d")],
       { b: { status: "succeeded" }, c: { status: "running" } },
     );
-    expect(done.style?.stroke).toBe("var(--surface-success-text)");
+    // Settled edges go quiet (2026-09): only the live front carries color.
+    expect(done.style?.stroke).toBe(
+      "color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)",
+    );
     expect(running.style?.stroke).toBe("hsl(var(--primary))");
     expect(running.animated).toBe(true);
-    // An unreached (no-state) target is the muted neutral, animated off.
-    expect(unreached.style?.stroke).toBe("hsl(var(--muted-foreground))");
+    // An unreached (no-state) target is the same quiet neutral, animated off.
+    expect(unreached.style?.stroke).toBe(
+      "color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)",
+    );
     expect(unreached.animated).toBe(false);
   });
 
@@ -112,7 +117,7 @@ describe("buildStyledEdges", () => {
     const edges = buildStyledEdges([edge("a", "b"), edge("b", "c")], undefined);
     expect(edges).toHaveLength(2);
     for (const e of edges) {
-      expect(e.style?.stroke).toBe("hsl(var(--muted-foreground))");
+      expect(e.style?.stroke).toBe("color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)");
       expect(e.animated).toBe(false);
     }
   });

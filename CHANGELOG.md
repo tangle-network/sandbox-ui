@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.132.2
+
+- The sidebar's labels read at 14px (`text-sm`) instead of 12px: flyout section titles, empty states, the account avatar initials, and the account menu's email, plan and appearance caption. The unread count inside its dot on an icon is the one glyph-sized exemption. The rail floor test in `dashboard-layout.test.tsx` now holds 14px.
+
 ## 0.132.1
 
 - `WorkspaceFilesPane` takes `surface="plain"` for a pane that already names the files, such as a companion's Files tab. The tree sits on the pane's own surface, with no nested card, gutter, or second "Files" heading; the heading stays for assistive technology. The default `card` surface is unchanged. Story: `Workspace/WorkspaceFilesPane` In Pane.

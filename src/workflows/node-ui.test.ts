@@ -35,16 +35,22 @@ describe("progressFill", () => {
 });
 
 describe("edgeColor", () => {
-  it("colors an edge by its target status, from the semantic (theme-aware) tokens", () => {
+  it("colors only the LIVE FRONT — settled edges go quiet (2026-09 redesign)", () => {
+    // The emphasis inversion: running/waiting/failed carry color; succeeded
+    // and queued sit at a quiet neutral so a healthy run is not a green wall.
     expect(edgeColor("running")).toBe("hsl(var(--primary))");
-    expect(edgeColor("succeeded")).toBe("var(--surface-success-text)");
+    expect(edgeColor("waiting")).toBe("var(--surface-warning-text)");
     expect(edgeColor("failed")).toBe("var(--surface-danger-text)");
-    expect(edgeColor("queued")).toBe("hsl(var(--muted-foreground))");
+    expect(edgeColor("succeeded")).toBe(
+      "color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)",
+    );
   });
 
   it("falls back to the muted neutral for the static (undefined) path", () => {
     // The definition/preview view passes no status — every edge must read neutral.
-    expect(edgeColor(undefined)).toBe("hsl(var(--muted-foreground))");
+    expect(edgeColor(undefined)).toBe(
+      "color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)",
+    );
   });
 
   it("never emits a --color-* @theme alias (undefined in tokens-only consumers)", () => {
@@ -79,12 +85,16 @@ describe("status colors", () => {
 });
 
 describe("statusBorder", () => {
-  it("borders a running/terminal node in its status color, and leaves a queued one at rest", () => {
+  it("borders the live front and the failure; DONE IS QUIET (2026-09 redesign)", () => {
     expect(statusBorder("running").borderColor).toBe(STATUS_COLOR.running);
-    expect(statusBorder("succeeded").borderColor).toBe(STATUS_COLOR.succeeded);
+    // Done is quiet: the neutral resting border, no status hue, no ring —
+    // the pill's check carries the state, the card does not paint itself green.
+    expect(statusBorder("succeeded").borderColor).toBe("hsl(var(--foreground) / 0.14)");
+    expect(statusBorder("succeeded").boxShadow).not.toContain("0 0 0");
+    // Failed is the loudest pixel on the canvas: danger border + wide halo.
     expect(statusBorder("failed").borderColor).toBe(STATUS_COLOR.failed);
-    // A node the run hasn't reached yet wears the resting border — it is NOT
-    // dimmed, which would only fight the contrast the rest of this design fixes.
+    expect(statusBorder("failed").boxShadow).toContain("0 0 32px");
+    // A node the run hasn't reached yet wears the resting border.
     expect(statusBorder("queued").borderColor).toBe("hsl(var(--border))");
   });
 

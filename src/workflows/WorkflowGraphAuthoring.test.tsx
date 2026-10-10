@@ -322,7 +322,9 @@ describe("a node carrying authoring problems", () => {
     });
     const card = container.querySelector<HTMLElement>('[data-testid="wf-node-card"]');
     expect(card?.style.borderColor).toBe("var(--surface-danger-text)");
-    expect(card?.style.boxShadow).toContain("35%");
+    // Failed is the LOUDEST pixel (2026-09): a wide 2px halo, stronger than
+    // any other state's ring.
+    expect(card?.style.boxShadow).toContain("0 0 32px");
   });
 });
 

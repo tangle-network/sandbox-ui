@@ -91,6 +91,7 @@ import {
   StatusPill,
   statusBorder,
   kindAccent,
+  RESTING_BORDER,
   RESTING_SHADOW,
   TONE_ACCENT,
 } from "./node-ui";
@@ -620,7 +621,7 @@ export function WorkflowNode({
               : problemSeverity
                 ? problemBorder(problemSeverity)
                 : {
-                    borderColor: `color-mix(in srgb, ${accent} 45%, hsl(var(--border)))`,
+                    borderColor: RESTING_BORDER,
                     boxShadow: RESTING_SHADOW,
                   }),
             // The TILE is the compact node (the name beside it is unboxed), so
@@ -724,13 +725,20 @@ export function WorkflowNode({
           : problemSeverity
             ? problemBorder(problemSeverity)
             : {
-                borderColor: `color-mix(in srgb, ${accent} 45%, hsl(var(--border)))`,
+                borderColor: RESTING_BORDER,
                 boxShadow: RESTING_SHADOW,
               }),
         ...(selected ? SELECTION_OUTLINE : {}),
       }}
     >
       {handles}
+      {/* The KIND TOP RULE — identity's quiet home now the border is
+          state-only: a 2px accent strip on the card's leading edge. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-0.5"
+        style={{ background: `color-mix(in srgb, ${accent} 70%, transparent)` }}
+      />
       {children}
     </div>
   );

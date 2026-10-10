@@ -1,4 +1,9 @@
 export {
+  ApprovalCard,
+  type ApprovalCardProps,
+  type ApprovalDiffFile,
+  ApprovalDiffSummary,
+  type ApprovalPlanStep,
   ExpandedToolDetail,
   type ExpandedToolDetailProps,
   type FeedSegment,
@@ -19,4 +24,13 @@ export {
   type ToolCallStatus,
   type ToolCallType,
   parseToolEvent,
+  type RunPhase,
+  RunPhaseList,
+  showsTaskPriority,
+  TaskList,
+  type TaskListItem,
+  type TaskListProps,
+  taskProgress,
+  type TaskStatus,
+  taskStatus,
 } from "@tangle-network/ui/run";

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Button, Card, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, EmptyState,
@@ -158,7 +159,7 @@ export function IntegrationsCatalog({
   rows, query, onQueryChange, categoryFilter = "", onCategoryFilterChange,
   sort, onSortChange, onSelectConnection, onConnect, onManage, onDisconnect,
   onRequestIntegration, onRetry, loading = false, error, actionError, connectError,
-  busyProviderId, reserveConnectionContext = false, skeletonCount, emptyCatalogLabel = "No integrations are available to connect yet.",
+  busyProviderId, reserveConnectionContext = false, skeletonCount, pageSize, emptyCatalogLabel = "No integrations are available to connect yet.",
   title, description, layout = "cards", className,
 }: IntegrationsCatalogProps) {
   const compact = layout === "tiles";
@@ -169,6 +170,9 @@ export function IntegrationsCatalog({
     (!q || `${row.title} ${row.providerId} ${row.description ?? ""}`.toLowerCase().includes(q)),
   );
   const hiddenActive = rows.filter((row) => catalogRowActive(row) && !filtered.includes(row)).length;
+  const limit = pageSize ?? (compact ? 24 : 12);
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? filtered : filtered.filter((row, index) => index < limit || catalogRowActive(row));
   const state = error ? "error" : loading && rows.length === 0 ? "loading" : rows.length === 0 ? "empty" : "loaded";
   const gridClass = compact
     // Columns follow the catalog's own width, not the viewport, so a tile stays wide
@@ -226,7 +230,7 @@ export function IntegrationsCatalog({
       {connectError ? <p role="alert" data-testid="integration-connect-error" className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{connectError}</p> : null}
       {(q || categoryFilter) && state === "loaded" ? <span role="status" className="sr-only">{filtered.length} matching integrations</span> : null}
       <div className={gridClass} data-testid="integrations-catalog-grid">
-        {state === "loading" ? Array.from({ length: skeletonCount ?? (compact ? 12 : 6) }, (_, i) => (
+        {state === "loading" ? Array.from({ length: skeletonCount ?? limit }, (_, i) => (
           <Card key={i} aria-hidden="true" className={cn(boxClass, "animate-pulse")}>
             <div className={headerClass}>
               <div className="shrink-0 rounded-2xl bg-muted" style={{ width: 48, height: 48 }} />
@@ -249,7 +253,7 @@ export function IntegrationsCatalog({
               <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
             </div> : null}
           </Card>
-        ) : filtered.map((row) => {
+        ) : visible.map((row) => {
           const provider = row.kind === "provider" ? row : undefined;
           const connection = provider?.connections.find((item) => item.id === provider.selectedConnectionId);
           const active = catalogRowActive(row);
@@ -311,6 +315,13 @@ export function IntegrationsCatalog({
           );
         })}
       </div>
+      {state === "loaded" && visible.length < filtered.length ? (
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={() => setShowAll(true)} data-testid="integrations-show-all">
+            Show all {filtered.length} integrations
+          </Button>
+        </div>
+      ) : null}
     </section>
   );
 }

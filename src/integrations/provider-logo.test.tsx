@@ -18,6 +18,15 @@ describe("normalizeProviderId", () => {
 });
 
 describe("providerLogoCandidates", () => {
+  it("sends protocol connectors straight to the monogram, keeping a supplied iconUrl", () => {
+    for (const id of ["email", "smtp", "webhook"]) expect(providerLogoCandidates({ id })).toEqual([]);
+    expect(providerLogoCandidates({ id: "email", iconUrl: "https://x.test/mail.svg" })).toEqual(["https://x.test/mail.svg"]);
+  });
+
+  it("pins Adobe Sign to a source that resolves before any CDN guess", () => {
+    expect(providerLogoCandidates({ id: "adobesign" })[0]).toContain("adobe.com");
+  });
+
   it("resolves the ActivePieces CDN by id, then a simpleicons slug", () => {
     expect(providerLogoCandidates({ id: "github" })).toEqual([
       "https://cdn.activepieces.com/pieces/github.png",

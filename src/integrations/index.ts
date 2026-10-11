@@ -1,5 +1,11 @@
 export { IntegrationsPanel } from "./integrations-panel";
-export { IntegrationsCatalog, catalogRowActive } from "./integrations-catalog";
+export {
+  IntegrationsCatalog,
+  catalogRowActive,
+  integrationConnectionTone,
+  integrationTileStatus,
+  type IntegrationConnectionState,
+} from "./integrations-catalog";
 export { IntegrationConnectionDetail } from "./connection-detail";
 export {
   ApiKeyConnectDialog,

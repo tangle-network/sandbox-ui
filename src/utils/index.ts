@@ -13,6 +13,13 @@ export {
   getToolCategory,
   getToolDisplayMetadata,
   getToolErrorText,
+  ixControl,
+  ixControlAfter,
+  ixControlSoft,
+  ixField,
+  ixRow,
+  ixSelected,
+  ixTabUnderline,
   timeAgo,
   truncateText,
 } from "@tangle-network/ui/utils";

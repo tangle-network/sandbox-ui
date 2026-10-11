@@ -7,8 +7,8 @@ import {
 import { IntegrationsCatalog } from "./integrations-catalog";
 import { normalizeProviderId } from "./provider-logo";
 import type {
-  IntegrationConnection, IntegrationConnectionAction, IntegrationProvider,
-  IntegrationSort, IntegrationsPanelProps, IntegrationsProviderRow,
+  IntegrationConnection, IntegrationConnectionAction, IntegrationHealth, IntegrationProvider,
+  IntegrationSort, IntegrationsPanelProps, IntegrationsProviderRow, IntegrationTone,
 } from "./types";
 
 export type { IntegrationsPanelProps, IntegrationConnectionAction, IntegrationSort } from "./types";
@@ -20,6 +20,14 @@ const DEFAULT_FEATURED_IDS = [
   "linear", "jira", "asana", "stripe", "stripe-pack", "twilio", "twilio-sms", "linkedin",
   "zoom", "shopify", "mailchimp", "zendesk", "intercom", "dropbox", "webhook",
 ];
+const STATUS_LABELS: Record<string, string> = { connected: "Connected", active: "Connected", pending: "Pending", expired: "Expired" };
+/** A legacy connection's tile label and tone: failing or expired is an error, pending or degraded is amber. */
+function connectionStatusOf(connection: IntegrationConnection, health: IntegrationHealth | undefined): { label: string; tone: IntegrationTone } {
+  const tone: IntegrationTone = health?.status === "failing" || connection.status === "expired" ? "error"
+    : health?.status === "degraded" || connection.status === "pending" ? "warning" : "success";
+  const raw = connection.status.replace(/_/g, " ");
+  return { label: health?.message ?? STATUS_LABELS[connection.status] ?? raw.charAt(0).toUpperCase() + raw.slice(1), tone };
+}
 function defaultConnectorOf(provider: IntegrationProvider): string {
   return provider.connectors?.[0]?.connectorId ?? provider.providerId;
 }
@@ -127,11 +135,11 @@ export function IntegrationsPanel({
       description: provider.description, iconUrl: provider.iconUrl, canConnect: true,
       selectedConnectionId: live.some((connection) => connection.id === selectedId) ? selectedId : null,
       connections: live.map((connection) => {
-        const health = healthByConnectionId?.[connection.id];
+        const status = connectionStatusOf(connection, healthByConnectionId?.[connection.id]);
         const manageHref = getManageHref?.(connection);
         return {
           id: connection.id, accountDisplay: connection.accountDisplay,
-          statusLabel: health?.message ?? connection.status.replace(/_/g, " "),
+          statusLabel: status.label, statusTone: status.tone,
           detail: getConnectionContext?.(connection), manageHref, manageInNewWindow: true,
           capabilities: { manage: Boolean(manageHref || onManage), disconnect: true },
           actions: (getConnectionActions?.(connection) ?? []).map((action) => ({

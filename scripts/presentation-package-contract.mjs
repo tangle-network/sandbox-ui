@@ -94,9 +94,18 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" });
               await page.waitForFunction(() => document.documentElement.dataset.presentationReady === "true");
               await page.evaluate((value) => { document.documentElement.className = value; }, mode);
-              // Even with reduced motion, body colors transition for 1 ms. Read
-              // the settled theme after a paint rather than the previous frame.
-              await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+              // Even with reduced motion, body colors transition for 1 ms, and two
+              // frames do not guarantee that transition has run on a loaded host:
+              // a read can still return the previous theme's colour (the entry
+              // lane on the gate, the compiled lane on a rerun, same build). Wait
+              // for every CSS transition the switch started to finish, then paint.
+              await page.evaluate(async () => {
+                getComputedStyle(document.body).color;
+                await Promise.all(document.getAnimations()
+                  .filter((animation) => animation instanceof CSSTransition)
+                  .map((animation) => animation.finished.catch(() => undefined)));
+                await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+              });
               const measured = await page.evaluate(() => {
                 const required = (selector) => {
                   const element = document.querySelector(selector);

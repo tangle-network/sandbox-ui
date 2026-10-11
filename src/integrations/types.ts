@@ -141,6 +141,12 @@ export interface IntegrationsCatalogProps {
   /** Compact facade reserves its context line before any account has loaded. */
   reserveConnectionContext?: boolean;
   skeletonCount?: number;
+  /**
+   * Rows shown before "Show all": a Hub catalog lists hundreds of providers, and drawing every tile made a
+   * page tens of thousands of pixels tall that shifted everything below it once the catalog loaded.
+   * Connected rows always show. Defaults to 12 cards or 24 tiles; the loading skeleton uses the same count.
+   */
+  pageSize?: number;
   emptyCatalogLabel?: string;
   title?: string;
   description?: string;

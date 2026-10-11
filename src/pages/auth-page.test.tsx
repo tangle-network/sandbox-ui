@@ -48,18 +48,41 @@ describe("AuthPage theming", () => {
 
   it("paints every field as a surface-ladder well with the 3:1 field border and keeps the focus line", () => {
     render(<AuthPage mode="signup" providers={[]} onEmailSubmit={async () => null} />)
+    // The card opens Brand's surface context, so --well is the card's well inside it.
+    expect(card().getAttribute("data-slot")).toBe("card")
     const fields = [
       screen.getByRole("textbox", { name: "Name" }),
       screen.getByRole("textbox", { name: "Email" }),
       screen.getByLabelText("Password"),
     ]
     for (const field of fields) {
-      const style = field.getAttribute("style") ?? ""
       // --bg-input sat 2.6 L under a white card and the hairline edged it at 1.5:1.
-      expect(style).toContain("var(--well-card,")
-      expect(style).toContain("var(--field-border,")
+      expect(field.className).toContain("bg-[var(--field-surface,var(--well))]")
+      expect(field.className).toContain("border-[var(--field-border)]")
       // An inline outline: none hid Brand's focus line on every field.
       expect(field.style.outline).toBe("")
+    }
+  })
+
+  it("gives every control the shared ring-hue hover, and no inline edge to outrank it", () => {
+    render(<AuthPage mode="signup" providers={["github"]} onEmailSubmit={async () => null} />)
+    const controls = [
+      screen.getByRole("link", { name: /sign up with tangle/i }),
+      screen.getByRole("button", { name: /continue with github/i }),
+      screen.getByRole("button", { name: /create account with email/i }),
+    ]
+    for (const control of controls) {
+      expect(control.className).toContain("hover:shadow-[var(--ix-hover)]")
+      expect(control.className).toContain("active:shadow-[var(--ix-press)]")
+      // An inline border or box-shadow beats every class, which left these with no hover state.
+      expect(control.style.border).toBe("")
+      expect(control.style.borderColor).toBe("")
+      expect(control.style.boxShadow).toBe("")
+    }
+    for (const field of [screen.getByRole("textbox", { name: "Name" }), screen.getByRole("textbox", { name: "Email" }), screen.getByLabelText("Password")]) {
+      expect(field.className).toContain("hover:shadow-[var(--shadow-well),var(--ix-hover)]")
+      expect(field.style.border).toBe("")
+      expect(field.style.background).toBe("")
     }
   })
 })

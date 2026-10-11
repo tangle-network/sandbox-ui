@@ -374,7 +374,7 @@ describe("IntegrationsPanel", () => {
       { providerId: "slack", displayName: "Slack" },
       { providerId: "zzz", displayName: "Zzz" },
     ];
-    const { container } = render(
+    render(
       <IntegrationsPanel
         catalog={wide}
         connections={[]}
@@ -383,7 +383,7 @@ describe("IntegrationsPanel", () => {
         featuredIds={["slack"]}
       />,
     );
-    const grid = container.querySelector(".grid.grid-cols-3") as HTMLElement;
+    const grid = screen.getByTestId("integrations-catalog-grid");
     const tiles = within(grid)
       .getAllByText(/Aardvark|Slack|Zzz/)
       .map((el) => el.textContent);
@@ -396,7 +396,7 @@ describe("IntegrationsPanel", () => {
       { providerId: "aardvark", displayName: "Aardvark" },
       { providerId: "slack", displayName: "Slack" },
     ];
-    const { container } = render(
+    render(
       <IntegrationsPanel
         catalog={wide}
         connections={[]}
@@ -406,7 +406,7 @@ describe("IntegrationsPanel", () => {
       />,
     );
     fireEvent.click(screen.getByTestId("sort-alpha"));
-    const grid = container.querySelector(".grid.grid-cols-3") as HTMLElement;
+    const grid = screen.getByTestId("integrations-catalog-grid");
     const tiles = within(grid)
       .getAllByText(/Aardvark|Slack/)
       .map((el) => el.textContent);

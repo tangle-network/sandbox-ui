@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.133.7
+
+- Asset Studio on a phone: `ApprovalQueue` shows one card per row below 480 px (two from 480 px, unchanged from `sm` up), and each `AssetCard`'s Edit, Reject and Approve are 14 px text with 14 px icons (`aria-hidden`) and a 40 px minimum height. At 390 px the queue drew two 170 px columns and the 12 px actions ran together as "Reject✓ Approve" (GTM journey B1, 2026-10-11).
+
 ## 0.133.6
 
 - Integrations error states (the catalog and connection details) render as the shared `Alert` in its danger tone, so they read red on every plane: Brand's matched danger fill, border and ink. They were `text-destructive` on the card with a 40% destructive border; dark themes lighten destructive so it clears 4.5:1 as text on the popover, and in Hospitality dark (`rgb(249, 200, 200)`) the error read as white in a grey box. The catalog error is one row with an inline Retry instead of a 200 px empty box. Baselines: `integrations-settings--{catalog-error,detail-error,detail-selected}` mobile (`detail-selected` was already stale against `main`).

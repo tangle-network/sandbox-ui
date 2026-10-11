@@ -45,4 +45,21 @@ describe("AuthPage theming", () => {
       expect(style).toContain("var(--control-text-lg, 1rem)")
     }
   })
+
+  it("paints every field as a surface-ladder well with the 3:1 field border and keeps the focus line", () => {
+    render(<AuthPage mode="signup" providers={[]} onEmailSubmit={async () => null} />)
+    const fields = [
+      screen.getByRole("textbox", { name: "Name" }),
+      screen.getByRole("textbox", { name: "Email" }),
+      screen.getByLabelText("Password"),
+    ]
+    for (const field of fields) {
+      const style = field.getAttribute("style") ?? ""
+      // --bg-input sat 2.6 L under a white card and the hairline edged it at 1.5:1.
+      expect(style).toContain("var(--well-card,")
+      expect(style).toContain("var(--field-border,")
+      // An inline outline: none hid Brand's focus line on every field.
+      expect(field.style.outline).toBe("")
+    }
+  })
 })

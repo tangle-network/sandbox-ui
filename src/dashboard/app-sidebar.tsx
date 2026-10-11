@@ -513,6 +513,10 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
         className: cn(classes, child.props.className),
         "aria-label": child.props["aria-label"] ?? label,
         "aria-description": child.props["aria-description"] ?? badgeDescription,
+        // The active destination is the current page. Brand's selected state
+        // (`aria-[current=page]`) keys off this attribute, and assistive tech
+        // announces it; the class recipe above only paints the pill.
+        "aria-current": child.props["aria-current"] ?? (isActive ? "page" : undefined),
         // The layout's `style` wins the merge, not the child's. It is where
         // `--stagger-index` arrives, and a child that happened to carry a
         // `style` of its own would otherwise drop the variable silently and
@@ -822,6 +826,10 @@ export function RailExpandable({
     else el.setAttribute("inert", "")
   }, [open])
   const activeSet = React.useMemo(() => new Set(activeSubIds ?? []), [activeSubIds])
+  // One link names the current page. When a sub-item is the page (an open
+  // session), the row is highlighted as its parent but does not also claim
+  // `aria-current="page"`.
+  const rowCurrent = isActive && activeSet.size === 0 ? "page" : undefined
   // Collapsed-rail flyout is portaled to <body> (it must escape the rail's
   // scroll-overflow clipping), so it's positioned from the trigger's rect and
   // kept open across the trigger→flyout gap by a small close delay.
@@ -839,6 +847,7 @@ export function RailExpandable({
         href={item.href}
         to={item.href}
         onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
         {...(item.prefetch !== undefined ? { prefetch: item.prefetch } : {})}
         className={cn(
           "flex h-8 min-w-0 items-center gap-2 rounded-md px-2.5 text-sm transition-colors",
@@ -977,7 +986,7 @@ export function RailExpandable({
         onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) scheduleClose() }}
       >
         {href ? (
-          <Link href={href} to={href} onClick={onNavigate} aria-label={label} className={triggerClasses}>
+          <Link href={href} to={href} onClick={onNavigate} aria-label={label} aria-current={rowCurrent} className={triggerClasses}>
             <Icon className="h-[17px] w-[17px] shrink-0" />
           </Link>
         ) : (
@@ -1063,6 +1072,7 @@ export function RailExpandable({
             href={href}
             to={href}
             onClick={onNavigate}
+            aria-current={rowCurrent}
             className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-sm font-medium"
           >
             <span className="truncate">{label}</span>

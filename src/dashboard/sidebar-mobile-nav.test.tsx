@@ -160,6 +160,16 @@ describe("SidebarLayout — mobile section nav", () => {
     for (const link of links) expect(link).toHaveAccessibleDescription("3 running")
   })
 
+  it("marks exactly the active section as the current page inside the drawer", async () => {
+    const user = userEvent.setup()
+    renderShell({ activeId: "approvals" })
+    await user.click(screen.getByRole("button", { name: "Open navigation" }))
+    const drawer = screen.getByRole("dialog", { name: "Navigation" })
+    const current = drawer.querySelectorAll('[aria-current="page"]')
+    expect(current).toHaveLength(1)
+    expect(current[0]).toBe(within(drawer).getByRole("link", { name: "approvals" }))
+  })
+
   it("does not start open — a nav drawer that reopens on every load is a bug", () => {
     renderShell()
     expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull()

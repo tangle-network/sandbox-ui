@@ -382,6 +382,7 @@ function SidebarLayoutInner({
                   href={f.href}
                   to={f.href}
                   onClick={onNavigate}
+                  aria-current={active ? "page" : undefined}
                   {...(f.prefetch !== undefined ? { prefetch: f.prefetch } : {})}
                   className={cn(
                     "flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors",

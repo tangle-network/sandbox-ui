@@ -112,3 +112,22 @@ describe("catalog tiles use the shared surface ladder", () => {
     expect(screen.getByTestId("status-linear")).toHaveTextContent("Not connected");
   });
 });
+
+describe("a long catalog shows one page until asked for all", () => {
+  const many: IntegrationsCatalogRow[] = Array.from({ length: 30 }, (_, i) => provider(`p${i}`));
+  many[27] = provider("p27", { connections: [account("z")], selectedConnectionId: "z" });
+
+  it("draws pageSize rows plus connected ones, then every row after Show all", () => {
+    render(<IntegrationsCatalog {...props} rows={many} pageSize={10} />);
+    expect(screen.getAllByTestId(/^integration-p\d+$/)).toHaveLength(11);
+    expect(screen.getByTestId("integration-p27")).toHaveAttribute("data-connected", "true");
+    fireEvent.click(screen.getByTestId("integrations-show-all"));
+    expect(screen.getAllByTestId(/^integration-p\d+$/)).toHaveLength(30);
+    expect(screen.queryByTestId("integrations-show-all")).toBeNull();
+  });
+
+  it("loads with as many skeleton tiles as the page it becomes", () => {
+    const { container } = render(<IntegrationsCatalog {...props} rows={[]} loading pageSize={10} />);
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(10);
+  });
+});

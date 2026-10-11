@@ -10,7 +10,9 @@ export default defineConfig({
   forbidOnly: true,
   updateSnapshots: 'none',
   reporter: process.env.CI ? 'dot' : 'list',
-  workers: process.env.CI ? 4 : undefined,
+  // A Beelink runs several gates at once; one worker per two cores starves story
+  // readiness past 30 s. CI and every other host use the same 4.
+  workers: 4,
   // One retry absorbs readiness timeouts on a saturated shared host. Pixel
   // comparisons are deterministic, so a real visual change still fails twice;
   // the report lists any retried test as flaky.

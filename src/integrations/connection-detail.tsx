@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@tangle-network/ui/primitives";
+import { Alert, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@tangle-network/ui/primitives";
 import { cn, focusRing } from "@tangle-network/ui/utils";
 import { ConnectionSelector, integrationSelectContentClassName, integrationSelectItemClassName } from "./integrations-catalog";
 import { ProviderIcon } from "./provider-logo";
@@ -65,9 +65,9 @@ export function IntegrationConnectionDetail({
     </header>
     <ConnectionSelector connections={connections} value={selectedConnectionId} onChange={onSelectConnection} label={`Account for ${provider.title}`} />
     <div className="min-h-[200px] min-w-0 space-y-4" key={connection?.id ?? "unselected"}>
-      {failure ? <div role="alert" className="rounded-xl border border-destructive/40 bg-card p-4 text-sm text-destructive">
-        <p>{failure}</p>{onRetry ? <Button variant="outline" onClick={() => onRetry(connection?.id ?? null)}>Retry</Button> : null}
-      </div> : null}
+      {failure ? <Alert tone="danger">
+        <p>{failure}</p>{onRetry ? <Button variant="outline" size="sm" className="justify-self-start" onClick={() => onRetry(connection?.id ?? null)}>Retry</Button> : null}
+      </Alert> : null}
       {loading && !connection ? <p role="status" className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">Loading connections…</p> :
         !connection ? <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
           {connections.length ? "Select a connected account to view its settings." : "No connected accounts are available."}

@@ -73,7 +73,10 @@ export async function openStory(page, id, theme, viewport, baseURL) {
       }
     }
     return [...document.querySelectorAll('[role="dialog"]')].some(isVisible)
-  }, null, { timeout: 30_000 })
+    // Poll on an interval, not requestAnimationFrame: a story can be fully painted while
+    // rAF callbacks stall, and the rAF poll then never re-checks (the timed-out page
+    // snapshot shows the rendered story).
+  }, null, { timeout: 30_000, polling: 100 })
   await expect(page.locator('.sb-errordisplay')).not.toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-sandbox-ui', 'true')
   await page.waitForFunction(() => {

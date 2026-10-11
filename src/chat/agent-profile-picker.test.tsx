@@ -144,3 +144,32 @@ describe("AgentProfilePicker", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+describe("AgentProfilePicker host editor", () => {
+  it("opens the host editor for built-in and custom rows instead of the inline form", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onNew = vi.fn();
+    render(
+      <AgentProfilePicker
+        value="studio"
+        onChange={() => {}}
+        profiles={[...PROFILES, { id: "custom-1", name: "Mine", description: "", builtin: false }]}
+        onEdit={onEdit}
+        onNew={onNew}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /agent profile/i }));
+    const edits = screen.getAllByTitle("Edit");
+    expect(edits).toHaveLength(3);
+    await user.click(edits[0]);
+    expect(onEdit).toHaveBeenCalledWith("studio");
+    expect(screen.queryByTestId("agent-profile-popover")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /agent profile/i }));
+    await user.click(screen.getByRole("button", { name: /new agent/i }));
+    expect(onNew).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("agent-profile-popover")).toBeNull();
+  });
+});

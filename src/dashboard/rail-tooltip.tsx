@@ -15,6 +15,8 @@ export const RAIL_FLOATING_SURFACE =
 export interface RailTooltipProps {
   /** Tooltip text shown to the right of the trigger. */
   label: string
+  /** A second, quieter line under the label that may wrap, e.g. what a nav item is for. */
+  description?: string
   /** The trigger element (icon button / link). */
   children: React.ReactNode
   /** Disable the tooltip (e.g. when the rail is expanded and the label is inline). */
@@ -39,7 +41,7 @@ export interface RailTooltipProps {
  * the whole nav would re-stagger on a collapse that moved nothing off screen.
  * One element type, both states.
  */
-export function RailTooltip({ label, children, disabled, className }: RailTooltipProps) {
+export function RailTooltip({ label, description, children, disabled, className }: RailTooltipProps) {
   const ref = React.useRef<HTMLSpanElement>(null)
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [coords, setCoords] = React.useState<{ top: number; left: number } | null>(null)
@@ -108,11 +110,13 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
               className={cn(
                 // Appears in place beside the trigger after the open delay, so
                 // it scales up rather than travelling — @see .agent-pop-in.
-                "agent-pop-in block whitespace-nowrap px-2 py-1 text-xs font-medium text-popover-foreground",
+                "agent-pop-in block px-2 py-1 text-xs font-medium text-popover-foreground",
+                description ? "w-max max-w-64" : "whitespace-nowrap",
                 RAIL_FLOATING_SURFACE,
               )}
             >
-              {label}
+              <span className="block whitespace-nowrap">{label}</span>
+              {description ? <span className="mt-0.5 block font-normal leading-snug text-muted-foreground">{description}</span> : null}
             </span>
           </span>,
           document.body,

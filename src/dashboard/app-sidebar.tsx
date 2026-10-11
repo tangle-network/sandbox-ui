@@ -433,6 +433,13 @@ export interface RailButtonProps {
   /** Show label text next to icon (for mobile drawer) */
   showLabel?: boolean
   /**
+   * One line saying what the destination is for, e.g. "Every past agent run".
+   * Shown in the hover tooltip under the label (the labeled rail shows the
+   * tooltip only when a description exists) and announced as the link's
+   * accessible description, so an unfamiliar nav item explains itself.
+   */
+  description?: string
+  /**
    * Render the rail-button styling onto a single child element (e.g. a router
    * `<Link>`) instead of an inner `<button>`. The child receives the button
    * classes, `title`, and the icon/label/badge as its content — so navigation
@@ -457,7 +464,7 @@ export interface RailButtonProps {
 
 const defaultBadgeLabel = (count: number) => `${count} new`
 
-export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = defaultBadgeLabel, onClick, className, showLabel, asChild, children, variant = "normal", style }: RailButtonProps) {
+export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = defaultBadgeLabel, onClick, className, showLabel, description, asChild, children, variant = "normal", style }: RailButtonProps) {
   const classes = cn(
     "relative flex shrink-0 items-center justify-center rounded-md transition-colors",
     MOTION_CONTROL,
@@ -484,6 +491,10 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
   const badgeDot = hasBadge && !showLabel && badge > 9
   const badgeDescription = hasBadge ? badgeLabel(badge) : undefined
   const tooltipLabel = hasBadge ? `${label} · ${badgeDescription}` : label
+  const accessibleDescription = [badgeDescription, description].filter(Boolean).join(". ") || undefined
+  // The labeled rail already shows the label inline, so its tooltip exists only
+  // to carry the description.
+  const tooltipDisabled = showLabel && !description
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
       <Icon className="h-[17px] w-[17px] shrink-0" />
@@ -512,7 +523,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
       {
         className: cn(classes, child.props.className),
         "aria-label": child.props["aria-label"] ?? label,
-        "aria-description": child.props["aria-description"] ?? badgeDescription,
+        "aria-description": child.props["aria-description"] ?? accessibleDescription,
         // The active destination is the current page. Brand's selected state
         // (`aria-[current=page]`) keys off this attribute, and assistive tech
         // announces it; the class recipe above only paints the pill.
@@ -527,15 +538,15 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
       content,
     )
     return (
-      <RailTooltip label={tooltipLabel} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
+      <RailTooltip label={tooltipLabel} description={description} disabled={tooltipDisabled} className={showLabel ? "w-full" : undefined}>
         {merged}
       </RailTooltip>
     )
   }
 
   return (
-    <RailTooltip label={tooltipLabel} disabled={showLabel} className={showLabel ? "w-full" : undefined}>
-      <button type="button" onClick={onClick} aria-label={label} aria-description={badgeDescription} className={classes} style={style}>
+    <RailTooltip label={tooltipLabel} description={description} disabled={tooltipDisabled} className={showLabel ? "w-full" : undefined}>
+      <button type="button" onClick={onClick} aria-label={label} aria-description={accessibleDescription} className={classes} style={style}>
         {content}
       </button>
     </RailTooltip>

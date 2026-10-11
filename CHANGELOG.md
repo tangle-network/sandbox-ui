@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.133.9
+
+- `SidebarLayoutNavItem.description` (and `RailButton`'s `description`): one line saying what a destination is for. It is announced as the link's `aria-description` and shown as a second, quieter line in the rail's hover tooltip; the labeled rail, which hides the tooltip because the label is inline, shows the tooltip when an item has a description. No text is added to the rail itself. Creative uses it so Production, Runs and Approvals explain themselves.
+- `AgentProfilePicker` takes `onEdit(id)` and `onNew()`: the row's edit action and "New agent…" close the menu and open the host's full profile editor instead of the inline name-and-persona form. With `onEdit`, built-in modes get the edit action too, so a product can show its built-in profile in full.
+
 ## 0.133.8
 
 - `ProviderIcon` stops requesting logos that cannot exist. Protocol connectors (`email`, `smtp`, `imap`, `webhook`, `http`) go straight to the monogram unless an `iconUrl` is supplied, and Adobe Sign uses a pinned source. Production Connections had logged two 404s per load for `adobesign` and `email`.

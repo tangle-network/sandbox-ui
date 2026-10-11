@@ -144,6 +144,8 @@ const ACTIVEPIECES_CDN = "https://cdn.activepieces.com/pieces";
  * to emit `iconUrl` per provider, after which this map can be retired.
  */
 export const PROVIDER_LOGO_URLS: Record<string, string> = {
+  // Adobe Acrobat Sign: no ActivePieces piece and no simpleicons slug (both 404).
+  adobesign: "https://www.google.com/s2/favicons?sz=64&domain_url=https://www.adobe.com/sign.html",
   // Catalog logo whose filename/extension differs from the provider id.
   "cal-com": `${ACTIVEPIECES_CDN}/cal.com.png`,
   "customer-io": `${ACTIVEPIECES_CDN}/customerio.png`,
@@ -258,6 +260,13 @@ export const PROVIDER_VECTOR_LOGOS: Record<string, string> = {
  * delisted (svgl.app) → a pinned override → the ActivePieces CDN by id (covers
  * most of the hub catalog) → derived simpleicons slugs → monogram.
  */
+/**
+ * Protocol connectors with no brand of their own. Every remote source 404s for
+ * them (production Connections logged two misses per load for `email`), so they
+ * go straight to the monogram unless the provider supplies an `iconUrl`.
+ */
+const GENERIC_PROVIDER_IDS = new Set(["email", "smtp", "imap", "webhook", "webhooks", "http"]);
+
 export function providerLogoCandidates(opts: {
   id: string;
   iconUrl?: string | null;
@@ -266,6 +275,7 @@ export function providerLogoCandidates(opts: {
   if (opts.iconUrl) out.push(opts.iconUrl);
   const raw = opts.id.toLowerCase();
   const norm = normalizeProviderId(raw);
+  if (GENERIC_PROVIDER_IDS.has(raw) || GENERIC_PROVIDER_IDS.has(norm)) return out;
   const curated = PROVIDER_LOGO_SLUGS[raw] ?? PROVIDER_LOGO_SLUGS[norm];
   // Vector mark for delisted brands first (Slack, Salesforce, the Microsoft 365
   // family, …): simpleicons 404s for these, so the crisp svgl.app SVG goes ahead

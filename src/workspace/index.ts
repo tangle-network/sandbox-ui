@@ -1,5 +1,11 @@
 export { WorkspaceLayout, type WorkspaceLayoutProps } from "./workspace-layout";
 export {
+  WorkspaceSurface,
+  WorkspaceSurfaceFrame,
+  type WorkspaceSurfaceProps,
+  type WorkspaceSurfaceFrameProps,
+} from "./workspace-surface";
+export {
   ShellHeader,
   SHELL_HEADER_HEIGHT,
   SHELL_INSET_GUTTER,

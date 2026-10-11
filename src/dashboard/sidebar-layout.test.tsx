@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SidebarLayout, type SidebarLayoutNavItem } from "./sidebar-layout"
+import { RailExpandable } from "./app-sidebar"
 
 function Icon() {
   return <svg data-testid="icon" />
@@ -466,5 +467,70 @@ describe("SidebarLayout — appearance menu", () => {
     // item triggers its onSelect reliably in jsdom.
     fireEvent.click(screen.getByRole("menuitem", { name: "Dark" }))
     expect(onChange).toHaveBeenCalledWith("dark")
+  })
+})
+
+// Brand's selected state (`ixSelected`: tint plus an inset accent ring) is keyed
+// on `aria-current="page"`, so a rail that only paints its active pill with
+// classes never shows it. Exactly one link per nav surface names the page.
+function currentLinks(root: ParentNode = document) {
+  return Array.from(root.querySelectorAll('[aria-current="page"]'))
+}
+
+describe("SidebarLayout — the active destination carries aria-current", () => {
+  it("marks only the active rail link as the current page", () => {
+    render(
+      <SidebarLayout navItems={["home", "board", "vault"].map((id) => navItem({ id }))} activeId="board">
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    const current = currentLinks()
+    expect(current).toHaveLength(1)
+    expect(current[0].tagName).toBe("A")
+    expect(current[0].getAttribute("href")).toBe("/board")
+    expect(screen.getByRole("link", { name: "home" }).hasAttribute("aria-current")).toBe(false)
+  })
+
+  it("marks no rail link when no destination is active", () => {
+    render(
+      <SidebarLayout navItems={["home", "board"].map((id) => navItem({ id }))}>
+        <div>content</div>
+      </SidebarLayout>,
+    )
+    expect(currentLinks()).toHaveLength(0)
+  })
+})
+
+describe("RailExpandable — the active conversation carries aria-current", () => {
+  const sessions = [
+    { id: "s1", label: "First chat", href: "/chat/s1" },
+    { id: "s2", label: "Second chat", href: "/chat/s2" },
+    { id: "s3", label: "Third chat", href: "/chat/s3" },
+  ]
+
+  it("marks only the active session link, not its parent row", () => {
+    render(
+      <RailExpandable icon={Icon} label="History" href="/history" isActive showLabel defaultOpen subItems={sessions} activeSubIds={["s2"]} />,
+    )
+    const current = currentLinks()
+    expect(current).toHaveLength(1)
+    expect(current[0]).toBe(screen.getByRole("link", { name: "Second chat" }))
+    expect(screen.getByRole("link", { name: "History" }).hasAttribute("aria-current")).toBe(false)
+  })
+
+  it("marks the row itself when it is the page and no session is open", () => {
+    render(
+      <RailExpandable icon={Icon} label="History" href="/history" isActive showLabel defaultOpen subItems={sessions} />,
+    )
+    const current = currentLinks()
+    expect(current).toHaveLength(1)
+    expect(current[0]).toBe(screen.getByRole("link", { name: "History" }))
+  })
+
+  it("marks the collapsed rail's row link when it is the page", () => {
+    render(<RailExpandable icon={Icon} label="History" href="/history" isActive subItems={sessions} />)
+    const current = currentLinks()
+    expect(current).toHaveLength(1)
+    expect(current[0]).toBe(screen.getByRole("link", { name: "History" }))
   })
 })

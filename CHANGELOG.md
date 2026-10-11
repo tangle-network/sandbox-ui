@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.133.2
+
+- The sidebar marks its active destination and active conversation with `aria-current="page"`: `RailButton` links, `RailExpandable` rows and session links (labeled rail, collapsed rail and its flyout), `RailFlyout` links, and the same items in the phone drawer. Brand's selected state (`aria-[current=page]`) now renders, and assistive tech announces the current page. A row whose session is open stays highlighted but leaves `aria-current` to the session, so one link names the page. Visuals are unchanged. Tests in `sidebar-layout.test.tsx` and `sidebar-mobile-nav.test.tsx`.
+
 ## 0.133.1
 
 - An agent message reads at the transcript scale: Brand's `--transcript-font-size` (16px) and `--transcript-line-height` (1.6), the same as the person's message. ui's `TRANSCRIPT_TEXT` sets that leading with a layered utility, and this stylesheet's unlayered `.tangle-prose { line-height: 1.7 }` beat it, so production Legal measured the person's text at 1.6 and the agent's at 1.7. `tailwind.css` now carries Brand's unlayered `.tangle-prose.tangle-transcript-text` and `.tangle-transcript-text .tangle-prose` rules; `scripts/transcript-text.test.mjs` holds them.

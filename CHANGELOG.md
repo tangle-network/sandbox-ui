@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.0
+
+- `WorkspaceSurface`: one page of a workspace (assets, tasks, activity, integrations, a terminal) on the same rounded floating panel as the chat, under an inset `ShellHeader` (`title`, `actions`, or a custom `header`), with a body that scrolls inside the panel. `WorkspaceSurfaceFrame` is the shared gutter and panel; `WorkspaceLayout surface="inset"` now draws its center and right panes inside it, so the chat and every other page share one silhouette and one header line.
+
 ## 0.133.8
 
 - `ProviderIcon` stops requesting logos that cannot exist. Protocol connectors (`email`, `smtp`, `imap`, `webhook`, `http`) go straight to the monogram unless an `iconUrl` is supplied, and Adobe Sign uses a pinned source. Production Connections had logged two 404s per load for `adobesign` and `email`.

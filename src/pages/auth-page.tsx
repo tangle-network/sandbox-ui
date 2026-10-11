@@ -74,7 +74,11 @@ const C = {
   border: "hsl(var(--border, 214 32% 91%))",
   text: "hsl(var(--card-foreground, 222 47% 11%))",
   muted: "hsl(var(--muted-foreground, 240 4% 46%))",
-  inputBg: "var(--bg-input, #f5f5f4)",
+  // A field is a well in the card: Brand's surface ladder recesses it below a
+  // dark card and takes the page plane in light, at least 3 OKLCH L off the
+  // card, and edges it with --field-border (3:1+), not the 1.5:1 hairline.
+  inputBg: "var(--well-card, var(--bg-input, #f5f5f4))",
+  inputBorder: "var(--field-border, hsl(var(--border, 214 32% 91%)))",
   hover: "hsl(var(--muted, 240 5% 96%))",
   danger: "hsl(var(--destructive, 0 72% 42%))",
   ink: "hsl(var(--foreground, 222 47% 11%))",
@@ -185,10 +189,9 @@ export function AuthPage({
     width: "100%",
     padding: "0 16px",
     ...CONTROL,
-    border: `1px solid ${C.border}`,
+    border: `1px solid ${C.inputBorder}`,
     background: C.inputBg,
     color: C.text,
-    outline: "none",
   };
 
   return (

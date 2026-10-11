@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.133.4
+
+- `AuthPage` fields are surface-ladder wells: the fill is Brand's `--well-card` (recessed below a dark card, the page plane in light) and the edge is `--field-border` (3:1 or more), each with its old value as the fallback. They were `--bg-input` (2.6 L under a white card) edged by the 1.5:1 hairline, so `agent-app-signoff surface-ladder` failed every login and signup field in Creative production (14 field-step, 28 field-border). The fields also drop their inline `outline: none`, which hid Brand's focus line. Test in `auth-page.test.tsx`.
+
 ## 0.133.3
 
 - `IntegrationsCatalog` tiles (the "Add integration" catalog in every agent app's Connections, and `IntegrationsPanel`) render as ui's `Card` (`data-slot="card"`), so a tile inside a section card steps to the raised level through Brand's surface rule. A tile that connects or opens as a whole uses Card `interactive`, with one keyboard-reachable Connect or Manage control. The hand-painted `bg-card`, success-green tile background and check badge are gone; skeleton, empty and error boxes are Cards too.

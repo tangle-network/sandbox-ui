@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../lib/utils";
-import { ShellHeader, SHELL_INSET_GUTTER } from "./shell-header";
+import { ShellHeader } from "./shell-header";
 
 export type WorkspaceSurfaceFrameProps = HTMLAttributes<HTMLDivElement>;
 
@@ -13,10 +13,7 @@ export type WorkspaceSurfaceFrameProps = HTMLAttributes<HTMLDivElement>;
  */
 export function WorkspaceSurfaceFrame({ className, children, ...props }: WorkspaceSurfaceFrameProps) {
   return (
-    <div
-      className="flex min-h-0 min-w-0 flex-1 bg-[var(--md3-surface-dim)]"
-      style={{ padding: SHELL_INSET_GUTTER }}
-    >
+    <div className="flex min-h-0 min-w-0 flex-1 bg-[var(--md3-surface-dim)] p-[var(--shell-inset-gutter,0.5rem)]">
       <div
         data-workspace-surface
         className={cn(

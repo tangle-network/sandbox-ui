@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.133.7
+
+- `AuthPage` controls show ui's ring-hue interaction language: the Tangle button and the social and email buttons take `ixControl` (ring-hue edge and glow on hover, deeper on press, a soft ring after a click, `focusRing` for the keyboard), the fields take `ixField` with `focusField`, and the footer link takes `ixControlSoft`. Their borders, field fill and shadows were inline styles, which outrank every class, so in Creative production hovering the submit button, the Tangle button or a field left `box-shadow: none`. The card carries `data-slot="card"`, so Brand's surface rule gives its fields the card's well (`--well-card`), the same fill as 0.133.4. Geometry and the card, page and text colours stay inline with their light fallbacks. Tests in `auth-page.test.tsx`.
+
 ## 0.133.6
 
 - Integrations error states (the catalog and connection details) render as the shared `Alert` in its danger tone, so they read red on every plane: Brand's matched danger fill, border and ink. They were `text-destructive` on the card with a 40% destructive border; dark themes lighten destructive so it clears 4.5:1 as text on the popover, and in Hospitality dark (`rgb(249, 200, 200)`) the error read as white in a grey box. The catalog error is one row with an inline Retry instead of a 200 px empty box. Baselines: `integrations-settings--{catalog-error,detail-error,detail-selected}` mobile (`detail-selected` was already stale against `main`).

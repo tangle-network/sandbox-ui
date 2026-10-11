@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.133.1
+
+- An agent message reads at the transcript scale: Brand's `--transcript-font-size` (16px) and `--transcript-line-height` (1.6), the same as the person's message. ui's `TRANSCRIPT_TEXT` sets that leading with a layered utility, and this stylesheet's unlayered `.tangle-prose { line-height: 1.7 }` beat it, so production Legal measured the person's text at 1.6 and the agent's at 1.7. `tailwind.css` now carries Brand's unlayered `.tangle-prose.tangle-transcript-text` and `.tangle-transcript-text .tangle-prose` rules; `scripts/transcript-text.test.mjs` holds them.
+
 ## 0.132.3
 
 - `SidebarLayout` mounts `railHeaderContent` in one place at a time: the rail on a desktop, the phone bar below `hideBelow`, and the drawer while it is open. It used to mount in the rail and the hidden phone bar at once, so a product-controlled menu such as a workspace switcher opened one menu per copy (Hospitality showed two offset workspace menus). Story: `Dashboard/SidebarLayout` Controlled header menu; visual check in `tests/visual/sidebar-navigation.spec.mjs`.

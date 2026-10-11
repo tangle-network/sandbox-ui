@@ -932,6 +932,25 @@
    * column's min-content width alone, so it cannot squeeze a table. */
   overflow-wrap: break-word;
 }
+/* Transcript text: the one size and leading for every chat message body, the
+ * person's and the agent's alike (Brand's `--transcript-*` tokens, applied by
+ * ui's `TRANSCRIPT_TEXT`). TRANSCRIPT_TEXT's own leading is a layered utility,
+ * and the unlayered `.tangle-prose` rule above beats any layered rule, so an
+ * agent message (`tangle-prose tangle-transcript-text`) read at 1.7 while the
+ * person's read at 1.6. These unlayered rules restore the one scale; they
+ * mirror Brand's globals.css, which consumers of this stylesheet do not load. */
+.tangle-transcript-text,
+.tangle-prose.tangle-transcript-text {
+  font-family: inherit;
+  font-size: var(--transcript-font-size);
+  line-height: var(--transcript-line-height);
+}
+/* Markdown inside a transcript container reads at the container's size and
+ * leading, not .tangle-prose's own 1.7. */
+.tangle-transcript-text .tangle-prose {
+  font-size: inherit;
+  line-height: inherit;
+}
 /* Zero the browser's default block margins at zero specificity (:where) so the
  * owl selector below owns all vertical rhythm — a plain `.tangle-prose p` reset
  * (0,1,1) would outrank the owl (0,1,0) and collapse the gap between blocks. */

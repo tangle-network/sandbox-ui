@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import {
-  Button, Card, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  Alert, Button, Card, DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger, EmptyState,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, StatusPill,
   type StatusTone,
 } from "@tangle-network/ui/primitives";
 import { cn, focusFieldWithin, focusRing } from "@tangle-network/ui/utils";
-import { ExternalLink, MoreVertical, Search, Unplug } from "lucide-react";
+import { AlertCircle, ExternalLink, MoreVertical, Search, Unplug } from "lucide-react";
 import { ProviderIcon } from "./provider-logo";
 import type {
   IntegrationDisplayConnection, IntegrationsCatalogProps, IntegrationsCatalogRow,
@@ -240,10 +240,14 @@ export function IntegrationsCatalog({
             {!compact ? <div className="mt-auto h-9 border-t border-border" /> : null}
           </Card>
         )) : state === "error" ? (
-          <Card role="alert" className="col-span-full flex min-h-[200px] min-w-0 flex-col items-center justify-center gap-3 rounded-xl border-destructive/40 p-6">
-            <p className="break-words text-sm text-destructive">{error}</p>
-            {onRetry ? <Button variant="outline" onClick={onRetry}>Retry</Button> : null}
-          </Card>
+          // The danger triple reads red on every plane; text-destructive alone is a pale
+          // red in dark themes (it must clear 4.5:1 on the popover) and read as white.
+          <Alert tone="danger" icon={<AlertCircle />} className="col-span-full items-center">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+              <p className="break-words">{error}</p>
+              {onRetry ? <Button variant="outline" size="sm" onClick={onRetry}>Retry</Button> : null}
+            </div>
+          </Alert>
         ) : filtered.length === 0 ? (
           <Card className="col-span-full min-h-[200px] min-w-0 rounded-xl p-4">
             <EmptyState title={state === "empty" ? "No integrations" : "No matches"}

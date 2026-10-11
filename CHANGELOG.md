@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.133.6
+
+- Integrations error states (the catalog and connection details) render as the shared `Alert` in its danger tone, so they read red on every plane: Brand's matched danger fill, border and ink. They were `text-destructive` on the card with a 40% destructive border; dark themes lighten destructive so it clears 4.5:1 as text on the popover, and in Hospitality dark (`rgb(249, 200, 200)`) the error read as white in a grey box. The catalog error is one row with an inline Retry instead of a 200 px empty box. Baselines: `integrations-settings--{catalog-error,detail-error,detail-selected}` mobile (`detail-selected` was already stale against `main`).
 ## 0.133.4
 
 - `AuthPage` fields are surface-ladder wells: the fill is Brand's `--well-card` (recessed below a dark card, the page plane in light) and the edge is `--field-border` (3:1 or more), each with its old value as the fallback. They were `--bg-input` (2.6 L under a white card) edged by the 1.5:1 hairline, so `agent-app-signoff surface-ladder` failed every login and signup field in Creative production (14 field-step, 28 field-border). The fields also drop their inline `outline: none`, which hid Brand's focus line. Test in `auth-page.test.tsx`.

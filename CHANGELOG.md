@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.133.6
+
+- Integrations error states (the catalog and connection details) render as the shared `Alert` in its danger tone, so they read red on every plane: Brand's matched danger fill, border and ink. They were `text-destructive` on the card with a 40% destructive border; dark themes lighten destructive so it clears 4.5:1 as text on the popover, and in Hospitality dark (`rgb(249, 200, 200)`) the error read as white in a grey box. The catalog error is one row with an inline Retry instead of a 200 px empty box. Baselines: `integrations-settings--{catalog-error,detail-error,detail-selected}` mobile (`detail-selected` was already stale against `main`).
+
 ## 0.133.3
 
 - `IntegrationsCatalog` tiles (the "Add integration" catalog in every agent app's Connections, and `IntegrationsPanel`) render as ui's `Card` (`data-slot="card"`), so a tile inside a section card steps to the raised level through Brand's surface rule. A tile that connects or opens as a whole uses Card `interactive`, with one keyboard-reachable Connect or Manage control. The hand-painted `bg-card`, success-green tile background and check badge are gone; skeleton, empty and error boxes are Cards too.

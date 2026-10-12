@@ -17,7 +17,10 @@ describe("ProviderMark", () => {
     expect(normalizeBrandKey("seedance-1-pro")).toBe("bytedance");
     expect(normalizeBrandKey("ltx-video")).toBe("lightricks");
   });
-  it("returns nothing for a maker without a bundled logo", () => {
+  it("renders the caller's fallback for a maker without a bundled logo", () => {
     expect(render(<ProviderMark provider="acme-labs" />).container.firstChild).toBeNull();
+    cleanup();
+    const { container } = render(<ProviderMark provider="acme-labs" fallback={<span data-testid="mono">A</span>} />);
+    expect(container.querySelector('[data-testid="mono"]')).not.toBeNull();
   });
 });

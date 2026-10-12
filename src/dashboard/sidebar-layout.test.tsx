@@ -572,3 +572,12 @@ describe("SidebarLayout — nav item description", () => {
     }
   })
 })
+
+it.each([true, false])("forwards descriptions to expandable and flyout destinations (labels=%s)", (railLabels) => {
+  render(<SidebarLayout railLabels={railLabels} navItems={[
+    navItem({ id: "history-described", label: "Described history", description: "Past conversations", expandable: true, subItems: [] }),
+    navItem({ id: "studio-described", label: "Described studio", description: "Create and review work", flyoutItems: [{ id: "canvas", label: "Canvas", href: "/canvas", icon: Icon }] }),
+  ]}><div>content</div></SidebarLayout>)
+  expect(screen.getByRole("link", { name: "Described history" })).toHaveAttribute("aria-description", "Past conversations")
+  expect(screen.getByRole("button", { name: "Described studio" })).toHaveAttribute("aria-description", "Create and review work")
+})

@@ -137,10 +137,10 @@ export function AgentProfilePicker({
   const selectedName = selected?.name ?? value;
 
   React.useEffect(() => {
-    if (!locked) return;
+    if (!locked && !disabled) return;
     setOpen(false);
     setComposing(null);
-  }, [locked]);
+  }, [locked, disabled]);
 
   function select(id: string) {
     onChange(id);
@@ -197,7 +197,7 @@ export function AgentProfilePicker({
         )}
       </button>
 
-      {open && !locked && (
+      {open && !locked && !disabled && (
         <AnchoredPopover
           ref={popoverRef}
           anchorRef={ref}
@@ -311,7 +311,7 @@ function ProfileRow({
         </span>
       </button>
       {(onEdit || onDelete) && (
-        <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <span className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
           {onEdit && (
             <button
               type="button"

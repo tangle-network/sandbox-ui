@@ -27,7 +27,7 @@ import {
  */
 const NAV: SidebarLayoutNavItem[] = [
   { id: "new", icon: CirclePlus, label: "New", href: "/chat/new", variant: "primary" },
-  { id: "vault", icon: FolderOpen, label: "Vault", href: "/vault" },
+  { id: "vault", icon: FolderOpen, label: "Vault", description: "Files, evidence and deliverables saved by your agents. Open a document to review what was produced.", href: "/vault" },
   { id: "board", icon: LayoutGrid, label: "Board", href: "/board" },
   { id: "approvals", icon: CheckCircle, label: "Approvals", href: "/approvals", badge: 3 },
   { id: "integrations", icon: Plug, label: "Integrations", href: "/integrations" },

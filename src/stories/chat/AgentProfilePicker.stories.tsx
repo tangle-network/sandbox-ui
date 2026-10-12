@@ -18,7 +18,8 @@ const capabilities = [
   { id: 'browser', label: 'Browser', description: 'Inspect the rendered product.' },
 ]
 
-function LivePicker({ locked = false, authoring = false, customOnly = false }: { locked?: boolean; authoring?: boolean; customOnly?: boolean }) {
+function LivePicker({ locked = false, authoring = false, customOnly = false, hostEditor = false }: { locked?: boolean; authoring?: boolean; customOnly?: boolean; hostEditor?: boolean }) {
+  const [editing, setEditing] = useState<string | null>(null)
   const [profiles, setProfiles] = useState(customOnly ? initialProfiles.filter((profile) => !profile.builtin) : initialProfiles)
   const [value, setValue] = useState(customOnly ? 'reviewer' : 'assistant')
   const save = (draft: AgentProfileDraft) => {
@@ -33,6 +34,8 @@ function LivePicker({ locked = false, authoring = false, customOnly = false }: {
       <AgentProfilePicker
         value={value}
         onChange={setValue}
+        onEdit={hostEditor ? setEditing : undefined}
+        onNew={hostEditor ? () => setEditing("new") : undefined}
         profiles={profiles}
         side="top"
         locked={locked}
@@ -42,6 +45,7 @@ function LivePicker({ locked = false, authoring = false, customOnly = false }: {
         onUpdate={authoring ? (_, draft) => save(draft) : undefined}
         onDelete={authoring ? (id) => setProfiles((current) => current.filter((profile) => profile.id !== id)) : undefined}
       />
+      {editing && <div role="dialog" aria-label="Host profile editor" className="rounded-lg border p-4"><p>{editing}</p><button onClick={() => setEditing(null)}>Close editor</button></div>}
     </div>
   )
 }
@@ -58,6 +62,7 @@ type Story = StoryObj<typeof meta>
 
 export const ChooseProfile: Story = { render: () => <LivePicker /> }
 export const ManageCustomAgents: Story = { render: () => <LivePicker authoring /> }
+export const HostEditor: Story = { render: () => <LivePicker hostEditor /> }
 export const LockedConversation: Story = { render: () => <LivePicker locked /> }
 
 export const CustomProfilesOnly: Story = { render: () => <LivePicker customOnly /> }

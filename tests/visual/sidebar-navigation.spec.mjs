@@ -106,3 +106,27 @@ for (const theme of ['light', 'dark']) {
   }
 }
 
+
+for (const theme of ['light', 'dark']) {
+  for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+    test(`nav descriptions stay inside the viewport on ${device} ${theme}`, async ({ page, baseURL }, info) => {
+      await openStory(page, 'dashboard-sidebarlayout--desktop', theme, viewport, baseURL)
+      if (device === 'phone') await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+      const destination = page.getByRole('link', { name: 'Vault', exact: true }).filter({ visible: true })
+      await destination.focus()
+      await expect(destination).toHaveAttribute('aria-description', /Files, evidence and deliverables/)
+      const tooltip = page.getByRole('tooltip', { includeHidden: true })
+      await expect(tooltip).toBeVisible()
+      await expect(tooltip).toContainText('Open a document to review what was produced.')
+      await tooltip.evaluate(async node => {
+        await Promise.all(node.getAnimations().map(animation => animation.finished))
+      })
+      const bounds = await tooltip.boundingBox()
+      expect(bounds.x).toBeGreaterThanOrEqual(0)
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width)
+      await page.screenshot({ path: info.outputPath(`nav-description-${device}-${theme}.png`), animations: 'disabled' })
+      await destination.blur()
+      await expect(tooltip).toHaveCount(0)
+    })
+  }
+}

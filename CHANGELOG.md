@@ -1,9 +1,29 @@
 # Changelog
 
-## 0.133.9
+## 0.134.5
 
-- `SidebarLayoutNavItem.description` (and `RailButton`'s `description`): one line saying what a destination is for. It is announced as the link's `aria-description` and shown as a second, quieter line in the rail's hover tooltip; the labeled rail, which hides the tooltip because the label is inline, shows the tooltip when an item has a description. No text is added to the rail itself. Creative uses it so Production, Runs and Approvals explain themselves.
-- `AgentProfilePicker` takes `onEdit(id)` and `onNew()`: the row's edit action and "New agent…" close the menu and open the host's full profile editor instead of the inline name-and-persona form. With `onEdit`, built-in modes get the edit action too, so a product can show its built-in profile in full.
+- `SidebarLayoutNavItem.description` and `RailButton.description` explain destinations in their accessible descriptions and hover tooltips, including labeled rails. Existing navigation labels and default tooltip behavior are unchanged.
+- `AgentProfilePicker` accepts optional `onEdit(id)` and `onNew()` callbacks to close the picker and open the host's full profile editor. Host editing is available for built-in and custom profiles; existing inline authoring and locked/disabled controls retain their behavior.
+
+## 0.134.4
+
+- Asset Studio on a phone: `ApprovalQueue` shows one card per row below 480 px (two from 480 px, unchanged from `sm` up), and each `AssetCard`'s Edit, Reject and Approve are 14 px text with 14 px icons (`aria-hidden`) and a 40 px minimum height. At 390 px the queue drew two 170 px columns and the 12 px actions ran together as "Reject✓ Approve" (GTM journey B1, 2026-10-11).
+
+## 0.134.3
+
+- `WorkspaceSurface` renders `title` as the page heading (`h1`, or `headingLevel`), with the header's type unchanged, so every page on the shared panel has a heading at the source. A custom `header` gets one through the new `WorkspaceSurfaceTitle`. Without a `title` no empty heading renders. Products had added local `<h1>` wrappers, which brand's `page_heading` drift ratchet refuses.
+
+## 0.134.2
+
+- `ProviderMark` takes a `fallback` and renders it when no real logo is bundled, so a caller can keep its own monogram. In 0.134.1 it returned an element that rendered nothing, which a caller couldn't detect.
+
+## 0.134.1
+
+- `ProviderMark({ provider, size })` (from `dashboard`): a provider's or model maker's mark from its slug, or `null` when no real logo is bundled, so pickers share one mark table instead of inlining their own. Adds ByteDance (Seedance, LatentSync, Doubao) and Lightricks (LTX) marks, so every Studio video maker (ByteDance, Kling, Runway, Lightricks) shows its logo.
+
+## 0.134.0
+
+- `WorkspaceSurface`: one page of a workspace (assets, tasks, activity, integrations, a terminal) on the same rounded floating panel as the chat, under an inset `ShellHeader` (`title`, `actions`, or a custom `header`), with a body that scrolls inside the panel. `WorkspaceSurfaceFrame` is the shared gutter and panel; `WorkspaceLayout surface="inset"` now draws its center and right panes inside it, so the chat and every other page share one silhouette and one header line.
 
 ## 0.133.8
 

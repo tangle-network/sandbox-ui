@@ -560,6 +560,8 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
 export interface RailFlyoutProps {
   icon: React.ComponentType<{ className?: string }>
   label: string
+  /** Explains this destination in accessible text and its tooltip or open flyout. */
+  description?: string
   /** Highlight the trigger (e.g. when a child route is active). */
   isActive?: boolean
   /** Show the label text beside the icon (labeled rail) vs. icon-only. */
@@ -583,6 +585,7 @@ export interface RailFlyoutProps {
 export function RailFlyout({
   icon: Icon,
   label,
+  description,
   isActive,
   showLabel,
   title,
@@ -623,10 +626,11 @@ export function RailFlyout({
 
   return (
     <div ref={ref} className={cn("relative", showLabel && "w-full")} style={style}>
-      <RailTooltip label={label} disabled={showLabel || open} className={showLabel ? "w-full" : undefined}>
+      <RailTooltip label={label} description={description} disabled={open || (showLabel && !description)} className={showLabel ? "w-full" : undefined}>
       <button
         type="button"
         aria-label={label}
+        aria-description={description}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -667,6 +671,7 @@ export function RailFlyout({
           <p className="px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
             {title ?? label}
           </p>
+          {description && <p className="px-2 pb-2 text-xs text-muted-foreground">{description}</p>}
           {children}
         </div>
       )}
@@ -720,6 +725,8 @@ export interface RailExpandableSubItem {
 export interface RailExpandableProps {
   icon: React.ComponentType<{ className?: string }>
   label: string
+  /** Explains this destination in accessible text and its tooltip or open flyout. */
+  description?: string
   /** Destination for the row itself. Clicking the label navigates here. */
   href?: string
   /** Highlight the row (e.g. its own route or a child route is active). */
@@ -798,6 +805,7 @@ function SubItemsSkeleton() {
 export function RailExpandable({
   icon: Icon,
   label,
+  description,
   href,
   isActive,
   showLabel,
@@ -997,11 +1005,11 @@ export function RailExpandable({
         onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) scheduleClose() }}
       >
         {href ? (
-          <Link href={href} to={href} onClick={onNavigate} aria-label={label} aria-current={rowCurrent} className={triggerClasses}>
+          <Link href={href} to={href} onClick={onNavigate} aria-label={label} aria-description={description} aria-current={rowCurrent} className={triggerClasses}>
             <Icon className="h-[17px] w-[17px] shrink-0" />
           </Link>
         ) : (
-          <button type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open} className={triggerClasses}>
+          <button type="button" aria-label={label} aria-description={description} aria-haspopup="menu" aria-expanded={open} className={triggerClasses}>
             <Icon className="h-[17px] w-[17px] shrink-0" />
           </button>
         )}
@@ -1025,6 +1033,7 @@ export function RailExpandable({
               <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
                 {label}
               </p>
+              {description && <p className="shrink-0 px-2 pb-2 text-xs text-muted-foreground">{description}</p>}
               <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">{list}</div>
             </div>,
             document.body,
@@ -1047,6 +1056,7 @@ export function RailExpandable({
 
   return (
     <div className={cn("w-full", className)} style={style}>
+      <RailTooltip label={label} description={description} disabled={!description} className="w-full">
       <div
         className={cn(
           "group/exp relative flex h-9 w-full items-center rounded-md transition-colors",
@@ -1064,6 +1074,7 @@ export function RailExpandable({
           aria-expanded={open}
           aria-controls={discloseId}
           aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
+          aria-description={description}
           className={`flex h-9 w-12 shrink-0 items-center gap-1 rounded-md pl-2 pr-1 ${focusRing}`}
         >
           <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden />
@@ -1084,6 +1095,7 @@ export function RailExpandable({
             to={href}
             onClick={onNavigate}
             aria-current={rowCurrent}
+            aria-description={description}
             className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-sm font-medium"
           >
             <span className="truncate">{label}</span>
@@ -1092,12 +1104,14 @@ export function RailExpandable({
           <button
             type="button"
             onClick={toggle}
+            aria-description={description}
             className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-left text-sm font-medium"
           >
             <span className="truncate">{label}</span>
           </button>
         )}
       </div>
+      </RailTooltip>
 
       {/* The disclosure's row travels 0fr -> 1fr, so it opens to the height its
           sub-items actually have. The clipped child — the one `.agent-disclose > *`

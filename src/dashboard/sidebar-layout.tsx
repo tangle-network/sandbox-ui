@@ -349,6 +349,7 @@ function SidebarLayoutInner({
             key={item.id}
             icon={item.icon}
             label={item.label}
+            description={item.description}
             href={item.href}
             isActive={activeId === item.id}
             showLabel={showLabels}
@@ -370,6 +371,7 @@ function SidebarLayoutInner({
             key={item.id}
             icon={item.icon}
             label={item.label}
+            description={item.description}
             title={item.label}
             showLabel={showLabels}
             isActive={activeId === item.id || item.flyoutItems.some((f) => activeSet.has(f.id))}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.4
+
+- Asset Studio on a phone: `ApprovalQueue` shows one card per row below 480 px (two from 480 px, unchanged from `sm` up), and each `AssetCard`'s Edit, Reject and Approve are 14 px text with 14 px icons (`aria-hidden`) and a 40 px minimum height. At 390 px the queue drew two 170 px columns and the 12 px actions ran together as "Reject✓ Approve" (GTM journey B1, 2026-10-11).
+
 ## 0.134.3
 
 - `WorkspaceSurface` renders `title` as the page heading (`h1`, or `headingLevel`), with the header's type unchanged, so every page on the shared panel has a heading at the source. A custom `header` gets one through the new `WorkspaceSurfaceTitle`. Without a `title` no empty heading renders. Products had added local `<h1>` wrappers, which brand's `page_heading` drift ratchet refuses.

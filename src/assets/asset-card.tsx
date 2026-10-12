@@ -176,9 +176,9 @@ export function AssetCard({ spec, variantCount, onApprove, onReject, onEdit, onO
             <button
               type="button"
               onClick={() => onEdit(spec.id)}
-              className="flex flex-1 items-center justify-center gap-1 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
             >
-              <Pencil size={12} />
+              <Pencil size={14} aria-hidden />
               Edit
             </button>
           )}
@@ -186,9 +186,9 @@ export function AssetCard({ spec, variantCount, onApprove, onReject, onEdit, onO
             <button
               type="button"
               onClick={() => onReject(spec.id)}
-              className="flex flex-1 items-center justify-center gap-1 border-l border-border py-2 text-xs text-muted-foreground transition-colors hover:bg-destructive/5 hover:text-destructive"
+              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 border-l border-border py-2 text-sm text-muted-foreground transition-colors hover:bg-destructive/5 hover:text-destructive"
             >
-              <X size={12} />
+              <X size={14} aria-hidden />
               Reject
             </button>
           )}
@@ -196,9 +196,9 @@ export function AssetCard({ spec, variantCount, onApprove, onReject, onEdit, onO
             <button
               type="button"
               onClick={() => onApprove(spec.id)}
-              className="flex flex-1 items-center justify-center gap-1 border-l border-border py-2 text-xs text-muted-foreground transition-colors hover:bg-green-600/5 hover:text-green-600"
+              className="flex min-h-10 flex-1 items-center justify-center gap-1.5 border-l border-border py-2 text-sm text-muted-foreground transition-colors hover:bg-green-600/5 hover:text-green-600"
             >
-              <Check size={12} />
+              <Check size={14} aria-hidden />
               Approve
             </button>
           )}

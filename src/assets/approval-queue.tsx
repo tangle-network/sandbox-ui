@@ -197,7 +197,9 @@ export function ApprovalQueue({
       {filtered.length === 0 ? (
         <div className="py-12 text-center text-sm text-muted-foreground">No assets match your filters.</div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        // One card per row on a phone: two 170 px columns squeezed Edit, Reject
+        // and Approve into one run of text ("Reject✓ Approve").
+        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {filtered.map((a) => (
             <AssetCard
               key={a.id}

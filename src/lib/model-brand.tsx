@@ -11,6 +11,7 @@
  * internal.
  */
 
+import type { ReactNode } from "react";
 import type { ReasoningEffort } from "@tangle-network/agent-interface";
 import { TangleKnot } from "@tangle-network/brand";
 import { ProviderLogo } from "./provider-logo";
@@ -447,11 +448,23 @@ export function normalizeBrandKey(value: string | undefined): ModelBrandKey {
 /**
  * A provider or model maker's mark from its slug ("anthropic", "kuaishou",
  * "bytedance", a model id), or null when no real logo is bundled, so a caller
- * can fall back to its own monogram. The one mark table every picker shares.
+ * passes its own monogram as `fallback`. The one mark table every picker shares.
  */
-export function ProviderMark({ provider, size = "sm", className }: { provider?: string; size?: "xs" | "sm" | "md"; className?: string }) {
-  if (!provider) return null;
-  return <BrandLogo brand={brandInfo(normalizeBrandKey(provider))} size={size} className={className} />;
+export function ProviderMark({
+  provider,
+  size = "sm",
+  className,
+  fallback = null,
+}: {
+  provider?: string;
+  size?: "xs" | "sm" | "md";
+  className?: string;
+  /** Rendered instead when no real logo is bundled (a caller's monogram). */
+  fallback?: ReactNode;
+}) {
+  const brand = brandInfo(normalizeBrandKey(provider));
+  if (!provider || !hasRealLogo(brand)) return <>{fallback}</>;
+  return <BrandLogo brand={brand} size={size} className={className} />;
 }
 
 export function brandInfo(key: ModelBrandKey): ModelBrandInfo {

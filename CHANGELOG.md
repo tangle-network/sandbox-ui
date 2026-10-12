@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.2
+
+- `ProviderMark` takes a `fallback` and renders it when no real logo is bundled, so a caller can keep its own monogram. In 0.134.1 it returned an element that rendered nothing, which a caller couldn't detect.
+
 ## 0.134.1
 
 - `ProviderMark({ provider, size })` (from `dashboard`): a provider's or model maker's mark from its slug, or `null` when no real logo is bundled, so pickers share one mark table instead of inlining their own. Adds ByteDance (Seedance, LatentSync, Doubao) and Lightricks (LTX) marks, so every Studio video maker (ByteDance, Kling, Runway, Lightricks) shows its logo.

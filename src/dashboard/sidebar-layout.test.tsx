@@ -534,3 +534,50 @@ describe("RailExpandable — the active conversation carries aria-current", () =
     expect(current[0]).toBe(screen.getByRole("link", { name: "History" }))
   })
 })
+
+describe("SidebarLayout — nav item description", () => {
+  it("announces the description and shows it in the hover tooltip on the labeled rail", async () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <SidebarLayout railLabels navItems={[navItem({ id: "runs", label: "Runs", description: "Every past agent run" })]}>
+          <div>content</div>
+        </SidebarLayout>,
+      )
+      const link = screen.getAllByRole("link", { name: "Runs" })[0]
+      expect(link).toHaveAttribute("aria-description", "Every past agent run")
+      fireEvent.mouseEnter(link.parentElement as HTMLElement)
+      await React.act(async () => { vi.advanceTimersByTime(300) })
+      expect(screen.getByRole("tooltip", { hidden: true })).toHaveTextContent("Every past agent run")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("keeps the labeled rail tooltip off when an item has no description", async () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <SidebarLayout railLabels navItems={[navItem({ id: "vault", label: "Vault" })]}>
+          <div>content</div>
+        </SidebarLayout>,
+      )
+      const link = screen.getAllByRole("link", { name: "Vault" })[0]
+      expect(link).not.toHaveAttribute("aria-description")
+      fireEvent.mouseEnter(link.parentElement as HTMLElement)
+      await React.act(async () => { vi.advanceTimersByTime(300) })
+      expect(screen.queryByRole("tooltip", { hidden: true })).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+it.each([true, false])("forwards descriptions to expandable and flyout destinations (labels=%s)", (railLabels) => {
+  render(<SidebarLayout railLabels={railLabels} navItems={[
+    navItem({ id: "history-described", label: "Described history", description: "Past conversations", expandable: true, subItems: [] }),
+    navItem({ id: "studio-described", label: "Described studio", description: "Create and review work", flyoutItems: [{ id: "canvas", label: "Canvas", href: "/canvas", icon: Icon }] }),
+  ]}><div>content</div></SidebarLayout>)
+  expect(screen.getByRole("link", { name: "Described history" })).toHaveAttribute("aria-description", "Past conversations")
+  expect(screen.getByRole("button", { name: "Described studio" })).toHaveAttribute("aria-description", "Create and review work")
+})

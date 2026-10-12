@@ -15,6 +15,8 @@ export const RAIL_FLOATING_SURFACE =
 export interface RailTooltipProps {
   /** Tooltip text shown to the right of the trigger. */
   label: string
+  /** A second, quieter line under the label that may wrap, e.g. what a nav item is for. */
+  description?: string
   /** The trigger element (icon button / link). */
   children: React.ReactNode
   /** Disable the tooltip (e.g. when the rail is expanded and the label is inline). */
@@ -39,10 +41,21 @@ export interface RailTooltipProps {
  * the whole nav would re-stagger on a collapse that moved nothing off screen.
  * One element type, both states.
  */
-export function RailTooltip({ label, children, disabled, className }: RailTooltipProps) {
+export function RailTooltip({ label, description, children, disabled, className }: RailTooltipProps) {
   const ref = React.useRef<HTMLSpanElement>(null)
+  const tooltipRef = React.useRef<HTMLSpanElement>(null)
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [coords, setCoords] = React.useState<{ top: number; left: number } | null>(null)
+
+  // Descriptions can wrap beyond a phone drawer's right edge. Measure the
+  // actual floating surface and keep the whole explanation in the viewport.
+  React.useLayoutEffect(() => {
+    if (!description || !coords || !tooltipRef.current) return
+    const { offsetWidth: width, offsetHeight: height } = tooltipRef.current
+    const left = Math.max(8, Math.min(coords.left, window.innerWidth - width - 8))
+    const top = Math.max(height / 2 + 8, Math.min(coords.top, window.innerHeight - height / 2 - 8))
+    if (left !== coords.left || top !== coords.top) setCoords({ left, top })
+  }, [coords, description])
 
   React.useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
@@ -103,16 +116,19 @@ export function RailTooltip({ label, children, disabled, className }: RailToolti
             className="pointer-events-none z-[70]"
           >
             <span
+              ref={tooltipRef}
               role="tooltip"
               aria-hidden="true"
               className={cn(
                 // Appears in place beside the trigger after the open delay, so
                 // it scales up rather than travelling — @see .agent-pop-in.
-                "agent-pop-in block whitespace-nowrap px-2 py-1 text-xs font-medium text-popover-foreground",
+                "agent-pop-in block px-2 py-1 text-xs font-medium text-popover-foreground",
+                description ? "w-max max-w-[min(16rem,calc(100vw-1rem))]" : "whitespace-nowrap",
                 RAIL_FLOATING_SURFACE,
               )}
             >
-              {label}
+              <span className={description ? "block break-words" : "block whitespace-nowrap"}>{label}</span>
+              {description ? <span className="mt-0.5 block font-normal leading-snug text-muted-foreground">{description}</span> : null}
             </span>
           </span>,
           document.body,

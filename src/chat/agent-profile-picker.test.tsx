@@ -144,3 +144,77 @@ describe("AgentProfilePicker", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+describe("AgentProfilePicker host editor", () => {
+  it("opens the host editor for built-in and custom rows instead of the inline form", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onNew = vi.fn();
+    render(
+      <AgentProfilePicker
+        value="studio"
+        onChange={() => {}}
+        profiles={[...PROFILES, { id: "custom-1", name: "Mine", description: "", builtin: false }]}
+        onEdit={onEdit}
+        onNew={onNew}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /agent profile/i }));
+    const edits = screen.getAllByTitle("Edit");
+    expect(edits).toHaveLength(3);
+    await user.click(edits[0]);
+    expect(onEdit).toHaveBeenCalledWith("studio");
+    expect(screen.queryByTestId("agent-profile-popover")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /agent profile/i }));
+    await user.click(screen.getAllByTitle("Edit")[2]);
+    expect(onEdit).toHaveBeenLastCalledWith("custom-1");
+    expect(screen.queryByTestId("agent-profile-popover")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /agent profile/i }));
+    await user.click(screen.getByRole("button", { name: /new agent/i }));
+    expect(onNew).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("agent-profile-popover")).toBeNull();
+  });
+
+  it.each(["disabled", "locked"] as const)("does not expose host actions while %s", async (state) => {
+    const onEdit = vi.fn();
+    const onNew = vi.fn();
+    render(
+      <AgentProfilePicker
+        value="studio"
+        onChange={() => {}}
+        profiles={PROFILES}
+        onEdit={onEdit}
+        onNew={onNew}
+        {...{ [state]: true }}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: "Agent profile" });
+    expect(trigger).toBeDisabled();
+    await userEvent.click(trigger);
+    expect(screen.queryByTestId("agent-profile-popover")).toBeNull();
+    expect(onEdit).not.toHaveBeenCalled();
+    expect(onNew).not.toHaveBeenCalled();
+  });
+});
+
+it("exposes profile authoring actions to touch and keyboard users", async () => {
+  render(<AgentProfilePicker value="studio" profiles={PROFILES} onChange={() => {}} onEdit={() => {}} />);
+  await userEvent.click(screen.getByRole("button", { name: "Agent profile" }));
+  const edit = screen.getAllByTitle("Edit")[0];
+  expect(edit.parentElement).toHaveClass("opacity-100", "group-focus-within:opacity-100");
+  expect(edit.parentElement).toHaveClass("[@media(hover:hover)]:opacity-0");
+});
+
+it("closes authoring when the host disables an already-open picker", async () => {
+  const props = { value: "studio", profiles: PROFILES, onChange: vi.fn(), onEdit: vi.fn(), onNew: vi.fn() };
+  const view = render(<AgentProfilePicker {...props} />);
+  await userEvent.click(screen.getByRole("button", { name: "Agent profile" }));
+  expect(screen.getAllByTitle("Edit")).toHaveLength(2);
+  view.rerender(<AgentProfilePicker {...props} disabled />);
+  expect(screen.queryByTestId("agent-profile-popover")).toBeNull();
+  expect(props.onEdit).not.toHaveBeenCalled();
+  expect(props.onNew).not.toHaveBeenCalled();
+});

@@ -79,6 +79,10 @@ export async function openStory(page, id, theme, viewport, baseURL) {
   }, null, { timeout: 30_000, polling: 100 })
   await expect(page.locator('.sb-errordisplay')).not.toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-sandbox-ui', 'true')
+  // A dark toolbar/body alone is not proof that components resolved dark tokens.
+  await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+  await expect(page.locator('html')).toHaveClass(new RegExp(`(?:^|\\s)${theme}(?:\\s|$)`))
+  await expect(page.locator('html')).not.toHaveClass(new RegExp(`(?:^|\\s)${theme === 'dark' ? 'light' : 'dark'}(?:\\s|$)`))
   await page.waitForFunction(() => {
     const stylesheets = [...document.querySelectorAll('link[rel="stylesheet"]')]
     return stylesheets.length > 0 && stylesheets.every((link) => Boolean(link.sheet)) &&

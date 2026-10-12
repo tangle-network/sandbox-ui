@@ -32,6 +32,10 @@ for (const id of ['slack', 'outlook', 'microsoftoutlook', 'salesforce', 'twilio'
 const withSandboxTheme: Decorator = (Story, context) => {
   const theme = context.globals.sandboxTheme ?? 'dark'
   const isLight = theme === 'light'
+  // Layouts synchronize Brand's theme from these classes; the toolbar must agree.
+  document.documentElement.classList.toggle('dark', !isLight)
+  document.documentElement.classList.toggle('light', isLight)
+  document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark')
   document.documentElement.setAttribute('data-sandbox-ui', 'true')
   document.documentElement.setAttribute('data-sandbox-theme', isLight ? 'vault' : '')
 

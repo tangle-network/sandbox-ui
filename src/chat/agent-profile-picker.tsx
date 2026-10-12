@@ -60,6 +60,15 @@ export interface AgentProfilePickerProps {
   /** Same commit/rejection contract as onCreate. */
   onUpdate?: (id: string, draft: AgentProfileDraft) => void | Promise<void>;
   onDelete?: (id: string) => void | Promise<void>;
+  /**
+   * Open the host's full profile editor for this profile instead of the inline
+   * name-and-persona form. When set, every row (built-in modes included) gets
+   * an edit action that closes the menu and calls this; `onUpdate` is then
+   * unused by the menu.
+   */
+  onEdit?: (id: string) => void;
+  /** Open the host's editor for a new profile instead of the inline form. */
+  onNew?: () => void;
   disabled?: boolean;
   /** Keep the pinned profile visible while preventing profile selection. */
   locked?: boolean;
@@ -99,6 +108,8 @@ export function AgentProfilePicker({
   onCreate,
   onUpdate,
   onDelete,
+  onEdit,
+  onNew,
   disabled,
   locked,
   lockReason,
@@ -131,7 +142,10 @@ export function AgentProfilePicker({
     setComposing(null);
   }, [popoverRef]);
 
-  const canAuthor = Boolean(capabilities && onCreate);
+  const canAuthor = Boolean(onNew || (capabilities && onCreate));
+  const editIn = (profile: AgentProfileOption) => onEdit
+    ? () => { setOpen(false); onEdit(profile.id); }
+    : onUpdate ? () => setComposing(profile) : undefined;
   const builtins = profiles.filter((profile) => profile.builtin);
   const custom = profiles.filter((profile) => !profile.builtin);
   const selected = profiles.find((profile) => profile.id === value);
@@ -256,6 +270,7 @@ export function AgentProfilePicker({
                   title={profile.name}
                   subtitle={profileSubtitle(profile)}
                   onSelect={() => select(profile.id)}
+                  onEdit={onEdit ? editIn(profile) : undefined}
                 />
               ))}
               {custom.length > 0 && <SectionHeader>Your agents</SectionHeader>}
@@ -266,14 +281,19 @@ export function AgentProfilePicker({
                   title={profile.name}
                   subtitle={profileSubtitle(profile)}
                   onSelect={() => select(profile.id)}
-                  onEdit={onUpdate ? () => setComposing(profile) : undefined}
+                  onEdit={editIn(profile)}
                   onDelete={onDelete ? () => void onDelete(profile.id) : undefined}
                 />
               ))}
               {canAuthor && (
                 <button
                   type="button"
-                  onClick={() => setComposing("new")}
+                  onClick={() => {
+                    if (onNew) {
+                      setOpen(false);
+                      onNew();
+                    } else setComposing("new");
+                  }}
                   className="mt-1 flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-[var(--accent-text)] transition-colors hover:bg-accent/40"
                 >
                   <Plus className="h-4 w-4" /> New agent…
@@ -335,7 +355,7 @@ function ProfileRow({
         </span>
       </button>
       {(onEdit || onDelete) && (
-        <span className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <span className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
           {onEdit && (
             <button
               type="button"

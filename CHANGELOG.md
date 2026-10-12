@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.134.6
+
+- `SidebarLayoutNavItem.description` and `RailButton.description` explain destinations in their accessible descriptions and hover tooltips, including labeled rails. Existing navigation labels and default tooltip behavior are unchanged.
+- `AgentProfilePicker` accepts optional `onEdit(id)` and `onNew()` callbacks to close the picker and open the host's full profile editor. Host editing is available for built-in and custom profiles; existing inline authoring and locked/disabled controls retain their behavior.
+
 ## 0.134.5
 
 - `AgentProfilePicker` waits for create and update callbacks to finish before closing its inline editor. A failed save keeps the draft and shows an inline error for retry; pending saves cannot double-submit, and stale completions cannot close a newer editor. Create and edit actions are offered only when their corresponding callback exists. Synchronous callbacks remain supported.

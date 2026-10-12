@@ -39,6 +39,8 @@ export interface SidebarLayoutNavItem {
   id: string
   label: string
   icon: React.ComponentType<{ className?: string }>
+  /** @see {@link RailButtonProps.description} — one line saying what this destination is for. */
+  description?: string
   /** Destination for link items. Omit when `togglesPanel` or `flyoutItems` is set. */
   href?: string
   /** Render this item as the panel toggle instead of a link. */
@@ -347,6 +349,7 @@ function SidebarLayoutInner({
             key={item.id}
             icon={item.icon}
             label={item.label}
+            description={item.description}
             href={item.href}
             isActive={activeId === item.id}
             showLabel={showLabels}
@@ -368,6 +371,7 @@ function SidebarLayoutInner({
             key={item.id}
             icon={item.icon}
             label={item.label}
+            description={item.description}
             title={item.label}
             showLabel={showLabels}
             isActive={activeId === item.id || item.flyoutItems.some((f) => activeSet.has(f.id))}
@@ -407,6 +411,7 @@ function SidebarLayoutInner({
           label={item.label}
           badge={item.badge}
           badgeLabel={item.badgeLabel}
+          description={item.description}
           isActive={panelOpen}
           onClick={() => {
             togglePanel()
@@ -416,7 +421,7 @@ function SidebarLayoutInner({
           {...arrival}
         />
       ) : (
-        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} badgeLabel={item.badgeLabel} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild {...arrival}>
+        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} badgeLabel={item.badgeLabel} description={item.description} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild {...arrival}>
           <Link
             href={item.href}
             to={item.href}

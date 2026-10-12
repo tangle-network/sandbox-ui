@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.5
+
+- `AgentProfilePicker` waits for create and update callbacks to finish before closing its inline editor. A failed save keeps the draft and shows an inline error for retry; pending saves cannot double-submit, and stale completions cannot close a newer editor. Create and edit actions are offered only when their corresponding callback exists. Synchronous callbacks remain supported.
+
 ## 0.134.4
 
 - Asset Studio on a phone: `ApprovalQueue` shows one card per row below 480 px (two from 480 px, unchanged from `sm` up), and each `AssetCard`'s Edit, Reject and Approve are 14 px text with 14 px icons (`aria-hidden`) and a 40 px minimum height. At 390 px the queue drew two 170 px columns and the 12 px actions ran together as "Reject✓ Approve" (GTM journey B1, 2026-10-11).

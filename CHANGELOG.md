@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.1
+
+- `ProviderMark({ provider, size })` (from `dashboard`): a provider's or model maker's mark from its slug, or `null` when no real logo is bundled, so pickers share one mark table instead of inlining their own. Adds ByteDance (Seedance, LatentSync, Doubao) and Lightricks (LTX) marks, so every Studio video maker (ByteDance, Kling, Runway, Lightricks) shows its logo.
+
 ## 0.134.0
 
 - `WorkspaceSurface`: one page of a workspace (assets, tasks, activity, integrations, a terminal) on the same rounded floating panel as the chat, under an inset `ShellHeader` (`title`, `actions`, or a custom `header`), with a body that scrolls inside the panel. `WorkspaceSurfaceFrame` is the shared gutter and panel; `WorkspaceLayout surface="inset"` now draws its center and right panes inside it, so the chat and every other page share one silhouette and one header line.

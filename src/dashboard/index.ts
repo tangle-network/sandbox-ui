@@ -115,6 +115,7 @@ export {
   // behind it stay internal.
   ModelBrandStack,
   modelBrandFor,
+  ProviderMark,
   type ModelBrandIdentity,
 } from "../lib/model-brand";
 export {

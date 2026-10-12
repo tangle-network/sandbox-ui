@@ -61,3 +61,43 @@ export const ManageCustomAgents: Story = { render: () => <LivePicker authoring /
 export const LockedConversation: Story = { render: () => <LivePicker locked /> }
 
 export const CustomProfilesOnly: Story = { render: () => <LivePicker customOnly /> }
+
+function SaveRecoveryPicker() {
+  const [profiles, setProfiles] = useState(initialProfiles)
+  const [value, setValue] = useState('assistant')
+  const [attempts, setAttempts] = useState(0)
+  const [pending, setPending] = useState<{ succeed: () => void; fail: () => void } | null>(null)
+  const save = (draft: AgentProfileDraft) => new Promise<void>((resolve, reject) => {
+    setAttempts((count) => count + 1)
+    setPending({
+      succeed: () => {
+        const id = draft.id ?? `custom-${profiles.length}`
+        setProfiles((current) => draft.id
+          ? current.map((profile) => profile.id === id ? { ...profile, ...draft, id } : profile)
+          : [...current, { ...draft, id }])
+        setValue(id)
+        setPending(null)
+        resolve()
+      },
+      fail: () => { setPending(null); reject(new Error('Save unavailable. Your draft is still here; try again.')) },
+    })
+  })
+  return (
+    <div className="flex flex-col justify-between gap-4 p-4" style={{ width: 'min(560px, calc(100vw - 32px))', minHeight: 'min(640px, calc(100vh - 64px))' }}>
+      <div className="space-y-2">
+        <p role="status" className="text-sm text-muted-foreground">Save attempts: {attempts}</p>
+        <div className="flex gap-3 text-sm">
+          <button type="button" disabled={!pending} onClick={() => pending?.fail()}>Reject pending save</button>
+          <button type="button" disabled={!pending} onClick={() => pending?.succeed()}>Confirm pending save</button>
+        </div>
+      </div>
+      <AgentProfilePicker
+        value={value} onChange={setValue} profiles={profiles} capabilities={capabilities}
+        onCreate={save} onUpdate={(_, draft) => save(draft)} side="top"
+      />
+    </div>
+  )
+}
+
+/** Explicit completion controls make pending, rejection and retry inspectable. */
+export const SaveRecovery: Story = { render: () => <SaveRecoveryPicker /> }

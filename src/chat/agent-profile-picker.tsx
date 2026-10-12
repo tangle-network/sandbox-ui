@@ -55,7 +55,9 @@ export interface AgentProfilePickerProps {
    * selection-only picker (the New / edit / delete affordances stay hidden).
    */
   capabilities?: ReadonlyArray<AgentProfileCapability>;
+  /** Resolve after commit; reject write failures to retain the draft and show its error. Do not reject a post-commit refresh failure. */
   onCreate?: (draft: AgentProfileDraft) => void | Promise<void>;
+  /** Same commit/rejection contract as onCreate. */
   onUpdate?: (id: string, draft: AgentProfileDraft) => void | Promise<void>;
   onDelete?: (id: string) => void | Promise<void>;
   /**
@@ -118,16 +120,29 @@ export function AgentProfilePicker({
   side = "top",
 }: AgentProfilePickerProps) {
   const [open, setOpen] = React.useState(false);
-  const [composing, setComposing] = React.useState<AgentProfileOption | "new" | null>(
+  const [composing, setComposingState] = React.useState<AgentProfileOption | "new" | null>(
     null,
   );
+  const [saving, setSaving] = React.useState(false);
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+  const pendingSave = React.useRef(false);
+  const editorEpoch = React.useRef(0);
+  const setComposing = React.useCallback((next: AgentProfileOption | "new" | null) => {
+    editorEpoch.current += 1;
+    pendingSave.current = false;
+    setSaving(false);
+    setSaveError(null);
+    setComposingState(next);
+  }, []);
+  React.useEffect(() => () => { editorEpoch.current += 1; }, []);
   const popoverRef = React.useRef<HTMLDivElement | null>(null);
   const ref = useClickOutside<HTMLDivElement>(() => {
+    if (pendingSave.current) return;
     setOpen(false);
     setComposing(null);
   }, [popoverRef]);
 
-  const canAuthor = Boolean(onNew || (capabilities && (onCreate || onUpdate)));
+  const canAuthor = Boolean(onNew || (capabilities && onCreate));
   const editIn = (profile: AgentProfileOption) => onEdit
     ? () => { setOpen(false); onEdit(profile.id); }
     : onUpdate ? () => setComposing(profile) : undefined;
@@ -140,7 +155,7 @@ export function AgentProfilePicker({
     if (!locked && !disabled) return;
     setOpen(false);
     setComposing(null);
-  }, [locked, disabled]);
+  }, [locked, disabled, setComposing]);
 
   function select(id: string) {
     onChange(id);
@@ -148,9 +163,32 @@ export function AgentProfilePicker({
   }
 
   async function save(draft: AgentProfileDraft) {
-    if (draft.id) await onUpdate?.(draft.id, draft);
-    else await onCreate?.(draft);
-    setComposing(null);
+    // The ref closes the same-event double-submit gap before React renders.
+    if (pendingSave.current || locked || disabled) return;
+    const epoch = editorEpoch.current;
+    pendingSave.current = true;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      if (draft.id) {
+        if (!onUpdate) throw new Error("Editing this agent is unavailable.");
+        await onUpdate(draft.id, draft);
+      } else {
+        if (!onCreate) throw new Error("Creating an agent is unavailable.");
+        await onCreate(draft);
+      }
+      if (editorEpoch.current === epoch) setComposing(null);
+    } catch (error) {
+      if (editorEpoch.current === epoch) {
+        setSaveError(error instanceof Error && error.message.trim() ? error.message : "Could not save this agent. Your draft is still here; try again.");
+      }
+    } finally {
+      // A disabled/unmounted or replaced editor no longer owns this result.
+      if (editorEpoch.current === epoch) {
+        pendingSave.current = false;
+        setSaving(false);
+      }
+    }
   }
 
   if (locked && onNewChat) {
@@ -176,9 +214,13 @@ export function AgentProfilePicker({
     <div ref={ref} className={cn("relative inline-flex", className)}>
       <button
         type="button"
-        disabled={disabled || locked}
+        disabled={disabled || locked || saving}
         title={locked ? lockReason : undefined}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (pendingSave.current) return;
+          if (open) setComposing(null);
+          setOpen((v) => !v);
+        }}
         className={cn(
           "inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container px-2.5",
           "text-xs font-medium text-foreground shadow-sm transition-colors",
@@ -213,7 +255,9 @@ export function AgentProfilePicker({
             <ProfileForm
               capabilities={capabilities ?? []}
               initial={composing === "new" ? undefined : composing}
-              onCancel={() => setComposing(null)}
+              saving={saving}
+              error={saveError}
+              onCancel={() => { if (!pendingSave.current) setComposing(null); }}
               onSave={save}
             />
           ) : (
@@ -341,13 +385,17 @@ function ProfileRow({
 function ProfileForm({
   capabilities,
   initial,
+  saving,
+  error,
   onCancel,
   onSave,
 }: {
   capabilities: ReadonlyArray<AgentProfileCapability>;
   initial?: AgentProfileOption;
+  saving: boolean;
+  error: string | null;
   onCancel: () => void;
-  onSave: (draft: AgentProfileDraft) => void;
+  onSave: (draft: AgentProfileDraft) => void | Promise<void>;
 }) {
   const [name, setName] = React.useState(initial?.name ?? "");
   const [caps, setCaps] = React.useState<string[]>(
@@ -361,9 +409,10 @@ function ProfileForm({
     );
 
   return (
-    <div className="space-y-3 p-2.5">
+    <div className="space-y-3 p-2.5" aria-busy={saving}>
       <input
         autoFocus
+        disabled={saving}
         value={name}
         onChange={(event) => setName(event.target.value)}
         placeholder="Agent name (e.g. Tax Reviewer)"
@@ -382,6 +431,7 @@ function ProfileForm({
               >
                 <input
                   type="checkbox"
+                  disabled={saving}
                   checked={caps.includes(cap.id)}
                   onChange={() => toggle(cap.id)}
                   className="mt-0.5"
@@ -400,15 +450,18 @@ function ProfileForm({
         </div>
       )}
       <textarea
+        disabled={saving}
         value={instructions}
         onChange={(event) => setInstructions(event.target.value)}
         rows={2}
         placeholder="Instructions (optional) — how this agent should behave"
         className={`w-full resize-none rounded-lg border bg-surface-container px-3 py-2 text-sm ${focusField}`}
       />
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2">
         <button
           type="button"
+          disabled={saving}
           onClick={onCancel}
           className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent/40"
         >
@@ -416,9 +469,9 @@ function ProfileForm({
         </button>
         <button
           type="button"
-          disabled={!name.trim()}
+          disabled={saving || !name.trim()}
           onClick={() =>
-            onSave({
+            void onSave({
               id: initial?.id,
               name: name.trim(),
               capabilities: caps,
@@ -427,7 +480,7 @@ function ProfileForm({
           }
           className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
         >
-          Save agent
+          {saving ? "Saving agent…" : "Save agent"}
         </button>
       </div>
     </div>

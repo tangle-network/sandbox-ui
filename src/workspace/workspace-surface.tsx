@@ -28,12 +28,37 @@ export function WorkspaceSurfaceFrame({ className, children, ...props }: Workspa
   );
 }
 
+export type WorkspaceSurfaceHeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+
+export interface WorkspaceSurfaceTitleProps extends HTMLAttributes<HTMLHeadingElement> {
+  /** Heading level; a page on the panel is the page, so it defaults to 1. */
+  level?: WorkspaceSurfaceHeadingLevel;
+}
+
+/**
+ * The page's heading in a surface header row. `WorkspaceSurface` renders it for
+ * `title`; a custom `header` uses it so the page still has its heading. It keeps
+ * the header's type: the heading element changes the outline, not the look.
+ */
+export function WorkspaceSurfaceTitle({ level = 1, className, ...props }: WorkspaceSurfaceTitleProps) {
+  const Heading = `h${level}` as const;
+  return (
+    <Heading
+      data-workspace-surface-title
+      className={cn("m-0 min-w-0 flex-1 truncate text-[length:inherit] font-medium leading-[inherit]", className)}
+      {...props}
+    />
+  );
+}
+
 export interface WorkspaceSurfaceProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
-  /** The page's name, left in the header row. */
+  /** The page's name, left in the header row and rendered as the page heading. */
   title?: ReactNode;
+  /** Heading level for `title` (default 1). */
+  headingLevel?: WorkspaceSurfaceHeadingLevel;
   /** Controls at the right of the header row: filters, a primary action. */
   actions?: ReactNode;
-  /** Replaces `title` and `actions` when a page needs its own header layout. */
+  /** Replaces `title` and `actions` when a page needs its own header layout; put a `WorkspaceSurfaceTitle` in it. */
   header?: ReactNode;
   /** Classes for the scrolling body under the header. */
   contentClassName?: string;
@@ -48,6 +73,7 @@ export interface WorkspaceSurfaceProps extends Omit<HTMLAttributes<HTMLDivElemen
  */
 export function WorkspaceSurface({
   title,
+  headingLevel,
   actions,
   header,
   contentClassName,
@@ -60,7 +86,12 @@ export function WorkspaceSurface({
         <ShellHeader inset data-workspace-header="center" className="gap-2">
           {header ?? (
             <>
-              <div className="min-w-0 flex-1 truncate font-medium">{title}</div>
+              {title != null ? (
+                <WorkspaceSurfaceTitle level={headingLevel}>{title}</WorkspaceSurfaceTitle>
+              ) : (
+                // No title, no empty heading: a spacer keeps the actions at the right.
+                <div className="flex-1" />
+              )}
               {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
             </>
           )}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.3
+
+- `WorkspaceSurface` renders `title` as the page heading (`h1`, or `headingLevel`), with the header's type unchanged, so every page on the shared panel has a heading at the source. A custom `header` gets one through the new `WorkspaceSurfaceTitle`. Without a `title` no empty heading renders. Products had added local `<h1>` wrappers, which brand's `page_heading` drift ratchet refuses.
+
 ## 0.134.2
 
 - `ProviderMark` takes a `fallback` and renders it when no real logo is bundled, so a caller can keep its own monogram. In 0.134.1 it returned an element that rendered nothing, which a caller couldn't detect.

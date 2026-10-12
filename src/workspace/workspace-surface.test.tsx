@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import { WorkspaceSurface } from "./workspace-surface";
+import { WorkspaceSurface, WorkspaceSurfaceTitle } from "./workspace-surface";
 
 afterEach(cleanup);
 
@@ -26,5 +26,39 @@ describe("WorkspaceSurface", () => {
   it("lets a page supply its own header row", () => {
     const { container } = render(<WorkspaceSurface header={<span>Custom</span>}>x</WorkspaceSurface>);
     expect(container.querySelector("[data-shell-header]")?.textContent).toBe("Custom");
+  });
+
+  it("renders the title as the page heading, h1 by default", () => {
+    render(<WorkspaceSurface title="Vault">x</WorkspaceSurface>);
+    const heading = screen.getByRole("heading", { level: 1, name: "Vault" });
+    expect(heading.closest("[data-shell-header]")).not.toBeNull();
+  });
+
+  it("takes a heading level for pages nested under another h1", () => {
+    render(<WorkspaceSurface title="Runs" headingLevel={2}>x</WorkspaceSurface>);
+    expect(screen.getByRole("heading", { level: 2, name: "Runs" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+  });
+
+  it("renders no empty heading without a title and keeps actions at the right", () => {
+    render(<WorkspaceSurface actions={<button type="button">New</button>}>x</WorkspaceSurface>);
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.getByRole("button", { name: "New" })).toBeTruthy();
+  });
+
+  it("gives a custom header its heading through WorkspaceSurfaceTitle", () => {
+    render(
+      <WorkspaceSurface
+        header={
+          <>
+            <WorkspaceSurfaceTitle>Studio</WorkspaceSurfaceTitle>
+            <span>Tabs</span>
+          </>
+        }
+      >
+        x
+      </WorkspaceSurface>,
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Studio" })).toBeTruthy();
   });
 });

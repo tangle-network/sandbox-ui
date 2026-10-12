@@ -2,6 +2,7 @@
 
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { Logo, TangleKnot } from "@tangle-network/brand";
+import { cn, focusField, focusRing, ixControl, ixControlSoft, ixField } from "@tangle-network/ui/utils";
 
 /**
  * Shared, self-contained sign-in / sign-up page for every Tangle vertical app.
@@ -74,11 +75,6 @@ const C = {
   border: "hsl(var(--border, 214 32% 91%))",
   text: "hsl(var(--card-foreground, 222 47% 11%))",
   muted: "hsl(var(--muted-foreground, 240 4% 46%))",
-  // A field is a well in the card: Brand's surface ladder recesses it below a
-  // dark card and takes the page plane in light, at least 3 OKLCH L off the
-  // card, and edges it with --field-border (3:1+), not the 1.5:1 hairline.
-  inputBg: "var(--well-card, var(--bg-input, #f5f5f4))",
-  inputBorder: "var(--field-border, hsl(var(--border, 214 32% 91%)))",
   hover: "hsl(var(--muted, 240 5% 96%))",
   danger: "hsl(var(--destructive, 0 72% 42%))",
   ink: "hsl(var(--foreground, 222 47% 11%))",
@@ -90,6 +86,12 @@ const C = {
 // 44px row with 16px text, so iOS never zooms a field on focus. Inline styles
 // keep the page complete for an app that loads no stylesheet; each token
 // carries the scale's pixel fallback.
+//
+// Colours that change on hover, press or focus are not inline: an inline
+// border or box-shadow outranks every class, which left these controls with no
+// hover state. They come from `@tangle-network/ui`'s interaction language
+// instead, the same ring-hue edge and glow every Button and Input shows (the
+// app compiles them through `sandbox-ui/tailwind.css`, which scans this dist).
 const CONTROL: CSSProperties = {
   boxSizing: "border-box",
   height: "var(--control-height-lg, 2.75rem)",
@@ -116,6 +118,15 @@ function GoogleIcon() {
     </svg>
   );
 }
+
+// A bordered control (social and email buttons): hairline edge, ring-hue edge
+// and glow on hover, deeper on press, a soft ring after a click.
+const OUTLINE_CONTROL = cn("border border-border", focusRing, ixControl);
+// A field: Brand's surface-ladder well (`--well` under the card) with the 3:1
+// `--field-border`, the ring-hue hover and the focus line.
+const FIELD = cn("border", focusField, ixField);
+// The filled Tangle button keeps its inline fill (`accent`) and takes the glow.
+const FILLED_CONTROL = cn("border border-transparent", focusRing, ixControl);
 
 const SOCIAL_LABEL: Record<SocialProvider, string> = { github: "GitHub", google: "Google" };
 const SOCIAL_ICON: Record<SocialProvider, ReactNode> = { github: <GithubIcon />, google: <GoogleIcon /> };
@@ -178,19 +189,16 @@ export function AuthPage({
     width: "100%",
     padding: "0 16px",
     ...CONTROL,
-    border: `1px solid ${C.border}`,
     background: "transparent",
     color: C.text,
     fontWeight: 500,
     cursor: "pointer",
-    transition: "background 120ms",
+    transition: "background 120ms, border-color 120ms, box-shadow 120ms",
   };
   const inputStyle: CSSProperties = {
     width: "100%",
     padding: "0 16px",
     ...CONTROL,
-    border: `1px solid ${C.inputBorder}`,
-    background: C.inputBg,
     color: C.text,
   };
 
@@ -198,7 +206,9 @@ export function AuthPage({
     <div
       style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, background: C.pageBg }}
     >
+      {/* data-slot="card" puts the card on Brand's surface ladder: its fields take the card's well. */}
       <div
+        data-slot="card"
         className={className}
         style={{
           width: "100%",
@@ -224,6 +234,7 @@ export function AuthPage({
         {/* Primary: Tangle SSO — solid, self-styled (never theme-dependent). */}
         <a
           href={tangleAuthUrl}
+          className={FILLED_CONTROL}
           style={{
             display: "flex",
             alignItems: "center",
@@ -233,11 +244,10 @@ export function AuthPage({
             padding: "0 16px",
             ...CONTROL,
             background: buttonBg,
-            border: "1px solid transparent",
             color: buttonFg,
             fontWeight: 600,
             textDecoration: "none",
-            transition: "background 120ms",
+            transition: "background 120ms, border-color 120ms, box-shadow 120ms",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = buttonHoverBg)}
           onMouseLeave={(e) => (e.currentTarget.style.background = buttonBg)}
@@ -252,6 +262,7 @@ export function AuthPage({
               <button
                 key={p}
                 type="button"
+                className={OUTLINE_CONTROL}
                 style={outlineBtn}
                 onClick={() => {
                   window.location.href = socialHref(p);
@@ -276,16 +287,16 @@ export function AuthPage({
 
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {showName && (
-                <input type="text" required aria-label="Name" placeholder="Name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+                <input type="text" required aria-label="Name" placeholder="Name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={FIELD} style={inputStyle} />
               )}
-              <input type="email" required aria-label="Email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
-              <input type="password" required aria-label="Password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
+              <input type="email" required aria-label="Email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={FIELD} style={inputStyle} />
+              <input type="password" required aria-label="Password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={FIELD} style={inputStyle} />
               {error && (
                 <p role="alert" style={{ fontSize: 14, color: C.danger }}>
                   {error}
                 </p>
               )}
-              <button type="submit" disabled={loading} style={{ ...outlineBtn, opacity: loading ? 0.5 : 1 }}>
+              <button type="submit" disabled={loading} className={OUTLINE_CONTROL} style={{ ...outlineBtn, opacity: loading ? 0.5 : 1 }}>
                 {loading ? "…" : emailLabel}
               </button>
             </form>
@@ -297,7 +308,7 @@ export function AuthPage({
         {altHref && (
           <p style={{ textAlign: "center", fontSize: 14, marginTop: 24, color: C.muted }}>
             {isSignup ? "Already have an account? " : `New to Tangle${product ? ` ${product}` : ""}? `}
-            <a href={altHref} style={{ fontWeight: 500, color: C.text }}>
+            <a href={altHref} className={cn("rounded-sm", focusRing, ixControlSoft)} style={{ fontWeight: 500, color: C.text }}>
               {isSignup ? "Sign in" : "Create account"}
             </a>
           </p>

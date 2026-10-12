@@ -1,8 +1,33 @@
 # Changelog
 
-## 0.133.7
+## 0.134.4
 
 - Asset Studio on a phone: `ApprovalQueue` shows one card per row below 480 px (two from 480 px, unchanged from `sm` up), and each `AssetCard`'s Edit, Reject and Approve are 14 px text with 14 px icons (`aria-hidden`) and a 40 px minimum height. At 390 px the queue drew two 170 px columns and the 12 px actions ran together as "Reject✓ Approve" (GTM journey B1, 2026-10-11).
+
+## 0.134.3
+
+- `WorkspaceSurface` renders `title` as the page heading (`h1`, or `headingLevel`), with the header's type unchanged, so every page on the shared panel has a heading at the source. A custom `header` gets one through the new `WorkspaceSurfaceTitle`. Without a `title` no empty heading renders. Products had added local `<h1>` wrappers, which brand's `page_heading` drift ratchet refuses.
+
+## 0.134.2
+
+- `ProviderMark` takes a `fallback` and renders it when no real logo is bundled, so a caller can keep its own monogram. In 0.134.1 it returned an element that rendered nothing, which a caller couldn't detect.
+
+## 0.134.1
+
+- `ProviderMark({ provider, size })` (from `dashboard`): a provider's or model maker's mark from its slug, or `null` when no real logo is bundled, so pickers share one mark table instead of inlining their own. Adds ByteDance (Seedance, LatentSync, Doubao) and Lightricks (LTX) marks, so every Studio video maker (ByteDance, Kling, Runway, Lightricks) shows its logo.
+
+## 0.134.0
+
+- `WorkspaceSurface`: one page of a workspace (assets, tasks, activity, integrations, a terminal) on the same rounded floating panel as the chat, under an inset `ShellHeader` (`title`, `actions`, or a custom `header`), with a body that scrolls inside the panel. `WorkspaceSurfaceFrame` is the shared gutter and panel; `WorkspaceLayout surface="inset"` now draws its center and right panes inside it, so the chat and every other page share one silhouette and one header line.
+
+## 0.133.8
+
+- `ProviderIcon` stops requesting logos that cannot exist. Protocol connectors (`email`, `smtp`, `imap`, `webhook`, `http`) go straight to the monogram unless an `iconUrl` is supplied, and Adobe Sign uses a pinned source. Production Connections had logged two 404s per load for `adobesign` and `email`.
+- Visual suite: Storybook serves on a random free port unless `STORYBOOK_PORT` is set (concurrent gates on one host collided on 6106), and a screenshot gets 30 s to stabilise instead of 15 s (a loaded host timed out a random handful of stories per run).
+
+## 0.133.7
+
+- `AuthPage` controls show ui's ring-hue interaction language: the Tangle button and the social and email buttons take `ixControl` (ring-hue edge and glow on hover, deeper on press, a soft ring after a click, `focusRing` for the keyboard), the fields take `ixField` with `focusField`, and the footer link takes `ixControlSoft`. Their borders, field fill and shadows were inline styles, which outrank every class, so in Creative production hovering the submit button, the Tangle button or a field left `box-shadow: none`. The card carries `data-slot="card"`, so Brand's surface rule gives its fields the card's well (`--well-card`), the same fill as 0.133.4. Geometry and the card, page and text colours stay inline with their light fallbacks. Tests in `auth-page.test.tsx`.
 
 ## 0.133.6
 

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { ShellHeader } from "./shell-header";
+import { WorkspaceSurfaceFrame } from "./workspace-surface";
 import { focusRing } from "@tangle-network/ui/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@tangle-network/ui/primitives";
 
@@ -828,15 +829,10 @@ export function WorkspaceLayout({
         {inset ? (
           // The gutter shows the recessed backdrop evenly on every side, so a
           // closed right pane ends the surface one gutter from the shell edge.
-          <div className="flex min-h-0 min-w-0 flex-1 p-[var(--shell-inset-gutter,0.5rem)]">
-            <div
-              data-workspace-surface
-              className="flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--md3-outline-variant)] bg-background shadow-[var(--shadow-card)]"
-            >
-              {centerPane}
-              {rightPane}
-            </div>
-          </div>
+          <WorkspaceSurfaceFrame>
+            {centerPane}
+            {rightPane}
+          </WorkspaceSurfaceFrame>
         ) : (
           <>
             {centerPane}

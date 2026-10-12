@@ -28,7 +28,9 @@ import falLogo from "@lobehub/icons-static-svg/icons/fal.svg";
 import fireworksLogo from "@lobehub/icons-static-svg/icons/fireworks.svg";
 import googleLogo from "@lobehub/icons-static-svg/icons/google.svg";
 import groqLogo from "@lobehub/icons-static-svg/icons/groq.svg";
+import bytedanceLogo from "@lobehub/icons-static-svg/icons/bytedance.svg";
 import klingLogo from "@lobehub/icons-static-svg/icons/kling.svg";
+import lightricksLogo from "@lobehub/icons-static-svg/icons/lightricks.svg";
 import lumaLogo from "@lobehub/icons-static-svg/icons/luma.svg";
 import metaLogo from "@lobehub/icons-static-svg/icons/meta.svg";
 import mistralLogo from "@lobehub/icons-static-svg/icons/mistral.svg";
@@ -105,6 +107,7 @@ export type ModelBrandKey =
   | "anthropic"
   | "azure"
   | "bedrock"
+  | "bytedance"
   | "cartesia"
   | "cerebras"
   | "cohere"
@@ -115,6 +118,7 @@ export type ModelBrandKey =
   | "google"
   | "groq"
   | "kuaishou"
+  | "lightricks"
   | "luma"
   | "meta"
   | "mistral"
@@ -332,8 +336,12 @@ function brandLogo(key: ModelBrandKey): string | undefined {
       return modelLogo(googleLogo);
     case "groq":
       return modelLogo(groqLogo);
+    case "bytedance":
+      return modelLogo(bytedanceLogo);
     case "kuaishou":
       return modelLogo(klingLogo);
+    case "lightricks":
+      return modelLogo(lightricksLogo);
     case "luma":
       return modelLogo(lumaLogo);
     case "meta":
@@ -414,6 +422,8 @@ export function normalizeBrandKey(value: string | undefined): ModelBrandKey {
   if (/(^|-)ai21($|-)|jamba/.test(normalized)) return "ai21";
   if (/(^|-)runway($|-)|gen-?[34]/.test(normalized)) return "runway";
   if (/(^|-)kling($|-)|kuaishou/.test(normalized)) return "kuaishou";
+  if (/(^|-)bytedance($|-)|seedance|latentsync|doubao/.test(normalized)) return "bytedance";
+  if (/(^|-)lightricks($|-)|(^|-)ltx($|-)/.test(normalized)) return "lightricks";
   if (/(^|-)luma($|-)|ray-?[12]/.test(normalized)) return "luma";
   if (/(^|-)pika($|-)/.test(normalized)) return "pika";
   if (/(^|-)stability($|-)|stable-diffusion|sdxl/.test(normalized)) return "stability";
@@ -434,6 +444,16 @@ export function normalizeBrandKey(value: string | undefined): ModelBrandKey {
   return "unknown";
 }
 
+/**
+ * A provider or model maker's mark from its slug ("anthropic", "kuaishou",
+ * "bytedance", a model id), or null when no real logo is bundled, so a caller
+ * can fall back to its own monogram. The one mark table every picker shares.
+ */
+export function ProviderMark({ provider, size = "sm", className }: { provider?: string; size?: "xs" | "sm" | "md"; className?: string }) {
+  if (!provider) return null;
+  return <BrandLogo brand={brandInfo(normalizeBrandKey(provider))} size={size} className={className} />;
+}
+
 export function brandInfo(key: ModelBrandKey): ModelBrandInfo {
   return BRAND_INFO[key] ?? BRAND_INFO.unknown;
 }
@@ -444,6 +464,7 @@ const BRAND_INFO: Record<ModelBrandKey, ModelBrandInfo> = {
   anthropic: { key: "anthropic", label: "Anthropic", ...brandMark("anthropic") },
   azure: { key: "azure", label: "Azure", ...brandMark("azure") },
   bedrock: { key: "bedrock", label: "AWS Bedrock", ...brandMark("bedrock") },
+  bytedance: { key: "bytedance", label: "ByteDance", ...brandMark("bytedance") },
   cartesia: { key: "cartesia", label: "Cartesia" },
   cerebras: { key: "cerebras", label: "Cerebras", ...brandMark("cerebras") },
   cohere: { key: "cohere", label: "Cohere", ...brandMark("cohere") },
@@ -454,6 +475,7 @@ const BRAND_INFO: Record<ModelBrandKey, ModelBrandInfo> = {
   google: { key: "google", label: "Google", ...brandMark("google") },
   groq: { key: "groq", label: "Groq", ...brandMark("groq") },
   kuaishou: { key: "kuaishou", label: "Kling", ...brandMark("kuaishou") },
+  lightricks: { key: "lightricks", label: "Lightricks", ...brandMark("lightricks") },
   luma: { key: "luma", label: "Luma", ...brandMark("luma") },
   meta: { key: "meta", label: "Meta", ...brandMark("meta") },
   mistral: { key: "mistral", label: "Mistral", ...brandMark("mistral") },

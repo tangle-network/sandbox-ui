@@ -35,6 +35,7 @@ const withSandboxTheme: Decorator = (Story, context) => {
   // Layouts synchronize Brand's theme from these classes; the toolbar must agree.
   document.documentElement.classList.toggle('dark', !isLight)
   document.documentElement.classList.toggle('light', isLight)
+  document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark')
   document.documentElement.setAttribute('data-sandbox-ui', 'true')
   document.documentElement.setAttribute('data-sandbox-theme', isLight ? 'vault' : '')
 

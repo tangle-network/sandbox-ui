@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.7
+
+- Admit the Agent Interface 5.2 cohort after qualifying the canonical harness, reasoning, and interactive-control contracts. Existing Interface 1/2/3 support is retained; no component behavior or presentation changes. Development and packed-consumer checks now exercise Interface 5.2.0.
+
 ## 0.134.6
 
 - `SidebarLayoutNavItem.description` and `RailButton.description` explain destinations in their accessible descriptions and hover tooltips, including labeled rails. Existing navigation labels and default tooltip behavior are unchanged.

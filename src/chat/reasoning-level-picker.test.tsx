@@ -1,13 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { reasoningLadder } from "@tangle-network/agent-interface";
 import userEvent from "@testing-library/user-event";
 import {
+  REASONING_LADDER,
   DEFAULT_REASONING_LEVEL_OPTIONS,
   HARNESS_REASONING_OPTIONS,
   ReasoningLevelPicker,
 } from "./reasoning-level-picker";
 
 describe("DEFAULT_REASONING_LEVEL_OPTIONS copy", () => {
+  it("retains the installed canonical reasoning ladder binding and supported values", () => {
+    expect(REASONING_LADDER).toBe(reasoningLadder);
+    for (const option of DEFAULT_REASONING_LEVEL_OPTIONS) {
+      if (option.value !== "auto") expect(reasoningLadder).toContain(option.value);
+    }
+  });
+
   const descOf = (value: string) =>
     DEFAULT_REASONING_LEVEL_OPTIONS.find((o) => o.value === value)?.description;
 

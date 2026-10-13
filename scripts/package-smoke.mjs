@@ -15,6 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "vite";
 import { writeIntegrationsContract } from "./integrations-package-contract.mjs";
+import { validateInterfaceContract } from "./interface-package-contract.mjs";
 import { presentationConsumerSpecs, validatePresentationConsumer } from "./presentation-package-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,9 +37,9 @@ const consumerDistDir = join(consumerDir, "dist");
 // rather than a silent pass.
 const stubMarker = (name) => `Could not resolve "${name}"`;
 
-const expectedAgentInterfaceRange = "^1.0.0 || ^2.0.0 || ^3.0.0";
+const expectedAgentInterfaceRange = "^1.0.0 || ^2.0.0 || ^3.0.0 || ^5.2.0";
 const expectedAgentInterfaceVersion =
-  process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "3.0.0";
+  process.env.SANDBOX_UI_AGENT_INTERFACE_VERSION ?? "5.2.0";
 
 function packedManifest(tarballPath) {
   return JSON.parse(
@@ -303,6 +304,7 @@ createRoot(document.getElementById("root")).render(
   );
 
   writeIntegrationsContract({ root, consumerDir });
+  validateInterfaceContract({ root, consumerDir });
 
   await build({
     root: consumerDir,

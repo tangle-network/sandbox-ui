@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { harnessTypeSchema } from "@tangle-network/agent-interface";
 import {
   HARNESS_OPTIONS,
@@ -56,6 +57,15 @@ describe("HARNESS_OPTIONS", () => {
 });
 
 describe("HarnessPicker", () => {
+  it("emits a canonical harness through the actual selection control", async () => {
+    const selected: HarnessType[] = [];
+    render(<HarnessPicker value="opencode" available={["opencode", "claude-code"]} onChange={value => selected.push(value)} />);
+    await userEvent.click(screen.getByRole("combobox", { name: "Agent harness: OpenCode" }));
+    await userEvent.click(screen.getByRole("option", { name: /Claude Code/ }));
+    expect(selected).toEqual(["claude-code"]);
+    expect(harnessTypeSchema.parse(selected[0])).toBe("claude-code");
+  });
+
   it("renders the selected harness label in the trigger", () => {
     render(<HarnessPicker value="claude-code" onChange={() => {}} />);
     expect(screen.getByText("Claude Code")).toBeInTheDocument();

@@ -18,7 +18,12 @@ React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a
 npm install @tangle-network/sandbox-ui
 ```
 
-**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0 || ^2.0.0`, `@tangle-network/brand ^1.6.0`, and `@tangle-network/ui ^11.10.0`.
+**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0 || ^2.0.0 || ^3.0.0 || ^5.2.0`, `@tangle-network/brand ^1.23.0`, and `@tangle-network/ui ^11.33.0`.
+
+The Interface compatibility check exercises the exact supported floors 1.0.0,
+2.0.0, 3.0.0, and 5.2.0, including source checks and a packed consumer's public
+declarations. Interface 4.x, 5.0.x, and 5.1.x are not admitted. New majors require
+qualification before the peer range is extended.
 Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which. `/files` needs `pdfjs-dist` only for `PdfViewer`, which `FilePreview` uses for PDFs; without it the viewer says so and falls back to the browser's own PDF viewer. The `ui` README covers its worker and asset setup through `configurePdfViewer`.
 
 ## Usage

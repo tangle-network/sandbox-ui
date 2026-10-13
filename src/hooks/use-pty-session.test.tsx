@@ -1,4 +1,4 @@
-import type { AgentInteractiveSessionControlClaim } from "@tangle-network/agent-interface"
+import { AgentInteractiveSessionControlClaimSchema, type AgentInteractiveSessionControlClaim } from "@tangle-network/agent-interface"
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { renderHook, act, waitFor } from "@testing-library/react"
 import { usePtySession } from "./use-pty-session"
@@ -796,12 +796,16 @@ describe("usePtySession input serialization", () => {
  */
 describe("usePtySession WebSocket transport", () => {
   const INTERACTIVE_CONTROL = {
-    refDigest: "sha256:interactive-ref",
+    refDigest: `sha256:${"a".repeat(64)}`,
     generation: 1,
     leaseId: "lease-1",
     holderId: "browser-1",
     expiresAt: "2026-08-16T12:00:00.000Z",
   } as const
+
+  it("transmits a claim shaped by the installed canonical Interface contract", () => {
+    expect(AgentInteractiveSessionControlClaimSchema.parse(INTERACTIVE_CONTROL)).toEqual(INTERACTIVE_CONTROL)
+  })
 
   beforeEach(() => {
     vi.useRealTimers()

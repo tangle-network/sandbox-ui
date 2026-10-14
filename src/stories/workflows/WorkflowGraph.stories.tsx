@@ -75,7 +75,7 @@ const PROVIDER_EVENT = `on:
     connection: github
     event: pull_request
     actions: [opened, synchronize]
-    repo: tangle-network/agent-dev-container
+    repo: tangle-network/agent-container
 do:
   - agent.run:
       model: anthropic/claude-sonnet-5
@@ -158,7 +158,7 @@ const CONTROL_FLOW = `on:
     connection: github
     event: pull_request
     actions: [opened, ready_for_review]
-    repo: tangle-network/agent-dev-container
+    repo: tangle-network/agent-container
 do:
   - if:
       equals: ["\${trigger.payload.draft}", false]

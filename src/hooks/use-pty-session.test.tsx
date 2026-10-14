@@ -6,7 +6,7 @@ import { usePtySession } from "./use-pty-session"
 /**
  * Integration tests for the input-serialization contract.
  *
- * Covers issue #802 in the agent-dev-container repo: sandbox terminal
+ * Covers issue #802 in the agent-container repo: sandbox terminal
  * input was laggy (>1s) and arrived at the sidecar out of order because
  * `sendCommand` previously issued one concurrent `fetch` per keystroke.
  * These tests lock in the invariants that prevent regressions:

@@ -85,7 +85,7 @@ describe("WorkspaceFilesPane", () => {
     expect(onSelect).toHaveBeenLastCalledWith("campaigns/plan.md", file);
   });
 
-  // The pre-0.130 contract, pinned: agent-dev-container's sandbox workspace
+  // The pre-0.130 contract, pinned: agent-container's sandbox workspace
   // forwards every selection that carries a node (`if (node) directory.onSelect(path, node)`),
   // so a folder click must still arrive, with RichFileTree's trailing-slash path,
   // on every click whether it expands, collapses, or the tree is filtered.

@@ -11,7 +11,7 @@ function decodeWire(b64: string): string {
 
 /**
  * Mirror of the sidecar's strict acceptance check
- * (agent-dev-container/apps/sidecar/src/lib/decode-text-parts.ts): re-encode
+ * (agent-container/apps/sidecar/src/lib/decode-text-parts.ts): re-encode
  * the decoded bytes and compare modulo padding — non-canonical/raw input is
  * rejected. If the client ever emits something the real server would 400,
  * this returns true. Keep in sync with that file.

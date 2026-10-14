@@ -929,7 +929,7 @@ on:
     connection: github
     event: pull_request
     actions: [opened, synchronize]
-    repo: tangle-network/agent-dev-container
+    repo: tangle-network/agent-container
 do:
   - agent.run:
       profile: code-reviewer
@@ -947,7 +947,7 @@ do:
       connection: "github",
       event: "pull_request",
       actions: ["opened", "synchronize"],
-      repo: "tangle-network/agent-dev-container",
+      repo: "tangle-network/agent-container",
     });
 
     // agent.run node carries every config field, prompt UNtruncated, and nested

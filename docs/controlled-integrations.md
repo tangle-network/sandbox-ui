@@ -88,7 +88,7 @@ silently retarget the remaining account. The old connection-index overwrite is g
 
 ## Verified source references
 
-Adapted presentation from `tangle-network/agent-dev-container`, default branch
+Adapted presentation from `tangle-network/agent-container`, default branch
 `develop`, inspected before implementation:
 
 | Path under `products/platform/web/src/client/` | Observed source blob |

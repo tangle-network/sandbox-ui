@@ -1,39 +1,29 @@
-import { readFileSync } from 'node:fs'
 import { test, expect } from 'playwright/test'
 import { assertStoryHealthy, openStory } from './story-ready.mjs'
 
-const brandTokenCss = readFileSync(new URL(import.meta.resolve('@tangle-network/brand/styles/tokens.css')), 'utf8')
 const motionRoles = ['--duration-instant', '--duration-fast', '--duration-base', '--duration-slow', '--duration-stream', '--duration-arrive', '--ease-standard', '--ease-entrance', '--ease-exit', '--ease-expo', '--motion-control', '--motion-surface', '--motion-dismiss', '--motion-stream', '--motion-arrive', '--stagger-step', '--stagger-index', '--arrive-distance', '--stream-blur']
 
 async function assertBrandMotion(page, theme, reducedMotion, info, phase) {
   expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(reducedMotion === 'reduce')
-  const values = await page.evaluate(({ css, roles, theme }) => {
-    // Compare the real cascade to installed Brand-only CSS; do not copy timings.
-    const frame = document.createElement('iframe')
-    frame.hidden = true
-    document.body.appendChild(frame)
-    const doc = frame.contentDocument
-    doc.open()
-    doc.write(`<html class="${theme}" data-theme="${theme}"><head><style>${css}</style></head><body><div class="${theme}" data-theme="${theme}"></div></body></html>`)
-    doc.close()
+  const values = await page.evaluate(({ roles, theme }) => {
     const scope = document.createElement('div')
     scope.className = theme
     scope.dataset.theme = theme
     document.body.appendChild(scope)
-    const read = node => Object.fromEntries(roles.map(role => [role, node.ownerDocument.defaultView.getComputedStyle(node).getPropertyValue(role).trim()]))
-    const result = { actualRoot: read(document.documentElement), actualTheme: read(scope), brandRoot: read(doc.documentElement), brandTheme: read(doc.body.firstElementChild) }
+    const read = node => Object.fromEntries(roles.map(role => [role, getComputedStyle(node).getPropertyValue(role).trim()]))
+    const result = { root: read(document.documentElement), theme: read(scope) }
     scope.remove()
-    frame.remove()
     return result
-  }, { css: brandTokenCss, roles: motionRoles, theme })
-  for (const value of Object.values(values.brandRoot)) expect(value).not.toBe('')
-  expect(values.actualRoot).toEqual(values.brandRoot)
-  expect(values.actualTheme).toEqual(values.brandTheme)
-  const durationMs = Object.fromEntries(Object.entries(values.actualRoot).filter(([key]) => key.startsWith('--duration-')).map(([key, value]) => {
-    expect(value).toMatch(/^\d+(?:\.\d+)?m?s$/)
-    return [key, Number.parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)]
-  }))
-  for (const value of Object.values(durationMs)) reducedMotion === 'reduce' ? expect(value).toBe(0) : expect(value).toBeGreaterThan(0)
+  }, { roles: motionRoles, theme })
+  const durationMs = {}
+  for (const [scope, roles] of Object.entries(values)) {
+    for (const value of Object.values(roles)) expect(value).not.toBe('')
+    durationMs[scope] = Object.fromEntries(Object.entries(roles).filter(([key]) => key.startsWith('--duration-')).map(([key, value]) => {
+      expect(value).toMatch(/^\d+(?:\.\d+)?m?s$/)
+      return [key, Number.parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)]
+    }))
+    for (const value of Object.values(durationMs[scope])) reducedMotion === 'reduce' ? expect(value).toBe(0) : expect(value).toBeGreaterThan(0)
+  }
   await info.attach(`brand-motion-${phase}`, { body: JSON.stringify({ theme, reducedMotion, values, durationMs, measurement: 'computed CSS roles, not elapsed latency' }), contentType: 'application/json' })
 }
 

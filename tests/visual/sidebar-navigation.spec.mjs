@@ -19,7 +19,7 @@ async function assertBrandMotion(page, theme, reducedMotion, info, phase) {
   for (const [scope, roles] of Object.entries(values)) {
     for (const value of Object.values(roles)) expect(value).not.toBe('')
     durationMs[scope] = Object.fromEntries(Object.entries(roles).filter(([key]) => key.startsWith('--duration-')).map(([key, value]) => {
-      expect(value).toMatch(/^\d+(?:\.\d+)?m?s$/)
+      expect(value).toMatch(/^(?:\d+(?:\.\d+)?|\.\d+)m?s$/)
       return [key, Number.parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)]
     }))
     for (const value of Object.values(durationMs[scope])) reducedMotion === 'reduce' ? expect(value).toBe(0) : expect(value).toBeGreaterThan(0)

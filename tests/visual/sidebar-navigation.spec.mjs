@@ -1,5 +1,41 @@
+import { readFileSync } from 'node:fs'
 import { test, expect } from 'playwright/test'
 import { assertStoryHealthy, openStory } from './story-ready.mjs'
+
+const brandTokenCss = readFileSync(new URL(import.meta.resolve('@tangle-network/brand/styles/tokens.css')), 'utf8')
+const motionRoles = ['--duration-instant', '--duration-fast', '--duration-base', '--duration-slow', '--duration-stream', '--duration-arrive', '--ease-standard', '--ease-entrance', '--ease-exit', '--ease-expo', '--motion-control', '--motion-surface', '--motion-dismiss', '--motion-stream', '--motion-arrive', '--stagger-step', '--stagger-index', '--arrive-distance', '--stream-blur']
+
+async function assertBrandMotion(page, theme, reducedMotion, info, phase) {
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(reducedMotion === 'reduce')
+  const values = await page.evaluate(({ css, roles, theme }) => {
+    // Compare the real cascade to installed Brand-only CSS; do not copy timings.
+    const frame = document.createElement('iframe')
+    frame.hidden = true
+    document.body.appendChild(frame)
+    const doc = frame.contentDocument
+    doc.open()
+    doc.write(`<html class="${theme}" data-theme="${theme}"><head><style>${css}</style></head><body><div class="${theme}" data-theme="${theme}"></div></body></html>`)
+    doc.close()
+    const scope = document.createElement('div')
+    scope.className = theme
+    scope.dataset.theme = theme
+    document.body.appendChild(scope)
+    const read = node => Object.fromEntries(roles.map(role => [role, node.ownerDocument.defaultView.getComputedStyle(node).getPropertyValue(role).trim()]))
+    const result = { actualRoot: read(document.documentElement), actualTheme: read(scope), brandRoot: read(doc.documentElement), brandTheme: read(doc.body.firstElementChild) }
+    scope.remove()
+    frame.remove()
+    return result
+  }, { css: brandTokenCss, roles: motionRoles, theme })
+  for (const value of Object.values(values.brandRoot)) expect(value).not.toBe('')
+  expect(values.actualRoot).toEqual(values.brandRoot)
+  expect(values.actualTheme).toEqual(values.brandTheme)
+  const durationMs = Object.fromEntries(Object.entries(values.actualRoot).filter(([key]) => key.startsWith('--duration-')).map(([key, value]) => {
+    expect(value).toMatch(/^\d+(?:\.\d+)?m?s$/)
+    return [key, Number.parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)]
+  }))
+  for (const value of Object.values(durationMs)) reducedMotion === 'reduce' ? expect(value).toBe(0) : expect(value).toBeGreaterThan(0)
+  await info.attach(`brand-motion-${phase}`, { body: JSON.stringify({ theme, reducedMotion, values, durationMs, measurement: 'computed CSS roles, not elapsed latency' }), contentType: 'application/json' })
+}
 
 // Keep interaction recordings uncut; static fixture baselines run separately.
 test.use({ video: 'on' })
@@ -138,8 +174,8 @@ for (const theme of ['light', 'dark']) {
 for (const theme of ['light', 'dark']) {
   for (const reducedMotion of ['no-preference', 'reduce']) {
     test(`phone dismissal reversal and preference changes ${theme} ${reducedMotion}`, async ({ page, baseURL }, info) => {
-      await page.emulateMedia({ reducedMotion })
-      await openStory(page, 'dashboard-sidebarlayout--desktop', theme, { width: 390, height: 844 }, baseURL)
+      await openStory(page, 'dashboard-sidebarlayout--desktop', theme, { width: 390, height: 844 }, baseURL, { reducedMotion })
+      await assertBrandMotion(page, theme, reducedMotion, info, 'initial')
       const opener = page.getByRole('button', { name: 'Open navigation', exact: true })
       const drawer = page.getByRole('dialog', { name: 'Navigation', exact: true })
       await opener.click()
@@ -151,6 +187,7 @@ for (const theme of ['light', 'dark']) {
         await expect.poll(() => drawer.evaluate(node => node.contains(document.activeElement))).toBe(true)
       }
       await page.emulateMedia({ reducedMotion: 'reduce' })
+      await assertBrandMotion(page, theme, 'reduce', info, 'toggled-reduce')
       await expect.poll(() => drawer.evaluate(node => node.getAnimations({ subtree: true }).filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations === Infinity).length)).toBe(0)
       await page.screenshot({ path: info.outputPath(`reopened-${theme}-${reducedMotion}.png`) })
       await page.keyboard.press('Escape')
@@ -168,8 +205,8 @@ for (const theme of ['light', 'dark']) {
     })
 
     test(`desktop layout stays quiet and disclosure stays inert ${theme} ${reducedMotion}`, async ({ page, baseURL }, info) => {
-      await page.emulateMedia({ reducedMotion })
-      await openStory(page, 'dashboard-sidebarlayout--expandable-groups', theme, { width: 1440, height: 900 }, baseURL)
+      await openStory(page, 'dashboard-sidebarlayout--expandable-groups', theme, { width: 1440, height: 900 }, baseURL, { reducedMotion })
+      await assertBrandMotion(page, theme, reducedMotion, info, 'initial')
       const rail = page.locator('[data-sidebar="true"]')
       const main = page.getByRole('main')
       const closeGroup = page.getByRole('button', { name: 'Collapse Apps', exact: true })

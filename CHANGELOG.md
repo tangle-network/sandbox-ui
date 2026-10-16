@@ -2,6 +2,8 @@
 
 ## 0.134.8
 
+- Forward the checked UI markdown schema, Wizard and plain-text exports; retire obsolete local-token and class-only assertions in favor of shared-owner contracts and real browser proof.
+
 - Phone Sidebar navigation uses the canonical UI Sheet for interrupted open/close, focus and dismissal cleanup; stateful headers keep one live slot. Requires UI11.38.1 and Brand1.25.1.
 - Desktop rail, content margin and inline disclosure layout update immediately; navigation actions appear together. Controls consume Brand motion roles. Responding labels retain status semantics and show a static label under reduced motion instead of an essential-loop exception.
 - Retire obsolete mock/class assertions; existing Chromium navigation coverage records keyboard reversal, live preference changes and quiet desktop layout.

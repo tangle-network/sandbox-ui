@@ -20,6 +20,7 @@ export {
   ixRow,
   ixSelected,
   ixTabUnderline,
+  plainTextFromMarkdown,
   timeAgo,
   truncateText,
 } from "@tangle-network/ui/utils";

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.134.8
+
+- Phone Sidebar navigation uses the canonical UI Sheet for interrupted open/close, focus and dismissal cleanup; stateful headers keep one live slot. Requires UI11.38.1 and Brand1.25.1.
+- Desktop rail, content margin and inline disclosure layout update immediately; navigation actions appear together. Controls consume Brand motion roles. Responding labels retain status semantics and show a static label under reduced motion instead of an essential-loop exception.
+- Retire obsolete mock/class assertions; existing Chromium navigation coverage records keyboard reversal, live preference changes and quiet desktop layout.
+
 ## 0.134.7
 
 - Admit the Agent Interface 5.2 cohort after qualifying the canonical harness, reasoning, and interactive-control contracts. Existing Interface 1/2/3 support is retained; no component behavior or presentation changes. Development and packed-consumer checks now exercise Interface 5.2.0.

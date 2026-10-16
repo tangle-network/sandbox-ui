@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
-import * as Dialog from "@radix-ui/react-dialog"
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { ShellHeader } from "../workspace/shell-header"
-import { MOTION_CONTROL, MOTION_TRAVEL } from "../lib/motion"
+import { MOTION_CONTROL } from "../lib/motion"
 import { useBrandThemeSync } from "./use-brand-theme-sync"
 import {
   Sidebar,
@@ -329,10 +329,6 @@ function SidebarLayoutInner({
    * `navItems` and it appears on both, so a phone can never silently lose a
    * door the desktop has.
    *
-   * Every item arrives on the shared entrance, staggered by its position: the
-   * rail reads as a list unfolding top-down rather than a block of icons
-   * appearing at once. `--stagger-index` is capped inside `.agent-arrive`, so a
-   * long nav does not open with a cascade.
    */
   function renderNavItems({
     showLabels,
@@ -341,8 +337,7 @@ function SidebarLayoutInner({
     showLabels: boolean
     onNavigate?: () => void
   }) {
-    return navItems.map((item, index) => {
-      const arrival = { className: "agent-arrive", style: { "--stagger-index": index } as React.CSSProperties }
+    return navItems.map((item) => {
       if (item.expandable) {
         return (
           <RailExpandable
@@ -360,7 +355,6 @@ function SidebarLayoutInner({
             defaultOpen={item.defaultOpen}
             onNavigate={onNavigate}
             LinkComponent={LinkComponent}
-            {...arrival}
           />
         )
       }
@@ -375,7 +369,6 @@ function SidebarLayoutInner({
             title={item.label}
             showLabel={showLabels}
             isActive={activeId === item.id || item.flyoutItems.some((f) => activeSet.has(f.id))}
-            {...arrival}
           >
             {item.flyoutItems.map((f) => {
               const FIcon = f.icon
@@ -418,10 +411,9 @@ function SidebarLayoutInner({
             onNavigate?.()
           }}
           showLabel={showLabels}
-          {...arrival}
         />
       ) : (
-        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} badgeLabel={item.badgeLabel} description={item.description} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild {...arrival}>
+        <RailButton key={item.id} icon={item.icon} label={item.label} badge={item.badge} badgeLabel={item.badgeLabel} description={item.description} isActive={activeId === item.id} showLabel={showLabels} variant={item.variant} asChild>
           <Link
             href={item.href}
             to={item.href}
@@ -434,7 +426,7 @@ function SidebarLayoutInner({
   }
 
   return (
-    <Dialog.Root open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+    <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
       <div className={cn("min-h-screen bg-surface text-foreground", className)}>
         {/* Wrap the fixed sidebar so the responsive-hide class lands on an
             element with no competing `display` utility. The rail itself carries
@@ -501,7 +493,7 @@ function SidebarLayoutInner({
                 SHOW_BELOW_CLASS[hideBelow],
               )}
             >
-              <Dialog.Trigger asChild>
+              <SheetTrigger asChild>
                 <button
                   type="button"
                   aria-label="Open navigation"
@@ -512,7 +504,7 @@ function SidebarLayoutInner({
                 >
                   <MenuIcon className="size-5" />
                 </button>
-              </Dialog.Trigger>
+              </SheetTrigger>
               <div className="flex min-w-0 flex-1 items-center">
                 {(headerSlot === "bar" ? railHeaderContent : undefined) ?? (
                   logo !== undefined ? (
@@ -540,10 +532,10 @@ function SidebarLayoutInner({
           {children}
         </SidebarContent>
 
-        {hideBelow && mobileNavOpen && (
+        {hideBelow && (
           <MobileNavDrawer
             breakpoint={hideBelow}
-            header={railHeaderContent ?? logo}
+            header={headerSlot === "drawer" ? railHeaderContent ?? logo : undefined}
             footer={
               railFooter !== undefined || hasProfile ? (
                 <>
@@ -579,7 +571,7 @@ function SidebarLayoutInner({
           </MobileNavDrawer>
         )}
       </div>
-    </Dialog.Root>
+    </Sheet>
   )
 }
 
@@ -609,18 +601,18 @@ function MobileNavDrawer({
   children: React.ReactNode
 }) {
   return (
-    <Dialog.Portal>
-      <Dialog.Overlay className={cn("fixed inset-0 z-50 bg-black/50", SHOW_BELOW_CLASS[breakpoint])} />
-      <Dialog.Content
+    <SheetContent
+        side="left"
+        hideCloseButton
         id="sidebar-mobile-nav"
         aria-describedby={undefined}
         style={{ width: SIDEBAR_MOBILE_WIDTH }}
-        className={cn("agent-arrive fixed inset-y-0 left-0 z-50 flex max-w-[85vw] flex-col border-r border-[var(--md3-outline-variant)] bg-surface-container-low shadow-xl", SHOW_BELOW_CLASS[breakpoint])}
+        className={cn("max-w-[85vw] gap-0 border-[var(--md3-outline-variant)] bg-surface-container-low", SHOW_BELOW_CLASS[breakpoint])}
       >
-        <Dialog.Title className="sr-only">Navigation</Dialog.Title>
+        <SheetTitle className="sr-only">Navigation</SheetTitle>
         <ShellHeader divider={false} className="gap-1 border-b border-[var(--md3-outline-variant)] bg-transparent px-2">
           <div className="flex min-w-0 flex-1 items-center">{header}</div>
-          <Dialog.Close asChild>
+          <SheetClose asChild>
             <button
               type="button"
               aria-label="Close navigation"
@@ -628,7 +620,7 @@ function MobileNavDrawer({
             >
               <CloseIcon className="size-5" />
             </button>
-          </Dialog.Close>
+          </SheetClose>
         </ShellHeader>
 
         <nav aria-label="Sections" className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-2">
@@ -641,8 +633,7 @@ function MobileNavDrawer({
         {footer != null && (
           <div className="shrink-0 border-t border-[var(--md3-outline-variant)] px-2 py-2">{footer}</div>
         )}
-      </Dialog.Content>
-    </Dialog.Portal>
+    </SheetContent>
   )
 }
 

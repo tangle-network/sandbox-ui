@@ -214,66 +214,15 @@ Avatar button in the rail that opens a dropdown with user info, settings, and lo
 
 ## Motion
 
-The rail speaks the same motion vocabulary as `@tangle-network/agent-app` — same token names, same values, declared in `src/styles/globals.css` and shipped in `dist/globals.css`.
-A product that loads both stylesheets gets one answer, not two.
+Brand owns the [motion character and interaction rules](https://github.com/tangle-network/brand/blob/main/docs/design-bible.md) and the roles served by its token stylesheet. Read that owner for durations, easing, interaction budgets and reduced-motion behavior; this guide does not copy their values.
 
-| Token | Value | What it times |
-|---|---|---|
-| `--duration-instant` | 90ms | a control acknowledging a pointer |
-| `--duration-fast` | 150ms | a control already on screen changing state |
-| `--duration-base` | 240ms | a surface arriving or leaving |
-| `--duration-slow` | 360ms | a full-height surface travelling |
-| `--duration-arrive` | 600ms | a row or card that was not there a moment ago |
-| `--stagger-step` | 50ms | delay per item in a staggered group (capped at 8 items) |
-| `--shimmer-period` | 1400ms | the `.agent-shimmer` sweep — deliberately outside the collapsible `--duration-*` family |
+SidebarLayout uses UI's Sheet for phone navigation. UI owns interruptible presence and retirement; Radix owns containment, Escape/outside dismissal and return focus. The controlled drawer stays mounted so closing and immediate reopening reach that shared owner. Stateful header content stays in one live slot across rail, bar and drawer.
 
-What the rail does with them:
+Navigation actions appear together without entrance staggering in both SidebarLayout and DashboardLayout. Desktop rail width, content margin and inline disclosure layout update immediately. Control feedback consumes the complete `--motion-control` role; technical floating opacity/transform consumes `--motion-surface`. No local layout-animation trace or timing constant is required because the Sidebar does not animate layout.
 
-- **Nav items arrive staggered.** Each item carries `.agent-arrive` and `style={{ "--stagger-index": i }}`, so the rail unfolds top-down instead of appearing all at once. Both shells (`SidebarLayout`, `DashboardLayout`) render it the same way, and `SessionSidebar` rows use the identical entrance.
-  The entrance runs on MOUNT only. Collapsing or expanding the rail moves nothing off screen, so it must not replay; `RailTooltip` therefore renders the same wrapper element whether or not the tooltip is enabled, because a changed element type makes React rebuild the trigger and a rebuilt element replays its CSS animation.
-  That wrapper surviving the toggle also means its unmount cleanup never runs, so `RailTooltip` cancels a pending open the moment it is disabled — otherwise the tooltip armed a fraction of a second earlier fires anyway, and appears unbidden at a stale position the next time the trigger is tooltipped again.
-- **The disclosure animates its real height.** `RailExpandable`'s inline accordion is a `.agent-disclose` grid whose row travels `0fr → 1fr` — no `max-height` guess, so a list of 3 sessions and a list of 30 both open correctly. Its sub-items mount on first open and stay mounted (a list that unmounts has no height to collapse); while closed the region is `inert`, so clipped links are neither tabbable nor announced.
-  The element `.agent-disclose > *` clips carries no padding of its own: a 0fr row sets its height to 0, and a border-box height of 0 still floors at padding + border, so padding there leaves a closed disclosure visibly tall. Spacing goes one level further in.
-- **Hover and active states read a token.** Every transition in the rail is `duration-[var(--duration-fast)] ease-[var(--ease-standard)]` (the `MOTION_CONTROL` constant in `src/lib/motion.ts`). The rail's own collapse and the content margin that follows it share `--duration-slow`, because two tiers there means the page visibly lags the edge it is attached to.
+Reduced motion removes the responding-label sweep. Its existing status semantics remain, and a static Responding label appears for reduced-motion users. State, focus, cancellation and cleanup do not wait for CSS animation-end/transition-end delivery. Other technical components retain their existing owner and proof scope; this Sidebar guide makes no package-wide measured-motion claim.
 
-Adding a timing to this area? Use a token. `scripts/motion-tokens.test.mjs` fails the build on a literal `ms`, a `duration-<number>`, or a duration that has no reduced-motion collapse.
-
-### Reduced motion
-
-Two rules in `globals.css`: the `--duration-*` ladder collapses to 1ms at `:root`, and a universal floor collapses everything that does not read a token. 1ms and not 0, because a zero-duration transition fires no `transitionend` and anything sequencing on one hangs.
-
-**The classification rule.** Motion is *essential* when it is the only evidence that something is happening **right now** — an operation in flight, a resource actively running. Freeze it and "working" becomes indistinguishable from "stuck", which is information removed. Everything else is *decorative* and is silenced.
-
-A static label beside the motion does not make an in-flight indicator decorative: "Loading processes…" reads the same whether the fetch is alive or hung. A state that is not in flight is already carried by its label, colour and shape, so motion on it is emphasis.
-
-Essential is declared **per element** (`data-motion="essential"`), never on a class — the exact same `.agent-shimmer` sweep marks a session whose agent is mid-turn and dresses a plain skeleton, and only the caller knows which one it built.
-
-The floor covers `::before` and `::after` as well as elements. A bare `*` matches no pseudo-element, and `.pulse-ring::before` ran its 2s ring straight through the preference until the selector said so.
-
-**Scope of the table below.** It is every animated surface this package authors in `src/`, plus every animation class it publishes in `dist/globals.css`. It does not cover a consuming app's own motion or `@tangle-network/ui`'s — those are reached by the universal floor, not enumerated here. Values are measured in Chromium against the built stylesheet, in both modes.
-
-What a reduced-motion user sees:
-
-| Indicator | Where | Classification | Under reduced motion |
-|---|---|---|---|
-| Responding session's title shimmer | `RailExpandable` sub-item, `SessionSidebar` row | essential | 1400ms sweep, still looping |
-| Save / load / send spinner | composer, mention list, profiles, secrets, startup scripts, video preview | essential | still spinning |
-| Running / provisioning status dot | `SandboxTable`, `SandboxCard` | essential | still pulsing |
-| Running-node pulse | `WorkflowGraph`, `StatusFooter` | essential | still pulsing |
-| Provisioning / connecting banner icon | `StatusBanner` | essential | still spinning |
-| In-flight panel loaders | `ProcessList`, `SnapshotList` | essential | still pulsing / spinning |
-| Nav item and session-row entrance | rail, `SessionSidebar` | decorative | appears immediately, no travel, no stagger |
-| Tooltip and flyout pop-in | `RailTooltip`, `RailFlyout` | decorative | appears immediately |
-| Rail collapse, drawer, content margin | `Sidebar`, `SidebarContent` | decorative | jumps to its new width |
-| Dropdown and popover open / close | `BackendSelector`, `ReasoningLevelPicker` | decorative | appears immediately |
-| Panel fades | `StartupScriptsPage` | decorative | appears immediately |
-| Node body swap on a density change | `WorkflowGraph`, `node-ui` | decorative | frozen (`animation: none`) |
-| Hover / focus / active colour changes | everywhere | decorative | instant |
-| Skeleton placeholders | `GitPanel`, `IntegrationsPanel` | decorative | frozen — the shape is the message |
-| Header pulse, error-dot ping | `SystemLogs` | decorative | frozen — the sentence beside it is the message |
-| `.shimmer-text` | published class, no internal caller | decorative | frozen (`animation: none`) |
-| `.shimmer`, `.animate-row-in`, `.pulse-ring`, `.terminal-cursor`, `.status-dot-creating` | published classes, no internal caller | decorative | one 1ms pass, then still |
-
+Existing Chromium coverage lives in `tests/visual/sidebar-navigation.spec.mjs`. Static screenshots and uncut normal, reversed and reduced-motion recordings are distinct evidence. Storybook proves the library fixture; hosted Sandbox/Dapp proof is still a consumer responsibility. Latency is UNCHECKED until calibrated against the live Brand budgets.
 
 ## Constants
 

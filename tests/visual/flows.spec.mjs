@@ -105,3 +105,84 @@ for (const theme of themes) {
     })
   }
 }
+
+for (const [viewportName, viewport] of Object.entries(viewports)) {
+  test.describe(`pill-tabs-overflow ${viewportName}`, () => {
+    test.use({ hasTouch: viewportName === 'mobile', isMobile: viewportName === 'mobile', video: 'on' })
+    for (const theme of themes) {
+      for (const reducedMotion of ['no-preference', 'reduce']) {
+        test(`${theme} ${reducedMotion}`, async ({ page, baseURL }) => {
+          await openStory(page, 'workbench-pilltabs--switch-views', theme, viewport, baseURL)
+          await page.emulateMedia({ colorScheme: theme, reducedMotion })
+          expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches))
+            .toBe(reducedMotion === 'reduce')
+          const host = page.getByTestId('pill-tabs-fixture')
+          // The existing story is embedded in the same kind of local scrollport as a phone review pane.
+          await host.evaluate(element => { element.style.width = '132px'; element.style.overflowX = 'auto' })
+          await host.scrollIntoViewIfNeeded()
+          const tabs = host.getByRole('tablist', { name: 'Workbench view' })
+          const scrollState = () => host.evaluate(element => {
+            const ancestors = []
+            for (let node = element.parentElement; node; node = node.parentElement) ancestors.push(node.scrollTop)
+            return { windowX: scrollX, windowY: scrollY, ancestors }
+          })
+          const before = await scrollState()
+          if (viewportName === 'mobile') {
+            const box = await host.boundingBox()
+            const tabBox = await tabs.boundingBox()
+            const startX = box.x + box.width * .85, endX = box.x + box.width * .15, y = tabBox.y + tabBox.height / 2
+            const cdp = await page.context().newCDPSession(page)
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y }] })
+            for (let step = 1; step <= 12; step++) {
+              await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: startX + (endX - startX) * step / 12, y }] })
+              await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
+            }
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+            await expect.poll(() => host.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+            await cdp.detach()
+          }
+          await tabs.getByRole('tab', { name: 'Code', exact: true }).focus()
+          const observations = []
+          for (const [key, name] of [['Home', 'Code'], ['ArrowLeft', 'Changes'], ['ArrowLeft', 'Preview'],
+            ['ArrowLeft', 'Code'], ['End', 'Changes'], ['ArrowRight', 'Code'], ['ArrowRight', 'Preview'],
+            ['ArrowRight', 'Changes'], ['Home', 'Code'], ['End', 'Changes']]) {
+            await page.keyboard.press(key)
+            const tab = tabs.getByRole('tab', { name, exact: true })
+            await expect(tab).toBeFocused()
+            await expect(tab).toHaveAttribute('aria-selected', 'true')
+            await expect(tabs.locator('[role="tab"][tabindex="0"]')).toHaveCount(1)
+            await expect(tabs.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1)
+            await expect(tab).toHaveAttribute('tabindex', '0')
+            await expect(tab).toBeInViewport({ ratio: 1 })
+            const bounds = await tab.evaluate(element => {
+              const tab = element.getBoundingClientRect()
+              const host = element.closest('[data-testid="pill-tabs-fixture"]')
+              const rect = host.getBoundingClientRect()
+              return { left: tab.left, right: tab.right, top: tab.top, bottom: tab.bottom, hostLeft: rect.left + host.clientLeft,
+                hostRight: rect.left + host.clientLeft + host.clientWidth, hostTop: rect.top + host.clientTop,
+                hostBottom: rect.top + host.clientTop + host.clientHeight, viewport: innerWidth, viewportHeight: innerHeight }
+            })
+            expect(bounds.left).toBeGreaterThanOrEqual(Math.max(0, bounds.hostLeft) - 1)
+            expect(bounds.right).toBeLessThanOrEqual(Math.min(bounds.viewport, bounds.hostRight) + 1)
+            expect(bounds.top).toBeGreaterThanOrEqual(Math.max(0, bounds.hostTop) - 1)
+            expect(bounds.bottom).toBeLessThanOrEqual(Math.min(bounds.viewportHeight, bounds.hostBottom) + 1)
+            await expect.poll(() => tabs.evaluate(element => {
+              const active = element.querySelector('[aria-selected="true"]').getBoundingClientRect()
+              const indicator = element.querySelector(':scope > [aria-hidden="true"]').getBoundingClientRect()
+              return Math.max(Math.abs(active.left - indicator.left), Math.abs(active.width - indicator.width))
+            })).toBeLessThan(2)
+            const panel = host.getByRole('tabpanel')
+            await expect(panel).toHaveAttribute('aria-labelledby', await tab.getAttribute('id'))
+            await expect(tab).toHaveAttribute('aria-controls', await panel.getAttribute('id'))
+            await expect(panel).toHaveText(`Showing ${name.toLowerCase()}`)
+            expect(await scrollState(), 'Tab navigation must preserve ancestor reading positions').toEqual(before)
+            expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+            observations.push({ key, name, bounds })
+          }
+          await test.info().attach('tab reachability', { body: Buffer.from(JSON.stringify({ theme, viewportName, reducedMotion, observations }, null, 2)), contentType: 'application/json' })
+          await test.info().attach('final tab', { body: await page.screenshot(), contentType: 'image/png' })
+        })
+      }
+    }
+  })
+}

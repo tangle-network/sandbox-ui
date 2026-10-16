@@ -123,7 +123,9 @@ export function PillTabs<T extends string>({
               event.preventDefault()
               const next = items[nextIndex]
               onChange(next.value)
-              tabRefs.current.get(next.value)?.focus()
+              const nextTab = tabRefs.current.get(next.value)
+              nextTab?.focus()
+              nextTab?.scrollIntoView({ block: "nearest", inline: "nearest" })
             }}
             className={cn(
               "relative z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",

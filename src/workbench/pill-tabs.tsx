@@ -124,8 +124,17 @@ export function PillTabs<T extends string>({
               const next = items[nextIndex]
               onChange(next.value)
               const nextTab = tabRefs.current.get(next.value)
-              nextTab?.focus()
-              nextTab?.scrollIntoView({ block: "nearest", inline: "nearest" })
+              if (!nextTab) return
+              nextTab.focus({ preventScroll: true })
+              for (let scrollport: HTMLElement | null = containerRef.current; scrollport; scrollport = scrollport.parentElement) {
+                if (!["auto", "scroll", "hidden"].includes(getComputedStyle(scrollport).overflowX)) continue
+                const bounds = scrollport.getBoundingClientRect()
+                const target = nextTab.getBoundingClientRect()
+                const left = bounds.left + scrollport.clientLeft
+                const right = left + scrollport.clientWidth
+                scrollport.scrollLeft += target.left < left ? target.left - left : target.right > right ? target.right - right : 0
+                break
+              }
             }}
             className={cn(
               "relative z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",

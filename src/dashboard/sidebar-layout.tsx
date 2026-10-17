@@ -297,6 +297,10 @@ function SidebarLayoutInner({
   // drawer that reopened itself on every page load would be a bug, not a
   // feature.
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false)
+  const [mobileNavPresent, setMobileNavPresent] = React.useState(false)
+  const handleMobileNavRef = React.useCallback((node: HTMLDivElement | null) => {
+    setMobileNavPresent(node !== null)
+  }, [])
   const closeMobileNav = React.useCallback(() => setMobileNavOpen(false), [])
 
   // A hidden modal must not keep the desktop inert after a responsive resize.
@@ -321,7 +325,9 @@ function SidebarLayoutInner({
   // bar and the drawer at once (the hidden copies are only display:none) made
   // one click open one portalled menu per copy, so it lives in one slot only.
   const railVisible = useRailVisible(hideBelow)
-  const headerSlot = mobileNavOpen ? "drawer" : railVisible ? "rail" : "bar"
+  // Shared Sheet owns retirement. Keep the sole header in its mounted drawer
+  // through exit, then move it back when the content ref is released.
+  const headerSlot = mobileNavOpen || mobileNavPresent ? "drawer" : railVisible ? "rail" : "bar"
 
   /**
    * One nav list, rendered twice — once in the desktop rail, once in the mobile
@@ -534,6 +540,7 @@ function SidebarLayoutInner({
 
         {hideBelow && (
           <MobileNavDrawer
+            contentRef={handleMobileNavRef}
             breakpoint={hideBelow}
             header={headerSlot === "drawer" ? railHeaderContent ?? logo : undefined}
             footer={
@@ -588,12 +595,14 @@ function SidebarLayoutInner({
  * only the top layer handles Escape, and the trigger owns return focus.
  */
 function MobileNavDrawer({
+  contentRef,
   breakpoint,
   header,
   footer,
   panel,
   children,
 }: {
+  contentRef: React.Ref<HTMLDivElement>
   breakpoint: "md" | "lg"
   header?: React.ReactNode
   footer?: React.ReactNode
@@ -602,6 +611,7 @@ function MobileNavDrawer({
 }) {
   return (
     <SheetContent
+        ref={contentRef}
         side="left"
         hideCloseButton
         id="sidebar-mobile-nav"

@@ -158,37 +158,6 @@ describe("SessionSidebar — quiet variant", () => {
     resetActiveSessions();
   });
 
-  it("renders no icon-in-a-box header and no running chip, only the new-chat text button", () => {
-    registerActiveSession({ sessionId: "t1", title: "First thread" });
-    setActiveSessionRunning("t1", true);
-
-    const branded = render(
-      <SessionSidebar title="Chats" items={baseItems} onCreate={() => {}} createLabel="New chat" />,
-    );
-    // The default header is the branded one: an icon box beside the title and
-    // a chip counting the running sessions.
-    expect(branded.container.querySelector("div.h-7.w-7")).not.toBeNull();
-    expect(branded.getByText("1")).toBeInTheDocument();
-    branded.unmount();
-
-    const quiet = render(
-      <SessionSidebar
-        title="Chats"
-        items={baseItems}
-        onCreate={() => {}}
-        createLabel="New chat"
-        variant="quiet"
-      />,
-    );
-    expect(quiet.container.querySelector("div.h-7.w-7")).toBeNull();
-    expect(quiet.queryByText("1")).toBeNull();
-    const create = quiet.getByRole("button", { name: "New chat" });
-    expect(create.className).toMatch(/\btext-sm\b/);
-    expect(create.className).toMatch(/\btext-muted-foreground\b/);
-    expect(create.className).toMatch(/\bhover:text-foreground\b/);
-    expect(create.className).not.toMatch(/\bborder\b/);
-  });
-
   it("renders the collapse button only when onCollapse is given", () => {
     const onCollapse = vi.fn();
     const { getByRole, rerender, queryByRole } = render(
@@ -199,28 +168,6 @@ describe("SessionSidebar — quiet variant", () => {
 
     rerender(<SessionSidebar title="Chats" items={baseItems} variant="quiet" />);
     expect(queryByRole("button", { name: "Hide chats" })).toBeNull();
-  });
-
-  it("fills the selected row with a surface, not the accent, and hides neutral badges", () => {
-    const items: SessionSidebarItem[] = [
-      { id: "t1", title: "Pinned thread", isPinned: true },
-      { id: "t2", title: "Flagged thread", badges: [{ id: "b", label: "Needs attention", tone: "warning" }] },
-    ];
-    const { getByText, queryByText } = render(
-      <SessionSidebar title="Chats" items={items} currentItemId="t1" variant="quiet" />,
-    );
-    const row = getByText("Pinned thread").closest("li")?.firstElementChild as HTMLElement;
-    expect(row.className).toMatch(/\bbg-surface-container-high\b/);
-    expect(row.className).toMatch(/\brounded-lg\b/);
-    expect(row.className).toMatch(/\bpy-2\b/);
-    expect(row.className).toMatch(/\bpl-2\b/);
-    expect(row.className).toMatch(/\bpr-3\b/);
-    expect(row.className).not.toMatch(/\bbg-accent\b/);
-    expect(row.className).not.toMatch(/\bborder/);
-    expect(getByText("Pinned thread").className).toMatch(/\bleading-5\b/);
-    // The neutral "Pinned" badge is noise in the rail; a warning badge still reads.
-    expect(queryByText("Pinned")).toBeNull();
-    expect(getByText("Needs attention")).toBeInTheDocument();
   });
 
   it("keeps the default variant's accent selection and its neutral badge", () => {

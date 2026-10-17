@@ -1,6 +1,35 @@
 import { test, expect } from 'playwright/test'
 import { assertStoryHealthy, openStory } from './story-ready.mjs'
 
+const motionRoles = ['--duration-instant', '--duration-fast', '--duration-base', '--duration-slow', '--duration-stream', '--duration-arrive', '--ease-standard', '--ease-entrance', '--ease-exit', '--ease-expo', '--motion-control', '--motion-surface', '--motion-dismiss', '--motion-stream', '--motion-arrive', '--stagger-step', '--stagger-index', '--arrive-distance', '--stream-blur']
+
+async function assertBrandMotion(page, theme, reducedMotion, info, phase) {
+  expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(reducedMotion === 'reduce')
+  const values = await page.evaluate(({ roles, theme }) => {
+    const scope = document.createElement('div')
+    scope.className = theme
+    scope.dataset.theme = theme
+    document.body.appendChild(scope)
+    const read = node => Object.fromEntries(roles.map(role => [role, getComputedStyle(node).getPropertyValue(role).trim()]))
+    const result = { root: read(document.documentElement), theme: read(scope) }
+    scope.remove()
+    return result
+  }, { roles: motionRoles, theme })
+  const durationMs = {}
+  for (const [scope, roles] of Object.entries(values)) {
+    for (const value of Object.values(roles)) expect(value).not.toBe('')
+    durationMs[scope] = Object.fromEntries(Object.entries(roles).filter(([key]) => key.startsWith('--duration-')).map(([key, value]) => {
+      expect(value).toMatch(/^(?:\d+(?:\.\d+)?|\.\d+)m?s$/)
+      return [key, Number.parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)]
+    }))
+    for (const value of Object.values(durationMs[scope])) reducedMotion === 'reduce' ? expect(value).toBe(0) : expect(value).toBeGreaterThan(0)
+  }
+  await info.attach(`brand-motion-${phase}`, { body: JSON.stringify({ theme, reducedMotion, values, durationMs, measurement: 'computed CSS roles, not elapsed latency' }), contentType: 'application/json' })
+}
+
+// Keep interaction recordings uncut; static fixture baselines run separately.
+test.use({ video: 'on' })
+
 test.afterEach(async ({ page }) => { await assertStoryHealthy(page) })
 
 for (const theme of ['light', 'dark']) {
@@ -89,7 +118,8 @@ for (const [breakpoint, width] of [['md', 768], ['lg', 1024]]) {
 for (const theme of ['light', 'dark']) {
   for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
     test(`controlled header menu opens exactly one menu on ${device} ${theme}`, async ({ page, baseURL }, info) => {
-      await openStory(page, 'dashboard-sidebarlayout--controlled-header-menu-story', theme, viewport, baseURL)
+      await openStory(page, 'dashboard-sidebarlayout--controlled-header-menu-story', theme, viewport, baseURL,
+        device === 'phone' ? { reducedMotion: 'no-preference' } : undefined)
       await expect(page.getByRole('button', { name: 'ReCenter', exact: true })).toHaveCount(1)
       await page.getByRole('button', { name: 'ReCenter', exact: true }).click()
       await expect(page.getByRole('menu')).toHaveCount(1)
@@ -102,6 +132,40 @@ for (const theme of ['light', 'dark']) {
       await drawer.getByRole('button', { name: 'ReCenter', exact: true }).click()
       await expect(page.getByRole('menu')).toHaveCount(1)
       await page.screenshot({ path: info.outputPath(`header-menu-drawer-${theme}.png`), animations: 'disabled' })
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('menu')).toHaveCount(0)
+      // Observe the actual closed commit while Sheet still mounts its retiring
+      // drawer. The product-owned header must stay there until retirement ends.
+      await drawer.evaluate(node => {
+        window.__headerExitSample = null
+        const headers = scope => [...scope.querySelectorAll('button')]
+          .filter(button => button.textContent.trim() === 'ReCenter').length
+        const observer = new MutationObserver(() => {
+          if (node.dataset.state !== 'closed') return
+          window.__headerExitSample = {
+            state: node.dataset.state,
+            mounted: node.isConnected,
+            drawerHeaders: headers(node),
+            globalHeaders: headers(document),
+            runningAnimations: node.getAnimations({ subtree: true })
+              .filter(animation => animation.playState === 'running').length,
+          }
+          observer.disconnect()
+        })
+        observer.observe(document.body, { attributes: true, childList: true, subtree: true })
+      })
+      await drawer.getByRole('button', { name: 'Close navigation', exact: true }).click()
+      await expect.poll(() => page.evaluate(() => window.__headerExitSample)).not.toBeNull()
+      const exitSample = await page.evaluate(() => window.__headerExitSample)
+      await info.attach('controlled-header-retiring-drawer', {
+        body: JSON.stringify({ theme, reducedMotion: 'no-preference', ...exitSample }),
+        contentType: 'application/json',
+      })
+      expect(exitSample).toMatchObject({ state: 'closed', mounted: true, globalHeaders: 1 })
+      expect(exitSample.runningAnimations).toBeGreaterThan(0)
+      expect(exitSample.drawerHeaders).toBe(1)
+      await expect(drawer).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'ReCenter', exact: true })).toHaveCount(1)
     })
   }
 }
@@ -127,6 +191,69 @@ for (const theme of ['light', 'dark']) {
       await page.screenshot({ path: info.outputPath(`nav-description-${device}-${theme}.png`), animations: 'disabled' })
       await destination.blur()
       await expect(tooltip).toHaveCount(0)
+    })
+  }
+}
+
+
+for (const theme of ['light', 'dark']) {
+  for (const reducedMotion of ['no-preference', 'reduce']) {
+    test(`phone dismissal reversal and preference changes ${theme} ${reducedMotion}`, async ({ page, baseURL }, info) => {
+      await openStory(page, 'dashboard-sidebarlayout--desktop', theme, { width: 390, height: 844 }, baseURL, { reducedMotion })
+      await assertBrandMotion(page, theme, reducedMotion, info, 'initial')
+      const opener = page.getByRole('button', { name: 'Open navigation', exact: true })
+      const drawer = page.getByRole('dialog', { name: 'Navigation', exact: true })
+      await opener.click()
+      for (let reversal = 0; reversal < 3; reversal++) {
+        await page.keyboard.press('Escape')
+        // Keyboard reactivation while the old presence may still be retiring.
+        await opener.press('Enter')
+        await expect(drawer).toBeVisible()
+        await expect.poll(() => drawer.evaluate(node => node.contains(document.activeElement))).toBe(true)
+      }
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await assertBrandMotion(page, theme, 'reduce', info, 'toggled-reduce')
+      await expect.poll(() => drawer.evaluate(node => node.getAnimations({ subtree: true }).filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations === Infinity).length)).toBe(0)
+      await page.screenshot({ path: info.outputPath(`reopened-${theme}-${reducedMotion}.png`) })
+      await page.keyboard.press('Escape')
+      await expect(drawer).toHaveCount(0)
+      await expect(opener).toBeFocused()
+      await expect(page.locator('body')).not.toHaveAttribute('data-scroll-locked')
+      expect(await page.locator('body').evaluate(node => getComputedStyle(node).pointerEvents)).not.toBe('none')
+      await opener.click()
+      await drawer.getByRole('button', { name: 'Close navigation', exact: true }).click()
+      await expect(drawer).toHaveCount(0)
+      await expect(opener).toBeFocused()
+      const roles = await page.evaluate(() => Object.fromEntries(['--motion-control', '--motion-surface', '--motion-dismiss', '--interaction-feedback-budget', '--interaction-pending-delay'].map(k => [k, getComputedStyle(document.documentElement).getPropertyValue(k).trim()])))
+      for (const value of Object.values(roles)) expect(value).not.toBe('')
+      await info.attach('brand-roles', { body: JSON.stringify({ theme, reducedMotion, roles }), contentType: 'application/json' })
+    })
+
+    test(`desktop layout stays quiet and disclosure stays inert ${theme} ${reducedMotion}`, async ({ page, baseURL }, info) => {
+      await openStory(page, 'dashboard-sidebarlayout--expandable-groups', theme, { width: 1440, height: 900 }, baseURL, { reducedMotion })
+      await assertBrandMotion(page, theme, reducedMotion, info, 'initial')
+      const rail = page.locator('[data-sidebar="true"]')
+      const main = page.getByRole('main')
+      const closeGroup = page.getByRole('button', { name: 'Collapse Apps', exact: true })
+      const region = page.locator(`[id="${await closeGroup.getAttribute('aria-controls')}"]`)
+      await closeGroup.click()
+      await expect.poll(() => region.evaluate(node => node.inert)).toBe(true)
+      await expect.poll(async () => (await region.boundingBox()).height).toBe(0)
+      await expect(region).toHaveCSS('transition-property', 'none')
+      await page.getByRole('button', { name: 'Expand Apps', exact: true }).click()
+      await expect.poll(() => region.evaluate(node => node.inert)).toBe(false)
+      await expect(page.getByRole('link', { name: 'Sample app', exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click()
+      await expect(rail).toHaveCSS('transition-property', 'none')
+      await expect(main).toHaveCSS('transition-property', 'none')
+      expect(await rail.evaluate(node => node.getAnimations().length)).toBe(0)
+      await page.getByRole('button', { name: 'Expand sidebar', exact: true }).first().click()
+      if (reducedMotion === 'reduce') {
+        await expect(page.getByText('Responding', { exact: true })).toBeVisible()
+        const status = page.getByRole('status', { name: 'Agent responding' })
+        expect(await status.evaluate(node => node.getAnimations().filter(a => a.playState === 'running').length)).toBe(0)
+      }
+      await page.screenshot({ path: info.outputPath(`quiet-desktop-${theme}-${reducedMotion}.png`) })
     })
   }
 }

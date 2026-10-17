@@ -107,7 +107,7 @@ export const ExpandableGroups: Story = {
         expandable: true,
         defaultOpen: true,
         subItems: [
-          { id: "chat", label: "Recent chat", href: "/chat/recent" },
+          { id: "chat", label: "Recent chat", href: "/chat/recent", isLoading: true },
           { id: "all", label: "View all chats", href: "/history", emphasis: true },
         ],
       },

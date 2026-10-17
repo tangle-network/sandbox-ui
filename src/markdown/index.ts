@@ -1,4 +1,7 @@
 export {
+  ApiSchema,
+  type ApiSchemaProps,
+  type CopyButtonProps,
   CodeBlock,
   type CodeBlockProps,
   codeBlockGrammar,

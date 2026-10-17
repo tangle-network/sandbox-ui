@@ -336,9 +336,6 @@ function DashboardLayoutInner({
               const isMode = modeSet.has(item.id)
               const prevIsMode = i > 0 && modeSet.has(navItems[i - 1].id)
               const showSep = i > 0 && isMode && !prevIsMode
-              // Same staggered entrance the SidebarLayout rail uses — one nav
-              // grammar across both shells, indexed by position in the list.
-              const arrival = { className: "agent-arrive", style: { "--stagger-index": i } as React.CSSProperties }
 
               return (
                 <React.Fragment key={item.id}>
@@ -355,7 +352,6 @@ function DashboardLayoutInner({
                       badge={item.badge}
                       badgeLabel={item.badgeLabel}
                       showLabel={showLabels}
-                      {...arrival}
                     />
                   ) : (
                     <RailButton
@@ -364,7 +360,6 @@ function DashboardLayoutInner({
                       isActive={activeNavId === item.id}
                       showLabel={showLabels}
                       asChild
-                      {...arrival}
                     >
                       <Link href={item.href} to={item.href} />
                     </RailButton>

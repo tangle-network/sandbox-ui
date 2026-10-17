@@ -13,7 +13,7 @@ export async function assertStoryHealthy(page) {
   expect(state.errors, 'Story runtime errors invalidate snapshots').toEqual([])
 }
 
-export async function openStory(page, id, theme, viewport, baseURL) {
+export async function openStory(page, id, theme, viewport, baseURL, { reducedMotion = 'reduce' } = {}) {
   if (!guards.has(page)) {
     const origin = new URL(baseURL).origin
     const state = { errors: [], externalRequests: [] }
@@ -49,7 +49,7 @@ export async function openStory(page, id, theme, viewport, baseURL) {
   // Keep Date stable while Storybook timers run; frozen timers can leave stories blank.
   await page.clock.setFixedTime(new Date('2026-09-23T12:00:00Z'))
   await page.setViewportSize(viewport)
-  await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
+  await page.emulateMedia({ colorScheme: theme, reducedMotion })
 
   const params = new URLSearchParams({
     id,

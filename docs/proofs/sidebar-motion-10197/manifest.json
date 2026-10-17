@@ -1,0 +1,179 @@
+{
+  "capture_source": "b860006f27b155bf4018ef0b5d4f54b2c7335a01",
+  "gate_id": "beelink1-2a58111e4a9fbff6e801a7de0b4fe81a",
+  "mode": "normal pinned beelink1, default frozen install and admission",
+  "exit": 0,
+  "waited_s": 69,
+  "ran_s": 177,
+  "node": "v22.23.3",
+  "lock_sha256": "bc390fed3fcb62b3042c9989344c6abd066fa0384178893bbfd037b71b76e556",
+  "navigation": {
+    "passed": 21,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "retries": 0
+  },
+  "static_update_capture": {
+    "completed": 28,
+    "changed": 14,
+    "all_changed_theme": "dark",
+    "light_hashes_unchanged": 14
+  },
+  "review": "All14 before/afterPNG pairs reviewed by two coding agents. All8 motion videos inspected through6fps filmstrips and passedDOM story outcomes; no physical cadence/p95/manualaccessibility/human craft/production claim.",
+  "frozen_final_head_comparison": "Pending at capture; final binary/proof head and normal non-update comparison receipt belong to PR#429.",
+  "media": [
+    {
+      "title": "phone dismissal reversal and preference changes light no-preference",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "video": "phone-light-normal.webm",
+      "still": "phone-light-normal.png",
+      "duration_s": 5.8,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "result": "passed",
+      "retry": 0,
+      "video_sha256": "c594843fa406a53b1cdad402f6ca229e91c55068d228b979ac45fbd84a62c22d",
+      "still_sha256": "1835143b77733fa3e020889607fbc17cb33950226b318e6aa388621df15281db"
+    },
+    {
+      "title": "desktop layout stays quiet and disclosure stays inert light no-preference",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "video": "desktop-light-normal.webm",
+      "still": "desktop-light-normal.png",
+      "duration_s": 5.32,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "result": "passed",
+      "retry": 0,
+      "video_sha256": "be94bd2b90f6f1463ce0f9cbdd50663cdf6e912eec6dab3f0e999312c11e4a3f",
+      "still_sha256": "04cc1fcf051c46001c82ba0e9e90ae76c01ad1398b1ff63ac4785c6b8477a6bb"
+    },
+    {
+      "title": "phone dismissal reversal and preference changes light reduce",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "video": "phone-light-reduced.webm",
+      "still": "phone-light-reduced.png",
+      "duration_s": 7.2,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "result": "passed",
+      "retry": 0,
+      "video_sha256": "bae02a39309b4682a7d8a9785b307fc5b3c33e0230ba4b16b51a41cd57b356da",
+      "still_sha256": "6809f49e89b401bc8ef354c3c690e865f7d079d399494e7cdaf26ca0e7dbaea2"
+    },
+    {
+      "title": "desktop layout stays quiet and disclosure stays inert light reduce",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "video": "desktop-light-reduced.webm",
+      "still": "desktop-light-reduced.png",
+      "duration_s": 5.0,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "result": "passed",
+      "retry": 0,
+      "video_sha256": "587b457386f13bdd5b7c5ba39136d031e8ae905a9dbe6420429a4e89f21321c0",
+      "still_sha256": "45c564a1e3472bf7f266704a634ce3745350c5b6b6286f0a0cfe5a5f076399c9"
+    },
+    {
+      "title": "phone dismissal reversal and preference changes dark no-preference",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "video": "phone-dark-normal.webm",
+      "still": "phone-dark-normal.png",
+      "duration_s": 6.08,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "result": "passed",
+      "retry": 0,
+      "video_sha256": "7b90bc4d3d535b869c638bb438248c7325583c577da84ca57c5a4c455b2cb3c3",
+      "still_sha256": "91b5c790a8d6cf71c8c83c351c2d563532637508a0f809bd62e5b829bf20efdc"
+    },
+    {
+      "title": "desktop layout stays quiet and disclosure stays inert dark no-preference",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "video": "desktop-dark-normal.webm",
+      "still": "desktop-dark-normal.png",
+      "duration_s": 5.8,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "result": "passed",
+      "retry": 0,
+      "video_sha256": "88ff0fb7cc519586afb180fd2e270d2ed9c3ff6f41d236495076017b2d0e1dea",
+      "still_sha256": "14e4fc8953b1976662b12542829ea1535bf5465af598f224e7a6593000fb8b02"
+    },
+    {
+      "title": "phone dismissal reversal and preference changes dark reduce",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "video": "phone-dark-reduced.webm",
+      "still": "phone-dark-reduced.png",
+      "duration_s": 5.84,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "result": "passed",
+      "retry": 0,
+      "video_sha256": "fe7a4f4cb4a5c034fb1d9bbd734c44d9c8ca8446c9b36a8aa5dc5cd668791f06",
+      "still_sha256": "9a890c6e1b61dfa0f3972c909d754ac1102cea6331dd9eff077ddf6a31466ab3"
+    },
+    {
+      "title": "desktop layout stays quiet and disclosure stays inert dark reduce",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "video": "desktop-dark-reduced.webm",
+      "still": "desktop-dark-reduced.png",
+      "duration_s": 3.84,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "result": "passed",
+      "retry": 0,
+      "video_sha256": "b409548c84da70257667d677ee4c25955d46d46f9f71cf707bf557da14fead54",
+      "still_sha256": "d98057dfb80c977daaf48bf2e0985e7a0887cb2a85f7813279ccfa64ef473a24"
+    }
+  ]
+}

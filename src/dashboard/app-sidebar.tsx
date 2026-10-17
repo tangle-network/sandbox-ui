@@ -3,7 +3,7 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { cn } from "../lib/utils"
-import { MOTION_CONTROL, MOTION_SURFACE, MOTION_TRAVEL } from "../lib/motion"
+import { MOTION_CONTROL, MOTION_SURFACE } from "../lib/motion"
 import { Avatar, AvatarFallback, AvatarImage } from "@tangle-network/ui/primitives"
 import {
   DropdownMenu,
@@ -316,11 +316,7 @@ export function Sidebar({ children, className, style }: SidebarProps) {
     <div
       data-sidebar="true"
       className={cn(
-        "fixed inset-y-0 left-0 z-40 flex bg-surface-container-low border-r border-[var(--md3-outline-variant)] transition-[transform,width]",
-        // The rail is a full-height surface travelling — the slow tier. It and
-        // SidebarContent's margin MUST read the same token or the page content
-        // visibly lags the edge it is supposed to be attached to.
-        MOTION_TRAVEL,
+        "fixed inset-y-0 left-0 z-40 flex bg-surface-container-low transition-none border-r border-[var(--md3-outline-variant)]",
         hidden && "-translate-x-full",
         className,
       )}
@@ -896,15 +892,14 @@ export function RailExpandable({
             ? {
                 role: "status",
                 "aria-label": "Agent responding",
-                // The sweep through the glyphs is the ONLY thing separating "this
-                // agent is still working" from "this row is stale", so it opts out
-                // of the reduced-motion floor. Decorative motion must not.
-                "data-motion": "essential",
               }
             : {})}
         >
           {item.label}
         </span>
+        {item.isLoading && (
+          <span aria-hidden="true" className="sr-only shrink-0 text-xs text-muted-foreground motion-reduce:not-sr-only">Responding</span>
+        )}
       </Link>
     )
 
@@ -1113,15 +1108,10 @@ export function RailExpandable({
       </div>
       </RailTooltip>
 
-      {/* The disclosure's row travels 0fr -> 1fr, so it opens to the height its
-          sub-items actually have. The clipped child — the one `.agent-disclose > *`
-          gives `min-height: 0; overflow: hidden` — must carry NO padding of its
-          own: a grid row of 0fr sets its height to 0, and a border-box height of
-          0 still floors at padding + border, so `pt-0.5` there leaves a closed
-          disclosure 2px tall. All spacing lives on the element inside it, which
-          the clip actually hides. */}
-      <div ref={discloseRef} id={discloseId} className="agent-disclose" data-open={open ? "true" : "false"}>
-        <div>
+      {/* Snap layout while preserving lazy content and the closed inert region.
+          The clipped child carries no padding; spacing belongs inside it. */}
+      <div ref={discloseRef} id={discloseId} className="grid transition-none" style={{ gridTemplateRows: open ? "1fr" : "0fr" }} data-open={open ? "true" : "false"}>
+        <div className="min-h-0 overflow-hidden">
           <div className="flex flex-col gap-0.5 pl-3 pt-0.5">{everOpened ? list : null}</div>
         </div>
       </div>
@@ -1247,9 +1237,7 @@ export function SidebarContent({ children, className }: SidebarContentProps) {
   return (
     <main
       className={cn(
-        "min-h-screen transition-[margin-left] lg:ml-[var(--sb-content-margin,0px)]",
-        // Same tier as the rail it is keeping pace with — @see Sidebar.
-        MOTION_TRAVEL,
+        "min-h-screen transition-none lg:ml-[var(--sb-content-margin,0px)]",
         className,
       )}
       style={{ "--sb-content-margin": `${contentMargin}px` } as React.CSSProperties}

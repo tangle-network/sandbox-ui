@@ -88,6 +88,10 @@ export {
   CodeBlock,
   type CodeBlockProps,
   CopyButton,
+  Wizard,
+  type WizardProps,
+  WizardStep,
+  type WizardStepProps,
   Dialog,
   DialogClose,
   DialogContent,
@@ -280,7 +284,7 @@ export * from "./auth";
 export * from "./connections";
 
 // --- Markdown ---
-export { codeBlockGrammar, fenceInfo, getSanitizedMarkdownHeadingIdFromRawFragment, Markdown, type MarkdownLinkChip, type MarkdownLinkChipResolver, type MarkdownProps, numericColumns, tableCsv } from "@tangle-network/ui/markdown";
+export { ApiSchema, type ApiSchemaProps, type CopyButtonProps, codeBlockGrammar, fenceInfo, getSanitizedMarkdownHeadingIdFromRawFragment, Markdown, type MarkdownLinkChip, type MarkdownLinkChipResolver, type MarkdownProps, numericColumns, tableCsv } from "@tangle-network/ui/markdown";
 
 // --- Hooks (named — excludes `ConnectionState`. The editor declares a
 //     `ConnectionState` of its own, so neither type takes the root name and

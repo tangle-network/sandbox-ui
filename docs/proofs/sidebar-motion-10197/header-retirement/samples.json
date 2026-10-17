@@ -1,0 +1,26 @@
+[
+  {
+    "case": "controlled header menu opens exactly one menu on phone light",
+    "sample": {
+      "theme": "light",
+      "reducedMotion": "no-preference",
+      "state": "closed",
+      "mounted": true,
+      "drawerHeaders": 1,
+      "globalHeaders": 1,
+      "runningAnimations": 2
+    }
+  },
+  {
+    "case": "controlled header menu opens exactly one menu on phone dark",
+    "sample": {
+      "theme": "dark",
+      "reducedMotion": "no-preference",
+      "state": "closed",
+      "mounted": true,
+      "drawerHeaders": 1,
+      "globalHeaders": 1,
+      "runningAnimations": 2
+    }
+  }
+]

@@ -209,6 +209,10 @@ export {
   type UploadFile,
   UploadProgress,
   type UploadProgressProps,
+  Wizard,
+  type WizardProps,
+  WizardStep,
+  type WizardStepProps,
   useTheme,
   useToast,
 } from "@tangle-network/ui/primitives";

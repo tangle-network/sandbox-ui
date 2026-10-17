@@ -1,0 +1,77 @@
+{
+  "qualified_source": "ff19782804abb199f5377bdb4421761e98ad9c8a",
+  "gate_id": "beelink1-f36ef98df229eba2067a405ff36eee48",
+  "gate_mode": "normal,defaultfrozeninstall/normaladmission",
+  "gate_exit": 0,
+  "waited_s": 60,
+  "ran_s": 279,
+  "node": "v22.23.3",
+  "navigation": {
+    "passed": 21,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "retries": 0
+  },
+  "frozen_static": {
+    "passed": 28,
+    "failed": 0,
+    "flaky": 0,
+    "skipped": 0,
+    "retries": 0,
+    "updates": false
+  },
+  "red_original": {
+    "head": "97911207691c725c8d76a937099d2c32efa8d9d1",
+    "status": "UNCHECKED",
+    "reason": "One developmentgate canceledunadmitted at300s afterCPU/occupiedcheckout. No browser/test/sample ran; no observedRED claim."
+  },
+  "media": [
+    {
+      "theme": "light",
+      "title": "controlled header menu opens exactly one menu on phone light",
+      "video": "light.webm",
+      "still": "open-menu-light.png",
+      "duration_s": 8.08,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "reducedMotion": "no-preference",
+      "result": "passed",
+      "retry": 0
+    },
+    {
+      "theme": "dark",
+      "title": "controlled header menu opens exactly one menu on phone dark",
+      "video": "dark.webm",
+      "still": "open-menu-dark.png",
+      "duration_s": 7.2,
+      "encoded": {
+        "width": 800,
+        "height": 450,
+        "avg_frame_rate": "25/1"
+      },
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "reducedMotion": "no-preference",
+      "result": "passed",
+      "retry": 0
+    }
+  ],
+  "sha256": {
+    "light.webm": "d7db23193d8c3cfbbafc8f953811b866a7ae99fac17473f4d8ddcd441fc0d54d",
+    "open-menu-light.png": "3226c3f01146d4466f12e3d3c19216c2cf515fa52760b05311a9529ef0ee8f58",
+    "dark.webm": "b8247b6ee6554cfd5eef393c11b4bc6a7e18fe65106e7a6b8faa82ec0909c522",
+    "open-menu-dark.png": "cf14d629a46a130be435f0d5cb5aa2e3750d2368cf3e5ba409445009c790e268",
+    "samples.json": "748b52820e570089ea0aca5d7dff665f2df1e8ecc70788d19bf46a1dec5c56c0"
+  },
+  "inspection": "Both currentuncut recordings independentlyinspected through6fps filmstrips plusactualclosedDOM samples; not realtimeplayback,physicalcadence,p95,manualaccessibility,humancraft orproductionproof."
+}

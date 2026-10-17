@@ -280,3 +280,101 @@ for (const [viewportName, viewport] of Object.entries(viewports)) {
     }
   })
 }
+
+// Exercise the real consumer: its own tabs row must scroll without translating
+// the artifact header or active panel. No fixture-created scroll wrapper.
+const artifactTabNavigation = [['Home', 'Code'], ['ArrowLeft', 'Ports'], ['ArrowLeft', 'Preview'],
+  ['ArrowLeft', 'Diff'], ['ArrowLeft', 'Code'], ['End', 'Ports'], ['ArrowRight', 'Code'],
+  ['ArrowRight', 'Diff'], ['ArrowRight', 'Preview'], ['ArrowRight', 'Ports'], ['Home', 'Code'], ['End', 'Ports']]
+
+for (const [viewportName, viewport] of Object.entries(viewports)) {
+  recordingTest.describe(`artifact-tabs-local-scroll ${viewportName}`, () => {
+    recordingTest.use({ hasTouch: viewportName === 'mobile', isMobile: viewportName === 'mobile' })
+    for (const theme of themes) {
+      for (const reducedMotion of ['no-preference', 'reduce']) {
+        recordingTest(`${theme} ${reducedMotion}`, async ({ page, baseURL }) => {
+          await openStory(page, 'workbench-sandboxartifactpane--default', theme, viewport, baseURL, { reducedMotion })
+          // Omit only the demo terminal binding; the actual four remaining views stay self-contained.
+          await page.goto(page.url() + '&args=terminal:!undefined', { waitUntil: 'load' })
+          const tabs = page.getByRole('tablist', { name: 'Artifact view' })
+          const host = tabs.locator('..')
+          const pane = host.locator('..')
+          const panel = pane.getByRole('tabpanel')
+          // Change only the embedding column width, never its overflow behavior.
+          await pane.evaluate(element => { element.style.width = '300px' })
+          await expect(tabs.getByRole('tab')).toHaveCount(4)
+          await expect.poll(() => host.evaluate(element => element.scrollWidth - element.clientWidth)).toBeGreaterThan(0)
+          const readPanePosition = () => pane.evaluate(element => {
+            const rect = node => { const r = node.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom } }
+            const ancestors = []
+            for (let node = element; node; node = node.parentElement) ancestors.push({ x: node.scrollLeft, y: node.scrollTop })
+            return { windowX: scrollX, windowY: scrollY, ancestors, root: rect(element),
+              header: rect(element.firstElementChild), identity: { left: element.firstElementChild.firstElementChild.getBoundingClientRect().left,
+                top: element.firstElementChild.firstElementChild.getBoundingClientRect().top, text: element.firstElementChild.firstElementChild.textContent },
+              panel: rect(element.querySelector('[role="tabpanel"]')) }
+          })
+          await tabs.getByRole('tab', { name: 'Code', exact: true }).evaluate(element => element.focus({ preventScroll: true }))
+          const before = await readPanePosition()
+          const observations = []
+          for (const [key, name] of artifactTabNavigation) {
+            await page.keyboard.press(key)
+            const tab = tabs.getByRole('tab', { name, exact: true })
+            await expect(tab).toBeFocused()
+            await expect(tab).toHaveAttribute('aria-selected', 'true')
+            const bounds = await tab.evaluate(element => {
+              const r = element.getBoundingClientRect(), host = element.closest('[role="tablist"]').parentElement
+              const h = host.getBoundingClientRect(), padding = getComputedStyle(element.closest('[role="tablist"]'))
+              const focus = getComputedStyle(element)
+              return { left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+                paddingLeft: parseFloat(padding.paddingLeft), paddingRight: parseFloat(padding.paddingRight),
+                focusBoxShadow: focus.boxShadow, focusOutlineWidth: focus.outlineWidth,
+                hostLeft: h.left + host.clientLeft, hostRight: h.left + host.clientLeft + host.clientWidth,
+                localScrollLeft: host.scrollLeft }
+            })
+            const observation = { key, name, before, after: await readPanePosition(), bounds }
+            observations.push(observation)
+            await recordingTest.info().attach(`artifact ${observations.length} ${key}`, {
+              body: Buffer.from(JSON.stringify(observation, null, 2)), contentType: 'application/json' })
+            expect(observation.after, 'Artifact tab navigation must preserve the header, panel and outer reading positions').toEqual(before)
+            expectLocalFocusClearance(bounds)
+            await expect(tab).toBeInViewport({ ratio: 1 })
+            await expect(tabs.locator('[role="tab"][tabindex="0"]')).toHaveCount(1)
+            await expect(tabs.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1)
+            await expect(panel).toHaveAttribute('aria-labelledby', await tab.getAttribute('id'))
+            await expect(tab).toHaveAttribute('aria-controls', await panel.getAttribute('id'))
+            await expect.poll(() => tabs.evaluate(element => {
+              const active = element.querySelector('[aria-selected="true"]').getBoundingClientRect()
+              const indicator = element.querySelector(':scope > [aria-hidden="true"]').getBoundingClientRect()
+              return Math.max(Math.abs(active.left - indicator.left), Math.abs(active.width - indicator.width))
+            })).toBeLessThan(2)
+            if (name === 'Code') await expect(panel.locator('.sandbox-code-view-editor')).toContainText('RetryOptions')
+            if (name === 'Diff') await waitForDiffRender(page, 'RetryOptions')
+            if (name === 'Preview') await expect(panel.frameLocator('iframe').getByRole('heading', { name: 'Local preview fixture' })).toBeVisible()
+            if (name === 'Ports') await expect(panel.getByRole('button', { name: /Copy public URL for port 3000:/ })).toBeVisible()
+          }
+          if (viewportName === 'mobile') {
+            await tabs.getByRole('tab', { name: 'Code', exact: true }).evaluate(element => element.focus({ preventScroll: true }))
+            await page.keyboard.press('Home')
+            const box = await host.boundingBox(), tabBox = await tabs.boundingBox()
+            const startX = box.x + box.width * .85, endX = box.x + box.width * .15, y = tabBox.y + tabBox.height / 2
+            const cdp = await page.context().newCDPSession(page)
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y }] })
+            for (let step = 1; step <= 12; step++) {
+              await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: startX + (endX - startX) * step / 12, y }] })
+              await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
+            }
+            await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+            await expect.poll(() => host.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+            expect(await readPanePosition()).toEqual(before)
+            await cdp.detach()
+            await tabs.getByRole('tab', { name: 'Ports', exact: true }).tap()
+            await expect(tabs.getByRole('tab', { name: 'Ports', exact: true })).toHaveAttribute('aria-selected', 'true')
+          }
+          await recordingTest.info().attach('artifact tab reachability', {
+            body: Buffer.from(JSON.stringify({ theme, viewportName, reducedMotion, observations }, null, 2)), contentType: 'application/json' })
+          await recordingTest.info().attach('artifact final tab', { body: await page.screenshot(), contentType: 'image/png' })
+        })
+      }
+    }
+  })
+}

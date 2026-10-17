@@ -87,7 +87,7 @@ const meta: Meta<typeof SandboxArtifactPane> = {
       { port: 3000, url: "https://3000-sandbox.tngl.dev", status: "active" },
       { port: 5173, url: "https://5173-sandbox.tngl.dev", status: "pending" },
     ],
-    previewUrl: "https://3000-sandbox.tngl.dev",
+    previewUrl: new URL("./preview-fixture.html", import.meta.url).href,
     terminal: {
       apiUrl: "https://sandbox.example.com",
       token: "demo-token",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.11
+
+- Rebuild bundled styles against UI 11.40.1 and Brand 1.26.0 and require those peer floors so shared controls retain 44px coarse-pointer targets and upload actions expose accessible labels. Forward the new shared Field and Settings primitives and Avatar props through the existing bridges.
+
 ## 0.134.10
 
 - Keep artifact view tab scrolling inside its existing tab row so keyboard navigation preserves the pane header and active panel in narrow columns.

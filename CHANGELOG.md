@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.10
+
+- Keep artifact view tab scrolling inside its existing tab row so keyboard navigation preserves the pane header and active panel in narrow columns.
+
 ## 0.134.9
 
 - Keyboard navigation in `PillTabs` reveals the focused tab fully inside horizontal scroll containers, including Arrow keys, Home and End on narrow phone panes. Focus, selection and panel relationships remain synchronized.

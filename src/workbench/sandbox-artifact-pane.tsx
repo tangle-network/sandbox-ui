@@ -124,7 +124,7 @@ export function SandboxArtifactPane({
         copyText={copyText}
       />
 
-      <div className="flex items-center border-b border-[var(--md3-outline-variant)] bg-surface-container-lowest px-3 py-1.5">
+      <div className="flex min-w-0 items-center overflow-x-auto border-b border-[var(--md3-outline-variant)] bg-surface-container-lowest px-3 py-1.5">
         <PillTabs
           items={tabs}
           value={view}

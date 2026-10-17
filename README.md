@@ -18,7 +18,7 @@ React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a
 npm install @tangle-network/sandbox-ui
 ```
 
-**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0 || ^2.0.0 || ^3.0.0 || ^5.2.0`, `@tangle-network/brand ^1.23.0`, and `@tangle-network/ui ^11.33.0`.
+**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0 || ^2.0.0 || ^3.0.0 || ^5.2.0`, `@tangle-network/brand ^1.26.0`, and `@tangle-network/ui ^11.40.1`.
 
 The Interface compatibility check exercises the exact supported floors 1.0.0,
 2.0.0, 3.0.0, and 5.2.0, including source checks and a packed consumer's public

@@ -106,12 +106,14 @@ for (const theme of themes) {
   }
 }
 
+const recordingTest = test.extend({ video: 'on' })
+
 for (const [viewportName, viewport] of Object.entries(viewports)) {
-  test.describe(`pill-tabs-overflow ${viewportName}`, () => {
-    test.use({ hasTouch: viewportName === 'mobile', isMobile: viewportName === 'mobile', video: 'on' })
+  recordingTest.describe(`pill-tabs-overflow ${viewportName}`, () => {
+    recordingTest.use({ hasTouch: viewportName === 'mobile', isMobile: viewportName === 'mobile' })
     for (const theme of themes) {
       for (const reducedMotion of ['no-preference', 'reduce']) {
-        test(`${theme} ${reducedMotion}`, async ({ page, baseURL }) => {
+        recordingTest(`${theme} ${reducedMotion}`, async ({ page, baseURL }) => {
           await openStory(page, 'workbench-pilltabs--switch-views', theme, viewport, baseURL)
           await page.emulateMedia({ colorScheme: theme, reducedMotion })
           expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches))
@@ -179,8 +181,8 @@ for (const [viewportName, viewport] of Object.entries(viewports)) {
             expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
             observations.push({ key, name, bounds })
           }
-          await test.info().attach('tab reachability', { body: Buffer.from(JSON.stringify({ theme, viewportName, reducedMotion, observations }, null, 2)), contentType: 'application/json' })
-          await test.info().attach('final tab', { body: await page.screenshot(), contentType: 'image/png' })
+          await recordingTest.info().attach('tab reachability', { body: Buffer.from(JSON.stringify({ theme, viewportName, reducedMotion, observations }, null, 2)), contentType: 'application/json' })
+          await recordingTest.info().attach('final tab', { body: await page.screenshot(), contentType: 'image/png' })
         })
       }
     }

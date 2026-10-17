@@ -369,6 +369,12 @@ for (const [viewportName, viewport] of Object.entries(viewports)) {
             await cdp.detach()
             await tabs.getByRole('tab', { name: 'Ports', exact: true }).tap()
             await expect(tabs.getByRole('tab', { name: 'Ports', exact: true })).toHaveAttribute('aria-selected', 'true')
+            await expect.poll(() => tabs.evaluate(element => {
+              const active = element.querySelector('[aria-selected="true"]').getBoundingClientRect()
+              const indicator = element.querySelector(':scope > [aria-hidden="true"]').getBoundingClientRect()
+              return Math.max(Math.abs(active.left - indicator.left), Math.abs(active.width - indicator.width))
+            })).toBeLessThan(2)
+            expect(await readPanePosition()).toEqual(before)
           }
           await recordingTest.info().attach('artifact tab reachability', {
             body: Buffer.from(JSON.stringify({ theme, viewportName, reducedMotion, observations }, null, 2)), contentType: 'application/json' })

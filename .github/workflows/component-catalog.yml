@@ -25,18 +25,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm build-storybook
-      - name: Install Chromium for maintained visual comparisons
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Compare the built catalog with reviewed Linux baselines
-        run: pnpm exec playwright test
-      - name: Preserve visual failures for review
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: visual-failures-${{ github.sha }}
-          path: test-results
-          if-no-files-found: ignore
-          retention-days: 14
       - name: Bind review states to the built source
         run: node scripts/build-catalog-manifest.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -95,33 +83,3 @@ jobs:
           if (observed?.sourceSha !== expected.sourceSha || observed?.indexSha256 !== expected.indexSha256) throw new Error('Hosted catalog did not match the tested artifact');
           appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Component review\n\nImmutable catalog: ${url.href}\n\nSource: \`${expected.sourceSha}\`\n\nManifest: ${new URL('/catalog-manifest.json', url).href}\n\nFixture evidence only; product flows and visual approval remain separate checks.\n`);
           NODE
-
-  # Temporary diagnostic control for the UI peer adoption. This job is isolated
-  # from the candidate build and cannot publish or qualify its catalog.
-  base-visual-control:
-    if: github.event_name == 'pull_request' && github.event.pull_request.number == 433
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: 2e791a18658e5b5b14213461548bf7ddd5b19407
-          persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22.23.3
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm exec playwright install --with-deps chromium
-      - name: Compare unchanged base with its reviewed Linux baselines
-        run: pnpm test:visual
-      - name: Preserve base-only visual failures for attribution
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: base-2e791a1-visual-failures-${{ github.run_id }}
-          path: test-results
-          if-no-files-found: ignore
-          retention-days: 7

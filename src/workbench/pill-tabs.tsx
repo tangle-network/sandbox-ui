@@ -123,7 +123,22 @@ export function PillTabs<T extends string>({
               event.preventDefault()
               const next = items[nextIndex]
               onChange(next.value)
-              tabRefs.current.get(next.value)?.focus()
+              const nextTab = tabRefs.current.get(next.value)
+              const container = containerRef.current
+              if (!nextTab || !container) return
+              nextTab.focus({ preventScroll: true })
+              const padding = getComputedStyle(container)
+              const target = nextTab.getBoundingClientRect()
+              const targetLeft = target.left - (Number.parseFloat(padding.paddingLeft) || 0)
+              const targetRight = target.right + (Number.parseFloat(padding.paddingRight) || 0)
+              for (let scrollport: HTMLElement | null = container; scrollport; scrollport = scrollport.parentElement) {
+                if (!["auto", "scroll", "hidden"].includes(getComputedStyle(scrollport).overflowX)) continue
+                const bounds = scrollport.getBoundingClientRect()
+                const left = bounds.left + scrollport.clientLeft
+                const right = left + scrollport.clientWidth
+                scrollport.scrollLeft += targetLeft < left ? targetLeft - left : targetRight > right ? targetRight - right : 0
+                break
+              }
             }}
             className={cn(
               "relative z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.9
+
+- Keyboard navigation in `PillTabs` reveals the focused tab fully inside horizontal scroll containers, including Arrow keys, Home and End on narrow phone panes. Focus, selection and panel relationships remain synchronized.
+
 ## 0.134.8
 
 - Forward the checked UI markdown schema, Wizard and plain-text exports; retire obsolete local-token and class-only assertions in favor of shared-owner contracts and real browser proof.

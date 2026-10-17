@@ -6,7 +6,14 @@ const items = [{ value: 'code', label: 'Code' }, { value: 'preview', label: 'Pre
 
 function LiveTabs() {
   const [value, setValue] = useState<'code' | 'preview' | 'changes'>('code')
-  return <div className="space-y-4"><PillTabs items={items} value={value} onChange={setValue} aria-label="Workbench view" /><p className="text-sm text-muted-foreground">Showing {value}</p></div>
+  return (
+    <div className="space-y-4" data-testid="pill-tabs-fixture">
+      <PillTabs items={items} value={value} onChange={setValue} aria-label="Workbench view"
+        idPrefix="workbench-view" panelId="workbench-panel" />
+      <p id="workbench-panel" role="tabpanel" aria-labelledby={`workbench-view-${value}`}
+        className="text-sm text-muted-foreground">Showing {value}</p>
+    </div>
+  )
 }
 
 const meta = {

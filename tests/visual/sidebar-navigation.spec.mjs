@@ -118,7 +118,8 @@ for (const [breakpoint, width] of [['md', 768], ['lg', 1024]]) {
 for (const theme of ['light', 'dark']) {
   for (const [device, viewport] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
     test(`controlled header menu opens exactly one menu on ${device} ${theme}`, async ({ page, baseURL }, info) => {
-      await openStory(page, 'dashboard-sidebarlayout--controlled-header-menu-story', theme, viewport, baseURL)
+      await openStory(page, 'dashboard-sidebarlayout--controlled-header-menu-story', theme, viewport, baseURL,
+        device === 'phone' ? { reducedMotion: 'no-preference' } : undefined)
       await expect(page.getByRole('button', { name: 'ReCenter', exact: true })).toHaveCount(1)
       await page.getByRole('button', { name: 'ReCenter', exact: true }).click()
       await expect(page.getByRole('menu')).toHaveCount(1)
@@ -131,6 +132,40 @@ for (const theme of ['light', 'dark']) {
       await drawer.getByRole('button', { name: 'ReCenter', exact: true }).click()
       await expect(page.getByRole('menu')).toHaveCount(1)
       await page.screenshot({ path: info.outputPath(`header-menu-drawer-${theme}.png`), animations: 'disabled' })
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('menu')).toHaveCount(0)
+      // Observe the actual closed commit while Sheet still mounts its retiring
+      // drawer. The product-owned header must stay there until retirement ends.
+      await drawer.evaluate(node => {
+        window.__headerExitSample = null
+        const headers = scope => [...scope.querySelectorAll('button')]
+          .filter(button => button.textContent.trim() === 'ReCenter').length
+        const observer = new MutationObserver(() => {
+          if (node.dataset.state !== 'closed') return
+          window.__headerExitSample = {
+            state: node.dataset.state,
+            mounted: node.isConnected,
+            drawerHeaders: headers(node),
+            globalHeaders: headers(document),
+            runningAnimations: node.getAnimations({ subtree: true })
+              .filter(animation => animation.playState === 'running').length,
+          }
+          observer.disconnect()
+        })
+        observer.observe(document.body, { attributes: true, childList: true, subtree: true })
+      })
+      await drawer.getByRole('button', { name: 'Close navigation', exact: true }).click()
+      await expect.poll(() => page.evaluate(() => window.__headerExitSample)).not.toBeNull()
+      const exitSample = await page.evaluate(() => window.__headerExitSample)
+      await info.attach('controlled-header-retiring-drawer', {
+        body: JSON.stringify({ theme, reducedMotion: 'no-preference', ...exitSample }),
+        contentType: 'application/json',
+      })
+      expect(exitSample).toMatchObject({ state: 'closed', mounted: true, globalHeaders: 1 })
+      expect(exitSample.runningAnimations).toBeGreaterThan(0)
+      expect(exitSample.drawerHeaders).toBe(1)
+      await expect(drawer).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'ReCenter', exact: true })).toHaveCount(1)
     })
   }
 }

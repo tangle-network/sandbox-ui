@@ -19,3 +19,15 @@ These eight original, uncut recordings cover light/dark × normal/reduced × pho
 | desktop layout stays quiet and disclosure stays inert dark reduce | [desktop-dark-reduced.webm](desktop-dark-reduced.webm) | [desktop-dark-reduced.png](desktop-dark-reduced.png) |
 
 The ten Brand principle evidence rows and remaining acceptance limits are maintained in the PR description; no token values or policy are duplicated here.
+
+## Header retirement fix qualification
+
+The preceding section retains the original feature proof at `b860006`; those eight recordings remain unchanged. The additional header-presence fix is qualified at `ff19782804abb199f5377bdb4421761e98ad9c8a` by normal gate `beelink1-f36ef98df229eba2067a405ff36eee48`: frozen install, typecheck, build and Storybook passed, followed by **21/21 navigation cases and 28/28 frozen static comparisons**, workers2/retries0, with no failures, flakes, skips or snapshot updates. The tracked tree stayed clean.
+
+Both normal-motion phone themes recorded the actual closed-but-mounted drawer with **one ReCenter header inside, one globally, and two running animations**. The original regression head `9791120` did not execute: its single development gate was canceled unadmitted after300s of CPU/checkout capacity waits. RED remains UNCHECKED; no before-failure observation is claimed.
+
+- Light: [uncut video](header-retirement/light.webm), [open controlled menu still](header-retirement/open-menu-light.png).
+- Dark: [uncut video](header-retirement/dark.webm), [open controlled menu still](header-retirement/open-menu-dark.png).
+- [Actual closed-DOM samples](header-retirement/samples.json) and [source, gate, dimensions, durations and hashes](header-retirement/manifest.json).
+
+Both unmodified original recordings retain fixture loading and were inspected through6fps filmstrips with the passed browser outcomes. This is package fixture qualification; no real-time playback, physical cadence, latency percentile, manual accessibility, human craft or production claim is made. A later proof-only commit can reuse this gate because executable inputs remain unchanged.

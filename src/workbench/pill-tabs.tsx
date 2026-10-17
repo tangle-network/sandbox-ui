@@ -124,15 +124,19 @@ export function PillTabs<T extends string>({
               const next = items[nextIndex]
               onChange(next.value)
               const nextTab = tabRefs.current.get(next.value)
-              if (!nextTab) return
+              const container = containerRef.current
+              if (!nextTab || !container) return
               nextTab.focus({ preventScroll: true })
-              for (let scrollport: HTMLElement | null = containerRef.current; scrollport; scrollport = scrollport.parentElement) {
+              const padding = getComputedStyle(container)
+              const target = nextTab.getBoundingClientRect()
+              const targetLeft = target.left - (Number.parseFloat(padding.paddingLeft) || 0)
+              const targetRight = target.right + (Number.parseFloat(padding.paddingRight) || 0)
+              for (let scrollport: HTMLElement | null = container; scrollport; scrollport = scrollport.parentElement) {
                 if (!["auto", "scroll", "hidden"].includes(getComputedStyle(scrollport).overflowX)) continue
                 const bounds = scrollport.getBoundingClientRect()
-                const target = nextTab.getBoundingClientRect()
                 const left = bounds.left + scrollport.clientLeft
                 const right = left + scrollport.clientWidth
-                scrollport.scrollLeft += target.left < left ? target.left - left : target.right > right ? target.right - right : 0
+                scrollport.scrollLeft += targetLeft < left ? targetLeft - left : targetRight > right ? targetRight - right : 0
                 break
               }
             }}

@@ -118,6 +118,13 @@ const readAncestorScroll = host => host.evaluate(element => {
   return { windowX: scrollX, windowY: scrollY, ancestors }
 })
 
+function expectLocalFocusClearance(bounds) {
+  expect(bounds.paddingLeft).toBeGreaterThan(0)
+  expect(bounds.paddingRight).toBeGreaterThan(0)
+  expect(bounds.left - bounds.paddingLeft, 'Focused tab halo must fit inside the local scrollport').toBeGreaterThanOrEqual(bounds.hostLeft - 1)
+  expect(bounds.right + bounds.paddingRight, 'Focused tab halo must fit inside the local scrollport').toBeLessThanOrEqual(bounds.hostRight + 1)
+}
+
 for (const [viewportName, viewport] of Object.entries(viewports)) {
   recordingTest.describe(`pill-tabs-overflow ${viewportName}`, () => {
     recordingTest.use({ hasTouch: viewportName === 'mobile', isMobile: viewportName === 'mobile' })
@@ -164,10 +171,17 @@ for (const [viewportName, viewport] of Object.entries(viewports)) {
               const tab = element.getBoundingClientRect()
               const host = element.closest('[data-testid="pill-tabs-fixture"]')
               const rect = host.getBoundingClientRect()
-              return { left: tab.left, right: tab.right, top: tab.top, bottom: tab.bottom, hostLeft: rect.left + host.clientLeft,
+              const padding = getComputedStyle(element.closest('[role="tablist"]'))
+              const focus = getComputedStyle(element)
+              return { left: tab.left, right: tab.right, top: tab.top, bottom: tab.bottom,
+                paddingLeft: Number.parseFloat(padding.paddingLeft), paddingRight: Number.parseFloat(padding.paddingRight),
+                focusBoxShadow: focus.boxShadow, focusOutlineWidth: focus.outlineWidth, hostLeft: rect.left + host.clientLeft,
                 hostRight: rect.left + host.clientLeft + host.clientWidth, hostTop: rect.top + host.clientTop,
                 hostBottom: rect.top + host.clientTop + host.clientHeight, viewport: innerWidth, viewportHeight: innerHeight }
             })
+            await recordingTest.info().attach(`focus clearance ${observations.length + 1} ${key}`, {
+              body: Buffer.from(JSON.stringify({ key, name, before, after: await scrollState(), bounds }, null, 2)), contentType: 'application/json' })
+            expectLocalFocusClearance(bounds)
             expect(bounds.left).toBeGreaterThanOrEqual(Math.max(0, bounds.hostLeft) - 1)
             expect(bounds.right).toBeLessThanOrEqual(Math.min(bounds.viewport, bounds.hostRight) + 1)
             expect(bounds.top).toBeGreaterThanOrEqual(Math.max(0, bounds.hostTop) - 1)
@@ -223,7 +237,11 @@ for (const [viewportName, viewport] of Object.entries(viewports)) {
               const tab = element.getBoundingClientRect()
               const host = element.closest('[data-testid="pill-tabs-fixture"]')
               const rect = host.getBoundingClientRect()
+              const padding = getComputedStyle(element.closest('[role="tablist"]'))
+              const focus = getComputedStyle(element)
               return { left: tab.left, right: tab.right, top: tab.top, bottom: tab.bottom,
+                paddingLeft: Number.parseFloat(padding.paddingLeft), paddingRight: Number.parseFloat(padding.paddingRight),
+                focusBoxShadow: focus.boxShadow, focusOutlineWidth: focus.outlineWidth,
                 hostLeft: rect.left + host.clientLeft, hostRight: rect.left + host.clientLeft + host.clientWidth,
                 hostTop: rect.top + host.clientTop, hostBottom: rect.top + host.clientTop + host.clientHeight }
             })
@@ -238,6 +256,7 @@ for (const [viewportName, viewport] of Object.entries(viewports)) {
             await expect(tabs.locator('[role="tab"][tabindex="0"]')).toHaveCount(1)
             await expect(tabs.locator('[role="tab"][aria-selected="true"]')).toHaveCount(1)
             await expect(tab).toHaveAttribute('tabindex', '0')
+            expectLocalFocusClearance(bounds)
             expect(bounds.left).toBeGreaterThanOrEqual(bounds.hostLeft - 1)
             expect(bounds.right).toBeLessThanOrEqual(bounds.hostRight + 1)
             expect(bounds.top).toBeGreaterThanOrEqual(bounds.hostTop - 1)

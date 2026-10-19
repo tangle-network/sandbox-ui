@@ -31,6 +31,8 @@ export default defineConfig({
   },
   format: ["esm"],
   platform: "neutral",
+  // The grapheme addon publishes module/main entries without an exports map.
+  inputOptions: { resolve: { mainFields: ["module", "main"] } },
   dts: true,
   clean: true,
   fixedExtension: false,

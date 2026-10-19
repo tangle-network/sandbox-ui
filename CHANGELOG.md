@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.134.12
+
+- Start plain-shell terminals during the WebSocket upgrade with their current size, removing an extra network round trip before ready. Exact interactive sessions retain their control-claim handshake.
+- Enable xterm Unicode 15 grapheme handling so emoji and joined emoji occupy the correct terminal cells.
+
 ## 0.134.11
 
 - Rebuild bundled styles against UI 11.40.1 and Brand 1.26.0 and require those peer floors so shared controls retain 44px coarse-pointer targets and upload actions expose accessible labels. Forward the new shared Field and Settings primitives and Avatar props through the existing bridges.

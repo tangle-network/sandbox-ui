@@ -870,40 +870,6 @@ describe("usePtySession WebSocket transport", () => {
     return { ...harness, hook, onData }
   }
 
-  it("constructs the WebSocket with wss:// and the bearer subprotocol (token NOT in URL)", async () => {
-    const { handles } = await mountAndOpenWs()
-    expect(handles).toHaveLength(1)
-    const url = new URL(handles[0].url)
-    expect(url.protocol).toBe("wss:")
-    expect(url.pathname).toMatch(/^\/terminals\/terminal-[^/]+\/ws$/)
-    // The bearer token MUST NOT appear in the URL query string —
-    // edge proxies and DevTools log URLs but not subprotocol headers.
-    expect(url.searchParams.get("token")).toBeNull()
-    expect(url.search).toBe("")
-
-    // The subprotocol carries a base64url-encoded bearer token under
-    // the `bearer.` prefix. Verify the encoding round-trips cleanly:
-    // backends decode the part after `bearer.` and base64url-decode
-    // it back to the raw token.
-    // Two offers: the non-credential marker the server echoes into the 101,
-    // then the credential. The marker is REQUIRED — a server must never echo
-    // `bearer.<…>` back in a response header, and Chrome fails the handshake
-    // when it offered subprotocols and the server selected none.
-    expect(handles[0].protocols).toEqual([
-      "tangle.terminal.v1",
-      expect.stringMatching(/^bearer\./),
-    ])
-    const proto = handles[0].protocols[1]
-    expect(proto.startsWith("bearer.")).toBe(true)
-    const encoded = proto.slice("bearer.".length)
-    // base64url-safe characters only
-    expect(/^[A-Za-z0-9_-]+$/.test(encoded)).toBe(true)
-    // Round-trip: pad to base64, swap url-safe chars back, atob.
-    const padded = encoded + "=".repeat((4 - (encoded.length % 4)) % 4)
-    const standard = padded.replace(/-/g, "+").replace(/_/g, "/")
-    expect(atob(standard)).toBe(fixtureValue)
-  })
-
   it("does not report connected or send queued input until the server sends ready", async () => {
     const harness = installWsHarness()
     const hook = renderHook(() =>

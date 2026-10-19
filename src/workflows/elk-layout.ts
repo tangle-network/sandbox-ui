@@ -329,7 +329,9 @@ export function toElkGraph(
           sources: [`${g.source}:out`],
           targets: [`${gridNodeId(g.source)}:in`],
         },
-        ...g.targets.map((t) => ({
+        // A folded failure handler is reached through its caption, as every
+        // other input to it is.
+        ...g.targets.filter((t) => !sinks.has(t)).map((t) => ({
           id: `${gridNodeId(g.source)}:leave:${t}`,
           sources: [`${gridNodeId(g.source)}:out`],
           targets: [`${t}:in`],
@@ -470,11 +472,18 @@ export function applyElkLayout(
     };
   });
   const edges = graph.edges.map((e): WfFlowEdge => {
-    if (sinkInputs.has(e.target)) return { ...e, hidden: true };
     // A grid's items are reached through the frame's one connector in and
-    // one out; a fork and a join line per item would bury the grid.
+    // one out; a fork and a join line per item would bury the grid. These
+    // stay hidden even when an item fails: they have no route.
     if (inGrid.has(e.source) || inGrid.has(e.target)) {
       return { ...e, hidden: true };
+    }
+    if (sinkInputs.has(e.target)) {
+      return {
+        ...e,
+        hidden: true,
+        ...(e.data ? { data: { ...e.data, foldedFailureInput: true } } : {}),
+      };
     }
     const r = routed.get(e.id);
     const points = r ? edgePoints(r) : [];

@@ -2189,7 +2189,9 @@ export function WorkflowGraph({
       ...e,
       // A failure handler's folded input comes back the moment its step
       // fails: that is the one input of the handler a reader needs to see.
-      ...(e.hidden && nodeState?.[e.source]?.status === "failed"
+      ...(e.hidden &&
+      e.data?.foldedFailureInput &&
+      nodeState?.[e.source]?.status === "failed"
         ? { hidden: false }
         : {}),
       deletable: editable ? isEditableEdge(e) : false,
@@ -2234,7 +2236,8 @@ export function WorkflowGraph({
   // Move the graph to a NEW layout when the STRUCTURE changes (a definition
   // edit, orientation, the density toggle, a run-overlay transition). A
   // run-state tick doesn't change `structural`, so a live run is never yanked
-  // around.
+  // around — except once when a foreach settles into its items: that is a new
+  // node set, and reframing is what puts the new grid on screen.
   //
   // For a same-node relayout with motion allowed — the density toggle — node
   // geometry and the camera tween TOGETHER through React Flow's store, so the

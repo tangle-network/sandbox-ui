@@ -31,6 +31,9 @@ export interface WfFlowEdgeData extends Record<string, unknown> {
   whenLabel?: string;
   /** This edge closes a cycle. */
   backEdge?: boolean;
+  /** A failure handler's input folded into its caption; drawn again only
+   *  when its source fails. */
+  foldedFailureInput?: boolean;
   /** Per-node visit budget, rendered beside a back edge so the loop states its
    *  own bound. Merged in at style time by the component that knows it. */
   maxNodeVisits?: number;

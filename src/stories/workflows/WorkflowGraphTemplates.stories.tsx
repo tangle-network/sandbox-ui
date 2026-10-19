@@ -175,7 +175,9 @@ const FOREACH_RUN_STATE: Record<string, WfNodeState> = {
   ...Object.fromEntries(
     Array.from({ length: 14 }, (_, j) => [
       `a1-b${j}`,
-      j < 9
+      j === 4
+        ? { status: "failed", error: "Chunk 5 timed out", durationMs: 900000 }
+        : j < 9
         ? { status: "succeeded", costUsd: 0.18 + j * 0.01, durationMs: 240000 }
         : j < 13
           ? { status: "running" }

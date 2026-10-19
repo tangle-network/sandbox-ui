@@ -94,6 +94,8 @@ describe("what the layout buys the catalogue", () => {
     const inputs = graph.edges.filter((e) => e.target === failed?.id);
     expect(inputs.length).toBeGreaterThan(4);
     expect(inputs.every((e) => e.hidden)).toBe(true);
+    // Only these come back when their step fails.
+    expect(inputs.every((e) => e.data?.foldedFailureInput)).toBe(true);
   });
 
   it("frames the PR review's four reviewer lanes as one parallel group", async () => {
@@ -177,6 +179,15 @@ do:
       lanes: 14,
       forEach: { concurrency: 4 },
     });
+    // An item's own fork and join have no route; a failed item must not
+    // bring its join back as a line across the grid.
+    const itemEdges = graph.edges.filter(
+      (e) => /^a1-b\d+$/.test(e.source) || /^a1-b\d+$/.test(e.target),
+    );
+    expect(itemEdges.length).toBeGreaterThan(0);
+    expect(
+      itemEdges.every((e) => e.hidden && !e.data?.foldedFailureInput),
+    ).toBe(true);
   });
 
   it("stays one template node before the run reports items", () => {

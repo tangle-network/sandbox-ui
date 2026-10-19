@@ -1,0 +1,475 @@
+{
+ "software-factory": {
+  "name": "Software factory",
+  "yaml": "name: software-factory\nenabled: false\ndescription: Take a labeled issue to a verified, owner-approved change and check it after merging\n# The budget counts dispatches per node, a skipped dispatch included. Six\n# bounds the loops: build gets about five review rounds, the owner about five\n# clarifications or spec revisions. Exhausting it fails the run, which the\n# failed node reports on the issue.\nmaxNodeVisits: 6\non:\n  provider_event:\n    connection: github\n    event: issues\n    actions: [labeled]\n    when:\n      all:\n        - path: \"trigger.payload.label.name\"\n          op: eq\n          value: \"factory\"\ndo:\n  # Triage is a System One decision over the issue, not an agent. It re-runs\n  # after each clarification answer, with every earlier answer in its state.\n  - id: triage\n    needs:\n      - id: clarify\n        when: { path: \"steps.clarify.choice\", op: eq, value: answer }\n    agent.run:\n      topology: { inference: {} }\n      model: \"typesafe/jev-1.13.0\"\n      profile:\n        name: factory-triage\n        prompt:\n          systemPrompt: \"You triage engineering issues for an autonomous coding pipeline. Judge only from the state.\"\n      prompt: '{\"state\":{\"repo\":\"${trigger.payload.repository.full_name}\",\"issue\":${pick(trigger.payload.issue, \"number\", \"title\", \"body\")},\"owner_answers\":${default(history.clarify, \"[]\")}},\"questions\":{\"route\":{\"type\":\"choice\",\"instructions\":\"How should an autonomous coding agent handle this issue?\",\"criteria\":{\"automatable\":\"The change and how to check it are clear enough to implement and verify without asking anyone.\",\"needs_spec\":\"The intent is clear but the scope or design needs a written spec and owner approval before building.\",\"needs_clarification\":\"Only the requester can answer what is wanted; building now would mean guessing.\",\"park\":\"Not actionable now: duplicate, already fixed, out of scope, or not a code change.\"}}}}'\n  # Asked when triage needs the requester, or is not confident enough to build.\n  - id: clarify\n    needs: [triage]\n    if:\n      any:\n        - { path: \"steps.triage.evaluation.answers.route.choice\", op: eq, value: needs_clarification }\n        - all:\n            - { path: \"steps.triage.evaluation.answers.route.choice\", op: eq, value: automatable }\n            - { path: \"steps.triage.evaluation.answers.route.probabilities.automatable\", op: lt, value: 0.8 }\n    decision:\n      title: \"Question on ${trigger.payload.repository.name}#${trigger.payload.issue.number}\"\n      prompt: \"${truncate(trigger.payload.issue.title, 200)}\\nTriage could not tell what is wanted. Reply answer with your answer as the note, or park.\\n${trigger.payload.issue.html_url}\"\n      options: [answer, park]\n      timeout: 72h\n      onTimeout: default\n      default: park\n      line: { id: \"lin_example\", member: \"+15551234567\" }\n  # Spec loop: a read-only agent writes the spec; the owner approves, revises\n  # (the note goes to the next draft) or parks.\n  - id: spec\n    join: any\n    needs:\n      - id: triage\n        when: { path: \"steps.triage.evaluation.answers.route.choice\", op: eq, value: needs_spec }\n      - id: spec-gate\n        when: { path: 'steps[\"spec-gate\"].choice', op: eq, value: revise }\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: factory-spec\n        prompt:\n          systemPrompt: \"You write implementation specs. Read the code the issue touches, then write a spec of at most 400 words: the change, the files, the acceptance criteria and the verification commands. Start with a two-line summary. Do not change any file.\"\n      prompt: |\n        Write the spec for issue #${trigger.payload.issue.number}: ${truncate(trigger.payload.issue.title, 200)}\n\n        ${truncate(trigger.payload.issue.body, 4000)}\n\n        Previous draft (empty on the first pass): ${truncate(steps.spec.text, 3000)}\n        Owner's revision notes on it: ${steps[\"spec-gate\"].note}\n      timeout: 20m\n  - id: spec-gate\n    needs: [spec]\n    decision:\n      title: \"Approve spec for ${trigger.payload.repository.name}#${trigger.payload.issue.number}?\"\n      prompt: \"${truncate(steps.spec.text, 1000)}\"\n      options: [approve, revise, park]\n      timeout: 72h\n      onTimeout: default\n      default: park\n      line: { id: \"lin_example\", member: \"+15551234567\" }\n  # Parking from any stage leaves a comment on the issue and ends the run. An\n  # output the factory cannot route (no triage choice, a fixer that did not\n  # push) parks too, so a run never ends silently with work half done.\n  - id: park\n    join: any\n    needs:\n      - id: triage\n        when:\n          not:\n            path: \"steps.triage.evaluation.answers.route.choice\"\n            op: in\n            value: [automatable, needs_spec, needs_clarification]\n      - id: clarify\n        when: { path: \"steps.clarify.choice\", op: eq, value: park }\n      - id: spec-gate\n        when: { path: 'steps[\"spec-gate\"].choice', op: eq, value: park }\n      - id: ship-gate\n        when: { path: 'steps[\"ship-gate\"].choice', op: eq, value: park }\n      - id: fix\n        when:\n          all:\n            - { path: \"steps.fix.text\", op: exists }\n            - { not: { path: \"steps.fix.text\", op: contains, value: \"PUSHED\" } }\n      - id: revise\n        when:\n          all:\n            - { path: \"steps.revise.text\", op: exists }\n            - { not: { path: \"steps.revise.text\", op: contains, value: \"PUSHED\" } }\n    integration.invoke:\n      path: github.issues.createComment\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        issue_number: \"${trigger.payload.issue.number}\"\n        body: \"Software factory parked this issue. Triage: ${steps.triage.evaluation.answers.route.choice}. Owner: ${steps.clarify.choice}${steps[\\\"spec-gate\\\"].choice}${steps[\\\"ship-gate\\\"].choice} ${steps[\\\"ship-gate\\\"].note}\"\n  # Build starts from a confident triage or an approved spec.\n  - id: implement\n    join: any\n    needs:\n      - id: triage\n        when:\n          all:\n            - { path: \"steps.triage.evaluation.answers.route.choice\", op: eq, value: automatable }\n            - { path: \"steps.triage.evaluation.answers.route.probabilities.automatable\", op: gte, value: 0.8 }\n      - id: spec-gate\n        when: { path: 'steps[\"spec-gate\"].choice', op: eq, value: approve }\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        push: true\n      profile:\n        name: factory-implementer\n        prompt:\n          systemPrompt: \"You implement one issue in the cloned repository. Follow the repository's own instructions (AGENTS.md, CLAUDE.md, READMEs). Make the smallest correct change, add or update tests, run them, commit, and push the branch you are given. Never push to the default branch and never force-push.\"\n      prompt: |\n        Implement issue #${trigger.payload.issue.number}: ${truncate(trigger.payload.issue.title, 200)}\n\n        ${truncate(trigger.payload.issue.body, 5000)}\n\n        Approved spec (empty when triage sent this straight to build): ${truncate(steps.spec.text, 4000)}\n        Owner's answers to clarifications (empty if none): ${default(history.clarify, \"[]\")}\n\n        Create branch factory/issue-${trigger.payload.issue.number} from ${trigger.payload.repository.default_branch}, commit, and push it to origin.\n        End with one line: PUSHED <commit sha>.\n      timeout: 45m\n  - id: open-pr\n    integration.invoke:\n      path: github.pulls.create\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        title: \"${truncate(trigger.payload.issue.title, 200)}\"\n        head: \"factory/issue-${trigger.payload.issue.number}\"\n        base: \"${trigger.payload.repository.default_branch}\"\n        body: \"Fixes #${trigger.payload.issue.number}\\n\\nOpened by the software factory. Each review and verification round is posted below.\\n\\n${truncate(steps.implement.text, 4000)}\"\n  # Capture the exact PR head for this round BEFORE any check. Fixes and owner\n  # revisions re-arm this read, then every fresh sandbox checks that SHA.\n  - id: head\n    needs:\n      - open-pr\n      - id: fix\n        when: { path: \"steps.fix.text\", op: contains, value: \"PUSHED\" }\n      - id: revise\n        when: { path: \"steps.revise.text\", op: contains, value: \"PUSHED\" }\n    integration.invoke:\n      path: github.pulls.get\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        pull_number: \"${steps[\\\"open-pr\\\"].number}\"\n  # The review cell: three specialist reviewers and an independent verifier\n  # each need ONLY head, so all four start together on the captured commit,\n  # each in its own fresh sandbox, never in the implementer's box. A failure\n  # goes back to fix without asking anyone; the owner sees only a change that\n  # passed the gate.\n  - id: review-correctness\n    needs: [head]\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        ref: \"${steps.head.head.sha}\"\n      topology: { single: {} }\n      profile:\n        name: factory-correctness-reviewer\n        prompt:\n          systemPrompt: \"You review a pull request ONLY for correctness: logic errors, broken edge cases, wrong error handling, and behavior that contradicts the issue or the spec. Read the diff against its merge base, each changed file and its callers. Start with one sentence under 200 characters stating your verdict and why. List blocking findings with file:line. End with exactly one line, either VERDICT: approve or VERDICT: revise, and do not write the word VERDICT anywhere else.\"\n      prompt: |\n        Review pull request #${steps[\"open-pr\"].number} for issue #${trigger.payload.issue.number}: ${truncate(trigger.payload.issue.title, 200)}\n        ${truncate(trigger.payload.issue.body, 3000)}\n        Check exactly commit ${steps.head.head.sha}; do not switch to the moving PR branch.\n        Spec (may be empty): ${truncate(steps.spec.text, 3000)}\n      timeout: 20m\n  - id: review-security\n    needs: [head]\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        ref: \"${steps.head.head.sha}\"\n      topology: { single: {} }\n      profile:\n        name: factory-security-reviewer\n        prompt:\n          systemPrompt: \"You review a pull request ONLY for security: injection, missing or wrong authorization, secrets in code or logs, SSRF, path traversal, unsafe deserialization, and risky new dependencies. Trace each changed input to where it is used. Start with one sentence under 200 characters stating your verdict and why. List blocking findings with file:line and the attack. End with exactly one line, either VERDICT: approve or VERDICT: revise, and do not write the word VERDICT anywhere else.\"\n      prompt: |\n        Security-review pull request #${steps[\"open-pr\"].number} for issue #${trigger.payload.issue.number}: ${truncate(trigger.payload.issue.title, 200)}\n        ${truncate(trigger.payload.issue.body, 3000)}\n        Check exactly commit ${steps.head.head.sha}; do not switch to the moving PR branch.\n      timeout: 20m\n  - id: review-tests\n    needs: [head]\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        ref: \"${steps.head.head.sha}\"\n      topology: { single: {} }\n      profile:\n        name: factory-tests-reviewer\n        prompt:\n          systemPrompt: \"You review a pull request ONLY for its tests: behavior the change adds or alters with no test that fails when it breaks, tests that assert mocks or implementation details instead of behavior, and tests that wait on the clock. Start with one sentence under 200 characters stating your verdict and why. List blocking findings with file:line and the test that would cover each. End with exactly one line, either VERDICT: approve or VERDICT: revise, and do not write the word VERDICT anywhere else.\"\n      prompt: |\n        Review the tests of pull request #${steps[\"open-pr\"].number} for issue #${trigger.payload.issue.number}: ${truncate(trigger.payload.issue.title, 200)}\n        ${truncate(trigger.payload.issue.body, 3000)}\n        Check exactly commit ${steps.head.head.sha}; do not switch to the moving PR branch.\n        Spec (may be empty): ${truncate(steps.spec.text, 3000)}\n      timeout: 20m\n  - id: verify\n    needs: [head]\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        ref: \"${steps.head.head.sha}\"\n      topology: { single: {} }\n      profile:\n        name: factory-verifier\n        prompt:\n          systemPrompt: \"You verify a change independently; you did not write it. Run the repository's documented checks for the touched code on the branch and on the default branch, and exercise the change the way its user would. A check that fails identically on the default branch is pre-existing; report it but do not count it against the change. Start with one sentence under 200 characters stating what you ran and the result. Report each command with its exit code and the decisive output lines. End with exactly one line, either VERDICT: pass or VERDICT: fail, and do not write the word VERDICT anywhere else.\"\n      prompt: |\n        Verify pull request #${steps[\"open-pr\"].number} for issue #${trigger.payload.issue.number}: ${truncate(trigger.payload.issue.title, 200)}\n        ${truncate(trigger.payload.issue.body, 3000)}\n        Check exactly commit ${steps.head.head.sha}; do not switch to the moving PR branch.\n        Spec (may be empty): ${truncate(steps.spec.text, 3000)}\n      timeout: 30m\n  # The JOIN: the gate waits for all four and merges them into ONE verdict line\n  # plus the deduplicated blocking findings the fixer works from. Text in, text\n  # out, so one stateless model call (topology: inference).\n  - id: review-gate\n    needs: [review-correctness, review-security, review-tests, verify]\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: factory-review-gate\n        prompt:\n          systemPrompt: \"You are the review gate of an autonomous coding pipeline. You merge three specialist reviews and one independent verification of the same commit into one verdict. Approve only when the verification ends VERDICT: pass and every review ends VERDICT: approve; otherwise revise. Start with one sentence under 200 characters stating the verdict and why. List the blocking findings the fixer must resolve, deduplicated, each with its file:line and the review or check it came from. End with exactly one line, either VERDICT: approve or VERDICT: revise, and do not write the word VERDICT anywhere else.\"\n      prompt: |\n        Pull request #${steps[\"open-pr\"].number} at commit ${steps.head.head.sha}.\n        CORRECTNESS REVIEW: ${truncate(steps[\"review-correctness\"].text, 4000)}\n        SECURITY REVIEW: ${truncate(steps[\"review-security\"].text, 4000)}\n        TESTS REVIEW: ${truncate(steps[\"review-tests\"].text, 4000)}\n        VERIFICATION: ${truncate(steps.verify.text, 4000)}\n  # The audit trail: every round's gate verdict, reviews and verification land\n  # on the PR.\n  - id: trail\n    needs: [review-gate]\n    integration.invoke:\n      path: github.issues.createComment\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        issue_number: \"${steps[\\\"open-pr\\\"].number}\"\n        body: \"Review gate\\n\\n${truncate(steps[\\\"review-gate\\\"].text, 4000)}\\n\\nCorrectness review\\n\\n${truncate(steps[\\\"review-correctness\\\"].text, 4000)}\\n\\nSecurity review\\n\\n${truncate(steps[\\\"review-security\\\"].text, 4000)}\\n\\nTests review\\n\\n${truncate(steps[\\\"review-tests\\\"].text, 4000)}\\n\\nVerification\\n\\n${truncate(steps.verify.text, 4000)}\"\n  # fix and the ship path take exactly complementary conditions, so a round\n  # either goes back to fix or forward to the owner, never both or neither.\n  # The gate decides the reviews, and the verifier's own verdict is required\n  # too, so a model gate can never send a change whose checks failed to ship.\n  - id: fix\n    needs: [review-gate]\n    if:\n      not:\n        all:\n            - { path: 'steps[\"review-gate\"].text', op: contains, value: \"VERDICT: approve\" }\n            - { not: { path: 'steps[\"review-gate\"].text', op: contains, value: \"VERDICT: revise\" } }\n            - { path: \"steps.verify.text\", op: contains, value: \"VERDICT: pass\" }\n            - { not: { path: \"steps.verify.text\", op: contains, value: \"VERDICT: fail\" } }\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        ref: \"factory/issue-${trigger.payload.issue.number}\"\n        push: true\n      profile:\n        name: factory-fixer\n        prompt:\n          systemPrompt: \"You fix a pull request branch from review and verification findings. Make the smallest change that resolves every blocking finding, run the tests, commit, and push to the same branch. Never push to the default branch and never force-push.\"\n      prompt: |\n        Fix branch factory/issue-${trigger.payload.issue.number} (pull request #${steps[\"open-pr\"].number}).\n        Blocking findings: ${truncate(steps[\"review-gate\"].text, 4000)}\n        Verification: ${truncate(steps.verify.text, 4000)}\n        End with one line: PUSHED <commit sha>.\n      timeout: 45m\n  # Ship approval waits in the app, with optional text transport.\n  # Silence parks; it never ships.\n  - id: ship-gate\n    needs: [review-gate]\n    if:\n      all:\n        - { path: 'steps[\"review-gate\"].text', op: contains, value: \"VERDICT: approve\" }\n        - { not: { path: 'steps[\"review-gate\"].text', op: contains, value: \"VERDICT: revise\" } }\n        - { path: \"steps.verify.text\", op: contains, value: \"VERDICT: pass\" }\n        - { not: { path: \"steps.verify.text\", op: contains, value: \"VERDICT: fail\" } }\n    decision:\n      title: \"Ship ${trigger.payload.repository.name}#${steps[\\\"open-pr\\\"].number}?\"\n      prompt: \"${truncate(trigger.payload.issue.title, 120)}\\nReview: ${truncate(steps[\\\"review-gate\\\"].text, 300)}\\nVerified: ${truncate(steps.verify.text, 400)}\\nHead ${slice(steps.head.head.sha, 0, 7)}\\n${steps[\\\"open-pr\\\"].html_url}\"\n      options: [ship, hold, park]\n      timeout: 72h\n      onTimeout: default\n      default: park\n      line: { id: \"lin_example\", member: \"+15551234567\" }\n  - id: revise\n    needs: [ship-gate]\n    if: { path: 'steps[\"ship-gate\"].choice', op: eq, value: hold }\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        ref: \"factory/issue-${trigger.payload.issue.number}\"\n        push: true\n      profile:\n        name: factory-fixer\n        prompt:\n          systemPrompt: \"You revise a pull request branch from the owner's notes. Make the smallest change that does what the owner asked, run the tests, commit, and push to the same branch. Never push to the default branch and never force-push.\"\n      prompt: |\n        The owner held pull request #${steps[\"open-pr\"].number} with this note: ${steps[\"ship-gate\"].note}\n        Revise branch factory/issue-${trigger.payload.issue.number} accordingly.\n        End with one line: PUSHED <commit sha>.\n      timeout: 45m\n  # sha makes GitHub refuse the merge if the head moved after verification.\n  - id: merge\n    needs:\n      - id: ship-gate\n        when: { path: 'steps[\"ship-gate\"].choice', op: eq, value: ship }\n    integration.invoke:\n      path: github.pulls.merge\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        pull_number: \"${steps[\\\"open-pr\\\"].number}\"\n        sha: \"${steps.head.head.sha}\"\n        merge_method: squash\n  - id: shipped\n    integration.invoke:\n      path: github.issues.createComment\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        issue_number: \"${trigger.payload.issue.number}\"\n        body: \"Shipped ${steps.merge.sha} (verified head ${steps.head.head.sha}) on the owner's approval. A follow-up check runs after the configured delay.\"\n  - id: soak\n    wait.timer: { seconds: 3600 }\n  # Monitoring: a fresh agent reads the shipped change's own signal. A\n  # regression becomes a new labeled issue, which starts the loop again.\n  - id: monitor\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n      connections: [github]\n      topology: { single: {} }\n      profile:\n        name: factory-monitor\n        prompt:\n          systemPrompt: \"You check whether a shipped change held. Run the checks that exercise it on the default branch and read the repository's recent pull requests and issues through the hub with read-only actions such as github.pulls.list and github.issues.list. Never change anything. End with exactly one line: HEALTH: ok or HEALTH: issue <one-line summary>.\"\n      prompt: |\n        Commit ${steps.merge.sha} shipped issue #${trigger.payload.issue.number} in ${trigger.payload.repository.full_name}: ${truncate(trigger.payload.issue.title, 200)}\n        ${truncate(trigger.payload.issue.body, 3000)}\n      timeout: 15m\n  - id: monitor-note\n    integration.invoke:\n      path: github.issues.createComment\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        issue_number: \"${trigger.payload.issue.number}\"\n        body: \"Monitor after ship\\n\\n${truncate(steps.monitor.text, 6000)}\"\n  - id: report-issue\n    needs: [monitor]\n    if: { path: \"steps.monitor.text\", op: contains, value: \"HEALTH: issue\" }\n    integration.invoke:\n      path: github.issues.create\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        title: \"Regression after #${steps[\\\"open-pr\\\"].number}: ${truncate(trigger.payload.issue.title, 150)}\"\n        body: \"The software factory's monitor flagged ${steps.merge.sha}, which shipped #${trigger.payload.issue.number}.\\n\\n${truncate(steps.monitor.text, 6000)}\"\n        labels: [\"factory\"]\n  # A failed step (an agent error, a refused PR or merge) is reported on the\n  # issue instead of failing silently.\n  - id: failed\n    join: any_failed\n    needs:\n      [spec, implement, open-pr, head, review-correctness, review-security, review-tests, verify, review-gate, fix, revise, merge, monitor]\n    integration.invoke:\n      path: github.issues.createComment\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        issue_number: \"${trigger.payload.issue.number}\"\n        body: \"The software factory stopped on this issue: ${truncate(steps.spec.error, 600)}${truncate(steps.implement.error, 600)}${truncate(steps[\\\"open-pr\\\"].error, 600)}${truncate(steps.head.error, 600)}${truncate(steps[\\\"review-correctness\\\"].error, 600)}${truncate(steps[\\\"review-security\\\"].error, 600)}${truncate(steps[\\\"review-tests\\\"].error, 600)}${truncate(steps.verify.error, 600)}${truncate(steps[\\\"review-gate\\\"].error, 600)}${truncate(steps.fix.error, 600)}${truncate(steps.revise.error, 600)}${truncate(steps.merge.error, 600)}${truncate(steps.monitor.error, 600)}\"\n",
+  "maxNodeVisits": 6,
+  "edges": [
+   {
+    "from": "a1",
+    "to": "a0",
+    "whenLabel": "clarify = answer"
+   },
+   {
+    "from": "a0",
+    "to": "a1"
+   },
+   {
+    "from": "a0",
+    "to": "a2",
+    "whenLabel": "triage.route = needs_spec"
+   },
+   {
+    "from": "a3",
+    "to": "a2",
+    "whenLabel": "spec-gate = revise"
+   },
+   {
+    "from": "a2",
+    "to": "a3"
+   },
+   {
+    "from": "a0",
+    "to": "a4",
+    "whenLabel": "not (triage.route in [automatable, needs_spec, needs_clarification])"
+   },
+   {
+    "from": "a1",
+    "to": "a4",
+    "whenLabel": "clarify = park"
+   },
+   {
+    "from": "a3",
+    "to": "a4",
+    "whenLabel": "spec-gate = park"
+   },
+   {
+    "from": "a15",
+    "to": "a4",
+    "whenLabel": "ship-gate = park"
+   },
+   {
+    "from": "a14",
+    "to": "a4",
+    "whenLabel": "fix.text exists AND not (fix.text contains PUSHED)"
+   },
+   {
+    "from": "a16",
+    "to": "a4",
+    "whenLabel": "revise.text exists AND not (revise.text contains PUSHED)"
+   },
+   {
+    "from": "a0",
+    "to": "a5",
+    "whenLabel": "triage.route = automatable AND triage.route.probabilities.automatable ≥ 0.8"
+   },
+   {
+    "from": "a3",
+    "to": "a5",
+    "whenLabel": "spec-gate = approve"
+   },
+   {
+    "from": "a5",
+    "to": "a6"
+   },
+   {
+    "from": "a6",
+    "to": "a7"
+   },
+   {
+    "from": "a14",
+    "to": "a7",
+    "whenLabel": "fix.text contains PUSHED"
+   },
+   {
+    "from": "a16",
+    "to": "a7",
+    "whenLabel": "revise.text contains PUSHED"
+   },
+   {
+    "from": "a7",
+    "to": "a8"
+   },
+   {
+    "from": "a7",
+    "to": "a9"
+   },
+   {
+    "from": "a7",
+    "to": "a10"
+   },
+   {
+    "from": "a7",
+    "to": "a11"
+   },
+   {
+    "from": "a8",
+    "to": "a12"
+   },
+   {
+    "from": "a9",
+    "to": "a12"
+   },
+   {
+    "from": "a10",
+    "to": "a12"
+   },
+   {
+    "from": "a11",
+    "to": "a12"
+   },
+   {
+    "from": "a12",
+    "to": "a13"
+   },
+   {
+    "from": "a12",
+    "to": "a14"
+   },
+   {
+    "from": "a12",
+    "to": "a15"
+   },
+   {
+    "from": "a15",
+    "to": "a16"
+   },
+   {
+    "from": "a15",
+    "to": "a17",
+    "whenLabel": "ship-gate = ship"
+   },
+   {
+    "from": "a17",
+    "to": "a18"
+   },
+   {
+    "from": "a18",
+    "to": "a19"
+   },
+   {
+    "from": "a19",
+    "to": "a20"
+   },
+   {
+    "from": "a20",
+    "to": "a21"
+   },
+   {
+    "from": "a20",
+    "to": "a22"
+   },
+   {
+    "from": "a2",
+    "to": "a23"
+   },
+   {
+    "from": "a5",
+    "to": "a23"
+   },
+   {
+    "from": "a6",
+    "to": "a23"
+   },
+   {
+    "from": "a7",
+    "to": "a23"
+   },
+   {
+    "from": "a8",
+    "to": "a23"
+   },
+   {
+    "from": "a9",
+    "to": "a23"
+   },
+   {
+    "from": "a10",
+    "to": "a23"
+   },
+   {
+    "from": "a11",
+    "to": "a23"
+   },
+   {
+    "from": "a12",
+    "to": "a23"
+   },
+   {
+    "from": "a14",
+    "to": "a23"
+   },
+   {
+    "from": "a16",
+    "to": "a23"
+   },
+   {
+    "from": "a17",
+    "to": "a23"
+   },
+   {
+    "from": "a20",
+    "to": "a23"
+   }
+  ]
+ },
+ "pr-review": {
+  "name": "PR Review",
+  "yaml": "name: pr-review\nenabled: false\ndescription: Review each ready pull request with four specialist reviewers in parallel, verify every finding against the code, and post one review of the confirmed findings\non:\n  provider_event:\n    connection: github\n    event: pull_request\n    # A draft opened as a draft is reviewed when it is marked ready.\n    actions: [opened, ready_for_review]\n    when:\n      all:\n        - { path: \"trigger.payload.pull_request.draft\", op: eq, value: false }\ndo:\n  # needs: [] makes each reviewer a ROOT, so all four start at once, each in its\n  # own sandbox with the PR's head checked out (`source.pr`). Each looks at ONE\n  # dimension, which is what keeps a review from being a shallow skim of all of\n  # them.\n  - id: review-correctness\n    needs: []\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        pr: \"${trigger.payload.pull_request.number}\"\n      topology: { single: {} }\n      profile:\n        name: correctness-reviewer\n        prompt:\n          systemPrompt: \"You review a pull request ONLY for correctness: logic errors, broken edge cases, wrong error handling, races, and behavior that contradicts what the PR says it does. Report each finding as one line: [blocking|non-blocking] path:LINE — what is wrong, why, and the fix. Report only what you can point to in the diff or its callers; no style notes. If you find nothing, write: No correctness findings.\"\n      prompt: \"Review pull request #${trigger.payload.pull_request.number}: ${truncate(trigger.payload.pull_request.title, 120)}. The PR head is checked out. Review the CHANGES, not the whole repository: resolve the merge base (usually `git merge-base origin/HEAD HEAD`), read `git diff <base>...HEAD`, and open each changed file and its callers. Output only your findings.\"\n      timeout: 20m\n  - id: review-security\n    needs: []\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        pr: \"${trigger.payload.pull_request.number}\"\n      topology: { single: {} }\n      profile:\n        name: security-reviewer\n        prompt:\n          systemPrompt: \"You review a pull request ONLY for security: injection, missing or wrong authorization, authentication bypass, secrets in code or logs, SSRF, path traversal, unsafe deserialization, and new dependencies with known risk. Report each finding as one line: [blocking|non-blocking] path:LINE — the attack, its impact, and the fix. Report only what the diff makes reachable. If you find nothing, write: No security findings.\"\n      prompt: \"Security-review pull request #${trigger.payload.pull_request.number}: ${truncate(trigger.payload.pull_request.title, 120)}. The PR head is checked out. Resolve the merge base, read `git diff <base>...HEAD`, and trace each changed input to where it is used. Output only your findings.\"\n      timeout: 20m\n  - id: review-tests\n    needs: []\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        pr: \"${trigger.payload.pull_request.number}\"\n      topology: { single: {} }\n      profile:\n        name: test-reviewer\n        prompt:\n          systemPrompt: \"You review a pull request ONLY for its tests: behavior the change adds or alters with no test that would fail if it broke, tests that assert implementation details or mocks instead of behavior, and tests that wait on the clock. Run the touched tests when the repository documents how. Report each finding as one line: [blocking|non-blocking] path:LINE — the untested or mis-tested behavior and the test that would cover it. If you find nothing, write: No test findings.\"\n      prompt: \"Review the tests of pull request #${trigger.payload.pull_request.number}: ${truncate(trigger.payload.pull_request.title, 120)}. The PR head is checked out. Resolve the merge base, read `git diff <base>...HEAD`, and for each changed behavior find the test that covers it. Output only your findings, with the commands you ran and their exit codes.\"\n      timeout: 20m\n  - id: review-design\n    needs: []\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        pr: \"${trigger.payload.pull_request.number}\"\n      topology: { single: {} }\n      profile:\n        name: design-reviewer\n        prompt:\n          systemPrompt: \"You review a pull request ONLY for design and API: public names and interface shape, breaking changes to an exported API or wire format, a second implementation of something the codebase already owns, and abstractions that leak or are not needed. Report each finding as one line: [blocking|non-blocking] path:LINE — the problem, who it affects, and the simpler shape. If you find nothing, write: No design findings.\"\n      prompt: \"Design-review pull request #${trigger.payload.pull_request.number}: ${truncate(trigger.payload.pull_request.title, 120)}. The PR head is checked out. Resolve the merge base, read `git diff <base>...HEAD`, and search the repository for existing code that already does what the change adds. Output only your findings.\"\n      timeout: 20m\n  # Each verifier needs ONLY its own reviewer, so a verifier starts the moment\n  # its reviewer finishes. It is adversarial: it did not write the findings, it\n  # re-reads the code each one cites, and it keeps only what survives.\n  - id: verify-correctness\n    needs: [review-correctness]\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        pr: \"${trigger.payload.pull_request.number}\"\n      topology: { single: {} }\n      profile:\n        name: correctness-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the review you are given. For EVERY finding, open the cited file at the cited line and try to refute it: read the code path, its callers and its tests, and run a command when one settles the question. Mark each finding CONFIRMED or REFUTED with one line of evidence (the code you read, or the command and its output). A finding with no file:line, or whose line does not show the problem, is REFUTED. Then write a section titled Confirmed findings that lists only the confirmed ones, each with its file:line and fix, or None.\"\n      prompt: |\n        Verify this correctness review of pull request #${trigger.payload.pull_request.number}. The PR head is checked out.\n\n        ${truncate(steps[\"review-correctness\"].finalMessage, 6000)}\n      timeout: 20m\n  - id: verify-security\n    needs: [review-security]\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        pr: \"${trigger.payload.pull_request.number}\"\n      topology: { single: {} }\n      profile:\n        name: security-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the review you are given. For EVERY finding, open the cited file at the cited line and try to refute it: trace whether an attacker can actually reach the code with the input the finding names, and what stops them. Mark each finding CONFIRMED or REFUTED with one line of evidence. A finding with no file:line, or no reachable path, is REFUTED. Then write a section titled Confirmed findings that lists only the confirmed ones, each with its file:line and fix, or None.\"\n      prompt: |\n        Verify this security review of pull request #${trigger.payload.pull_request.number}. The PR head is checked out.\n\n        ${truncate(steps[\"review-security\"].finalMessage, 6000)}\n      timeout: 20m\n  - id: verify-tests\n    needs: [review-tests]\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        pr: \"${trigger.payload.pull_request.number}\"\n      topology: { single: {} }\n      profile:\n        name: test-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the review you are given. For EVERY finding, check it against the code: search for a test that already covers the behavior, and run the touched tests when the repository documents how. Mark each finding CONFIRMED or REFUTED with one line of evidence (the test you found, or the command and its exit code). A finding with no file:line, or one an existing test already covers, is REFUTED. Then write a section titled Confirmed findings that lists only the confirmed ones, each with its file:line and the missing test, or None.\"\n      prompt: |\n        Verify this test review of pull request #${trigger.payload.pull_request.number}. The PR head is checked out.\n\n        ${truncate(steps[\"review-tests\"].finalMessage, 6000)}\n      timeout: 20m\n  - id: verify-design\n    needs: [review-design]\n    agent.run:\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n        pr: \"${trigger.payload.pull_request.number}\"\n      topology: { single: {} }\n      profile:\n        name: design-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the review you are given. For EVERY finding, open the cited file at the cited line and try to refute it: find the callers a breaking change would break, or the existing code a duplication claim names. Mark each finding CONFIRMED or REFUTED with one line of evidence. A finding with no file:line, or a claimed duplicate that does not exist, is REFUTED. Then write a section titled Confirmed findings that lists only the confirmed ones, each with its file:line and fix, or None.\"\n      prompt: |\n        Verify this design review of pull request #${trigger.payload.pull_request.number}. The PR head is checked out.\n\n        ${truncate(steps[\"review-design\"].finalMessage, 6000)}\n      timeout: 20m\n  # The JOIN: synthesize waits for all four verifiers. It reads text only, so it\n  # is one stateless model call (topology: inference), with no sandbox. A\n  # hyphenated id needs the quoted form ${steps[\"verify-security\"].finalMessage}.\n  - id: synthesize\n    needs: [verify-correctness, verify-security, verify-tests, verify-design]\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: lead-reviewer\n        prompt:\n          systemPrompt: \"You write one pull-request review from verified findings. Use ONLY findings a verifier marked CONFIRMED; drop every REFUTED one. Merge findings that cite the same file:line, keep every file:line citation, and put blocking findings before non-blocking ones. Start with one sentence stating the verdict and why. Then one section per dimension with confirmed findings (Correctness, Security, Tests, Design), omitting empty sections. End with exactly one line: SHIP, or DO-NOT-SHIP when any confirmed finding is blocking.\"\n      prompt: |\n        CORRECTNESS (verified): ${truncate(steps[\"verify-correctness\"].finalMessage, 6000)}\n\n        SECURITY (verified): ${truncate(steps[\"verify-security\"].finalMessage, 6000)}\n\n        TESTS (verified): ${truncate(steps[\"verify-tests\"].finalMessage, 6000)}\n\n        DESIGN (verified): ${truncate(steps[\"verify-design\"].finalMessage, 6000)}\n  # Post host-side: the agents produce text, and the write stays off the\n  # (untrusted) PR content. Posted as the Tangle Hub GitHub App, not as the\n  # person who connected the account — without it the review carries that\n  # person's authority, and GitHub refuses one on a pull request they opened.\n  - id: post\n    needs: [synthesize]\n    integration.invoke:\n      path: github.pulls.reviews.create\n      identity: app\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        pull_number: \"${trigger.payload.pull_request.number}\"\n        event: COMMENT\n        body: \"${steps.synthesize.text}\"\n",
+  "maxNodeVisits": 25,
+  "edges": [
+   {
+    "from": "a0",
+    "to": "a4"
+   },
+   {
+    "from": "a1",
+    "to": "a5"
+   },
+   {
+    "from": "a2",
+    "to": "a6"
+   },
+   {
+    "from": "a3",
+    "to": "a7"
+   },
+   {
+    "from": "a4",
+    "to": "a8"
+   },
+   {
+    "from": "a5",
+    "to": "a8"
+   },
+   {
+    "from": "a6",
+    "to": "a8"
+   },
+   {
+    "from": "a7",
+    "to": "a8"
+   },
+   {
+    "from": "a8",
+    "to": "a9"
+   }
+  ]
+ },
+ "engineering-audit": {
+  "name": "Senior engineering audit",
+  "yaml": "name: engineering-audit\nenabled: false\ndescription: Audit a repository through five senior-engineering lenses in parallel, verify every finding, and file one ranked GitHub issue\n# Run it on demand: \"Run now\" on the workflow page, or POST the hook URL the API\n# returns on create. The audit reads no trigger fields, so a run needs no inputs.\non:\n  webhook: {}\ndo:\n  # Resolve the repository first: a typo or a missing connection fails here,\n  # before any sandbox starts, and every later step reads the canonical name.\n  - id: repo\n    integration.invoke:\n      path: github.repositories.get\n      input:\n        owner: \"my-org\"\n        repo: \"my-repo\"\n  # Five lenses, each needing only `repo`, so they start together (the\n  # scheduler runs four nodes of one run at a time; the fifth starts as the\n  # first finishes). Each audits its own clone of the default branch.\n  - id: audit-architecture\n    needs: [repo]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: architecture-auditor\n        prompt:\n          systemPrompt: \"You are a principal engineer auditing a codebase ONLY for architecture: module boundaries, one owner per rule or value, coupling that forces unrelated changes together, duplicated implementations of one capability, dead code, and abstractions with one caller. Read the repository's own docs first. For each finding write: severity (critical, high, medium, low); path:LINE; what is wrong and what it costs; the fix; and a NUMBER TO BEAT — a value you measured now and its target (for example: modules importing billing internals 9 -> 1), with the command that measures it. Report at most 8 findings, the most expensive first. Never change a file.\"\n      prompt: \"Audit the architecture of ${steps.repo.full_name} at its default branch (${steps.repo.default_branch}). Measure before you claim: count with grep, wc, or the repository's own tools, and show each command.\"\n      timeout: 30m\n  - id: audit-reliability\n    needs: [repo]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: reliability-auditor\n        prompt:\n          systemPrompt: \"You are a principal engineer auditing a codebase ONLY for correctness and reliability: swallowed errors, missing timeouts, unbounded retries, races, non-idempotent writes on retried paths, partial failures that leave state half-written, and data loss. For each finding write: severity (critical, high, medium, low); path:LINE; the failure and when it happens; the fix; and a NUMBER TO BEAT — a value you measured now and its target (for example: outbound calls with no timeout 14 -> 0), with the command that measures it. Report at most 8 findings, the most damaging first. Never change a file.\"\n      prompt: \"Audit the correctness and reliability of ${steps.repo.full_name} at its default branch (${steps.repo.default_branch}). Trace the main request and job paths end to end. Measure before you claim and show each command.\"\n      timeout: 30m\n  - id: audit-security\n    needs: [repo]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: security-auditor\n        prompt:\n          systemPrompt: \"You are a principal engineer auditing a codebase ONLY for security: authorization on every entry point, injection, secrets in code, config or logs, SSRF, path traversal, unsafe deserialization, and dependencies with known vulnerabilities. For each finding write: severity (critical, high, medium, low); path:LINE; the attack, who can perform it, and its impact; the fix; and a NUMBER TO BEAT — a value you measured now and its target (for example: routes without an authorization check 3 -> 0), with the command that measures it. Report at most 8 findings, the most exploitable first. Never change a file.\"\n      prompt: \"Audit the security of ${steps.repo.full_name} at its default branch (${steps.repo.default_branch}). Enumerate the entry points first, then trace untrusted input from each. Run the package manager's audit command when there is one. Show each command.\"\n      timeout: 30m\n  - id: audit-performance\n    needs: [repo]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: performance-auditor\n        prompt:\n          systemPrompt: \"You are a principal engineer auditing a codebase ONLY for performance: work repeated per request that could be done once, N+1 queries, unbounded loops or result sets, blocking calls on hot paths, memory that grows without a bound, and slow startup or build. For each finding write: severity (critical, high, medium, low); path:LINE; the cost and when it is paid; the fix; and a NUMBER TO BEAT — a value you measured now and its target (for example: cold build 94s -> 40s, queries per page load 31 -> 3), with the command that measures it. Report at most 8 findings, the most expensive first. Never change a file.\"\n      prompt: \"Audit the performance of ${steps.repo.full_name} at its default branch (${steps.repo.default_branch}). Prefer measurements you can take in the sandbox (build and test timings, query counts in tests, benchmark scripts the repository ships) over estimates, and label any estimate as one.\"\n      timeout: 30m\n  - id: audit-operability\n    needs: [repo]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: operability-auditor\n        prompt:\n          systemPrompt: \"You are a principal engineer auditing a codebase ONLY for tests and operability: critical paths with no test that would fail if they broke, tests that assert mocks instead of behavior, flaky or clock-based tests, CI gaps, missing logs, metrics or alerts on failure paths, and deploy or rollback steps that only live in someone's head. Run the documented test command. For each finding write: severity (critical, high, medium, low); path:LINE; the risk; the fix; and a NUMBER TO BEAT — a value you measured now and its target (for example: test suite 7m12s with 4 flaky tests -> under 3m with 0), with the command that measures it. Report at most 8 findings, the riskiest first. Never change a file.\"\n      prompt: \"Audit the tests and operability of ${steps.repo.full_name} at its default branch (${steps.repo.default_branch}). Run the test suite the repository documents and report its command, exit code, duration and failures.\"\n      timeout: 30m\n  # Each verifier needs only its own lens and re-checks that lens's findings\n  # in a fresh clone. It keeps what survives and re-measures each number.\n  - id: verify-architecture\n    needs: [audit-architecture]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: architecture-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the audit you are given. For EVERY finding, open the cited file at the cited line and try to refute it, then re-run its measurement command. Mark each finding CONFIRMED or REFUTED with one line of evidence. A finding with no file:line, a line that does not show the problem, or a number you cannot reproduce is REFUTED. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, file:line, fix and the number to beat as you measured it, or None. Never change a file.\"\n      prompt: |\n        Verify this architecture audit of ${steps.repo.full_name}.\n\n        ${truncate(steps[\"audit-architecture\"].finalMessage, 6000)}\n      timeout: 30m\n  - id: verify-reliability\n    needs: [audit-reliability]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: reliability-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the audit you are given. For EVERY finding, open the cited file at the cited line and try to refute it: find the timeout, retry bound, lock or transaction that already prevents the failure, and re-run its measurement command. Mark each finding CONFIRMED or REFUTED with one line of evidence. A finding with no file:line, a failure something already prevents, or a number you cannot reproduce is REFUTED. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, file:line, fix and the number to beat as you measured it, or None. Never change a file.\"\n      prompt: |\n        Verify this reliability audit of ${steps.repo.full_name}.\n\n        ${truncate(steps[\"audit-reliability\"].finalMessage, 6000)}\n      timeout: 30m\n  - id: verify-security\n    needs: [audit-security]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: security-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the audit you are given. For EVERY finding, open the cited file at the cited line and try to refute it: trace whether the named attacker can reach that code with the named input, and find the check that stops them. Mark each finding CONFIRMED or REFUTED with one line of evidence. A finding with no file:line, no reachable path, or a number you cannot reproduce is REFUTED. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, file:line, fix and the number to beat as you measured it, or None. Never change a file.\"\n      prompt: |\n        Verify this security audit of ${steps.repo.full_name}.\n\n        ${truncate(steps[\"audit-security\"].finalMessage, 6000)}\n      timeout: 30m\n  - id: verify-performance\n    needs: [audit-performance]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: performance-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the audit you are given. For EVERY finding, open the cited file at the cited line and try to refute it: check whether the path is actually hot, whether a cache or bound already exists, and re-run its measurement. Mark each finding CONFIRMED or REFUTED with one line of evidence. A finding with no file:line, a cost already bounded, or a number you cannot reproduce is REFUTED; an estimate stays labelled as one. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, file:line, fix and the number to beat as you measured it, or None. Never change a file.\"\n      prompt: |\n        Verify this performance audit of ${steps.repo.full_name}.\n\n        ${truncate(steps[\"audit-performance\"].finalMessage, 6000)}\n      timeout: 30m\n  - id: verify-operability\n    needs: [audit-operability]\n    agent.run:\n      source:\n        repo: \"${steps.repo.full_name}\"\n      topology: { single: {} }\n      profile:\n        name: operability-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial verifier; you did not write the audit you are given. For EVERY finding, open the cited file at the cited line and try to refute it: search for the test, alert or runbook the finding says is missing, and re-run the test command it reports. Mark each finding CONFIRMED or REFUTED with one line of evidence. A finding with no file:line, something that already exists, or a number you cannot reproduce is REFUTED. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, file:line, fix and the number to beat as you measured it, or None. Never change a file.\"\n      prompt: |\n        Verify this tests and operability audit of ${steps.repo.full_name}.\n\n        ${truncate(steps[\"audit-operability\"].finalMessage, 6000)}\n      timeout: 30m\n  # The JOIN over all five verifiers. Text in, text out, so one stateless model\n  # call (topology: inference) with no sandbox.\n  - id: synthesize\n    needs:\n      [verify-architecture, verify-reliability, verify-security, verify-performance, verify-operability]\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: audit-lead\n        prompt:\n          systemPrompt: \"You write a senior engineering audit report from verified findings. Use ONLY findings a verifier marked CONFIRMED; drop every REFUTED one. Merge findings that cite the same file:line. Rank every remaining finding across all lenses by expected cost if left unfixed, critical first. Output GitHub markdown: a three-sentence summary; then a ranked table with columns Rank, Lens, Severity, Location (file:line), Finding, Number to beat (current -> target), How to measure; then one short section per finding with the evidence and the fix. Every finding keeps its number to beat. If no finding was confirmed, say so plainly and list what the auditors checked.\"\n      prompt: |\n        Repository: ${steps.repo.full_name} (default branch ${steps.repo.default_branch})\n\n        ARCHITECTURE (verified): ${truncate(steps[\"verify-architecture\"].finalMessage, 5000)}\n\n        RELIABILITY (verified): ${truncate(steps[\"verify-reliability\"].finalMessage, 5000)}\n\n        SECURITY (verified): ${truncate(steps[\"verify-security\"].finalMessage, 5000)}\n\n        PERFORMANCE (verified): ${truncate(steps[\"verify-performance\"].finalMessage, 5000)}\n\n        TESTS AND OPERABILITY (verified): ${truncate(steps[\"verify-operability\"].finalMessage, 5000)}\n  # ONE issue carries the whole report, filed host-side on the audited repo.\n  - id: file-issue\n    needs: [synthesize]\n    integration.invoke:\n      path: github.issues.create\n      input:\n        owner: \"${steps.repo.owner.login}\"\n        repo: \"${steps.repo.name}\"\n        title: \"Senior engineering audit of ${steps.repo.full_name}\"\n        body: \"${steps.synthesize.text}\"\n",
+  "maxNodeVisits": 25,
+  "edges": [
+   {
+    "from": "a0",
+    "to": "a1"
+   },
+   {
+    "from": "a0",
+    "to": "a2"
+   },
+   {
+    "from": "a0",
+    "to": "a3"
+   },
+   {
+    "from": "a0",
+    "to": "a4"
+   },
+   {
+    "from": "a0",
+    "to": "a5"
+   },
+   {
+    "from": "a1",
+    "to": "a6"
+   },
+   {
+    "from": "a2",
+    "to": "a7"
+   },
+   {
+    "from": "a3",
+    "to": "a8"
+   },
+   {
+    "from": "a4",
+    "to": "a9"
+   },
+   {
+    "from": "a5",
+    "to": "a10"
+   },
+   {
+    "from": "a6",
+    "to": "a11"
+   },
+   {
+    "from": "a7",
+    "to": "a11"
+   },
+   {
+    "from": "a8",
+    "to": "a11"
+   },
+   {
+    "from": "a9",
+    "to": "a11"
+   },
+   {
+    "from": "a10",
+    "to": "a11"
+   },
+   {
+    "from": "a11",
+    "to": "a12"
+   }
+  ]
+ },
+ "design-audit": {
+  "name": "Senior design audit",
+  "yaml": "name: design-audit\nenabled: false\ndescription: Audit a live page through five senior-design lenses in parallel, each from screenshots taken in a sandbox browser, verify every finding, and deliver one ranked report\n# Run it on demand: \"Run now\" on the workflow page, or POST the hook URL the API\n# returns on create. The audit reads no trigger fields, so a run needs no inputs.\non:\n  webhook: {}\ndo:\n  # Five roots (needs: []): every lens starts at run start in its own sandbox\n  # (the scheduler runs four nodes of one run at a time). The page URL reaches\n  # each box as AUDIT_URL; the box's Chromium opens it at the lens's viewport.\n  - id: audit-hierarchy\n    needs: []\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: visual-design-auditor\n        prompt:\n          systemPrompt: \"You are a principal product designer auditing a live page ONLY for visual hierarchy and typography: what the eye lands on first versus what matters most, type scale and line length, spacing rhythm, alignment, contrast between primary and secondary content, and visual noise. Judge only from screenshots and the DOM you captured. For each finding write: severity (critical, high, medium, low); viewport and region (with a CSS selector when you have one); what is wrong and why it costs the user; the fix; and the screenshot file that shows it. Report at most 8 findings, the most damaging first. Begin your answer with one line: Audited <url> at <viewport>.\"\n      prompt: \"Audit the page at $AUDIT_URL for visual hierarchy and typography at a 1440x900 desktop viewport. Capture it first with the sandbox's Chromium: mkdir -p audit && chromium --headless=new --hide-scrollbars --window-size=1440,900 --screenshot=audit/desktop.png \\\"$AUDIT_URL\\\" and chromium --headless=new --dump-dom \\\"$AUDIT_URL\\\" > audit/dom.html, then look at the screenshot and read the DOM. If the page needs scrolling, capture a second screenshot at --window-size=1440,2400.\"\n      timeout: 20m\n  - id: audit-interaction\n    needs: []\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: interaction-design-auditor\n        prompt:\n          systemPrompt: \"You are a principal product designer auditing a live page ONLY for interaction and flows: whether the primary action is obvious, what each control does when used, hover, focus, loading, empty and error states, dead ends, and steps a user must take that the page could take for them. Drive the page with a scripted headless browser and screenshot each state you judge. For each finding write: severity (critical, high, medium, low); viewport and the control or step (with a CSS selector when you have one); what happens versus what should; the fix; and the screenshot file that shows it. Report at most 8 findings, the most damaging first. Begin your answer with one line: Audited <url> at <viewport>.\"\n      prompt: \"Audit the interactions on the page at $AUDIT_URL at a 1440x900 viewport. Use Playwright against the sandbox's Chromium (launch it with executablePath set to the output of command -v chromium) to click through the primary flows, submit forms empty and with bad input, and screenshot every state into audit/. Do not submit real purchases or real personal data.\"\n      timeout: 20m\n  - id: audit-accessibility\n    needs: []\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: accessibility-auditor\n        prompt:\n          systemPrompt: \"You are an accessibility specialist auditing a live page against WCAG 2.2 AA: text and control contrast, keyboard reachability and focus order, visible focus, names and labels for controls and images, landmarks and heading order, motion, and target size. Measure rather than guess: compute contrast ratios from the CSS, tab through the page, and run axe-core when it installs. For each finding write: severity (critical, high, medium, low); the WCAG criterion; viewport and element (CSS selector); the measured value; the fix; and the screenshot file that shows it. Report at most 8 findings, the ones that block a user first. Begin your answer with one line: Audited <url> at <viewport>.\"\n      prompt: \"Audit the accessibility of the page at $AUDIT_URL at a 1440x900 viewport. Use Playwright against the sandbox's Chromium (executablePath from command -v chromium): screenshot the page into audit/, tab through every focusable element and record the order, and run @axe-core/playwright when npm can install it, reporting each violation it finds.\"\n      timeout: 20m\n  - id: audit-responsive\n    needs: []\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: responsive-design-auditor\n        prompt:\n          systemPrompt: \"You are a principal product designer auditing a live page ONLY for mobile and responsive layout: horizontal scroll, clipped or overlapping content, tap targets under 44px, text under 16px on phones, fixed elements that cover content, and layouts that fail between breakpoints. Judge from screenshots at each viewport. For each finding write: severity (critical, high, medium, low); viewport and region (with a CSS selector when you have one); the measured size or overflow; the fix; and the screenshot file that shows it. Report at most 8 findings, the most damaging first. Begin your answer with one line: Audited <url> at <viewports>.\"\n      prompt: \"Audit the page at $AUDIT_URL at three viewports: 390x844 (phone), 768x1024 (tablet) and 1440x900 (desktop). For each, run mkdir -p audit && chromium --headless=new --hide-scrollbars --window-size=<w>,<h> --screenshot=audit/<w>x<h>.png \\\"$AUDIT_URL\\\", and use Playwright against the same Chromium to measure document width against the viewport and the size of each tappable element on the phone viewport.\"\n      timeout: 20m\n  - id: audit-copy\n    needs: []\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: content-design-auditor\n        prompt:\n          systemPrompt: \"You are a principal content designer auditing a live page ONLY for copy and content: whether the headline says what the product does and for whom, jargon, vague or inflated claims, inconsistent names for one thing, button labels that do not say what happens, and error or empty-state text that does not tell the user what to do. Quote the exact text. For each finding write: severity (critical, high, medium, low); viewport and region (with a CSS selector when you have one); the quoted text; why it costs the user; the rewrite; and the screenshot file that shows it. Report at most 8 findings, the most damaging first. Begin your answer with one line: Audited <url> at <viewport>.\"\n      prompt: \"Audit the copy on the page at $AUDIT_URL at a 1440x900 viewport. Capture it with mkdir -p audit && chromium --headless=new --hide-scrollbars --window-size=1440,2400 --screenshot=audit/desktop.png \\\"$AUDIT_URL\\\" and read the text from chromium --headless=new --dump-dom \\\"$AUDIT_URL\\\".\"\n      timeout: 20m\n  # Each verifier needs only its own lens. It opens the page itself, at the\n  # same viewport, in a fresh box, and keeps only what it can see again.\n  - id: verify-hierarchy\n    needs: [audit-hierarchy]\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: visual-design-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial design verifier; you did not write the audit you are given. Open the page yourself at the viewport each finding names (chromium --headless=new --hide-scrollbars --window-size=<w>,<h> --screenshot=...), look at your own screenshot, and try to refute each finding. Mark each CONFIRMED or REFUTED with one line of evidence from what your screenshot or the DOM shows. A finding you cannot see again, or one with no viewport and region, is REFUTED. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, viewport, region and fix, or None.\"\n      prompt: |\n        Verify this visual hierarchy and typography audit of $AUDIT_URL.\n\n        ${truncate(steps[\"audit-hierarchy\"].finalMessage, 6000)}\n      timeout: 20m\n  - id: verify-interaction\n    needs: [audit-interaction]\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: interaction-design-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial design verifier; you did not write the audit you are given. Reproduce each finding yourself with Playwright against the sandbox's Chromium (executablePath from command -v chromium): perform the same steps at the same viewport and screenshot the result. Mark each CONFIRMED or REFUTED with one line of evidence from what you saw. A finding you cannot reproduce is REFUTED. Never submit real purchases or real personal data. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, viewport, the control or step and fix, or None.\"\n      prompt: |\n        Verify this interaction and flows audit of $AUDIT_URL.\n\n        ${truncate(steps[\"audit-interaction\"].finalMessage, 6000)}\n      timeout: 20m\n  - id: verify-accessibility\n    needs: [audit-accessibility]\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: accessibility-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial accessibility verifier; you did not write the audit you are given. Re-measure each finding yourself with Playwright against the sandbox's Chromium (executablePath from command -v chromium): recompute the contrast ratio, re-run the tab order, re-check the element's accessible name, or re-run axe-core. Mark each CONFIRMED or REFUTED with the value you measured. A finding whose measurement you cannot reproduce, or that cites no element, is REFUTED. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, WCAG criterion, element and fix, or None.\"\n      prompt: |\n        Verify this accessibility audit of $AUDIT_URL.\n\n        ${truncate(steps[\"audit-accessibility\"].finalMessage, 6000)}\n      timeout: 20m\n  - id: verify-responsive\n    needs: [audit-responsive]\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: responsive-design-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial design verifier; you did not write the audit you are given. Open the page yourself at each viewport a finding names (chromium --headless=new --hide-scrollbars --window-size=<w>,<h> --screenshot=...) and re-measure overflow and element sizes with Playwright against the same Chromium. Mark each CONFIRMED or REFUTED with the value you measured. A finding you cannot see or measure again is REFUTED. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, viewport, region and fix, or None.\"\n      prompt: |\n        Verify this mobile and responsive audit of $AUDIT_URL.\n\n        ${truncate(steps[\"audit-responsive\"].finalMessage, 6000)}\n      timeout: 20m\n  - id: verify-copy\n    needs: [audit-copy]\n    agent.run:\n      topology: { single: {} }\n      env:\n        AUDIT_URL: \"https://example.com\"\n      profile:\n        name: content-design-verifier\n        prompt:\n          systemPrompt: \"You are an adversarial content verifier; you did not write the audit you are given. Read the page yourself (chromium --headless=new --dump-dom) and check that each quoted text is really on the page, in the region named. Mark each CONFIRMED or REFUTED with one line of evidence. A quote that is not on the page is REFUTED, and so is a finding whose rewrite is not clearer than the original. Then write a section titled Confirmed findings listing only the confirmed ones, each with severity, region, the quoted text and the rewrite, or None.\"\n      prompt: |\n        Verify this copy and content audit of $AUDIT_URL.\n\n        ${truncate(steps[\"audit-copy\"].finalMessage, 6000)}\n      timeout: 20m\n  # The JOIN over all five verifiers: text in, text out, so one stateless model\n  # call (topology: inference) with no sandbox.\n  - id: synthesize\n    needs:\n      [verify-hierarchy, verify-interaction, verify-accessibility, verify-responsive, verify-copy]\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: design-audit-lead\n        prompt:\n          systemPrompt: \"You write a senior design audit report from verified findings. Use ONLY findings a verifier marked CONFIRMED; drop every REFUTED one. The audits begin with the URL and viewport they covered; name the URL in your first line. Merge findings about the same element. Rank every remaining finding across all lenses by how much it costs a user trying to get their job done, critical first. Output markdown: a three-sentence summary; a ranked table with columns Rank, Lens, Severity, Viewport, Where, Finding, Fix; then the three changes that would help users most, in order. If no finding was confirmed, say so plainly and list what the auditors checked.\"\n      prompt: |\n        VISUAL HIERARCHY AND TYPOGRAPHY (verified): ${truncate(steps[\"verify-hierarchy\"].finalMessage, 5000)}\n\n        INTERACTION AND FLOWS (verified): ${truncate(steps[\"verify-interaction\"].finalMessage, 5000)}\n\n        ACCESSIBILITY (verified): ${truncate(steps[\"verify-accessibility\"].finalMessage, 5000)}\n\n        MOBILE AND RESPONSIVE (verified): ${truncate(steps[\"verify-responsive\"].finalMessage, 5000)}\n\n        COPY AND CONTENT (verified): ${truncate(steps[\"verify-copy\"].finalMessage, 5000)}\n  # Optional deliveries: each is omitted from the created workflow when its\n  # inputs are left blank. With neither, the report is the synthesize step's\n  # output on the run page.\n  - id: deliver\n    needs: [synthesize]\n    notify:\n      url: \"https://example.com/webhook\"\n      payload:\n        page: \"https://example.com\"\n        text: \"${steps.synthesize.text}\"\n  - id: file-issue\n    needs: [synthesize]\n    integration.invoke:\n      path: github.issues.create\n      input:\n        owner: \"my-org\"\n        repo: \"my-repo\"\n        title: \"Senior design audit\"\n        body: \"${steps.synthesize.text}\"\n",
+  "maxNodeVisits": 25,
+  "edges": [
+   {
+    "from": "a0",
+    "to": "a5"
+   },
+   {
+    "from": "a1",
+    "to": "a6"
+   },
+   {
+    "from": "a2",
+    "to": "a7"
+   },
+   {
+    "from": "a3",
+    "to": "a8"
+   },
+   {
+    "from": "a4",
+    "to": "a9"
+   },
+   {
+    "from": "a5",
+    "to": "a10"
+   },
+   {
+    "from": "a6",
+    "to": "a10"
+   },
+   {
+    "from": "a7",
+    "to": "a10"
+   },
+   {
+    "from": "a8",
+    "to": "a10"
+   },
+   {
+    "from": "a9",
+    "to": "a10"
+   },
+   {
+    "from": "a10",
+    "to": "a11"
+   },
+   {
+    "from": "a10",
+    "to": "a12"
+   }
+  ]
+ },
+ "fanout-review": {
+  "name": "Fanout review",
+  "yaml": "name: fanout-review\nenabled: false\ndescription: One builder, three specialist reviewers in parallel, then synthesize one verdict\non:\n  schedule:\n    cron: \"0 9 * * 1\"\n    timezone: UTC\ndo:\n  # needs: [] makes build a ROOT (no dependencies) — it starts immediately.\n  - id: build\n    needs: []\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: builder\n        prompt:\n          systemPrompt: \"You draft the weekly engineering status report.\"\n      prompt: \"Draft this week's engineering status report.\"\n  # Each reviewer declares needs: [build], so all three dispatch in PARALLEL\n  # once build completes (a `needs` diamond, no structural action needed).\n  - id: review-accuracy\n    needs: [build]\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: accuracy-reviewer\n        prompt:\n          systemPrompt: \"Review ONLY factual accuracy. End with one line: RATING: <1-10> and the corrections.\"\n      prompt: \"Check the facts in this report: ${steps.build.text}\"\n  - id: review-clarity\n    needs: [build]\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: clarity-reviewer\n        prompt:\n          systemPrompt: \"Review ONLY clarity and structure. End with one line: RATING: <1-10> and the fixes.\"\n      prompt: \"Review the clarity of this report: ${steps.build.text}\"\n  - id: review-tone\n    needs: [build]\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: tone-reviewer\n        prompt:\n          systemPrompt: \"Review ONLY tone for an executive audience. End with one line: RATING: <1-10> and the fixes.\"\n      prompt: \"Review the tone of this report: ${steps.build.text}\"\n  # The JOIN: synthesize waits for ALL three reviewers (needs lists each id).\n  # Read a named step's output as ${steps.<id>.text}; a hyphenated id needs\n  # the quoted form ${steps[\"review-accuracy\"].text}.\n  - id: synthesize\n    needs: [review-accuracy, review-clarity, review-tone]\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: chief-of-staff\n        prompt:\n          systemPrompt: \"Merge the specialist reviews into one final report with a SHIP or REVISE verdict.\"\n      prompt: |\n        Report: ${steps.build.text}\n        ACCURACY: ${steps[\"review-accuracy\"].text}\n        CLARITY: ${steps[\"review-clarity\"].text}\n        TONE: ${steps[\"review-tone\"].text}\n",
+  "maxNodeVisits": 25,
+  "edges": [
+   {
+    "from": "a0",
+    "to": "a1"
+   },
+   {
+    "from": "a0",
+    "to": "a2"
+   },
+   {
+    "from": "a0",
+    "to": "a3"
+   },
+   {
+    "from": "a1",
+    "to": "a4"
+   },
+   {
+    "from": "a2",
+    "to": "a4"
+   },
+   {
+    "from": "a3",
+    "to": "a4"
+   }
+  ]
+ },
+ "feature-dev-ralph": {
+  "name": "Feature dev loop",
+  "yaml": "name: feature-dev-ralph\nenabled: false\ndescription: Develop a feature from a labeled issue in a draft/review loop, then ask a human before posting the patch\n# Each (re)entry of a node counts as one visit: round 1 visits all 7 nodes and\n# later rounds re-visit the 6 loop nodes, so 12 covers ~2 full draft/review\n# rounds before the run fails CYCLE_BUDGET_EXCEEDED.\nmaxNodeVisits: 12\non:\n  provider_event:\n    connection: github\n    event: issues\n    # Fire only when the agent-build label is present; `when` re-checks the\n    # full condition on each event (bare payload paths, NOT ${...} templates).\n    actions: [labeled]\n    when:\n      all:\n        - path: \"trigger.payload.issue.labels[].name\"\n          op: contains\n          value: agent-build\ndo:\n  # The persistent dev workspace: `resume: true` resolves the workflow's\n  # snapshot registry under this node's id — a COLD FIRST RUN spawns fresh,\n  # later runs restore the disk `snap` captured, so the clone and build\n  # artifacts survive across runs. needs: [] makes it a root: the box\n  # provisions in parallel with the first draft.\n  - id: devbox\n    needs: []\n    sandbox.spawn:\n      template: node-22\n      prompt: \"Persistent feature-dev workspace (warm clone + build cache).\"\n      connections: [github]\n      resume: true\n  # draft's ONLY dependency is the GUARDED back-edge from steer (the loop's\n  # re-entry trigger), so it has no gating in-edges and runs FIRST; on later\n  # rounds it re-runs only while the reviewer asked for revisions.\n  - id: draft\n    needs:\n      - id: steer\n        when: { path: \"steps.review.finalMessage\", op: contains, value: \"VERDICT: revise\" }\n    agent.run:\n      profile:\n        name: feature-builder\n        prompt:\n          systemPrompt: \"You implement features. Read the issue, make the change in the cloned repo, and produce the COMPLETE change summary plus the patch as your final output — never stop after planning.\"\n      prompt: \"Implement issue #${trigger.payload.issue.number} in ${trigger.payload.repository.full_name}: ${truncate(trigger.payload.issue.title, 120)}\\n\\n${truncate(trigger.payload.issue.body, 2000)}\\n\\nSteering notes from the reviewer (empty on the first pass): ${steps.steer.text}\"\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n      maxRounds: 3\n  # review chains after draft (no `needs` = the linear default) and reads the\n  # same clone to judge the change, pinning its verdict to one terminal line.\n  - id: review\n    agent.run:\n      profile: code-reviewer\n      prompt: \"Review the implementation of issue #${trigger.payload.issue.number}: ${steps.draft.text}\\n\\nRead the changed code in the clone, then end your review with exactly one line: VERDICT: approve or VERDICT: revise.\"\n      source:\n        repo: \"${trigger.payload.repository.full_name}\"\n      maxRounds: 3\n  # steer runs every round but is SKIPPED by its step-level `if` unless the\n  # verdict was revise — on approve the back-edge never fires and the loop\n  # ends. (`if` paths are index-only and prior-steps-only: review is steps[2].)\n  - id: steer\n    if: { path: \"steps[2].text\", op: contains, value: \"VERDICT: revise\" }\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: steering-editor\n        prompt:\n          systemPrompt: \"You turn review feedback into short, actionable steering notes for the implementer.\"\n      prompt: |\n        The reviewer asked for changes: ${steps.review.finalMessage}\n        Write steering notes for the next implementation pass.\n  # The human patch-publication gate re-arms EVERY round (unguarded needs) and its `if`\n  # lets it park only on the approving round — route terminal steps with an\n  # unguarded `needs` plus a step-level `if`, NEVER a guarded edge (a\n  # guarded edge's false verdict is dead for the run).\n  - id: merge-gate\n    needs: [review]\n    if: { path: \"steps[2].text\", op: contains, value: \"VERDICT: approve\" }\n    decision:\n      title: \"Post this patch?\"\n      prompt: \"${steps.draft.text}\"\n      options: [post, abandon]\n      timeout: 24h\n      onTimeout: default\n      default: abandon\n  # The approved patch lands on the issue as a comment (the change itself is\n  # the drafter's final output — the host-side step does the write). Its `if`\n  # reads the gate's choice (merge-gate is steps[4]); on revise rounds the\n  # gate is skipped, the choice is undefined, and this stays skipped too.\n  - id: post-patch\n    needs: [merge-gate]\n    if: { path: \"steps[4].choice\", op: eq, value: post }\n    integration.invoke:\n      path: github.issues.createComment\n      input:\n        owner: \"${trigger.payload.repository.owner.login}\"\n        repo: \"${trigger.payload.repository.name}\"\n        issue_number: \"${trigger.payload.issue.number}\"\n        body: \"${steps.draft.text}\"\n  # Checkpoint the dev workspace each round — after the gate settles and only\n  # once devbox exists. The registry keeps the LATEST capture, so the next\n  # run's devbox resumes warm.\n  - id: snap\n    needs: [merge-gate, devbox]\n    sandbox.snapshot:\n      sandbox: \"${steps.devbox.sandboxId}\"\n",
+  "maxNodeVisits": 12,
+  "edges": [
+   {
+    "from": "a3",
+    "to": "a1",
+    "whenLabel": "review.finalMessage contains \"VERDICT: revise\""
+   },
+   {
+    "from": "a1",
+    "to": "a2"
+   },
+   {
+    "from": "a2",
+    "to": "a3"
+   },
+   {
+    "from": "a2",
+    "to": "a4"
+   },
+   {
+    "from": "a4",
+    "to": "a5"
+   },
+   {
+    "from": "a4",
+    "to": "a6"
+   },
+   {
+    "from": "a0",
+    "to": "a6"
+   }
+  ]
+ },
+ "ralph-loop": {
+  "name": "Ralph loop",
+  "yaml": "name: ralph-loop\nenabled: false\ndescription: Draft, review, steer, and re-draft until the reviewer approves, then publish\n# The cycle budget: each (re)entry of a node counts as one visit; 12 covers\n# ~3 full draft/review/steer rounds before the run fails CYCLE_BUDGET_EXCEEDED.\nmaxNodeVisits: 12\non:\n  schedule:\n    cron: \"0 9 * * 1-5\"\n    timezone: UTC\ndo:\n  # draft's ONLY dependency is the GUARDED back-edge from steer (the loop's\n  # re-entry trigger), so it has no gating in-edges and runs FIRST; on later\n  # turns it re-runs only when the reviewer asked for revisions.\n  - id: draft\n    needs:\n      - id: steer\n        when: { path: \"steps.review.finalMessage\", op: contains, value: \"VERDICT: revise\" }\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: drafter\n        prompt:\n          systemPrompt: \"You write concise release notes.\"\n      prompt: \"Write the release notes draft. Steering notes from the reviewer (empty on the first pass): ${steps.steer.text}\"\n  - id: review\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: reviewer\n        prompt:\n          systemPrompt: \"You review release notes. End your review with exactly one line: VERDICT: approve or VERDICT: revise.\"\n      prompt: \"Review this draft: ${steps.draft.text}\"\n  # steer runs every round but is SKIPPED by its step-level `if` unless the\n  # verdict was revise — so on approve the back-edge never fires and the loop\n  # ends. (The edge `when` re-checks the verdict on steer's completion.)\n  - id: steer\n    if: { path: \"steps.review.finalMessage\", op: contains, value: \"VERDICT: revise\" }\n    agent.run:\n      topology: { inference: {} }\n      profile:\n        name: steering-editor\n        prompt:\n          systemPrompt: \"You turn review feedback into short, actionable steering notes for the drafter.\"\n      prompt: |\n        The reviewer asked for changes: ${steps.review.finalMessage}\n        Write steering notes for the next draft.\n  # publish re-arms EVERY round (unguarded needs), and its `if` lets it fire\n  # only on the approving round. A guarded edge would work here too — a guard\n  # is re-judged on each completion of its source — but an `if` keeps the\n  # decision on the action it gates, where it reads.\n  - id: publish\n    needs: [review]\n    if: { path: \"steps.review.finalMessage\", op: contains, value: \"VERDICT: approve\" }\n    notify:\n      url: \"https://example.com/webhook\"\n      payload:\n        text: \"${steps.draft.text}\"\n",
+  "maxNodeVisits": 12,
+  "edges": [
+   {
+    "from": "a2",
+    "to": "a0",
+    "whenLabel": "review.finalMessage contains \"VERDICT: revise\""
+   },
+   {
+    "from": "a0",
+    "to": "a1"
+   },
+   {
+    "from": "a1",
+    "to": "a2"
+   },
+   {
+    "from": "a1",
+    "to": "a3"
+   }
+  ]
+ }
+}

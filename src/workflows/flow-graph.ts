@@ -15,6 +15,7 @@ import {
   type WfNodeState,
   type WfProblem,
   type WfSide,
+  type WfSpacing,
   wfEdgeId,
   worstSeverity,
 } from "./model";
@@ -38,6 +39,20 @@ export interface WfFlowEdgeData extends Record<string, unknown> {
   problems?: readonly WfProblem[];
   /** This edge offers the "insert a step here" control at its midpoint. */
   insertable?: boolean;
+  /**
+   * The routed polyline the ELK pass drew this edge along, in flow
+   * coordinates, with `from`/`to` the node positions it was routed for. The
+   * renderer follows it only while both endpoints still sit there; a node
+   * that moved (a drag, a density tween) gets the plain step path instead of
+   * a route that no longer reaches it.
+   */
+  route?: {
+    points: readonly { x: number; y: number }[];
+    /** Where the layout reserved room for the edge's chips. */
+    label?: { x: number; y: number };
+    from: { x: number; y: number };
+    to: { x: number; y: number };
+  };
 }
 
 export type WfFlowEdge = Edge<WfFlowEdgeData>;
@@ -62,6 +77,30 @@ export interface FlowGraph {
   edges: WfFlowEdge[];
   /** Set when the YAML couldn't be parsed into a renderable graph. */
   error: string | null;
+  /** The layout's layer and lane separators (see {@link WfSpacing}). */
+  spacing?: WfSpacing;
+  /** Parallel fan-outs the layout framed, set only by the ELK pass. */
+  groups?: readonly WfGroupFrame[];
+  /** Set when the ELK pass laid this graph out (see elk-layout.ts). */
+  engine?: "elk";
+  /** The density and flow direction this graph was built for, so a host
+   *  showing it while a newer one is laid out can match its rendering to the
+   *  layout on screen rather than to the props. */
+  compact?: boolean;
+  direction?: WfDirection;
+}
+
+/** A frame drawn behind a parallel fan-out: the box around its lanes, in flow
+ *  coordinates, and how many lanes run side by side inside it. */
+export interface WfGroupFrame {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  lanes: number;
+  /** How many of the framed nodes are agents, for the frame's caption. */
+  agents: number;
 }
 
 /** Options for {@link buildFlowGraph}. */
@@ -184,6 +223,9 @@ export function buildFlowGraph(
   const targetPosition = isLR ? Position.Left : Position.Top;
   return {
     error: graph.error,
+    compact,
+    direction,
+    ...(graph.spacing ? { spacing: graph.spacing } : {}),
     nodes: graph.nodes.map(
       (n): Node<WfNodeData> => ({
         id: n.id,

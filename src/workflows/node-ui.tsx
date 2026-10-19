@@ -119,6 +119,7 @@ export const STATUS_COLOR: Record<WfNodeStatus, string> = {
   waiting: STATUS_WAITING,
   succeeded: STATUS_DONE,
   failed: STATUS_FAILED,
+  skipped: STATUS_QUEUED,
 };
 
 /** An edge reads by the status of the node it points AT — with the 2026-10-09
@@ -139,6 +140,7 @@ export const STATUS_LABEL: Record<WfNodeStatus, string> = {
   waiting: "Waiting on you",
   succeeded: "Done",
   failed: "Failed",
+  skipped: "Not taken",
 };
 
 /** @deprecated `StatusPill` now renders ui's StatusPill from `STATUS_TONE`;
@@ -175,6 +177,11 @@ export const STATUS_PILL: Record<
     color: "var(--surface-danger-text)",
     borderColor: "var(--surface-danger-border)",
   },
+  skipped: {
+    background: "transparent",
+    color: "hsl(var(--muted-foreground))",
+    borderColor: "color-mix(in srgb, hsl(var(--muted-foreground)) 28%, transparent)",
+  },
 };
 
 /** The card's border + ring once a node has live run state. The emphasis
@@ -188,6 +195,8 @@ export const STATUS_PILL: Record<
 export function statusBorder(status: WfNodeStatus): {
   borderColor: string;
   boxShadow?: string;
+  borderStyle?: "dashed";
+  opacity?: number;
 } {
   switch (status) {
     case "failed":
@@ -209,6 +218,13 @@ export function statusBorder(status: WfNodeStatus): {
     case "queued":
       // A not-yet-reached node stays quiet: the resting border, no accent.
       return { borderColor: "hsl(var(--border))" };
+    case "skipped":
+      // The road not taken: dashed and dimmed, quieter even than queued.
+      return {
+        borderColor: "hsl(var(--muted-foreground) / 0.45)",
+        borderStyle: "dashed",
+        opacity: 0.5,
+      };
     case "succeeded":
       // DONE IS QUIET: neutral border, the resting shadow only. The pill's
       // small check carries the state; the card does not paint itself green.
@@ -440,6 +456,7 @@ export const STATUS_TONE: Record<WfNodeStatus, StatusTone> = {
   // wall of green pills on a healthy run.
   succeeded: "neutral",
   failed: "danger",
+  skipped: "neutral",
 };
 
 /** The status pill in a card's header — the one place the run state is spelled
@@ -561,6 +578,8 @@ export function emptySlotLabel(status: WfNodeStatus): string | undefined {
       return "No output";
     case "failed":
       return "No error reported";
+    case "skipped":
+      return "Not taken this run";
     default:
       return undefined;
   }

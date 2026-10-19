@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.135.0
+
+- Lay out branching workflow graphs with ELK's layered algorithm (`elkjs`, a new optional peer loaded on first render). Nodes in a layer are ordered to minimise crossings, edges are routed orthogonally to the exact handle of each card, loops return around the outside as dashed back edges, and a long graph wraps into rows shaped to its canvas, so a 22-step factory opens whole and fills the panel instead of drawing a 5:1 strip. A plain line keeps the existing fold; a host without `elkjs` keeps the previous layout.
+- Frame parallel fan-outs: steps that start together over unguarded edges, followed down their own lanes, get a labelled frame ("4 parallel lanes · 8 agents").
+- Title a step by its author's `id` when that names it better than its kind (integrations, decisions with templated titles, unnamed agents); the kind moves to the subtitle.
+- Collapse a `join: any_failed` failure handler's inputs into a caption on the node ("If any of 10 steps fails") instead of drawing an edge from every step.
+- Add a `skipped` node status ("Not taken": dimmed and dashed) for branches a run did not take.
+- Full-screen toggle on the full canvas; names of compact nodes stay readable when a large graph is framed whole; an unpinned `direction` follows the canvas (top-to-bottom on a portrait canvas); a minimap appears above 40 nodes.
+- A trigger now connects to a step whose only other input is a loop's return edge.
+
 ## 0.134.12
 
 - Start plain-shell terminals during the WebSocket upgrade with their current size, removing an extra network round trip before ready. Exact interactive sessions retain their control-claim handshake.

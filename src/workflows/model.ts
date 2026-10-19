@@ -35,7 +35,11 @@ export type WfNodeStatus =
   | "running"
   | "waiting"
   | "succeeded"
-  | "failed";
+  | "failed"
+  /** The run went another way: a guard or `when` left this step out. Drawn
+   *  dimmed and dashed, so the path the run took stands out from the one it
+   *  did not, and never confused with a step that is still to come. */
+  | "skipped";
 
 /**
  * Live RUN state for one node, supplied by the host (keyed by node id) and
@@ -316,6 +320,16 @@ export interface WfGraph {
   edges: WfEdge[];
   /** Set when the YAML couldn't be parsed into a renderable graph. */
   error: string | null;
+  /** The separators this layout pitched its layers and lanes at, so a second
+   *  layouter (see `elk-layout.ts`) keeps the same density. Absent on an error. */
+  spacing?: WfSpacing;
+}
+
+/** Gaps between layers (`rank`, along the flow) and between nodes stacked in
+ *  one layer (`cross`). */
+export interface WfSpacing {
+  rank: number;
+  cross: number;
 }
 
 // Layout geometry (px). A layered flow: the trigger→action spine advances along
@@ -989,10 +1003,50 @@ function withConfig(base: WfNodeData, cfg: Record<string, unknown>): WfNodeData 
  * neither — dropping the envelope would leave the two indistinguishable in the
  * detail view, which is the one place that promises every field.
  */
+/**
+ * Title a step by the id its author gave it, when that names it better than
+ * its kind does. A graph of a real workflow is mostly the same few kinds — a
+ * factory is nine "GitHub" steps and a handful of decisions whose own titles
+ * are run-time templates — so titling by kind makes every node look like its
+ * neighbour. The author's id ("open-pr", "ship-gate", "monitor-note") is the
+ * one name that says what each is FOR.
+ *
+ * An agent keeps its profile's role ("Factory reviewer"), which already says
+ * that; it takes the id only when it has no readable role. A decision keeps a
+ * title its author wrote as plain text, and takes the id when that title is a
+ * template the graph would show with its `${...}` unresolved. Every other
+ * kind takes the id, and what the kind does moves to the subtitle, where the
+ * provider's logo still marks it.
+ */
+/** An id the editor minted rather than an author chose: the kind's own slug
+ *  (`agent-run`, `integration-invoke-2`) or a positional `step-N`. Titling by
+ *  one would only restate the kind, worse. */
+function isMachineStepId(id: string, kind: string | undefined): boolean {
+  if (/^step-\d+$/.test(id)) return true;
+  if (!kind) return false;
+  const slug = kind.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return id === slug || new RegExp(`^${slug}-\\d+$`).test(id);
+}
+
+function titledByStep(base: WfNodeData, rec: Record<string, unknown>): WfNodeData {
+  const id = str(rec.id);
+  if (!id || isMachineStepId(id, base.kind)) return base;
+  const role = humanizeIdentifier(id);
+  if (base.kind === "agent.run") {
+    return base.title === "AI Agent" ? { ...base, title: role } : base;
+  }
+  if (base.kind === "decision") {
+    const authored = str(asRecord(rec.decision).title);
+    return authored && !authored.includes("${") ? base : { ...base, title: role };
+  }
+  const what = [base.title, base.subtitle].filter(Boolean).join(" · ");
+  return { ...base, title: role, ...(what ? { subtitle: what } : {}) };
+}
+
 function describeAction(action: unknown): WfNodeData {
   const rec = asRecord(action);
   const kind = actionKind(rec);
-  const base = describeActionBase(action);
+  const base = titledByStep(describeActionBase(action), rec);
   // Normalize the action's config on its OWN — never a shallow copy of it. A copy
   // is a different object than the one a recursive YAML anchor points back at, so
   // `toJsonSafe` would no longer recognize the cycle on its first repeat and would
@@ -1656,7 +1710,18 @@ export function buildWorkflowGraph(
     // begin the whole body — so this is the model's edge to draw, not something
     // the caller should have to restate in a topology that describes only the
     // steps it owns.
-    const rootward = new Set(edges.map((e) => e.target));
+    //
+    // An edge that only closes a loop does not make its target a non-root:
+    // the factory's triage is entered from the trigger and RE-entered from
+    // clarify, and counting the loop as its way in left the trigger pointing
+    // at nothing.
+    const loopBack = classifyBackEdges(
+      logical.map((n) => n.id),
+      edges,
+    );
+    const rootward = new Set(
+      edges.filter((e) => !loopBack.has(e.id)).map((e) => e.target),
+    );
     for (const n of logical) {
       if (triggerNodeIndex(n.id) !== null) continue;
       if (rootward.has(n.id)) continue;
@@ -1702,5 +1767,6 @@ export function buildWorkflowGraph(
     nodes: folded ?? layoutLayers(logical, direction, rankSep, geo.crossSep),
     edges,
     error: null,
+    spacing: { rank: rankSep, cross: geo.crossSep },
   };
 }

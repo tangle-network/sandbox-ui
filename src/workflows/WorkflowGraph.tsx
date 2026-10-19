@@ -17,19 +17,23 @@ import {
   getViewportForBounds,
   Handle,
   MarkerType,
+  MiniMap,
   type Node,
   type NodeProps,
   Panel,
   Position,
   ReactFlow,
   type ReactFlowInstance,
+  type ReactFlowState,
   type Rect,
   useEdgesState,
   useNodesState,
+  useStore,
   type Viewport,
+  ViewportPortal,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Maximize2, Minimize2, Plus, X } from "lucide-react";
+import { Expand, Maximize2, Minimize2, Plus, Shrink, X } from "lucide-react";
 import {
   createContext,
   type CSSProperties,
@@ -66,13 +70,16 @@ import {
 import {
   buildFlowGraph,
   clearOfNodeBoxes,
+  type FlowGraph,
   CLUSTER_HALF_SIZE,
   indexProblems,
   mergeRunState,
   type NodeBox,
   WF_EDGE_TYPE,
   type WfFlowEdge,
+  type WfGroupFrame,
 } from "./flow-graph";
+import { layoutWithElk, wantsElkLayout } from "./elk-layout";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 import { classifyOutput, NodeOutputBody } from "./node-output";
 import { shortModel } from "./naming";
@@ -146,6 +153,24 @@ export function fitZoomFloor(compact: boolean): number {
 }
 
 /**
+ * The floor for a graph ELK laid out. ELK wraps a long graph into rows sized
+ * for the canvas, so its fit is the whole workflow at once — the shape Drew
+ * asked to see — and names stay legible through semantic zoom
+ * (useCompactTitleScale). Clamping it at the compact floor instead would crop
+ * a layout built to be seen whole.
+ */
+export const ELK_FIT_FLOOR = 0.28;
+
+/**
+ * The fit floor a laid-out graph opens at. Only a left-to-right ELK layout
+ * is built to be seen whole; a top-to-bottom one is a phone's column, read by
+ * panning down it from the top, so it keeps the readable compact floor.
+ */
+function elkFloor(graph: FlowGraph, direction: WfDirection): number | undefined {
+  return graph.engine === "elk" && direction === "LR" ? ELK_FIT_FLOOR : undefined;
+}
+
+/**
  * The rectangle the LAID-OUT nodes occupy, in flow coordinates.
  *
  * Read straight off the layouter's own position + size rather than through
@@ -174,6 +199,53 @@ export function layoutBounds(nodes: readonly Node<WfNodeData>[]): Rect {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
+/** What the camera frames: the nodes, and the parallel frames drawn around
+ *  them, whose captions sit above the first lane. */
+export function graphBounds(graph: FlowGraph): Rect {
+  const nodes = layoutBounds(graph.nodes);
+  if (!graph.groups || graph.groups.length === 0) return nodes;
+  const x0 = Math.min(nodes.x, ...graph.groups.map((g) => g.x));
+  const y0 = Math.min(nodes.y, ...graph.groups.map((g) => g.y));
+  const x1 = Math.max(
+    nodes.x + nodes.width,
+    ...graph.groups.map((g) => g.x + g.width),
+  );
+  const y1 = Math.max(
+    nodes.y + nodes.height,
+    ...graph.groups.map((g) => g.y + g.height),
+  );
+  return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+}
+
+/**
+ * The camera a graph opens at: {@link framingViewport} over the graph and its
+ * frames, at the floor its layout calls for. A top-to-bottom column wider
+ * than a phone is read down its spine, so the camera centres on the entry
+ * step rather than on the column's left edge, where only loop returns run.
+ */
+export function openingViewport(
+  graph: FlowGraph,
+  width: number,
+  height: number,
+  compact: boolean,
+  direction: WfDirection,
+): Viewport {
+  const bounds = graphBounds(graph);
+  const view = framingViewport(
+    bounds,
+    width,
+    height,
+    compact,
+    elkFloor(graph, direction),
+  );
+  const entry = graph.nodes[0];
+  if (direction !== "TB" || !entry || bounds.width * view.zoom <= width) {
+    return view;
+  }
+  const entryCenter = entry.position.x + (entry.width ?? 0) / 2;
+  return { ...view, x: width / 2 - entryCenter * view.zoom };
+}
+
 /**
  * The camera that frames `bounds` inside a `width`×`height` canvas.
  *
@@ -198,12 +270,13 @@ export function framingViewport(
   width: number,
   height: number,
   compact: boolean,
+  floor = fitZoomFloor(compact),
 ): Viewport {
   const fit = getViewportForBounds(
     bounds,
     width,
     height,
-    fitZoomFloor(compact),
+    floor,
     fitZoomCeiling(compact),
     FIT_VIEW.padding,
   );
@@ -593,6 +666,8 @@ export function WorkflowNode({
     </>
   );
 
+  const titleScale = useCompactTitleScale(compact);
+
   // COMPACT (the default): an n8n-style icon tile with the node's name alongside.
   // The tile is the node; the name is unboxed, on the canvas. Everything else —
   // prompts, metrics, output — is a click away in the node detail, or one density
@@ -684,11 +759,16 @@ export function WorkflowNode({
         >
           <div
             className="truncate font-semibold text-[12px] text-foreground leading-tight"
+            style={
+              titleScale > 1
+                ? { fontSize: 12 * titleScale, ...(isLR ? { marginInline: -16 } : {}) }
+                : undefined
+            }
             title={d.title}
           >
             {d.title}
           </div>
-          {subtitle && (
+          {subtitle && titleScale <= SUBTITLE_MAX_SCALE && (
             <div
               className="truncate text-[11px] text-muted-foreground leading-tight"
               title={subtitle}
@@ -1127,6 +1207,263 @@ function releasedOnCanvas(
  */
 export const NodeBoxesContext = createContext<readonly NodeBox[]>([]);
 
+/** A node's current top-left, read from the store so an edge notices its end
+ *  moving (a drag, a tween). Null while the node is not in the store. */
+function useInternalNodePosition(id: string): { x: number; y: number } | null {
+  return useStore(
+    useCallback(
+      (state: ReactFlowState) => {
+        const node = state.nodeLookup.get(id);
+        return node ? node.position : null;
+      },
+      [id],
+    ),
+    (a: { x: number; y: number } | null, b: { x: number; y: number } | null) =>
+      a === b || (a !== null && b !== null && samePoint(a, b)),
+  );
+}
+
+function samePoint(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): boolean {
+  return Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5;
+}
+
+/** Corner radius of a routed edge's bends, capped by the shorter of the two
+ *  segments that meet there so a tight jog never overshoots. */
+const ROUTE_CORNER = 8;
+
+/** An orthogonal polyline as an SVG path with rounded bends. */
+export function roundedPolyline(
+  points: readonly { x: number; y: number }[],
+): string {
+  if (points.length === 0) return "";
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const prev = points[i - 1];
+    const at = points[i];
+    const next = points[i + 1];
+    const inLen = Math.hypot(at.x - prev.x, at.y - prev.y);
+    const outLen = Math.hypot(next.x - at.x, next.y - at.y);
+    const r = Math.min(ROUTE_CORNER, inLen / 2, outLen / 2);
+    if (r < 0.5) {
+      d += ` L ${at.x} ${at.y}`;
+      continue;
+    }
+    const before = {
+      x: at.x - ((at.x - prev.x) / inLen) * r,
+      y: at.y - ((at.y - prev.y) / inLen) * r,
+    };
+    const after = {
+      x: at.x + ((next.x - at.x) / outLen) * r,
+      y: at.y + ((next.y - at.y) / outLen) * r,
+    };
+    d += ` L ${before.x} ${before.y} Q ${at.x} ${at.y} ${after.x} ${after.y}`;
+  }
+  const last = points[points.length - 1];
+  return `${d} L ${last.x} ${last.y}`;
+}
+
+/** The point halfway along a polyline, where an unlabelled route's insert
+ *  control or problem chip sits. */
+function polylineMidpoint(points: readonly { x: number; y: number }[]): {
+  x: number;
+  y: number;
+} {
+  const lengths = points
+    .slice(1)
+    .map((p, i) => Math.hypot(p.x - points[i].x, p.y - points[i].y));
+  let remaining = lengths.reduce((sum, len) => sum + len, 0) / 2;
+  for (let i = 0; i < lengths.length; i += 1) {
+    if (remaining <= lengths[i] && lengths[i] > 0) {
+      const t = remaining / lengths[i];
+      return {
+        x: points[i].x + (points[i + 1].x - points[i].x) * t,
+        y: points[i].y + (points[i + 1].y - points[i].y) * t,
+      };
+    }
+    remaining -= lengths[i];
+  }
+  return points[points.length - 1] ?? { x: 0, y: 0 };
+}
+
+/**
+ * The graph `buildFlowGraph` laid out, re-laid by ELK when it branches,
+ * guards or loops (see elk-layout.ts).
+ *
+ * While ELK works on a new structure the graph ON SCREEN stays, so a relayout
+ * is one move from what the reader sees to the new layout — never a detour
+ * through an older laid-out graph. Before anything has been shown the canvas
+ * stays hidden (`ready` false) rather than flashing a layout it is about to
+ * replace, but only until {@link REVEAL_DEADLINE_MS}: ELK that is slow, absent
+ * or failing then leaves the synchronous layout on screen, so no failure can
+ * leave the canvas blank. `ready` gates the first reveal only.
+ */
+function useElkLayout(
+  base: FlowGraph,
+  direction: WfDirection,
+  compact: boolean,
+  canvasAspect: number | null,
+  foldFailureInputs: boolean,
+): { graph: FlowGraph; ready: boolean } {
+  const wanted = wantsElkLayout(base);
+  const [laid, setLaid] = useState<{ base: FlowGraph; graph: FlowGraph } | null>(
+    null,
+  );
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const shownRef = useRef<FlowGraph | null>(null);
+  useEffect(() => {
+    // Wait for the canvas to be measured: the wrap is cut to its shape, and a
+    // layout for a guessed shape would be replaced a frame later.
+    if (!wanted || canvasAspect === null) return;
+    let live = true;
+    void layoutWithElk(base, direction, compact, canvasAspect, {
+      foldFailureInputs,
+    }).then((graph) => {
+      if (live) setLaid({ base, graph: graph ?? base });
+    });
+    return () => {
+      live = false;
+    };
+    // `compact` changes only together with `base`, which is rebuilt for it.
+  }, [base, direction, wanted, canvasAspect, foldFailureInputs]);
+  useEffect(() => {
+    if (deadlinePassed) return;
+    const timer = setTimeout(() => setDeadlinePassed(true), REVEAL_DEADLINE_MS);
+    return () => clearTimeout(timer);
+  }, [deadlinePassed]);
+
+  let graph: FlowGraph;
+  let settled: boolean;
+  if (!wanted) {
+    graph = base;
+    settled = true;
+  } else if (laid?.base === base) {
+    graph = laid.graph;
+    settled = true;
+  } else {
+    graph = shownRef.current ?? base;
+    settled = false;
+  }
+  const ready = settled || shownRef.current !== null || deadlinePassed;
+  if (ready) shownRef.current = graph;
+  return { graph, ready };
+}
+
+/** How long a first ELK layout may keep the canvas hidden before the
+ *  synchronous layout is shown instead. */
+const REVEAL_DEADLINE_MS = 600;
+
+/**
+ * The canvas's shape, in three buckets: portrait (a phone), square, and the
+ * wide panel the workflow pages use. Bucketed so a resize re-lays the graph
+ * out only when its shape class changes, never on every pixel. Null until
+ * the canvas has been measured.
+ *
+ * Returns a CALLBACK ref: the canvas element can mount after the graph does
+ * (a first render with no YAML shows a placeholder instead), and a mount-time
+ * effect would never see it — leaving the canvas unmeasured and ELK unrun.
+ */
+function useCanvasAspect(): [number | null, (el: HTMLDivElement | null) => void] {
+  const [aspect, setAspect] = useState<number | null>(null);
+  const observerRef = useRef<ResizeObserver | null>(null);
+  const attach = useCallback((el: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    if (!el) return;
+    const measure = () => {
+      const { width, height } = el.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+      const raw = width / height;
+      setAspect(raw < 0.9 ? 0.6 : raw < 1.6 ? 1.2 : 2.2);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") {
+      setAspect((current) => current ?? 2.2);
+      return;
+    }
+    observerRef.current = new ResizeObserver(measure);
+    observerRef.current.observe(el);
+  }, []);
+  return [aspect, attach];
+}
+
+/** "4 agents in parallel" when each lane is one agent; "4 parallel lanes ·
+ *  8 agents" when a lane is a chain (a reviewer and its verifier). */
+export function parallelCaption(frame: WfGroupFrame): string {
+  if (frame.agents > frame.lanes) {
+    return `${frame.lanes} parallel lanes · ${frame.agents} agents`;
+  }
+  return frame.agents === frame.lanes
+    ? `${frame.lanes} agents in parallel`
+    : `${frame.lanes} in parallel`;
+}
+
+/** Frames behind parallel fan-outs, drawn in flow coordinates under the
+ *  nodes. Pointer-transparent: a frame annotates, it is never a target. */
+function ParallelFrames({ frames }: { frames: readonly WfGroupFrame[] }) {
+  return (
+    <ViewportPortal>
+      {frames.map((frame) => (
+        <div
+          key={frame.id}
+          data-testid="wf-parallel-frame"
+          className="pointer-events-none absolute rounded-xl border border-primary/30 border-dashed bg-primary/[0.04]"
+          style={{
+            transform: `translate(${frame.x}px, ${frame.y}px)`,
+            width: frame.width,
+            height: frame.height,
+            zIndex: -1,
+          }}
+        >
+          <span className="absolute top-1 left-2.5 font-medium text-[10px] text-primary/80 uppercase tracking-wide">
+            {parallelCaption(frame)}
+          </span>
+        </div>
+      ))}
+    </ViewportPortal>
+  );
+}
+
+/** Below this zoom a compact node's name is too small to read, so it grows to
+ *  hold a readable size on screen; the tile, the layout and the edges keep
+ *  their scale. Capped so a name never outgrows the corridor beside it. */
+const TITLE_READABLE_ZOOM = 0.75;
+const TITLE_MAX_SCALE = 2.4;
+/** Past this the subtitle is dropped: two grown lines would crowd the next
+ *  row's tiles, and the title is the one a reader scans for. */
+const SUBTITLE_MAX_SCALE = 1.25;
+
+/**
+ * Semantic zoom for a compact node's name. A whole 20-step factory framed in
+ * one canvas sits near zoom 0.35, where 12px names render at 4px — the graph's
+ * SHAPE reads but no step does. Quantised to tenths so a zoom gesture
+ * re-renders a node a handful of times, not on every frame.
+ */
+function useCompactTitleScale(enabled: boolean): number {
+  return useStore(
+    useCallback(
+      (state: ReactFlowState) => {
+        if (!enabled) return 1;
+        const zoom = state.transform[2];
+        if (zoom >= TITLE_READABLE_ZOOM) return 1;
+        return Math.min(
+          TITLE_MAX_SCALE,
+          Math.round((TITLE_READABLE_ZOOM / zoom) * 10) / 10,
+        );
+      },
+      [enabled],
+    ),
+  );
+}
+
+/** Past this many nodes the full canvas carries a minimap, so a reader zoomed
+ *  into one corner of a large graph can see where they are in it. Below it
+ *  the wrapped layout fits the canvas whole, and a minimap would only cover
+ *  part of the graph it summarises. */
+const MINIMAP_MIN_NODES = 40;
+
 /** Chip styling shared by the guard summary and the cycle badge, so an edge's
  *  two possible annotations read as one pair rather than two designs. */
 const EDGE_CHIP_CLASS =
@@ -1157,9 +1494,21 @@ export function WfEdgeRenderer({
   style,
 }: EdgeProps<WfFlowEdge>) {
   const insertStep = useContext(EdgeInsertContext);
+  const sourceNode = useInternalNodePosition(source);
+  const targetNode = useInternalNodePosition(target);
+  const route = data?.route;
+  // Follow the ELK route only while both ends still sit where it was routed
+  // for. A dragged node, or one mid-way through a density tween, would leave a
+  // route pointing at empty canvas; the step path follows the node instead.
+  const onRoute =
+    route !== undefined &&
+    sourceNode !== null &&
+    targetNode !== null &&
+    samePoint(sourceNode, route.from) &&
+    samePoint(targetNode, route.to);
   // The same path shape the built-in edges draw, so a decorated edge and a
   // plain one in the same graph are the same line with different furniture.
-  const [path, labelX, labelY] = getSmoothStepPath({
+  const [stepPath, stepLabelX, stepLabelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
@@ -1167,6 +1516,21 @@ export function WfEdgeRenderer({
     targetY,
     targetPosition,
   });
+  // The route ends on the port ELK was given at the handle; the handle's own
+  // coordinates are the exact point the card draws, so the ends snap to it.
+  const routePoints = onRoute
+    ? [
+        { x: sourceX, y: sourceY },
+        ...route.points.slice(1, -1),
+        { x: targetX, y: targetY },
+      ]
+    : [];
+  const path = onRoute ? roundedPolyline(routePoints) : stepPath;
+  const labelAt = onRoute
+    ? (route.label ?? polylineMidpoint(routePoints))
+    : { x: stepLabelX, y: stepLabelY };
+  const labelX = labelAt.x;
+  const labelY = labelAt.y;
   const backEdge = data?.backEdge === true;
   const whenLabel = data?.whenLabel;
   const visits = data?.maxNodeVisits;
@@ -1402,8 +1766,9 @@ export interface WorkflowGraphProps {
   yaml: string;
   /** "full" = interactive (pan/zoom/drag + controls); "preview" = static fit. */
   variant?: "full" | "preview";
-  /** Flow direction: "LR" (default) reads left-to-right — best for the wide/short
-   *  run-detail panel; "TB" is a vertical column. */
+  /** Flow direction: "LR" reads left-to-right — best for the wide/short
+   *  run-detail panel; "TB" is a vertical column. Unset, it follows the
+   *  canvas: "LR" in a panel, "TB" in a portrait canvas such as a phone's. */
   direction?: WfDirection;
   /**
    * Start collapsed (compact icon tiles) rather than expanded.
@@ -1571,7 +1936,7 @@ export interface WorkflowGraphProps {
 export function WorkflowGraph({
   yaml,
   variant = "full",
-  direction = "LR",
+  direction: directionProp,
   defaultCompact,
   onCompactChange,
   className,
@@ -1625,6 +1990,9 @@ export function WorkflowGraph({
    * `userCompact`, which is the only thing React may read for that.
    */
   const nextDensityFrom = useRef(userCompact);
+  // The canvas taken over the whole window, for a graph too big to read in
+  // the panel it lives in. Escape or the same button gives it back.
+  const [fullscreen, setFullscreen] = useState(false);
   const compact = isPreview || userCompact;
   // What the nodes RENDER (content + handle anchors). Inside a layout tween it
   // TRAILS `compact` — the target density drives the layout and the camera at
@@ -1637,6 +2005,12 @@ export function WorkflowGraph({
   // The canvas wrapper — measured when reframing, since the viewport math needs
   // the frame's real width/height and the RF instance doesn't expose them.
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [canvasAspect, measureCanvas] = useCanvasAspect();
+  // Unpinned, the flow follows the canvas: left to right in a panel, top to
+  // bottom on a phone, where a left-to-right pipeline could only be read by
+  // panning sideways through it.
+  const direction: WfDirection =
+    directionProp ?? (canvasAspect !== null && canvasAspect < 0.9 ? "TB" : "LR");
   // Whether the graph has been framed against a REAL canvas yet. Until it has,
   // the camera is still ours to set; afterwards it belongs to the reader, and
   // only a relayout moves it.
@@ -1653,7 +2027,7 @@ export function WorkflowGraph({
   // size instead of tearing the canvas down and re-measuring (which blanked the
   // graph on every update).
   const hasRunOverlay = nodeState !== undefined;
-  const structural = useMemo(
+  const firstLayout = useMemo(
     () =>
       buildFlowGraph(yaml, {
         nodeState: hasRunOverlay ? {} : undefined,
@@ -1677,6 +2051,21 @@ export function WorkflowGraph({
       declaredEdges,
     ],
   );
+  // Everything below reads the ELK-laid graph once it exists; see useElkLayout.
+  const { graph: structural, ready: laidOut } = useElkLayout(
+    firstLayout,
+    direction,
+    compact,
+    canvasAspect,
+    // An editing canvas keeps a failure handler's inputs: they are edges an
+    // author can select, delete or carry a problem on.
+    !editable,
+  );
+  // What is ON SCREEN, which trails the props while ELK works: the node
+  // content, the handle anchors and the camera must match the drawn layout,
+  // not the one being computed.
+  const shownCompact = structural.compact ?? compact;
+  const shownDirection = structural.direction ?? direction;
   const colorMode = useColorMode(wrapperRef, !structural.error && structural.nodes.length > 0);
 
   // The boxes a decorated edge's cluster must keep clear of. Derived from the
@@ -1720,6 +2109,11 @@ export function WorkflowGraph({
     // suspenders the handler wears anyway.
     return styled.map((e) => ({
       ...e,
+      // A failure handler's folded input comes back the moment its step
+      // fails: that is the one input of the handler a reader needs to see.
+      ...(e.hidden && nodeState?.[e.source]?.status === "failed"
+        ? { hidden: false }
+        : {}),
       deletable: editable ? isEditableEdge(e) : false,
     }));
   }, [
@@ -1782,7 +2176,13 @@ export function WorkflowGraph({
   // (a ResizeObserver) lags a relayout by a frame or more, so a fitView here
   // raced it and framed the OLD node sizes as often as the new ones.
   const didInitialSeedRef = useRef(false);
+  // Whether the canvas has been revealed. The first ELK answer replaces a
+  // layout nobody has seen (the canvas is hidden until it lands), so it lands
+  // in place rather than tweening out of the hidden one.
+  const revealedRef = useRef(laidOut);
   useEffect(() => {
+    const firstReveal = laidOut && !revealedRef.current;
+    revealedRef.current = laidOut;
     // The run state is merged at WRITE time — read fresh from the ref inside
     // every setNodes this effect makes — so a status tick landing mid-tween is
     // carried by the very next frame instead of being stomped by a snapshot
@@ -1800,7 +2200,7 @@ export function WorkflowGraph({
     if (!didInitialSeedRef.current) {
       didInitialSeedRef.current = true;
       setNodes(withRunState(structural.nodes));
-      setDisplayCompact(compact);
+      setDisplayCompact(shownCompact);
       return;
     }
     const inst = rfRef.current;
@@ -1810,15 +2210,10 @@ export function WorkflowGraph({
     // the canvas has a size.
     if (!inst || !frame || frame.width === 0 || frame.height === 0) {
       setNodes(withRunState(structural.nodes));
-      setDisplayCompact(compact);
+      setDisplayCompact(shownCompact);
       return;
     }
-    const endViewport = framingViewport(
-      layoutBounds(structural.nodes),
-      frame.width,
-      frame.height,
-      compact,
-    );
+    const endViewport = openingViewport(structural, frame.width, frame.height, shownCompact, shownDirection);
     // This relayout IS the frame for the new structure — the effect below must
     // not also claim it once the canvas is measured.
     framedRef.current = true;
@@ -1828,21 +2223,22 @@ export function WorkflowGraph({
       prev.length === structural.nodes.length &&
       structural.nodes.every((n) => prevById.has(n.id));
     if (
+      firstReveal ||
       !sameNodeSet ||
       !motionAllowed() ||
       typeof requestAnimationFrame === "undefined"
     ) {
       setNodes(withRunState(structural.nodes));
-      setDisplayCompact(compact);
+      setDisplayCompact(shownCompact);
       inst.setViewport(endViewport);
       return;
     }
     // The rendered density lands mid-tween: growing flips early, shrinking
     // flips once the card has nearly collapsed (see DENSITY_FLIP_AT).
     const flipTimer = setTimeout(
-      () => setDisplayCompact(compact),
+      () => setDisplayCompact(shownCompact),
       LAYOUT_TRANSITION_MS *
-        (compact ? DENSITY_FLIP_AT.shrink : DENSITY_FLIP_AT.grow),
+        (shownCompact ? DENSITY_FLIP_AT.shrink : DENSITY_FLIP_AT.grow),
     );
     const startViewport = inst.getViewport();
     const startedAt = performance.now();
@@ -1889,7 +2285,26 @@ export function WorkflowGraph({
       cancelAnimationFrame(raf);
       clearTimeout(flipTimer);
     };
-  }, [structural, compact, setNodes]);
+  }, [structural, shownCompact, setNodes, laidOut, shownDirection]);
+
+  const structuralRef = useRef(structural);
+  structuralRef.current = structural;
+  const compactRef = useRef(shownCompact);
+  compactRef.current = shownCompact;
+  const directionRef = useRef(shownDirection);
+  directionRef.current = shownDirection;
+  const reframe = useCallback(() => {
+    // After the browser has applied the new canvas size.
+    requestAnimationFrame(() => {
+      const inst = rfRef.current;
+      const frame = wrapperRef.current?.getBoundingClientRect();
+      if (!inst || !frame || frame.width === 0 || frame.height === 0) return;
+      const graph = structuralRef.current;
+      inst.setViewport(
+        openingViewport(graph, frame.width, frame.height, compactRef.current, directionRef.current),
+      );
+    });
+  }, []);
 
   /**
    * Own the INITIAL frame once the instance and canvas have a size. React
@@ -1903,15 +2318,10 @@ export function WorkflowGraph({
     const frame = wrapperRef.current?.getBoundingClientRect();
     if (!inst || !frame || frame.width === 0 || frame.height === 0) return;
     inst.setViewport(
-      framingViewport(
-        layoutBounds(structural.nodes),
-        frame.width,
-        frame.height,
-        compact,
-      ),
+      openingViewport(structural, frame.width, frame.height, shownCompact, shownDirection),
     );
     framedRef.current = true;
-  }, [framingCue, structural, compact]);
+  }, [framingCue, structural, shownCompact, shownDirection]);
 
   // Re-attempt framing when a late-measured canvas finally has a size. Only
   // until the graph is framed — after that a resize is the reader's business,
@@ -1929,6 +2339,25 @@ export function WorkflowGraph({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  // Reframe when the canvas changes size by the reader's own ask: entering or
+  // leaving full screen is exactly "show me the whole graph at this size".
+  const fullscreenSeen = useRef(fullscreen);
+  useEffect(() => {
+    // Mount is not a toggle; the initial framing owns the first camera.
+    if (fullscreenSeen.current === fullscreen) return;
+    fullscreenSeen.current = fullscreen;
+    reframe();
+    if (!fullscreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      // A dialog opened from the canvas (a node's detail) owns Escape first.
+      if (document.querySelector('[aria-modal="true"]')) return;
+      setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen, reframe]);
 
   const handleNodeClick = useCallback(
     (_event: ReactMouseEvent, node: Node<WfNodeData>) => {
@@ -2022,7 +2451,7 @@ export function WorkflowGraph({
   }
 
   return (
-    <DirectionContext.Provider value={direction}>
+    <DirectionContext.Provider value={shownDirection}>
       <DensityContext.Provider value={displayCompact}>
       <RunModeContext.Provider value={hasRunOverlay}>
       <SelectedNodeContext.Provider value={selectedNodeId}>
@@ -2031,7 +2460,18 @@ export function WorkflowGraph({
       <NodeProblemsContext.Provider value={problemIndex.byNode}>
       <TriggerDeleteContext.Provider value={deleteTrigger ?? null}>
       <EdgeInsertContext.Provider value={insertOnEdge ?? null}>
-      <div ref={wrapperRef} className={`wf-graph ${className ?? ""}`}>
+      <div
+        ref={(el) => {
+          wrapperRef.current = el;
+          measureCanvas(el);
+        }}
+        className={`wf-graph ${laidOut ? "" : "opacity-0"} ${
+          fullscreen
+            ? "!fixed !inset-3 !z-40 !h-auto !w-auto overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+            : (className ?? "")
+        }`}
+        data-layout={laidOut ? "ready" : "pending"}
+      >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -2119,6 +2559,19 @@ export function WorkflowGraph({
           size={1.4}
           color="hsl(var(--muted-foreground) / 0.38)"
         />
+        {structural.groups && structural.groups.length > 0 && (
+          <ParallelFrames frames={structural.groups} />
+        )}
+        {!isPreview && structural.nodes.length > MINIMAP_MIN_NODES && (
+          <MiniMap
+            pannable
+            zoomable
+            position="bottom-left"
+            style={{ width: 168, height: 104 }}
+            className="!hidden sm:!block"
+            ariaLabel="Workflow overview"
+          />
+        )}
         {/* The compact proposal-card preview is a glanceable thumbnail — the
             zoom/fit controls and density toggle only clutter it (it still pans +
             pinch-zooms and is always compact). */}
@@ -2170,6 +2623,18 @@ export function WorkflowGraph({
               >
                 {userCompact ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
                 {userCompact ? "Expand" : "Compact"}
+              </button>
+              <button
+                type="button"
+                data-testid="wf-fullscreen"
+                onClick={() => setFullscreen((on) => !on)}
+                aria-pressed={fullscreen}
+                title={fullscreen ? "Exit full screen (Esc)" : "Full screen"}
+                aria-label={fullscreen ? "Exit full screen" : "Full screen"}
+                className="flex items-center gap-1 rounded-md border border-border bg-card/80 px-2 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur transition hover:text-foreground"
+              >
+                {fullscreen ? <Shrink size={12} /> : <Expand size={12} />}
+                {fullscreen ? "Exit" : "Full screen"}
               </button>
             </Panel>
           </>

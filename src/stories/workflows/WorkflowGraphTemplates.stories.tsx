@@ -144,3 +144,59 @@ export const SoftwareFactoryPhone: Story = {
     <TemplateCanvas id="software-factory" width="w-[358px]" height="h-[36rem]" />
   ),
 };
+
+/** A gardener-shaped run: a cartographer, then fourteen audits four at a
+ *  time, then a synthesis. Each foreach item is its own node once the run
+ *  reports it. */
+const FOREACH_RUN_YAML = `on:
+  webhook: {}
+do:
+  - id: cartographer
+    agent.run:
+      prompt: Map the open issues into chunks.
+  - id: audits
+    foreach:
+      items: "\${steps.cartographer.output.chunks}"
+      maxConcurrency: 4
+      do:
+        agent.run:
+          profile: { name: chunk-auditor }
+          prompt: "Audit chunk \${index}."
+  - id: synthesize
+    agent.run:
+      profile: { name: synthesizer }
+      prompt: Merge the audits.
+`;
+
+const FOREACH_RUN_STATE: Record<string, WfNodeState> = {
+  trigger: { status: "succeeded" },
+  a0: { status: "succeeded", costUsd: 0.42, durationMs: 310000 },
+  a1: { status: "running" },
+  ...Object.fromEntries(
+    Array.from({ length: 14 }, (_, j) => [
+      `a1-b${j}`,
+      j < 9
+        ? { status: "succeeded", costUsd: 0.18 + j * 0.01, durationMs: 240000 }
+        : j < 13
+          ? { status: "running" }
+          : { status: "queued" },
+    ]),
+  ),
+};
+
+export const ForeachItemsRunning: Story = {
+  render: () => (
+    <div className="w-[1100px] max-w-full rounded-xl border border-border bg-card p-3">
+      <div className="mb-2 font-medium text-sm text-text">Factory gardener</div>
+      <div className="h-[34rem] w-full overflow-hidden rounded-lg border border-border bg-background">
+        <WorkflowGraphLazy
+          yaml={FOREACH_RUN_YAML}
+          variant="full"
+          defaultCompact={true}
+          nodeState={FOREACH_RUN_STATE}
+          className="h-full w-full"
+        />
+      </div>
+    </div>
+  ),
+};

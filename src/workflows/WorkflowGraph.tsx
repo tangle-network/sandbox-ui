@@ -1392,6 +1392,12 @@ function useCanvasAspect(): [number | null, (el: HTMLDivElement | null) => void]
 /** "4 agents in parallel" when each lane is one agent; "4 parallel lanes ·
  *  8 agents" when a lane is a chain (a reviewer and its verifier). */
 export function parallelCaption(frame: WfGroupFrame): string {
+  if (frame.forEach) {
+    const at = frame.forEach.concurrency;
+    return at !== undefined && at < frame.lanes
+      ? `${frame.lanes} items · ${at} at a time`
+      : `${frame.lanes} items in parallel`;
+  }
   if (frame.agents > frame.lanes) {
     return `${frame.lanes} parallel lanes · ${frame.agents} agents`;
   }
@@ -1403,8 +1409,43 @@ export function parallelCaption(frame: WfGroupFrame): string {
 /** Frames behind parallel fan-outs, drawn in flow coordinates under the
  *  nodes. Pointer-transparent: a frame annotates, it is never a target. */
 function ParallelFrames({ frames }: { frames: readonly WfGroupFrame[] }) {
+  const connectors = frames.flatMap((f) => f.connectors ?? []);
   return (
     <ViewportPortal>
+      {connectors.length > 0 && (
+        <svg
+          aria-hidden
+          className="pointer-events-none absolute top-0 left-0 overflow-visible"
+          style={{ zIndex: -1 }}
+          width={1}
+          height={1}
+        >
+          <defs>
+            <marker
+              id="wf-grid-arrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={GRID_CONNECTOR_COLOR} />
+            </marker>
+          </defs>
+          {connectors.map((c, k) => (
+            <path
+              // biome-ignore lint/suspicious/noArrayIndexKey: connectors are rebuilt with their layout
+              key={k}
+              d={roundedPolyline(c.points)}
+              fill="none"
+              stroke={GRID_CONNECTOR_COLOR}
+              strokeWidth={1.75}
+              markerEnd="url(#wf-grid-arrow)"
+            />
+          ))}
+        </svg>
+      )}
       {frames.map((frame) => (
         <div
           key={frame.id}
@@ -1457,6 +1498,30 @@ function useCompactTitleScale(enabled: boolean): number {
     ),
   );
 }
+
+/** The highest leaf index per fan-out in a run state, as a stable string.
+ *  The model applies counts to `foreach` steps only; a `parallel` already
+ *  draws every branch it declares. Null when no step reported more than one
+ *  item. */
+export function foreachItemCountsKey(
+  nodeState: Record<string, WfNodeState> | undefined,
+): string | null {
+  if (!nodeState) return null;
+  const counts: Record<number, number> = {};
+  for (const id of Object.keys(nodeState)) {
+    const match = /^a(\d+)-b(\d+)$/.exec(id);
+    if (!match) continue;
+    const action = Number(match[1]);
+    counts[action] = Math.max(counts[action] ?? 0, Number(match[2]) + 1);
+  }
+  const wide = Object.entries(counts).filter(([, n]) => n > 1);
+  return wide.length > 0 ? JSON.stringify(Object.fromEntries(wide)) : null;
+}
+
+/** The resting edge colour (edgeColor with no run state), for the lines a
+ *  grid frame draws itself. */
+const GRID_CONNECTOR_COLOR =
+  "color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)";
 
 /** Past this many nodes the full canvas carries a minimap, so a reader zoomed
  *  into one corner of a large graph can see where they are in it. Below it
@@ -2027,6 +2092,17 @@ export function WorkflowGraph({
   // size instead of tearing the canvas down and re-measuring (which blanked the
   // graph on every update).
   const hasRunOverlay = nodeState !== undefined;
+  // Items each foreach reported, read off the run state's per-item leaves
+  // (`a3-b0` … `a3-b13`). Keyed as a string so a run-state tick that changes
+  // no count never rebuilds the layout.
+  const itemCountsKey = useMemo(() => foreachItemCountsKey(nodeState), [nodeState]);
+  const itemCounts = useMemo(
+    () =>
+      itemCountsKey
+        ? (JSON.parse(itemCountsKey) as Record<number, number>)
+        : undefined,
+    [itemCountsKey],
+  );
   const firstLayout = useMemo(
     () =>
       buildFlowGraph(yaml, {
@@ -2040,6 +2116,7 @@ export function WorkflowGraph({
         // is why arming it re-lays the graph out.
         reserveEdgeInsert: insertArmed,
         ...(declaredEdges ? { edges: declaredEdges } : {}),
+        ...(itemCounts ? { itemCounts } : {}),
       }),
     [
       yaml,
@@ -2049,6 +2126,7 @@ export function WorkflowGraph({
       wrap,
       insertArmed,
       declaredEdges,
+      itemCounts,
     ],
   );
   // Everything below reads the ELK-laid graph once it exists; see useElkLayout.

@@ -174,6 +174,70 @@ function handleOffset(
   return { inX: x, inY: 0, outX: x, outY: height };
 }
 
+/** Fewer items than this stay a column of lanes; more become a grid. */
+const GRID_MIN_ITEMS = 5;
+const GRID_GAP = 16;
+
+/** A settled foreach's items laid out as one grid, the way a CI matrix is:
+ *  a column of fourteen tiles shrinks every node in the graph to fit, while a
+ *  5 x 3 block reads at a glance. */
+export interface ItemGrid {
+  source: string;
+  members: string[];
+  targets: string[];
+  cols: number;
+  cellW: number;
+  cellH: number;
+  /** The block ELK places: the grid plus the frame's padding and caption. */
+  width: number;
+  height: number;
+}
+
+export function itemGrids(
+  graph: FlowGraph,
+  direction: WfDirection,
+): ItemGrid[] {
+  const grids: ItemGrid[] = [];
+  for (const source of graph.nodes) {
+    if (source.data.kind !== "foreach") continue;
+    const prefix = `${source.id}-b`;
+    const members = graph.nodes.filter(
+      (n) => n.id.startsWith(prefix) && /^\d+$/.test(n.id.slice(prefix.length)),
+    );
+    if (members.length < GRID_MIN_ITEMS) continue;
+    const ids = new Set(members.map((n) => n.id));
+    const targets = [
+      ...new Set(
+        graph.edges
+          .filter((e) => ids.has(e.source) && !ids.has(e.target))
+          .map((e) => e.target),
+      ),
+    ];
+    const cellW = Math.max(...members.map((n) => n.width ?? 0));
+    const cellH = Math.max(...members.map((n) => n.height ?? 0));
+    // Wider than tall across a landscape band. Down a portrait one, two
+    // columns: a phone canvas holds two compact cards side by side at the
+    // readable zoom floor, and a third pushes one off screen.
+    const cols =
+      direction === "LR" ? Math.ceil(Math.sqrt(members.length * 1.6)) : 2;
+    const rows = Math.ceil(members.length / cols);
+    grids.push({
+      source: source.id,
+      members: members.map((n) => n.id),
+      targets,
+      cols,
+      cellW,
+      cellH,
+      width: cols * cellW + (cols - 1) * GRID_GAP + 2 * FRAME_PAD,
+      height:
+        rows * cellH + (rows - 1) * GRID_GAP + 2 * FRAME_PAD + FRAME_CAPTION,
+    });
+  }
+  return grids;
+}
+
+const gridNodeId = (source: string) => `grid:${source}`;
+
 export function toElkGraph(
   graph: FlowGraph,
   direction: WfDirection,
@@ -183,13 +247,10 @@ export function toElkGraph(
 ): ElkNode {
   const spacing = graph.spacing ?? { rank: 72, cross: 24 };
   const sinks = foldedSinks(graph, foldFailureInputs);
-  return {
-    id: "root",
-    layoutOptions: {
-      ...elkLayoutOptions(direction, spacing),
-      ...(wrapAspect !== undefined ? wrapOptions(wrapAspect) : {}),
-    },
-    children: graph.nodes.map((n) => {
+  const grids = itemGrids(graph, direction);
+  const inGrid = new Set(grids.flatMap((g) => g.members));
+  const isLR = direction === "LR";
+  const nodeChild = (n: FlowGraph["nodes"][number]): ElkNode => {
       const width = n.width ?? 0;
       const height = n.height ?? 0;
       const at = handleOffset(width, height, direction, compact);
@@ -211,16 +272,70 @@ export function toElkGraph(
           { id: `${n.id}:out`, x: at.outX, y: at.outY, width: 0, height: 0 },
         ],
       };
+  };
+  const gridChild = (g: ItemGrid): ElkNode => ({
+        id: gridNodeId(g.source),
+        width: g.width,
+        height: g.height,
+        layoutOptions: { "elk.portConstraints": "FIXED_POS" },
+        ports: [
+          {
+            id: `${gridNodeId(g.source)}:in`,
+            x: isLR ? 0 : g.width / 2,
+            y: isLR ? g.height / 2 : 0,
+            width: 0,
+            height: 0,
+          },
+          {
+            id: `${gridNodeId(g.source)}:out`,
+            x: isLR ? g.width : g.width / 2,
+            y: isLR ? g.height / 2 : g.height,
+            width: 0,
+            height: 0,
+          },
+        ],
+      });
+  return {
+    id: "root",
+    layoutOptions: {
+      ...elkLayoutOptions(direction, spacing),
+      ...(wrapAspect !== undefined ? wrapOptions(wrapAspect) : {}),
+    },
+    // Model order drives cycle breaking, so a grid takes its first item's
+    // place in it: listed ahead of its own foreach, the edge into it would
+    // read as a loop back.
+    children: graph.nodes.flatMap((n): ElkNode[] => {
+      const grid = grids.find((g) => g.members[0] === n.id);
+      if (grid) return [gridChild(grid)];
+      if (inGrid.has(n.id)) return [];
+      return [nodeChild(n)];
     }),
-    edges: graph.edges
-      .filter((e) => !sinks.has(e.target))
-      .map(
-        (e): ElkExtendedEdge => ({
-          id: e.id,
-          sources: [`${e.source}:out`],
-          targets: [`${e.target}:in`],
-        }),
-      ),
+    edges: [
+      ...graph.edges
+        .filter(
+          (e) =>
+            !sinks.has(e.target) && !inGrid.has(e.source) && !inGrid.has(e.target),
+        )
+        .map(
+          (e): ElkExtendedEdge => ({
+            id: e.id,
+            sources: [`${e.source}:out`],
+            targets: [`${e.target}:in`],
+          }),
+        ),
+      ...grids.flatMap((g): ElkExtendedEdge[] => [
+        {
+          id: `${gridNodeId(g.source)}:enter`,
+          sources: [`${g.source}:out`],
+          targets: [`${gridNodeId(g.source)}:in`],
+        },
+        ...g.targets.map((t) => ({
+          id: `${gridNodeId(g.source)}:leave:${t}`,
+          sources: [`${gridNodeId(g.source)}:out`],
+          targets: [`${t}:in`],
+        })),
+      ]),
+    ],
   };
 }
 
@@ -271,6 +386,7 @@ function foldedSinks(graph: FlowGraph, fold: boolean): Set<string> {
 export function applyElkLayout(
   graph: FlowGraph,
   laid: ElkNode,
+  direction: WfDirection,
   foldFailureInputs = true,
 ): FlowGraph | null {
   const placed = new Map<string, { x: number; y: number }>();
@@ -278,6 +394,54 @@ export function applyElkLayout(
     if (child.x === undefined || child.y === undefined) return null;
     placed.set(child.id, { x: child.x, y: child.y });
   }
+  const grids = itemGrids(graph, direction);
+  const gridFrames: WfGroupFrame[] = [];
+  for (const g of grids) {
+    const box = placed.get(gridNodeId(g.source));
+    if (!box) return null;
+    g.members.forEach((id, k) => {
+      const col = k % g.cols;
+      const row = Math.floor(k / g.cols);
+      placed.set(id, {
+        x: box.x + FRAME_PAD + col * (g.cellW + GRID_GAP),
+        y: box.y + FRAME_PAD + FRAME_CAPTION + row * (g.cellH + GRID_GAP),
+      });
+    });
+    const source = graph.nodes.find((n) => n.id === g.source);
+    const concurrency = source?.data.config?.maxConcurrency;
+    // A compact node's port sits on its box, which is wider than its tile;
+    // the connector ends at the tile, as the renderer snaps every other edge.
+    const tileInset =
+      graph.compact && graph.direction === "LR"
+        ? (n: { width?: number }) => ((n.width ?? 0) - COMPACT_TILE) / 2
+        : () => 0;
+    const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
+    const connectors = (laid.edges ?? [])
+      .filter((e) => e.id.startsWith(`${gridNodeId(g.source)}:`))
+      .map((e) => {
+        const points = edgePoints(e).map((p) => ({ x: p.x, y: p.y }));
+        const from = nodeById.get(e.sources[0].replace(/:out$/, ""));
+        const to = nodeById.get(e.targets[0].replace(/:in$/, ""));
+        if (points.length >= 2 && from) points[0].x -= tileInset(from);
+        if (points.length >= 2 && to) points[points.length - 1].x += tileInset(to);
+        return { points };
+      })
+      .filter((c) => c.points.length >= 2);
+    gridFrames.push({
+      id: `frame:${gridNodeId(g.source)}`,
+      x: box.x,
+      y: box.y,
+      width: g.width,
+      height: g.height,
+      lanes: g.members.length,
+      agents: g.members.filter(
+        (id) => graph.nodes.find((n) => n.id === id)?.data.kind === "agent.run",
+      ).length,
+      forEach: typeof concurrency === "number" ? { concurrency } : {},
+      connectors,
+    });
+  }
+  const inGrid = new Set(grids.flatMap((g) => g.members));
   if (graph.nodes.some((n) => !placed.has(n.id))) return null;
 
   const routed = new Map<string, ElkExtendedEdge>();
@@ -307,6 +471,11 @@ export function applyElkLayout(
   });
   const edges = graph.edges.map((e): WfFlowEdge => {
     if (sinkInputs.has(e.target)) return { ...e, hidden: true };
+    // A grid's items are reached through the frame's one connector in and
+    // one out; a fork and a join line per item would bury the grid.
+    if (inGrid.has(e.source) || inGrid.has(e.target)) {
+      return { ...e, hidden: true };
+    }
     const r = routed.get(e.id);
     const points = r ? edgePoints(r) : [];
     if (points.length < 2) return e;
@@ -329,7 +498,7 @@ export function applyElkLayout(
     };
   });
   const laidOut: FlowGraph = { ...graph, nodes, edges, engine: "elk" };
-  const groups = parallelFrames(laidOut);
+  const groups = [...gridFrames, ...parallelFrames(laidOut)];
   return groups.length > 0 ? { ...laidOut, groups } : laidOut;
 }
 
@@ -350,6 +519,9 @@ const FRAME_CAPTION = 18;
  * claiming an unrelated step is worse than no frame.
  */
 export function parallelFrames(graph: FlowGraph): WfGroupFrame[] {
+  // A sibling group's key is its sorted predecessor ids; a single one names
+  // the step that fanned out.
+  const incomingSource = (key: string) => (key.includes("|") ? null : key);
   const forward = graph.edges.filter((e) => !e.data?.backEdge && !e.hidden);
   const preds = new Map<string, WfFlowEdge[]>();
   const succs = new Map<string, WfFlowEdge[]>();
@@ -409,7 +581,16 @@ export function parallelFrames(graph: FlowGraph): WfGroupFrame[] {
       return n.position.x < x1 && nx1 > x0 && n.position.y < y1 && ny1 > y0;
     });
     if (intrudes) continue;
+    const source = incomingSource(key);
+    const sourceNode = source ? byId.get(source) : undefined;
+    const concurrency = sourceNode?.data.config?.maxConcurrency;
     frames.push({
+      ...(sourceNode?.data.kind === "foreach"
+        ? {
+            forEach:
+              typeof concurrency === "number" ? { concurrency } : {},
+          }
+        : {}),
       id: `frame:${key}`,
       x: x0,
       y: y0,
@@ -440,6 +621,7 @@ export async function layoutWithElk(
     const plain = applyElkLayout(
       graph,
       await elk.layout(toElkGraph(graph, direction, undefined, compact, fold)),
+      direction,
       fold,
     );
     if (!plain) return null;
@@ -448,7 +630,7 @@ export async function layoutWithElk(
     const plainAspect = boundsAspect(plain);
     if (
       direction !== "LR" ||
-      graph.nodes.length < WRAP_MIN_NODES ||
+      laidOutNodeCount(graph) < WRAP_MIN_NODES ||
       plainAspect < canvasAspect * WRAP_WHEN_WIDER
     ) {
       return plain;
@@ -456,6 +638,7 @@ export async function layoutWithElk(
     const wrapped = applyElkLayout(
       graph,
       await elk.layout(toElkGraph(graph, direction, canvasAspect, compact, fold)),
+      direction,
       fold,
     );
     if (!wrapped) return plain;
@@ -474,6 +657,16 @@ const DEFAULT_CANVAS_ASPECT = 2.2;
 /** How much wider than its canvas a single band must be before wrapping is
  *  tried. */
 const WRAP_WHEN_WIDER = 1.6;
+
+/** The nodes ELK places: a grid of items counts once. */
+function laidOutNodeCount(graph: FlowGraph): number {
+  const grids = itemGrids(graph, "LR");
+  return (
+    graph.nodes.length -
+    grids.reduce((sum, g) => sum + g.members.length, 0) +
+    grids.length
+  );
+}
 
 /** Below this many nodes a graph reads better as one band: cut into rows, a
  *  six-step loop sends its edges across the row break for no gain in size. */

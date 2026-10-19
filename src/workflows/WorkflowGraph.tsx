@@ -238,13 +238,23 @@ export function openingViewport(
     compact,
     elkFloor(graph, direction),
   );
+  if (direction !== "TB") return view;
+  // A portrait graph taller than its canvas is anchored at the top edge, under
+  // the toolbar, which on a phone spans most of the width. It overflows
+  // downward anyway, so the entry drops below the toolbar for free.
+  const y =
+    bounds.height * view.zoom > height
+      ? Math.max(view.y, TOOLBAR_CLEARANCE - bounds.y * view.zoom)
+      : view.y;
   const entry = graph.nodes[0];
-  if (direction !== "TB" || !entry || bounds.width * view.zoom <= width) {
-    return view;
-  }
+  if (!entry || bounds.width * view.zoom <= width) return { ...view, y };
   const entryCenter = entry.position.x + (entry.width ?? 0) / 2;
-  return { ...view, x: width / 2 - entryCenter * view.zoom };
+  return { ...view, x: width / 2 - entryCenter * view.zoom, y };
 }
+
+/** The toolbar's band at the top of the canvas: its 12px inset plus a 28px
+ *  button row and a little air. */
+export const TOOLBAR_CLEARANCE = 44;
 
 /**
  * The camera that frames `bounds` inside a `width`×`height` canvas.

@@ -36,7 +36,13 @@ export default defineConfig({
   fixedExtension: false,
   // Provider logos ship inside the bundle as data URLs, so consumers need no
   // asset loader for them.
-  deps: { alwaysBundle: [/^@lobehub\/icons-static-svg\//] },
+  deps: {
+    alwaysBundle: [
+      /^@lobehub\/icons-static-svg\//,
+      // Keep terminal-only assets out of embedded-app consumers' dependencies.
+      /^@xterm\/addon-unicode-graphemes$/,
+    ],
+  },
   loader: { ".svg": "dataurl" },
   onSuccess: "node scripts/copy-styles.mjs",
   // Bundling drops per-file "use client" directives, as tsup did before.

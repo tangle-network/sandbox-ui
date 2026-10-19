@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback, useMemo } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 // `@xterm/addon-webgl` is a *true* optional peer: xterm falls back to
 // its DOM/canvas renderer when the addon is absent. Keep it out of the
 // static import graph so a consumer who skips installing the package
@@ -211,6 +212,8 @@ export default function TerminalView({
     const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
 
+    term.loadAddon(new UnicodeGraphemesAddon());
+    term.unicode.activeVersion = '15-graphemes';
     term.loadAddon(fitAddon);
     term.loadAddon(webLinksAddon);
     term.open(containerRef.current);

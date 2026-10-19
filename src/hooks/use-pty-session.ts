@@ -84,13 +84,22 @@ function createEmptyBatch(): PendingBatch {
 const WS_READY_TIMEOUT_MS = 10000;
 
 /** Convert an http(s) base URL into the matching ws(s) URL. */
-function toWsUrl(apiUrl: string, sessionId: string): string | null {
+function toWsUrl(
+  apiUrl: string,
+  sessionId: string,
+  defaultShell?: { cols: number; rows: number },
+): string | null {
   try {
     const base = typeof window !== 'undefined' ? window.location.href : undefined;
     const url = new URL(`${apiUrl}/terminals/${sessionId}/ws`, base);
     if (url.protocol === 'https:') url.protocol = 'wss:';
     else if (url.protocol === 'http:') url.protocol = 'ws:';
     else return null;
+    if (defaultShell) {
+      url.searchParams.set('cols', String(defaultShell.cols));
+      url.searchParams.set('rows', String(defaultShell.rows));
+      url.searchParams.set('defaultShell', '1');
+    }
     return url.toString();
   } catch {
     return null;
@@ -410,7 +419,15 @@ export function usePtySession({
         resolve(false);
         return;
       }
-      const wsUrl = toWsUrl(apiUrl, sessionId);
+      // Starting a plain shell during upgrade removes the init-frame round trip.
+      // Exact interactive sessions must authenticate their control claim in init.
+      const wsUrl = toWsUrl(
+        apiUrl,
+        sessionId,
+        options.initOnOpen && !exactAttachRequiredRef.current
+          ? { cols: colsRef.current, rows: rowsRef.current }
+          : undefined,
+      );
       if (!wsUrl) {
         resolve(false);
         return;

@@ -31,6 +31,9 @@ export interface WfFlowEdgeData extends Record<string, unknown> {
   whenLabel?: string;
   /** This edge closes a cycle. */
   backEdge?: boolean;
+  /** A failure handler's input folded into its caption; drawn again only
+   *  when its source fails. */
+  foldedFailureInput?: boolean;
   /** Per-node visit budget, rendered beside a back edge so the loop states its
    *  own bound. Merged in at style time by the component that knows it. */
   maxNodeVisits?: number;
@@ -101,6 +104,12 @@ export interface WfGroupFrame {
   lanes: number;
   /** How many of the framed nodes are agents, for the frame's caption. */
   agents: number;
+  /** Set when the lanes are a foreach's items: how many it runs at once
+   *  (`maxConcurrency`), when it says. */
+  forEach?: { concurrency?: number };
+  /** The routed lines into and out of a grid of items, in flow coordinates,
+   *  drawn by the frame because the items' own edges are hidden. */
+  connectors?: readonly { points: readonly { x: number; y: number }[] }[];
 }
 
 /** Options for {@link buildFlowGraph}. */
@@ -127,6 +136,9 @@ export interface BuildFlowGraphOptions {
   /** Reserve the layer gap an edge's insert control needs. Passed straight
    *  through to `buildWorkflowGraph`. */
   reserveEdgeInsert?: boolean;
+  /** Items each settled `foreach` ran. Passed straight through to
+   *  `buildWorkflowGraph`. */
+  itemCounts?: Readonly<Record<number, number>>;
 }
 
 /** A bare run-state map (`buildFlowGraph(yaml, { a0: { status: "running" } })`),
@@ -160,6 +172,7 @@ const FLOW_GRAPH_OPTION_KEYS = [
   "wrap",
   "edges",
   "reserveEdgeInsert",
+  "itemCounts",
 ] as const;
 
 type ListedOptionKey = (typeof FLOW_GRAPH_OPTION_KEYS)[number];
@@ -217,6 +230,7 @@ export function buildFlowGraph(
     ...(options.wrap ? { wrap: true } : {}),
     ...(options.edges ? { edges: options.edges } : {}),
     ...(options.reserveEdgeInsert ? { reserveEdgeInsert: true } : {}),
+    ...(options.itemCounts ? { itemCounts: options.itemCounts } : {}),
   });
   const isLR = direction === "LR";
   const sourcePosition = isLR ? Position.Right : Position.Bottom;

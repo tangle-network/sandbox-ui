@@ -94,6 +94,8 @@ describe("what the layout buys the catalogue", () => {
     const inputs = graph.edges.filter((e) => e.target === failed?.id);
     expect(inputs.length).toBeGreaterThan(4);
     expect(inputs.every((e) => e.hidden)).toBe(true);
+    // Only these come back when their step fails.
+    expect(inputs.every((e) => e.data?.foldedFailureInput)).toBe(true);
   });
 
   it("frames the PR review's four reviewer lanes as one parallel group", async () => {
@@ -143,5 +145,53 @@ do:
     expect(graph.edges.some((e) => e.hidden)).toBe(false);
     expect(x("a4")).toBeGreaterThan(x("a3"));
     expect(x("a3")).toBeGreaterThan(x("a0"));
+  });
+});
+
+describe("a foreach that reported its items", () => {
+  const yaml = `on:
+  webhook: {}
+do:
+  - id: map
+    agent.run: { prompt: map }
+  - id: audits
+    foreach:
+      items: "\${steps.map.output.chunks}"
+      maxConcurrency: 4
+      do:
+        agent.run: { prompt: audit }
+  - id: merge
+    agent.run: { prompt: merge }
+`;
+
+  it("draws one node per item and frames them as items run K at a time", async () => {
+    const base = buildFlowGraph(yaml, {
+      compact: true,
+      itemCounts: { 1: 14 },
+    });
+    const leaves = base.nodes.filter((n) => /^a1-b\d+$/.test(n.id));
+    expect(leaves).toHaveLength(14);
+    expect(leaves[13].data.subtitle).toBe("Item 14 of 14");
+    const graph = await layoutWithElk(base, "LR", true);
+    if (!graph) throw new Error("no layout");
+    expect(graph.groups).toHaveLength(1);
+    expect(graph.groups![0]).toMatchObject({
+      lanes: 14,
+      forEach: { concurrency: 4 },
+    });
+    // An item's own fork and join have no route; a failed item must not
+    // bring its join back as a line across the grid.
+    const itemEdges = graph.edges.filter(
+      (e) => /^a1-b\d+$/.test(e.source) || /^a1-b\d+$/.test(e.target),
+    );
+    expect(itemEdges.length).toBeGreaterThan(0);
+    expect(
+      itemEdges.every((e) => e.hidden && !e.data?.foldedFailureInput),
+    ).toBe(true);
+  });
+
+  it("stays one template node before the run reports items", () => {
+    const base = buildFlowGraph(yaml, { compact: true });
+    expect(base.nodes.filter((n) => /^a1-b\d+$/.test(n.id))).toHaveLength(1);
   });
 });

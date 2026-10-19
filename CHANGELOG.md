@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.136.0
+
+- A settled `foreach` draws one node per item, each with its own status, duration and cost and opening its step, instead of one template tile. Five or more items lay out as a grid inside one frame, captioned with the step's concurrency ("14 items · 4 at a time"), reached by one connector in and one out. Hosts pass item state as per-item leaves (`a3-b0` … `a3-b13`) in `nodeState`; `buildWorkflowGraph` and `buildFlowGraph` also accept `itemCounts`.
+
 ## 0.135.0
 
 - Lay out branching workflow graphs with ELK's layered algorithm (`elkjs`, a new optional peer loaded on first render). Nodes in a layer are ordered to minimise crossings, edges are routed orthogonally to the exact handle of each card, loops return around the outside as dashed back edges, and a long graph wraps into rows shaped to its canvas, so a 22-step factory opens whole and fills the panel instead of drawing a 5:1 strip. A plain line keeps the existing fold; a host without `elkjs` keeps the previous layout.

@@ -648,6 +648,13 @@ export interface BuildWorkflowGraphOptions {
    * measured afterwards. Defaults to `false`.
    */
   reserveEdgeInsert?: boolean;
+  /**
+   * How many items a settled `foreach` ran, by its action index. A foreach
+   * is one template step until it has run; then each item is a node of its
+   * own, so a fan-out over fourteen issues reads as fourteen lanes with their
+   * own status and cost rather than one tile with a count.
+   */
+  itemCounts?: Readonly<Record<number, number>>;
 }
 
 /**
@@ -1661,16 +1668,33 @@ export function buildWorkflowGraph(
           ? (asRecord(rec.parallel).branches as unknown[])
           : []
         : "foreach" in rec
-          ? // A foreach with no `do` template has no child to render.
-            [asRecord(rec.foreach).do].filter(Boolean)
+          ? // A foreach with no `do` template has no child to render; a run
+            // that reported its items gets one leaf per item.
+            Array.from(
+              {
+                length: asRecord(rec.foreach).do
+                  ? Math.max(1, options?.itemCounts?.[i] ?? 1)
+                  : 0,
+              },
+              () => asRecord(rec.foreach).do,
+            )
           : [];
 
     if (children.length > 0) {
       const branchRank = rank + 1;
       const branchIds: string[] = [];
+      const items = "foreach" in rec && children.length > 1;
       children.forEach((child, j) => {
         const cid = branchNodeId(i, j);
-        addNode(cid, describeAction(child), branchRank, reserveRunState);
+        const data = describeAction(child);
+        addNode(
+          cid,
+          items
+            ? { ...data, subtitle: `Item ${j + 1} of ${children.length}` }
+            : data,
+          branchRank,
+          reserveRunState,
+        );
         // Fan-out survives a declared topology unchanged: a branch leaf is this
         // module's own node, derived from the structural action's config, and no
         // declared spec addresses it.

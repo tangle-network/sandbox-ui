@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.136.1
+
+- A portrait graph taller than its canvas opens with its first step below the toolbar instead of under it; on a phone the toolbar spans most of the width and hid the trigger.
+- A failed `foreach` item no longer draws an unrouted line across its grid to the next step.
+
 ## 0.136.0
 
 - A settled `foreach` draws one node per item, each with its own status, duration and cost and opening its step, instead of one template tile. Five or more items lay out as a grid inside one frame, captioned with the step's concurrency ("14 items · 4 at a time"), reached by one connector in and one out. Hosts pass item state as per-item leaves (`a3-b0` … `a3-b13`) in `nodeState`; `buildWorkflowGraph` and `buildFlowGraph` also accept `itemCounts`.

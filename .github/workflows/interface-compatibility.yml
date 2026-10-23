@@ -17,7 +17,7 @@ permissions:
 jobs:
   verify:
     name: Interface ${{ matrix.interface }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ci-public]
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -49,7 +49,7 @@ jobs:
           TARBALL_PATH=$(./scripts/pack-package.sh "${RUNNER_TEMP}/sandbox-ui-compat-${GITHUB_RUN_ID}")
           echo "path=$TARBALL_PATH" >> "$GITHUB_OUTPUT"
       - name: Install Chromium for the maintained packed consumer contract
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install chromium
       - name: Qualify the exact Interface floor with maintained packed checks
         env:
           SANDBOX_UI_TARBALL: ${{ steps.package.outputs.path }}

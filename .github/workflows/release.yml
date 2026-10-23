@@ -7,17 +7,18 @@ on:
     paths: [package.json]
 
 permissions:
-  contents: write
-  id-token: write
-  packages: write
+  contents: read
+
+concurrency:
+  group: release-publish
+  cancel-in-progress: false
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  prepare:
+    runs-on: [self-hosted, ci-public]
     timeout-minutes: 30
-    concurrency:
-      group: release-publish
-      cancel-in-progress: false
+    outputs:
+      npm-pending: ${{ steps.npm.outputs.pending }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -45,7 +46,7 @@ jobs:
           echo "path=$TARBALL_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Install Chromium for packed consumer proof
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install chromium
 
       - name: Test packed artifact
         env:
@@ -63,25 +64,94 @@ jobs:
           SANDBOX_UI_AGENT_INTERFACE_VERSION: 1.0.0
         run: pnpm test:package
 
+      - name: Check whether npm needs publication
+        id: npm
+        env:
+          TARBALL_PATH: ${{ steps.package.outputs.path }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { registryShasum } from './scripts/publish-package.mjs';
+          const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
+          const remote = await registryShasum({ registry: 'https://registry.npmjs.org', packageName: manifest.name, version: manifest.version });
+          const local = createHash('sha1').update(readFileSync(process.env.TARBALL_PATH)).digest('hex');
+          if (remote && remote !== local) throw new Error('Published npm version contains different bytes');
+          appendFileSync(process.env.GITHUB_OUTPUT, `pending=${!remote}\n`);
+          NODE
+
+      - name: Retain the qualified artifact and publication control
+        run: |
+          mkdir -p "$RUNNER_TEMP/release"
+          cp "${{ steps.package.outputs.path }}" "$RUNNER_TEMP/release/package.tgz"
+          cp scripts/publish-package.mjs "$RUNNER_TEMP/release/publish-package.mjs"
+          (cd "$RUNNER_TEMP/release" && sha256sum package.tgz publish-package.mjs > SHA256SUMS)
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: sandbox-ui-release
+          path: ${{ runner.temp }}/release
+          retention-days: 1
+          if-no-files-found: error
+
+  release:
+    needs: prepare
+    if: needs.prepare.outputs.npm-pending == 'true'
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    # npm trusted publishing requires a GitHub-hosted runner.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.23.3
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: sandbox-ui-release
+          path: ${{ runner.temp }}/release
+      - name: Verify the qualified bytes
+        run: cd "$RUNNER_TEMP/release" && sha256sum --check SHA256SUMS
       - name: Install trusted-publishing npm
         run: npm install --global npm@12.1.0
 
       - name: Publish and verify npm artifact
         run: >-
-          node scripts/publish-package.mjs
-          "${{ steps.package.outputs.path }}"
+          node "${{ runner.temp }}/release/publish-package.mjs"
+          "${{ runner.temp }}/release/package.tgz"
           https://registry.npmjs.org
           latest
           --provenance
 
+
+  github-release:
+    needs: [prepare, release]
+    if: always() && needs.prepare.result == 'success' && (needs.release.result == 'success' || needs.prepare.outputs.npm-pending == 'false')
+    runs-on: [self-hosted, ci-public]
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.23.3
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: sandbox-ui-release
+          path: ${{ runner.temp }}/release
+      - name: Verify the qualified bytes
+        run: cd "$RUNNER_TEMP/release" && sha256sum --check SHA256SUMS
       - name: Publish and verify GitHub Packages artifact
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >-
-          node scripts/publish-package.mjs
-          "${{ steps.package.outputs.path }}"
+          node "${{ runner.temp }}/release/publish-package.mjs"
+          "${{ runner.temp }}/release/package.tgz"
           https://npm.pkg.github.com
           latest
+
 
       - name: Create GitHub Release
         env:

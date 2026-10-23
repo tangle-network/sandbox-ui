@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   prepare:
-    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@main
+    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@ab33b2e0a64c06c11feae6a04a450366b537f9f4
     permissions:
       contents: read
     with:
@@ -55,7 +55,7 @@ jobs:
   github-release:
     needs: [prepare, release]
     if: always() && needs.prepare.result == 'success' && (needs.release.result == 'success' || needs.prepare.outputs.npm-pending == 'false')
-    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@main
+    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@ab33b2e0a64c06c11feae6a04a450366b537f9f4
     permissions:
       contents: write
       packages: write

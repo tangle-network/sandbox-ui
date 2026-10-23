@@ -39,7 +39,7 @@ jobs:
     if: >-
       (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-    uses: tangle-network/sandbox-ui/.github/workflows/deploy-catalog.yml@main
+    uses: tangle-network/sandbox-ui/.github/workflows/deploy-catalog.yml@ab33b2e0a64c06c11feae6a04a450366b537f9f4
     permissions:
       contents: read
       deployments: write

@@ -15,83 +15,11 @@ concurrency:
 
 jobs:
   prepare:
-    runs-on: [self-hosted, ci-public]
-    timeout-minutes: 30
-    outputs:
-      npm-pending: ${{ steps.npm.outputs.pending }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22.23.3
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Validate and build
-        run: |
-          pnpm typecheck
-          pnpm build
-          pnpm test
-
-      - name: Pack release artifact
-        id: package
-        run: |
-          PACK_DIR="${RUNNER_TEMP}/sandbox-ui-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          TARBALL_PATH=$(./scripts/pack-package.sh "$PACK_DIR")
-          echo "path=$TARBALL_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: Install Chromium for packed consumer proof
-        run: pnpm exec playwright install chromium
-
-      - name: Test packed artifact
-        env:
-          SANDBOX_UI_TARBALL: ${{ steps.package.outputs.path }}
-        run: pnpm test:package
-
-      - name: Test embedded app consumer without terminal peers
-        env:
-          SANDBOX_UI_TARBALL: ${{ steps.package.outputs.path }}
-        run: pnpm test:embedded-app-package
-
-      - name: Test oldest supported agent interface
-        env:
-          SANDBOX_UI_TARBALL: ${{ steps.package.outputs.path }}
-          SANDBOX_UI_AGENT_INTERFACE_VERSION: 1.0.0
-        run: pnpm test:package
-
-      - name: Check whether npm needs publication
-        id: npm
-        env:
-          TARBALL_PATH: ${{ steps.package.outputs.path }}
-        run: |
-          node --input-type=module <<'NODE'
-          import { readFileSync, appendFileSync } from 'node:fs';
-          import { createHash } from 'node:crypto';
-          import { registryShasum } from './scripts/publish-package.mjs';
-          const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
-          const remote = await registryShasum({ registry: 'https://registry.npmjs.org', packageName: manifest.name, version: manifest.version });
-          const local = createHash('sha1').update(readFileSync(process.env.TARBALL_PATH)).digest('hex');
-          if (remote && remote !== local) throw new Error('Published npm version contains different bytes');
-          appendFileSync(process.env.GITHUB_OUTPUT, `pending=${!remote}\n`);
-          NODE
-
-      - name: Retain the qualified artifact and publication control
-        run: |
-          mkdir -p "$RUNNER_TEMP/release"
-          cp "${{ steps.package.outputs.path }}" "$RUNNER_TEMP/release/package.tgz"
-          cp scripts/publish-package.mjs "$RUNNER_TEMP/release/publish-package.mjs"
-          (cd "$RUNNER_TEMP/release" && sha256sum package.tgz publish-package.mjs > SHA256SUMS)
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-        with:
-          name: sandbox-ui-release
-          path: ${{ runner.temp }}/release
-          retention-days: 1
-          if-no-files-found: error
+    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@main
+    permissions:
+      contents: read
+    with:
+      phase: prepare
 
   release:
     needs: prepare
@@ -99,7 +27,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      packages: write
     # npm trusted publishing requires a GitHub-hosted runner.
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -128,48 +55,9 @@ jobs:
   github-release:
     needs: [prepare, release]
     if: always() && needs.prepare.result == 'success' && (needs.release.result == 'success' || needs.prepare.outputs.npm-pending == 'false')
-    runs-on: [self-hosted, ci-public]
+    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@main
     permissions:
       contents: write
       packages: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: 22.23.3
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
-        with:
-          name: sandbox-ui-release
-          path: ${{ runner.temp }}/release
-      - name: Verify the qualified bytes
-        run: cd "$RUNNER_TEMP/release" && sha256sum --check SHA256SUMS
-      - name: Publish and verify GitHub Packages artifact
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >-
-          node "${{ runner.temp }}/release/publish-package.mjs"
-          "${{ runner.temp }}/release/package.tgz"
-          https://npm.pkg.github.com
-          latest
-
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          TAG="v${VERSION}"
-          TAG_SHA=$(git ls-remote origin "refs/tags/${TAG}" "refs/tags/${TAG}^{}" | awk '/\^\{\}$/ { peeled=$1 } !/\^\{\}$/ { direct=$1 } END { print peeled ? peeled : direct }')
-
-          if [[ -n "$TAG_SHA" && "$TAG_SHA" != "$GITHUB_SHA" ]]; then
-            echo "Tag ${TAG} points to ${TAG_SHA}, expected tested commit ${GITHUB_SHA}" >&2
-            exit 1
-          fi
-
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "GitHub Release ${TAG} already exists at tested commit ${GITHUB_SHA}; skipping"
-          elif [[ -n "$TAG_SHA" ]]; then
-            gh release create "$TAG" --verify-tag --generate-notes
-          else
-            gh release create "$TAG" --target "$GITHUB_SHA" --generate-notes
-          fi
+    with:
+      phase: github-release

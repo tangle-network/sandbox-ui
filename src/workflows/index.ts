@@ -37,6 +37,18 @@ export {
 export type { WorkflowGraphProps } from "./WorkflowGraph";
 export { WorkflowGraph as WorkflowGraphLazy } from "./WorkflowGraphLazy";
 
+// The topology of a multi-agent run: spawn edges as a tree, messages and
+// delegations as curves over it. Lazy for the same reason as the workflow graph.
+export {
+  AgentGraph,
+  type AgentGraphDirection,
+  type AgentGraphEdge,
+  type AgentGraphEdgeKind,
+  type AgentGraphNode,
+  type AgentGraphProps,
+  type AgentGraphStatus,
+} from "./AgentGraph";
+
 // The brand mark of the model a node ran on. The graph's own node cards resolve and
 // render these (node-ui.tsx), so a host labelling a node OUTSIDE the canvas — a side
 // panel, a run row — reaches for the same two symbols. Exported here so it can have

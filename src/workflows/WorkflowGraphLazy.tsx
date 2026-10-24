@@ -52,7 +52,7 @@ function lazyWorkflowGraph(): ComponentType<WorkflowGraphProps> {
   );
 }
 
-class GraphErrorBoundary extends Component<
+export class GraphErrorBoundary extends Component<
   { fallback: ReactNode; children: ReactNode },
   { hasError: boolean }
 > {

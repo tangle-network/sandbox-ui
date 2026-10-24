@@ -17,7 +17,6 @@
  */
 
 import type {
-  ELK,
   ElkExtendedEdge,
   ElkNode,
   ElkPoint,
@@ -30,21 +29,8 @@ import {
   type WfGroupFrame,
 } from "./flow-graph";
 import type { WfDirection } from "./model";
+import { loadElk } from "./elk-loader";
 import { COMPACT_TILE, triggerNodeIndex } from "./model";
-
-/** One ELK instance per page. `null` once loading failed, so a host without
- *  the peer pays for one failed import, not one per render. */
-let elkInstance: Promise<ELK | null> | undefined;
-
-function loadElk(): Promise<ELK | null> {
-  elkInstance ??= import("elkjs/lib/elk.bundled.js")
-    .then((mod) => {
-      const Elk = (mod as { default: new () => ELK }).default;
-      return new Elk();
-    })
-    .catch(() => null);
-  return elkInstance;
-}
 
 /**
  * Whether the graph is worth the ELK pass: anything but a plain line. A line

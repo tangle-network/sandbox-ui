@@ -54,3 +54,12 @@ export function fmtTokens(
   if (i === undefined && o === undefined) return undefined;
   return `${i ?? 0}/${o ?? 0} tok`;
 }
+
+/** A token total in a few characters: `840 tok`, `12.4k tok`, `1.2M tok`.
+ *  Undefined for an absent, non-finite or negative count. */
+export function fmtTokenTotal(tokens: number | null | undefined): string | undefined {
+  if (tokens == null || !Number.isFinite(tokens) || tokens < 0) return undefined;
+  if (tokens < 1000) return `${Math.round(tokens)} tok`;
+  if (tokens < 1_000_000) return `${(tokens / 1000).toFixed(tokens < 10_000 ? 1 : 0)}k tok`;
+  return `${(tokens / 1_000_000).toFixed(1)}M tok`;
+}

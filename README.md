@@ -477,7 +477,7 @@ For that, compose directly from:
 
 Retheming is absolutely supported, but the documentation was thinner than it should be. The token layer is strong; the higher-level surfaces are themeable, but more opinionated. For a radically different product look, prefer keeping the token contract and wrapping the higher-level workbench/chat surfaces rather than fighting every internal class.
 
-`DiffView` from `/workbench` defaults to a dark code theme. If the host app offers a light/dark switch, pass its selected theme as `themeType`. The diff renderer updates when that value changes.
+For an artifact-only viewer, import the same `DiffView` from `@tangle-network/sandbox-ui/workbench/diff`. This focused entry does not load the terminal or the rest of the Workbench. It defaults to a dark code theme; pass the host's selected theme as `themeType`, which updates the existing renderer when the theme changes. The `/workbench` export remains available to consumers using the full Workbench.
 
 ## Docs
 
@@ -497,6 +497,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 | `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
 | `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane, PdfViewer, FileCard, FileList |
 | `/workbench/embedded-app` | EmbeddedAppView and preview status types without terminal or editor modules |
+| `/workbench/diff` | DiffView and DiffViewProps without terminal or editor modules |
 | `/dashboard` | [Sidebar](./docs/sidebar.md), DashboardLayout, BillingDashboard, UsageChart |
 | `/editor` | TipTap collaborative editor (requires optional peers) |
 | `/terminal` | xterm.js terminal view (requires optional peers) |

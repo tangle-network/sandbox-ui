@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.136.2
+
+- Export the existing `DiffView` through `@tangle-network/sandbox-ui/workbench/diff` so a standalone artifact viewer can bundle a diff without terminal peers. The packed minimal-consumer check covers both focused workbench entries, reads its dependency versions from the packed manifest and checks for nested terminal dependencies without bypassing peer compatibility.
+
 ## 0.136.1
 
 - A portrait graph taller than its canvas opens with its first step below the toolbar instead of under it; on a phone the toolbar spans most of the width and hid the trigger.

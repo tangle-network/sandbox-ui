@@ -54,6 +54,14 @@ try {
     .filter(entry => entry.isDirectory() && entry.name === "@xterm")
   if (terminalPackages.length) throw new Error("The clean consumer unexpectedly installed xterm, including nested dependencies.")
 
+  const uiDirectories = execFileSync("npm", ["ls", "@tangle-network/ui", "--all", "--parseable"], {
+    cwd: consumer, encoding: "utf8",
+  }).trim().split(/\r?\n/).filter(path => path.endsWith(join("node_modules", "@tangle-network", "ui")))
+    .map(path => realpathSync(path))
+  if (new Set(uiDirectories).size !== 1) {
+    throw new Error("The host and packed Sandbox consumer must resolve one shared UI directory: " + JSON.stringify(uiDirectories))
+  }
+
   await build({ root: consumer, configFile: false, logLevel: "error",
     build: { outDir: join(consumer, "dist"), emptyOutDir: true } })
 
@@ -64,7 +72,7 @@ try {
   if (emitted.includes("@xterm/") || emitted.includes("Could not resolve")) {
     throw new Error("A focused workbench entry pulled unresolved optional peers into the consumer bundle.")
   }
-  console.log("EmbeddedAppView and DiffView built from the packed artifact without xterm peers.")
+  console.log("EmbeddedAppView and DiffView built from the packed artifact with one shared UI directory and no xterm peers.")
 } finally {
   rmSync(workdir, { recursive: true, force: true })
 }

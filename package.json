@@ -152,8 +152,8 @@
     "@hocuspocus/provider": ">=2.15.0 <5.0.0",
     "@nanostores/react": ">=0.8.4 <2.0.0",
     "@tangle-network/agent-interface": "^1.0.0 || ^2.0.0 || ^3.0.0 || ^5.2.0",
-    "@tangle-network/brand": "^1.26.0",
-    "@tangle-network/ui": "^11.40.2",
+    "@tangle-network/brand": "^1.26.2",
+    "@tangle-network/ui": "^11.42.0",
     "@tanstack/react-query": "^5.0.0",
     "@tiptap/core": ">=3.20.4 <4.0.0",
     "@tiptap/extension-collaboration": ">=3.20.4 <4.0.0",
@@ -233,7 +233,7 @@
     "nanostores": "^1.5.4",
     "tailwindcss-animate": "^1.0.7",
     "yaml": "^2.9.1",
-    "@tangle-network/ui": "11.40.2"
+    "@tangle-network/ui": "11.42.0"
   },
   "devDependencies": {
     "@fontsource/geist": "5.3.0",
@@ -247,8 +247,7 @@
     "@storybook/react-vite": "^10.6.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@tangle-network/agent-interface": "5.2.0",
-    "@tangle-network/brand": "1.26.0",
-    "@tangle-network/ui": "11.40.1",
+    "@tangle-network/brand": "1.26.2",
     "@tanstack/react-query": "^5.104.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",

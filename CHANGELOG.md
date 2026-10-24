@@ -3,6 +3,7 @@
 ## 0.136.2
 
 - Export the existing `DiffView` through `@tangle-network/sandbox-ui/workbench/diff` so a standalone artifact viewer can bundle a diff without terminal peers. The packed minimal-consumer check covers both focused workbench entries, reads its dependency versions from the packed manifest and checks for nested terminal dependencies without bypassing peer compatibility.
+- Align the UI and Brand dependencies with the current Agent Record consumer and remove the duplicate UI development declaration so the app can resolve one shared UI version.
 
 ## 0.136.1
 

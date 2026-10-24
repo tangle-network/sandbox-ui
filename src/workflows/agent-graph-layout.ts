@@ -24,6 +24,8 @@ import { loadElk } from "./elk-loader";
 export type AgentGraphStatus =
   | "running"
   | "waiting"
+  /** Blocked on a person: drawn amber, named in the header. */
+  | "needs-you"
   | "succeeded"
   | "failed"
   | "stopped"

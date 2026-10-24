@@ -41,12 +41,15 @@ export { WorkflowGraph as WorkflowGraphLazy } from "./WorkflowGraphLazy";
 // delegations as curves over it. Lazy for the same reason as the workflow graph.
 export {
   AgentGraph,
+  type AgentGraphCall,
+  type AgentGraphCallKind,
   type AgentGraphDirection,
   type AgentGraphEdge,
   type AgentGraphEdgeKind,
   type AgentGraphNode,
   type AgentGraphProps,
   type AgentGraphStatus,
+  type AgentGraphTool,
 } from "./AgentGraph";
 
 // The brand mark of the model a node ran on. The graph's own node cards resolve and

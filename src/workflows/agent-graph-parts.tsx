@@ -26,6 +26,7 @@ import {
   CircleQuestionMark,
   CircleStop,
   CircleX,
+  Hand,
   Hourglass,
   LoaderCircle,
   type LucideIcon,
@@ -61,6 +62,7 @@ export const AGENT_STATUS: Record<
 > = {
   running: { label: "Running", icon: LoaderCircle, color: STATUS_COLOR.running, flow: "running" },
   waiting: { label: "Waiting", icon: Hourglass, color: STATUS_COLOR.waiting, flow: "waiting" },
+  "needs-you": { label: "Needs you", icon: Hand, color: STATUS_COLOR.waiting, flow: "waiting" },
   succeeded: { label: "Done", icon: CircleCheck, color: STATUS_COLOR.succeeded, flow: "succeeded" },
   failed: { label: "Failed", icon: CircleX, color: STATUS_COLOR.failed, flow: "failed" },
   stopped: { label: "Stopped", icon: CircleStop, color: MUTED, flow: "succeeded" },

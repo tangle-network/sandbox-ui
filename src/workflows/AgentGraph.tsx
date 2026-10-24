@@ -13,8 +13,11 @@ import type {
   AgentGraphEdge,
   AgentGraphNode,
 } from "./agent-graph-layout";
+import { AgentHubCanvas } from "./AgentHubCanvas";
+import type { AgentGraphCall, AgentGraphTool } from "./agent-hub-layout";
 import { GraphErrorBoundary, retryImport } from "./WorkflowGraphLazy";
 
+export type { AgentGraphCall, AgentGraphCallKind, AgentGraphTool } from "./agent-hub-layout";
 export type {
   AgentGraphDirection,
   AgentGraphEdge,
@@ -36,6 +39,22 @@ export interface AgentGraphProps {
   className?: string;
   /** Shown instead of the canvas when there are no agents. */
   emptyState?: ReactNode;
+  /**
+   * `tree` (default) lays out a spawn tree of cards for large runs. `hub` draws
+   * the run around its orchestrator: You, the agents, the tools they call, and
+   * each call travelling along its edge in its kind's colour.
+   */
+  layout?: "tree" | "hub";
+  /** Hub layout: the tools and services agents call, drawn as outer nodes. */
+  tools?: readonly AgentGraphTool[];
+  /** Hub layout: recorded calls between nodes, newest last. They colour and animate edges and fill popovers. */
+  calls?: readonly AgentGraphCall[];
+  /** Hub layout: draw the person who asked as "You". */
+  you?: { label?: string; summary?: string } | boolean;
+  /** Hub layout: epoch ms to draw at (a replay position); defaults to now, ticking. */
+  now?: number;
+  /** Hub layout: the header title. Default "Agent graph". */
+  title?: ReactNode;
 }
 
 function lazyCanvas() {
@@ -86,6 +105,14 @@ function AgentListFallback({
 }
 
 export function AgentGraph(props: AgentGraphProps) {
+  if (props.layout === "hub") {
+    if (props.nodes.length === 0 && props.emptyState) return <>{props.emptyState}</>;
+    return <AgentHubCanvas {...props} />;
+  }
+  return <AgentGraphTree {...props} />;
+}
+
+function AgentGraphTree(props: AgentGraphProps) {
   const [attempt, setAttempt] = useState(0);
   // A fresh lazy() per attempt: React.lazy caches a rejected import.
   const Canvas = useMemo(() => lazyCanvas(), [attempt]);

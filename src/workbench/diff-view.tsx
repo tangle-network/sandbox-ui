@@ -81,8 +81,10 @@ export function DiffView({
         overflow: wrap ? "wrap" : "scroll",
         disableFileHeader: !showFileHeader,
       },
+      // No worker manager, and no third argument: @pierre/diffs 1.6 made it `requestOwnerRender`, a callback it calls
+      // whenever it is not null, so the old `false` (1.5's isContainerManaged) threw "e is not a function" and every
+      // DiffView drew nothing. Left out, the instance renders itself on 1.5 and 1.6 alike.
       undefined,
-      false,
     )
     instanceRef.current = instance
     appliedThemeType.current = latestThemeType.current

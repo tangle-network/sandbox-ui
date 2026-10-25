@@ -10,6 +10,7 @@ export default defineConfig({
     workspace: "src/workspace/index.ts",
     workbench: "src/workbench/index.ts",
     "workbench/embedded-app": "src/workbench/embedded-app.ts",
+    "workbench/diff": "src/workbench/diff.ts",
     openui: "src/openui/index.ts",
     files: "src/files/index.ts",
     "vault-tree": "src/vault-tree/index.ts",

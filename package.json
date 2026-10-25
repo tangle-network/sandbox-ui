@@ -48,6 +48,10 @@
       "import": "./dist/workbench/embedded-app.js",
       "types": "./dist/workbench/embedded-app.d.ts"
     },
+    "./workbench/diff": {
+      "import": "./dist/workbench/diff.js",
+      "types": "./dist/workbench/diff.d.ts"
+    },
     "./openui": {
       "import": "./dist/openui.js",
       "types": "./dist/openui.d.ts"

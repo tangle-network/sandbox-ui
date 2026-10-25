@@ -134,6 +134,7 @@ export function TraceWorkspace({
               pinned.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48
               if (pinned.current) setUnseen(false)
             }}
+            data-primary-content=""
             className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
           >
             {streamUrl

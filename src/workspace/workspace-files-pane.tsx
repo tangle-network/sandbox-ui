@@ -413,7 +413,7 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
         )}
       </div>
       {preview ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto [&>*]:min-h-full">
+        <div data-primary-content="" className="flex min-h-0 flex-1 flex-col overflow-auto [&>*]:min-h-full">
           {mode === "diff" && compare ? compare.content : preview.content}
         </div>
       ) : (

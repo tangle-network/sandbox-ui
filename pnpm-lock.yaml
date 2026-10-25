@@ -182,8 +182,8 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/ui':
-        specifier: 11.44.0
-        version: 11.44.0(9108795aa8a7a39aefb9b901e02af2f4)
+        specifier: 11.42.0
+        version: 11.42.0(9108795aa8a7a39aefb9b901e02af2f4)
       diff:
         specifier: ^9.0.0
         version: 9.0.0
@@ -1929,12 +1929,12 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/ui@11.44.0':
-    resolution: {integrity: sha512-J2+TXobYQyAXxzl7UEeYwdfhPZH/uqJR35VAZPphhWT49Gd2yO7z0ZFsXsLCJWfHKtRvmmqydw0/BK9l7EXCAw==}
+  '@tangle-network/ui@11.42.0':
+    resolution: {integrity: sha512-73wwBgpLboX226Qyld0OLWmHWcBY/nGvNN30SLeQbI1l3tUO4K2kPiHT5xsnmp6a9VskNwrVU8uG1CK5WxIqUA==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <3.0.0'
-      '@tangle-network/brand': ^1.27.0
+      '@tangle-network/brand': ^1.26.2
       '@tiptap/core': '>=3.20.4 <4.0.0'
       '@tiptap/extension-collaboration': '>=3.20.4 <4.0.0'
       '@tiptap/extension-collaboration-caret': '>=3.7.0 <4.0.0'
@@ -5485,7 +5485,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/ui@11.44.0(9108795aa8a7a39aefb9b901e02af2f4)':
+  '@tangle-network/ui@11.42.0(9108795aa8a7a39aefb9b901e02af2f4)':
     dependencies:
       '@pierre/theme': 1.1.0
       '@pierre/trees': 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(shiki@4.5.0)

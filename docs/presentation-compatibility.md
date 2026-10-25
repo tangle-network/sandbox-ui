@@ -36,7 +36,7 @@ The following repository callers define the compatibility boundary.
 | Heading | `src/stories/primitives/Heading.stories.tsx`, `src/stories/primitives/PageShell.stories.tsx`; original PageHeader/SectionTitle renderers | Preserve relative imports; delete the competing renderers. |
 | SectionTitle | Heading stories, `src/primitives/heading.test.tsx`, primitive barrel | Keep the compatibility name and h2 semantics. |
 | PageShell | PageShell stories, `src/primitives/heading.test.tsx`, primitive barrel | Direct forwarding; no composition rewrite. |
-| Card/table families | Existing named UI re-exports in `src/primitives/index.ts` and root | Already canonical: retain them, expose canonical public prop types and pin identity. |
+| Card/table families | `export *` of `@tangle-network/ui/primitives` in `src/primitives/index.ts`, forwarded by root | Already canonical: forward ui's bindings and pin identity. |
 | Consumers outside this repository | Public package entries/types and the isolated packed consumer | No claim of deployed application rollout. |
 
 The local Sandbox wordmark remains intentional. Domain cards, workspace layouts,

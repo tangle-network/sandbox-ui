@@ -244,6 +244,24 @@ export {
   BreadcrumbEllipsis,
   useTheme,
   useToast,
+  // ui 11.42.0: metric chart and series primitives.
+  MetricChart,
+  SeriesSparkline,
+  normalizeSeries,
+  periodDelta,
+  seriesAreaPath,
+  seriesExtent,
+  seriesLinePath,
+  seriesMean,
+  seriesScale,
+  type ChartReferenceLine,
+  type MetricChartProps,
+  type PeriodDelta,
+  type SeriesExtent,
+  type SeriesPoint,
+  type SeriesPointInput,
+  type SeriesScale,
+  type SeriesSparklineProps,
 } from "@tangle-network/ui/primitives";
 
 export { Logo, TangleKnot, type LogoProps } from "./logo";

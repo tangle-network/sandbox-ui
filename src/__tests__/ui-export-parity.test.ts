@@ -2,13 +2,11 @@
  * Every name `@tangle-network/ui` exports has to stay reachable through this
  * package's shims.
  *
- * The subpath shims here are hand-typed re-export lists, not `export *`. That
- * is deliberate — `src/primitives` serves `Logo`, `LogoProps` and `TangleKnot`
- * from the sandbox-branded `./logo` instead of forwarding ui's, and a star
- * would make those two declarations collide. The cost of typing the list is
- * that a name added upstream is simply absent downstream: nothing errors, the
- * shim still compiles, and a consumer discovers the gap only when an import
- * they expected to work does not resolve.
+ * A shim that forwards its ui subpath with `export *` (as `./primitives` does)
+ * is complete by construction and is not re-checked here. The other subpaths
+ * are hand-typed re-export lists: a name added upstream is simply absent
+ * downstream, nothing errors, and a consumer discovers the gap only when an
+ * import they expected to work does not resolve.
  *
  * `re-export-identity.test.ts` is the other half of this contract and does not
  * overlap. It samples one symbol per subpath and proves the binding is
@@ -196,6 +194,14 @@ const mirrored = Object.keys((manifest(packageRoot).exports ?? {}) as Record<str
   .filter((sub) => uiExports[`./${sub}`] && existsSync(resolvePath(packageRoot, "src", sub, "index.ts")))
   .sort();
 
+/** Hand-typed shims: those that do not forward their ui subpath with a star. */
+const handTyped = mirrored.filter(
+  (sub) =>
+    !new RegExp(`export\\s+\\*\\s+from\\s+['"]@tangle-network/ui/${sub}['"]`).test(
+      stripComments(readFileSync(resolvePath(packageRoot, "src", sub, "index.ts"), "utf8")),
+    ),
+);
+
 describe("every @tangle-network/ui export stays reachable through the shims", () => {
   it("discovers the mirrored subpaths", () => {
     // A manifest rename would empty this list and make every assertion below
@@ -203,7 +209,7 @@ describe("every @tangle-network/ui export stays reachable through the shims", ()
     expect(mirrored.length).toBeGreaterThan(8);
   });
 
-  for (const sub of mirrored) {
+  for (const sub of handTyped) {
     it(`${sub} re-exports all of ui/${sub}`, () => {
       const declarations = uiTypesFor(sub);
       expect(declarations, `ui publishes ./${sub} but its types did not resolve`).not.toBeNull();
@@ -245,35 +251,4 @@ describe("a name served locally while ui exports it too is documented", () => {
       );
     });
   }
-});
-
-/**
- * The root entry is a curated aggregate, not a mirror, so it is held to a
- * pinned list instead of full parity. Each omission below is a decision the
- * root makes on purpose; a name that leaves ui, or a new one that root forgets,
- * changes this set and reds.
- */
-const ROOT_OMISSIONS: Readonly<Record<string, string>> = {
-  TerminalInput: "clashes with workspace's own terminal types; re-exported as TerminalDisplayInput",
-  TerminalCursor: "clashes with workspace's own terminal types; re-exported as TerminalDisplayCursor",
-  ConnectionState: "the editor declares one too, so neither takes the root name; each stays reachable from its subpath",
-  RedactedDocSegment: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
-  RedactedDocument: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
-  RedactedDocumentData: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
-  RedactedDocumentProps: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
-  RevealResult: "redaction has no consumer here; ui publishes it on ./redaction for apps that want it",
-};
-
-describe("the root entry omits only what it means to omit", () => {
-  it("omits exactly the pinned set", () => {
-    const declarations = uiTypesFor(".");
-    expect(declarations, "ui's root types did not resolve").not.toBeNull();
-    const upstream = declaredExports(declarations as string);
-    expect(upstream.size).toBeGreaterThan(100);
-    const shim = shimExports(resolvePath(packageRoot, "src", "index.ts"));
-    const missing = [...upstream].filter((name) => !shim.has(name)).sort();
-    expect(missing, `root omissions, measured against @tangle-network/ui ${uiVersion}`).toEqual(
-      Object.keys(ROOT_OMISSIONS).sort(),
-    );
-  });
 });

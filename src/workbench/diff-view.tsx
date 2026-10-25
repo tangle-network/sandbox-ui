@@ -52,7 +52,6 @@ export function DiffView({
     [filename, baseline, current],
   )
   const [wrap, setWrap] = React.useState(defaultWrap)
-  const hintId = React.useId()
   const hostRef = React.useRef<HTMLDivElement>(null)
   const instanceRef = React.useRef<FileDiff | null>(null)
   const latestThemeType = React.useRef(themeType)
@@ -115,16 +114,12 @@ export function DiffView({
           onClick={() => setWrap((value) => !value)}>
           Wrap lines
         </Button>
-        <p id={hintId} className="min-w-0 flex-1 text-xs text-muted-foreground">
-          {wrap ? "Long lines wrap within this pane." : "Long lines scroll horizontally. Turn on Wrap lines to read without scrolling."}
-        </p>
       </div>
       <div
         ref={hostRef}
         data-testid="diff-view"
         role="region"
         aria-label={`Diff for ${filename}`}
-        aria-describedby={hintId}
         tabIndex={0}
         className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto text-[13px]"
       />

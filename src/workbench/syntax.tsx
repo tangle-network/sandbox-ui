@@ -123,6 +123,7 @@ export function CodeSurface({
   return (
     <div
       ref={hostRef}
+      data-code-surface=""
       role="region"
       aria-label={filename}
       tabIndex={0}

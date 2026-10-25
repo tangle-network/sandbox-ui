@@ -220,9 +220,10 @@ export function WorkspaceFilesPane({
   const isEmpty = nodes.length === 0;
   const normalizedSelection = selectedPath?.replace(/^(\.\/|\/)+/, "").replace(/\/+$/, "");
 
-  // Focus follows the reader's own open and close. A page that mounts with a file already previewed keeps its
-  // scroll and focus: focusing Back on mount scrolled a phone page past its header.
+  // Focus follows the reader's own open and close, never the page's: a preview that arrives from an initial or loaded
+  // selectedPath leaves focus and scroll alone (focusing Back on landing scrolled a phone page past its header).
   const mountedRef = useRef(false);
+  const openedByReaderRef = useRef(false);
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
@@ -230,7 +231,8 @@ export function WorkspaceFilesPane({
       return;
     }
     if (split) { wasPreviewRef.current = hasPreview; return; }
-    if (hasPreview && !wasPreviewRef.current) backRef.current?.focus({ preventScroll: true });
+    if (hasPreview && !wasPreviewRef.current && openedByReaderRef.current) backRef.current?.focus({ preventScroll: true });
+    openedByReaderRef.current = false;
     if (!hasPreview && wasPreviewRef.current) {
       const target = returnFocusRef.current;
       if (target?.isConnected) target.focus({ preventScroll: true });
@@ -300,6 +302,7 @@ export function WorkspaceFilesPane({
                 selectedPath={normalizedSelection}
                 onSelect={(path) => {
                   if (treeRef.current) returnFocusRef.current = activeElementWithin(treeRef.current);
+                  openedByReaderRef.current = true;
                   onSelect?.(path, index.get(path));
                 }}
                 onFolderSelect={(path) => onSelect?.(`${path}/`, index.get(path))}

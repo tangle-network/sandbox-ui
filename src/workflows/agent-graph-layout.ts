@@ -47,6 +47,27 @@ export interface AgentGraphNode {
   turn?: string | null;
   costUsd?: number | null;
   tokens?: number | null;
+  /** Live cards: what it is doing now, from its real state; loops the card's figure. */
+  activity?: AgentGraphActivity | null;
+  /** Live cards: its latest tool calls or events, oldest first; the card shows the last three. */
+  events?: readonly AgentGraphEvent[] | null;
+  /** Live cards: the reasoning effort it runs at, e.g. "high". */
+  effort?: string | null;
+  /** Live cards: epoch ms it was spawned, for its time alive. */
+  startedAt?: number | null;
+  /** Live cards: commits it shipped. */
+  commits?: number | null;
+  /** Live cards: a settled agent's result, shown on its chip, e.g. "rc2 · 14 commits". */
+  result?: string | null;
+}
+
+export type AgentGraphActivity = "thinking" | "reading" | "building" | "proving" | "writing" | "waiting" | "restarting";
+
+export interface AgentGraphEvent {
+  id: string;
+  /** One line, e.g. "bash cargo test -p prover". */
+  label: string;
+  at?: number;
 }
 
 export type AgentGraphEdgeKind = "spawn" | "message" | "delegation";
@@ -64,6 +85,10 @@ export type AgentGraphDirection = "TB" | "LR";
 
 /** Every agent card's size. Fixed, so a status or turn update never moves a card. */
 export const AGENT_CARD = { width: 200, height: 78 } as const;
+/** A live card: room for the figure, the thinking line and the last three events. Fixed for the same reason. */
+export const LIVE_AGENT_CARD = { width: 272, height: 152 } as const;
+
+export type CardSize = { readonly width: number; readonly height: number };
 /** A parent with at least this many leaf workers draws them as a grid. */
 export const GRID_MIN_LEAVES = 4;
 const GRID_GAP = 10;
@@ -156,13 +181,13 @@ export interface AgentLayout {
   height: number;
 }
 
-function gridSize(members: number, columns: number): { width: number; height: number } {
+function gridSize(members: number, columns: number, card: CardSize): { width: number; height: number } {
   const cols = Math.max(1, Math.min(columns, members));
   const rows = Math.ceil(members / cols);
   return {
-    width: cols * AGENT_CARD.width + (cols - 1) * GRID_GAP + 2 * FRAME_PAD,
+    width: cols * card.width + (cols - 1) * GRID_GAP + 2 * FRAME_PAD,
     height:
-      FRAME_CAPTION + rows * AGENT_CARD.height + (rows - 1) * GRID_GAP + FRAME_PAD,
+      FRAME_CAPTION + rows * card.height + (rows - 1) * GRID_GAP + FRAME_PAD,
   };
 }
 
@@ -173,13 +198,13 @@ interface Unit {
 }
 
 /** The boxes the layouter places: each ungrouped agent, and each grid as one block. */
-function layoutUnits(topology: AgentTopology, columns: number) {
+function layoutUnits(topology: AgentTopology, columns: number, card: CardSize) {
   const units: Unit[] = [];
   for (const id of topology.agentIds) {
-    if (!topology.groupOf.has(id)) units.push({ id, ...AGENT_CARD });
+    if (!topology.groupOf.has(id)) units.push({ id, width: card.width, height: card.height });
   }
   for (const g of topology.groups) {
-    units.push({ id: g.id, ...gridSize(g.memberIds.length, columns) });
+    units.push({ id: g.id, ...gridSize(g.memberIds.length, columns, card) });
   }
   const unitOf = (id: string) => topology.groupOf.get(id) ?? id;
   const seen = new Set<string>();
@@ -274,8 +299,9 @@ export async function layoutAgents(
   topology: AgentTopology,
   direction: AgentGraphDirection,
   columns: number,
+  card: CardSize = AGENT_CARD,
 ): Promise<AgentLayout> {
-  const { units, links } = layoutUnits(topology, columns);
+  const { units, links } = layoutUnits(topology, columns, card);
   const placed =
     (await placeWithElk(units, links, direction)) ?? placeByDepth(units, links, direction);
   const positions = new Map<string, { x: number; y: number }>();
@@ -291,13 +317,13 @@ export async function layoutAgents(
   for (const g of topology.groups) {
     const origin = positions.get(g.id) ?? { x: 0, y: 0 };
     positions.delete(g.id);
-    const size = gridSize(g.memberIds.length, columns);
+    const size = gridSize(g.memberIds.length, columns, card);
     frames.push({ group: g, ...origin, ...size });
     const cols = Math.max(1, Math.min(columns, g.memberIds.length));
     g.memberIds.forEach((id, i) => {
       positions.set(id, {
-        x: origin.x + FRAME_PAD + (i % cols) * (AGENT_CARD.width + GRID_GAP),
-        y: origin.y + FRAME_CAPTION + Math.floor(i / cols) * (AGENT_CARD.height + GRID_GAP),
+        x: origin.x + FRAME_PAD + (i % cols) * (card.width + GRID_GAP),
+        y: origin.y + FRAME_CAPTION + Math.floor(i / cols) * (card.height + GRID_GAP),
       });
     });
   }

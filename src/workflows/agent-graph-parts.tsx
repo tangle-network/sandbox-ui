@@ -89,7 +89,7 @@ export function StatusGlyph({ status, size }: { status: AgentGraphStatus; size: 
   );
 }
 
-function cardBorder(status: AgentGraphStatus) {
+export function cardBorder(status: AgentGraphStatus) {
   if (status === "unknown") return { borderColor: "hsl(var(--muted-foreground) / 0.45)", borderStyle: "dashed" as const };
   if (status === "idle") return { borderColor: "hsl(var(--border))" };
   if (status === "stopped") return { borderColor: RESTING_BORDER, boxShadow: RESTING_SHADOW };
@@ -125,7 +125,7 @@ export const AGENT_NODE_CLASS = "group/agent !outline-none";
 
 const HANDLE_CLASS = "!h-1 !w-1 !min-w-0 !border-0 !bg-transparent opacity-0";
 
-function Handles({ direction, source = true }: { direction: AgentGraphDirection; source?: boolean }) {
+export function Handles({ direction, source = true }: { direction: AgentGraphDirection; source?: boolean }) {
   return (
     <>
       <Handle

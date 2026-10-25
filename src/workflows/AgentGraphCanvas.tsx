@@ -29,6 +29,7 @@ import type { AgentGraphProps } from "./AgentGraph";
 import {
   AGENT_CARD,
   type AgentGraphStatus,
+  LIVE_AGENT_CARD,
   type AgentLayout,
   buildAgentTopology,
   candidateColumns,
@@ -47,10 +48,11 @@ import {
   agentSummary,
   MESSAGE_EDGE_COLOR,
 } from "./agent-graph-parts";
+import { AGENT_LIVE_CSS, LiveAgentCard, type LiveAgentCardNode } from "./agent-live-card";
 import { motionAllowed, useColorMode } from "./canvas-theme";
 import { edgeColor } from "./node-ui";
 
-const NODE_TYPES = { agent: AgentCard, agentFrame: AgentFrameBox };
+const NODE_TYPES = { agent: AgentCard, liveAgent: LiveAgentCard, agentFrame: AgentFrameBox };
 const EDGE_TYPES = { agentMessage: AgentMessageEdgeView };
 /** The fit's margin, in screen pixels. */
 const FIT_PADDING = 16;
@@ -91,7 +93,10 @@ export function AgentGraphCanvas({
   direction = "TB",
   className,
   emptyState,
+  live = false,
+  now,
 }: AgentGraphProps) {
+  const card = live ? LIVE_AGENT_CARD : AGENT_CARD;
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [canvas, measureCanvas] = useCanvasSize();
   const colorMode = useColorMode(wrapperRef, nodes.length > 0);
@@ -105,10 +110,10 @@ export function AgentGraphCanvas({
 
   // Every grid width is laid out once per tree; a resize only re-picks.
   const [layouts, setLayouts] = useState<{ key: string; all: AgentLayout[] } | null>(null);
-  const layoutKey = `${direction}:${topology.key}`;
+  const layoutKey = `${direction}:${live ? "live" : "cards"}:${topology.key}`;
   useEffect(() => {
     let live = true;
-    Promise.all(candidateColumns(topology).map((c) => layoutAgents(topology, direction, c))).then(
+    Promise.all(candidateColumns(topology).map((c) => layoutAgents(topology, direction, c, card))).then(
       (all) => {
         if (live) setLayouts({ key: layoutKey, all });
       },
@@ -116,7 +121,7 @@ export function AgentGraphCanvas({
     return () => {
       live = false;
     };
-  }, [topology, direction, layoutKey]);
+  }, [topology, direction, layoutKey, card]);
   const layout = useMemo(
     () =>
       layouts && layouts.key === layoutKey && canvas
@@ -147,7 +152,7 @@ export function AgentGraphCanvas({
         ),
       },
     }));
-    const cards: AgentCardNode[] = [];
+    const cards: (AgentCardNode | LiveAgentCardNode)[] = [];
     for (const id of topology.agentIds) {
       const agent = byId.get(id);
       const position = layout.positions.get(id);
@@ -155,20 +160,20 @@ export function AgentGraphCanvas({
       const selected = selectedId === id;
       cards.push({
         id,
-        type: "agent",
+        type: live ? "liveAgent" : "agent",
         position,
-        width: AGENT_CARD.width,
-        height: AGENT_CARD.height,
+        width: card.width,
+        height: card.height,
         className: AGENT_NODE_CLASS,
         draggable: false,
         ariaRole: "button",
         ariaLabel: agentSummary(agent),
         domAttributes: { "aria-pressed": selected },
-        data: { agent, selected, direction },
-      });
+        data: { agent, selected, direction, now },
+      } as AgentCardNode | LiveAgentCardNode);
     }
     return [...frames, ...cards];
-  }, [layout, topology, byId, selectedId, direction]);
+  }, [layout, topology, byId, selectedId, direction, live, card, now]);
 
   const flowEdges = useMemo((): Edge[] => {
     if (!layout) return [];
@@ -293,10 +298,11 @@ export function AgentGraphCanvas({
         wrapperRef.current = el;
         measureCanvas(el);
       }}
-      className={`agent-graph relative transition-opacity duration-150 ease-out motion-reduce:transition-none ${layout && shown ? "opacity-100" : "opacity-0"} ${className ?? ""}`}
+      className={`agent-graph${live ? " ag-live" : ""} relative transition-opacity duration-150 ease-out motion-reduce:transition-none ${layout && shown ? "opacity-100" : "opacity-0"} ${className ?? ""}`}
       data-layout={layout && shown ? "ready" : "pending"}
       data-columns={layout?.columns}
     >
+      {live && <style>{AGENT_LIVE_CSS}</style>}
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}

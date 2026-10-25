@@ -19,9 +19,11 @@ import { GraphErrorBoundary, retryImport } from "./WorkflowGraphLazy";
 
 export type { AgentGraphCall, AgentGraphCallKind, AgentGraphTool } from "./agent-hub-layout";
 export type {
+  AgentGraphActivity,
   AgentGraphDirection,
   AgentGraphEdge,
   AgentGraphEdgeKind,
+  AgentGraphEvent,
   AgentGraphNode,
   AgentGraphStatus,
 } from "./agent-graph-layout";
@@ -51,10 +53,16 @@ export interface AgentGraphProps {
   calls?: readonly AgentGraphCall[];
   /** Hub layout: draw the person who asked as "You". */
   you?: { label?: string; summary?: string } | boolean;
-  /** Hub layout: epoch ms to draw at (a replay position); defaults to now, ticking. */
+  /** Hub layout and live cards: epoch ms to draw at (a replay position); defaults to now, ticking. */
   now?: number;
   /** Hub layout: the header title. Default "Agent graph". */
   title?: ReactNode;
+  /**
+   * Tree layout: live cards for a running run. Each card loops a small figure of the agent's `activity`, shows its
+   * thinking line (`turn`) and last three `events` as they arrive, its model, effort, time alive and commits; a settled
+   * agent shrinks to a chip with its `result`, and a new spawn grows in. Cards keep a fixed size, so updates never move one.
+   */
+  live?: boolean;
 }
 
 function lazyCanvas() {

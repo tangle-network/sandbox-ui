@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AgentGraph, type AgentGraphEdge, type AgentGraphNode } from "../../workflows";
 
 /**
@@ -156,6 +156,49 @@ export const NestedTeamsLeftToRight: StoryObj = {
   render: () => (
     <div className="h-screen w-full bg-background">
       <Selectable nodes={nestedNodes} edges={nestedEdges} initial="tests" direction="LR" className="h-full w-full" />
+    </div>
+  ),
+};
+
+// A live proving run: a lead and five workers, each doing a different kind of work. Events arrive every two seconds.
+const LIVE_START = Date.now() - 41 * 60_000;
+const LIVE_WORK: readonly [string, AgentGraphNode["activity"], string, readonly string[]][] = [
+  ["prove-scale", "proving", "Folding round 14 of 22; the lag term still dominates", ["bash cargo run --release -- prove --rows 2^22", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs"]],
+  ["commit-wave", "building", "Rebuilding with the wave commitment behind a feature flag", ["bash cargo build -p commit --features wave", "edit crates/commit/src/wave.rs", "bash cargo test -p commit wave::"]],
+  ["paper-parity", "reading", "Section 4.2 bounds the verifier at log n field ops", ["read papers/hyperplonk.pdf p.18", "grep 'verifier' docs/notes.md", "read src/verifier/mod.rs"]],
+  ["field-kernels", "writing", "Writing the Montgomery reduction for the 64-bit field", ["edit src/field/kernel.rs", "bash cargo bench -p field mul", "edit benches/field.rs"]],
+  ["verify-lag", "waiting", "Waiting on prove-scale's round-14 transcript", ["wait prove-scale transcript", "read logs/round-13.json", "wait slot on host"]],
+];
+
+function LiveRun() {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 2000);
+    return () => clearInterval(timer);
+  }, []);
+  const workers: AgentGraphNode[] = LIVE_WORK.map(([label, activity, turn, calls], i) => ({
+    id: label, label, model: MODELS[i % MODELS.length], harness: "opencode", effort: i % 2 ? "high" : "medium",
+    status: activity === "waiting" ? "waiting" : "running", activity, turn,
+    startedAt: LIVE_START + i * 4 * 60_000, commits: [14, 12, 1, 4, 0][i],
+    events: Array.from({ length: 3 + tick }, (_, k) => ({ id: `${label}-${k}`, label: calls[k % calls.length] })),
+  }));
+  const nodes: AgentGraphNode[] = [
+    { id: "lead", label: "lead", role: "manager", model: "anthropic/claude-sonnet-4-5", effort: "high", status: "running", activity: "thinking",
+      turn: "Two workers on the commitment, one on the verifier; rc3 needs the lag fix", startedAt: LIVE_START, commits: 34,
+      events: [{ id: "l1", label: "spawn field-kernels" }, { id: "l2", label: "release rc2" }, { id: "l3", label: "steer verify-lag" }] },
+    ...workers,
+    { id: "verdict-hunt", label: "verdict-hunt", model: "openai/gpt-5.5", status: "succeeded", result: "valid · 4 commits" },
+  ];
+  const edges: AgentGraphEdge[] = nodes.slice(1).map((n) => ({ from: "lead", to: n.id, kind: "spawn" }));
+  const [selected, setSelected] = useState<string | null>(null);
+  return <AgentGraph live nodes={nodes} edges={edges} selectedId={selected} onSelect={setSelected} className="h-full w-full" />;
+}
+
+/** A running run as live cards: who is working, on what, right now. */
+export const LiveRunCards: StoryObj = {
+  render: () => (
+    <div className="h-screen w-full bg-background">
+      <LiveRun />
     </div>
   ),
 };

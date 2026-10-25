@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState }
 import type { FlowMarker, FlowSpan, FlowTrace } from "@tangle-network/charts"
 import { AgentTimeline, type AgentTimelineItem } from "@tangle-network/ui/chat"
 import { InlineThinkingItem } from "@tangle-network/ui/run"
+import { X } from "lucide-react"
 import { cn } from "../lib/utils"
 import { type AgentTranscriptEntry, useAgentStream } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
@@ -11,19 +12,24 @@ import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
 /** A moment on the run's event track: a release, a check verdict, a spawn, a crash or a steer. */
 export interface TraceEvent extends FlowMarker {}
 
-export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" | "markers" | "onSelect" | "onTimeChange"> {
+export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" | "markers" | "onSelect" | "onTimeChange" | "selectedId" | "onDeselect"> {
   trace: FlowTrace
   /** The selected agent's message stream (Server-Sent Events: rows, reset, end; reconnects with ?after=lastSeq). */
   streamUrl?: (agentId: string) => string
   events?: TraceEvent[]
   /** The time the reader moved to, in trace ms; null while following live or showing the whole run. */
   onTimeChange?: (t: number | null) => void
-  /** The files as of the cursor (the page answers the as-of query); keep its key on the commit so its state survives a scrub. */
+  /**
+   * The code workspace as of the cursor and scoped to the selected agent, usually a WorkspaceFilesPane: the page answers
+   * the as-of query. It spans the full width and at least 70% of the viewport. Keep its key on the commit so a scrub
+   * keeps its state.
+   */
   files?: ReactNode
-  /** The scoreboard as of the cursor. */
+  /** The scoreboard as of the cursor, under the code workspace; omitted when not given. */
   scoreboard?: ReactNode
   selectedAgentId?: string
-  onSelectAgent?: (agentId: string) => void
+  /** Called with the agent the reader selected, or undefined when they close its drawer or press Escape. */
+  onSelectAgent?: (agentId: string | undefined) => void
   className?: string
 }
 
@@ -52,7 +58,7 @@ function NotTimeIndexed({ label }: { label: string }) {
 
 /**
  * The run workspace: the agent timeline and span waterfall over one clock, the selected agent's conversation
- * streaming beside it, and the page's files and scoreboard following the time cursor. Scrubbing is time travel:
+ * streaming in a right-hand drawer, and the page's code workspace and scoreboard following the time cursor. Scrubbing is time travel:
  * every panel shows what was true at the cursor, and the conversation shows what had been said by then.
  */
 export function TraceWorkspace({
@@ -61,6 +67,7 @@ export function TraceWorkspace({
   const byId = useMemo(() => new Map(trace.spans.flatMap((span) => (span.id ? [[span.id, span] as const] : []))), [trace])
   const [ownSelection, setOwnSelection] = useState<string>()
   const selected = selectedAgentId ?? ownSelection
+  const select = (agentId: string | undefined) => { setOwnSelection(agentId); onSelectAgent?.(agentId) }
   const agent = selected ? byId.get(selected) : undefined
   const [cursor, setCursor] = useState<number | null>(null)
   const stream = useAgentStream(selected && streamUrl ? streamUrl(selected) : undefined)
@@ -88,35 +95,37 @@ export function TraceWorkspace({
   useEffect(() => { pinned.current = true; setUnseen(false) }, [selected])
 
   return (
-    <div className={cn("sandbox-trace-workspace grid min-h-0 gap-3", agent ? "lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]" : "grid-cols-1", className)}>
-      <div className="flex min-h-0 min-w-0 flex-col gap-3">
-        <TraceWaterfall
-          {...waterfall}
-          trace={trace}
-          markers={events}
-          onSelect={(span) => {
-            const owner = agentOf(span, byId)
-            if (!owner?.id) return
-            setOwnSelection(owner.id)
-            onSelectAgent?.(owner.id)
-          }}
-          onTimeChange={(t) => { setCursor(t); onTimeChange?.(t) }}
-        />
-        <div className="grid min-h-0 gap-3 md:grid-cols-2">
-          <section aria-label="Files at the cursor" className="min-h-0 overflow-hidden rounded-xl border border-border bg-card">
-            {files ?? <NotTimeIndexed label="Files" />}
-          </section>
-          <section aria-label="Scoreboard at the cursor" className="min-h-0 overflow-hidden rounded-xl border border-border bg-card">
-            {scoreboard ?? <NotTimeIndexed label="Scoreboard" />}
-          </section>
-        </div>
-      </div>
+    <div className={cn("sandbox-trace-workspace flex min-h-0 flex-col gap-3", className)}>
+      <TraceWaterfall
+        {...waterfall}
+        trace={trace}
+        markers={events}
+        selectedId={agent?.id}
+        onDeselect={() => select(undefined)}
+        onSelect={(span) => {
+          const owner = agentOf(span, byId)
+          if (owner?.id) select(owner.id)
+        }}
+        onTimeChange={(t) => { setCursor(t); onTimeChange?.(t) }}
+      />
+      <section aria-label="Code at the cursor" className="flex min-h-[70vh] flex-col overflow-hidden rounded-xl border border-border bg-card">
+        {files ?? <NotTimeIndexed label="Files" />}
+      </section>
+      {scoreboard && (
+        <section aria-label="Scoreboard at the cursor" className="overflow-hidden rounded-xl border border-border bg-card">{scoreboard}</section>
+      )}
       {agent && (
-        <aside aria-label={`${agent.name} conversation`} className="relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card">
+        // A drawer over the right edge: the code workspace keeps its full width underneath.
+        <aside aria-label={`${agent.name} conversation`} onKeyDown={(event) => { if (event.key === "Escape") select(undefined) }}
+          className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[420px] flex-col border-l border-border bg-card shadow-2xl">
           <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
             <span className={cn("h-2 w-2 shrink-0 rounded-full", stream.alive && cursor === null ? "bg-[var(--status-running,#34c48c)]" : "bg-muted-foreground/50")} aria-hidden />
             <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{agent.name}</h3>
             {agent.detail && <span className="truncate text-xs text-muted-foreground">{agent.detail}</span>}
+            <button type="button" aria-label="Close conversation" title="Close (Esc)" onClick={() => select(undefined)}
+              className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+              <X aria-hidden className="h-4 w-4" />
+            </button>
           </header>
           <div
             ref={scroller}

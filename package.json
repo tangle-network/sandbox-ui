@@ -243,7 +243,7 @@
     "@storybook/react-vite": "^10.6.3",
     "@tailwindcss/postcss": "^4.3.3",
     "@tangle-network/agent-interface": "5.7.1",
-    "@tangle-network/brand": "1.27.1",
+    "@tangle-network/brand": "1.26.2",
     "@tangle-network/ui": "11.42.0",
     "@tanstack/react-query": "^5.104.5",
     "@testing-library/dom": "^10.4.2",

@@ -13,8 +13,8 @@ const paths = [
   "drafts/",
 ];
 
-function FilesAndPreview() {
-  const [selected, setSelected] = useState<string>();
+function FilesAndPreview({ initial, className = "h-[560px] w-full max-w-[480px] border border-border" }: { initial?: string; className?: string }) {
+  const [selected, setSelected] = useState<string | undefined>(initial);
   return (
     <WorkspaceFilesPane
       paths={paths}
@@ -35,7 +35,7 @@ function FilesAndPreview() {
           content: "## Current goal\n\nMake the first routing integration reliable.\n\n- Check current traffic\n- Review latency and error rates\n- Share a focused rollout plan",
         }} />,
       } : undefined}
-      className="h-[560px] w-full max-w-[480px] border border-border"
+      className={className}
     />
   );
 }
@@ -51,6 +51,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const BrowseAndPreview: Story = { render: () => <FilesAndPreview /> };
+/** From 640 px the tree and the open file sit side by side; drag, arrow keys or double-click the divider. */
+export const SplitWithFileOpen: Story = {
+  render: () => <FilesAndPreview initial="campaigns/router-reliability/README.md" className="h-[560px] w-full max-w-[1100px] border border-border" />,
+};
 export const Empty: Story = { args: { paths: [], className: "h-[360px] w-full max-w-[480px]" } };
 export const EmptyFolder: Story = {
   render: () => <WorkspaceFilesPane root={{ name: "drafts", path: "drafts", type: "directory", children: [] }} className="h-[360px] w-full max-w-[480px]" />,

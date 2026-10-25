@@ -14,6 +14,7 @@ describe("WorkspaceFilesPane", () => {
     function Consumer() {
       const [path, setPath] = useState<string>();
       return <WorkspaceFilesPane
+        layout="stack"
         paths={paths}
         selectedPath={path}
         onSelect={setPath}

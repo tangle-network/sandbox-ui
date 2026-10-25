@@ -49,9 +49,86 @@ export type WorkspaceFilesPaneProps = WorkspaceFilesSource & {
    * kept for assistive technology only.
    */
   surface?: "card" | "plain";
+  /**
+   * `split` (default) keeps the tree and the open file side by side, with a resizable sidebar, from 640 px of
+   * container width; narrower, and in `stack`, the preview replaces the tree until Back.
+   */
+  layout?: "split" | "stack";
   className?: string;
   style?: CSSProperties;
 };
+
+const SPLIT_MIN_PX = 640;
+const SIDEBAR_DEFAULT_PX = 280;
+const SIDEBAR_MIN_PX = 200;
+
+interface SidebarWidth {
+  width: number;
+  min: number;
+  max: number;
+  set: (px: number) => void;
+  reset: () => void;
+}
+
+/** The sidebar's width, clamped to 200 px .. half the pane, remembered per viewer under `expansionKey` when given. */
+function useSidebarWidth(key: string | undefined, containerWidth: number): SidebarWidth {
+  const storageKey = key ? `${key}:sidebar-width` : undefined;
+  const [stored, setStored] = useState<number>(() => {
+    if (!storageKey) return SIDEBAR_DEFAULT_PX;
+    try {
+      const value = Number(globalThis.localStorage?.getItem(storageKey));
+      return Number.isFinite(value) && value > 0 ? value : SIDEBAR_DEFAULT_PX;
+    } catch {
+      return SIDEBAR_DEFAULT_PX;
+    }
+  });
+  const max = Math.max(SIDEBAR_MIN_PX, containerWidth > 0 ? Math.floor(containerWidth / 2) : 560);
+  const width = Math.min(max, Math.max(SIDEBAR_MIN_PX, stored));
+  const save = (px: number) => {
+    const next = Math.min(max, Math.max(SIDEBAR_MIN_PX, Math.round(px)));
+    setStored(next);
+    if (storageKey) try { globalThis.localStorage?.setItem(storageKey, String(next)); } catch { /* private mode keeps it for the session */ }
+  };
+  return { width, min: SIDEBAR_MIN_PX, max, set: save, reset: () => save(SIDEBAR_DEFAULT_PX) };
+}
+
+/** Drag, arrow keys (Shift for larger steps), Home/End, or double-click to reset the sidebar width. */
+function SidebarResizer({ sidebar, label }: { sidebar: SidebarWidth; label: string }) {
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Resize ${label.toLowerCase()} sidebar`}
+      aria-valuenow={sidebar.width}
+      aria-valuemin={sidebar.min}
+      aria-valuemax={sidebar.max}
+      tabIndex={0}
+      onDoubleClick={sidebar.reset}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 64 : 16;
+        if (event.key === "ArrowLeft") sidebar.set(sidebar.width - step);
+        else if (event.key === "ArrowRight") sidebar.set(sidebar.width + step);
+        else if (event.key === "Home") sidebar.set(sidebar.min);
+        else if (event.key === "End") sidebar.set(sidebar.max);
+        else return;
+        event.preventDefault();
+      }}
+      onPointerDown={(event) => {
+        const handle = event.currentTarget;
+        const startX = event.clientX;
+        const startWidth = sidebar.width;
+        handle.setPointerCapture(event.pointerId);
+        const move = (next: PointerEvent) => sidebar.set(startWidth + next.clientX - startX);
+        const up = () => { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); };
+        handle.addEventListener("pointermove", move);
+        handle.addEventListener("pointerup", up);
+      }}
+      className="group relative w-1.5 shrink-0 cursor-col-resize touch-none outline-none"
+    >
+      <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-primary group-focus-visible:bg-primary" />
+    </div>
+  );
+}
 
 function indexNodes(nodes: ReadonlyArray<FileNode>): Map<string, FileNode> {
   const index = new Map<string, FileNode>();
@@ -88,10 +165,23 @@ export function WorkspaceFilesPane({
   label = "Files",
   headerActions,
   surface = "card",
+  layout = "split",
   className,
   style,
 }: WorkspaceFilesPaneProps) {
   const plain = surface === "plain";
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  useEffect(() => {
+    const element = rootRef.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => setContainerWidth(entry!.contentRect.width));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  // Split from 640 px of the pane's own width; before the first measure, assume it fits.
+  const split = layout === "split" && (containerWidth === 0 || containerWidth >= SPLIT_MIN_PX);
+  const sidebar = useSidebarWidth(expansionKey, containerWidth);
   // A root with a path is itself a row (a file, or a named and possibly empty
   // folder); a pathless root is the container whose children are the rows.
   const nodes = useMemo<FileNode[]>(
@@ -120,6 +210,7 @@ export function WorkspaceFilesPane({
       wasPreviewRef.current = hasPreview;
       return;
     }
+    if (split) { wasPreviewRef.current = hasPreview; return; }
     if (hasPreview && !wasPreviewRef.current) backRef.current?.focus({ preventScroll: true });
     if (!hasPreview && wasPreviewRef.current) {
       const target = returnFocusRef.current;
@@ -127,18 +218,20 @@ export function WorkspaceFilesPane({
       else treeRef.current?.focus({ preventScroll: true });
     }
     wasPreviewRef.current = hasPreview;
-  }, [hasPreview]);
+  }, [hasPreview, split]);
 
   return (
-    <div className={cn("flex h-full min-h-0 min-w-0 flex-col", className)} style={style}>
+    <div ref={rootRef} data-workspace-files-layout={split ? "split" : "stack"}
+      className={cn("flex h-full min-h-0 min-w-0", split ? "flex-row" : "flex-col", className)} style={style}>
       {/* Retaining the tree preserves expansion, selection, filter and scroll on return. */}
       <div
         ref={treeRef}
-        hidden={hasPreview}
+        hidden={!split && hasPreview}
         tabIndex={-1}
         role="region"
         aria-label="Workspace files"
-        className={cn("flex min-h-0 flex-1 flex-col", !plain && "p-2", hasPreview && "hidden")}
+        style={split ? { width: sidebar.width } : undefined}
+        className={cn("flex min-h-0 flex-col", split ? "shrink-0" : "flex-1", !plain && "p-2", !split && hasPreview && "hidden")}
       >
         <section
           aria-labelledby={headingId}
@@ -198,10 +291,16 @@ export function WorkspaceFilesPane({
           </div>
         </section>
       </div>
+      {split && <SidebarResizer sidebar={sidebar} label={label} />}
+      {split && !preview && (
+        <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
+          {isEmpty ? null : "Select a file to open it here."}
+        </div>
+      )}
       {preview && (
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-10 shrink-0 flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-            {onBack && (
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="sticky top-0 z-10 flex min-h-10 shrink-0 flex-wrap items-center gap-2 border-b border-border bg-background px-3 py-2">
+            {onBack && !split && (
               <Button
                 ref={backRef}
                 type="button"
@@ -218,7 +317,7 @@ export function WorkspaceFilesPane({
             </span>
             {preview.actions && <div className="flex shrink-0 items-center gap-2">{preview.actions}</div>}
           </div>
-          <div className="min-h-0 flex-1 overflow-auto">{preview.content}</div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto [&>*]:min-h-full">{preview.content}</div>
         </div>
       )}
     </div>

@@ -2,7 +2,11 @@
 
 ## 0.137.0
 
-- Add `AgentGraph` to `@tangle-network/sandbox-ui/workflows`: the topology of a multi-agent run from `nodes` (label, role, harness, model, status, current turn, cost, tokens) and `edges` (`spawn`, `message`, `delegation`). Spawn edges lay out as a tree with ELK; message and delegation edges are dashed curves over it with a count badge, and never move a card. A parent's leaf workers pack into a grid whose width is chosen for the canvas, so a manager with sixteen workers reads at a 360px pane and on a phone. Status is a colour, a glyph and a word; the selected agent is ringed; click or Enter on a focused card calls `onSelect`. It fits the run on mount and when the tree changes, pans and pinch-zooms, follows light and dark, and loads React Flow and ELK on first render like `WorkflowGraphLazy`.
+- `./primitives` and the root entry forward every `@tangle-network/ui/primitives` export with `export *` instead of two hand-typed lists, so a primitive ui adds is reachable here without a sandbox-ui release. No name is removed. Newly reachable: `MetricChart`, `SeriesSparkline` and the series helpers on `./primitives` and the root; `Breadcrumb*`, `HoverCard*`, `TerminalInput` and `TerminalCursor` on the root. The root `TerminalLine` type stays the workspace terminal line.
+- `@tangle-network/sandbox-ui/primitives` is deprecated as a compatibility re-export: new code imports `@tangle-network/ui/primitives`. Sandbox-ui keeps serving its own `Logo`, `TangleKnot` and `SectionTitle` there.
+- Build against `@tangle-network/ui` 11.42.0 and require `@tangle-network/brand` ^1.26.2, the peer ui 11.42.0 declares; `@radix-ui/react-dialog`, `react-dropdown-menu` and `react-select` move to the versions ui uses, so a consumer installs one copy of each.
+- `DiffView` renders on `@pierre/diffs` 1.6 (it threw "e is not a function" and drew an empty pane).
+- `WorkspaceFilesPane` no longer focuses Back when it mounts with a preview already open, so a page that opens on a preselected file keeps its scroll position.
 
 ## 0.136.1
 

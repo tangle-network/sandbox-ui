@@ -489,7 +489,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 
 | Subpath | Description |
 |---------|-------------|
-| `/primitives` | Button, Card, Dialog, Badge, Input, Select, Table, Tabs, Toast, etc. |
+| `/primitives` | Deprecated compatibility re-export of `@tangle-network/ui/primitives` (Button, Card, Dialog, Select, Table, Tabs, Toast, ...), plus Sandbox's own `Logo`, `TangleKnot` and `SectionTitle`. New code imports `@tangle-network/ui/primitives`. |
 | `/chat` | ChatContainer, ChatInput, ChatMessage, AgentTimeline, ThinkingIndicator |
 | `/run` | ToolCallFeed, RunGroup, InlineToolItem, ExpandedToolDetail |
 | `/workspace` | WorkspaceFilesPane, WorkspaceArtifactView, SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |

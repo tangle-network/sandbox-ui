@@ -34,10 +34,15 @@ test('catalog contains stories and critical states', () => {
   }
 })
 
+// A story that pins `globals.sandboxTheme` is named for its theme (CatalogLight, DarkTheme): it renders in that
+// theme whatever the URL asks, so it is captured only there.
+const pinnedTheme = (id) => id.match(/--(?:[a-z0-9-]*-)?(light|dark)(?:-theme)?$/)?.[1]
+
 for (const story of stories) {
   const critical = criticalModules.includes(story.importPath.replace(/^\.\//, ''))
   const storyViewports = critical ? { ...viewports, tablet } : viewports
-  for (const theme of themes) {
+  const pinned = pinnedTheme(story.id)
+  for (const theme of pinned ? [pinned] : themes) {
     for (const [viewportName, viewport] of Object.entries(storyViewports)) {
       test(`${story.id} ${theme} ${viewportName}`, async ({ page, baseURL }) => {
         await openStory(page, story.id, theme, viewport, baseURL)

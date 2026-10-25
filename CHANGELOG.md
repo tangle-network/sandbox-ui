@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.137.1
+
+- `WorkspaceFilesPane` moves focus to Back only when the reader opens a file from the tree. A preview that arrives from a `selectedPath` the page loads after mounting leaves focus and scroll where they were.
+- `DiffView` drops the helper line beside Wrap lines; the toggle's pressed state carries the mode.
+
 ## 0.137.0
 
 - `./primitives` and the root entry forward every `@tangle-network/ui/primitives` export with `export *` instead of two hand-typed lists, so a primitive ui adds is reachable here without a sandbox-ui release. No name is removed. Newly reachable: `MetricChart`, `SeriesSparkline` and the series helpers on `./primitives` and the root; `Breadcrumb*`, `HoverCard*`, `TerminalInput` and `TerminalCursor` on the root. The root `TerminalLine` type stays the workspace terminal line.

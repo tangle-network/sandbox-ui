@@ -1,8 +1,13 @@
 # Changelog
 
-## 0.137.1
+## 0.137.2
 
 - Dependencies move to their latest releases and drop every known critical and high advisory in the tree (storybook, vite, undici, source-map-js, zod): `eventsource-parser`, `lucide-react`, `nanostores`, `@pierre/diffs` and `@lobehub/icons-static-svg` take their newest versions. The `@tangle-network/ui` 11.42.0 and `@tangle-network/brand` ^1.26.2 peer floors are unchanged.
+
+## 0.137.1
+
+- `WorkspaceFilesPane` moves focus to Back only when the reader opens a file from the tree. A preview that arrives from a `selectedPath` the page loads after mounting leaves focus and scroll where they were.
+- `DiffView` drops the helper line beside Wrap lines; the toggle's pressed state carries the mode.
 
 ## 0.137.0
 

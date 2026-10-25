@@ -114,13 +114,17 @@ export function WorkspaceFilesPane({
   // Focus follows the reader's own open and close. A page that mounts with a file already previewed keeps its
   // scroll and focus: focusing Back on mount scrolled a phone page past its header.
   const mountedRef = useRef(false);
+  // Back takes focus only when the reader opened the file here; a page that loads its selectedPath after mounting
+  // leaves focus and scroll where they were.
+  const openedByReaderRef = useRef(false);
   useEffect(() => {
     if (!mountedRef.current) {
       mountedRef.current = true;
       wasPreviewRef.current = hasPreview;
       return;
     }
-    if (hasPreview && !wasPreviewRef.current) backRef.current?.focus({ preventScroll: true });
+    if (hasPreview && !wasPreviewRef.current && openedByReaderRef.current) backRef.current?.focus({ preventScroll: true });
+    openedByReaderRef.current = false;
     if (!hasPreview && wasPreviewRef.current) {
       const target = returnFocusRef.current;
       if (target?.isConnected) target.focus({ preventScroll: true });
@@ -187,6 +191,7 @@ export function WorkspaceFilesPane({
                 selectedPath={normalizedSelection}
                 onSelect={(path) => {
                   if (treeRef.current) returnFocusRef.current = activeElementWithin(treeRef.current);
+                  openedByReaderRef.current = true;
                   onSelect?.(path, index.get(path));
                 }}
                 onFolderSelect={(path) => onSelect?.(`${path}/`, index.get(path))}

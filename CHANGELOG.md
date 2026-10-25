@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.137.1
+
+- Dependencies move to their latest releases and drop every known critical and high advisory in the tree (storybook, vite, undici, source-map-js, zod): `eventsource-parser`, `lucide-react`, `nanostores`, `@pierre/diffs` and `@lobehub/icons-static-svg` take their newest versions. The `@tangle-network/ui` 11.42.0 and `@tangle-network/brand` ^1.26.2 peer floors are unchanged.
+
 ## 0.137.0
 
 - `./primitives` and the root entry forward every `@tangle-network/ui/primitives` export with `export *` instead of two hand-typed lists, so a primitive ui adds is reachable here without a sandbox-ui release. No name is removed. Newly reachable: `MetricChart`, `SeriesSparkline` and the series helpers on `./primitives` and the root; `Breadcrumb*`, `HoverCard*`, `TerminalInput` and `TerminalCursor` on the root. The root `TerminalLine` type stays the workspace terminal line.

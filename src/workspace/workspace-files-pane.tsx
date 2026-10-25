@@ -111,12 +111,20 @@ export function WorkspaceFilesPane({
   const isEmpty = nodes.length === 0;
   const normalizedSelection = selectedPath?.replace(/^(\.\/|\/)+/, "").replace(/\/+$/, "");
 
+  // Focus follows the reader's own open and close. A page that mounts with a file already previewed keeps its
+  // scroll and focus: focusing Back on mount scrolled a phone page past its header.
+  const mountedRef = useRef(false);
   useEffect(() => {
-    if (hasPreview && !wasPreviewRef.current) backRef.current?.focus();
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      wasPreviewRef.current = hasPreview;
+      return;
+    }
+    if (hasPreview && !wasPreviewRef.current) backRef.current?.focus({ preventScroll: true });
     if (!hasPreview && wasPreviewRef.current) {
       const target = returnFocusRef.current;
-      if (target?.isConnected) target.focus();
-      else treeRef.current?.focus();
+      if (target?.isConnected) target.focus({ preventScroll: true });
+      else treeRef.current?.focus({ preventScroll: true });
     }
     wasPreviewRef.current = hasPreview;
   }, [hasPreview]);

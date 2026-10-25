@@ -34,3 +34,7 @@ export {
   type TaskStatus,
   taskStatus,
 } from "@tangle-network/ui/run";
+
+export { TraceWaterfall, type TraceWaterfallProps, traceSpanMark } from "./trace-waterfall";
+export { TraceWorkspace, type TraceEvent, type TraceWorkspaceProps } from "./trace-workspace";
+export { type AgentStreamRow, type AgentStreamState, type AgentTranscriptEntry, foldAgentRows, useAgentStream } from "./agent-stream";

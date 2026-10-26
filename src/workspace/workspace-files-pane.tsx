@@ -256,7 +256,7 @@ export function WorkspaceFilesPane({
   }, [hasPreview, split]);
 
   return (
-    <div ref={rootRef} data-workspace-files-layout={split ? "split" : "stack"} data-workspace-files-surface={surface} data-expanded={expanded ? "" : undefined}
+    <div ref={rootRef} data-workspace-files-layout={split ? "split" : "stack"} data-expanded={expanded ? "" : undefined}
       className={cn(
         "flex h-full min-h-0 min-w-0 overflow-hidden bg-card text-card-foreground [--files-inset:0.75rem]",
         split ? "flex-row" : "flex-col",
@@ -396,7 +396,7 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
             value={mode}
             onValueChange={setMode}
             options={[{ value: "file", label: "File" }, { value: "diff", label: `Diff vs ${compare.label}` }]}
-            className="shrink-0"
+            className="shrink-0 p-0.5 [&>button]:py-1"
           />
         )}
         {preview?.actions && <div className="flex shrink-0 items-center gap-2">{preview.actions}</div>}

@@ -10,12 +10,12 @@ const paths = [
   "campaigns/router-reliability/outreach.md",
   "campaigns/router-reliability/README.md",
   "crm/accounts/router-account.md",
-  "research/sources/router-product-docs.md",
+  "research/sources/router-product-docs-2026-10-26.md",
   "research/sources/first-customer-brief.md",
   "drafts/",
 ];
 
-function FilesAndPreview({ initial, className = "h-[560px] w-full max-w-[480px] border border-border" }: { initial?: string; className?: string }) {
+function FilesAndPreview({ initial, className = "h-[560px] w-full max-w-[480px]" }: { initial?: string; className?: string }) {
   const [selected, setSelected] = useState<string | undefined>(initial);
   return (
     <WorkspaceFilesPane
@@ -55,7 +55,7 @@ type Story = StoryObj<typeof meta>;
 export const BrowseAndPreview: Story = { render: () => <FilesAndPreview /> };
 /** From 640 px the tree and the open file sit side by side; drag, arrow keys or double-click the divider. */
 export const SplitWithFileOpen: Story = {
-  render: () => <FilesAndPreview initial="campaigns/router-reliability/README.md" className="h-[560px] w-full max-w-[1100px] border border-border" />,
+  render: () => <FilesAndPreview initial="campaigns/router-reliability/README.md" className="h-[560px] w-full max-w-[1100px]" />,
 };
 export const Empty: Story = { args: { paths: [], className: "h-[360px] w-full max-w-[480px]" } };
 export const EmptyFolder: Story = {
@@ -100,7 +100,7 @@ function EditorFrame() {
         content: <CodeSurface code={source.current} filename={selected} />,
         compare: { label: "release 41", content: <DiffView filename={selected} baseline={source.previous} current={source.current} /> },
       } : undefined}
-      className="h-[70vh] w-full border border-border"
+      className="h-[70vh] w-full"
     />
   );
 }

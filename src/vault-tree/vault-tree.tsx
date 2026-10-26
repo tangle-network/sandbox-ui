@@ -402,10 +402,10 @@ export function VaultTree({
               'group flex min-h-8 w-full cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 text-sm transition-colors [@media(pointer:coarse)]:min-h-10',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
               selected
-                ? 'bg-[var(--accent-surface-soft)] font-medium text-[var(--accent-text)]'
+                ? 'bg-[var(--ix-sel-bg)] font-medium text-[var(--accent-text)]'
                 : active
                   ? 'bg-muted font-medium text-foreground'
-                  : 'text-foreground hover:bg-muted',
+                  : 'text-foreground hover:bg-[var(--ix-hover-bg)]',
             ].join(' ')}
           >
             <span aria-hidden="true" className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">

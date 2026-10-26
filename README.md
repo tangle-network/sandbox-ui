@@ -279,6 +279,8 @@ The pane uses the shared searchable file tree and retains it while a preview is 
 Returning to files preserves expansion, selection, and scroll.
 Native search ends when a result is selected.
 Adapters own loading, permissions, errors, file reads, and actions; `emptyState` customizes an empty workspace.
+One card frames the tree and the open file; pass `surface="plain"` inside a pane that already frames them.
+The search field and the open-file tabs share one header row, and `--files-inset` sets every inset.
 The preview header exposes Back to files, the selected path, and supplied actions without a second title frame.
 Set `hideTitleBlock` on the nested artifact renderer when the containing pane already identifies the file.
 Download, format, toolbar, and content controls remain available; standalone rendering keeps its existing title defaults.

@@ -354,8 +354,9 @@ function ProfileRow({
           </span>
         </span>
       </button>
+      {/* The reveal shares the hiding rule's media condition, so it always follows it in the cascade; otherwise a focused Edit stayed invisible on desktop. */}
       {(onEdit || onDelete) && (
-        <span className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+        <span className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100">
           {onEdit && (
             <button
               type="button"

@@ -72,7 +72,8 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
   const layout = useMemo(() => layoutHub({ nodes, edges, tools, calls, you: Boolean(you) }), [nodes, edges, tools, calls, you]);
 
   // Full metrics when they fit at three quarters scale or better, else the compact grid.
-  const span = (m: HubMetrics) => ({ w: (layout.maxCol - layout.minCol) * m.cellX + PAD_X * 2, h: (layout.maxRow - layout.minRow) * m.cellY + PAD_Y * 2 + m.label });
+  // The last row's centre sits half a hub tile below its cell top, and its tile and name hang below that.
+  const span = (m: HubMetrics) => ({ w: (layout.maxCol - layout.minCol) * m.cellX + PAD_X * 2, h: (layout.maxRow - layout.minRow) * m.cellY + PAD_Y * 2 + m.hubTile + m.label });
   const metrics = width && width / span(HUB_METRICS).w < 0.75 ? HUB_METRICS_COMPACT : HUB_METRICS;
   const { w, h } = span(metrics);
   const scale = width ? Math.min(1, width / w) : 1;

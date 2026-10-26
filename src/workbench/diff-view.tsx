@@ -5,6 +5,7 @@ import { FileDiff, getSingularPatch } from "@pierre/diffs"
 import { Button } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { buildUnifiedPatch } from "./diff-utils"
+import { CODE_FONT_FAMILY, CODE_THEME } from "./syntax"
 
 const DIFF_OPTIONS = {
   diffStyle: "unified",
@@ -12,7 +13,7 @@ const DIFF_OPTIONS = {
   lineDiffType: "word",
   hunkSeparators: "simple",
   expandUnchanged: false,
-  theme: { dark: "github-dark", light: "github-light" },
+  theme: CODE_THEME,
   stickyHeader: true,
 } as const
 
@@ -65,10 +66,7 @@ export function DiffView({
     if (host == null || !patch) return
     const container = document.createElement(DIFF_CONTAINER_TAG)
     // The renderer's shadow styles otherwise choose an OS-specific mono face.
-    container.style.setProperty(
-      "--diffs-font-family",
-      'var(--font-mono, "Geist Mono", "JetBrains Mono", ui-monospace, monospace)',
-    )
+    container.style.setProperty("--diffs-font-family", CODE_FONT_FAMILY)
     container.style.display = "block"
     container.style.minWidth = "0"
     container.style.maxWidth = "100%"

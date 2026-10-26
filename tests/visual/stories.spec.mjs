@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { test, expect } from 'playwright/test'
-import { assertStoryHealthy, openStory, waitForDiffRender } from './story-ready.mjs'
+import { assertStoryHealthy, openStory, waitForCodeRender, waitForDiffRender } from './story-ready.mjs'
 
 test.afterEach(async ({ page }) => {
   await assertStoryHealthy(page)
@@ -62,6 +62,7 @@ for (const story of stories) {
         if (/^workbench-diffreadability--(wrapped|horizontal-scroll|narrow)$/.test(story.id)) {
           await waitForDiffRender(page, 'endpoint')
         }
+        if (/^workbench-code(surface|view)--/.test(story.id)) await waitForCodeRender(page)
         if (story.id === 'workbench-diffreadability--unbroken-text') {
           await waitForDiffRender(page, 'END_OF_LINE')
         }

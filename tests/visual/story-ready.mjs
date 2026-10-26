@@ -103,6 +103,22 @@ export async function openStory(page, id, theme, viewport, baseURL, { reducedMot
   await assertStoryHealthy(page)
 }
 
+/** Code surfaces render plain text first and again once their grammar loads; wait until the markup holds still. */
+export async function waitForCodeRender(page) {
+  await page.waitForFunction(() => {
+    const roots = [...document.querySelectorAll('[data-code-surface] diffs-container')].map((element) => element.shadowRoot)
+    if (roots.length === 0 || roots.some((root) => !root?.textContent?.trim())) return false
+    const markup = roots.map((root) => root.innerHTML).join('')
+    const settled = window.__codeMarkup === markup
+    window.__codeMarkup = markup
+    return settled
+  }, undefined, { polling: 400 })
+  await page.evaluate(async () => {
+    await document.fonts.load('400 13px "Geist Mono"')
+    await document.fonts.ready
+  })
+}
+
 export async function waitForDiffRender(page, expectedText) {
   await page.waitForFunction(
     (text) => document.querySelector('[data-testid="diff-view"] diffs-container')?.shadowRoot?.textContent?.includes(text),

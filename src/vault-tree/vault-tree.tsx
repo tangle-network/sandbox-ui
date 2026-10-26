@@ -27,6 +27,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import type { FileNode } from '@tangle-network/ui/files'
+import { revealInScroller } from '../lib/reveal-in-scroller'
 
 /** Children rendered per folder before a "Show more" row. */
 export const VAULT_TREE_CHILD_PAGE = 200
@@ -273,7 +274,8 @@ export function VaultTree({
     const reveal = pendingRevealRef.current
     if (reveal && rowRefs.current.has(reveal)) {
       pendingRevealRef.current = null
-      rowRefs.current.get(reveal)?.scrollIntoView?.({ block: 'nearest' })
+      const row = rowRefs.current.get(reveal)
+      if (row) revealInScroller(row)
     }
     const focus = pendingFocusRef.current
     if (focus && rowRefs.current.has(focus)) {

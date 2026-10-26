@@ -5,6 +5,7 @@ import { FileDiff, getSingularPatch } from "@pierre/diffs"
 import { Button } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { buildUnifiedPatch } from "./diff-utils"
+import { CODE_FONT_FAMILY, CODE_THEME } from "./syntax"
 
 const DIFF_OPTIONS = {
   diffStyle: "unified",
@@ -12,7 +13,7 @@ const DIFF_OPTIONS = {
   lineDiffType: "word",
   hunkSeparators: "simple",
   expandUnchanged: false,
-  theme: { dark: "github-dark", light: "github-light" },
+  theme: CODE_THEME,
   stickyHeader: true,
 } as const
 
@@ -51,7 +52,6 @@ export function DiffView({
     [filename, baseline, current],
   )
   const [wrap, setWrap] = React.useState(defaultWrap)
-  const hintId = React.useId()
   const hostRef = React.useRef<HTMLDivElement>(null)
   const instanceRef = React.useRef<FileDiff | null>(null)
   const latestThemeType = React.useRef(themeType)
@@ -66,10 +66,7 @@ export function DiffView({
     if (host == null || !patch) return
     const container = document.createElement(DIFF_CONTAINER_TAG)
     // The renderer's shadow styles otherwise choose an OS-specific mono face.
-    container.style.setProperty(
-      "--diffs-font-family",
-      'var(--font-mono, "Geist Mono", "JetBrains Mono", ui-monospace, monospace)',
-    )
+    container.style.setProperty("--diffs-font-family", CODE_FONT_FAMILY)
     container.style.display = "block"
     container.style.minWidth = "0"
     container.style.maxWidth = "100%"
@@ -117,16 +114,12 @@ export function DiffView({
           onClick={() => setWrap((value) => !value)}>
           Wrap lines
         </Button>
-        <p id={hintId} className="min-w-0 flex-1 text-xs text-muted-foreground">
-          {wrap ? "Long lines wrap within this pane." : "Long lines scroll horizontally. Turn on Wrap lines to read without scrolling."}
-        </p>
       </div>
       <div
         ref={hostRef}
         data-testid="diff-view"
         role="region"
         aria-label={`Diff for ${filename}`}
-        aria-describedby={hintId}
         tabIndex={0}
         className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto text-[13px]"
       />

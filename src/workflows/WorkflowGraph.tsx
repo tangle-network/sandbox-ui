@@ -704,10 +704,8 @@ export function WorkflowNode({
                 state.status === "running" ? "animate-pulse" : ""
               }`}
               {...(state.status === "running" ? { "data-motion": "essential" } : {})}
-              style={{
-                background: STATUS_COLOR[state.status],
-                borderColor: "hsl(var(--card))",
-              }}
+              style={{ background: STATUS_COLOR[state.status], borderColor: "hsl(var(--card))" }}
+              role="img"
               aria-label={STATUS_LABEL[state.status]}
             />
           )}

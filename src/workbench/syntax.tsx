@@ -1,187 +1,135 @@
 "use client"
 
 import * as React from "react"
-import type { CSSProperties } from "react"
-import PrismLight from "react-syntax-highlighter/dist/esm/prism-light"
-import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash"
-import css from "react-syntax-highlighter/dist/esm/languages/prism/css"
-import javascript from "react-syntax-highlighter/dist/esm/languages/prism/javascript"
-import json from "react-syntax-highlighter/dist/esm/languages/prism/json"
-import jsx from "react-syntax-highlighter/dist/esm/languages/prism/jsx"
-import markdown from "react-syntax-highlighter/dist/esm/languages/prism/markdown"
-import python from "react-syntax-highlighter/dist/esm/languages/prism/python"
-import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx"
-import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript"
-import yaml from "react-syntax-highlighter/dist/esm/languages/prism/yaml"
+import { File } from "@pierre/diffs"
+import { revealInScroller } from "../lib/reveal-in-scroller"
 
-// Register only the languages the sandbox surfaces actually render. The Light
-// build ships no grammars by default, so this keeps the bundle lean and the
-// highlighter deterministic.
-let registered = false
-function ensureLanguages() {
-  if (registered) return
-  registered = true
-  PrismLight.registerLanguage("bash", bash)
-  PrismLight.registerLanguage("css", css)
-  PrismLight.registerLanguage("javascript", javascript)
-  PrismLight.registerLanguage("json", json)
-  PrismLight.registerLanguage("jsx", jsx)
-  PrismLight.registerLanguage("markdown", markdown)
-  PrismLight.registerLanguage("python", python)
-  PrismLight.registerLanguage("tsx", tsx)
-  PrismLight.registerLanguage("typescript", typescript)
-  PrismLight.registerLanguage("yaml", yaml)
-}
+/** The one code theme: CodeSurface and DiffView share @pierre/diffs' Shiki highlighter and these themes. */
+export const CODE_THEME = { dark: "github-dark", light: "github-light" } as const
 
-const EXTENSION_LANGUAGE: Record<string, string> = {
-  ts: "typescript",
-  mts: "typescript",
-  cts: "typescript",
-  tsx: "tsx",
-  js: "javascript",
-  mjs: "javascript",
-  cjs: "javascript",
-  jsx: "jsx",
-  json: "json",
-  jsonc: "json",
-  sh: "bash",
-  bash: "bash",
-  zsh: "bash",
-  css: "css",
-  md: "markdown",
-  markdown: "markdown",
-  py: "python",
-  yml: "yaml",
-  yaml: "yaml",
-}
+export const CODE_FONT_FAMILY = 'var(--font-mono, "Geist Mono", "JetBrains Mono", ui-monospace, monospace)'
 
-/** Resolve a Prism language id from an explicit hint or the filename. */
-export function resolveLanguage(filename: string, explicit?: string): string {
-  if (explicit) return explicit
-  const ext = filename.split(".").pop()?.toLowerCase() ?? ""
-  return EXTENSION_LANGUAGE[ext] ?? "text"
-}
+const CONTAINER_TAG = "diffs-container"
 
-// Restrained dark Prism theme wired to the brand `--syntax-*` tokens so
-// highlighting tracks the active theme (dark / vault) instead of baking in a
-// fixed palette. Backgrounds stay transparent — the surrounding surface owns
-// the depth — and ligatures are disabled so `=>`, `!=`, `>=` read as code.
-const codeBase: CSSProperties = {
-  color: "var(--syntax-foreground, #E8E6F6)",
-  background: "transparent",
-  fontFamily: 'var(--font-mono, "Geist Mono", "JetBrains Mono", ui-monospace, monospace)',
-  fontVariantLigatures: "none",
-  fontFeatureSettings: "normal",
-  fontSize: "var(--code-font-size, 0.8125rem)",
-  lineHeight: "var(--code-line-height, 1.6)",
-  tabSize: 2,
-  hyphens: "none",
-  direction: "ltr",
-  textAlign: "left",
-  whiteSpace: "pre",
-  wordSpacing: "normal",
-  wordBreak: "normal",
-}
-
-export const BRAND_PRISM_THEME: Record<string, CSSProperties> = {
-  'code[class*="language-"]': codeBase,
-  'pre[class*="language-"]': { ...codeBase, margin: 0, padding: 0, overflow: "auto" },
-  comment: { color: "var(--syntax-comment, #6B7094)", fontStyle: "italic" },
-  prolog: { color: "var(--syntax-comment, #6B7094)" },
-  doctype: { color: "var(--syntax-comment, #6B7094)" },
-  cdata: { color: "var(--syntax-comment, #6B7094)" },
-  punctuation: { color: "var(--syntax-variable, #C4C0D8)" },
-  namespace: { opacity: 0.7 },
-  property: { color: "var(--syntax-variable, #C4C0D8)" },
-  tag: { color: "var(--syntax-keyword, #A78FFF)" },
-  "attr-name": { color: "var(--syntax-variable, #C4C0D8)" },
-  "attr-value": { color: "var(--syntax-string, #10b981)" },
-  boolean: { color: "var(--syntax-number, #FFB347)" },
-  number: { color: "var(--syntax-number, #FFB347)" },
-  constant: { color: "var(--syntax-number, #FFB347)" },
-  symbol: { color: "var(--syntax-number, #FFB347)" },
-  selector: { color: "var(--syntax-keyword, #A78FFF)" },
-  "class-name": { color: "var(--syntax-function, #6D9FFF)" },
-  string: { color: "var(--syntax-string, #10b981)" },
-  char: { color: "var(--syntax-string, #10b981)" },
-  builtin: { color: "var(--syntax-meta, #8263FF)" },
-  inserted: { color: "var(--syntax-string, #10b981)" },
-  deleted: { color: "var(--syntax-error, #FF4D6D)" },
-  variable: { color: "var(--syntax-variable, #C4C0D8)" },
-  operator: { color: "var(--syntax-variable, #C4C0D8)" },
-  entity: { color: "var(--syntax-function, #6D9FFF)", cursor: "help" },
-  url: { color: "var(--syntax-function, #6D9FFF)" },
-  atrule: { color: "var(--syntax-keyword, #A78FFF)" },
-  keyword: { color: "var(--syntax-keyword, #A78FFF)" },
-  function: { color: "var(--syntax-function, #6D9FFF)" },
-  regex: { color: "var(--syntax-meta, #8263FF)" },
-  important: { color: "var(--syntax-error, #FF4D6D)", fontWeight: "bold" },
-  bold: { fontWeight: "bold" },
-  italic: { fontStyle: "italic" },
+/** Follow the host's Brand theme (`data-theme` or the `light` class on <html>) unless the caller fixes one. */
+export function useHostThemeType(explicit?: "light" | "dark"): "light" | "dark" {
+  const read = () => {
+    if (typeof document === "undefined") return "dark"
+    const root = document.documentElement
+    return root.getAttribute("data-theme") === "light" || root.classList.contains("light") ? "light" : "dark"
+  }
+  const [host, setHost] = React.useState<"light" | "dark">(read)
+  React.useEffect(() => {
+    if (explicit) return
+    setHost(read())
+    const observer = new MutationObserver(() => setHost(read()))
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme"] })
+    return () => observer.disconnect()
+  }, [explicit])
+  return explicit ?? host
 }
 
 export interface CodeSurfaceProps {
   code: string
+  /** Names the file and picks its grammar: every Shiki language, loaded on first use. */
   filename: string
+  /** A Shiki language id that overrides the filename, such as `rust` for a file without an extension. */
   language?: string
   showLineNumbers?: boolean
+  /** Wrap long lines inside the pane instead of scrolling sideways. */
+  wrap?: boolean
+  /** A 1-based line to select and scroll into view. */
+  line?: number
+  /** Defaults to the host's Brand theme. */
+  themeType?: "light" | "dark"
   className?: string
 }
 
 /**
- * Read-only, brand-themed code renderer. Wrapped in a scroll container so the
- * highlighter itself never grows the layout; line numbers sit in a muted,
- * tabular column.
+ * Read-only code renderer on @pierre/diffs' `File`, the same Shiki highlighter and theme as DiffView. A new
+ * custom element per render survives StrictMode remounts; the surrounding element owns scrolling.
  */
 export function CodeSurface({
   code,
   filename,
   language,
   showLineNumbers = true,
+  wrap = false,
+  line,
+  themeType,
   className,
 }: CodeSurfaceProps) {
-  ensureLanguages()
-  const lang = resolveLanguage(filename, language)
+  const theme = useHostThemeType(themeType)
+  const hostRef = React.useRef<HTMLDivElement>(null)
+  const instanceRef = React.useRef<File | null>(null)
+  const containerRef = React.useRef<HTMLElement | null>(null)
+  const latestTheme = React.useRef(theme)
+  const appliedTheme = React.useRef(theme)
+  const pendingLine = React.useRef<number | undefined>(line)
+
+  React.useLayoutEffect(() => {
+    latestTheme.current = theme
+  }, [theme])
+
+  // Lines render as plain text first and again once the grammar loads, so a requested line is revealed after
+  // whichever render first contains it.
+  const reveal = React.useCallback(() => {
+    const target = pendingLine.current
+    const element = target ? containerRef.current?.shadowRoot?.querySelector<HTMLElement>(`[data-line="${target}"]`) : null
+    if (!target || !element) return
+    pendingLine.current = undefined
+    instanceRef.current?.setSelectedLines({ start: target, end: target })
+    revealInScroller(element, "center")
+  }, [])
+
+  React.useLayoutEffect(() => {
+    const host = hostRef.current
+    if (host == null) return
+    const container = document.createElement(CONTAINER_TAG)
+    container.style.setProperty("--diffs-font-family", CODE_FONT_FAMILY)
+    container.style.display = "block"
+    container.style.minWidth = "0"
+    container.style.maxWidth = "100%"
+    host.appendChild(container)
+    containerRef.current = container
+    const instance = new File({
+      theme: CODE_THEME,
+      themeType: latestTheme.current,
+      overflow: wrap ? "wrap" : "scroll",
+      disableFileHeader: true,
+      disableLineNumbers: !showLineNumbers,
+      onPostRender: () => reveal(),
+    })
+    instanceRef.current = instance
+    appliedTheme.current = latestTheme.current
+    instance.render({ file: { name: filename, contents: code, ...(language ? { lang: language } : {}) }, fileContainer: container })
+    return () => {
+      if (instanceRef.current === instance) instanceRef.current = null
+      instance.cleanUp()
+      container.remove()
+    }
+  }, [code, filename, language, showLineNumbers, wrap, reveal])
+
+  React.useLayoutEffect(() => {
+    if (appliedTheme.current === theme) return
+    instanceRef.current?.setThemeType(theme)
+    appliedTheme.current = theme
+  }, [theme])
+
+  React.useLayoutEffect(() => {
+    pendingLine.current = line
+    reveal()
+  }, [line, reveal])
 
   return (
     <div
+      ref={hostRef}
+      data-code-surface=""
+      role="region"
+      aria-label={filename}
+      tabIndex={0}
       className={className}
-      style={{
-        height: "100%",
-        overflow: "auto",
-        background: "transparent",
-        padding: "0.75rem 0.5rem 0.75rem 0",
-      }}
-    >
-      <PrismLight
-        language={lang}
-        style={BRAND_PRISM_THEME}
-        showLineNumbers={showLineNumbers}
-        wrapLongLines={false}
-        customStyle={{
-          margin: 0,
-          padding: 0,
-          background: "transparent",
-          fontSize: "var(--code-font-size, 0.8125rem)",
-        }}
-        codeTagProps={{
-          style: {
-            fontFamily:
-              'var(--font-mono, "Geist Mono", "JetBrains Mono", ui-monospace, monospace)',
-            fontVariantLigatures: "none",
-          },
-        }}
-        lineNumberStyle={{
-          minWidth: "3em",
-          paddingRight: "1em",
-          textAlign: "right",
-          color: "var(--syntax-comment, #6B7094)",
-          opacity: 0.65,
-          userSelect: "none",
-        }}
-      >
-        {code}
-      </PrismLight>
-    </div>
+      style={{ height: "100%", minWidth: 0, overflow: "auto", fontSize: "var(--code-font-size, 0.8125rem)" }}
+    />
   )
 }

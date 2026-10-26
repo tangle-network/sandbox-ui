@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { FlowSpan, FlowTrace } from "@tangle-network/charts";
 import { TraceWorkspace } from "../../run";
+// The host imports the waterfall's stylesheet once, as the TraceWaterfall docs say.
+import "@tangle-network/charts/react/flow-waterfall.css";
 
 /**
  * The run workspace with its Timeline and Graph views over one trace: a manager that spawned four workers, one still

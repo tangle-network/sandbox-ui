@@ -182,8 +182,8 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/ui':
-        specifier: ^11.44.1
-        version: 11.44.1(9108795aa8a7a39aefb9b901e02af2f4)
+        specifier: ^11.45.0
+        version: 11.45.0(6df588fd51eeb8409681c9ca21ec55d3)
       diff:
         specifier: ^9.0.0
         version: 9.0.0
@@ -237,8 +237,8 @@ importers:
         specifier: 5.7.1
         version: 5.7.1
       '@tangle-network/brand':
-        specifier: 1.27.1
-        version: 1.27.1(react@19.3.1)
+        specifier: 1.29.0
+        version: 1.29.0(react@19.3.1)
       '@tangle-network/charts':
         specifier: ^0.21.4
         version: 0.21.4(react@19.3.1)
@@ -1920,8 +1920,8 @@ packages:
   '@tangle-network/agent-interface@5.7.1':
     resolution: {integrity: sha512-8wsmxlddEX9N3PGHvJ/pgtOBGFy6nm1FZfU2BnT4PrATpHLJV8rnI69QcwM0CqJbU9j3yD9l26fTJbMFusGPtg==}
 
-  '@tangle-network/brand@1.27.1':
-    resolution: {integrity: sha512-/uoHpYx5dEFuugecVUU6dfui/qihGzbAx7fRQpNbseXo2XUwVqyglkRSso7E/HHruWDm/TpAjxJaldNAgUHpig==}
+  '@tangle-network/brand@1.29.0':
+    resolution: {integrity: sha512-7kjZaCSYYR0ZOSzB0U8EpQUZ3uXAEZqvRbkSTmnTmWvdhZd20fa4WxhyjqgE+W7PH7AY4OFbUu4igpJE5HbLeA==}
     hasBin: true
     peerDependencies:
       react: '>=18'
@@ -1937,12 +1937,12 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/ui@11.44.1':
-    resolution: {integrity: sha512-lPx/6x6W4e+lsHhC5wdkoo3HkJubvr6yI+/Avv3C4X33XJYACPA6ougjvgrDe8p/Ux2G+4s8M1s2tU7SINV9Bw==}
+  '@tangle-network/ui@11.45.0':
+    resolution: {integrity: sha512-+dhuppMPew5cRG1FdtpxG7OFgpC4zbDuI33r2PtIwiWeo3o9cceZ5vskGsk41uFrzoHoEJtciwVKS70Oha/8ng==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <3.0.0'
-      '@tangle-network/brand': ^1.27.1
+      '@tangle-network/brand': ^1.29.0
       '@tiptap/core': '>=3.20.4 <4.0.0'
       '@tiptap/extension-collaboration': '>=3.20.4 <4.0.0'
       '@tiptap/extension-collaboration-caret': '>=3.7.0 <4.0.0'
@@ -5451,7 +5451,7 @@ snapshots:
       spdx-expression-parse: 5.0.0
       zod: 4.6.6
 
-  '@tangle-network/brand@1.27.1(react@19.3.1)':
+  '@tangle-network/brand@1.29.0(react@19.3.1)':
     optionalDependencies:
       react: 19.3.1
 
@@ -5459,7 +5459,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/ui@11.44.1(9108795aa8a7a39aefb9b901e02af2f4)':
+  '@tangle-network/ui@11.45.0(6df588fd51eeb8409681c9ca21ec55d3)':
     dependencies:
       '@pierre/theme': 1.1.0
       '@pierre/trees': 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(shiki@4.5.0)
@@ -5482,7 +5482,7 @@ snapshots:
       '@radix-ui/react-switch': 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@radix-ui/react-tabs': 1.2.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@radix-ui/react-tooltip': 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@tangle-network/brand': 1.27.1(react@19.3.1)
+      '@tangle-network/brand': 1.29.0(react@19.3.1)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       github-slugger: 2.0.0

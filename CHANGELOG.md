@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.140.0
+
+- `WorkspaceFilesPane` is one card around the tree and the open file (`surface="card"`, the default): the tree no longer sits in a card of its own beside a bare viewer. Inside a pane that already frames its content, pass `surface="plain"` (no border, corner or shadow). Both columns open with a header row of one height on the page plane, so the search field and the open-file tabs share one strip and one baseline; the label shows in that row only when there is no search field. The splitter is a 1px line below that row with a 9px hit area. Every inset reads `--files-inset` (0.75rem).
+- Open files use `FileTabs` from `@tangle-network/ui` (^11.45.0): the active tab joins the content, the close button sits inside the tab, long names are cut in the middle, and arrow keys, Home, End and Delete work on the tab list. The pane's hand-rolled tablist is deleted. File | Diff is the shared `SegmentedControl`; Back and full screen are shared `Button`s. In the stacked layout the header names the open file, not its full path.
+- The file tree's selected row and hover use the brand's selected and hover tokens (`--ix-sel-bg`, `--ix-hover-bg`), so the open file reads against the card.
+
 ## 0.139.0
 
 - Add `AgentGraph` to `@tangle-network/sandbox-ui/workflows`: the topology of a multi-agent run from `nodes` (label, role, harness, model, status, current turn, cost, tokens) and `edges` (`spawn`, `message`, `delegation`). Spawn edges lay out as a tree with ELK; message and delegation edges are dashed curves over it with a count badge, and never move a card. A parent's leaf workers pack into a grid whose width is chosen for the canvas, so a manager with sixteen workers reads at a 360px pane and on a phone. Status is a colour, a glyph and a word; the selected agent is ringed; click or Enter on a focused card calls `onSelect`. It fits the run on mount and when the tree changes, pans and pinch-zooms, follows light and dark, and loads React Flow and ELK on first render like `WorkflowGraphLazy`. `live` draws a running run as live cards: a small ASCII figure loops each agent's `activity`, its thinking line and last three `events` slide in, with model, effort, time alive and commits; settled agents shrink to a chip with their `result`, and new spawns grow in.

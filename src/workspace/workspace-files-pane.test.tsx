@@ -170,9 +170,43 @@ describe("WorkspaceFilesPane", () => {
     expect(getByRole("searchbox", { name: "Search files" })).toBeVisible();
   });
 
-  it("keeps its own card surface and visible heading by default", () => {
-    const { getByRole, getByText } = render(<WorkspaceFilesPane paths={paths} />);
-    expect(getByRole("region", { name: "Files" })).toHaveClass("rounded-xl", "border", "bg-card");
+  it("names the tree in its header row only when no search field takes that row", () => {
+    const searched = render(<WorkspaceFilesPane paths={paths} />);
+    expect(searched.getByText("Files", { selector: "h2" })).toHaveClass("sr-only");
+    expect(searched.getByRole("searchbox", { name: "Search files" })).toBeVisible();
+    searched.unmount();
+    const { getByText } = render(<WorkspaceFilesPane paths={paths} search={false} />);
     expect(getByText("Files", { selector: "h2" })).not.toHaveClass("sr-only");
+  });
+
+  it("keeps a tab per opened file, moves between them with arrow keys, and closes into the neighbour", async () => {
+    function Consumer() {
+      const [path, setPath] = useState<string | undefined>("campaigns/plan.md");
+      return <WorkspaceFilesPane
+        paths={paths}
+        selectedPath={path}
+        onSelect={(next, node) => { if (node?.type === "file") setPath(next); }}
+        onBack={() => setPath(undefined)}
+        preview={path ? { path, content: <article>{path}</article> } : undefined}
+      />;
+    }
+    const user = userEvent.setup();
+    const { getByRole, getByText, queryByRole } = render(<Consumer />);
+    await user.click(getByRole("treeitem", { name: "research" }));
+    await user.click(getByRole("treeitem", { name: "sources.md" }));
+    const list = getByRole("tablist", { name: "Open files" });
+    expect(within(list).getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"))).toEqual(["plan.md", "sources.md"]);
+    expect(getByRole("tab", { name: "sources.md" })).toHaveAttribute("aria-selected", "true");
+
+    getByRole("tab", { name: "sources.md" }).focus();
+    await user.keyboard("{ArrowLeft}");
+    expect(getByRole("article")).toHaveTextContent("campaigns/plan.md");
+    expect(getByRole("treeitem", { name: "plan.md" })).toHaveAttribute("aria-selected", "true");
+
+    await user.click(getByRole("button", { name: "Close plan.md" }));
+    expect(getByRole("article")).toHaveTextContent("research/sources.md");
+    await user.click(getByRole("button", { name: "Close sources.md" }));
+    expect(queryByRole("tablist")).toBeNull();
+    expect(getByText("Select a file to open it here.")).toBeVisible();
   });
 });

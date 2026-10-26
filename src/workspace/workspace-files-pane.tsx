@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
-import { ArrowLeft, FolderOpen, Maximize2, Minimize2, X } from "lucide-react";
-import type { FileNode } from "@tangle-network/ui/files";
-import { Button, EmptyState, Input } from "@tangle-network/ui/primitives";
+import { ArrowLeft, FolderOpen, Maximize2, Minimize2 } from "lucide-react";
+import { FileTabs, type FileNode } from "@tangle-network/ui/files";
+import { Button, EmptyState, Input, SegmentedControl } from "@tangle-network/ui/primitives";
 import { cn } from "../lib/utils";
 import { VaultTree } from "../vault-tree/vault-tree";
 import { fileTreeFromPaths, filterFileNodes } from "../vault-tree/tree-data";
@@ -40,15 +40,15 @@ export type WorkspaceFilesPaneProps = WorkspaceFilesSource & {
   expansionKey?: string;
   /** Show a name filter above the tree. Defaults to true. */
   search?: boolean;
-  /** Heading of the files surface. Defaults to "Files". */
+  /** Heading of the files surface, shown in the tree's header row when there is no search field. Defaults to "Files". */
   label?: string;
-  /** Controls rendered in the files surface header. */
+  /** Controls rendered in the tree's header row. */
   headerActions?: ReactNode;
   /**
-   * `card` (default) sets the tree in its own raised surface under a visible
-   * heading. `plain` is for a pane that already names the files, such as a
-   * companion tab: the tree sits on the pane's own surface, and the heading is
-   * kept for assistive technology only.
+   * `card` (default) frames the tree and the open file in one card. `plain`
+   * is for a pane that already frames and names the files, such as a companion
+   * tab: no border, corner or shadow, and the heading is for assistive
+   * technology only.
    */
   surface?: "card" | "plain";
   /**
@@ -98,7 +98,16 @@ function useSidebarWidth(key: string | undefined, containerWidth: number): Sideb
   return { width, min: SIDEBAR_MIN_PX, max, set: save, reset: () => save(SIDEBAR_DEFAULT_PX) };
 }
 
-/** Drag, arrow keys (Shift for larger steps), Home/End, or double-click to reset the sidebar width. */
+/**
+ * The tree's and the open file's header rows: one height and one chrome plane (the page, a step under the card), so
+ * they read as one strip with one baseline. Fields in it take the card plane, as the active tab does.
+ */
+const HEADER_ROW = "flex h-11 shrink-0 pointer-coarse:h-14 items-center bg-background shadow-[inset_0_-1px_0_hsl(var(--border))] [--field-surface:hsl(var(--card))]";
+
+/**
+ * A 1px line below the header row with a 9px invisible hit area. Its negative margin cancels its width, so the header row stays one strip.
+ * Drag, arrow keys (Shift for larger steps), Home/End, or double-click to reset the sidebar width.
+ */
 function SidebarResizer({ sidebar, label }: { sidebar: SidebarWidth; label: string }) {
   return (
     <div
@@ -129,9 +138,10 @@ function SidebarResizer({ sidebar, label }: { sidebar: SidebarWidth; label: stri
         handle.addEventListener("pointermove", move);
         handle.addEventListener("pointerup", up);
       }}
-      className="group relative w-1.5 shrink-0 cursor-col-resize touch-none outline-none"
+      className="group relative z-10 -mr-px w-px shrink-0 cursor-col-resize touch-none outline-none"
     >
-      <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-primary group-focus-visible:bg-primary" />
+      <span aria-hidden className="absolute bottom-0 left-0 top-11 w-px pointer-coarse:top-14 bg-border transition-colors group-hover:bg-ring group-focus-visible:bg-ring" />
+      <span aria-hidden className="absolute bottom-0 -left-1 top-11 w-[9px] pointer-coarse:top-14" />
     </div>
   );
 }
@@ -155,8 +165,11 @@ function activeElementWithin(element: HTMLElement): HTMLElement | null {
 
 /**
  * Compact file navigation shared by workspace companions and standalone panes.
- * The tree sits in its own surface: folders start collapsed, expansion is
- * remembered under `expansionKey`, and a preview replaces the tree until Back.
+ * One card holds the tree and the open file. Both columns start with a header
+ * row of one height on the chrome plane, so the search field and the open-file
+ * tabs share one baseline; every inset reads `--files-inset`. Folders start
+ * collapsed, expansion is remembered under `expansionKey`, and in the stacked
+ * layout a preview replaces the tree until Back.
  */
 export function WorkspaceFilesPane({
   root,
@@ -218,6 +231,7 @@ export function WorkspaceFilesPane({
   const wasPreviewRef = useRef(false);
   const hasPreview = preview !== undefined;
   const isEmpty = nodes.length === 0;
+  const searchable = search && !isEmpty;
   const normalizedSelection = selectedPath?.replace(/^(\.\/|\/)+/, "").replace(/\/+$/, "");
 
   // Focus follows the reader's own open and close, never the page's: a preview that arrives from an initial or loaded
@@ -243,7 +257,13 @@ export function WorkspaceFilesPane({
 
   return (
     <div ref={rootRef} data-workspace-files-layout={split ? "split" : "stack"} data-expanded={expanded ? "" : undefined}
-      className={cn("flex h-full min-h-0 min-w-0", split ? "flex-row" : "flex-col", expanded && "fixed inset-0 z-50 h-auto bg-background p-2", className)}
+      className={cn(
+        "flex h-full min-h-0 min-w-0 overflow-hidden bg-card text-card-foreground [--files-inset:0.75rem]",
+        split ? "flex-row" : "flex-col",
+        !plain && "rounded-[var(--radius-lg)] border border-border shadow-[var(--edge-highlight),var(--shadow-card)]",
+        className,
+        expanded && "fixed inset-0 z-50 h-auto max-h-none w-auto max-w-none rounded-none border-0",
+      )}
       style={expanded ? undefined : style}>
       {/* Retaining the tree preserves expansion, selection, filter and scroll on return. */}
       <div
@@ -253,29 +273,12 @@ export function WorkspaceFilesPane({
         role="region"
         aria-label="Workspace files"
         style={split ? { width: sidebar.width } : undefined}
-        className={cn("flex min-h-0 flex-col", split ? "shrink-0" : "flex-1", !plain && "p-2", !split && hasPreview && "hidden")}
+        className={cn("flex min-h-0 flex-col outline-none", split ? "shrink-0" : "flex-1", !split && hasPreview && "hidden")}
       >
-        <section
-          aria-labelledby={headingId}
-          data-workspace-files-surface={surface}
-          className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden",
-            !plain && "rounded-xl border border-border bg-card text-card-foreground shadow-sm",
-          )}
-        >
-          {plain ? (
-            <>
-              <h2 id={headingId} className="sr-only">{label}</h2>
-              {headerActions && <div className="flex shrink-0 items-center justify-end gap-1 px-3 pt-3">{headerActions}</div>}
-            </>
-          ) : (
-            <div className="flex shrink-0 items-center gap-2 px-3 pb-2 pt-3">
-              <h2 id={headingId} className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{label}</h2>
-              {headerActions && <div className="flex shrink-0 items-center gap-1">{headerActions}</div>}
-            </div>
-          )}
-          {search && !isEmpty && (
-            <div className={cn("shrink-0 px-3 pb-2", plain && "pt-3")}>
+        <section aria-labelledby={headingId} data-workspace-files-surface={surface} className="flex min-h-0 flex-1 flex-col">
+          <div className={cn(HEADER_ROW, "gap-2 px-[var(--files-inset)]")}>
+            <h2 id={headingId} className={cn("min-w-0 flex-1 truncate text-sm font-medium text-foreground", (plain || searchable) && "sr-only")}>{label}</h2>
+            {searchable && (
               <Input
                 type="search"
                 size="sm"
@@ -283,10 +286,12 @@ export function WorkspaceFilesPane({
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={`Search ${label.toLowerCase()}…`}
                 aria-label={`Search ${label.toLowerCase()}`}
+                className="min-w-0 flex-1"
               />
-            </div>
-          )}
-          <div className={cn("min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5", (!plain || (search && !isEmpty)) && "border-t border-border")}>
+            )}
+            {headerActions && <div className="ml-auto flex shrink-0 items-center gap-1">{headerActions}</div>}
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-[calc(var(--files-inset)_-_0.25rem)] py-2">
             {isEmpty ? (
               emptyState !== undefined ? emptyState : <EmptyState icon={<FolderOpen className="h-6 w-6" />} title="No files yet" />
             ) : visible.length === 0 ? (
@@ -367,51 +372,40 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="sticky top-0 z-10 flex min-h-10 shrink-0 items-center gap-2 border-b border-border bg-background px-2">
+      {/* Stacked, the row has no neighbour to line up with: on a phone the File | Diff toggle wraps under it instead of clipping. */}
+      <div className={cn(HEADER_ROW, "sticky top-0 z-10 gap-2 pr-[var(--files-inset)]", !(tabs && open.length > 0) && "pl-[var(--files-inset)]", !split && "h-auto min-h-11 flex-wrap py-1.5 pointer-coarse:h-auto")}>
         {onBack && !split && preview && (
-          <Button ref={backRef} type="button" variant="bare" onClick={onBack}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md px-1 py-1 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" />
+          <Button ref={backRef} type="button" variant="ghost" size="sm" onClick={onBack} className="-ml-2 shrink-0 gap-1 px-2 text-muted-foreground">
+            <ArrowLeft aria-hidden="true" />
             Back to files
           </Button>
         )}
         {tabs && open.length > 0 ? (
-          <div role="tablist" aria-label="Open files" className="flex min-w-0 flex-1 items-end self-stretch overflow-x-auto">
-            {open.map((entry) => {
-              const selected = entry === path;
-              return (
-                <div key={entry} title={entry}
-                  className={cn("group flex h-full shrink-0 items-center border-b-2 text-sm", selected ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
-                  <button type="button" role="tab" aria-selected={selected} onClick={() => onOpen(entry)} className="max-w-48 truncate py-2 pl-3 pr-1 outline-none focus-visible:underline">
-                    {baseName(entry)}
-                  </button>
-                  <button type="button" aria-label={`Close ${baseName(entry)}`} onClick={() => close(entry)}
-                    className={cn("mr-1 rounded p-1 hover:bg-muted", !selected && "opacity-0 group-hover:opacity-100 focus-visible:opacity-100")}>
-                    <X aria-hidden className="h-3 w-3" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+          <FileTabs
+            tabs={open.map((entry) => ({ id: entry, name: baseName(entry), path: entry }))}
+            activeId={path}
+            onSelect={onOpen}
+            onClose={close}
+            className="h-full flex-1 px-[var(--files-inset)]"
+          />
         ) : (
-          <span className="min-w-0 flex-1 truncate px-1 text-sm text-muted-foreground" title={path}>{path}</span>
+          <span className="min-w-0 flex-1 truncate text-sm text-foreground" title={path}>{path && baseName(path)}</span>
         )}
         {compare && (
-          <div role="group" aria-label="View" className="flex shrink-0 rounded-md border border-border p-0.5 text-xs">
-            {(["file", "diff"] as const).map((value) => (
-              <button key={value} type="button" aria-pressed={mode === value} onClick={() => setMode(value)}
-                className={cn("rounded px-2 py-1", mode === value ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground")}>
-                {value === "file" ? "File" : `Diff vs ${compare.label}`}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            aria-label="View"
+            value={mode}
+            onValueChange={setMode}
+            options={[{ value: "file", label: "File" }, { value: "diff", label: `Diff vs ${compare.label}` }]}
+            className={cn("shrink-0 p-0.5 [&>button]:py-1", !split && "order-last")}
+          />
         )}
         {preview?.actions && <div className="flex shrink-0 items-center gap-2">{preview.actions}</div>}
         {expand && (
-          <Button type="button" variant="bare" onClick={expand.toggle} aria-pressed={expand.expanded}
+          <Button type="button" variant="ghost" size="icon-sm" onClick={expand.toggle} aria-pressed={expand.expanded}
             aria-label={expand.expanded ? "Exit full screen" : "Full screen"} title={expand.expanded ? "Exit full screen (Esc)" : "Full screen"}
-            className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
-            <ExpandIcon aria-hidden className="h-4 w-4" />
+            className="shrink-0 text-muted-foreground">
+            <ExpandIcon aria-hidden />
           </Button>
         )}
       </div>

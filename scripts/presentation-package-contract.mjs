@@ -141,7 +141,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
                 const typeTokens = {
                   display: ["--font-size-display", "3rem"], hero: ["--font-size-hero", "2.5rem"],
                   page: ["--font-size-3xl", "1.875rem"], section: ["--font-size-xl", "1.25rem"],
-                  subsection: ["--font-size-lg", "1rem"], eyebrow: ["--font-size-sm", "0.75rem"],
+                  subsection: ["--font-size-base", "1rem"], eyebrow: ["--font-size-xs", "0.75rem"],
                 };
                 const typography = [...document.querySelectorAll("[data-type-role]")].map((element) => {
                   const role = element.dataset.typeRole;

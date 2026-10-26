@@ -10,13 +10,13 @@ export interface WorkspaceArtifactViewProps {
   hideTitleBlock?: boolean;
 }
 
-/** The shared technical renderer for workspace files and generated artifacts. */
+/** The shared technical renderer for workspace files and generated artifacts. It paints no plane, so it sits on the pane that holds it. */
 export function WorkspaceArtifactView({ artifact, hideTitleBlock }: WorkspaceArtifactViewProps) {
   switch (artifact.kind) {
     case "file":
       return (
         <FileArtifactPane
-          path={artifact.path === artifact.filename ? undefined : artifact.path}
+          path={artifact.path === artifact.filename ? undefined : artifact.path} className="bg-transparent"
           filename={artifact.filename}
           content={artifact.content}
           blobUrl={artifact.blobUrl}
@@ -45,7 +45,7 @@ export function WorkspaceArtifactView({ artifact, hideTitleBlock }: WorkspaceArt
     case "markdown":
       return (
         <ArtifactPane
-          hideTitleBlock={hideTitleBlock}
+          hideTitleBlock={hideTitleBlock} className="bg-transparent"
           eyebrow={artifact.eyebrow ?? "Document"}
           title={artifact.title}
           subtitle={artifact.subtitle}
@@ -63,7 +63,7 @@ export function WorkspaceArtifactView({ artifact, hideTitleBlock }: WorkspaceArt
     case "openui":
       return (
         <ArtifactPane
-          hideTitleBlock={hideTitleBlock}
+          hideTitleBlock={hideTitleBlock} className="bg-transparent"
           eyebrow={artifact.eyebrow ?? "Structured Artifact"}
           title={artifact.title}
           subtitle={artifact.subtitle}
@@ -79,7 +79,7 @@ export function WorkspaceArtifactView({ artifact, hideTitleBlock }: WorkspaceArt
     case "custom":
       return (
         <ArtifactPane
-          hideTitleBlock={hideTitleBlock}
+          hideTitleBlock={hideTitleBlock} className="bg-transparent"
           eyebrow={artifact.eyebrow ?? "Artifact"}
           title={artifact.title}
           subtitle={artifact.subtitle}

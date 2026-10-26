@@ -372,7 +372,8 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className={cn(HEADER_ROW, "sticky top-0 z-10 gap-2 pr-[var(--files-inset)]", !(tabs && open.length > 0) && "pl-[var(--files-inset)]")}>
+      {/* Stacked, the row has no neighbour to line up with: on a phone the File | Diff toggle wraps under it instead of clipping. */}
+      <div className={cn(HEADER_ROW, "sticky top-0 z-10 gap-2 pr-[var(--files-inset)]", !(tabs && open.length > 0) && "pl-[var(--files-inset)]", !split && "h-auto min-h-11 flex-wrap py-1.5 pointer-coarse:h-auto")}>
         {onBack && !split && preview && (
           <Button ref={backRef} type="button" variant="ghost" size="sm" onClick={onBack} className="-ml-2 shrink-0 gap-1 px-2 text-muted-foreground">
             <ArrowLeft aria-hidden="true" />
@@ -396,7 +397,7 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
             value={mode}
             onValueChange={setMode}
             options={[{ value: "file", label: "File" }, { value: "diff", label: `Diff vs ${compare.label}` }]}
-            className="shrink-0 p-0.5 [&>button]:py-1"
+            className={cn("shrink-0 p-0.5 [&>button]:py-1", !split && "order-last")}
           />
         )}
         {preview?.actions && <div className="flex shrink-0 items-center gap-2">{preview.actions}</div>}

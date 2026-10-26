@@ -1,5 +1,0 @@
----
-"@tangle-network/sandbox-ui": minor
----
-
-Add `AgentGraph` to `@tangle-network/sandbox-ui/workflows`: the topology of a multi-agent run from `nodes` (label, role, harness, model, status, current turn, cost, tokens) and `edges` (`spawn`, `message`, `delegation`). Spawn edges lay out as a tree with ELK; message and delegation edges are dashed curves over it with a count badge, and never move a card. A parent's leaf workers pack into a grid whose width is chosen for the canvas, so a manager with sixteen workers reads at a 360px pane and on a phone. Status is a colour, a glyph and a word; the selected agent is ringed; click or Enter on a focused card calls `onSelect`. It fits the run on mount and when the tree changes, pans and pinch-zooms, follows light and dark, and loads React Flow and ELK on first render like `WorkflowGraphLazy`. `live` draws a running run as live cards: a small ASCII figure loops each agent's `activity`, its thinking line and last three `events` slide in, with model, effort, time alive and commits; settled agents shrink to a chip with their `result`, and new spawns grow in.

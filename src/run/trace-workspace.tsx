@@ -6,6 +6,7 @@ import { AgentTimeline, type AgentTimelineItem } from "@tangle-network/ui/chat"
 import { InlineThinkingItem } from "@tangle-network/ui/run"
 import { X } from "lucide-react"
 import { cn } from "../lib/utils"
+import { AgentGraph, type AgentGraphEdge, type AgentGraphNode } from "../workflows/AgentGraph"
 import { type AgentTranscriptEntry, useAgentStream } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
 
@@ -30,6 +31,11 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   selectedAgentId?: string
   /** Called with the agent the reader selected, or undefined when they close its drawer or press Escape. */
   onSelectAgent?: (agentId: string | undefined) => void
+  /**
+   * What the trace cannot say about a live agent, by agent id: its activity, thinking line, latest events, commits or
+   * result. The Graph view draws them on the agent's live card; status, model, cost and lifetime come from the trace.
+   */
+  agentCards?: Readonly<Record<string, Partial<AgentGraphNode>>>
   className?: string
 }
 
@@ -39,6 +45,27 @@ function agentOf(span: FlowSpan, byId: Map<string, FlowSpan>): FlowSpan | undefi
     if (cursor.kind === "pipeline") return cursor
   }
   return undefined
+}
+
+/** The trace's agents as a spawn tree at the cursor: an agent not started by then is left out, one that ends after it is
+ *  still running, so the Graph and the Timeline always show the same moment. */
+function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, at: number | null, epoch: number | undefined, cards: TraceWorkspaceProps["agentCards"]) {
+  const nodes: AgentGraphNode[] = []
+  const edges: AgentGraphEdge[] = []
+  for (const span of spans) {
+    if (span.kind !== "pipeline" || !span.id || (at !== null && span.startMs > at)) continue
+    const running = at === null ? span.status === "running" : span.endMs > at || span.status === "running"
+    nodes.push({
+      id: span.id, label: span.name, model: span.detail, costUsd: span.costUsd,
+      status: running ? "running" : span.status === "failed" ? "failed" : "succeeded",
+      startedAt: epoch === undefined ? undefined : epoch + span.startMs,
+      ...cards?.[span.id],
+    })
+    const parent = span.parentId ? byId.get(span.parentId) : undefined
+    const spawner = parent && agentOf(parent, byId)
+    if (spawner?.id) edges.push({ from: spawner.id, to: span.id, kind: "spawn" })
+  }
+  return { nodes, edges }
 }
 
 function timelineItems(entries: readonly AgentTranscriptEntry[], streaming: boolean): AgentTimelineItem[] {
@@ -62,7 +89,7 @@ function NotTimeIndexed({ label }: { label: string }) {
  * every panel shows what was true at the cursor, and the conversation shows what had been said by then.
  */
 export function TraceWorkspace({
-  trace, streamUrl, events, onTimeChange, files, scoreboard, selectedAgentId, onSelectAgent, className, ...waterfall
+  trace, streamUrl, events, onTimeChange, files, scoreboard, selectedAgentId, onSelectAgent, agentCards, className, ...waterfall
 }: TraceWorkspaceProps) {
   const byId = useMemo(() => new Map(trace.spans.flatMap((span) => (span.id ? [[span.id, span] as const] : []))), [trace])
   const [ownSelection, setOwnSelection] = useState<string>()
@@ -79,6 +106,11 @@ export function TraceWorkspace({
     const first = stream.entries[0]?.at
     return agent && first !== undefined ? first - agent.startMs : undefined
   }, [waterfall.startedAt, agent, stream.entries])
+  const [view, setView] = useState<"timeline" | "graph">("timeline")
+  const graph = useMemo(
+    () => (view === "graph" ? agentGraphAt(trace.spans, byId, cursor, waterfall.startedAt, agentCards) : undefined),
+    [view, trace, byId, cursor, waterfall.startedAt, agentCards],
+  )
   const shown = cursor === null || origin === undefined ? stream.entries : stream.entries.filter((entry) => entry.at - origin <= cursor)
   const items = useMemo(() => timelineItems(shown, cursor === null && stream.alive), [shown, cursor, stream.alive])
 
@@ -96,18 +128,35 @@ export function TraceWorkspace({
 
   return (
     <div className={cn("sandbox-trace-workspace flex min-h-0 flex-col gap-3", className)}>
-      <TraceWaterfall
-        {...waterfall}
-        trace={trace}
-        markers={events}
-        selectedId={agent?.id}
-        onDeselect={() => select(undefined)}
-        onSelect={(span) => {
-          const owner = agentOf(span, byId)
-          if (owner?.id) select(owner.id)
-        }}
-        onTimeChange={(t) => { setCursor(t); onTimeChange?.(t) }}
-      />
+      <div role="group" aria-label="Run view" className="flex gap-1 self-end rounded-lg border border-border bg-card p-0.5 text-sm">
+        {(["timeline", "graph"] as const).map((option) => (
+          <button key={option} type="button" aria-pressed={view === option} onClick={() => setView(option)}
+            className="rounded-md px-3 py-1 capitalize text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground">
+            {option}
+          </button>
+        ))}
+      </div>
+      {graph && (
+        <AgentGraph nodes={graph.nodes} edges={graph.edges} selectedId={agent?.id ?? null} onSelect={select}
+          live={cursor === null && graph.nodes.some((node) => node.status === "running")}
+          now={cursor !== null && waterfall.startedAt !== undefined ? waterfall.startedAt + cursor : undefined}
+          className="h-[60vh] min-h-[480px] rounded-xl border border-border bg-card" />
+      )}
+      {/* Hidden, not unmounted, in the Graph view: the waterfall owns the clock and live ticking the graph draws at. */}
+      <div hidden={view === "graph"}>
+        <TraceWaterfall
+          {...waterfall}
+          trace={trace}
+          markers={events}
+          selectedId={agent?.id}
+          onDeselect={() => select(undefined)}
+          onSelect={(span) => {
+            const owner = agentOf(span, byId)
+            if (owner?.id) select(owner.id)
+          }}
+          onTimeChange={(t) => { setCursor(t); onTimeChange?.(t) }}
+        />
+      </div>
       <section aria-label="Code at the cursor" className="flex min-h-[70vh] flex-col overflow-hidden rounded-xl border border-border bg-card">
         {files ?? <NotTimeIndexed label="Files" />}
       </section>

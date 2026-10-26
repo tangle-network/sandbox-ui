@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { File } from "@pierre/diffs"
+import { revealInScroller } from "../lib/reveal-in-scroller"
 
 /** The one code theme: CodeSurface and DiffView share @pierre/diffs' Shiki highlighter and these themes. */
 export const CODE_THEME = { dark: "github-dark", light: "github-light" } as const
@@ -78,7 +79,7 @@ export function CodeSurface({
     if (!target || !element) return
     pendingLine.current = undefined
     instanceRef.current?.setSelectedLines({ start: target, end: target })
-    element.scrollIntoView({ block: "center" })
+    revealInScroller(element, "center")
   }, [])
 
   React.useLayoutEffect(() => {

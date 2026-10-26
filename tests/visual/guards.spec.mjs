@@ -1,5 +1,5 @@
 import { test, expect } from 'playwright/test'
-import { assertStoryHealthy, openStory } from './story-ready.mjs'
+import { assertStoryHealthy, openStory, waitForCodeRender } from './story-ready.mjs'
 import { AA_NORMAL, contrast } from '../../scripts/text-dim-surfaces.mjs'
 
 const viewport = { width: 390, height: 844 }
@@ -227,4 +227,16 @@ test('keeps an embedded app interactive and its toolbar usable on mobile', async
   expect(bounds.scrollWidth).toBeLessThanOrEqual(bounds.clientWidth)
   expect(bounds.openRight).toBeLessThanOrEqual(bounds.toolbarRight)
   await assertStoryHealthy(page)
+})
+
+test('keeps the page still while the editor frame reveals its open file', async ({ page, baseURL }) => {
+  // On the run page the frame sits below the waterfall, out of the first view; revealing the open file's tree row
+  // scrolled the whole window to it (agent-record 0.90.0, 190 px three seconds after load).
+  await page.addInitScript(() => addEventListener('DOMContentLoaded', () => {
+    document.head.append(Object.assign(document.createElement('style'), { textContent: '#storybook-root { padding-top: 150vh }' }))
+  }))
+  await openStory(page, 'workspace-workspacefilespane--run-editor-frame', 'dark', { width: 1440, height: 900 }, baseURL)
+  await waitForCodeRender(page)
+  await expect(page.getByRole('treeitem', { selected: true })).toHaveCount(1)
+  expect(await page.evaluate(() => scrollY), 'A pane scrolls only itself').toBe(0)
 })

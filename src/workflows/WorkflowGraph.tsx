@@ -8,7 +8,6 @@
 import {
   Background,
   BaseEdge,
-  type ColorMode,
   Controls,
   EdgeLabelRenderer,
   type EdgeProps,
@@ -43,11 +42,9 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type RefObject,
 } from "react";
 import {
   COMPACT_NODE_SIZE,
@@ -79,6 +76,7 @@ import {
   type WfFlowEdge,
   type WfGroupFrame,
 } from "./flow-graph";
+import { motionAllowed, SELECTION_OUTLINE, useColorMode } from "./canvas-theme";
 import { layoutWithElk, wantsElkLayout } from "./elk-layout";
 import { clampPreview, fmtCost, fmtDuration, fmtTokens } from "./format";
 import { classifyOutput, NodeOutputBody } from "./node-output";
@@ -316,51 +314,12 @@ export const LAYOUT_TRANSITION_MS = 220;
  */
 const DENSITY_FLIP_AT = { grow: 0.12, shrink: 0.75 } as const;
 
-/** Motion is opt-OUT, so it is only used where the reader's preference can be
- *  read and says nothing against it. Somewhere without `matchMedia` cannot say
- *  a reader tolerates movement, so it gets none. */
-function motionAllowed(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === false
-  );
-}
-
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** The layout tween's easing — gentle into and out of the motion, so neither
  *  end of the morph reads as a snap. */
 const easeInOutCubic = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
-
-/** React Flow adds its own .light/.dark class below the graph wrapper. Read
- * that wrapper's inherited scheme so a nested WorkspaceLayout theme wins over
- * the page root without React Flow's class influencing the answer. */
-function currentColorMode(anchor: HTMLElement | null): ColorMode {
-  if (typeof document === "undefined" || typeof window === "undefined") return "light";
-  const scheme = window.getComputedStyle(anchor ?? document.documentElement).colorScheme;
-  if (scheme.startsWith("dark")) return "dark";
-  if (scheme.startsWith("light")) return "light";
-  return (anchor ?? document.documentElement).closest(".dark") ? "dark" : "light";
-}
-
-function useColorMode(wrapperRef: RefObject<HTMLDivElement | null>, hasGraph: boolean): ColorMode {
-  const [mode, setMode] = useState<ColorMode>(() => currentColorMode(null));
-  useLayoutEffect(() => {
-    const anchor = hasGraph ? wrapperRef.current : null;
-    const update = () => setMode(currentColorMode(anchor));
-    update();
-    const observer = new MutationObserver(update);
-    for (let el: HTMLElement | null = anchor ?? document.documentElement; el; el = el.parentElement) {
-      observer.observe(el, {
-        attributes: true,
-        attributeFilter: ["class", "data-theme", "data-sandbox-theme", "style"],
-      });
-    }
-    return () => observer.disconnect();
-  }, [wrapperRef, hasGraph]);
-  return mode;
-}
 
 /** Flow direction for the current graph, so the node component can place its
  *  edge handles on the correct sides (edges enter the leading edge and leave the
@@ -392,15 +351,6 @@ export const SelectedNodeContext = createContext<string | undefined>(undefined);
  * for all of its nodes, or none.
  */
 export const RunModeContext = createContext<boolean>(false);
-
-/** The selected node's ring. An `outline` rather than a border or a box-shadow
- *  because both of those are already spoken for — the border carries tone and
- *  run status, the shadow carries the running/waiting glow — and an outline
- *  composes with both without disturbing the laid-out box. */
-const SELECTION_OUTLINE: CSSProperties = {
-  outline: "2px solid hsl(var(--primary))",
-  outlineOffset: 2,
-};
 
 /** Whether the canvas is currently an EDITOR — read by the node so its
  *  connection handles become visible targets rather than the invisible anchors

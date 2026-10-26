@@ -66,7 +66,9 @@ for (const story of stories) {
         if (story.id === 'workbench-diffreadability--unbroken-text') {
           await waitForDiffRender(page, 'END_OF_LINE')
         }
-        if (story.id.startsWith('workflows-')) {
+        // The hub layout draws its own SVG, not React Flow.
+        if (story.id.startsWith('workflows-agentgraph-hub--')) await expect(page.locator('.ag-root .ag-canvas-wrap')).toBeVisible()
+        else if (story.id.startsWith('workflows-')) {
           await expect(page.locator('.react-flow__node').first()).toBeVisible()
           const graphTheme = story.id === 'workflows-workflowgraph--nested-vault' ? 'light' : theme
           await expect(page.locator('.react-flow').first()).toHaveClass(new RegExp(`\\b${graphTheme}\\b`))

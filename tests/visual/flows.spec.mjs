@@ -13,6 +13,19 @@ const viewports = {
 
 const flows = [
   {
+    // The Graph view draws the trace's agents as a spawn tree, and selecting one opens the same drawer as the Timeline.
+    name: 'run-graph-view',
+    story: 'run-traceworkspace--timeline-and-graph',
+    act: async (page) => {
+      await page.getByRole('button', { name: 'graph', exact: true }).click()
+      // Agent cards only: the tree also draws a frame node around a parent's packed workers.
+      const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent')
+      await expect(cards).toHaveCount(5)
+      await cards.filter({ hasText: 'verifier' }).click()
+      await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toBeVisible()
+    },
+  },
+  {
     name: 'dashboard-action-menu',
     story: 'dashboard-sandboxcard--running',
     act: async (page) => {

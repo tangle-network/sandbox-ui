@@ -200,14 +200,6 @@ describe("AgentProfilePicker host editor", () => {
   });
 });
 
-it("exposes profile authoring actions to touch and keyboard users", async () => {
-  render(<AgentProfilePicker value="studio" profiles={PROFILES} onChange={() => {}} onEdit={() => {}} />);
-  await userEvent.click(screen.getByRole("button", { name: "Agent profile" }));
-  const edit = screen.getAllByTitle("Edit")[0];
-  expect(edit.parentElement).toHaveClass("opacity-100", "group-focus-within:opacity-100");
-  expect(edit.parentElement).toHaveClass("[@media(hover:hover)]:opacity-0");
-});
-
 it("closes authoring when the host disables an already-open picker", async () => {
   const props = { value: "studio", profiles: PROFILES, onChange: vi.fn(), onEdit: vi.fn(), onNew: vi.fn() };
   const view = render(<AgentProfilePicker {...props} />);

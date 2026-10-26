@@ -354,8 +354,9 @@ function ProfileRow({
           </span>
         </span>
       </button>
+      {/* Always shown, in muted text: actions hidden until hover stayed invisible to keyboard focus whenever the hiding rule won the cascade. */}
       {(onEdit || onDelete) && (
-        <span className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+        <span className="flex shrink-0 items-center gap-1">
           {onEdit && (
             <button
               type="button"

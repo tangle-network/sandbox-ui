@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.138.1
+
+- A workflow graph node's run-status dot is an image named by its status ("Done", "Not taken"), so assistive technology reads it and axe no longer reports `aria-prohibited-attr` on every run-state node card.
+
 ## 0.138.0
 
 - `CodeSurface` and `CodeView` highlight with the Shiki highlighter that `DiffView` already uses (through `@pierre/diffs`), so Rust, TOML, Go, C and C++, Solidity, SQL, shell, Dockerfile and every other Shiki language render highlighted; each grammar loads on first use. `CodeView` adds copy, a wrap toggle and go to line (Ctrl/Cmd+G), and both follow the host's light or dark theme unless `themeType` is set. `react-syntax-highlighter` leaves the package. `BRAND_PRISM_THEME` and `resolveLanguage` are removed (no consumers); `CODE_THEME` names the shared theme.

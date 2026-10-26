@@ -18,8 +18,10 @@ const flows = [
     story: 'run-traceworkspace--timeline-and-graph',
     act: async (page) => {
       await page.getByRole('button', { name: 'graph', exact: true }).click()
-      await expect(page.locator('.react-flow__node')).toHaveCount(5)
-      await page.locator('.react-flow__node', { hasText: 'verifier' }).click()
+      // Agent cards only: the tree also draws a frame node around a parent's packed workers.
+      const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent')
+      await expect(cards).toHaveCount(5)
+      await cards.filter({ hasText: 'verifier' }).click()
       await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toBeVisible()
     },
   },

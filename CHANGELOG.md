@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.138.2
+
+- The file tree and `CodeSurface` reveal their selection inside their own scrolling pane only. `Element.scrollIntoView` moved the window too, so a `WorkspaceFilesPane` below the fold scrolled the host page to its open file a few seconds after load.
+
 ## 0.138.1
 
 - A workflow graph node's run-status dot is an image named by its status ("Done", "Not taken"), so assistive technology reads it and axe no longer reports `aria-prohibited-attr` on every run-state node card.

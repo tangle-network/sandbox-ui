@@ -12,11 +12,11 @@ const T0 = Date.UTC(2026, 9, 24, 21, 0, 0);
 const s = (sec: number) => T0 + sec * 1000;
 
 const tools: AgentGraphTool[] = [
-  { id: "search", label: "Web search", provider: "duckduckgo", detail: "Public web, cached 24 h" },
+  { id: "search", label: "Web search", detail: "Public web, cached 24 h" },
   { id: "notion", label: "Notion", provider: "notion", detail: "Product wiki" },
   { id: "slack", label: "Slack", provider: "slack", detail: "#billing-launch" },
   { id: "github", label: "GitHub", provider: "github", detail: "billing-web repository" },
-  { id: "postgres", label: "Database", provider: "postgres", detail: "Postgres, read-only" },
+  { id: "postgres", label: "Database", provider: "supabase", detail: "Supabase Postgres, read-only" },
   { id: "linear", label: "Linear", provider: "linear", detail: "BILL project" },
 ];
 
@@ -118,7 +118,7 @@ export const LargeRun: Story = {
       { id: "root", label: "root", model: "zai/glm-5.3", status: "running", costUsd: null },
       ...workers.map((w, i) => ({ id: w, label: w, model: "zai/glm-5.3", status: (i % 5 === 3 ? "failed" : i < 9 ? "succeeded" : "running") as AgentGraphNode["status"], costUsd: null })),
     ];
-    const big: AgentGraphTool[] = [{ id: "shell", label: "Shell", provider: "bash" }, { id: "files", label: "Files", provider: "files" }, { id: "git", label: "Git", provider: "git" }];
+    const big: AgentGraphTool[] = [{ id: "shell", label: "Shell" }, { id: "files", label: "Files" }, { id: "git", label: "Git" }];
     const bigCalls = workers.flatMap((w, i) => [
       { id: `${w}-s`, from: "root", to: w, kind: "call" as const, startedAt: s(i * 2), durationMs: 30_000 },
       { id: `${w}-t`, from: w, to: big[i % 3]!.id, kind: (i % 5 === 3 ? "failed" : "call") as AgentGraphCall["kind"], startedAt: s(36 + i), durationMs: 1200 },

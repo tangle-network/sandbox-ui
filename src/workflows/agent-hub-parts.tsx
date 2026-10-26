@@ -4,7 +4,7 @@
  * its recent calls. Status reads as a glyph and a word as well as a colour.
  */
 
-import { Bot, Check, Clock3, LoaderCircle, User, X } from "lucide-react";
+import { Bot, Check, Clock3, LoaderCircle, User, Wrench, X } from "lucide-react";
 import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from "react";
 import { ProviderIcon } from "../integrations/provider-logo";
 import { ModelBrandStack, modelBrandFor } from "../lib/model-brand";
@@ -37,7 +37,10 @@ export interface HubEntity {
 function NodeIcon({ entity, size }: { entity: HubEntity; size: number }) {
   if (entity.kind === "you") return <User size={size * 0.42} strokeWidth={2.2} aria-hidden />;
   if (entity.kind === "tool") {
-    return <ProviderIcon id={entity.tool?.provider ?? entity.id} displayName={entity.label} size={Math.round(size * 0.46)} className="rounded-[4px]" />;
+    // Only a named provider has a brand mark; a shell or file tool has none, and looking one up by its id misses every logo CDN.
+    const provider = entity.tool?.provider;
+    if (!provider) return <Wrench size={size * 0.4} aria-hidden />;
+    return <ProviderIcon id={provider} displayName={entity.label} size={Math.round(size * 0.46)} className="rounded-[4px]" />;
   }
   const brand = entity.agent?.model ? modelBrandFor(entity.agent.model) : null;
   return brand ? <ModelBrandStack identity={brand} size="sm" /> : <Bot size={size * 0.44} aria-hidden />;

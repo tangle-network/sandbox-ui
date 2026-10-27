@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- `AgentGraph live` cards read like a system monitor, not a toy: the ASCII figure is gone; a status pill with a breathing dot and a thin travelling sheen on a running card's top edge say it is working; the thinking line gets two lines at 13px; the last three events stream in with a glyph for their kind of work (terminal, edit, read, search, web, git, wait) and how long ago each ran (`AgentGraphEvent.at`), older lines fading back. The model drops its vendor prefix (the brand mark says it), and the card is 304px wide so model, effort, time alive and commits fit.
+- Running and done agents stay on the resting hairline in every AgentGraph card; only waiting, needs-you, failed and unknown colour a border, so a busy run is not a wall of glowing outlines.
+
 ## 1.1.0
 
 - The file tree (`VaultTree`, and so `WorkspaceFilesPane`) reads at a glance: each file carries a type glyph in its type's ink from Brand's tone icons (Markdown, README, Rust, Cargo and package manifests, JavaScript and TypeScript, JSON, TOML and YAML, lockfiles, git files, licenses, images, tables, shell), a 1px guide per depth with the open file's parent guide in the stronger hairline, and one indent step of 12px instead of 1rem.

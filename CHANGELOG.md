@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.7
+
+- `TraceWorkspace`'s agent drawer shows its live dot only while the stream is open and producing. A stream that is unreachable (`error` set) now shows the muted dot, like an ended one. Before this, a drawer opened after the viewer closed said "unreachable" next to a green live dot.
+
 ## 1.1.6
 
 - `TraceWorkspace`'s agent drawer renders Runtime's `notice` rows by `provenance`: `delegated-input` is the agent's input (a user message), `recorded-result` is its delivered answer (an assistant message), and any other notice, such as `capture-unavailable`, is a muted line. JSON text in an input or result renders as a fenced block. These rows used to be dropped, so an agent with no captured conversation showed nothing.

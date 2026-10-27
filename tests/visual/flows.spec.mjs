@@ -33,12 +33,12 @@ const flows = [
     act: async (page) => {
       await page.getByRole('button', { name: 'graph', exact: true }).click()
       await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
-      const cards = page.locator('.react-flow__node-agent')
+      const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent')
       await expect(cards).toHaveCount(96)
       await expect(page.getByRole('region', { name: 'Code at the cursor' })).toHaveCount(0)
       const outside = await page.evaluate(() => {
         const pane = document.querySelector('.agent-graph').getBoundingClientRect()
-        return [...document.querySelectorAll('.react-flow__node-agent')].filter((card) => {
+        return [...document.querySelectorAll('.react-flow__node-agent, .react-flow__node-liveAgent')].filter((card) => {
           const r = card.getBoundingClientRect()
           return r.width === 0 || r.left < pane.left - 1 || r.right > pane.right + 1 || r.top < pane.top - 1 || r.bottom > pane.bottom + 1
         }).length

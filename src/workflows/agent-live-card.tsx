@@ -171,5 +171,5 @@ export const AGENT_LIVE_CSS = `
 @keyframes ag-live-grow { from { opacity: 0; transform: scale(.92) translateY(-8px); } }
 @keyframes ag-live-in { from { opacity: 0; transform: translateY(6px); } }
 @keyframes ag-live-settle { from { opacity: 1; transform: scale(1.08); } }
-@media (prefers-reduced-motion: reduce) { .ag-live * { animation: none !important; } .ag-live .ag-live-card:hover { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ag-live *, .ag-live *::before { animation: none !important; } .ag-live .ag-live-card:hover { transform: none; } }
 `;

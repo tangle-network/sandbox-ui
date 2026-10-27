@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0
+
+- Release 1.0.0 with the same API as 0.140.0; no code changes. From here a breaking change is a major release, and a caret range (`^1.0.0`) takes every later compatible release, so an app no longer needs a release of its own for each minor of this package.
+
 ## 0.140.0
 
 - `WorkspaceFilesPane` is one card around the tree and the open file (`surface="card"`, the default): the tree no longer sits in a card of its own beside a bare viewer. Inside a pane that already frames its content, pass `surface="plain"` (no border, corner or shadow). Both columns open with a header row of one height on the page plane, so the search field and the open-file tabs share one strip and one baseline; the label shows in that row only when there is no search field. The splitter is a 1px line below that row with a 9px hit area. Every inset reads `--files-inset` (0.75rem).

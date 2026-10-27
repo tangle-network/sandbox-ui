@@ -11,19 +11,31 @@
  * The tree follows the WAI-ARIA tree pattern with a single tab stop: arrow keys
  * move between rows, Right/Left expand, collapse or move to a child or parent,
  * Home/End jump, and Enter or Space open a file or toggle a folder.
+ *
+ * Each row reads at a glance: a file-type glyph in its type's ink (Brand tone
+ * icons), a 1 px guide per depth with the open file's parent guide stronger,
+ * and, when the host passes `status`, an added / modified / deleted letter; a
+ * collapsed folder holding changes carries a dot.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import {
+  BookOpen,
+  Braces,
   ChevronRight,
   File,
   FileCode,
+  FileCog,
   FileImage,
-  FileJson,
+  FileLock,
   FileSpreadsheet,
+  FileTerminal,
   FileText,
   Folder,
   FolderOpen,
+  GitBranch,
+  Package,
+  Scale,
   type LucideIcon,
 } from 'lucide-react'
 import type { FileNode } from '@tangle-network/ui/files'
@@ -61,8 +73,19 @@ export interface VaultTreeProps {
   expandAll?: boolean
   /** Accessible name of the tree. */
   label?: string
+  /** A change mark per file path, such as a branch's diff against main. */
+  status?: Readonly<Record<string, FileChange>>
   className?: string
 }
+
+export type FileChange = 'added' | 'modified' | 'deleted'
+const CHANGE: Record<FileChange, { letter: string; ink: string }> = {
+  added: { letter: 'A', ink: 'text-[var(--surface-success-text)]' },
+  modified: { letter: 'M', ink: 'text-[var(--surface-warning-text)]' },
+  deleted: { letter: 'D', ink: 'text-[var(--surface-danger-text)]' },
+}
+/** One indent step; guides sit on its centre line. */
+const INDENT = 12
 
 type TreeRow =
   | {
@@ -119,38 +142,47 @@ function sortChildren(children: FileNode[] | undefined): FileNode[] {
   })
 }
 
-const FILE_ICONS: Record<string, LucideIcon> = {
-  md: FileText,
-  mdx: FileText,
-  txt: FileText,
-  pdf: FileText,
-  doc: FileText,
-  docx: FileText,
-  csv: FileSpreadsheet,
-  tsv: FileSpreadsheet,
-  xls: FileSpreadsheet,
-  xlsx: FileSpreadsheet,
-  json: FileJson,
-  png: FileImage,
-  jpg: FileImage,
-  jpeg: FileImage,
-  gif: FileImage,
-  webp: FileImage,
-  svg: FileImage,
-  ts: FileCode,
-  tsx: FileCode,
-  js: FileCode,
-  jsx: FileCode,
-  py: FileCode,
-  html: FileCode,
-  css: FileCode,
-  yaml: FileCode,
-  yml: FileCode,
+/** A file's glyph and ink by name, then extension: Brand's tone icons, each at least 3:1 on the card and a selected row. */
+type FileKind = { Icon: LucideIcon; ink: string }
+// Literal class names, so the style build's source scan finds every one.
+const INK = {
+  blue: 'text-[var(--tone-blue-icon)]',
+  orange: 'text-[var(--tone-orange-icon)]',
+  lime: 'text-[var(--tone-lime-icon)]',
+  brown: 'text-[var(--tone-brown-icon)]',
+  pink: 'text-[var(--tone-pink-icon)]',
+  teal: 'text-[var(--tone-teal-icon)]',
+  cyan: 'text-[var(--tone-cyan-icon)]',
+  violet: 'text-[var(--tone-violet-icon)]',
+} as const
+const ink = (tone: keyof typeof INK) => INK[tone]
+const BY_NAME: Record<string, FileKind> = {
+  'readme.md': { Icon: BookOpen, ink: ink('blue') },
+  'cargo.toml': { Icon: Package, ink: ink('orange') },
+  'package.json': { Icon: Package, ink: ink('lime') },
+  license: { Icon: Scale, ink: ink('brown') },
+  'license.md': { Icon: Scale, ink: ink('brown') },
+  dockerfile: { Icon: FileCog, ink: ink('blue') },
+  makefile: { Icon: FileTerminal, ink: ink('brown') },
 }
-
-function fileIcon(name: string): LucideIcon {
-  const dot = name.lastIndexOf('.')
-  return (dot > 0 && FILE_ICONS[name.slice(dot + 1).toLowerCase()]) || File
+const BY_EXT: Record<string, FileKind> = {
+  md: { Icon: FileText, ink: ink('blue') }, mdx: { Icon: FileText, ink: ink('blue') }, txt: { Icon: FileText, ink: 'text-muted-foreground' },
+  pdf: { Icon: FileText, ink: ink('pink') }, doc: { Icon: FileText, ink: ink('blue') }, docx: { Icon: FileText, ink: ink('blue') },
+  csv: { Icon: FileSpreadsheet, ink: ink('teal') }, tsv: { Icon: FileSpreadsheet, ink: ink('teal') }, xls: { Icon: FileSpreadsheet, ink: ink('teal') }, xlsx: { Icon: FileSpreadsheet, ink: ink('teal') },
+  json: { Icon: Braces, ink: ink('lime') }, jsonl: { Icon: Braces, ink: ink('lime') },
+  png: { Icon: FileImage, ink: ink('pink') }, jpg: { Icon: FileImage, ink: ink('pink') }, jpeg: { Icon: FileImage, ink: ink('pink') }, gif: { Icon: FileImage, ink: ink('pink') }, webp: { Icon: FileImage, ink: ink('pink') }, svg: { Icon: FileImage, ink: ink('pink') },
+  ts: { Icon: FileCode, ink: ink('blue') }, tsx: { Icon: FileCode, ink: ink('blue') }, js: { Icon: FileCode, ink: ink('lime') }, jsx: { Icon: FileCode, ink: ink('lime') }, mjs: { Icon: FileCode, ink: ink('lime') }, cjs: { Icon: FileCode, ink: ink('lime') },
+  rs: { Icon: FileCode, ink: ink('orange') }, py: { Icon: FileCode, ink: ink('blue') }, go: { Icon: FileCode, ink: ink('cyan') }, sh: { Icon: FileTerminal, ink: ink('brown') },
+  html: { Icon: FileCode, ink: ink('orange') }, css: { Icon: FileCode, ink: ink('violet') },
+  toml: { Icon: FileCog, ink: ink('violet') }, yaml: { Icon: FileCog, ink: ink('violet') }, yml: { Icon: FileCog, ink: ink('violet') }, ini: { Icon: FileCog, ink: ink('violet') },
+  lock: { Icon: FileLock, ink: 'text-muted-foreground' },
+}
+function fileKind(name: string): FileKind {
+  const lower = name.toLowerCase()
+  if (BY_NAME[lower]) return BY_NAME[lower]
+  if (lower.startsWith('.git')) return { Icon: GitBranch, ink: ink('orange') }
+  const dot = lower.lastIndexOf('.')
+  return (dot > 0 && BY_EXT[lower.slice(dot + 1)]) || { Icon: File, ink: 'text-muted-foreground' }
 }
 
 export function VaultTree({
@@ -163,6 +195,7 @@ export function VaultTree({
   storageKey,
   expandAll = false,
   label = 'Files',
+  status,
   className,
 }: VaultTreeProps) {
   // Expansion belongs to its key: switching workspaces swaps in that
@@ -349,6 +382,20 @@ export function VaultTree({
     }
   }, [nodeRows, isOpen, focusRow, setFolderOpen, expandAll, index, activate])
 
+  const changedFolders = useMemo(() => {
+    const out = new Map<string, FileChange>()
+    for (const [path, change] of Object.entries(status ?? {})) {
+      let cut = path.lastIndexOf('/')
+      while (cut > 0) {
+        const folder = path.slice(0, cut)
+        if (out.get(folder) !== 'modified') out.set(folder, change === 'added' ? 'added' : 'modified')
+        cut = folder.lastIndexOf('/')
+      }
+    }
+    return out
+  }, [status])
+  // The open file's parent: its guide is drawn in the stronger hairline.
+  const openParent = selectedPath ? index.parents.get(selectedPath) ?? null : null
   return (
     <div role="tree" aria-label={label} data-vault-tree-rows className={`flex flex-col gap-px ${className ?? ''}`}>
       {rows.map((row) => {
@@ -362,7 +409,7 @@ export function VaultTree({
                 next.set(row.parent, Math.max(VAULT_TREE_CHILD_PAGE, current.get(row.parent) ?? 0) + VAULT_TREE_CHILD_PAGE)
                 return next
               })}
-              style={{ paddingInlineStart: `calc(${row.depth} * 1rem + 2.25rem)` }}
+              style={{ paddingInlineStart: row.depth * INDENT + 28 }}
               className="flex min-h-8 w-full items-center rounded-md pr-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
               Show {Math.min(row.hidden, VAULT_TREE_CHILD_PAGE)} more of {row.hidden}
@@ -374,7 +421,11 @@ export function VaultTree({
         const open = dir && isOpen(node.path)
         const selected = !dir && node.path === selectedPath
         const active = dir && node.path === activeFolder
-        const Icon = dir ? (open ? FolderOpen : Folder) : fileIcon(node.name)
+        const kind = dir ? { Icon: open ? FolderOpen : Folder, ink: 'text-muted-foreground' } : fileKind(node.name)
+        const Icon = kind.Icon
+        const change = dir ? (open ? undefined : changedFolders.get(node.path)) : status?.[node.path]
+        const ancestors: string[] = []
+        for (let at = row.parent; at; at = index.parents.get(at) ?? null) ancestors.unshift(at)
         return (
           <div
             key={node.path}
@@ -397,9 +448,9 @@ export function VaultTree({
             onClick={() => activate(node)}
             onFocus={() => setFocusedPath(node.path)}
             onKeyDown={(event) => onKeyDown(event, node)}
-            style={{ paddingInlineStart: `calc(${depth} * 1rem + 0.25rem)` }}
+            style={{ paddingInlineStart: depth * INDENT + 4 }}
             className={[
-              'group flex min-h-8 w-full cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 text-sm transition-colors [@media(pointer:coarse)]:min-h-10',
+              'group relative flex min-h-8 w-full cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 text-sm transition-colors [@media(pointer:coarse)]:min-h-10',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
               selected
                 ? 'bg-[var(--ix-sel-bg)] font-medium text-[var(--accent-text)]'
@@ -408,14 +459,22 @@ export function VaultTree({
                   : 'text-foreground hover:bg-[var(--ix-hover-bg)]',
             ].join(' ')}
           >
+            {ancestors.map((folder, level) => (
+              <span
+                key={folder}
+                aria-hidden="true"
+                className={`pointer-events-none absolute inset-y-0 w-px ${folder === openParent ? 'bg-[var(--border-strong)]' : 'bg-border'}`}
+                style={{ left: level * INDENT + 12 }}
+              />
+            ))}
             <span aria-hidden="true" className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
               {dir && <ChevronRight className={`size-3.5 transition-transform duration-fast ${open ? 'rotate-90' : ''}`} />}
             </span>
-            <Icon
-              aria-hidden="true"
-              className={`size-4 shrink-0 ${selected ? 'text-[var(--accent-text)]' : 'text-muted-foreground'}`}
-            />
+            <Icon aria-hidden="true" className={`size-4 shrink-0 ${kind.ink}`} />
             <span className="min-w-0 flex-1 truncate">{node.name}</span>
+            {change && (dir
+              ? <span aria-label={`holds ${change === 'added' ? 'added' : 'changed'} files`} className={`size-1.5 shrink-0 rounded-full ${change === 'added' ? 'bg-[var(--surface-success-text)]' : 'bg-[var(--surface-warning-text)]'}`} />
+              : <span aria-label={change} className={`w-3.5 shrink-0 text-center font-mono text-xs font-semibold ${CHANGE[change].ink}`}>{CHANGE[change].letter}</span>)}
           </div>
         )
       })}

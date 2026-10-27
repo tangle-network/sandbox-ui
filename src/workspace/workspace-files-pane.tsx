@@ -3,7 +3,7 @@ import { ArrowLeft, FolderOpen, Maximize2, Minimize2 } from "lucide-react";
 import { FileTabs, type FileNode } from "@tangle-network/ui/files";
 import { Button, EmptyState, Input, SegmentedControl } from "@tangle-network/ui/primitives";
 import { cn } from "../lib/utils";
-import { VaultTree } from "../vault-tree/vault-tree";
+import { type FileChange, VaultTree } from "../vault-tree/vault-tree";
 import { fileTreeFromPaths, filterFileNodes } from "../vault-tree/tree-data";
 
 export interface WorkspaceFilesPreview {
@@ -19,6 +19,8 @@ type WorkspaceFilesSource =
   | { paths: ReadonlyArray<string>; root?: never };
 
 export type WorkspaceFilesPaneProps = WorkspaceFilesSource & {
+  /** A change mark per listed path (`added`, `modified`, `deleted`), such as a branch's diff against main: the tree marks each. */
+  status?: Readonly<Record<string, FileChange>>;
   /** The open file. Its row is selected and its folders are revealed when it changes. */
   selectedPath?: string;
   /**
@@ -187,6 +189,7 @@ export function WorkspaceFilesPane({
   layout = "split",
   tabs = true,
   expandable = true,
+  status,
   className,
   style,
 }: WorkspaceFilesPaneProps) {
@@ -314,6 +317,7 @@ export function WorkspaceFilesPane({
                 storageKey={expansionKey}
                 expandAll={query.trim().length > 0}
                 label={label}
+                status={status}
               />
             )}
           </div>

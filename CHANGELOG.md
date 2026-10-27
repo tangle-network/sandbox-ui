@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0
+
+- The file tree (`VaultTree`, and so `WorkspaceFilesPane`) reads at a glance: each file carries a type glyph in its type's ink from Brand's tone icons (Markdown, README, Rust, Cargo and package manifests, JavaScript and TypeScript, JSON, TOML and YAML, lockfiles, git files, licenses, images, tables, shell), a 1px guide per depth with the open file's parent guide in the stronger hairline, and one indent step of 12px instead of 1rem.
+- New `status` prop on `VaultTree` and `WorkspaceFilesPane`: a change mark per path (`added`, `modified`, `deleted`) draws an A, M or D in the success, warning or danger ink at the row's end, and a collapsed folder that holds changes carries a dot. `FileChange` is exported from `@tangle-network/sandbox-ui/vault-tree`.
+
 ## 1.0.0
 
 - Release 1.0.0 with the same API as 0.140.0; no code changes. From here a breaking change is a major release, and a caret range (`^1.0.0`) takes every later compatible release, so an app no longer needs a release of its own for each minor of this package.

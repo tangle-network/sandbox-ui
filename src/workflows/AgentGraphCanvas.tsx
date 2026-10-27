@@ -236,6 +236,8 @@ export function AgentGraphCanvas({
   const readerMoved = useRef(false);
   const framed = useRef<string | null>(null);
   const layoutIdentity = layout ? `${layoutKey}:${layout.columns}` : null;
+  // A run too large to fit at the 0.2 floor (95 workers on a phone) still fits whole: the floor drops to the zoom that fits it.
+  const minZoom = layout && canvas ? Math.max(0.02, Math.min(0.2, (canvas.width - 2 * FIT_PADDING) / layout.width, (canvas.height - 2 * FIT_PADDING) / layout.height)) : 0.2;
   useEffect(() => {
     const inst = rfRef.current;
     if (!ready || !inst || !layoutIdentity || !canvas) return;
@@ -248,13 +250,13 @@ export function AgentGraphCanvas({
       void inst.fitView({
         padding: `${FIT_PADDING}px`,
         maxZoom: 1,
-        minZoom: 0.2,
+        minZoom,
         duration: animate ? 220 : 0,
       });
       setShown(true);
     });
     return () => cancelAnimationFrame(frame);
-  }, [ready, layoutIdentity, canvas]);
+  }, [ready, layoutIdentity, canvas, minZoom]);
 
   const select = useCallback(
     (id: string) => {
@@ -332,7 +334,7 @@ export function AgentGraphCanvas({
         zoomOnPinch
         zoomOnDoubleClick={false}
         panOnDrag
-        minZoom={0.2}
+        minZoom={minZoom}
         maxZoom={1.75}
         aria-label="Agent topology"
       >

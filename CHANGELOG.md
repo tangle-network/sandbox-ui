@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+
+- `AgentGraph` fits a run too large for its 0.2 zoom floor (95 workers on a phone) whole: the floor drops to the zoom that fits it, where the Graph used to frame empty canvas and look blank.
+- `TraceWorkspace` reserves no 70vh Files panel when the host passes no `files`.
+- `TraceWorkspace`'s Graph keeps the first span per id, so a host that reuses its run id as the root agent's id gets one root over its workers, not a root drawn inside its own team with the workers below.
+
 ## 1.1.1
 
 - `AgentGraph live` cards read like a system monitor, not a toy: the ASCII figure is gone; a status pill with a breathing dot and a thin travelling sheen on a running card's top edge say it is working; the thinking line gets two lines at 13px; the last three events stream in with a glyph for their kind of work (terminal, edit, read, search, web, git, wait) and how long ago each ran (`AgentGraphEvent.at`), older lines fading back. The model drops its vendor prefix (the brand mark says it), and the card is 304px wide so model, effort, time alive and commits fit.

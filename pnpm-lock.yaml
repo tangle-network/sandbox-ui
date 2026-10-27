@@ -182,8 +182,8 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/ui':
-        specifier: ^11.45.0
-        version: 11.45.0(6df588fd51eeb8409681c9ca21ec55d3)
+        specifier: ^11.46.0
+        version: 11.46.0(6df588fd51eeb8409681c9ca21ec55d3)
       diff:
         specifier: ^9.0.0
         version: 9.0.0
@@ -1937,8 +1937,8 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/ui@11.45.0':
-    resolution: {integrity: sha512-+dhuppMPew5cRG1FdtpxG7OFgpC4zbDuI33r2PtIwiWeo3o9cceZ5vskGsk41uFrzoHoEJtciwVKS70Oha/8ng==}
+  '@tangle-network/ui@11.46.0':
+    resolution: {integrity: sha512-3chnj2lZjZScGsKERskOdRpp4Z2/IenL2iJrjQNRoKp8Z/Fp2jV1jfCSI2r7KSk2uNHymbp7fb1R4+YjCYSH5w==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <3.0.0'
@@ -5459,7 +5459,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/ui@11.45.0(6df588fd51eeb8409681c9ca21ec55d3)':
+  '@tangle-network/ui@11.46.0(6df588fd51eeb8409681c9ca21ec55d3)':
     dependencies:
       '@pierre/theme': 1.1.0
       '@pierre/trees': 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(shiki@4.5.0)

@@ -50,6 +50,19 @@ const flows = [
     },
   },
   {
+    // A failed agent keeps its whole card with its failure (critique P0 #5); only finished and stopped agents become chips.
+    name: 'agentgraph-live-failed',
+    story: 'workflows-agentgraph--live-run-cards',
+    act: async (page) => {
+      await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
+      const failed = page.locator('.ag-live-card[data-status="failed"]')
+      await expect(failed).toHaveCount(1)
+      await expect(failed.locator('.ag-live-failure')).toContainText('regressed 38%')
+      await expect(page.locator('.ag-live-slot[data-status="failed"]')).toHaveCount(0)
+      await expect(page.locator('.ag-live-slot[data-status="succeeded"]')).toHaveCount(1)
+    },
+  },
+  {
     name: 'dashboard-action-menu',
     story: 'dashboard-sandboxcard--running',
     act: async (page) => {

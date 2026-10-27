@@ -188,6 +188,9 @@ function LiveRun() {
       events: [{ id: "l1", label: "spawn field-kernels" }, { id: "l2", label: "release rc2" }, { id: "l3", label: "steer verify-lag" }] },
     ...workers,
     { id: "verdict-hunt", label: "verdict-hunt", model: "openai/gpt-5.5", status: "succeeded", result: "valid · 4 commits" },
+    { id: "bench-gate", label: "bench-gate", model: "glm-5.3-flash", effort: "medium", status: "failed", startedAt: LIVE_START + 9 * 60_000, commits: 2,
+      result: "cargo bench: fold_round regressed 38% over budget; 2 integration tests red",
+      events: [{ id: "b1", label: "bash cargo bench -p prover", at: LIVE_START + 30 * 60_000 }, { id: "b2", label: "read target/criterion/report.json", at: LIVE_START + 31 * 60_000 }, { id: "b3", label: "bash cargo test -p prover", at: LIVE_START + 33 * 60_000 }] },
   ];
   const edges: AgentGraphEdge[] = nodes.slice(1).map((n) => ({ from: "lead", to: n.id, kind: "spawn" }));
   const [selected, setSelected] = useState<string | null>(null);

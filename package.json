@@ -250,7 +250,7 @@
     "@storybook/react": "^10.6.3",
     "@storybook/react-vite": "^10.6.3",
     "@tailwindcss/postcss": "^4.3.3",
-    "@tangle-network/agent-interface": "5.7.1",
+    "@tangle-network/agent-interface": "5.10.1",
     "@tangle-network/brand": "1.29.0",
     "@tangle-network/charts": "^0.21.20",
     "@tanstack/react-query": "^5.104.5",

@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import type { AgentGraphDirection, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import { agentStatus, agentSummary, Handles, StatusGlyph, cardBorder } from "./agent-graph-parts";
 import { SELECTION_OUTLINE } from "./canvas-theme";
-import { KIND_ACCENT, NodeMark, RESTING_BORDER, RESTING_SHADOW } from "./node-ui";
+import { KIND_ACCENT, NodeMark, RESTING_SHADOW } from "./node-ui";
 
 export type LiveAgentCardNode = Node<
   { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number },
@@ -19,8 +19,6 @@ export type LiveAgentCardNode = Node<
 >;
 
 const SETTLED: ReadonlySet<AgentGraphStatus> = new Set(["succeeded", "failed", "stopped"]);
-/** Only states that ask for a reader keep a coloured border; a running card stays calm and lets its pill breathe. */
-const CALLS_FOR_YOU: ReadonlySet<AgentGraphStatus> = new Set(["waiting", "needs-you", "failed", "unknown"]);
 
 // An event names its tool first ("bash cargo test", "edit src/fold.rs"); the glyph says which kind of work it was.
 const EVENT_GLYPHS: readonly (readonly [RegExp, LucideIcon])[] = [
@@ -84,9 +82,9 @@ export function LiveAgentCard({ data }: NodeProps<LiveAgentCardNode>) {
     );
   }
 
-  const meta = [agent.model, agent.effort].filter(Boolean).join(" · ");
+  // The vendor prefix ("anthropic/") is in the brand mark already; the tooltip keeps the full id.
+  const meta = [agent.model?.replace(/^[\w-]+\//, ""), agent.effort].filter(Boolean).join(" · ");
   const events = (agent.events ?? []).slice(-3);
-  const border = CALLS_FOR_YOU.has(agent.status) ? cardBorder(agent.status) : { borderColor: RESTING_BORDER };
   return (
     <div
       className="ag-live-card"
@@ -94,7 +92,7 @@ export function LiveAgentCard({ data }: NodeProps<LiveAgentCardNode>) {
       data-activity={agent.activity ?? undefined}
       data-selected={selected || undefined}
       title={agentSummary(agent)}
-      style={{ boxShadow: RESTING_SHADOW, ...border, ...(selected ? SELECTION_OUTLINE : {}), ["--ag-status" as string]: s.color }}
+      style={{ boxShadow: RESTING_SHADOW, ...cardBorder(agent.status), ...(selected ? SELECTION_OUTLINE : {}), ["--ag-status" as string]: s.color }}
     >
       <Handles direction={direction} />
       <div className="ag-live-head">
@@ -150,7 +148,7 @@ export const AGENT_LIVE_CSS = `
   background: color-mix(in oklab, var(--ag-status) 14%, transparent); }
 .ag-live .ag-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ag-status); }
 .ag-live [data-status="running"] .ag-live-dot { animation: ag-live-breathe 1.6s ease-in-out infinite; }
-.ag-live .ag-live-thinking { margin: 0; font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; animation: ag-live-in 260ms ease-out both; }
+.ag-live .ag-live-thinking { flex: none; margin: 0; font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; animation: ag-live-in 260ms ease-out both; }
 .ag-live .ag-live-quiet { color: var(--ag-muted); }
 .ag-live .ag-live-events { margin: auto 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .ag-live .ag-live-events li { display: flex; align-items: center; gap: 6px; height: 16px; font: 11px/16px var(--font-mono, ui-monospace, monospace); color: var(--ag-muted);

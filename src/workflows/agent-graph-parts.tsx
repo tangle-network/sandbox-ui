@@ -89,7 +89,10 @@ export function StatusGlyph({ status, size }: { status: AgentGraphStatus; size: 
   );
 }
 
+/** Only states that ask for a reader colour a card's border; running and done cards stay on the resting hairline and
+ *  say their state by glyph and word, so a busy run never reads as a wall of glowing outlines. */
 export function cardBorder(status: AgentGraphStatus) {
+  if (status === "running" || status === "succeeded") return { borderColor: RESTING_BORDER };
   if (status === "unknown") return { borderColor: "hsl(var(--muted-foreground) / 0.45)", borderStyle: "dashed" as const };
   if (status === "idle") return { borderColor: "hsl(var(--border))" };
   if (status === "stopped") return { borderColor: RESTING_BORDER, boxShadow: RESTING_SHADOW };

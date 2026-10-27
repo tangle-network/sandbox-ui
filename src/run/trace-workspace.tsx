@@ -117,7 +117,9 @@ export function TraceWorkspace({
     [view, trace, byId, cursor, waterfall.startedAt, agentCards],
   )
   const shown = cursor === null || origin === undefined ? stream.entries : stream.entries.filter((entry) => entry.at - origin <= cursor)
-  const items = useMemo(() => timelineItems(shown, cursor === null && stream.alive && !stream.error), [shown, cursor, stream.alive, stream.error])
+  // Live means the stream is open and producing now: an ended, unreachable or scrubbed stream is not.
+  const live = stream.alive && !stream.error && cursor === null
+  const items = useMemo(() => timelineItems(shown, live), [shown, live])
 
   // Follow the newest output unless the reader scrolled up; then offer a "New output" pill instead of jumping.
   const scroller = useRef<HTMLDivElement>(null)
@@ -174,7 +176,7 @@ export function TraceWorkspace({
         <aside aria-label={`${agent.name} conversation`} onKeyDown={(event) => { if (event.key === "Escape") select(undefined) }}
           className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[420px] flex-col border-l border-border bg-card shadow-2xl">
           <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-            <span className={cn("h-2 w-2 shrink-0 rounded-full", stream.alive && cursor === null ? "bg-[var(--status-running,#34c48c)]" : "bg-muted-foreground/50")} aria-hidden />
+            <span className={cn("h-2 w-2 shrink-0 rounded-full", live ? "bg-[var(--status-running,#34c48c)]" : "bg-muted-foreground/50")} aria-hidden />
             <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{agent.name}</h3>
             {agent.detail && <span className="truncate text-xs text-muted-foreground">{agent.detail}</span>}
             <button type="button" aria-label="Close conversation" title="Close (Esc)" onClick={() => select(undefined)}
@@ -193,7 +195,7 @@ export function TraceWorkspace({
             className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
           >
             {streamUrl
-              ? <AgentTimeline items={items} isThinking={stream.alive && !stream.error && cursor === null && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
+              ? <AgentTimeline items={items} isThinking={live && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
               : <NotTimeIndexed label="Conversation" />}
           </div>
           {unseen && (

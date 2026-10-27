@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.6
+
+- `TraceWorkspace`'s agent drawer renders Runtime's `notice` rows by `provenance`: `delegated-input` is the agent's input (a user message), `recorded-result` is its delivered answer (an assistant message), and any other notice, such as `capture-unavailable`, is a muted line. JSON text in an input or result renders as a fenced block. These rows used to be dropped, so an agent with no captured conversation showed nothing.
+- `useAgentStream` reports a refused or broken stream as `error` ("The agent stream is unreachable; the viewer may be closed.") instead of leaving the drawer on its thinking ellipsis forever. It keeps retrying, and the next rows clear the error.
+
 ## 1.1.4
 
 - A failed agent in `AgentGraph live` keeps its whole card: the danger border, its failure (`result`, else its last event) in place of the thinking line at 13/17px in the failed ink with a two-line clamp, and its events stamped with the clock time they ran instead of a growing age. Only finished and stopped agents settle into a chip, and the chip is no longer dimmed: its result reads in the foreground at 12/16px, weight 500.

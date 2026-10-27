@@ -59,10 +59,12 @@ const flows = [
         row(1, { kind: 'notice', provenance: 'delegated-input', text: '{"task":"verify the sumcheck transcript"}', source: 'parent root; task sha256:ab12; Runtime FileResultBlobStore' }),
         row(2, { kind: 'notice', provenance: 'capture-unavailable', text: 'Native conversation was not captured for this agent.', source: 'Runtime recorded capture' }),
         row(3, { kind: 'text', text: 'Transcript verified.' }),
+        // A tool call whose result was never captured: when the stream ends it must stop spinning, and its args stay whole.
+        row(4, { kind: 'tool-call', toolCallId: 'c1', toolName: 'bash', args: { command: 'cargo test -p prover --release -- --nocapture sumcheck::round_fourteen_transcript_matches' } }),
       ]
       await page.route('**/agent-stream/**', (route) => route.fulfill({
         status: 200, contentType: 'text/event-stream',
-        body: `event: rows\ndata: ${JSON.stringify({ events, lastSeq: 3, alive: false })}\n\nevent: end\ndata: {}\n\n`,
+        body: `event: rows\ndata: ${JSON.stringify({ events, lastSeq: 4, alive: false })}\n\nevent: end\ndata: {}\n\n`,
       }))
       await page.getByRole('button', { name: 'graph', exact: true }).click()
       await page.locator('.react-flow__node-agent, .react-flow__node-liveAgent').filter({ hasText: 'verifier' }).click()
@@ -71,6 +73,9 @@ const flows = [
       await expect(drawer.getByRole('note').first()).toContainText('Recorded input from parent')
       await expect(drawer.getByRole('note').nth(1)).toContainText('Conversation not captured')
       await expect(drawer).toContainText('Transcript verified.')
+      await expect(drawer).toContainText('completion not captured')
+      await drawer.getByText('completion not captured').click()
+      await expect(drawer).toContainText('round_fourteen_transcript_matches')
     },
   },
   {

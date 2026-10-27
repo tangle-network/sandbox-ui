@@ -77,7 +77,7 @@ function timelineItems(entries: readonly AgentTranscriptEntry[], streaming: bool
     if (entry.kind === "message") {
       return { id: entry.id, kind: "message", role: entry.role, content: entry.content, isStreaming: streaming && index === entries.length - 1 }
     }
-    if (entry.kind === "tool") return { id: entry.id, kind: "tool", call: entry.call }
+    if (entry.kind === "tool") return { id: entry.id, kind: "tool", call: entry.call, part: entry.part }
     if (entry.kind === "notice") return { id: entry.id, kind: "custom", content: <StreamNotice entry={entry} /> }
     // Reasoning stays one collapsed row the reader can open.
     return { id: entry.id, kind: "custom", content: <InlineThinkingItem part={{ type: "reasoning", text: entry.text }} defaultOpen={false} openWhileActive={false} /> }

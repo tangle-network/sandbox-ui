@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer } from "react"
 import type { ToolCallData, ToolCallType } from "@tangle-network/ui/run"
+import type { ToolPart } from "@tangle-network/ui/types"
 
 /** One row of an agent's message stream (tangle-tools `/api/discovery/runs/<run>/agents/<agent>/stream`). */
 export interface AgentStreamRow {
@@ -28,7 +29,8 @@ export interface AgentStreamRow {
 export type AgentTranscriptEntry =
   | { id: string; at: number; kind: "message"; role: "assistant" | "user"; content: string }
   | { id: string; at: number; kind: "reasoning"; text: string }
-  | { id: string; at: number; kind: "tool"; call: ToolCallData }
+  // `part` keeps the raw arguments and result, so the expanded row shows them whole, not the one-line `call.detail`.
+  | { id: string; at: number; kind: "tool"; call: ToolCallData; part: ToolPart }
   | { id: string; at: number; kind: "notice"; provenance: string; text: string; source?: string }
 
 export interface AgentStreamState {
@@ -84,19 +86,30 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
       next.push({
         id, at, kind: "tool",
         call: { id, type: toolType(event.toolName), label: event.toolName ?? "tool", status: "running", detail: brief(event.args, 120) },
+        part: { type: "tool", id, tool: event.toolName ?? "tool", state: { status: "running", input: event.args, time: { start: at } } },
       })
     } else if (event.kind === "tool-result") {
       const index = next.findIndex((entry) => entry.kind === "tool" && entry.call.id === event.toolCallId)
       const entry = next[index]
       if (entry?.kind === "tool") {
+        const status = failed(event.result) ? "error" : "success"
         next[index] = {
           ...entry,
-          call: { ...entry.call, status: failed(event.result) ? "error" : "success", output: brief(event.result), duration: Math.max(0, at - entry.at) },
+          call: { ...entry.call, status, output: brief(event.result), duration: Math.max(0, at - entry.at) },
+          part: { ...entry.part, state: { ...entry.part.state, status: status === "error" ? "error" : "completed", output: event.result, time: { start: entry.at, end: at } } },
         }
       }
     }
   }
   return next
+}
+
+/** When the stream ends, a tool call that never got its result has an unknown outcome: it settles to pending with "completion
+ *  not captured", never left spinning and never given an invented result. */
+function settle(entries: AgentTranscriptEntry[]): AgentTranscriptEntry[] {
+  return entries.map((entry) => entry.kind === "tool" && entry.part.state.status === "running"
+    ? { ...entry, call: { ...entry.call, detail: "completion not captured" }, part: { ...entry.part, state: { ...entry.part.state, status: "pending" } } }
+    : entry)
 }
 
 function reduce(state: AgentStreamState, action: Action): AgentStreamState {
@@ -107,15 +120,16 @@ function reduce(state: AgentStreamState, action: Action): AgentStreamState {
       // A new generation means the server rebuilt the stream: start over rather than append to stale rows.
       const base = action.generation !== undefined && action.generation !== state.generation ? { entries: [], lastSeq: 0 } : state
       const fresh = action.rows.filter((row) => row.seq > base.lastSeq)
-      return {
+      const next: AgentStreamState = {
         generation: action.generation ?? state.generation,
         entries: foldAgentRows(base.entries, fresh),
         lastSeq: fresh.reduce((max, row) => Math.max(max, row.seq), base.lastSeq),
         alive: action.alive ?? state.alive,
       }
+      return next.alive ? next : { ...next, entries: settle(next.entries) }
     }
     case "end":
-      return { ...state, alive: false }
+      return { ...state, alive: false, entries: settle(state.entries) }
     case "error":
       return { ...state, error: action.message }
   }

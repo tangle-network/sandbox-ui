@@ -48,7 +48,7 @@ import {
   agentSummary,
   MESSAGE_EDGE_COLOR,
 } from "./agent-graph-parts";
-import { AGENT_LIVE_CSS, LiveAgentCard, type LiveAgentCardNode } from "./agent-live-card";
+import { LiveAgentCard, type LiveAgentCardNode } from "./agent-live-card";
 import { motionAllowed, useColorMode } from "./canvas-theme";
 import { edgeColor } from "./node-ui";
 
@@ -304,7 +304,6 @@ export function AgentGraphCanvas({
       data-layout={layout && shown ? "ready" : "pending"}
       data-columns={layout?.columns}
     >
-      {live && <style>{AGENT_LIVE_CSS}</style>}
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}

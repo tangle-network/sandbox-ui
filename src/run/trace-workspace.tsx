@@ -157,9 +157,9 @@ export function TraceWorkspace({
           onTimeChange={(t) => { setCursor(t); onTimeChange?.(t) }}
         />
       </div>
-      <section aria-label="Code at the cursor" className="flex min-h-[70vh] flex-col overflow-hidden rounded-xl border border-border bg-card">
-        {files ?? <NotTimeIndexed label="Files" />}
-      </section>
+      {files && <section aria-label="Code at the cursor" className="flex min-h-[70vh] flex-col overflow-hidden rounded-xl border border-border bg-card">
+        {files}
+      </section>}
       {scoreboard && (
         <section aria-label="Scoreboard at the cursor" className="overflow-hidden rounded-xl border border-border bg-card">{scoreboard}</section>
       )}

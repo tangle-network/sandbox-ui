@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- `TraceWorkspace` omits the Files pane when no files are supplied, so an agent-only live viewer has no empty 70vh code panel. Supplied file views keep their full-height workspace.
+
 ## 1.1.0
 
 - The file tree (`VaultTree`, and so `WorkspaceFilesPane`) reads at a glance: each file carries a type glyph in its type's ink from Brand's tone icons (Markdown, README, Rust, Cargo and package manifests, JavaScript and TypeScript, JSON, TOML and YAML, lockfiles, git files, licenses, images, tables, shell), a 1px guide per depth with the open file's parent guide in the stronger hairline, and one indent step of 12px instead of 1rem.

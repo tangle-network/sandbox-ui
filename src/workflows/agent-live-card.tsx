@@ -35,7 +35,7 @@ const EVENT_GLYPHS: readonly (readonly [RegExp, LucideIcon])[] = [
 const eventGlyph = (label: string) => EVENT_GLYPHS.find(([match]) => match.test(label.toLowerCase()))?.[1] ?? Sparkles;
 
 function clockTime(at: number | undefined): string | undefined {
-  return at == null || !Number.isFinite(at) ? undefined : new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return at == null || !Number.isFinite(at) ? undefined : new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 }
 
 function ago(at: number | undefined, now: number): string | undefined {

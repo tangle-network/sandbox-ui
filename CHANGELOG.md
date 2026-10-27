@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- `@tangle-network/charts` moves from `^0.21.4` to `^0.21.20`, as both the peer range and the installed dev version. The lockfile had installed charts 0.21.4, so every Storybook story with a waterfall (TraceWorkspace and the run stories) rendered a charts build fifteen releases old, and design reviews judged those stale frames. Stories, the visual suite and the deployed catalog now render the charts the packages ship with. Consumers need charts 0.21.20 or later; agent-record already serves 0.21.19 and moves with this release.
+
 ## 1.1.2
 
 - `AgentGraph` fits a run too large for its 0.2 zoom floor (95 workers on a phone) whole: the floor drops to the zoom that fits it, where the Graph used to frame empty canvas and look blank.

@@ -234,8 +234,8 @@ importers:
         specifier: ^4.3.3
         version: 4.3.3
       '@tangle-network/agent-interface':
-        specifier: 5.10.1
-        version: 5.10.1
+        specifier: 5.10.2
+        version: 5.10.2
       '@tangle-network/brand':
         specifier: 1.29.0
         version: 1.29.0(react@19.3.1)
@@ -1917,8 +1917,8 @@ packages:
   '@tailwindcss/postcss@4.3.3':
     resolution: {integrity: sha512-JTSZZGQi1AyKirbLN3azmjVzef92tcX7h+iSqPdaeStyFpGpDlKvvpxeOE8njhbUanbRwr3z8DyzhICWnMtQeg==}
 
-  '@tangle-network/agent-interface@5.10.1':
-    resolution: {integrity: sha512-gIrHfS1oxUEhq3ZYEOvoBE2dH4lK0xCy5rWjgpryJthzDYBhG8F74Xygz7cQ+QUCkN5LKqfcgQtpJyElXFRJ7Q==}
+  '@tangle-network/agent-interface@5.10.2':
+    resolution: {integrity: sha512-CqnwLl7PrTxImvyUAoUFXNQ9+OJDOzTHchUARRldsBBuNMTiGlglMqjonOxh7COR6PSViR//xEnmNYh8a+VC7Q==}
 
   '@tangle-network/brand@1.29.0':
     resolution: {integrity: sha512-7kjZaCSYYR0ZOSzB0U8EpQUZ3uXAEZqvRbkSTmnTmWvdhZd20fa4WxhyjqgE+W7PH7AY4OFbUu4igpJE5HbLeA==}
@@ -5445,7 +5445,7 @@ snapshots:
       postcss: 8.5.31
       tailwindcss: 4.3.3
 
-  '@tangle-network/agent-interface@5.10.1':
+  '@tangle-network/agent-interface@5.10.2':
     dependencies:
       '@noble/hashes': 2.4.0
       spdx-expression-parse: 5.0.0

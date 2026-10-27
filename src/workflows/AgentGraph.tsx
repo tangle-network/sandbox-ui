@@ -58,8 +58,8 @@ export interface AgentGraphProps {
   /** Hub layout: the header title. Default "Agent graph". */
   title?: ReactNode;
   /**
-   * Tree layout: live cards for a running run. Each card loops a small figure of the agent's `activity`, shows its
-   * thinking line (`turn`) and last three `events` as they arrive, its model, effort, time alive and commits; a settled
+   * Tree layout: live cards for a running run. Each card shows a status pill that breathes while it runs, its thinking
+   * line (`turn`) and last three `events` streaming in with how long ago each ran (`at`), its model, effort, time alive and commits; a settled
    * agent shrinks to a chip with its `result`, and a new spawn grows in. Cards keep a fixed size, so updates never move one.
    */
   live?: boolean;

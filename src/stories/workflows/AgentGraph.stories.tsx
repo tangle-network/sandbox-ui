@@ -180,7 +180,7 @@ function LiveRun() {
     id: label, label, model: MODELS[i % MODELS.length], harness: "opencode", effort: i % 2 ? "high" : "medium",
     status: activity === "waiting" ? "waiting" : "running", activity, turn,
     startedAt: LIVE_START + i * 4 * 60_000, commits: [14, 12, 1, 4, 0][i],
-    events: Array.from({ length: 3 + tick }, (_, k) => ({ id: `${label}-${k}`, label: calls[k % calls.length] })),
+    events: Array.from({ length: 3 + tick }, (_, k) => ({ id: `${label}-${k}`, label: calls[k % calls.length], at: Date.now() - (2 + tick - k) * 9_000 - i * 3_000 })),
   }));
   const nodes: AgentGraphNode[] = [
     { id: "lead", label: "lead", role: "manager", model: "anthropic/claude-sonnet-4-5", effort: "high", status: "running", activity: "thinking",

@@ -1,7 +1,8 @@
 /**
  * The live agent card for `AgentGraph live`: one agent at work, while it works. Its status pill breathes while it runs,
  * its thinking line reads in two lines, and its latest events stream in at the bottom with what they did and how long
- * ago, older lines fading as new ones arrive. A settled agent shrinks to a dimmed chip with its result in the same slot,
+ * ago, older lines fading as new ones arrive. A finished or stopped agent shrinks to a chip with its result in the same
+ * slot; a failed agent keeps its whole card, its failure in place of the thinking line and its events at the times they ran,
  * so the layout never moves while a run updates.
  */
 
@@ -18,7 +19,8 @@ export type LiveAgentCardNode = Node<
   "liveAgent"
 >;
 
-const SETTLED: ReadonlySet<AgentGraphStatus> = new Set(["succeeded", "failed", "stopped"]);
+// A failure keeps its evidence: only finished and stopped agents settle into a chip (critique P0 #5).
+const SETTLED: ReadonlySet<AgentGraphStatus> = new Set(["succeeded", "stopped"]);
 
 // An event names its tool first ("bash cargo test", "edit src/fold.rs"); the glyph says which kind of work it was.
 const EVENT_GLYPHS: readonly (readonly [RegExp, LucideIcon])[] = [
@@ -31,6 +33,10 @@ const EVENT_GLYPHS: readonly (readonly [RegExp, LucideIcon])[] = [
   [/^(wait|sleep|queue)\b/, Hourglass],
 ];
 const eventGlyph = (label: string) => EVENT_GLYPHS.find(([match]) => match.test(label.toLowerCase()))?.[1] ?? Sparkles;
+
+function clockTime(at: number | undefined): string | undefined {
+  return at == null || !Number.isFinite(at) ? undefined : new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
 function ago(at: number | undefined, now: number): string | undefined {
   if (at == null || !Number.isFinite(at)) return undefined;
@@ -65,7 +71,8 @@ function useNow(fixed: number | undefined, live: boolean): number {
 export function LiveAgentCard({ data }: NodeProps<LiveAgentCardNode>) {
   const { agent, selected, direction } = data;
   const settled = SETTLED.has(agent.status);
-  const now = useNow(data.now, !settled);
+  const failed = agent.status === "failed";
+  const now = useNow(data.now, !settled && !failed);
   const s = agentStatus(agent.status);
   const alive = aliveFor(agent.startedAt, now);
 
@@ -109,13 +116,18 @@ export function LiveAgentCard({ data }: NodeProps<LiveAgentCardNode>) {
           </span>
         </div>
       </div>
-      <p className="ag-live-thinking" key={agent.turn ?? ""}>
-        {agent.turn || <span className="ag-live-quiet">{s.label}</span>}
-      </p>
+      {failed ? (
+        <p className="ag-live-thinking ag-live-failure">{agent.result ?? events.at(-1)?.label ?? s.label}</p>
+      ) : (
+        <p className="ag-live-thinking" key={agent.turn ?? ""}>
+          {agent.turn || <span className="ag-live-quiet">{s.label}</span>}
+        </p>
+      )}
       <ol className="ag-live-events" aria-label="Latest events">
         {events.map((event) => {
           const Glyph = eventGlyph(event.label);
-          const when = ago(event.at, now);
+          // A failed card is frozen: its events keep the clock time they ran, not an age that keeps growing.
+          const when = failed ? clockTime(event.at) : ago(event.at, now);
           return (
             <li key={event.id}>
               <Glyph aria-hidden size={12} strokeWidth={2} />
@@ -150,6 +162,7 @@ export const AGENT_LIVE_CSS = `
 .ag-live [data-status="running"] .ag-live-dot { animation: ag-live-breathe 1.6s ease-in-out infinite; }
 .ag-live .ag-live-thinking { flex: none; margin: 0; font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; animation: ag-live-in 260ms ease-out both; }
 .ag-live .ag-live-quiet { color: var(--ag-muted); }
+.ag-live .ag-live-failure { color: var(--ag-status); }
 .ag-live .ag-live-events { margin: auto 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .ag-live .ag-live-events li { display: flex; align-items: center; gap: 6px; height: 16px; font: 11px/16px var(--font-mono, ui-monospace, monospace); color: var(--ag-muted);
   animation: ag-live-in 260ms cubic-bezier(.2,.8,.2,1) both; }
@@ -162,9 +175,9 @@ export const AGENT_LIVE_CSS = `
 .ag-live .ag-live-event-at { flex: none; font-family: inherit; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
 .ag-live .ag-live-slot { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .ag-live .ag-live-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; height: 32px; padding: 0 12px; border: 1px solid var(--ag-border); border-radius: 16px;
-  background: var(--ag-surface); color: var(--ag-muted); font-size: 12px; opacity: .72; cursor: pointer; animation: ag-live-settle 320ms cubic-bezier(.2,.8,.2,1) both; }
+  background: var(--ag-surface); color: var(--ag-muted); font-size: 12px; cursor: pointer; animation: ag-live-settle 320ms cubic-bezier(.2,.8,.2,1) both; }
 .ag-live .ag-live-chip-name { color: var(--ag-fg); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ag-live .ag-live-chip-result { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-live .ag-live-chip-result { color: var(--ag-fg); font-weight: 500; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes ag-live-sheen { from { background-position: -40% 0; } to { background-position: 140% 0; } }
 @keyframes ag-live-breathe { 50% { opacity: .35; transform: scale(.8); } }
 @keyframes ag-live-flash { from { background: color-mix(in oklab, var(--ag-status) 16%, transparent); } to { background: transparent; } }

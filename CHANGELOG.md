@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- A failed agent in `AgentGraph live` keeps its whole card: the danger border, its failure (`result`, else its last event) in place of the thinking line at 13/17px in the failed ink with a two-line clamp, and its events stamped with the clock time they ran instead of a growing age. Only finished and stopped agents settle into a chip, and the chip is no longer dimmed: its result reads in the foreground at 12/16px, weight 500.
+
 ## 1.1.2
 
 - `AgentGraph` fits a run too large for its 0.2 zoom floor (95 workers on a phone) whole: the floor drops to the zoom that fits it, where the Graph used to frame empty canvas and look blank.

@@ -50,6 +50,30 @@ const flows = [
     },
   },
   {
+    // The drawer folds a real event stream: a host notice renders as a labelled record, separate from the agent's own text.
+    name: 'run-drawer-notices',
+    story: 'run-traceworkspace--agent-drawer-stream',
+    act: async (page) => {
+      const row = (seq, event) => ({ seq, at: `2026-09-23T11:5${seq}:00Z`, event })
+      const events = [
+        row(1, { kind: 'notice', provenance: 'delegated-input', text: '{"task":"verify the sumcheck transcript"}', source: 'parent root; task sha256:ab12; Runtime FileResultBlobStore' }),
+        row(2, { kind: 'notice', provenance: 'capture-unavailable', text: 'Native conversation was not captured for this agent.', source: 'Runtime recorded capture' }),
+        row(3, { kind: 'text', text: 'Transcript verified.' }),
+      ]
+      await page.route('**/agent-stream/**', (route) => route.fulfill({
+        status: 200, contentType: 'text/event-stream',
+        body: `event: rows\ndata: ${JSON.stringify({ events, lastSeq: 3, alive: false })}\n\nevent: end\ndata: {}\n\n`,
+      }))
+      await page.getByRole('button', { name: 'graph', exact: true }).click()
+      await page.locator('.react-flow__node-agent, .react-flow__node-liveAgent').filter({ hasText: 'verifier' }).click()
+      const drawer = page.getByRole('complementary', { name: 'verifier conversation' })
+      await expect(drawer.getByRole('note')).toHaveCount(2)
+      await expect(drawer.getByRole('note').first()).toContainText('Recorded input from parent')
+      await expect(drawer.getByRole('note').nth(1)).toContainText('Conversation not captured')
+      await expect(drawer).toContainText('Transcript verified.')
+    },
+  },
+  {
     name: 'dashboard-action-menu',
     story: 'dashboard-sandboxcard--running',
     act: async (page) => {

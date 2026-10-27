@@ -11,8 +11,12 @@ export interface AgentStreamRow {
   stream?: string
   attempt?: number
   event: {
-    kind: "text" | "reasoning" | "tool-call" | "tool-result" | "user" | (string & {})
+    kind: "text" | "reasoning" | "tool-call" | "tool-result" | "user" | "notice" | (string & {})
     text?: string
+    /** A notice's origin: "delegated-input" (the task its parent recorded) or "capture-unavailable"; never agent text. */
+    provenance?: string
+    /** Where a notice's record lives, e.g. "parent root; task sha256:…; Runtime FileResultBlobStore". */
+    source?: string
     toolCallId?: string
     toolName?: string
     args?: unknown
@@ -25,6 +29,7 @@ export type AgentTranscriptEntry =
   | { id: string; at: number; kind: "message"; role: "assistant" | "user"; content: string }
   | { id: string; at: number; kind: "reasoning"; text: string }
   | { id: string; at: number; kind: "tool"; call: ToolCallData }
+  | { id: string; at: number; kind: "notice"; provenance: string; text: string; source?: string }
 
 export interface AgentStreamState {
   generation?: string | number
@@ -69,6 +74,8 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
       else next.push({ id: `m-${row.seq}`, at, kind: "message", role: "assistant", content: event.text })
     } else if (event.kind === "user" && event.text) {
       next.push({ id: `u-${row.seq}`, at, kind: "message", role: "user", content: event.text })
+    } else if (event.kind === "notice" && event.text) {
+      next.push({ id: `n-${row.seq}`, at, kind: "notice", provenance: event.provenance ?? "notice", text: event.text, source: event.source })
     } else if (event.kind === "reasoning" && event.text) {
       if (last?.kind === "reasoning") next[next.length - 1] = { ...last, text: last.text + event.text }
       else next.push({ id: `r-${row.seq}`, at, kind: "reasoning", text: event.text })

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.4
+
+- The agent stream carries host notices: an event `{ kind: "notice", provenance, text, source? }` folds into a `notice` transcript entry, and `TraceWorkspace`'s drawer renders it as a labelled record, never as the agent's words: "Recorded input from parent" for `provenance: "delegated-input"`, "Conversation not captured" for `"capture-unavailable"`, else "Notice". The text is monospace with a scroll cap, and `source` is the tooltip.
+
 ## 1.1.2
 
 - `AgentGraph` fits a run too large for its 0.2 zoom floor (95 workers on a phone) whole: the floor drops to the zoom that fits it, where the Graph used to frame empty canvas and look blank.

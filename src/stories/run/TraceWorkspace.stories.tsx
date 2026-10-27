@@ -58,3 +58,8 @@ const factory: FlowTrace = {
 export const FactoryRun: StoryObj<typeof meta> = {
   args: { trace: factory, live: false, label: "minmax-h9", defaultView: "agents" },
 };
+
+/** The selected agent's drawer streams its conversation from `streamUrl`; a host's notices (recorded input, no capture) read as records. */
+export const AgentDrawerStream: StoryObj<typeof meta> = {
+  args: { trace, live: false, label: "Trace", defaultView: "agents", streamUrl: (id: string) => `/agent-stream/${id}` },
+};

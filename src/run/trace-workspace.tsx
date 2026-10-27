@@ -78,9 +78,22 @@ function timelineItems(entries: readonly AgentTranscriptEntry[], streaming: bool
       return { id: entry.id, kind: "message", role: entry.role, content: entry.content, isStreaming: streaming && index === entries.length - 1 }
     }
     if (entry.kind === "tool") return { id: entry.id, kind: "tool", call: entry.call }
+    if (entry.kind === "notice") return { id: entry.id, kind: "custom", content: <StreamNotice entry={entry} /> }
     // Reasoning stays one collapsed row the reader can open.
     return { id: entry.id, kind: "custom", content: <InlineThinkingItem part={{ type: "reasoning", text: entry.text }} defaultOpen={false} openWhileActive={false} /> }
   })
+}
+
+const NOTICE_LABEL: Record<string, string> = { "delegated-input": "Recorded input from parent", "capture-unavailable": "Conversation not captured" }
+
+/** What the host recorded about the conversation, labelled as a record and never shown as the agent's own words. */
+function StreamNotice({ entry }: { entry: Extract<AgentTranscriptEntry, { kind: "notice" }> }) {
+  return (
+    <div role="note" data-provenance={entry.provenance} title={entry.source} className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2">
+      <p className="text-xs font-medium text-muted-foreground">{NOTICE_LABEL[entry.provenance] ?? "Notice"}</p>
+      <p className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-foreground">{entry.text}</p>
+    </div>
+  )
 }
 
 function NotTimeIndexed({ label }: { label: string }) {

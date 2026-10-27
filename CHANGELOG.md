@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.4
+## 1.1.5
 
 - The agent stream carries host notices: an event `{ kind: "notice", provenance, text, source? }` folds into a `notice` transcript entry, and `TraceWorkspace`'s drawer renders it as a labelled record, never as the agent's words: "Recorded input from parent" for `provenance: "delegated-input"`, "Conversation not captured" for `"capture-unavailable"`, else "Notice". The text is monospace with a scroll cap, and `source` is the tooltip.
 - A tool call whose result never arrived settles when the stream ends (`end`, or `alive: false`): its row goes to pending with "completion not captured" instead of spinning forever, and no result is invented. Tool entries carry their source `part` with the raw arguments and result, so the expanded row shows a long command whole instead of the 120-character summary.

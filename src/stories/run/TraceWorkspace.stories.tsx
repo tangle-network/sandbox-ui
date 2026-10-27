@@ -39,3 +39,22 @@ export default meta;
 export const TimelineAndGraph: StoryObj<typeof meta> = {
   args: { trace, live: false, label: "Trace", defaultView: "agents" },
 };
+
+/**
+ * A factory as a live host sends it: the run id reused as its root agent's id (so two spans share it), 95 workers under
+ * that root, and no files. The Graph view shows one root over its workers, whole, even on a phone; no Files panel.
+ */
+const factory: FlowTrace = {
+  spans: [
+    agent("minmax-h9", "root", 0, 3_600_000, "running"),
+    agent("minmax-h9", "minmax-h9", 0, 3_600_000, "running"),
+    ...Array.from({ length: 95 }, (_, i) => agent(`w${i}`, `worker-${i}`, i * 20_000, 1_200_000 + i * 20_000, i % 13 === 4 ? "failed" : i % 3 ? "done" : "running", "minmax-h9")),
+  ],
+  totalMs: 3_600_000,
+  promptTokens: 0,
+  completionTokens: 0,
+};
+
+export const FactoryRun: StoryObj<typeof meta> = {
+  args: { trace: factory, live: false, label: "minmax-h9", defaultView: "agents" },
+};

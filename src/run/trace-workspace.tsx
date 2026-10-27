@@ -52,8 +52,12 @@ function agentOf(span: FlowSpan, byId: Map<string, FlowSpan>): FlowSpan | undefi
 function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, at: number | null, epoch: number | undefined, cards: TraceWorkspaceProps["agentCards"]) {
   const nodes: AgentGraphNode[] = []
   const edges: AgentGraphEdge[] = []
+  const seen = new Set<string>()
   for (const span of spans) {
     if (span.kind !== "pipeline" || !span.id || (at !== null && span.startMs > at)) continue
+    // A host that sends one id twice (a run id reused as its root agent's) gets one agent, not a root nested in its own team.
+    if (seen.has(span.id)) continue
+    seen.add(span.id)
     const running = at === null ? span.status === "running" : span.endMs > at || span.status === "running"
     nodes.push({
       id: span.id, label: span.name, model: span.detail, costUsd: span.costUsd,
@@ -157,9 +161,10 @@ export function TraceWorkspace({
           onTimeChange={(t) => { setCursor(t); onTimeChange?.(t) }}
         />
       </div>
-      <section aria-label="Code at the cursor" className="flex min-h-[70vh] flex-col overflow-hidden rounded-xl border border-border bg-card">
-        {files ?? <NotTimeIndexed label="Files" />}
-      </section>
+      {/* Without files the run has no code to follow, so no empty 70vh panel is reserved for it. */}
+      {files && (
+        <section aria-label="Code at the cursor" className="flex min-h-[70vh] flex-col overflow-hidden rounded-xl border border-border bg-card">{files}</section>
+      )}
       {scoreboard && (
         <section aria-label="Scoreboard at the cursor" className="overflow-hidden rounded-xl border border-border bg-card">{scoreboard}</section>
       )}

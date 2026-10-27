@@ -78,6 +78,7 @@ function timelineItems(entries: readonly AgentTranscriptEntry[], streaming: bool
       return { id: entry.id, kind: "message", role: entry.role, content: entry.content, isStreaming: streaming && index === entries.length - 1 }
     }
     if (entry.kind === "tool") return { id: entry.id, kind: "tool", call: entry.call }
+    if (entry.kind === "notice") return { id: entry.id, kind: "custom", content: <p className="text-xs text-muted-foreground">{entry.text}</p> }
     // Reasoning stays one collapsed row the reader can open.
     return { id: entry.id, kind: "custom", content: <InlineThinkingItem part={{ type: "reasoning", text: entry.text }} defaultOpen={false} openWhileActive={false} /> }
   })
@@ -116,7 +117,7 @@ export function TraceWorkspace({
     [view, trace, byId, cursor, waterfall.startedAt, agentCards],
   )
   const shown = cursor === null || origin === undefined ? stream.entries : stream.entries.filter((entry) => entry.at - origin <= cursor)
-  const items = useMemo(() => timelineItems(shown, cursor === null && stream.alive), [shown, cursor, stream.alive])
+  const items = useMemo(() => timelineItems(shown, cursor === null && stream.alive && !stream.error), [shown, cursor, stream.alive, stream.error])
 
   // Follow the newest output unless the reader scrolled up; then offer a "New output" pill instead of jumping.
   const scroller = useRef<HTMLDivElement>(null)
@@ -192,7 +193,7 @@ export function TraceWorkspace({
             className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
           >
             {streamUrl
-              ? <AgentTimeline items={items} isThinking={stream.alive && cursor === null && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
+              ? <AgentTimeline items={items} isThinking={stream.alive && !stream.error && cursor === null && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
               : <NotTimeIndexed label="Conversation" />}
           </div>
           {unseen && (

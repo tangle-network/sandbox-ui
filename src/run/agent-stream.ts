@@ -11,8 +11,10 @@ export interface AgentStreamRow {
   stream?: string
   attempt?: number
   event: {
-    kind: "text" | "reasoning" | "tool-call" | "tool-result" | "user" | (string & {})
+    kind: "text" | "reasoning" | "tool-call" | "tool-result" | "user" | "notice" | (string & {})
     text?: string
+    /** A notice's origin: the agent's `delegated-input`, its `recorded-result`, or a capture fact such as `capture-unavailable`. */
+    provenance?: string
     toolCallId?: string
     toolName?: string
     args?: unknown
@@ -25,6 +27,7 @@ export type AgentTranscriptEntry =
   | { id: string; at: number; kind: "message"; role: "assistant" | "user"; content: string }
   | { id: string; at: number; kind: "reasoning"; text: string }
   | { id: string; at: number; kind: "tool"; call: ToolCallData }
+  | { id: string; at: number; kind: "notice"; text: string }
 
 export interface AgentStreamState {
   generation?: string | number
@@ -32,6 +35,7 @@ export interface AgentStreamState {
   lastSeq: number
   /** The agent is still producing output. */
   alive: boolean
+  /** Why the stream shows nothing new; a reconnect that delivers rows clears it. */
   error?: string
 }
 
@@ -40,6 +44,7 @@ type Action =
   | { type: "reset"; generation?: string | number }
   | { type: "end" }
   | { type: "error"; message: string }
+  | { type: "unreachable" }
 
 const TOOL_TYPES: ReadonlySet<string> = new Set(["bash", "read", "write", "edit", "glob", "grep", "list", "download", "inspect", "audit"])
 
@@ -57,6 +62,16 @@ const brief = (value: unknown, max = 240): string | undefined => {
 const failed = (result: unknown): boolean =>
   typeof result === "object" && result !== null && ("error" in result || (result as { is_error?: unknown }).is_error === true)
 
+// A recorded input or result is JSON when it is not plain text; fence it so it reads as data.
+const recorded = (text: string): string => {
+  try {
+    const value: unknown = JSON.parse(text)
+    return typeof value === "object" && value !== null ? `\`\`\`json\n${text}\n\`\`\`` : text
+  } catch {
+    return text
+  }
+}
+
 /** Fold stream rows into transcript entries: text of one turn merges, a tool call becomes a row its result completes. */
 export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly AgentStreamRow[]): AgentTranscriptEntry[] {
   const next = [...entries]
@@ -69,6 +84,11 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
       else next.push({ id: `m-${row.seq}`, at, kind: "message", role: "assistant", content: event.text })
     } else if (event.kind === "user" && event.text) {
       next.push({ id: `u-${row.seq}`, at, kind: "message", role: "user", content: event.text })
+    } else if (event.kind === "notice" && event.text) {
+      // The agent's delegated input and its recorded result are its conversation when no native one was captured.
+      if (event.provenance === "delegated-input") next.push({ id: `u-${row.seq}`, at, kind: "message", role: "user", content: recorded(event.text) })
+      else if (event.provenance === "recorded-result") next.push({ id: `m-${row.seq}`, at, kind: "message", role: "assistant", content: recorded(event.text) })
+      else next.push({ id: `n-${row.seq}`, at, kind: "notice", text: event.text })
     } else if (event.kind === "reasoning" && event.text) {
       if (last?.kind === "reasoning") next[next.length - 1] = { ...last, text: last.text + event.text }
       else next.push({ id: `r-${row.seq}`, at, kind: "reasoning", text: event.text })
@@ -105,12 +125,16 @@ function reduce(state: AgentStreamState, action: Action): AgentStreamState {
         entries: foldAgentRows(base.entries, fresh),
         lastSeq: fresh.reduce((max, row) => Math.max(max, row.seq), base.lastSeq),
         alive: action.alive ?? state.alive,
+        error: undefined,
       }
     }
     case "end":
       return { ...state, alive: false }
     case "error":
       return { ...state, error: action.message }
+    case "unreachable":
+      // A refused stream is not a thinking agent: stop the ellipsis and say so until a reconnect delivers rows.
+      return { ...state, error: "The agent stream is unreachable; the viewer may be closed." }
   }
 }
 
@@ -143,7 +167,9 @@ export function useAgentStream(url: string | undefined): AgentStreamState {
       source.addEventListener("end", () => { closed = true; source?.close(); dispatch({ type: "end" }) })
       source.onerror = () => {
         source?.close()
-        if (!closed) retry = setTimeout(open, 1_000)
+        if (closed) return
+        dispatch({ type: "unreachable" })
+        retry = setTimeout(open, 1_000)
       }
     }
     open()

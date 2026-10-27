@@ -24,7 +24,7 @@ export interface AgentStreamRow {
 
 /** A transcript entry with the time it began, so a time cursor can show the conversation as of any moment. */
 export type AgentTranscriptEntry =
-  | { id: string; at: number; kind: "message"; role: "assistant" | "user"; content: string }
+  | { id: string; at: number; kind: "message"; role: "assistant" | "user"; content: string; sealed?: true }
   | { id: string; at: number; kind: "reasoning"; text: string }
   | { id: string; at: number; kind: "tool"; call: ToolCallData }
   | { id: string; at: number; kind: "notice"; text: string }
@@ -80,14 +80,15 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
     const { event } = row
     const last = next[next.length - 1]
     if (event.kind === "text" && event.text) {
-      if (last?.kind === "message" && last.role === "assistant") next[next.length - 1] = { ...last, content: last.content + event.text }
+      if (last?.kind === "message" && last.role === "assistant" && !last.sealed) next[next.length - 1] = { ...last, content: last.content + event.text }
       else next.push({ id: `m-${row.seq}`, at, kind: "message", role: "assistant", content: event.text })
     } else if (event.kind === "user" && event.text) {
       next.push({ id: `u-${row.seq}`, at, kind: "message", role: "user", content: event.text })
     } else if (event.kind === "notice" && event.text) {
       // The agent's delegated input and its recorded result are its conversation when no native one was captured.
       if (event.provenance === "delegated-input") next.push({ id: `u-${row.seq}`, at, kind: "message", role: "user", content: recorded(event.text) })
-      else if (event.provenance === "recorded-result") next.push({ id: `m-${row.seq}`, at, kind: "message", role: "assistant", content: recorded(event.text) })
+      // A recorded result is whole; later text starts its own message rather than appending to it.
+      else if (event.provenance === "recorded-result") next.push({ id: `m-${row.seq}`, at, kind: "message", role: "assistant", content: recorded(event.text), sealed: true })
       else next.push({ id: `n-${row.seq}`, at, kind: "notice", text: event.text })
     } else if (event.kind === "reasoning" && event.text) {
       if (last?.kind === "reasoning") next[next.length - 1] = { ...last, text: last.text + event.text }
@@ -129,7 +130,7 @@ function reduce(state: AgentStreamState, action: Action): AgentStreamState {
       }
     }
     case "end":
-      return { ...state, alive: false }
+      return { ...state, alive: false, error: undefined }
     case "error":
       return { ...state, error: action.message }
     case "unreachable":
@@ -155,6 +156,9 @@ export function useAgentStream(url: string | undefined): AgentStreamState {
       const target = new URL(url, globalThis.location?.href)
       if (lastSeq > 0) target.searchParams.set("after", String(lastSeq))
       source = new EventSource(target.toString())
+      // Only a connection that never opened is unreachable; a server closing an open stream is a normal reconnect.
+      let opened = false
+      source.onopen = () => { opened = true }
       source.addEventListener("rows", (message) => {
         const data = JSON.parse((message as MessageEvent<string>).data) as { generation?: string | number; events: AgentStreamRow[]; lastSeq?: number; alive?: boolean }
         lastSeq = Math.max(lastSeq, data.lastSeq ?? 0, ...data.events.map((row) => row.seq))
@@ -168,7 +172,7 @@ export function useAgentStream(url: string | undefined): AgentStreamState {
       source.onerror = () => {
         source?.close()
         if (closed) return
-        dispatch({ type: "unreachable" })
+        if (!opened) dispatch({ type: "unreachable" })
         retry = setTimeout(open, 1_000)
       }
     }

@@ -56,7 +56,7 @@
 .ag-phone-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 8px; list-style: none; }
 .ag-phone-list > li { min-width: 0; padding-left: min(calc(var(--depth) * 16px), 32px); border-left: 1px solid var(--ag-border); }
 .ag-phone-select { width: 100%; height: 100%; text-align: left; background: transparent; padding: 0; border: 0; color: inherit; cursor: pointer; }
-.ag-phone-select:focus-visible { outline: 2px solid hsl(var(--foreground) / .7); outline-offset: 2px; }
+.agent-graph .react-flow__node-liveAgent:focus-visible .ag-live-card, .agent-graph .react-flow__node-agent:focus-visible > div, .ag-phone-select:focus-visible { outline: 2px solid hsl(var(--foreground) / .7); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .ag-live-card { animation: none; transition: opacity var(--duration-fast); } }
 @container (width < 600px) {
   .ag-live-card { height: auto; min-height: 164px; }

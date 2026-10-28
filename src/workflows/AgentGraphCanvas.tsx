@@ -273,15 +273,17 @@ export function AgentGraphCanvas({
     if (!(event.target instanceof HTMLElement)) return;
     const id = event.target.closest(".react-flow__node")?.getAttribute("data-id");
     if (!id || !byId.has(id)) return;
-    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(id); return; }
-    if (event.key === "Escape") { wrapperRef.current?.focus(); return; }
+    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); wrapperRef.current?.focus(); return; }
+    if (!event.target.classList.contains("react-flow__node")) return;
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); select(id); return; }
     const origin = layout?.positions.get(id);
     const vector = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
     const target = event.key === "Home" ? topology.agentIds[0] : origin && vector ? [...(layout?.positions ?? [])]
-      .filter(([key, p]) => key !== id && (p.x - origin.x) * vector[0] + (p.y - origin.y) * vector[1] > 0)
+      .filter(([key, p]) => byId.has(key) && key !== id && (p.x - origin.x) * vector[0] + (p.y - origin.y) * vector[1] > 0)
       .sort((a, b) => Math.hypot(a[1].x - origin.x, a[1].y - origin.y) - Math.hypot(b[1].x - origin.x, b[1].y - origin.y))[0]?.[0] : null;
     if (!target) return;
     event.preventDefault();
+    event.stopPropagation();
     const position = layout?.positions.get(target);
     wrapperRef.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(target)}"]`)?.focus();
     if (position) void rfRef.current?.setCenter(position.x + card.width / 2, position.y + card.height / 2, { zoom: rfRef.current.getZoom(), duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
@@ -318,6 +320,7 @@ export function AgentGraphCanvas({
       }}
       className={`agent-graph ag-live relative flex flex-col ${className ?? ""}`}
       tabIndex={-1}
+      onKeyDownCapture={handleKeyDown}
       data-layout={narrow ? "list" : layout && shown ? "ready" : "pending"}
       data-columns={layout?.columns}
     >
@@ -345,7 +348,6 @@ export function AgentGraphCanvas({
         onNodeClick={handleNodeClick}
         onNodeMouseEnter={(_, node) => setHovered(node.id)}
         onNodeMouseLeave={() => setHovered(null)}
-        onKeyDown={handleKeyDown}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={false}
         nodesConnectable={false}

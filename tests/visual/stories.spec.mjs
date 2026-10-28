@@ -68,8 +68,11 @@ for (const story of stories) {
         }
         // The hub layout draws its own SVG, not React Flow.
         if (story.id.startsWith('workflows-agentgraph-hub--')) await expect(page.locator('.ag-root .ag-canvas-wrap')).toBeVisible()
-        else if (story.id.startsWith('workflows-agentgraph--') && viewport.width < 600) {
-          await expect(page.locator('[data-layout="list"]')).toBeVisible()
+        else if (story.id.startsWith('workflows-agentgraph--')) {
+          const graph = page.locator('.agent-graph')
+          await expect(graph).toHaveAttribute('data-layout', /ready|list/)
+          if (await graph.evaluate(el => el.clientWidth) <600) await expect(graph).toHaveAttribute('data-layout', 'list')
+          else await expect(page.locator('.react-flow')).toHaveClass(new RegExp(`\\b${theme}\\b`))
         } else if (story.id.startsWith('workflows-')) {
           await expect(page.locator('.react-flow__node').first()).toBeVisible()
           const graphTheme = story.id === 'workflows-workflowgraph--nested-vault' ? 'light' : theme

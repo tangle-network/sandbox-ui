@@ -99,7 +99,7 @@ export const RESTING_SHADOW =
 export const RESTING_BORDER = "hsl(var(--foreground) / 0.14)";
 
 /** Workflow waiting means human approval; peer waiting remains neutral in agent views. */
-const workflowStatus = (status: WfNodeStatus) => status === "waiting" ? "needs-you" : status === "queued" ? "idle" : status === "skipped" ? "stopped" : status;
+const workflowStatus = (status: WfNodeStatus) => status === "waiting" ? "needs-you" : status === "skipped" ? "stopped" : status;
 const workflowMeta = (status: WfNodeStatus) => statusMeta(workflowStatus(status));
 const workflowStatuses: WfNodeStatus[] = ["queued", "running", "waiting", "succeeded", "failed", "skipped"];
 export const STATUS_RUNNING = `var(${statusMeta("running").token})`;

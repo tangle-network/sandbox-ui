@@ -62,9 +62,11 @@ export function useAttention(ref: RefObject<HTMLElement | null>, status: string)
     const token = statusMeta(status).token;
     const duration = tokenMilliseconds("--duration-ambient", element) * (status === "needs-you" ? .45 : .3);
     element.dataset.attn = status;
+    const shadow = getComputedStyle(element).boxShadow;
+    const resting = shadow === "none" ? "" : `, ${shadow}`;
     const animation = element.animate([
-      { outline: `0px solid color-mix(in srgb, var(${token}) 40%, transparent)`, outlineOffset: "0px" },
-      { outline: `1px solid transparent`, outlineOffset: "6px" },
+      { boxShadow: `0 0 0 0 color-mix(in srgb, var(${token}) 40%, transparent)${resting}` },
+      { boxShadow: `0 0 0 6px transparent${resting}` },
     ], { duration, iterations: status === "needs-you" ? 2 : 1, easing: getComputedStyle(element).getPropertyValue("--ease-exit").trim() || "ease-out" });
     const end = setTimeout(() => { delete element.dataset.attn; }, duration * (status === "needs-you" ? 2 : 1));
     return () => { animation.cancel(); clearTimeout(end); delete element.dataset.attn; };

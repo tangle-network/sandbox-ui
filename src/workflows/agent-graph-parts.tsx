@@ -69,6 +69,7 @@ export function agentSummary(agent: AgentGraphNode): string {
     agent.model,
     agentStatus(agent.status).label,
     agent.turn,
+    agent.result,
     cost,
     tokens,
   ]

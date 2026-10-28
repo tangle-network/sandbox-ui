@@ -102,8 +102,17 @@ for (const theme of ['dark', 'light']) for (const width of [1280, 390]) {
 test('17 agents stream at 3 events per second for 60 seconds', async ({ page }, testInfo) => {
   test.setTimeout(90_000)
   await page.setViewportSize({ width: 1280, height: 900 })
+  // HR-Time coarsens non-isolated clocks to 100µs plus jitter, enough to report
+  // a 60Hz empty page as 16.8ms. Isolate this timing harness for 5µs resolution;
+  // application bytes and the 16.7ms/50ms budgets stay unchanged.
+  // https://w3c.github.io/hr-time/#dfn-coarsen-time
+  await page.route('**/iframe.html**', async route => {
+    const response = await route.fetch()
+    await route.fulfill({ response, headers: { ...response.headers(), 'cross-origin-opener-policy': 'same-origin', 'cross-origin-embedder-policy': 'require-corp' } })
+  })
   await page.goto('/iframe.html?id=workflows-agentgraph--burst&viewMode=story&globals=sandboxTheme:dark')
   await expect(page.locator('[data-layout="ready"]')).toBeVisible()
+  expect(await page.evaluate(() => crossOriginIsolated)).toBe(true)
   await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.animationName === 'agent-arrive').map(a => a.finished.catch(() => {}))))
   const metrics = await page.evaluate(() => new Promise(resolve => {
     const frames = [], longTasks = []
@@ -115,7 +124,7 @@ test('17 agents stream at 3 events per second for 60 seconds', async ({ page }, 
       if (previous !== undefined) frames.push(now - previous)
       previous = now
       if (now - start < 60_000) requestAnimationFrame(frame)
-      else { observer.disconnect(); frames.sort((a, b) => a - b); resolve({ frameCount: frames.length, p95: Math.round(frames[Math.ceil(frames.length * .95) - 1] * 1000) / 1000, maxLongTask: Math.max(0, ...longTasks), longTaskCount: longTasks.length }) }
+      else { observer.disconnect(); frames.sort((a, b) => a - b); resolve({ crossOriginIsolated, frameCount: frames.length, p95: Math.round(frames[Math.ceil(frames.length * .95) - 1] * 1000) / 1000, maxLongTask: Math.max(0, ...longTasks), longTaskCount: longTasks.length }) }
     }
     requestAnimationFrame(frame)
   }))
@@ -123,4 +132,22 @@ test('17 agents stream at 3 events per second for 60 seconds', async ({ page }, 
   await testInfo.attach('frame-metrics', { body: JSON.stringify(metrics), contentType: 'application/json' })
   expect(metrics.p95).toBeLessThanOrEqual(16.7)
   expect(metrics.maxLongTask).toBeLessThanOrEqual(50)
+})
+
+
+test('long failed evidence and keyboard focus stay reachable', async ({ page }) => {
+  await page.setViewportSize({ width:1280, height:900 })
+  await page.goto('/iframe.html?id=workflows-agentgraph--live-failed-long&viewMode=story&globals=sandboxTheme:light')
+  await expect(page.locator('[data-layout="ready"]')).toBeVisible()
+  const failed = page.locator('.ag-live-card[data-status="failed"]').first()
+  await expect(failed).toHaveAttribute('title', /final tool events/)
+  await expect(failed.locator('.ag-live-failure')).toContainText('final tool events')
+  const card = page.locator('.react-flow__node-liveAgent').first()
+  await card.focus()
+  await card.press('ArrowDown')
+  const focused = page.locator('.react-flow__node-liveAgent:focus .ag-live-card')
+  await expect(focused).toHaveCount(1)
+  expect(await focused.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('solid')
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.agent-graph')).toBeFocused()
 })

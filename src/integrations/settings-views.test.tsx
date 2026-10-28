@@ -138,6 +138,31 @@ describe("controlled connection detail", () => {
     expect(screen.queryByRole("button", { name: "Test connection" })).toBeNull();
   });
 
+  it("calls onBack for plain primary clicks and preserves modified link behavior", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const onBack = vi.fn();
+    render(<IntegrationConnectionDetail provider={provider} connections={accounts}
+      selectedConnectionId="account/one" onSelectConnection={vi.fn()} detailsByConnectionId={{}}
+      backHref="/settings/integrations" onBack={onBack} />);
+    const back = screen.getByRole("link", { name: "← Integrations" });
+    const intercepted: boolean[] = [];
+    const observeClick = (event: MouseEvent) => intercepted.push(event.defaultPrevented);
+    document.addEventListener("click", observeClick);
+    try {
+      await user.click(back);
+      expect(onBack).toHaveBeenCalledTimes(1);
+      expect(intercepted).toEqual([true]);
+      for (const modifier of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }]) {
+        expect(fireEvent.click(back, { button: 0, ...modifier })).toBe(true);
+      }
+      expect(onBack).toHaveBeenCalledTimes(1);
+      expect(intercepted).toEqual([true, false, false, false, false]);
+      expect(back).toHaveAttribute("href", "/settings/integrations");
+    } finally {
+      document.removeEventListener("click", observeClick);
+    }
+  });
+
   it("does not expose editing, reset, test or disconnect without capabilities", () => {
     render(<IntegrationConnectionDetail provider={provider} connections={[{ ...accounts[0]!, capabilities: {} }]}
       selectedConnectionId="account/one" onSelectConnection={vi.fn()}

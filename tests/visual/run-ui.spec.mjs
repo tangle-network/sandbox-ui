@@ -14,6 +14,10 @@ for (const theme of ['dark', 'light']) {
       const running = page.locator('[data-status="running"] .ag-live-pill').first()
       expect(await waiting.evaluate(el => getComputedStyle(el).color)).not.toBe(await running.evaluate(el => getComputedStyle(el).color))
       expect(await waiting.evaluate(el => getComputedStyle(el).color)).toBe(await waiting.evaluate(el => { const probe = document.createElement('span'); probe.style.color = 'var(--surface-neutral-text)'; el.append(probe); const color = getComputedStyle(probe).color; probe.remove(); return color }))
+      if (width === 1280) {
+        const background = page.locator('.react-flow__background')
+        expect(await background.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(await background.evaluate(el => { const probe = document.createElement('span'); probe.style.backgroundColor = 'var(--bg-root)'; el.parentElement.append(probe); const color = getComputedStyle(probe).backgroundColor; probe.remove(); return color }))
+      }
       if (width === 390) {
         await expect(page.locator('[data-layout="list"]')).toBeVisible()
         await expect(page.locator('.react-flow__controls')).toHaveCount(0)

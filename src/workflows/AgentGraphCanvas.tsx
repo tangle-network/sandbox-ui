@@ -362,7 +362,7 @@ export function AgentGraphCanvas({
         maxZoom={1.75}
         aria-label="Agent topology"
       >
-        <Background gap={16} size={1} color="hsl(var(--foreground) / 0.06)" />
+        <Background bgColor="var(--bg-root)" gap={16} size={1} color="hsl(var(--foreground) / 0.06)" />
         {nodes.length > MINIMAP_MIN_NODES && (
           <MiniMap
             pannable

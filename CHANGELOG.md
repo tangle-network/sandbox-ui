@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.8
+
+- The `@tangle-network/charts` peer admits charts 1.0, its first stable release (the same code as 0.21.25).
+
 ## 1.1.7
 
 - `TraceWorkspace`'s agent drawer shows its live dot only while the stream is open and producing. A stream that is unreachable (`error` set) now shows the muted dot, like an ended one. Before this, a drawer opened after the viewer closed said "unreachable" next to a green live dot.

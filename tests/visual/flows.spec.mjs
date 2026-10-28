@@ -26,8 +26,7 @@ const flows = [
     },
   },
   {
-    // A host that reuses its run id as the root agent's id, with 95 workers and no files: one root, not nested in its own
-    // team; every agent drawn inside the canvas at desktop and phone (a blank or root-only frame fails); no empty Files panel.
+    // A run-id root occupies its manager header once. All95 workers fit below it without overlap or an empty Files pane.
     name: 'run-graph-factory',
     story: 'run-traceworkspace--factory-run',
     act: async (page) => {
@@ -47,7 +46,10 @@ const flows = [
       expect(outside).toBe(0)
       const root = await cards.filter({ hasText: 'root' }).first().boundingBox()
       const frame = await page.locator('.react-flow__node-agentFrame').first().boundingBox()
-      expect(root.y + root.height).toBeLessThanOrEqual(frame.y + 1)
+      const workersTop = await cards.evaluateAll(nodes => Math.min(...nodes.filter(node => !node.classList.contains('ag-frame-owner')).map(node => node.getBoundingClientRect().top)))
+      expect(root.y).toBeGreaterThanOrEqual(frame.y)
+      expect(root.y + root.height).toBeLessThanOrEqual(workersTop)
+      await expect(page.locator('.ag-frame-owner')).toHaveCount(1)
     },
   },
   {

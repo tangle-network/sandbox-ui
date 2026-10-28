@@ -288,9 +288,9 @@ export function AgentGraphCanvas({
     if (!target) return;
     event.preventDefault();
     event.stopPropagation();
-    const position = layout?.positions.get(target);
+    const position = layout?.positions.get(target), size = rfRef.current?.getInternalNode(target)?.measured;
     wrapperRef.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(target)}"]`)?.focus();
-    if (position) void rfRef.current?.setCenter(position.x + card.width / 2, position.y + card.height / 2, { zoom: rfRef.current.getZoom(), duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
+    if (position) void rfRef.current?.setCenter(position.x + (size?.width ?? card.width) / 2, position.y + (size?.height ?? card.height) / 2, { zoom: rfRef.current.getZoom(), duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
   }, [byId, select, layout, topology, card, animateMotion]);
   const activityRank = (agent: (typeof nodes)[number]) => agent.status === "needs-you" ? 0 : agent.status === "failed" ? 1 : quietActivity(agent, clock) ? 2 : agent.status === "waiting" ? 3 : agent.status === "running" ? 4 : 5;
   const readingOrder = useRef<string[]>([]);
@@ -304,8 +304,8 @@ export function AgentGraphCanvas({
     {counts.filter(group => group.matches.length).map(group => <button type="button" key={group.status} className="ag-status-button rounded-full border border-border px-2 py-1" style={{ color: group.status === "quiet" ? "var(--surface-warning-text)" : agentStatus(group.status as AgentGraphStatus).color }} onClick={() => {
       const index = group.matches.findIndex(agent => agent.id === selectedId);
       const next = group.matches[(index + 1) % group.matches.length]; select(next.id);
-      const p = layout?.positions.get(next.id);
-      if (p) void rfRef.current?.setCenter(p.x + card.width / 2, p.y + card.height / 2, { zoom: 1, duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
+      const p = layout?.positions.get(next.id), size = rfRef.current?.getInternalNode(next.id)?.measured;
+      if (p) void rfRef.current?.setCenter(p.x + (size?.width ?? card.width) / 2, p.y + (size?.height ?? card.height) / 2, { zoom: 1, duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
     }}><span className="shrink-0">{group.matches.length} {group.status === "needs-you" ? "needs you" : group.status}</span><span className="ag-caption-target">{group.current.label}{group.status === "failed" && <span className="font-normal"> · {group.current.result ?? group.current.turn ?? "Failure cause not recorded"}</span>}</span></button>)}
   </div>;
 

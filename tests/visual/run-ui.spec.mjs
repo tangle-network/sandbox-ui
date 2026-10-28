@@ -214,7 +214,7 @@ for (const width of [1280, 390]) test(`latest activity holds reading position an
   await page.goto('/iframe.html?id=run-latestevents--reading&viewMode=story&globals=sandboxTheme:light')
   const feed = page.getByRole('region', { name: 'Latest activity' })
   await expect(feed.getByText('Timestamp not reported')).toBeVisible()
-  await expect(feed.getByRole('button', { name: /untimed:/ }).locator('time')).toHaveText('—')
+  await expect(feed.getByRole('button', { name: /^untimed / }).locator('time')).toHaveText('—')
   await feed.hover()
   await expect(feed).toContainText('Paused while reading')
   // Trigger a producer update without moving the pointer or keyboard out of the feed.
@@ -230,7 +230,7 @@ for (const width of [1280, 390]) test(`latest activity holds reading position an
   await expect(feed.getByText('Failed', { exact: true })).toBeVisible()
   await expect(feed.locator('time').first()).toContainText('Observed')
   await expect(feed.getByRole('status')).toHaveText('worker: Failed; untimed: Done')
-  await feed.getByRole('button', { name: /worker: Integration check exited 1/ }).click()
+  await feed.getByRole('button', { name: /worker.*Integration check exited 1/ }).click()
   await expect(page.getByLabel('Selected agent')).toHaveText('worker')
   await page.mouse.move(1, 1)
   await page.getByRole('button', { name: 'Append event', exact: true }).focus()
@@ -264,4 +264,20 @@ test('activity feed supports keyboard reading without a selection action', async
   await expect(feed).toBeFocused()
   await expect(feed).toContainText('Paused while reading')
   await expect(feed).toContainText('No activity events were reported.')
+})
+
+
+test('scrubbing without an epoch keeps historical changes out of observed activity', async ({ page }) => {
+  await page.goto('/iframe.html?id=run-traceworkspace--timeline-and-graph&viewMode=story&globals=sandboxTheme:light')
+  const slider = page.getByRole('slider', { name: 'Playback position' })
+  await slider.fill('600000')
+  await page.getByRole('radio', { name: 'Graph', exact: true }).click()
+  await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
+  await page.getByRole('radio', { name: 'Agents', exact: true }).click()
+  await slider.fill('1000000')
+  const feed = page.getByRole('region', { name: 'Latest activity' })
+  await expect(feed.locator('.ag-latest-state')).toHaveCount(0)
+  await expect(feed.getByRole('status')).toBeEmpty()
+  await page.getByRole('radio', { name: 'Graph', exact: true }).click()
+  await expect(page.locator('.agent-graph [data-status="failed"]')).toHaveCount(1)
 })

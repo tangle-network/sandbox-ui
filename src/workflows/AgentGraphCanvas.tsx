@@ -323,7 +323,7 @@ export function AgentGraphCanvas({
       data-columns={layout?.columns}
     >
       {caption}
-      {showLatestEvents && live && <LatestEvents agents={nodes} now={now} selectedId={selectedId} onSelect={onSelect ? select : undefined} />}
+      {showLatestEvents && live && <LatestEvents agents={nodes} now={now} live={live} selectedId={selectedId} onSelect={onSelect ? select : undefined} />}
       {narrow ? <ul className="ag-graph-viewport ag-phone-list overflow-auto" aria-label="Agents by attention">
         {[...nodes].sort((a, b) => activityRank(a) - activityRank(b)).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
           <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} data-agent-id={agent.id} className="ag-phone-select"

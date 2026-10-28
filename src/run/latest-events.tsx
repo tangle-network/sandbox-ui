@@ -55,8 +55,12 @@ export function LatestEvents({ agents, n = 5, now, live = now === undefined, sel
     }));
     previous.current = new Map(agents.map(agent => [agent.id, agent.status]));
     if (!live) { setPins(old => old.length ? [] : old); messages.current.clear(); clearTimeout(announce.current); announce.current = undefined; return; }
+    const ids = new Set(agents.map(agent => agent.id));
+    setPins(old => {
+      const next = [...changes, ...old.filter(entry => ids.has(entry.agentId) && !changes.some(change => change.agentId === entry.agentId))].slice(0, limit);
+      return !changes.length && next.length === old.length ? old : next;
+    });
     if (!changes.length) return;
-    setPins(old => [...changes, ...old.filter(entry => !changes.some(change => change.agentId === entry.agentId))].slice(0, limit));
     for (const entry of changes) messages.current.set(entry.agentId, entry.name + ": " + statusMeta(entry.status).label);
     if (announce.current === undefined) announce.current = setTimeout(() => { setAnnouncement([...messages.current.values()].join("; ")); messages.current.clear(); announce.current = undefined; }, tokenMilliseconds("--duration-ambient"));
   }, [agents, clock, limit, live]);

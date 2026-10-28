@@ -36,7 +36,7 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   onSelectAgent?: (agentId: string | undefined) => void
   /**
    * What the trace cannot say about a live agent, by agent id: its activity, thinking line, latest events, commits or
-   * result. The Graph view draws them on the agent's live card; status, model, cost and lifetime come from the trace.
+   * result. Timed agents follow the trace cursor. Workers without recorded timing retain their live identity and metadata.
    */
   agentCards?: Readonly<Record<string, Partial<AgentGraphNode>>>
   /** Existing graph layouts and recorded edges/tools; node identity and clock stay with this workspace. */
@@ -162,6 +162,7 @@ export function TraceWorkspace({
 
   return (
     <div className={cn("sandbox-trace-workspace flex min-h-0 flex-col gap-3", className)}>
+      <div className={agentId ? "min-w-0 lg:mr-[420px]" : "min-w-0"}>
       <TraceWaterfall {...waterfall} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
         onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
@@ -175,6 +176,7 @@ export function TraceWorkspace({
             live={cursor === null && graph.nodes.some(node => ["running", "waiting", "needs-you", "failed"].includes(node.status))}
             className={cn("min-h-0 flex-1", graphOptions.className)} />
         </section>} />
+      </div>
       {/* Without files the run has no code to follow, so no empty 70vh panel is reserved for it. */}
       {files && (
         <section aria-label="Code at the cursor" className="flex min-h-[70vh] flex-col overflow-hidden rounded-xl border border-border bg-card">{files}</section>

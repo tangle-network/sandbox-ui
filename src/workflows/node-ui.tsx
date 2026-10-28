@@ -1,18 +1,5 @@
-/**
- * Shared presentational atoms for a workflow graph node — the type glyph, the
- * status color/label/badge maps, and the edge coloring. One source of truth so
- * the node card and the edges that point at it read as one system.
- *
- * Colors resolve to the SEMANTIC surface tokens (`--surface-success-text`,
- * `--surface-danger-text`, …), which carry a light AND a dark value tuned for
- * contrast against the card. A literal palette hex (`#22c55e`) or a stock
- * Tailwind shade (`text-red-400`) carries ONE value, so it can only ever hold its
- * contrast in one of the two themes — never use one for a status color.
- *
- * Inline `style` colors here use the RAW brand tokens (`hsl(var(--primary))`,
- * `var(--surface-…)`) — NOT the `--color-*` @theme aliases, which are undefined
- * in a consumer that only imports `tokens.css` (e.g. platform-web), where a
- * `var(--color-*)` would silently resolve to nothing. See the edge-color test.
+/** Workflow-node identity and shared run-status presentation.
+ * Raw Brand variables also resolve for consumers that load only tokens.css.
  */
 
 import { type StatusTone } from "@tangle-network/ui/primitives";
@@ -50,19 +37,7 @@ import { providerLabel } from "./provider-label";
 export const MUTED_TRACK =
   "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)";
 
-// Tone accent color (theme-reactive, resolving against the raw brand vars):
-// trigger = primary indigo; structural (parallel/foreach/decision control flow) =
-// warning amber; action = neutral. Drives a node's glyph tint and its resting
-/** Per-KIND accents — the QUIET identity channel. The 2026-10-09 canvas
- *  critique's first blocker: kind and state shared the same channel and hue
- *  family (sandbox-kind was green like DONE; structural-kind amber like
- *  WAITING; agent-kind indigo like RUNNING). The split:
- *    KIND  = the glyph-tile tint + a 2px top rule. Hues chosen to NEVER
- *           collide with the state family (green/amber/red are reserved
- *           for state alone).
- *    STATE = the border, ring, glow and fill (see statusBorder).
- * Kind hue duplicates are deliberate: shape + glyph carry identity; the
- * tint is a hint, not the signal. */
+/** Glyph accents identify the node kind; ui's status metadata owns run state. */
 export const KIND_ACCENT: Record<string, string> = {
   "agent.run": "hsl(var(--primary))",
   "script.run": "var(--surface-info-text)",

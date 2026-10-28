@@ -26,7 +26,7 @@ export const AGENT_HUB_CSS = `
 .ag-node { position: absolute; display: flex; flex-direction: column; align-items: center; width: 176px; margin-left: -88px; margin-top: calc(var(--ag-tile) / -2); padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; outline: none; }
 .ag-tile { position: relative; display: grid; place-items: center; width: var(--ag-tile); height: var(--ag-tile); flex-shrink: 0; border-radius: var(--radius-card); background: var(--ag-surface); border: 1px solid var(--ag-border); box-shadow: var(--shadow-card); transition: box-shadow var(--motion-control); }
 .ag-node:hover .ag-tile { box-shadow: var(--shadow-dropdown); }
-.ag-model-mark { display: grid; place-items: center; width: 20px; height: 20px; filter: grayscale(1) var(--tw-invert,); color: var(--ag-muted); } .ag-model-mark img, .ag-model-mark svg { max-width: 20px; max-height: 20px; } .ag-node:hover .ag-model-mark { filter: var(--tw-invert, none); }
+.ag-model-mark { display: grid; place-items: center; width: 20px; height: 20px; filter: grayscale(1) var(--tw-invert,); color: var(--ag-muted); } .ag-model-mark img, .ag-model-mark svg { max-width: 20px; max-height: 20px; } .ag-node:hover .ag-model-mark { filter: var(--tw-invert, none); } .ag-node:not(:hover) .ag-model-mark svg path { fill: currentColor; }
 .ag-node:focus-visible, .ag-selected .ag-tile, .ag-close:focus-visible, .ag-chip:focus-visible { outline: 2px solid color-mix(in srgb, var(--ag-fg) 70%, transparent); outline-offset: 2px; }
 .ag-node[style*="--ag-tone"] .ag-tile { border: 1.5px solid var(--ag-tone); }
 .ag-node-you .ag-tile { background: var(--ag-fg); color: var(--ag-surface); }
@@ -34,7 +34,7 @@ export const AGENT_HUB_CSS = `
 .ag-name { margin-top: 6px; font-size: 14px; font-weight: 600; line-height: 20px; }
 .ag-sub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
 .ag-node-tool .ag-name { max-width: 132px; }
-.ag-sub { font-size: 13px; line-height: 17px; font-weight: 400; color: var(--ag-muted); } .ag-node-tool .ag-name { font-size: 12px; font-weight: 400; color: var(--ag-muted); }
+.ag-sub, .ag-node-tool .ag-name { font-size: 12px; font-weight: 400; color: var(--ag-muted); } .ag-canvas .ag-sub { font-size: 13px; line-height: 17px; }
 .ag-badge { position: absolute; top: -5px; right: -5px; display: grid; place-items: center; background: var(--ag-surface); border-radius: var(--radius-pill); box-shadow: 0 0 0 2px var(--ag-surface); }
 .ag-running-dot { display: inline-block; flex-shrink: 0; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-info-text); animation: tangle-breathe var(--motion-ambient) infinite; }
 .ag-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; color: var(--ag-muted); }

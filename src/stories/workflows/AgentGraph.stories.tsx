@@ -205,3 +205,33 @@ export const LiveRunCards: StoryObj = {
     </div>
   ),
 };
+
+const REPLAY_NOW = Date.UTC(2026, 9, 28, 12);
+function RunState({ state = "seventeen", burst = false }: { state?: string; burst?: boolean }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!burst) return;
+    const timer = setInterval(() => setTick(t => t + 1), 333);
+    return () => clearInterval(timer);
+  }, [burst]);
+  const now = REPLAY_NOW + tick * 333;
+  const nodes: AgentGraphNode[] = runNodes.map((node, i) => ({ ...node,
+    status: i === 1 ? "needs-you" : i === 2 ? "failed" : i === 3 ? "running" : node.status,
+    startedAt: REPLAY_NOW - 40 * 60_000,
+    turn: i === 1 ? "Approve the exact release proposal" : i === 2 ? "Benchmark harness exited 137 (OOM)" : i === 3 ? "Waiting for the remote benchmark" : node.turn,
+    result: i === 2 ? "Benchmark harness exited 137 (OOM)" : node.turn,
+    events: Array.from({ length: state === "none" ? 0 : state === "one" ? 1 : 4 }, (_, k) => ({ id: `${node.id}-${tick + k}`, label: ["bash cargo run --release -- prove", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs", "bash cargo test -p prover"][k], at: i === 3 ? REPLAY_NOW - (15 - k) * 60_000 : now - (3 - k) * 10_000 })),
+  }));
+  return <div className="h-screen w-full rounded-[var(--radius-container)] border border-border bg-background"><AgentGraph live nodes={nodes} edges={runEdges} now={now} selectedId={selected} onSelect={setSelected} className="h-full w-full" /></div>;
+}
+export const SeventeenLive: StoryObj = { render: () => <RunState /> };
+export const LiveNeedsYou: StoryObj = { render: () => <RunState /> };
+export const LiveFailed: StoryObj = { render: () => <RunState /> };
+export const LiveQuiet: StoryObj = { render: () => <RunState /> };
+export const NoEvents: StoryObj = { render: () => <RunState state="none" /> };
+export const OneEvent: StoryObj = { render: () => <RunState state="one" /> };
+export const Phone390: StoryObj = { parameters: { viewport: { defaultViewport: "mobile" } }, render: () => <RunState /> };
+export const LightTheme: StoryObj = { globals: { sandboxTheme: "light" }, render: () => <RunState /> };
+export const ReducedMotion: StoryObj = { parameters: { reducedMotion: "reduce" }, render: () => <RunState /> };
+export const Burst: StoryObj = { render: () => <RunState burst /> };

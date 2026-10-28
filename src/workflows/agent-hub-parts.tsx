@@ -1,25 +1,21 @@
-/**
- * What the `AgentGraph` hub layout draws: a node (a brand-marked tile with its
- * name and model under it), the status badge on its corner, and the popover of
- * its recent calls. Status reads as a glyph and a word as well as a colour.
- */
+/** Hub nodes and call details share the run status vocabulary. */
 
-import { Bot, Check, Clock3, LoaderCircle, User, Wrench, X } from "lucide-react";
-import type { CSSProperties, KeyboardEvent, ReactNode, Ref } from "react";
+import { Bot, User, Wrench, X } from "lucide-react";
+import { runStatus, statusMeta, RunStatusIcon } from "@tangle-network/ui/run";
+import { type CSSProperties, type KeyboardEvent, type ReactNode, type Ref, useRef } from "react";
 import { ProviderIcon } from "../integrations/provider-logo";
 import { ModelBrandStack, modelBrandFor } from "../lib/model-brand";
 import type { AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import type { AgentGraphCall, AgentGraphCallKind, AgentGraphTool, HubNodeKind } from "./agent-hub-layout";
 import { fmtCost } from "./format";
-import { shortModel } from "./naming";
-import { STATUS_COLOR } from "./node-ui";
+import { ambientStyle, syncAmbient, useAttention } from "./run-ui-state";
 
 /** One colour per call kind, shared by edges, the legend and popover rows. */
 export const CALL_COLOR: Record<AgentGraphCallKind, string> = {
-  call: "var(--agent-graph-call, hsl(217 91% 60%))",
-  answer: `var(--agent-graph-answer, ${STATUS_COLOR.succeeded})`,
-  "needs-you": `var(--agent-graph-needs-you, ${STATUS_COLOR.waiting})`,
-  failed: `var(--agent-graph-failed, ${STATUS_COLOR.failed})`,
+  call: "var(--brand-primary)",
+  answer: `var(${statusMeta("done").token})`,
+  "needs-you": `var(${statusMeta("needs-you").token})`,
+  failed: `var(${statusMeta("failed").token})`,
 };
 export const CALL_LABEL: Record<AgentGraphCallKind, string> = { call: "Call", answer: "Answer", "needs-you": "Needs you", failed: "Failed" };
 
@@ -30,6 +26,7 @@ export interface HubEntity {
   label: string;
   sub?: string;
   status?: AgentGraphStatus;
+  quiet?: string;
   agent?: AgentGraphNode;
   tool?: AgentGraphTool;
 }
@@ -43,16 +40,15 @@ function NodeIcon({ entity, size }: { entity: HubEntity; size: number }) {
     return <ProviderIcon id={provider} displayName={entity.label} size={Math.round(size * 0.46)} className="rounded-[4px]" />;
   }
   const brand = entity.agent?.model ? modelBrandFor(entity.agent.model) : null;
-  return brand ? <ModelBrandStack identity={brand} size="sm" /> : <Bot size={size * 0.44} aria-hidden />;
+  return brand ? <span className="ag-model-mark"><ModelBrandStack identity={brand} size="sm" /></span> : <Bot size={16} aria-hidden />;
 }
 
-/** The corner badge: done, needs you, failed or running, each with its own glyph. */
-function StatusBadge({ status }: { status?: AgentGraphStatus }) {
-  if (status === "succeeded") return <span className="ag-badge" style={{ background: STATUS_COLOR.succeeded }}><Check size={9} strokeWidth={3} /></span>;
-  if (status === "needs-you") return <span className="ag-badge" style={{ background: STATUS_COLOR.waiting }}><Clock3 size={9} strokeWidth={3} /></span>;
-  if (status === "failed") return <span className="ag-badge" style={{ background: STATUS_COLOR.failed }}>!</span>;
-  if (status === "running") return <span className="ag-badge ag-badge-running"><LoaderCircle size={11} strokeWidth={2.5} /></span>;
-  return null;
+/** Running has one quiet opacity signal; all other states use the shared glyph. */
+function StatusBadge({ status, quiet }: { status?: AgentGraphStatus; quiet?: string }) {
+  if (!status) return null;
+  return <span className="ag-badge">{runStatus(status) === "running" && !quiet
+    ? <span className="ag-running-dot" data-motion="essential" aria-label="Running" style={ambientStyle} onAnimationStart={syncAmbient} />
+    : <RunStatusIcon status={quiet ? "waiting" : status} />}</span>;
 }
 
 export interface HubNodeProps {
@@ -69,15 +65,19 @@ export interface HubNodeProps {
 }
 
 export function HubNode({ entity, x, y, tile, dimmed, selected, buttonRef, onOpen, onHover, onKeyDown }: HubNodeProps) {
-  const tone = entity.status === "needs-you" ? STATUS_COLOR.waiting : entity.status === "failed" ? STATUS_COLOR.failed : undefined;
-  const subTone = entity.status === "needs-you" ? STATUS_COLOR.waiting : entity.status === "failed" ? STATUS_COLOR.failed : undefined;
-  const sub = entity.status === "needs-you" ? "Needs you" : entity.status === "failed" ? "Error" : entity.sub;
+  const attentionRef = useRef<HTMLButtonElement>(null);
+  useAttention(attentionRef, entity.status ?? "unknown");
+  const attention = entity.status === "needs-you" || entity.status === "failed";
+  const tone = attention ? `var(${statusMeta(entity.status!).token})` : undefined;
+  const sub = entity.quiet ?? (entity.status === "needs-you" ? "Needs you · Respond" : entity.status ? statusMeta(entity.status).label : entity.sub);
   return (
     <button
-      ref={buttonRef}
+      ref={(el) => { attentionRef.current = el; if (typeof buttonRef === "function") buttonRef(el); else if (buttonRef) buttonRef.current = el; }}
       type="button"
       data-agent-graph-node={entity.id}
       data-kind={entity.kind}
+      data-status={entity.status}
+      data-activity={entity.quiet ? "quiet" : undefined}
       aria-label={`${entity.label}${entity.sub ? `, ${entity.sub}` : ""}${entity.status ? `, ${entity.status === "needs-you" ? "needs you" : entity.status}` : ""}`}
       aria-expanded={selected}
       className={`ag-node ag-node-${entity.kind}${dimmed ? " ag-dimmed" : ""}${selected ? " ag-selected" : ""}`}
@@ -91,10 +91,10 @@ export function HubNode({ entity, x, y, tile, dimmed, selected, buttonRef, onOpe
     >
       <span className="ag-tile">
         <NodeIcon entity={entity} size={tile} />
-        <StatusBadge status={entity.status} />
+        <StatusBadge status={entity.status} quiet={entity.quiet} />
       </span>
       <span className="ag-name">{entity.label}</span>
-      {sub && <span className="ag-sub" style={subTone ? { color: subTone } : undefined}>{sub}</span>}
+      {sub && <span className="ag-sub" style={entity.quiet ? { color: "var(--surface-warning-text)" } : tone ? { color: tone } : undefined}>{sub}</span>}
     </button>
   );
 }
@@ -118,7 +118,7 @@ export function HubPopover({ entity, entities, calls, now, left, top, summary, c
   const mine = calls.filter((c) => (c.from === entity.id || c.to === entity.id) && c.startedAt <= now).sort((a, b) => b.startedAt - a.startedAt);
   const recent = mine.slice(0, 5);
   const lastMinute = mine.filter((c) => now - c.startedAt <= 60_000).length;
-  const status = entity.status === "needs-you" ? "Needs you" : entity.status === "failed" ? "Error" : entity.status === "running" ? "Running" : entity.status === "succeeded" ? "Done" : undefined;
+  const status = entity.status ? statusMeta(entity.status).label : undefined;
   const cost = entity.agent?.costUsd;
   return (
     <div role="dialog" aria-label={`${entity.label} calls`} className="ag-popover" style={{ left, top }}
@@ -129,7 +129,7 @@ export function HubPopover({ entity, entities, calls, now, left, top, summary, c
           <span className="ag-pop-name">{entity.label}</span>
           {(entity.sub || entity.tool?.detail) && <span className="ag-pop-sub">{entity.tool?.detail ?? entity.sub}</span>}
         </span>
-        {status && <span className={`ag-pill ag-pill-${entity.status}`}>{status}</span>}
+        {status && <span className={`ag-pill ag-pill-${entity.status}`}>{entity.status === "running" && !entity.quiet ? <span className="ag-running-dot" data-motion="essential" style={ambientStyle} onAnimationStart={syncAmbient} /> : <RunStatusIcon status={entity.quiet ? "waiting" : entity.status!} aria-hidden />}{entity.quiet ?? status}</span>}
         <button ref={closeRef} type="button" className="ag-close" aria-label="Close" onClick={onClose}><X size={14} /></button>
       </div>
       {summary && <p className="ag-pop-summary">{summary}</p>}
@@ -144,7 +144,7 @@ export function HubPopover({ entity, entities, calls, now, left, top, summary, c
               {other && <span className="ag-tile ag-tile-micro" style={{ "--ag-tile": "16px" } as CSSProperties}><NodeIcon entity={other} size={16} /></span>}
               <span className="ag-pop-call"><b>{other?.label ?? (outgoing ? c.to : c.from)}</b>{c.label ? ` · ${c.label}` : ""}</span>
               <span className="ag-pop-time" style={c.kind === "failed" ? { color: CALL_COLOR.failed } : undefined}>
-                {c.kind === "failed" ? "Failed" : running ? <LoaderCircle size={12} className="ag-spin" aria-label="running" /> : fmtMs(c.durationMs!)}
+                {c.kind === "failed" ? "Failed" : running ? <span className="ag-running-dot" data-motion="essential" aria-label="Running" style={ambientStyle} onAnimationStart={syncAmbient} /> : fmtMs(c.durationMs!)}
               </span>
             </li>
           );

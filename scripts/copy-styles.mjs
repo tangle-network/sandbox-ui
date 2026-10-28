@@ -68,4 +68,7 @@ await writeFile(join(distDir, "styles.css"), result.css)
 // uncompiled, plus the `@source` lines a consumer's Tailwind needs to compile
 // every utility these components write. @see TAILWIND_ENTRY_SOURCES.
 const tailwindEntry = await readFile(join(srcStylesDir, "tailwind.css"), "utf8")
-await writeFile(join(distDir, "tailwind.css"), withEntrySources(tailwindEntry))
+const authoredCss = postcss.parse(globalsCss).nodes
+  .filter(node => node.type !== "comment" && !(node.type === "atrule" && ["import", "source"].includes(node.name)))
+  .map(node => node.toString()).join("\n")
+await writeFile(join(distDir, "tailwind.css"), withEntrySources(`${tailwindEntry}\n${authoredCss}`))

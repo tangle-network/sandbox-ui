@@ -21,3 +21,45 @@
 @source "../../src/**/*.ts";
 @source "../../node_modules/@tangle-network/ui/src/**/*.tsx";
 @source "../../node_modules/@tangle-network/ui/src/**/*.ts";
+
+/* Run cards use Brand's status, motion, radius and shadow owners. */
+.agent-graph { container-type: inline-size; }
+.ag-live { --ag-fg: hsl(var(--foreground)); --ag-muted: hsl(var(--muted-foreground)); --ag-surface: hsl(var(--card)); --ag-border: hsl(var(--border)); }
+.ag-live-slot { display: flex; align-items: center; width: 100%; height: 100%; }
+.ag-live-card { position: relative; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; width: 100%; height: 100%; padding: 12px; border: 1px solid var(--ag-border);
+  border-radius: var(--radius-card); background: var(--ag-surface); color: var(--ag-fg); overflow: hidden;
+  transition: height var(--motion-surface), border-color var(--motion-control), box-shadow var(--motion-control); }
+.ag-live-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ag-live-names { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.ag-live-name { font-size: 14px; line-height: 18px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-live-meta, .ag-live-stats { font-size: 12px; line-height: 16px; color: var(--ag-muted); }
+.ag-live-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-live-stats { display: flex; flex-direction: column; align-items: flex-end; flex: none; font-variant-numeric: tabular-nums; }
+.ag-live-pill { display: inline-flex; align-items: center; gap: 4px; color: var(--ag-status); }
+.ag-running-dot { display: inline-block; flex: none; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-info-text); }
+[data-activity="quiet"] .ag-running-dot { animation: none !important; }
+.ag-live-thinking { flex: none; margin: 0; font-size: 13px; line-height: 17px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ag-live-failure { color: var(--surface-danger-text); }
+.ag-live-quiet { color: var(--surface-warning-text); font-size: 12px; line-height: 16px; }
+.ag-live-blocker { color: var(--ag-muted); font-size: 12px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-live-respond { height: 28px; min-height: 28px; align-self: flex-start; border: 1px solid currentColor; border-radius: var(--radius-control); padding: 0 8px; color: var(--surface-warning-text); background: transparent; cursor: pointer; }
+.ag-live-events { margin: auto 0 0; padding: 0; list-style: none; height: 48px; min-height: 48px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+.ag-live-events li { display: flex; align-items: center; gap: 6px; min-height: 16px; font: 11px/16px var(--font-mono, monospace); color: var(--ag-muted); transition: color var(--motion-stream); }
+.ag-live-events li svg { flex: none; width: 12px; height: 12px; }
+.ag-live-events li:last-child { color: var(--ag-fg); }
+.ag-live-event-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-live-event-at { flex: none; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
+.ag-live-chip { height: 40px; flex-direction: row; align-items: center; gap: 8px; border-radius: var(--radius-pill); opacity: 1; }
+.ag-live-chip .ag-live-head { flex: none; max-width: 55%; }
+.ag-live-chip .ag-live-stats, .ag-live-chip .ag-live-head > :first-child { display: none; }
+.ag-live-chip-result { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 16px; font-weight: 500; }
+.ag-phone-list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 8px; list-style: none; }
+.ag-phone-list > li { min-width: 0; padding-left: min(calc(var(--depth) * 16px), 32px); border-left: 1px solid var(--ag-border); }
+.ag-phone-select { width: 100%; height: 100%; text-align: left; background: transparent; padding: 0; border: 0; color: inherit; cursor: pointer; }
+.ag-phone-select:focus-visible { outline: 2px solid hsl(var(--foreground) / .7); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .ag-live-card { transition: opacity var(--duration-fast); } }
+@container (width < 600px) {
+  .ag-live-card { height: auto; min-height: 164px; }
+  .ag-live-card.ag-live-chip { min-height: 40px; height: 40px; }
+  .ag-live-card[data-status="needs-you"] { min-height: 196px; }
+}

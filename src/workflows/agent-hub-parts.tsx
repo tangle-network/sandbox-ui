@@ -2,7 +2,7 @@
 
 import { Bot, User, Wrench, X } from "lucide-react";
 import { runStatus, statusMeta, RunStatusIcon } from "@tangle-network/ui/run";
-import { type CSSProperties, type KeyboardEvent, type ReactNode, type Ref, useRef } from "react";
+import { type CSSProperties, type KeyboardEvent, type ReactNode, type Ref, useLayoutEffect, useRef, useState } from "react";
 import { ProviderIcon } from "../integrations/provider-logo";
 import { ModelBrandStack, modelBrandFor } from "../lib/model-brand";
 import type { AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
@@ -115,13 +115,29 @@ export interface HubPopoverProps {
 
 /** A node's recent calls: who it called or was called by, what for, how long, and what failed. */
 export function HubPopover({ entity, entities, calls, now, left, top, summary, closeRef, onClose }: HubPopoverProps) {
+  const element = useRef<HTMLDivElement>(null);
+  const [fitted, setFitted] = useState<{ left: number; top: number; maxHeight?: number }>({ left, top });
+  useLayoutEffect(() => {
+    const dialog = element.current, container = dialog?.parentElement;
+    if (!dialog || !container) return;
+    const fit = () => {
+      const relative = getComputedStyle(dialog).position !== "absolute";
+      const maxHeight = Math.max(0, container.clientHeight - 16);
+      const height = Math.min(dialog.scrollHeight + dialog.offsetHeight - dialog.clientHeight, maxHeight);
+      const next = relative ? { left, top } : { left: Math.max(8, Math.min(left, container.clientWidth - dialog.offsetWidth - 8)), top: Math.max(8, Math.min(top, container.clientHeight - height - 8)), maxHeight };
+      setFitted(previous => previous.left === next.left && previous.top === next.top && previous.maxHeight === next.maxHeight ? previous : next);
+    };
+    fit();
+    const observer = new ResizeObserver(fit); observer.observe(dialog); observer.observe(container);
+    return () => observer.disconnect();
+  }, [left, top]);
   const mine = calls.filter((c) => (c.from === entity.id || c.to === entity.id) && c.startedAt <= now).sort((a, b) => b.startedAt - a.startedAt);
   const recent = mine.slice(0, 5);
   const lastMinute = mine.filter((c) => now - c.startedAt <= 60_000).length;
   const status = entity.status ? statusMeta(entity.status).label : undefined;
   const cost = entity.agent?.costUsd;
   return (
-    <div role="dialog" aria-label={`${entity.label} calls`} className="ag-popover" style={{ left, top }}
+    <div ref={element} role="dialog" aria-label={`${entity.label} calls`} className="ag-popover" style={fitted}
       onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }}>
       <div className="ag-pop-head">
         <span className="ag-tile ag-tile-mini" style={{ "--ag-tile": "28px" } as CSSProperties}><NodeIcon entity={entity} size={28} /></span>

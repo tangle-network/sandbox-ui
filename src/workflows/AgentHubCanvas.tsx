@@ -4,7 +4,7 @@ import { type KeyboardEvent, type ReactNode, type RefObject, useEffect, useLayou
 import type { AgentGraphEdge, AgentGraphNode } from "./agent-graph-layout";
 import { AGENT_HUB_CSS } from "./agent-hub-css";
 import {
-  type AgentGraphCall, type AgentGraphTool, HUB_METRICS, HUB_METRICS_COMPACT, type HubMetrics, layoutHub, orthogonalPath, YOU_ID,
+  type AgentGraphCall, type AgentGraphTool, HUB_METRICS, type HubMetrics, layoutHub, orthogonalPath, YOU_ID,
 } from "./agent-hub-layout";
 import { CALL_COLOR, CALL_LABEL, type HubEntity, HubNode, HubPopover } from "./agent-hub-parts";
 import { quietActivity, tokenMilliseconds, useMotionAllowed, useRunNow } from "./run-ui-state";
@@ -99,7 +99,7 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
   }, [visibleCalls]);
 
   const span = (m: HubMetrics) => ({ w: (layout.maxCol - layout.minCol) * m.cellX + PAD_X * 2, h: (layout.maxRow - layout.minRow) * m.cellY + PAD_Y * 2 + m.hubTile + m.label });
-  const metrics = width && width / span(HUB_METRICS).w < 0.85 ? HUB_METRICS_COMPACT : HUB_METRICS;
+  const metrics = HUB_METRICS;
   const { w, h } = span(metrics);
   const list = width > 0 && (width < 600 || width / w < .85);
   const scale = width ? Math.max(.85, Math.min(1, width / w)) : 1;
@@ -121,7 +121,7 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
 
   const { positions, routes } = useMemo(() => {
     const positions = new Map(layout.placements.map(p => [p.id, { x: (p.col - layout.minCol) * metrics.cellX + PAD_X, y: (p.row - layout.minRow) * metrics.cellY + PAD_Y + metrics.hubTile / 2, tile: p.kind === "hub" ? metrics.hubTile : p.kind === "you" ? metrics.tile - 8 : metrics.tile }]));
-    const bounds = layout.placements.map(p => { const { x, y, tile } = positions.get(p.id)!; return { id: p.id, tile: { left: x - tile / 2 - 4, right: x + tile / 2 + 4, top: y - tile / 2 - 4, bottom: y + tile / 2 + 4 }, label: { left: x - 70, right: x + 70, top: y + tile / 2 + 4, bottom: y + tile / 2 + (p.kind === "tool" || p.kind === "you" ? 30 : 64) } }; });
+    const bounds = layout.placements.map(p => { const { x, y, tile } = positions.get(p.id)!; return { id: p.id, tile: { left: x - tile / 2 - 4, right: x + tile / 2 + 4, top: y - tile / 2 - 4, bottom: y + tile / 2 + 4 }, label: { left: x - (p.kind === "tool" || p.kind === "you" ? 70 : 92), right: x + (p.kind === "tool" || p.kind === "you" ? 70 : 92), top: y + tile / 2 + 4, bottom: y + tile / 2 + (p.kind === "tool" || p.kind === "you" ? 30 : 64) } }; });
     let lanes = 0;
     const routes = new Map(layout.links.map(link => {
       const a = positions.get(link.from)!, b = positions.get(link.to)!;

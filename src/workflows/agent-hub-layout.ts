@@ -62,7 +62,6 @@ export interface HubMetrics {
 }
 
 export const HUB_METRICS: HubMetrics = { cellX: 184, cellY: 140, tile: 48, hubTile: 60, label: 34 };
-export const HUB_METRICS_COMPACT: HubMetrics = { cellX: 112, cellY: 112, tile: 40, hubTile: 48, label: 30 };
 
 const key = (col: number, row: number) => `${col},${row}`;
 

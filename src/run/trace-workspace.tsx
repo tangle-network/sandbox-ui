@@ -61,10 +61,13 @@ function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, a
     if (seen.has(span.id)) continue
     seen.add(span.id)
     const state = at !== null && (span.endMs > at || span.status === "running") ? "running" : runStatus(span.status ?? "unknown")
+    const activity = (span.activityAt ?? []).reduce((last, time) => Number.isFinite(time) && (at === null || time <= at) ? Math.max(last, time) : last, -Infinity)
     nodes.push({
       id: span.id, label: span.name, model: span.detail, costUsd: span.costUsd,
       status: state === "done" ? "succeeded" : state,
       startedAt: epoch === undefined ? undefined : epoch + span.startMs,
+      lastActivityAt: epoch == null || !Number.isFinite(epoch) || !Number.isFinite(activity) ? undefined : epoch + activity,
+      medianEventGapMs: span.medianEventGapMs,
       ...cards?.[span.id],
     })
     const parent = span.parentId ? byId.get(span.parentId) : undefined

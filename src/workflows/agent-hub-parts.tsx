@@ -47,7 +47,7 @@ function NodeIcon({ entity, size }: { entity: HubEntity; size: number }) {
 function StatusBadge({ status, quiet }: { status?: AgentGraphStatus; quiet?: string }) {
   if (!status) return null;
   return <span className="ag-badge">{runStatus(status) === "running"
-    ? <span className="ag-running-dot" data-motion="essential" aria-label="Running" style={quiet ? { animation: "none", background: "var(--muted-foreground)" } : ambientStyle} onAnimationStart={syncAmbient} />
+    ? <span className="ag-running-dot" data-motion="essential" aria-label="Running" style={quiet ? { animation: "none", background: "var(--ag-muted)" } : ambientStyle} onAnimationStart={syncAmbient} />
     : <RunStatusIcon status={status} />}</span>;
 }
 

@@ -1,14 +1,14 @@
 import type { Node, NodeProps } from "@xyflow/react";
 import { Wrench } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import type { AgentGraphDirection, AgentGraphEvent, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import { agentStatus, agentSummary, Handles, StatusGlyph, cardBorder } from "./agent-graph-parts";
 import { SELECTION_OUTLINE } from "./canvas-theme";
 import { fmtCost, fmtEventTime } from "./format";
 import { shortModel } from "./naming";
 import { KIND_ACCENT, NodeMark, RESTING_SHADOW } from "./node-ui";
-import { quietActivity, tokenMilliseconds, useAttention, useRunNow } from "./run-ui-state";
+import { quietActivity, useAttention, useRunNow } from "./run-ui-state";
 
 export type LiveAgentCardNode = Node<
   { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onOpen?: () => void; parentLabel?: string; renderEventIcon?: (event: AgentGraphEvent) => ReactNode }, "liveAgent"
@@ -31,17 +31,9 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
   const quiet = quietActivity(agent, now);
   const s = agentStatus(agent.status);
   const meta = [agent.model ? shortModel(agent.model) : undefined, agent.effort].filter(Boolean).join(" · ");
-  const [events, setEvents] = useState(() => (agent.events ?? []).slice(-3));
+  const events = (agent.events ?? []).slice(-3);
   const cost = Number.isFinite(agent.costUsd) ? fmtCost(agent.costUsd!) : undefined;
   const metrics = [cost, !failed && agent.startedAt != null ? `${fmtEventTime(agent.startedAt, now, false)} elapsed` : undefined, Number.isFinite(agent.commits) ? `${agent.commits} ${agent.commits === 1 ? "commit" : "commits"}` : undefined].filter(Boolean).join(" · ") || "—";
-  const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const latest = useRef(agent.events);
-  latest.current = agent.events;
-  useEffect(() => {
-    if (pending.current !== undefined) return;
-    pending.current = setTimeout(() => { setEvents((latest.current ?? []).slice(-3)); pending.current = undefined; }, tokenMilliseconds("--duration-ambient", ref.current) * .15);
-  }, [agent.events]);
-  useEffect(() => () => clearTimeout(pending.current), []);
   return (
     <div className="ag-live-slot">
       {handles && <Handles direction={direction} />}

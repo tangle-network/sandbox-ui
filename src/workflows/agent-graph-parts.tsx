@@ -40,8 +40,6 @@ import {
   RESTING_SHADOW,
 } from "./node-ui";
 
-const MUTED = "hsl(var(--muted-foreground))";
-
 /** Workflow state adaptation stays at its boundary; agent states use ui directly. */
 export function agentStatus(status: AgentGraphStatus) {
   const meta = statusMeta(status);
@@ -181,8 +179,7 @@ export type AgentMessageEdge = Edge<
   "agentMessage"
 >;
 
-/** The secondary edges' colours: a message is quiet, a delegation is the
- *  primary accent's wash. Both stay well under a spawn edge's weight. */
+/** Resting message and delegation edges stay neutral. */
 export const MESSAGE_EDGE_COLOR: Record<Exclude<AgentGraphEdgeKind, "spawn">, string> = {
   message: "color-mix(in srgb, hsl(var(--muted-foreground)) 70%, transparent)",
   delegation: "color-mix(in srgb, hsl(var(--muted-foreground)) 80%, transparent)",

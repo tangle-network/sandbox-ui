@@ -1,3 +1,4 @@
+import { waitFor } from "@testing-library/dom";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { FlowSpan, FlowTrace } from "@tangle-network/charts";
 import { FlowWaterfall, TimelineView } from "@tangle-network/charts/react";
@@ -27,5 +28,13 @@ export const FamilyFolded: Story = { args: { defaultCollapsed: true } };
 export const SearchMatch: Story = { args: { query: "Echo" } };
 export const LongNames: Story = { args: { trace: { ...trace, spans: trace.spans.map(span => ({ ...span, name: `${span.name} validating-the-very-long-release-proposal-and-signed-artifacts` })) } } };
 // SpanCard is exercised through its public owner. A click pins it; Escape returns to the row.
-export const SpanCardFailed: Story = { args: { trace: failureHeavy } };
+const pinCard: Story["play"] = async ({ canvasElement }) => {
+  const bar = await waitFor(() => { const bar = canvasElement.querySelector<HTMLElement>(".fw-bar"); if (!bar) throw new Error("Waiting for trace bar"); return bar; });
+  bar.click();
+  await waitFor(() => { if (!canvasElement.querySelector(".fw-card")) throw new Error("Span card did not open"); });
+};
+export const SpanCardFailed: Story = { args: { trace: failureHeavy }, play: pinCard };
+export const SpanCardFailedFull: Story = { args: { trace: failureHeavy, defaultView: "spans" }, play: pinCard };
+export const SpanCardDone: Story = { play: pinCard };
+export const SpanCardRunning: Story = { args: { trace: live, live: true }, play: pinCard };
 export const TimelineFolded: Story = { render: () => <TimelineView lanes={[{ id: "root", label: "Root", spans: [{ start: 0, end: 1000, state: "done" }], ticks: [] }, { id: "worker", parent: "root", label: "Worker", spans: [{ start: 100, end: 900, state: "done" }], ticks: [] }]} options={{ measure: "Agent timeline" }} defaultCollapsed={["root"]} /> };

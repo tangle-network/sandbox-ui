@@ -14,7 +14,8 @@
  *
  * The same file is the source of the precompiled `./styles` bundle:
  * src/styles/globals.css wraps it with `@import "tailwindcss"` and this repo's
- * own source globs. Edit runtime CSS here, never in globals.css. */
+ * own source globs. Authored Sandbox rules belong in globals.css; the style
+ * build also includes those rules in the published Tailwind source entry. */
 
 /* Fonts are loaded by the consumer, not this library. See README
  * "Fonts" for the list of font families sandbox-ui references

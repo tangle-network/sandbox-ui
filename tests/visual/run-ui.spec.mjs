@@ -109,7 +109,7 @@ test('17 agents stream at 3 events per second for 60 seconds', async ({ page }, 
       if (previous !== undefined) frames.push(now - previous)
       previous = now
       if (now - start < 60_000) requestAnimationFrame(frame)
-      else { observer.disconnect(); frames.sort((a, b) => a - b); resolve({ frameCount: frames.length, p95: frames[Math.ceil(frames.length * .95) - 1], maxLongTask: Math.max(0, ...longTasks), longTaskCount: longTasks.length }) }
+      else { observer.disconnect(); frames.sort((a, b) => a - b); resolve({ frameCount: frames.length, p95: Math.round(frames[Math.ceil(frames.length * .95) - 1] * 1000) / 1000, maxLongTask: Math.max(0, ...longTasks), longTaskCount: longTasks.length }) }
     }
     requestAnimationFrame(frame)
   }))

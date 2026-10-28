@@ -1,6 +1,6 @@
 import type { Node, NodeProps } from "@xyflow/react";
 import { toolGlyph } from "@tangle-network/charts/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { AgentGraphDirection, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import { agentStatus, agentSummary, Handles, StatusGlyph, cardBorder } from "./agent-graph-parts";
 import { SELECTION_OUTLINE } from "./canvas-theme";
@@ -46,16 +46,20 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
     pending.current = setTimeout(() => { setEvents((latest.current ?? []).slice(-4)); pending.current = undefined; }, tokenMilliseconds("--duration-ambient", ref.current) * .15);
   }, [agent.events]);
   useEffect(() => () => clearTimeout(pending.current), []);
-  useEffect(() => {
+  const tailAnimation = useRef<Animation | null>(null);
+  useEffect(() => () => tailAnimation.current?.cancel(), []);
+  useLayoutEffect(() => {
     const last = events.at(-1)?.id;
     const old = previous.current;
     previous.current = last;
     const element = tail.current;
-    if (!element || !old || old === last || !motion) return;
+    if (!motion) { tailAnimation.current?.cancel(); return; }
+    if (!element || !old || old === last) return;
     const queued = events.findIndex(event => event.id === old);
-    const frames = queued < 0 ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: "translateY(0)" }, { transform: "translateY(-16px)" }];
-    const animation = element.animate(frames, { duration: tokenMilliseconds("--duration-stream", element), easing: getComputedStyle(element).getPropertyValue("--ease-standard").trim() });
-    return () => animation.cancel();
+    const offset = new DOMMatrix(getComputedStyle(element).transform).m42 + 16;
+    tailAnimation.current?.cancel();
+    const frames = queued < 0 ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: `translateY(${offset}px)` }, { transform: "translateY(-16px)" }];
+    tailAnimation.current = element.animate(frames, { duration: tokenMilliseconds("--duration-stream", element), easing: getComputedStyle(element).getPropertyValue("--ease-standard").trim() });
   }, [events, motion]);
   return (
     <div className="ag-live-slot">
@@ -64,6 +68,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
         data-activity={quiet ? "quiet" : agent.activity ?? undefined} data-selected={selected || undefined}
         title={agentSummary(agent)}
         style={{ boxShadow: RESTING_SHADOW, ...cardBorder(agent.status), ...(selected ? SELECTION_OUTLINE : {}), ["--ag-status" as string]: s.color }}>
+        {settled && <StatusGlyph status={agent.status} size={16} />}
         <div className="ag-live-head">
           <NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} />
           <div className="ag-live-names">

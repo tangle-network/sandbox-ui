@@ -88,11 +88,7 @@ export function kindAccent(tone: WfNodeTone, kind: string | undefined): string {
   return (kind !== undefined ? KIND_ACCENT[kind] : undefined) ?? TONE_ACCENT[tone];
 }
 
-/** Resting elevation — the 2026-10-09 critique's depth finding: the card
- *  sat FLAT on the canvas (three near-identical greys, borders invisible).
- *  The card must sit ON the canvas, not in it: a real two-layer shadow plus a
- *  1px inner top highlight, foreground-token based so both themes get depth
- *  without a dark-mode black box. */
+/** Brand shadow channels stay black in dark mode. */
 export const RESTING_SHADOW =
   "inset 0 1px 0 hsl(var(--foreground) / 0.07), " +
   "0 1px 2px hsl(var(--shadow-color) / 0.10), " +

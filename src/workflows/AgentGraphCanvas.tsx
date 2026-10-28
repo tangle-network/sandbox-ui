@@ -1,10 +1,3 @@
-/**
- * The topology of a multi-agent run: who spawned whom as a tree, and who
- * messaged or delegated to whom as curved secondary edges over it. Reached
- * through the lazy `AgentGraph` wrapper, which defers `@xyflow/react` (and
- * `elkjs`) to render time.
- */
-
 import {
   Background,
   Controls,
@@ -89,6 +82,18 @@ function useCanvasSize(): [
   return [size, measure];
 }
 
+/** Keep the selected card inside the actual viewport without resetting the reader's camera. */
+function revealSelection(inst: ReactFlowInstance, wrapper: HTMLDivElement | null, id: string) {
+  const node = inst.getInternalNode(id), box = wrapper?.querySelector(".ag-graph-viewport")?.getBoundingClientRect();
+  const width = node?.measured.width ?? node?.width, height = node?.measured.height ?? node?.height;
+  if (!node || !box || !width || !height) return;
+  const current = inst.getViewport(), position = node.internals.positionAbsolute;
+  const zoom = Math.max(0.02, Math.min(current.zoom, (box.width - 2 * FIT_PADDING) / width, (box.height - 2 * FIT_PADDING) / height));
+  const x = Math.max(FIT_PADDING - position.x * zoom, Math.min(box.width - FIT_PADDING - (position.x + width) * zoom, current.x));
+  const y = Math.max(FIT_PADDING - position.y * zoom, Math.min(box.height - FIT_PADDING - (position.y + height) * zoom, current.y));
+  if (x !== current.x || y !== current.y || zoom !== current.zoom) void inst.setViewport({ x, y, zoom });
+}
+
 export function AgentGraphCanvas({
   nodes,
   edges,
@@ -130,13 +135,12 @@ export function AgentGraphCanvas({
       live = false;
     };
   }, [topology, direction, layoutKey, card, narrow]);
-  const layout = useMemo(
-    () =>
-      layouts && layouts.key === layoutKey && canvas
-        ? pickAgentLayout(layouts.all, canvas, FIT_PADDING)
-        : null,
-    [layouts, layoutKey, canvas],
-  );
+  const priorLayout = useRef<AgentLayout | null>(null);
+  const layout = useMemo(() => {
+    if (!layouts || layouts.key !== layoutKey || !canvas) return null;
+    return priorLayout.current = selectedId && priorLayout.current && layouts.all.includes(priorLayout.current)
+      ? priorLayout.current : pickAgentLayout(layouts.all, canvas, FIT_PADDING);
+  }, [layouts, layoutKey, canvas, selectedId]);
 
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -232,6 +236,8 @@ export function AgentGraphCanvas({
   const [ready, setReady] = useState(false);
   const [shown, setShown] = useState(false);
   const readerMoved = useRef(false);
+  const selection = useRef(selectedId);
+  selection.current = selectedId;
   const framed = useRef<string | null>(null);
   useEffect(() => { if (narrow) { rfRef.current = null; setReady(false); setShown(false); framed.current = null; } }, [narrow]);
   const layoutIdentity = layout ? `${layoutKey}:${layout.columns}` : null;
@@ -240,12 +246,14 @@ export function AgentGraphCanvas({
     const inst = rfRef.current;
     if (!ready || !inst || !layoutIdentity || !canvas) return;
     const relayout = framed.current !== layoutIdentity;
-    if (!relayout && readerMoved.current) return;
+    const preserveView = !relayout && readerMoved.current;
+    if (preserveView && !selection.current) return;
     const animate = framed.current !== null && relayout && animateMotion;
     framed.current = layoutIdentity;
-    readerMoved.current = false;
+    readerMoved.current = preserveView;
     const frame = requestAnimationFrame(() => {
-      void inst.fitView({
+      if (preserveView) revealSelection(inst, wrapperRef.current, selection.current!);
+      else void inst.fitView({
         padding: `${FIT_PADDING}px`,
         maxZoom: 1,
         minZoom,

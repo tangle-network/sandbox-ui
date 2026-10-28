@@ -68,6 +68,7 @@ for (const theme of ['dark', 'light']) for (const width of [1280, 390]) {
     await expect(page.locator('.ag-live-card[data-status="needs-you"] button')).toHaveText('Respond')
     await expect(page.locator('.ag-live-card[data-status="failed"] .ag-live-thinking').first()).toContainText('exited 137')
     expect(await page.locator('[data-activity="quiet"] .ag-running-dot').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
+    await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.animationName === 'agent-arrive').map(a => a.finished.catch(() => {}))))
     expect(await textContrast(page)).toEqual([])
     if (width === 390) {
       await expect(page.locator('.ag-phone-list > li').first().locator('[data-status]')).toHaveAttribute('data-status', 'needs-you')
@@ -99,6 +100,7 @@ test('17 agents stream at 3 events per second for 60 seconds', async ({ page }, 
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/iframe.html?id=workflows-agentgraph--burst&viewMode=story&globals=sandboxTheme:dark')
   await expect(page.locator('[data-layout="ready"]')).toBeVisible()
+  await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a.animationName === 'agent-arrive').map(a => a.finished.catch(() => {}))))
   const metrics = await page.evaluate(() => new Promise(resolve => {
     const frames = [], longTasks = []
     const observer = new PerformanceObserver(list => longTasks.push(...list.getEntries().map(e => e.duration)))

@@ -232,7 +232,7 @@ export const LiveFailed: StoryObj = { render: () => <RunState /> };
 export const LiveQuiet: StoryObj = { render: () => <RunState /> };
 export const NoEvents: StoryObj = { render: () => <RunState state="none" /> };
 export const OneEvent: StoryObj = { render: () => <RunState state="one" /> };
-export const Phone390: StoryObj = { parameters: { viewport: { defaultViewport: "mobile" } }, render: () => <RunState /> };
+export const Phone390: StoryObj = { globals: { viewport: { value: "mobile", isRotated: false } }, decorators: [Story => <div style={{ width: "100%", maxWidth: 390 }}><Story /></div>], render: () => <RunState /> };
 export const LightTheme: StoryObj = { globals: { sandboxTheme: "light" }, render: () => <RunState /> };
 export const ReducedMotion: StoryObj = { parameters: { reducedMotion: "reduce" }, render: () => <RunState /> };
 export const Burst: StoryObj = { render: () => <RunState burst /> };

@@ -8,6 +8,6 @@
   {"component": "AgentGraph", "source": "src/workflows/AgentGraph.tsx", "storyFile": "src/stories/workflows/AgentGraph.stories.tsx", "task": "Find needs-you, failed and quiet agents at phone and desktop widths"},
   {"component": "AgentHubCanvas", "source": "src/workflows/AgentHubCanvas.tsx", "storyFile": "src/stories/workflows/AgentGraphHub.stories.tsx", "task": "Inspect live agent and tool calls"},
   {"component": "FlowWaterfall", "source": "src/run/trace-waterfall.tsx", "storyFile": "src/stories/run/FlowWaterfall.stories.tsx", "task": "Locate failed and quiet work in time"},
-  {"component": "TimelineView", "source": "src/run/trace-waterfall.tsx", "storyFile": "src/stories/run/FlowWaterfall.stories.tsx", "task": "Inspect a folded trace family"},
-  {"component": "SpanCard", "source": "src/run/trace-waterfall.tsx", "storyFile": "src/stories/run/FlowWaterfall.stories.tsx", "task": "Inspect the evidence for a trace span"}
+  {"component": "TimelineView", "source": "src/stories/run/FlowWaterfall.stories.tsx", "storyFile": "src/stories/run/FlowWaterfall.stories.tsx", "task": "Inspect a folded trace family", "owner": "@tangle-network/charts"},
+  {"component": "SpanCard", "source": "src/stories/run/FlowWaterfall.stories.tsx", "storyFile": "src/stories/run/FlowWaterfall.stories.tsx", "task": "Inspect the evidence for a trace span", "owner": "@tangle-network/charts"}
 ]

@@ -5,6 +5,7 @@ import { FlowWaterfall, TimelineView } from "@tangle-network/charts/react";
 import "@tangle-network/charts/react/flow-waterfall.css";
 import recorded from "./fixtures/discovery-waterfall.json";
 import controlSession from "./fixtures/control-session.json";
+import discovery21c from "./fixtures/discovery-21c.json";
 
 const trace = recorded as FlowTrace;
 const live: FlowTrace = { ...trace, spans: trace.spans.map((span, index): FlowSpan => span.kind === "pipeline" ? { ...span, status: index ? "needs-you" : "running", outcome: { tone: index ? "warn" : "live", label: index ? "Needs you" : "Running" } } : span) };
@@ -18,7 +19,7 @@ export const StepsView: Story = { args: { defaultView: "spans" } };
 export const LiveWaterfall: Story = { args: { trace: live, live: true } };
 export const NeedsYou: Story = { args: { trace: live, live: true } };
 export const FailureHeavy: Story = { args: { trace: failureHeavy } };
-export const Phone390: Story = { parameters: { viewport: { defaultViewport: "mobile" } } };
+export const Phone390: Story = { globals: { viewport: { value: "mobile", isRotated: false } }, decorators: [Story => <div style={{ width: "100%", maxWidth: 390 }}><Story /></div>] };
 export const ReducedMotion: Story = { args: { trace: live, live: true }, parameters: { reducedMotion: "reduce" } };
 export const Empty: Story = { args: { trace: { totalMs: 0, promptTokens: 0, completionTokens: 0, spans: [] } } };
 export const SingleAgent: Story = { args: { trace: { ...failureHeavy, errors: 1, spans: failureHeavy.spans.slice(0, 1) } } };
@@ -41,3 +42,6 @@ export const SpanCardRunning: Story = { args: { trace: live, live: true }, play:
 export const TimelineFolded: Story = { render: () => <TimelineView lanes={[{ id: "root", label: "Root", spans: [{ start: 0, end: 1000, state: "done" }], ticks: [] }, { id: "worker", parent: "root", label: "Worker", spans: [{ start: 100, end: 900, state: "done" }], ticks: [] }]} options={{ measure: "Agent timeline" }} defaultCollapsed={["root"]} /> };
 
 export const ControlSession: Story = { args: { trace: otlpFlowTrace(controlSession as OtlpSpan[]) } };
+export const Discovery21c: Story = { args: { trace: otlpFlowTrace(discovery21c as OtlpSpan[]) } };
+
+export const LightTheme: Story = { globals: { sandboxTheme: "light" } };

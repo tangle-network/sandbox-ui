@@ -1,3 +1,4 @@
+import { waitFor } from "@testing-library/dom";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { FlowSpan, FlowTrace } from "@tangle-network/charts";
 import { TraceWorkspace } from "../../run";
@@ -57,4 +58,18 @@ const factory: FlowTrace = {
 
 export const FactoryRun: StoryObj<typeof meta> = {
   args: { trace: factory, live: false, label: "minmax-h9", defaultView: "agents" },
+};
+
+export const Phone390: StoryObj<typeof meta> = {
+  args: { trace, live: false, defaultView: "agents" },
+  globals: { viewport: { value: "mobile", isRotated: false } },
+  decorators: [Story => <div style={{ width: "100%", maxWidth: 390 }}><Story /></div>],
+};
+export const Live: StoryObj<typeof meta> = { args: { trace, live: true, defaultView: "agents" } };
+export const GraphView: StoryObj<typeof meta> = {
+  args: { trace, live: false, defaultView: "agents" },
+  play: async ({ canvasElement }) => {
+    const button = await waitFor(() => { const button = [...canvasElement.querySelectorAll("button")].find(button => button.textContent === "graph"); if (!button) throw new Error("Waiting for graph control"); return button; });
+    button.click();
+  },
 };

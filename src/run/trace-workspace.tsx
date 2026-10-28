@@ -1,11 +1,13 @@
 "use client"
 
 import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { toolGlyph } from "@tangle-network/charts/react"
 import type { FlowMarker, FlowSpan, FlowTrace } from "@tangle-network/charts"
 import { AgentTimeline, type AgentTimelineItem } from "@tangle-network/ui/chat"
-import { InlineThinkingItem } from "@tangle-network/ui/run"
+import { InlineThinkingItem, runStatus } from "@tangle-network/ui/run"
 import { X } from "lucide-react"
 import { cn } from "../lib/utils"
+import { ambientStyle, syncAmbient } from "../workflows/run-ui-state"
 import { AgentGraph, type AgentGraphEdge, type AgentGraphNode } from "../workflows/AgentGraph"
 import { type AgentTranscriptEntry, useAgentStream } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
@@ -58,10 +60,10 @@ function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, a
     // A host that sends one id twice (a run id reused as its root agent's) gets one agent, not a root nested in its own team.
     if (seen.has(span.id)) continue
     seen.add(span.id)
-    const running = at === null ? span.status === "running" : span.endMs > at || span.status === "running"
+    const state = at !== null && (span.endMs > at || span.status === "running") ? "running" : runStatus(span.status ?? "unknown")
     nodes.push({
       id: span.id, label: span.name, model: span.detail, costUsd: span.costUsd,
-      status: running ? "running" : span.status === "failed" ? "failed" : "succeeded",
+      status: state === "done" ? "succeeded" : state,
       startedAt: epoch === undefined ? undefined : epoch + span.startMs,
       ...cards?.[span.id],
     })
@@ -144,7 +146,7 @@ export function TraceWorkspace({
         ))}
       </div>
       {graph && (
-        <AgentGraph nodes={graph.nodes} edges={graph.edges} selectedId={agent?.id ?? null} onSelect={select}
+        <AgentGraph renderEventIcon={event => toolGlyph(event.label)} nodes={graph.nodes} edges={graph.edges} selectedId={agent?.id ?? null} onSelect={select}
           live={cursor === null && graph.nodes.some((node) => node.status === "running")}
           now={cursor !== null && waterfall.startedAt !== undefined ? waterfall.startedAt + cursor : undefined}
           className="h-[60vh] min-h-[480px] rounded-xl border border-border bg-card" />
@@ -176,7 +178,7 @@ export function TraceWorkspace({
         <aside aria-label={`${agent.name} conversation`} onKeyDown={(event) => { if (event.key === "Escape") select(undefined) }}
           className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[420px] flex-col border-l border-border bg-card shadow-2xl">
           <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-            <span className={cn("h-2 w-2 shrink-0 rounded-full", live ? "bg-[var(--status-running,#34c48c)]" : "bg-muted-foreground/50")} aria-hidden />
+            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", live ? "bg-[var(--surface-info-text)]" : "bg-muted-foreground")} aria-hidden data-motion={live ? "essential" : undefined} style={live ? ambientStyle : undefined} onAnimationStart={syncAmbient} />
             <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{agent.name}</h3>
             {agent.detail && <span className="truncate text-xs text-muted-foreground">{agent.detail}</span>}
             <button type="button" aria-label="Close conversation" title="Close (Esc)" onClick={() => select(undefined)}

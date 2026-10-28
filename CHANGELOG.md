@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1
+
+- Run attention counts stay readable beside long failure details in narrower desktop panes. Small headers wrap their count chips while preserving complete status labels.
+
 ## 2.0.0
 
 - Breaking: the optional charts peer and public trace types move to the 2.x line. Token totals can be absent when telemetry was not reported; consumers must handle unknown totals instead of assuming zero.

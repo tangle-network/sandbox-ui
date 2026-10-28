@@ -297,8 +297,8 @@ export function AgentGraphCanvas({
   const parentOf = new Map(edges.filter(e => e.kind === "spawn").map(e => [e.to, e.from]));
   const depthOf = (id: string) => { const seen = new Set([id]); let depth = 0; while (parentOf.has(id) && !seen.has(parentOf.get(id)!)) { id = parentOf.get(id)!; seen.add(id); depth++; } return depth; };
   const counts = ["needs-you", "failed", "quiet"].map(status => { const matches = nodes.filter(agent => status === "quiet" ? quietActivity(agent, clock) : agent.status === status); return { status, matches, current: matches.find(agent => agent.id === selectedId) ?? matches[0] }; });
-  const caption = <div className="flex h-10 shrink-0 items-center gap-3 px-3 text-xs text-muted-foreground" aria-label="Run status">
-    <span>{nodes.length} agents</span>
+  const caption = <div className="flex min-h-10 shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1 text-xs text-muted-foreground" aria-label="Run status">
+    <span className="shrink-0 whitespace-nowrap">{nodes.length} agents</span>
     {counts.filter(group => group.matches.length).map(group => <button type="button" key={group.status} className="ag-status-button rounded-full border border-border px-2 py-1" style={{ color: group.status === "quiet" ? "var(--surface-warning-text)" : agentStatus(group.status as AgentGraphStatus).color }} onClick={() => {
       const index = group.matches.findIndex(agent => agent.id === selectedId);
       const next = group.matches[(index + 1) % group.matches.length]; select(next.id);

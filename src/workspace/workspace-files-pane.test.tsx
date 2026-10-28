@@ -50,6 +50,12 @@ describe("WorkspaceFilesPane", () => {
     expect(getByText("Reviewed output")).toBeVisible();
   });
 
+  it("names the open file's folders under its tabs, so its path stays readable when the tree scrolls", () => {
+    const { getByRole } = render(<WorkspaceFilesPane paths={paths} selectedPath="campaigns/plan.md" preview={{ path: "campaigns/plan.md", content: <article>Plan</article> }} />);
+    const crumbs = getByRole("navigation", { name: "File path" });
+    expect(crumbs).toHaveTextContent("campaigns›plan.md");
+  });
+
   it("expands on click and remembers expansion under expansionKey across a remount", async () => {
     const user = userEvent.setup();
     const first = render(<WorkspaceFilesPane paths={paths} expansionKey="user-1:ws-1" />);

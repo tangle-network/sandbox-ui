@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.8
+
+- `WorkspaceFilesPane` names the open file's folders in a breadcrumb under its tabs, so the path that places a file stays readable after the tree scrolls its ancestors away.
+- `VaultTree` tints a folder by its role, as an editor does (`src`, `docs`, `tests`, `scripts`, `crates`, `benches`), and a selected file uses the one selected-row idiom: the selection tint with a 3px accent bar, the name in its own ink.
+
 ## 1.1.7
 
 - `TraceWorkspace`'s agent drawer shows its live dot only while the stream is open and producing. A stream that is unreachable (`error` set) now shows the muted dot, like an ended one. Before this, a drawer opened after the viewer closed said "unreachable" next to a green live dot.

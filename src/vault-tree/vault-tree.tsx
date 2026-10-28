@@ -177,6 +177,16 @@ const BY_EXT: Record<string, FileKind> = {
   toml: { Icon: FileCog, ink: ink('violet') }, yaml: { Icon: FileCog, ink: ink('violet') }, yml: { Icon: FileCog, ink: ink('violet') }, ini: { Icon: FileCog, ink: ink('violet') },
   lock: { Icon: FileLock, ink: 'text-muted-foreground' },
 }
+/** A folder's ink by its role, as an editor tints `src`, `docs` and `tests`; any other folder stays in the muted ink. */
+const FOLDER_INK: Record<string, string> = {
+  src: ink('violet'), lib: ink('violet'), crates: ink('orange'), packages: ink('orange'),
+  docs: ink('blue'), doc: ink('blue'), pages: ink('blue'),
+  test: ink('lime'), tests: ink('lime'), __tests__: ink('lime'), benches: ink('teal'), bench: ink('teal'),
+  scripts: ink('brown'), tools: ink('brown'), bin: ink('brown'),
+  '.github': ink('orange'), examples: ink('cyan'), assets: ink('pink'),
+}
+const folderInk = (name: string) => FOLDER_INK[name.toLowerCase()] ?? 'text-muted-foreground'
+
 function fileKind(name: string): FileKind {
   const lower = name.toLowerCase()
   if (BY_NAME[lower]) return BY_NAME[lower]
@@ -421,7 +431,7 @@ export function VaultTree({
         const open = dir && isOpen(node.path)
         const selected = !dir && node.path === selectedPath
         const active = dir && node.path === activeFolder
-        const kind = dir ? { Icon: open ? FolderOpen : Folder, ink: 'text-muted-foreground' } : fileKind(node.name)
+        const kind = dir ? { Icon: open ? FolderOpen : Folder, ink: folderInk(node.name) } : fileKind(node.name)
         const Icon = kind.Icon
         const change = dir ? (open ? undefined : changedFolders.get(node.path)) : status?.[node.path]
         const ancestors: string[] = []
@@ -452,8 +462,9 @@ export function VaultTree({
             className={[
               'group relative flex min-h-8 w-full cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 text-sm transition-colors [@media(pointer:coarse)]:min-h-10',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+              // The one selected-row idiom: the selection tint with a 3px accent bar, the name in its own ink.
               selected
-                ? 'bg-[var(--ix-sel-bg)] font-medium text-[var(--accent-text)]'
+                ? 'bg-[var(--ix-sel-bg)] font-medium text-foreground shadow-[inset_3px_0_0_var(--accent-text)]'
                 : active
                   ? 'bg-muted font-medium text-foreground'
                   : 'text-foreground hover:bg-[var(--ix-hover-bg)]',

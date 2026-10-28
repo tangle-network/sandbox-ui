@@ -353,6 +353,24 @@ interface FilesViewerProps {
 
 const baseName = (path: string) => path.replace(/\/+$/, "").split("/").pop() || path;
 
+/**
+ * The open file's folders, as an editor's breadcrumb under its tabs: the tree scrolls to the file and its ancestors leave
+ * view, so the path that places it stays readable here.
+ */
+function PathCrumbs({ path }: { path: string }) {
+  const parts = path.replace(/^\/+|\/+$/g, "").split("/");
+  return (
+    <nav aria-label="File path" className="flex h-8 shrink-0 items-center gap-1 overflow-hidden px-[var(--files-inset)] text-sm text-muted-foreground shadow-[inset_0_-1px_0_hsl(var(--border))]">
+      {parts.map((part, i) => (
+        <span key={i} className={cn("flex min-w-0 items-center gap-1", i === parts.length - 1 ? "shrink-0 text-foreground" : "shrink truncate")}>
+          {i > 0 && <span aria-hidden className="text-[var(--text-dim)]">›</span>}
+          <span className="truncate">{part}</span>
+        </span>
+      ))}
+    </nav>
+  );
+}
+
 /** The editor side of the pane: open-file tabs, a File | Diff toggle, the full-screen control, and the open file. */
 function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, expand }: FilesViewerProps) {
   const path = preview?.path;
@@ -413,6 +431,7 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
           </Button>
         )}
       </div>
+      {preview && path && path.includes("/") && <PathCrumbs path={path} />}
       {preview ? (
         <div data-primary-content="" className="flex min-h-0 flex-1 flex-col overflow-auto [&>*]:min-h-full">
           {mode === "diff" && compare ? compare.content : preview.content}

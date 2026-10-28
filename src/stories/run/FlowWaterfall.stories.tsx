@@ -5,7 +5,7 @@ import "@tangle-network/charts/react/flow-waterfall.css";
 import recorded from "./fixtures/discovery-waterfall.json";
 
 const trace = recorded as FlowTrace;
-const live: FlowTrace = { ...trace, spans: trace.spans.map((span, index) => span.kind === "pipeline" ? { ...span, status: index ? "needs-you" : "running", outcome: { tone: index ? "warn" : "live", label: index ? "Needs you" : "Running" } } : span) };
+const live: FlowTrace = { ...trace, spans: trace.spans.map((span, index): FlowSpan => span.kind === "pipeline" ? { ...span, status: index ? "needs-you" : "running", outcome: { tone: index ? "warn" : "live", label: index ? "Needs you" : "Running" } } : span) };
 const failureHeavy: FlowTrace = { totalMs: 900_000, promptTokens: 0, completionTokens: 0, errors: 17,
   spans: Array.from({ length: 17 }, (_, i): FlowSpan => ({ id: `agent-${i}`, kind: "pipeline", name: `benchmark-worker-${i + 1}`, startMs: i * 12_000, endMs: 600_000 + i * 8_000, status: "failed", output: "Benchmark harness exited 137 (OOM)", outcome: { label: "Failed", tone: "failed" } })) };
 const meta = { title: "Run/FlowWaterfall", component: FlowWaterfall, parameters: { layout: "padded" }, args: { trace, live: false } } satisfies Meta<typeof FlowWaterfall>;

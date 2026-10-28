@@ -1,11 +1,11 @@
 import type { Node, NodeProps } from "@xyflow/react";
 import { toolGlyph } from "@tangle-network/charts/react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AgentGraphDirection, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import { agentStatus, agentSummary, Handles, StatusGlyph, cardBorder } from "./agent-graph-parts";
 import { SELECTION_OUTLINE } from "./canvas-theme";
 import { KIND_ACCENT, NodeMark, RESTING_SHADOW } from "./node-ui";
-import { quietActivity, useAttention, useRunNow } from "./run-ui-state";
+import { quietActivity, tokenMilliseconds, useAttention, useMotionAllowed, useRunNow } from "./run-ui-state";
 
 export type LiveAgentCardNode = Node<
   { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onRespond?: () => void }, "liveAgent"
@@ -34,7 +34,29 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
   const quiet = quietActivity(agent, now);
   const s = agentStatus(agent.status);
   const meta = [agent.model?.replace(/^[\w-]+\//, ""), agent.effort].filter(Boolean).join(" · ");
-  const events = (agent.events ?? []).slice(-4);
+  const [events, setEvents] = useState(() => (agent.events ?? []).slice(-4));
+  const tail = useRef<HTMLOListElement>(null);
+  const motion = useMotionAllowed();
+  const previous = useRef(events.at(-1)?.id);
+  const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const latest = useRef(agent.events);
+  latest.current = agent.events;
+  useEffect(() => {
+    if (pending.current !== undefined) return;
+    pending.current = setTimeout(() => { setEvents((latest.current ?? []).slice(-4)); pending.current = undefined; }, tokenMilliseconds("--duration-ambient", ref.current) * .15);
+  }, [agent.events]);
+  useEffect(() => () => clearTimeout(pending.current), []);
+  useEffect(() => {
+    const last = events.at(-1)?.id;
+    const old = previous.current;
+    previous.current = last;
+    const element = tail.current;
+    if (!element || !old || old === last || !motion) return;
+    const queued = events.findIndex(event => event.id === old);
+    const frames = queued < 0 ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: "translateY(0)" }, { transform: "translateY(-16px)" }];
+    const animation = element.animate(frames, { duration: tokenMilliseconds("--duration-stream", element), easing: getComputedStyle(element).getPropertyValue("--ease-standard").trim() });
+    return () => animation.cancel();
+  }, [events, motion]);
   return (
     <div className="ag-live-slot">
       {handles && <Handles direction={direction} />}
@@ -49,24 +71,22 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
             {!settled && meta && <span className="ag-live-meta">{meta}</span>}
           </div>
           <div className="ag-live-stats">
-            <span className="ag-live-pill"><StatusGlyph status={agent.status} size={16} />{s.label}</span>
+            <span className={`ag-live-pill${quiet ? " ag-live-quiet" : ""}`}><StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}</span>
             {!settled && <span>{agent.startedAt != null ? `${eventTime(agent.startedAt, failed ? events.at(-1)?.at ?? agent.startedAt : now, false)} · ` : ""}{agent.commits == null ? "—" : `${agent.commits} ${agent.commits === 1 ? "commit" : "commits"}`}</span>}
           </div>
         </div>
         {settled ? <span className="ag-live-chip-result">{agent.result ?? s.label}</span> : <>
-          <p className={`ag-live-thinking${failed ? " ag-live-failure" : ""}`}>
+          <div className="ag-live-thinking-row"><p className={`ag-live-thinking${failed ? " ag-live-failure" : ""}`}>
             {failed ? agent.result ?? events.at(-1)?.label ?? s.label : agent.turn || "—"}
           </p>
-          {quiet && <span className="ag-live-quiet">{quiet.label}</span>}
-          {agent.status === "waiting" && <span className="ag-live-blocker">{agent.turn || "Waiting on peer"}</span>}
-          {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" onClick={event => { event.stopPropagation(); onRespond?.(); }}>Respond</button>}
-          <ol className="ag-live-events" aria-label="Latest events">
+          {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" onClick={event => { event.stopPropagation(); onRespond?.(); }}>Respond</button>}</div>
+          <div className="ag-live-events-clip"><ol ref={tail} className="ag-live-events" aria-label="Latest events">
             {events.map(event => <li key={event.id} title={event.label}>
               {toolGlyph(event.label)}
               <span className="ag-live-event-label">{middleLabel(event.label)}</span>
               <time className="ag-live-event-at">{eventTime(event.at, now, failed)}</time>
             </li>)}
-          </ol>
+          </ol></div>
         </>}
       </div>
     </div>

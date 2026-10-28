@@ -235,6 +235,7 @@ export function AgentGraphCanvas({
   const [shown, setShown] = useState(false);
   const readerMoved = useRef(false);
   const framed = useRef<string | null>(null);
+  useEffect(() => { if (narrow) { rfRef.current = null; setReady(false); setShown(false); framed.current = null; } }, [narrow]);
   const layoutIdentity = layout ? `${layoutKey}:${layout.columns}` : null;
   const minZoom = layout && canvas ? Math.max(0.02, Math.min(0.2, (canvas.width - 2 * FIT_PADDING) / layout.width, (canvas.height - 2 * FIT_PADDING) / layout.height)) : 0.2;
   useEffect(() => {

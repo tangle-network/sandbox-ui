@@ -112,51 +112,23 @@ export function Handles({ direction, source = true }: { direction: AgentGraphDir
 
 export function AgentCard({ data }: NodeProps<AgentCardNode>) {
   const { agent, selected, direction } = data;
-  const s = agentStatus(agent.status);
   const now = useRunNow(data.now);
   const quiet = quietActivity(agent, now);
-  const meta = [agent.role, agent.harness].filter(Boolean).join(" · ");
-  const cost = fmtCost(agent.costUsd ?? undefined);
-  const tokens = fmtTokenTotal(agent.tokens);
-  return (
-    <div
-      data-status={agent.status}
-      data-activity={quiet ? "quiet" : undefined}
-      data-selected={selected || undefined}
-      title={agentSummary(agent)}
-      className={`relative flex h-full w-full cursor-pointer flex-col justify-between rounded-xl border bg-card px-3 pt-2.5 pb-2 text-left hover:-translate-y-px motion-reduce:hover:translate-y-0 after:pointer-events-none after:absolute after:inset-0 after:rounded-xl after:opacity-0 after:shadow-[0_10px_28px_-10px_hsl(var(--shadow-color)/0.45)] after:transition-opacity after:duration-150 after:ease-out hover:after:opacity-100 motion-reduce:after:transition-none group-focus-visible/agent:outline-2 group-focus-visible/agent:outline-offset-4 group-focus-visible/agent:outline-ring ${MOTION_CONTROL}`}
-      style={{
-        boxShadow: RESTING_SHADOW,
-        ...cardBorder(agent.status),
-        ...(selected ? SELECTION_OUTLINE : {}),
-      }}
-    >
-      <Handles direction={direction} />
-      <div className="flex min-w-0 items-center gap-2.5">
-        <NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-[13px] text-foreground leading-[18px] tracking-[-0.01em]">
-            {agent.label}
-          </div>
-          <div className="truncate text-[11px] text-muted-foreground leading-4">{meta || " "}</div>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-0.5 self-start">
-          <StatusGlyph status={agent.status} size={15} />
-        </div>
-      </div>
-      <div className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4">
-        <span className="shrink-0 font-medium" style={{ color: s.color === MUTED ? undefined : s.color }}>
-          {quiet?.label ?? s.label}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-muted-foreground">
-          {agent.turn ? agent.turn : ""}
-        </span>
-        {(cost ?? tokens) && (
-          <span className="shrink-0 text-muted-foreground tabular-nums">{cost ?? tokens}</span>
-        )}
-      </div>
+  const s = agentStatus(agent.status);
+  return <div data-status={agent.status} data-activity={quiet ? "quiet" : undefined} data-selected={selected || undefined}
+    title={agentSummary(agent)} className={`relative flex h-full w-full flex-col gap-1 rounded-[var(--radius-card)] border bg-card px-3 py-2 text-left ${MOTION_CONTROL}`}
+    style={{ boxShadow: RESTING_SHADOW, ...cardBorder(agent.status), ...(selected ? SELECTION_OUTLINE : {}) }}>
+    <Handles direction={direction} />
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="grayscale hover:grayscale-0"><NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} /></span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{agent.label}</span>
+      <span className="text-xs text-muted-foreground tabular-nums">{fmtCost(agent.costUsd ?? undefined) ?? "—"}</span>
     </div>
-  );
+    <p className="m-0 line-clamp-2 min-h-4 text-xs text-foreground leading-4">{agent.turn || "—"}</p>
+    <div className="mt-auto flex items-center gap-1 text-xs" style={{ color: quiet ? "var(--surface-warning-text)" : s.color }}>
+      <StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}
+    </div>
+  </div>;
 }
 
 export type AgentFrameNode = Node<

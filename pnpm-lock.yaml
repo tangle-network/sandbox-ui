@@ -183,7 +183,7 @@ importers:
         version: 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/ui':
         specifier: ^11.46.0
-        version: 11.46.0(6df588fd51eeb8409681c9ca21ec55d3)
+        version: 11.46.0(972c139e63882234900c4c3f5b317d13)
       diff:
         specifier: ^9.0.0
         version: 9.0.0
@@ -237,8 +237,8 @@ importers:
         specifier: 5.10.2
         version: 5.10.2
       '@tangle-network/brand':
-        specifier: 1.29.0
-        version: 1.29.0(react@19.3.1)
+        specifier: ^1.31.1
+        version: 1.31.1(react@19.3.1)
       '@tangle-network/charts':
         specifier: ^0.21.20
         version: 0.21.20(react@19.3.1)
@@ -1920,8 +1920,8 @@ packages:
   '@tangle-network/agent-interface@5.10.2':
     resolution: {integrity: sha512-CqnwLl7PrTxImvyUAoUFXNQ9+OJDOzTHchUARRldsBBuNMTiGlglMqjonOxh7COR6PSViR//xEnmNYh8a+VC7Q==}
 
-  '@tangle-network/brand@1.29.0':
-    resolution: {integrity: sha512-7kjZaCSYYR0ZOSzB0U8EpQUZ3uXAEZqvRbkSTmnTmWvdhZd20fa4WxhyjqgE+W7PH7AY4OFbUu4igpJE5HbLeA==}
+  '@tangle-network/brand@1.31.1':
+    resolution: {integrity: sha512-DZs9J0+6MDWtBgdiahWpM3mDzLAIsNNJHq/F5cRWoLdquVdPFuWYLdPijBUTXYSoeNHLlewGlMgNj/A9Nn2bhw==}
     hasBin: true
     peerDependencies:
       react: '>=18'
@@ -5451,7 +5451,7 @@ snapshots:
       spdx-expression-parse: 5.0.0
       zod: 4.6.6
 
-  '@tangle-network/brand@1.29.0(react@19.3.1)':
+  '@tangle-network/brand@1.31.1(react@19.3.1)':
     optionalDependencies:
       react: 19.3.1
 
@@ -5459,7 +5459,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/ui@11.46.0(6df588fd51eeb8409681c9ca21ec55d3)':
+  '@tangle-network/ui@11.46.0(972c139e63882234900c4c3f5b317d13)':
     dependencies:
       '@pierre/theme': 1.1.0
       '@pierre/trees': 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(shiki@4.5.0)
@@ -5482,7 +5482,7 @@ snapshots:
       '@radix-ui/react-switch': 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@radix-ui/react-tabs': 1.2.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@radix-ui/react-tooltip': 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@tangle-network/brand': 1.29.0(react@19.3.1)
+      '@tangle-network/brand': 1.31.1(react@19.3.1)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       github-slugger: 2.0.0

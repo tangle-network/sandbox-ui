@@ -54,6 +54,10 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
   writeFileSync(join(fixture, "entry.css"), `
 @import "tailwindcss" source(none);
 @import "@tangle-network/sandbox-ui/tailwind.css";
+@layer theme {
+  .light { --hsl-foreground: 0 0% 20%; }
+  .dark { --hsl-foreground: 0 0% 80%; }
+}
 `);
   const cssPath = join(consumerDir, "node_modules/@tangle-network/sandbox-ui/dist/globals.css");
   const cssSha256 = createHash("sha256").update(readFileSync(cssPath)).digest("hex");
@@ -171,6 +175,9 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
                   cardBackground: getComputedStyle(card).backgroundColor,
                 };
               });
+              if (lane === "entry") assert.equal(measured.bodyColor,
+                mode === "light" ? "rgb(51, 51, 51)" : "rgb(204, 204, 204)",
+                "host theme refinements must override imported Brand defaults");
               assert.deepEqual(measured.missing, [], `${lane}/${width}/${mode}: compiled utility rules are missing`);
               assert(measured.classCount > 25, "empty fixture cannot pass the utility gate");
               for (const type of measured.typography) {

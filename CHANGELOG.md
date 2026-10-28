@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.9
+
+- Brand defaults live in `theme.brand`, below host theme refinements. Light-default hosts and their channel adapters can override them through the existing `theme` layer. The package builds against the generated Brand palette.
+
 ## 1.1.8
 
 - The `@tangle-network/charts` peer admits charts 1.0, its first stable release (the same code as 0.21.25).

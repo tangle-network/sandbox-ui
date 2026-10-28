@@ -51,7 +51,7 @@ An app that runs its own Tailwind v4 compile imports the source entry instead, a
 ```
 
 The entry carries Brand's tokens and utility registrations, this package's runtime CSS, and `@source` lines for its own `dist` and the `@tangle-network/ui` peer, so every component utility compiles once, in the app's own layer order.
-Agent apps import `@tangle-network/agent-app/tailwind.css`, which includes this entry.
+Brand defaults live in `theme.brand`, so host refinements in `theme` can override them. Agent apps import `@tangle-network/agent-app/tailwind.css`, which includes this entry.
 
 ### Dashboard page spacing
 

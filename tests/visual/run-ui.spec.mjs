@@ -174,3 +174,12 @@ test('trace graph uses recorded activity and leaves missing activity unknown', a
   await expect(page.locator('.ag-live-card[data-activity="quiet"]')).toContainText('Quiet 29m')
   await expect(page.locator('.ag-live-card[data-activity="quiet"]')).toContainText('root')
 })
+
+test('live headers retain recorded metadata without clipping', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/iframe.html?id=workflows-agentgraph--live-run-cards&viewMode=story&globals=sandboxTheme:light')
+  await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
+  const clipped = await page.locator('.ag-live-meta, .ag-live-accounting').evaluateAll(elements => elements.filter(el => el.getClientRects().length && el.scrollWidth > el.clientWidth + 1).map(el => el.textContent))
+  expect(clipped).toEqual([])
+  await expect(page.locator('.ag-live-chip')).toContainText('Done')
+})

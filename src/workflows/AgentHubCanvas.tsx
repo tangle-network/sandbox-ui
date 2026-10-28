@@ -7,7 +7,6 @@ import {
   type AgentGraphCall, type AgentGraphTool, HUB_METRICS, HUB_METRICS_COMPACT, type HubMetrics, layoutHub, orthogonalPath, YOU_ID,
 } from "./agent-hub-layout";
 import { CALL_COLOR, CALL_LABEL, type HubEntity, HubNode, HubPopover } from "./agent-hub-parts";
-import { shortModel } from "./naming";
 import { quietActivity, tokenMilliseconds, useMotionAllowed, useRunNow } from "./run-ui-state";
 import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
 import { fmtCost } from "./format";
@@ -76,7 +75,19 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
   const closeRef = useRef<HTMLButtonElement>(null);
   const animate = useMotionAllowed();
   const visibleCalls = useMemo(() => calls.filter((c) => c.startedAt <= now), [calls, now]);
-  const layout = useMemo(() => layoutHub({ nodes, edges, tools, calls, you: Boolean(you) }), [nodes, edges, tools, calls, you]);
+  const nextLayout = useMemo(() => layoutHub({ nodes, edges, tools, calls, you: Boolean(you) }), [nodes, edges, tools, calls, you]);
+  const layoutKey = JSON.stringify(nextLayout);
+  const layoutRef = useRef({ key: layoutKey, layout: nextLayout });
+  if (layoutRef.current.key !== layoutKey) layoutRef.current = { key: layoutKey, layout: nextLayout };
+  const layout = layoutRef.current.layout;
+  const callSummaries = useMemo(() => {
+    const summaries = { call: new Map<string, AgentGraphCall>(), answer: new Map<string, AgentGraphCall>(), "needs-you": new Map<string, AgentGraphCall>() };
+    for (const call of visibleCalls) if (call.kind !== "failed") {
+      const bucket = summaries[call.kind], id = call.kind === "call" ? call.to : call.from;
+      if (!bucket.has(id) || bucket.get(id)!.startedAt < call.startedAt) bucket.set(id, call);
+    }
+    return summaries;
+  }, [visibleCalls]);
 
   const span = (m: HubMetrics) => ({ w: (layout.maxCol - layout.minCol) * m.cellX + PAD_X * 2, h: (layout.maxRow - layout.minRow) * m.cellY + PAD_Y * 2 + m.hubTile + m.label });
   const metrics = width && width / span(HUB_METRICS).w < 0.85 ? HUB_METRICS_COMPACT : HUB_METRICS;
@@ -93,16 +104,25 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
         map.set(p.id, { id: p.id, kind: "tool", label: tool.label, tool });
       } else {
         const agent = nodes.find((n) => n.id === p.id)!;
-        map.set(p.id, { id: p.id, kind: p.kind, label: agent.label, sub: agent.model ? shortModel(agent.model) : undefined, status: agent.status, quiet: quietActivity(agent, now)?.label, agent });
+        map.set(p.id, { id: p.id, kind: p.kind, label: agent.label, sub: (agent.status === "succeeded" ? agent.result ?? callSummaries.answer.get(agent.id)?.label : undefined) ?? agent.turn ?? (agent.status === "needs-you" ? callSummaries["needs-you"].get(agent.id)?.label : undefined) ?? callSummaries.call.get(agent.id)?.label ?? undefined, status: agent.status, quiet: quietActivity(agent, now)?.label, agent });
       }
     }
     return map;
-  }, [layout, nodes, tools, you, now]);
+  }, [layout, nodes, tools, you, now, callSummaries]);
 
-  const at = (id: string) => {
-    const p = layout.placements.find((q) => q.id === id)!;
-    return { x: (p.col - layout.minCol) * metrics.cellX + PAD_X, y: (p.row - layout.minRow) * metrics.cellY + PAD_Y + metrics.hubTile / 2 };
-  };
+  const { positions, routes } = useMemo(() => {
+    const positions = new Map(layout.placements.map(p => [p.id, { x: (p.col - layout.minCol) * metrics.cellX + PAD_X, y: (p.row - layout.minRow) * metrics.cellY + PAD_Y + metrics.hubTile / 2, tile: p.kind === "hub" ? metrics.hubTile : p.kind === "you" ? metrics.tile - 8 : metrics.tile }]));
+    const bounds = layout.placements.map(p => { const { x, y, tile } = positions.get(p.id)!; return { id: p.id, tile: { left: x - tile / 2 - 4, right: x + tile / 2 + 4, top: y - tile / 2 - 4, bottom: y + tile / 2 + 4 }, label: { left: x - 70, right: x + 70, top: y + tile / 2 + 4, bottom: y + tile / 2 + (p.kind === "tool" || p.kind === "you" ? 30 : 64) } }; });
+    let lanes = 0;
+    const routes = new Map(layout.links.map(link => {
+      const a = positions.get(link.from)!, b = positions.get(link.to)!;
+      const fromHub = layout.placements.find(p => p.id === link.from)?.kind === "hub";
+      const lane = fromHub ? (++lanes % 2 ? -1 : 1) * Math.ceil(lanes / 2) * 12 : 0;
+      return [`${link.from}|${link.to}`, orthogonalPath(a, b, b.y < a.y, lane, 10, bounds.flatMap(rect => [...(rect.id === link.from || rect.id === link.to ? [] : [rect.tile]), rect.label]))];
+    }));
+    return { positions, routes };
+  }, [layout, metrics]);
+  const at = (id: string) => positions.get(id)!;
 
   const edgeState = (from: string, to: string) => {
     let latest: AgentGraphCall | undefined;
@@ -124,6 +144,7 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
     return set;
   }, [focus, layout]);
 
+  const availableTools = tools.filter(tool => !visibleCalls.some(call => call.from === tool.id || call.to === tool.id));
   const agents = nodes.length;
   const lastMinute = visibleCalls.filter((c) => now - c.startedAt <= 60_000).length;
   const costs = nodes.map((n) => n.costUsd);
@@ -165,13 +186,11 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
     const left = right ? (p.x + 40) * scale : Math.max(8, (p.x - 40) * scale - 280);
     const top = list ? 8 : Math.max(8, (p.y - metrics.hubTile / 2 - 8) * scale);
     const summary = openEntity.kind === "you" ? (typeof you === "object" ? you.summary : undefined)
-      : openEntity.agent?.turn ?? undefined;
+      : openEntity.agent?.turn ?? openEntity.sub ?? undefined;
     return <HubPopover entity={openEntity} entities={entities} calls={visibleCalls} now={now} left={left} top={top} summary={summary}
       closeRef={closeRef} onClose={() => { const id = open!; setOpen(null); buttons.current.get(id)?.focus(); }} />;
   })();
 
-  const lanes = new Map<string, number>();
-  const laneOf = (node: string) => { const n = lanes.get(node) ?? 0; lanes.set(node, n + 1); return (n % 2 ? 1 : -1) * Math.ceil(n / 2) * 12; };
 
   return (
     <section className={`ag-root ${className ?? ""}`} aria-label={typeof title === "string" ? title : "Agent graph"}>
@@ -187,22 +206,19 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
         </span>
       </header>
       <div ref={wrap} className={`ag-canvas-wrap${list ? " ag-list-mode" : ""}`} style={list ? undefined : { height: h * scale }} onKeyDown={(e) => { if (e.key === "Escape") setOpen(null); }}>
-        {list ? <ul className="ag-mobile">{[...entities.values()].filter(e => e.agent).sort((a, b) => {
+        {list ? <><ul className="ag-mobile">{[...entities.values()].filter(e => e.agent).sort((a, b) => {
           const rank = (e: HubEntity) => e.status === "needs-you" ? 0 : e.status === "failed" ? 1 : e.quiet ? 2 : e.status === "waiting" ? 3 : e.status === "running" ? 4 : 5;
           return rank(a) - rank(b);
         }).map(entity => <li key={entity.id}>
           <HubNode entity={entity} x={0} y={0} tile={32} dimmed={false} selected={open === entity.id}
             buttonRef={el => { if (el) buttons.current.set(entity.id, el); else buttons.current.delete(entity.id); }}
             onOpen={() => openNode(entity.id)} onHover={() => {}} onKeyDown={keydown(entity.id)} />
-          <div className="ag-tools">{tools.filter(t => visibleCalls.some(c => c.from === entity.id && c.to === t.id)).map(t =>
+          <div className="ag-tools">{tools.filter(t => visibleCalls.some(c => c.from === entity.id && c.to === t.id || c.to === entity.id && c.from === t.id)).map(t =>
             <button type="button" key={t.id} onClick={() => openNode(t.id)}>{t.label}</button>)}</div>
-        </li>)}</ul> : <div className="ag-canvas" style={{ width: w, height: h, transform: `scale(${scale})` }}>
+        </li>)}</ul>{availableTools.length > 0 && <div className="ag-available"><span>Available tools</span><div className="ag-tools">{availableTools.map(tool => <button type="button" key={tool.id} onClick={() => openNode(tool.id)}>{tool.label}</button>)}</div></div>}</> : <div className="ag-canvas" style={{ width: w, height: h, transform: `scale(${scale})` }}>
           <svg className="ag-edges" width={w} height={h} aria-hidden>
             {layout.links.map((l) => {
-              const a = at(l.from), b = at(l.to);
-              const fromHub = layout.placements.find((p) => p.id === l.from)?.kind === "hub";
-              const sameCol = Math.abs(a.x - b.x) < 1;
-              const { d, length } = orthogonalPath(a, b, l.from !== YOU_ID && (fromHub || sameCol), fromHub ? laneOf(l.from) : 0);
+              const { d, length } = routes.get(`${l.from}|${l.to}`)!;
               const live = edgeState(l.from, l.to);
               const touches = !related || (related.has(l.from) && related.has(l.to));
               const forward = live ? live.from === l.from : true;
@@ -225,9 +241,9 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
         </div>}
         {popover}
       </div>
-      <ul className="ag-legend" aria-label="Edge colours">
+      {!list && <ul className="ag-legend" aria-label="Edge colours">
         {(["call", "answer", "needs-you", "failed"] as const).map((k) => <li key={k}><span className="ag-legend-line" style={{ background: CALL_COLOR[k] }} />{CALL_LABEL[k]}</li>)}
-      </ul>
+      </ul>}
     </section>
   );
 }

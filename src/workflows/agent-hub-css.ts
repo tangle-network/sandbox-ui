@@ -32,6 +32,7 @@ export const AGENT_HUB_CSS = `
 .ag-node-you .ag-tile { background: var(--ag-fg); color: var(--ag-surface); }
 .ag-name, .ag-sub { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ag-name { margin-top: 6px; font-size: 14px; font-weight: 600; line-height: 20px; }
+.ag-sub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
 .ag-sub, .ag-node-tool .ag-name { font-size: 12px; font-weight: 400; color: var(--ag-muted); }
 .ag-badge { position: absolute; top: -5px; right: -5px; display: grid; place-items: center; background: var(--ag-surface); border-radius: var(--radius-pill); box-shadow: 0 0 0 2px var(--ag-surface); }
 .ag-running-dot { display: inline-block; flex-shrink: 0; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-info-text); animation: tangle-breathe var(--motion-ambient) infinite; }
@@ -55,8 +56,10 @@ export const AGENT_HUB_CSS = `
 .ag-mobile .ag-node { position: relative; left: auto !important; top: auto !important; margin: 0; width: 100%; min-height: 48px; display: grid; grid-template-columns: 32px minmax(0,1fr); text-align: left; column-gap: 12px; }
 .ag-mobile .ag-tile { grid-row: span 2; }
 .ag-mobile .ag-name, .ag-mobile .ag-sub { max-width: 100%; width: 100%; margin: 0; }
+.ag-mobile .ag-sub { display: block; white-space: nowrap; }
 .ag-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0 44px; }
 .ag-tools button { color: var(--ag-muted); background: transparent; border: 1px solid var(--ag-border); border-radius: var(--radius-pill); min-height: 28px; padding: 0 8px; font: inherit; cursor: pointer; }
+.ag-available { padding: 8px; border-top: 1px solid var(--ag-border); color: var(--ag-muted); } .ag-available .ag-tools { margin: 8px 0 0; }
 .ag-list-mode .ag-popover { position: relative; left: auto !important; top: auto !important; width: auto; margin: 8px; }
 @media (prefers-reduced-motion: reduce) { .ag-root *, .ag-root *::before { animation: none !important; transition: opacity var(--duration-fast) !important; } .ag-root .ag-running-dot { animation: tangle-breathe var(--motion-ambient) infinite !important; } }
 `;

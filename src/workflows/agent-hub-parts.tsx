@@ -37,7 +37,7 @@ function NodeIcon({ entity, size }: { entity: HubEntity; size: number }) {
     // Only a named provider has a brand mark; a shell or file tool has none, and looking one up by its id misses every logo CDN.
     const provider = entity.tool?.provider;
     if (!provider) return <Wrench size={size * 0.4} aria-hidden />;
-    return <ProviderIcon id={provider} displayName={entity.label} size={Math.round(size * 0.46)} className="rounded-[4px]" />;
+    return <ProviderIcon id={provider} displayName={entity.label} size={Math.round(size * 0.46)} className="ag-model-mark" />;
   }
   const brand = entity.agent?.model ? modelBrandFor(entity.agent.model) : null;
   return brand ? <span className="ag-model-mark"><ModelBrandStack identity={brand} size="sm" /></span> : <Bot size={16} aria-hidden />;
@@ -69,7 +69,7 @@ export function HubNode({ entity, x, y, tile, dimmed, selected, buttonRef, onOpe
   useAttention(attentionRef, entity.status ?? "unknown");
   const attention = entity.status === "needs-you" || entity.status === "failed";
   const tone = attention ? `var(${statusMeta(entity.status!).token})` : undefined;
-  const sub = entity.quiet ?? (entity.status === "needs-you" ? "Needs you · Respond" : entity.status === "waiting" ? entity.agent?.turn || "Waiting on peer" : entity.status ? statusMeta(entity.status).label : entity.sub);
+  const sub = entity.quiet ?? (entity.status === "needs-you" ? "Needs you · Respond" : entity.status === "waiting" ? entity.agent?.turn || "Waiting on peer" : entity.status === "failed" ? entity.agent?.result ?? entity.agent?.turn ?? "Failure cause not recorded" : entity.sub ? `${statusMeta(entity.status ?? "unknown").label} · ${entity.sub}` : entity.status ? statusMeta(entity.status).label : undefined);
   return (
     <button
       ref={(el) => { attentionRef.current = el; if (typeof buttonRef === "function") buttonRef(el); else if (buttonRef) buttonRef.current = el; }}
@@ -127,7 +127,7 @@ export function HubPopover({ entity, entities, calls, now, left, top, summary, c
         <span className="ag-tile ag-tile-mini" style={{ "--ag-tile": "28px" } as CSSProperties}><NodeIcon entity={entity} size={28} /></span>
         <span className="ag-pop-title">
           <span className="ag-pop-name">{entity.label}</span>
-          {(entity.sub || entity.tool?.detail) && <span className="ag-pop-sub">{entity.tool?.detail ?? entity.sub}</span>}
+          {(entity.agent?.model || entity.sub || entity.tool?.detail) && <span className="ag-pop-sub">{entity.agent?.model ?? entity.tool?.detail ?? entity.sub}</span>}
         </span>
         {status && <span className={`ag-pill ag-pill-${entity.status}`}>{entity.status === "running" && !entity.quiet ? <span className="ag-running-dot" data-motion="essential" style={ambientStyle} onAnimationStart={syncAmbient} /> : <RunStatusIcon status={entity.quiet ? "waiting" : entity.status!} aria-hidden />}{entity.quiet ?? status}</span>}
         <button ref={closeRef} type="button" className="ag-close" aria-label="Close" onClick={onClose}><X size={14} /></button>

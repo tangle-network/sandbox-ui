@@ -17,27 +17,14 @@
  * own source globs. Authored Sandbox rules belong in globals.css; the style
  * build also includes those rules in the published Tailwind source entry. */
 
-/* Fonts are loaded by the consumer, not this library. See README
- * "Fonts" for the list of font families sandbox-ui references
- * (Geist, Geist Mono, Outfit, Manrope, Inter) and the recommended
- * loading strategies (@fontsource packages or an HTML <link>).
- *
- * Historical note: previous versions shipped
- *   @import url("https://fonts.googleapis.com/css2?family=Geist...")
- * at the top of this file. That pattern broke in downstream apps that
- * used CSS chain `@import`s — once the dist CSS is inlined after any
- * rule, the URL @import is no longer at the top of the merged
- * stylesheet and the CSS spec disallows it (PostCSS rejects the
- * build). Shipping fonts as a library concern is also undesirable
- * for privacy (third-party Google Fonts request) and network-failure
- * reasons. Consumers own font loading now. */
-
-@import "@tangle-network/brand/styles/tokens.css";
+/* Brand defaults sit below the host's theme refinements. Font loading stays
+ * with the consumer; this entry makes no remote requests. */
+@import "@tangle-network/brand/styles/tokens.css" layer(theme.brand);
 /* Brand's named themes (`data-theme="<name>"`). They re-skin the surface ladder
  * and nothing else — the Tangle accent stays put. Imported here so a consuming
  * app opting into one resolves it through the single composed entry point,
  * rather than reaching into brand for a second stylesheet. */
-@import "@tangle-network/brand/styles/named-themes.css";
+@import "@tangle-network/brand/styles/named-themes.css" layer(theme.brand);
 
 /* Canonical font, radius and semantic-color utility registrations, imported as
  * DEFAULT theme values. A default registration still emits every Brand utility,

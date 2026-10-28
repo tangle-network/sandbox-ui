@@ -36,7 +36,7 @@ const flows = [
       await expect(cards).toHaveCount(96)
       await expect(page.getByRole('region', { name: 'Code at the cursor' })).toHaveCount(0)
       if (await page.locator('[data-layout="list"]').count()) return
-      await page.getByRole('button', { name: 'fit view', exact: true }).click()
+      await page.getByRole('button', { name: 'Fit View', exact: true }).click()
       await expect.poll(() => page.evaluate(() => {
         const pane = document.querySelector('.agent-graph').getBoundingClientRect()
         return [...document.querySelectorAll('.react-flow__node-agent, .react-flow__node-liveAgent')].filter((card) => {

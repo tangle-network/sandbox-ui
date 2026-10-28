@@ -281,3 +281,29 @@ test('scrubbing without an epoch keeps historical changes out of observed activi
   await page.getByRole('radio', { name: 'Graph', exact: true }).click()
   await expect(page.locator('.agent-graph [data-status="failed"]')).toHaveCount(1)
 })
+
+
+test('recorded activity never inherits a later failure', async ({ page }) => {
+  await page.goto('/iframe.html?id=run-latestevents--reading&viewMode=story&globals=sandboxTheme:light')
+  const feed = page.getByRole('region', { name: 'Latest activity' })
+  const recorded = feed.getByRole('button', { name: /worker Read source/ })
+  const dot = () => recorded.locator('.ag-latest-dot').evaluate(element => ({ fill: getComputedStyle(element).backgroundColor, border: getComputedStyle(element).borderColor }))
+  const initial = await dot()
+  await page.getByRole('button', { name: 'Fail worker', exact: true }).click()
+  await feed.getByRole('button', { name: /worker.*Integration check exited 1/ }).click()
+  await page.getByRole('button', { name: 'Fail worker', exact: true }).focus()
+  await page.mouse.move(1, 1)
+  await expect(feed.locator('.ag-latest-state')).toHaveCount(0)
+  await page.waitForTimeout(1200)
+  expect(await dot()).toEqual(initial)
+})
+
+test('historical Running observations never add a liveness loop', async ({ page }) => {
+  await page.goto('/iframe.html?id=run-latestevents--reading&viewMode=story&globals=sandboxTheme:light')
+  const feed = page.getByRole('region', { name: 'Latest activity' })
+  await page.getByRole('button', { name: 'Fail worker', exact: true }).click()
+  await expect(feed.getByText('Failed', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Resume worker', exact: true }).click()
+  await expect(feed.getByText('Running', { exact: true })).toBeVisible()
+  expect(await feed.evaluate(element => element.getAnimations({ subtree: true }).filter(animation => animation.effect?.getTiming().iterations === Infinity).length)).toBe(0)
+})

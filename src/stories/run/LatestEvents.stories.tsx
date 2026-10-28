@@ -8,10 +8,11 @@ function ReadingFixture() {
   const [selected, select] = useState<string>();
   return <div className="mx-auto max-w-3xl border border-border bg-card">
     <LatestEvents agents={agents} selectedId={selected} onSelect={select} />
-    <div className="flex gap-3 p-3 text-sm">
+    <div className="flex flex-wrap gap-3 p-3 text-sm">
       <button onClick={() => setAgents(old => old.map(agent => agent.id === "worker" ? { ...agent, events: [...(agent.events ?? []), { id: "next", label: "Ran integration check", at: Date.now() }] } : agent))}>Append event</button>
       <button onClick={() => setAgents(old => old.map(agent => agent.id === "worker" ? { ...agent, status: "failed", result: "Integration check exited 1" } : agent))}>Fail worker</button>
       <button onClick={() => setAgents(old => old.map(agent => agent.id === "untimed" ? { ...agent, status: "succeeded", result: "Finished without a producer timestamp" } : agent))}>Finish untimed</button>
+      <button onClick={() => setAgents(old => old.map(agent => agent.id === "worker" ? { ...agent, status: "running", result: "Resumed after inspection" } : agent))}>Resume worker</button>
       <output aria-label="Selected agent">{selected ?? "None"}</output>
     </div>
   </div>;

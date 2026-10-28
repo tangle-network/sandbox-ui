@@ -11,11 +11,12 @@ function ReadingFixture() {
     <div className="flex gap-3 p-3 text-sm">
       <button onClick={() => setAgents(old => old.map(agent => agent.id === "worker" ? { ...agent, events: [...(agent.events ?? []), { id: "next", label: "Ran integration check", at: Date.now() }] } : agent))}>Append event</button>
       <button onClick={() => setAgents(old => old.map(agent => agent.id === "worker" ? { ...agent, status: "failed", result: "Integration check exited 1" } : agent))}>Fail worker</button>
+      <button onClick={() => setAgents(old => old.map(agent => agent.id === "untimed" ? { ...agent, status: "succeeded", result: "Finished without a producer timestamp" } : agent))}>Finish untimed</button>
       <output aria-label="Selected agent">{selected ?? "None"}</output>
     </div>
   </div>;
 }
 const meta = { title: "Run/LatestEvents", component: LatestEvents, parameters: { layout: "padded" } } satisfies Meta<typeof LatestEvents>;
 export default meta;
-export const Reading: StoryObj<typeof meta> = { render: () => <ReadingFixture /> };
+export const Reading: StoryObj<typeof meta> = { args: { agents: [] }, render: () => <ReadingFixture /> };
 export const Empty: StoryObj<typeof meta> = { args: { agents: [] } };

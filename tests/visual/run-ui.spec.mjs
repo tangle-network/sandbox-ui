@@ -225,10 +225,11 @@ for (const width of [1280, 390]) test(`latest activity holds reading position an
   await expect(feed.getByText('Ran integration check')).toBeVisible()
   await page.mouse.move(1, 1)
   await page.getByRole('button', { name: 'Fail worker', exact: true }).click()
+  await page.getByRole('button', { name: 'Finish untimed', exact: true }).click()
   await expect(feed.getByText('Integration check exited 1')).toBeVisible()
   await expect(feed.getByText('Failed', { exact: true })).toBeVisible()
   await expect(feed.locator('time').first()).toContainText('Observed')
-  await expect(feed.getByRole('status')).toHaveText('worker: Failed')
+  await expect(feed.getByRole('status')).toHaveText('worker: Failed; untimed: Done')
   await feed.getByRole('button', { name: /worker: Integration check exited 1/ }).click()
   await expect(page.getByLabel('Selected agent')).toHaveText('worker')
   await page.mouse.move(1, 1)
@@ -253,4 +254,14 @@ test('one run view control preserves selection and exposes both graph layouts', 
   await page.getByRole('combobox', { name: 'Graph layout' }).selectOption('tree')
   await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Latest activity' })).toHaveCount(1)
+})
+
+
+test('activity feed supports keyboard reading without a selection action', async ({ page }) => {
+  await page.goto('/iframe.html?id=run-latestevents--empty&viewMode=story&globals=sandboxTheme:dark')
+  const feed = page.getByRole('region', { name: 'Latest activity' })
+  await feed.focus()
+  await expect(feed).toBeFocused()
+  await expect(feed).toContainText('Paused while reading')
+  await expect(feed).toContainText('No activity events were reported.')
 })

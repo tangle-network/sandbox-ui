@@ -165,7 +165,7 @@ export function TraceWorkspace({
       <TraceWaterfall {...waterfall} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
         onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
-        latestEvents={<LatestEvents agents={graph.nodes} now={graphNow} selectedId={agentId} onSelect={select} />}
+        latestEvents={<LatestEvents agents={graph.nodes} now={graphNow} live={cursor === null} selectedId={agentId} onSelect={select} />}
         graph={<section className="flex h-[60vh] min-h-[480px] flex-col" aria-label="Agent graph">
           <label className="flex h-8 shrink-0 items-center justify-end gap-2 px-3 text-xs text-muted-foreground">Layout
             <select aria-label="Graph layout" value={graphLayout} onChange={event => setGraphLayout(event.currentTarget.value as "tree" | "hub")} className="rounded-[var(--radius-control)] border border-border bg-card px-2 py-1 text-foreground"><option value="tree">Tree</option><option value="hub">Hub</option></select>

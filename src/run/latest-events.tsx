@@ -8,6 +8,8 @@ export interface LatestEventsProps {
   agents: readonly AgentGraphNode[];
   n?: number;
   now?: number;
+  /** Observe incoming status changes. Disable when scrubbing a trace without an epoch. */
+  live?: boolean;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
 }
@@ -36,7 +38,7 @@ function EventRow({ entry, now, onSelect }: { entry: Entry; now: number; onSelec
 }
 
 /** Recorded events and locally observed state changes. Hover or focus holds the reading position. */
-export function LatestEvents({ agents, n = 5, now, selectedId, onSelect }: LatestEventsProps) {
+export function LatestEvents({ agents, n = 5, now, live = now === undefined, selectedId, onSelect }: LatestEventsProps) {
   const clock = useRunNow(now), limit = Number.isFinite(n) ? Math.max(1, Math.trunc(n)) : 5;
   const latest = useMemo(() => agents.flatMap(agent => (agent.events ?? []).map(event => ({
     id: agent.id + ":" + event.id, agentId: agent.id, name: agent.label, label: event.label, at: event.at, status: agent.status,
@@ -44,7 +46,7 @@ export function LatestEvents({ agents, n = 5, now, selectedId, onSelect }: Lates
   const [rows, setRows] = useState<Entry[]>(latest), [pins, setPins] = useState<Entry[]>([]), [announcement, setAnnouncement] = useState("");
   const [hovered, setHovered] = useState(false), [focused, setFocused] = useState(false), paused = hovered || focused;
   const source = useRef(latest), pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const announce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), message = useRef("");
+  const announce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), messages = useRef(new Map<string, string>());
   source.current = latest;
   const previous = useRef(new Map(agents.map(agent => [agent.id, agent.status])));
   useEffect(() => {
@@ -52,12 +54,12 @@ export function LatestEvents({ agents, n = 5, now, selectedId, onSelect }: Lates
       id: agent.id + ":status:" + clock, agentId: agent.id, name: agent.label, status: agent.status, label: agent.result ?? agent.turn ?? "Status changed", at: clock, observed: true,
     }));
     previous.current = new Map(agents.map(agent => [agent.id, agent.status]));
-    if (now !== undefined) { setPins(old => old.length ? [] : old); return; }
+    if (!live) { setPins(old => old.length ? [] : old); messages.current.clear(); clearTimeout(announce.current); announce.current = undefined; return; }
     if (!changes.length) return;
     setPins(old => [...changes, ...old.filter(entry => !changes.some(change => change.agentId === entry.agentId))].slice(0, limit));
-    message.current = changes.map(entry => entry.name + ": " + statusMeta(entry.status).label).join("; ");
-    if (announce.current === undefined) announce.current = setTimeout(() => { setAnnouncement(message.current); announce.current = undefined; }, tokenMilliseconds("--duration-ambient"));
-  }, [agents, clock, limit, now]);
+    for (const entry of changes) messages.current.set(entry.agentId, entry.name + ": " + statusMeta(entry.status).label);
+    if (announce.current === undefined) announce.current = setTimeout(() => { setAnnouncement([...messages.current.values()].join("; ")); messages.current.clear(); announce.current = undefined; }, tokenMilliseconds("--duration-ambient"));
+  }, [agents, clock, limit, live]);
   useEffect(() => { if (selectedId) setPins(old => old.filter(entry => entry.agentId !== selectedId)); }, [selectedId]);
   useEffect(() => {
     if (paused) { clearTimeout(pending.current); pending.current = undefined; return; }
@@ -69,7 +71,7 @@ export function LatestEvents({ agents, n = 5, now, selectedId, onSelect }: Lates
   useLayoutEffect(() => { if (!paused) held.current = current; }, [current, paused]);
   const visible = paused ? held.current : current;
   const refresh = () => { setRows([...source.current]); held.current = [...pins, ...source.current.filter(entry => !pins.some(pin => pin.agentId === entry.agentId))].slice(0, limit); };
-  return <section className="ag-latest" aria-label="Latest activity" onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
+  return <section className="ag-latest" aria-label="Latest activity" tabIndex={0} onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
     onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
     <header><strong>Latest activity</strong><span>{paused ? "Paused while reading" : "Recorded events · age"}</span>{paused && <button type="button" onClick={refresh}>Show latest</button>}</header>
     <ol style={{ height: Math.min(limit, 3) * 28 }}>

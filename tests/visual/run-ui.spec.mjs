@@ -115,6 +115,7 @@ test('17 agents stream at 3 events per second for 60 seconds', async ({ page }, 
     }
     requestAnimationFrame(frame)
   }))
+  console.log(JSON.stringify({ kind: 'run-frame-metrics', ...metrics }))
   await testInfo.attach('frame-metrics', { body: JSON.stringify(metrics), contentType: 'application/json' })
   expect(metrics.p95).toBeLessThanOrEqual(16.7)
   expect(metrics.maxLongTask).toBeLessThanOrEqual(50)

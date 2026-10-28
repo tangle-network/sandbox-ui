@@ -135,17 +135,17 @@ export type AgentFrameNode = Node<
 >;
 
 /** The statuses a grid caption counts: the ones a reader looks for. */
-const CAPTION_STATUSES: readonly AgentGraphStatus[] = ["needs-you", "failed", "waiting", "running"];
+const CAPTION_STATUSES: readonly (AgentGraphStatus | "quiet")[] = ["needs-you", "failed", "quiet", "waiting", "running"];
 
 export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
   const { frame, statuses, direction } = data;
   const counts = CAPTION_STATUSES.map((status) => ({
     status,
-    n: statuses.filter((s) => s === status).length,
+    n: status === "quiet" ? data.quietCount ?? 0 : statuses.filter((s) => s === status).length,
   })).filter((c) => c.n > 0);
   const words = [
     `${frame.group.memberIds.length} agents`,
-    ...counts.map((c) => `${c.n} ${agentStatus(c.status).label.toLowerCase()}`),
+    ...counts.map((c) => `${c.n} ${c.status === "quiet" ? "quiet" : agentStatus(c.status).label.toLowerCase()}`),
   ].join(", ");
   return (
     <div
@@ -162,11 +162,10 @@ export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
           <Users size={12} strokeWidth={2} />
           {frame.group.memberIds.length} agents
         </span>
-        {data.quietCount ? <span className="text-xs" style={{ color: "var(--surface-warning-text)" }}>{data.quietCount} quiet</span> : null}
         {counts.map((c) => (
           <span key={c.status} aria-hidden className="flex items-center gap-1 tabular-nums">
-            <StatusGlyph status={c.status} size={11} />
-            {c.n}
+            {c.status !== "quiet" && <StatusGlyph status={c.status} size={11} />}
+            {c.n}{c.status === "quiet" ? " quiet" : ""}
           </span>
         ))}
       </div>

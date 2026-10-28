@@ -222,7 +222,7 @@ function RunState({ state = "seventeen", burst = false }: { state?: string; burs
     startedAt: REPLAY_NOW - 40 * 60_000,
     turn: i === 1 ? "Approve the exact release proposal" : i === 2 ? "Benchmark harness exited 137 (OOM)" : i === 3 ? "Waiting for the remote benchmark" : node.turn,
     result: i === 2 ? "Benchmark harness exited 137 (OOM)" : node.turn,
-    events: Array.from({ length: state === "none" ? 0 : state === "one" ? 1 : 4 }, (_, k) => ({ id: `${node.id}-${tick + k}`, label: ["bash cargo run --release -- prove", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs", "bash cargo test -p prover"][k], at: i === 3 && !burst ? REPLAY_NOW - (15 - k) * 60_000 : now - (3 - k) * 10_000 })),
+    events: Array.from({ length: state === "none" ? 0 : state === "one" ? 1 : 4 }, (_, k) => ({ id: `${node.id}-${tick + k}`, label: ["bash cargo run --release -- prove", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs", "bash cargo test -p prover"][(tick + k) % 4], at: i === 3 && !burst ? REPLAY_NOW - (15 - k) * 60_000 : burst ? REPLAY_NOW + (tick + k - 3) * 333 : now - (3 - k) * 10_000 })),
   }));
   return <div className="h-screen w-full rounded-[var(--radius-container)] border border-border bg-background"><AgentGraph live renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={runEdges} now={now} selectedId={selected} onSelect={setSelected} className="h-full w-full" /></div>;
 }

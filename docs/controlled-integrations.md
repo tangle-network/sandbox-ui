@@ -34,7 +34,9 @@ Only the explicitly selected ID's result is displayed. Each permission row recei
 its effective decision, available decision options, risk label, source label and
 reset capability. A null/unrecognized decision displays “Not available”; the view
 does not turn a write into Ask or a read into Allow. Groups and collapsed disclosures
-are supplied by the owner, without a duplicate policy engine.
+are supplied by the owner, without a duplicate policy engine. With `backHref`, an
+optional `onBack` handles plain primary Back clicks after preventing navigation;
+modified clicks retain the link's normal behavior.
 
 API-key and OAuth-parameter values are controlled by the parent. The package keeps
 only presentation state (such as reveal/hide), not key values. The parent should

@@ -194,6 +194,7 @@ export interface IntegrationConnectionDetailProps {
   loading?: boolean;
   error?: string | null;
   backHref?: string;
+  onBack?: () => void;
   description?: string;
   onRetry?: (connectionId: string | null) => void;
   onTestConnection?: (connectionId: string) => void;

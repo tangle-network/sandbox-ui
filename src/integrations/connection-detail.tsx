@@ -9,7 +9,7 @@ import type { IntegrationConnectionDetailProps, IntegrationPermissionGroup } fro
 /** Platform's permission layout, without its fetching, defaults or persistence. */
 export function IntegrationConnectionDetail({
   provider, connections, selectedConnectionId, onSelectConnection, detailsByConnectionId,
-  loading, error, backHref, description, onRetry, onTestConnection, onDisconnect,
+  loading, error, backHref, onBack, description, onRetry, onTestConnection, onDisconnect,
   onDecisionChange, onResetDecision, className,
 }: IntegrationConnectionDetailProps) {
   const connection = connections.find((item) => item.id === selectedConnectionId);
@@ -57,7 +57,12 @@ export function IntegrationConnectionDetail({
 
   return <section className={cn("w-full min-w-0 space-y-4", className)} aria-label={`${provider.title} connection settings`}
     data-testid="integration-connection-detail" aria-busy={loading || details?.loading || undefined}>
-    {backHref ? <a href={backHref} className={cn("inline-flex text-sm text-muted-foreground hover:text-foreground", focusRing)}>← Integrations</a> : null}
+    {backHref ? <a href={backHref} className={cn("inline-flex text-sm text-muted-foreground hover:text-foreground", focusRing)}
+      onClick={onBack ? event => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        onBack();
+      } : undefined}>← Integrations</a> : null}
     <header className="flex min-w-0 items-start gap-3">
       <ProviderIcon id={provider.providerId} iconUrl={provider.iconUrl} displayName={provider.title} size={48} />
       <div className="min-w-0"><h2 className="break-words text-xl font-semibold">{provider.title} connection settings</h2>

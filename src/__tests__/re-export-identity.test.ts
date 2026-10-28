@@ -88,6 +88,10 @@ const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
 ];
 
 describe("re-export bridge identity", () => {
+  test("keeps both public terminal component names", () => {
+    expect(Reflect.get(sandboxRoot, "TerminalLine")).toBe(canonicalPrimitives.TerminalLine);
+    expect(sandboxRoot.TerminalDisplayLine).toBe(canonicalPrimitives.TerminalLine);
+  });
   test("forwards every canonical primitive except the local logo", () => {
     for (const name of Object.keys(canonicalPrimitives) as (keyof typeof canonicalPrimitives)[]) {
       if (name === "Logo" || name === "TangleKnot") continue;

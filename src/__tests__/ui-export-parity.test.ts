@@ -1,24 +1,4 @@
-/**
- * Every name `@tangle-network/ui` exports has to stay reachable through this
- * package's shims.
- *
- * A shim that forwards its ui subpath with `export *` (as `./primitives` does)
- * is complete by construction and is not re-checked here. The other subpaths
- * are hand-typed re-export lists: a name added upstream is simply absent
- * downstream, nothing errors, and a consumer discovers the gap only when an
- * import they expected to work does not resolve.
- *
- * `re-export-identity.test.ts` is the other half of this contract and does not
- * overlap. It samples one symbol per subpath and proves the binding is
- * ui's own object rather than a copy, which needs the built bundle. This suite
- * asks the complementary question — whether anything is missing at all — and
- * answers it from source, so it runs in a plain `vitest run` with no build.
- *
- * Read against the INSTALLED ui, not a sibling source checkout: the dependency
- * this package resolves is what its consumers actually get. That also makes a
- * version bump the moment this suite reds, which is the point — upgrading ui
- * is exactly when new exports appear and shadows start colliding.
- */
+/** Check named shims against the installed UI declarations; identity is checked on the built bundle. */
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";

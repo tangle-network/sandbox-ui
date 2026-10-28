@@ -48,7 +48,7 @@ export interface AgentGraphNode {
   startedAt?: number | null;
   /** Live cards: commits it shipped. */
   commits?: number | null;
-  /** Live cards: a settled agent's result, shown on its chip, e.g. "rc2 · 14 commits". */
+  /** Live cards: a settled agent's result in its compact row, e.g. "rc2 · 14 commits". */
   result?: string | null;
 }
 

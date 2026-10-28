@@ -147,7 +147,7 @@ export function TraceWorkspace({
       </div>
       {graph && (
         <AgentGraph renderEventIcon={event => toolGlyph(event.label)} nodes={graph.nodes} edges={graph.edges} selectedId={agent?.id ?? null} onSelect={select}
-          live={cursor === null && graph.nodes.some((node) => node.status === "running")}
+          live={cursor === null && graph.nodes.some((node) => ["running", "waiting", "needs-you", "failed"].includes(node.status))}
           now={cursor !== null && waterfall.startedAt !== undefined ? waterfall.startedAt + cursor : undefined}
           className="h-[60vh] min-h-[480px] rounded-xl border border-border bg-card" />
       )}

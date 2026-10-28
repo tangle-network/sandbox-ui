@@ -25,7 +25,6 @@ export type {
   AgentGraphEvent,
   AgentGraphEdge,
   AgentGraphEdgeKind,
-  AgentGraphEvent,
   AgentGraphNode,
   AgentGraphStatus,
 } from "./agent-graph-layout";

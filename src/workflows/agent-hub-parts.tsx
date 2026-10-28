@@ -124,7 +124,7 @@ export function HubPopover({ entity, entities, calls, now, left, top, summary, c
       const relative = getComputedStyle(dialog).position !== "absolute";
       const maxHeight = Math.max(0, container.clientHeight - 16);
       const height = Math.min(dialog.scrollHeight + dialog.offsetHeight - dialog.clientHeight, maxHeight);
-      const next = relative ? { left, top } : { left: Math.max(8, Math.min(left, container.clientWidth - dialog.offsetWidth - 8)), top: Math.max(8, Math.min(top, container.clientHeight - height - 8)), maxHeight };
+      const next = relative ? { left, top } : { left: Math.max(container.scrollLeft + 8, Math.min(left, container.scrollLeft + container.clientWidth - dialog.offsetWidth - 8)), top: Math.max(container.scrollTop + 8, Math.min(top, container.scrollTop + container.clientHeight - height - 8)), maxHeight };
       setFitted(previous => previous.left === next.left && previous.top === next.top && previous.maxHeight === next.maxHeight ? previous : next);
     };
     fit();

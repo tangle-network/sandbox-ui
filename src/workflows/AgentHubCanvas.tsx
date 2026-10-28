@@ -166,7 +166,7 @@ export function AgentHubCanvas(props: AgentHubCanvasProps) {
     setOpen(next);
     if (next) onSelect?.(next);
   };
-  useEffect(() => { if (open) closeRef.current?.focus({ preventScroll: true }); }, [open]);
+  useEffect(() => { if (open) { closeRef.current?.closest('[role="dialog"]')?.scrollIntoView({ block: "nearest" }); closeRef.current?.focus({ preventScroll: true }); } }, [open]);
 
   const keydown = (id: string) => (event: KeyboardEvent<HTMLButtonElement>) => {
     const dirs: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };

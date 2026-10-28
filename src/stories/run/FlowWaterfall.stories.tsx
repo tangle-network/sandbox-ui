@@ -3,6 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { otlpFlowTrace, type OtlpSpan, type FlowSpan, type FlowTrace } from "@tangle-network/charts";
 import { FlowWaterfall, TimelineView } from "@tangle-network/charts/react";
 import "@tangle-network/charts/react/flow-waterfall.css";
+import "@tangle-network/charts/figure.css";
 import recorded from "./fixtures/discovery-waterfall.json";
 import controlSession from "./fixtures/control-session.json";
 import discovery21c from "./fixtures/discovery-21c.json";

@@ -251,7 +251,7 @@ export function AgentGraphCanvas({
     readerMoved.current = preserveView;
     const frame = requestAnimationFrame(() => {
       if (preserveView) revealSelection(inst, wrapperRef.current, selection.current!);
-      else if (live) void inst.setViewport({ x: FIT_PADDING, y: FIT_PADDING, zoom: 1, duration: animate ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
+      else if (live) void inst.setViewport({ x: FIT_PADDING, y: FIT_PADDING, zoom: 1 }, { duration: animate ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
       else void inst.fitView({
         padding: `${FIT_PADDING}px`,
         maxZoom: 1,

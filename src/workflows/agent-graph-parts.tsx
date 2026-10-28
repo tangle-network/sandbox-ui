@@ -78,7 +78,7 @@ export function agentSummary(agent: AgentGraphNode): string {
 }
 
 export type AgentCardNode = Node<
-  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onRespond?: () => void; parentLabel?: string },
+  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onOpen?: () => void; parentLabel?: string },
   "agent"
 >;
 
@@ -109,7 +109,7 @@ export function Handles({ direction, source = true }: { direction: AgentGraphDir
   );
 }
 
-export function AgentCardView({ agent, selected, direction, now: fixed, onRespond, parentLabel, handles = false }: AgentCardNode["data"] & { handles?: boolean }) {
+export function AgentCardView({ agent, selected, direction, now: fixed, onOpen, parentLabel, handles = false }: AgentCardNode["data"] & { handles?: boolean }) {
   const now = useRunNow(fixed);
   const quiet = quietActivity(agent, now);
   const s = agentStatus(agent.status);
@@ -125,7 +125,7 @@ export function AgentCardView({ agent, selected, direction, now: fixed, onRespon
     <p className="m-0 line-clamp-2 min-h-4 text-xs text-foreground leading-4">{(agent.status === "failed" ? agent.result ?? agent.turn : agent.turn) || "—"}</p>
     <div className="mt-auto flex items-center justify-between gap-1 text-xs" style={{ color: quiet ? "var(--surface-warning-text)" : s.color }}>
       <span className="flex items-center gap-1"><StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}</span>
-      {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onRespond} onClick={event => { event.stopPropagation(); onRespond?.(); }}>Respond</button>}
+      {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onOpen} onClick={event => { event.stopPropagation(); onOpen?.(); }}>Respond</button>}
     </div>
   </div>;
 }

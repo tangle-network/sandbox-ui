@@ -123,7 +123,7 @@ export default meta;
 /** One manager, sixteen workers: the workers are packed into a grid sized to the canvas. */
 export const SeventeenAgents: StoryObj = {
   render: () => (
-    <div className="h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <Selectable nodes={runNodes} edges={runEdges} initial="agent_memscale" className="h-full w-full" />
     </div>
   ),
@@ -132,7 +132,7 @@ export const SeventeenAgents: StoryObj = {
 /** The Discovery run page's left pane: 360px wide beside the transcript. */
 export const WorkspacePane: StoryObj = {
   render: () => (
-    <div className="flex h-screen w-full bg-background">
+    <div className="flex h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <div className="h-full w-full max-w-[360px] shrink-0 border-border border-r">
         <Selectable nodes={runNodes} edges={runEdges} initial="agent_scheduler" className="h-full w-full" />
       </div>
@@ -146,7 +146,7 @@ export const WorkspacePane: StoryObj = {
 /** Sub-managers with their own workers, three levels deep. */
 export const NestedTeams: StoryObj = {
   render: () => (
-    <div className="h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <Selectable nodes={nestedNodes} edges={nestedEdges} initial="impl" className="h-full w-full" />
     </div>
   ),
@@ -155,7 +155,7 @@ export const NestedTeams: StoryObj = {
 /** The same run left to right, for a wide, short pane. */
 export const NestedTeamsLeftToRight: StoryObj = {
   render: () => (
-    <div className="h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <Selectable nodes={nestedNodes} edges={nestedEdges} initial="tests" direction="LR" className="h-full w-full" />
     </div>
   ),
@@ -202,7 +202,7 @@ function LiveRun() {
 /** A running run as live cards: who is working, on what, right now. */
 export const LiveRunCards: StoryObj = {
   render: () => (
-    <div className="h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <LiveRun />
     </div>
   ),

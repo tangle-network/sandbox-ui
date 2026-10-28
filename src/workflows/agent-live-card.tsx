@@ -11,7 +11,7 @@ import { KIND_ACCENT, NodeMark, RESTING_SHADOW } from "./node-ui";
 import { quietActivity, tokenMilliseconds, useAttention, useMotionAllowed, useRunNow } from "./run-ui-state";
 
 export type LiveAgentCardNode = Node<
-  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onRespond?: () => void; parentLabel?: string; renderEventIcon?: (event: AgentGraphEvent) => ReactNode }, "liveAgent"
+  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onOpen?: () => void; parentLabel?: string; renderEventIcon?: (event: AgentGraphEvent) => ReactNode }, "liveAgent"
 >;
 const SETTLED: ReadonlySet<AgentGraphStatus> = new Set(["succeeded", "stopped"]);
 
@@ -26,8 +26,8 @@ function middleLabel(label: string) {
 }
 
 /** One shell survives settling. A failure retains its evidence and absolute event times. */
-export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixed, handles = false, onRespond, parentLabel, renderEventIcon }: {
-  agent: AgentGraphNode; selected: boolean; direction?: AgentGraphDirection; now?: number; handles?: boolean; onRespond?: () => void; parentLabel?: string; renderEventIcon?: (event: AgentGraphEvent) => ReactNode;
+export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixed, handles = false, onOpen, parentLabel, renderEventIcon }: {
+  agent: AgentGraphNode; selected: boolean; direction?: AgentGraphDirection; now?: number; handles?: boolean; onOpen?: () => void; parentLabel?: string; renderEventIcon?: (event: AgentGraphEvent) => ReactNode;
 }) {
   const now = useRunNow(fixed);
   const ref = useRef<HTMLDivElement>(null);
@@ -81,7 +81,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
             {!settled && meta && <span className="ag-live-meta">{meta}</span>}
           </div>
           <div className="ag-live-stats">
-            <span className={`ag-live-pill${quiet ? " ag-live-quiet" : ""}`}><StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}</span>
+            {failed && onOpen ? <button type="button" className="ag-live-pill ag-live-inspect nodrag nopan" onClick={event => { event.stopPropagation(); onOpen(); }}><StatusGlyph status={agent.status} size={16} />{s.label}<span>Inspect</span></button> : <span className={`ag-live-pill${quiet ? " ag-live-quiet" : ""}`}><StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}</span>}
             {!settled && <span className="ag-live-accounting" title={metrics}>{metrics}</span>}
           </div>
         </div>
@@ -89,7 +89,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
           <div className="ag-live-thinking-row"><p className={`ag-live-thinking${failed ? " ag-live-failure" : ""}`}>
             {failed ? agent.result ?? events.at(-1)?.label ?? agent.turn ?? s.label : agent.turn || "—"}
           </p>
-          {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onRespond} title={onRespond ? undefined : "Responses unavailable in this view"} onClick={event => { event.stopPropagation(); onRespond?.(); }}>Respond</button>}</div>
+          {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onOpen} title={onOpen ? undefined : "Responses unavailable in this view"} onClick={event => { event.stopPropagation(); onOpen?.(); }}>Respond</button>}</div>
           {events.length > 0 && <div className="ag-live-events-clip"><ol ref={tail} className="ag-live-events" aria-label="Latest events">
             {events.map(event => <li key={event.id} title={event.label}>
               {renderEventIcon?.(event) ?? <Wrench size={12} strokeWidth={1.75} aria-hidden />}

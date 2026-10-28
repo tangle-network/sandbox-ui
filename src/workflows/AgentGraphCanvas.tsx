@@ -176,7 +176,7 @@ export function AgentGraphCanvas({
         ariaRole: "button",
         ariaLabel: agentSummary(agent),
         domAttributes: { "aria-pressed": selected },
-        data: { agent, selected, direction, now: clock, onRespond: onSelect ? () => onSelect(agent.id) : undefined, renderEventIcon },
+        data: { agent, selected, direction, now: clock, onOpen: onSelect ? () => onSelect(agent.id) : undefined, renderEventIcon },
       } as AgentCardNode | LiveAgentCardNode);
     }
     return [...frames, ...cards];
@@ -191,12 +191,6 @@ export function AgentGraphCanvas({
       const id = `spawn:${s.from}:${target}`;
       if (seen.has(id)) continue;
       seen.add(id);
-      const group = topology.groups.find((g) => g.id === target);
-      const statuses = group
-        ? group.memberIds.map((m) => byId.get(m)?.status)
-        : [byId.get(s.to)?.status];
-      const lead = (["failed", "waiting", "running"] as const).find((st) => statuses.includes(st));
-      const flow = lead ?? agentStatus(statuses[0] ?? "unknown").flow;
       out.push({
         id,
         source: s.from,
@@ -205,7 +199,7 @@ export function AgentGraphCanvas({
         pathOptions: { borderRadius: 14 },
         selectable: false,
         focusable: false,
-        style: { stroke: edgeColor(flow), strokeWidth: 1.5 },
+        style: { stroke: edgeColor(undefined), strokeWidth: 1.5 },
       } as Edge);
     }
     const ids = new Set(topology.agentIds);
@@ -293,7 +287,7 @@ export function AgentGraphCanvas({
   const activityRank = (agent: (typeof nodes)[number]) => agent.status === "needs-you" ? 0 : agent.status === "failed" ? 1 : quietActivity(agent, clock) ? 2 : agent.status === "waiting" ? 3 : agent.status === "running" ? 4 : 5;
   const parentOf = new Map(edges.filter(e => e.kind === "spawn").map(e => [e.to, e.from]));
   const depthOf = (id: string) => { const seen = new Set([id]); let depth = 0; while (parentOf.has(id) && !seen.has(parentOf.get(id)!)) { id = parentOf.get(id)!; seen.add(id); depth++; } return depth; };
-  const counts = ["needs-you", "failed", "quiet"].map(status => ({ status, matches: nodes.filter(agent => status === "quiet" ? quietActivity(agent, clock) : agent.status === status) }));
+  const counts = ["needs-you", "failed", "quiet"].map(status => { const matches = nodes.filter(agent => status === "quiet" ? quietActivity(agent, clock) : agent.status === status); return { status, matches, current: matches.find(agent => agent.id === selectedId) ?? matches[0] }; });
   const caption = <div className="flex h-10 shrink-0 items-center gap-3 px-3 text-xs text-muted-foreground" aria-label="Run status">
     <span>{nodes.length} agents</span>
     {counts.filter(group => group.matches.length).map(group => <button type="button" key={group.status} className="ag-status-button rounded-full border border-border px-2 py-1" style={{ color: group.status === "quiet" ? "var(--surface-warning-text)" : agentStatus(group.status as AgentGraphStatus).color }} onClick={() => {
@@ -301,7 +295,7 @@ export function AgentGraphCanvas({
       const next = group.matches[(index + 1) % group.matches.length]; select(next.id);
       const p = layout?.positions.get(next.id);
       if (p) void rfRef.current?.setCenter(p.x + card.width / 2, p.y + card.height / 2, { zoom: 1, duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
-    }}><span className="shrink-0">{group.matches.length} {group.status === "needs-you" ? "needs you" : group.status}</span><span className="ag-caption-target">{group.matches.find(agent => agent.id === selectedId)?.label ?? group.matches[0].label}</span></button>)}
+    }}><span className="shrink-0">{group.matches.length} {group.status === "needs-you" ? "needs you" : group.status}</span><span className="ag-caption-target">{group.current.label}{group.status === "failed" && <span className="font-normal"> · {group.current.result ?? group.current.turn ?? "Failure cause not recorded"}</span>}</span></button>)}
   </div>;
 
   if (nodes.length === 0) {
@@ -332,8 +326,8 @@ export function AgentGraphCanvas({
           <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} data-agent-id={agent.id} className="ag-phone-select"
             onClick={() => select(agent.id)} onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); select(agent.id); } }}>
             {live || agent.status === "succeeded" || agent.status === "stopped"
-              ? <LiveAgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} renderEventIcon={renderEventIcon} onRespond={onSelect ? () => select(agent.id) : undefined} />
-              : <AgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} direction={direction} onRespond={onSelect ? () => select(agent.id) : undefined} />}
+              ? <LiveAgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} renderEventIcon={renderEventIcon} onOpen={onSelect ? () => select(agent.id) : undefined} />
+              : <AgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} direction={direction} onOpen={onSelect ? () => select(agent.id) : undefined} />}
           </div>
         </li>)}
       </ul> : <div className="ag-graph-viewport min-h-0 flex-1" style={{ opacity: shown ? 1 : 0 }}><ReactFlow

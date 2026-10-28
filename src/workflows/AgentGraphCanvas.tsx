@@ -26,6 +26,7 @@ import {
   useState,
 } from "react";
 import type { AgentGraphProps } from "./AgentGraph";
+import { LatestEvents } from "../run/latest-events";
 import {
   AGENT_CARD,
   type AgentGraphStatus,
@@ -98,6 +99,7 @@ export function AgentGraphCanvas({
   emptyState,
   live = false,
   renderEventIcon,
+  showLatestEvents = true,
   now,
 }: AgentGraphProps) {
   const card = live ? LIVE_AGENT_CARD : AGENT_CARD;
@@ -321,6 +323,7 @@ export function AgentGraphCanvas({
       data-columns={layout?.columns}
     >
       {caption}
+      {showLatestEvents && live && <LatestEvents agents={nodes} now={now} selectedId={selectedId} onSelect={onSelect ? select : undefined} />}
       {narrow ? <ul className="ag-graph-viewport ag-phone-list overflow-auto" aria-label="Agents by attention">
         {[...nodes].sort((a, b) => activityRank(a) - activityRank(b)).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
           <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} data-agent-id={agent.id} className="ag-phone-select"

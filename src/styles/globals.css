@@ -76,3 +76,12 @@
 .ag-agent-card[data-status="needs-you"] p { -webkit-line-clamp: 1; }
 .ag-status-button { display: inline-flex; align-items: center; min-width: 0; gap: 6px; }
 .ag-caption-target { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+
+.ag-latest { flex: none; min-width: 0; border-bottom: 1px solid hsl(var(--border)); padding: 8px 12px; color: hsl(var(--foreground)); font-size: 12px; line-height: 16px; }
+.ag-latest header { display: flex; align-items: center; min-height: 24px; gap: 8px; } .ag-latest header > span { color: hsl(var(--muted-foreground)); } .ag-latest header > button { margin-left: auto; padding: 0; border: 0; background: transparent; text-decoration: underline; font: inherit; color: inherit; cursor: pointer; }
+.ag-latest ol { list-style: none; margin: 0; padding: 0; overflow: auto; } .ag-latest li { height: 28px; }
+.ag-latest li > button { display: flex; align-items: center; gap: 6px; width: 100%; height: 28px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; } .ag-latest li > button:disabled { cursor: default; }
+.ag-latest strong { font-weight: 600; } .ag-latest li strong { flex: none; max-width: 22%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-latest-dot { width: 8px; height: 8px; flex: none; border-radius: var(--radius-pill); } .ag-latest-state { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.ag-latest-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px/16px var(--font-mono, monospace); } .ag-latest time { flex: none; color: hsl(var(--muted-foreground)); font: 11px/16px var(--font-mono, monospace); font-variant-numeric: tabular-nums; }
+.ag-latest-empty { display: flex; align-items: center; color: hsl(var(--muted-foreground)); }

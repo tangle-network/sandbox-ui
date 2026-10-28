@@ -66,6 +66,8 @@ export interface AgentGraphProps {
   live?: boolean;
   /** Host tool identity, such as charts' toolGlyph(event.label). Core graphs need no charts dependency. */
   renderEventIcon?: (event: AgentGraphEvent) => ReactNode;
+  /** Live tree activity; false when a shared workspace already supplies its strip. */
+  showLatestEvents?: boolean;
 }
 
 function lazyCanvas() {

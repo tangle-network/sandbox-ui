@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { AgentGraphDirection, AgentGraphEvent, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import { agentStatus, agentSummary, Handles, StatusGlyph, cardBorder } from "./agent-graph-parts";
 import { SELECTION_OUTLINE } from "./canvas-theme";
-import { fmtCost } from "./format";
+import { fmtCost, fmtEventTime } from "./format";
 import { shortModel } from "./naming";
 import { KIND_ACCENT, NodeMark, RESTING_SHADOW } from "./node-ui";
 import { quietActivity, tokenMilliseconds, useAttention, useMotionAllowed, useRunNow } from "./run-ui-state";
@@ -15,12 +15,6 @@ export type LiveAgentCardNode = Node<
 >;
 const SETTLED: ReadonlySet<AgentGraphStatus> = new Set(["succeeded", "stopped"]);
 
-function eventTime(at: number | undefined, now: number, frozen: boolean) {
-  if (at == null || !Number.isFinite(at)) return "—";
-  if (frozen) return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  const seconds = Math.max(0, Math.floor((now - at) / 1000));
-  return seconds < 5 ? "now" : seconds < 60 ? `${seconds}s` : seconds < 3600 ? `${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 3600)}h`;
-}
 function middleLabel(label: string) {
   return label.length <= 52 ? label : `${label.slice(0, 32)} … ${label.slice(-17)}`;
 }
@@ -39,7 +33,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
   const meta = [agent.model ? shortModel(agent.model) : undefined, agent.effort].filter(Boolean).join(" · ");
   const [events, setEvents] = useState(() => (agent.events ?? []).slice(-4));
   const cost = Number.isFinite(agent.costUsd) ? fmtCost(agent.costUsd!) : undefined;
-  const metrics = [cost, !failed && agent.startedAt != null ? `${eventTime(agent.startedAt, now, false)} elapsed` : undefined, Number.isFinite(agent.commits) ? `${agent.commits} ${agent.commits === 1 ? "commit" : "commits"}` : undefined].filter(Boolean).join(" · ") || "—";
+  const metrics = [cost, !failed && agent.startedAt != null ? `${fmtEventTime(agent.startedAt, now, false)} elapsed` : undefined, Number.isFinite(agent.commits) ? `${agent.commits} ${agent.commits === 1 ? "commit" : "commits"}` : undefined].filter(Boolean).join(" · ") || "—";
   const tail = useRef<HTMLOListElement>(null);
   const motion = useMotionAllowed();
   const previous = useRef(events.at(-1)?.id);
@@ -94,7 +88,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
             {events.map(event => <li key={event.id} title={event.label}>
               {renderEventIcon?.(event) ?? <Wrench size={12} strokeWidth={1.75} aria-hidden />}
               <span className="ag-live-event-label">{middleLabel(event.label)}</span>
-              <time className="ag-live-event-at" dateTime={Number.isFinite(event.at) ? new Date(event.at!).toISOString() : undefined}>{failed && event.at != null ? "at " : ""}{eventTime(event.at, now, failed)}</time>
+              <time className="ag-live-event-at" dateTime={Number.isFinite(event.at) ? new Date(event.at!).toISOString() : undefined}>{failed && event.at != null ? "at " : ""}{fmtEventTime(event.at, now, failed)}</time>
             </li>)}
           </ol></div>}
         </>}

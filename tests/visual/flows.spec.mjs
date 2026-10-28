@@ -17,7 +17,7 @@ const flows = [
     name: 'run-graph-view',
     story: 'run-traceworkspace--timeline-and-graph',
     act: async (page) => {
-      await page.getByRole('button', { name: 'graph', exact: true }).click()
+      if (await page.getByRole('radio', { name: 'Graph', exact: true }).getAttribute('aria-checked') !== 'true') await page.getByRole('radio', { name: 'Graph', exact: true }).click()
       // Agent cards only: the tree also draws a frame node around a parent's packed workers.
       const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent, .ag-phone-select')
       await expect(cards).toHaveCount(5)
@@ -31,7 +31,7 @@ const flows = [
     name: 'run-graph-factory',
     story: 'run-traceworkspace--factory-run',
     act: async (page) => {
-      await page.getByRole('button', { name: 'graph', exact: true }).click()
+      if (await page.getByRole('radio', { name: 'Graph', exact: true }).getAttribute('aria-checked') !== 'true') await page.getByRole('radio', { name: 'Graph', exact: true }).click()
       await expect(page.locator('.agent-graph[data-layout="ready"], .agent-graph[data-layout="list"]')).toBeVisible()
       const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent, .ag-phone-select')
       await expect(cards).toHaveCount(96)

@@ -63,3 +63,10 @@ export function fmtTokenTotal(tokens: number | null | undefined): string | undef
   if (tokens < 1_000_000) return `${(tokens / 1000).toFixed(tokens < 10_000 ? 1 : 0)}k tok`;
   return `${(tokens / 1_000_000).toFixed(1)}M tok`;
 }
+
+export function fmtEventTime(at: number | undefined, now: number, frozen = false) {
+  if (at == null || !Number.isFinite(at)) return "—";
+  if (frozen) return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const seconds = Math.max(0, Math.floor((now - at) / 1000));
+  return seconds < 5 ? "now" : seconds < 60 ? `${seconds}s` : seconds < 3600 ? `${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 3600)}h`;
+}

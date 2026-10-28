@@ -69,8 +69,8 @@ export const Live: StoryObj<typeof meta> = { args: { trace, live: true, defaultV
 export const GraphView: StoryObj<typeof meta> = {
   args: { trace, live: false, defaultView: "agents" },
   play: async ({ canvasElement }) => {
-    const button = await waitFor(() => { const button = [...canvasElement.querySelectorAll("button")].find(button => button.textContent === "graph"); if (!button) throw new Error("Waiting for graph control"); return button; });
-    button.click();
+    const button = await waitFor(() => { const button = [...canvasElement.querySelectorAll("button")].find(button => button.textContent?.trim() === "Graph"); if (!button) throw new Error("Waiting for graph control"); return button; });
+    if (button.getAttribute("aria-checked") !== "true") button.click();
   },
 };
 

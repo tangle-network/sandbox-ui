@@ -13,3 +13,5 @@ export {
 export { TraceWaterfall, type TraceWaterfallProps, traceSpanMark } from "./trace-waterfall";
 export { TraceWorkspace, type TraceEvent, type TraceWorkspaceProps } from "./trace-workspace";
 export { type AgentStreamRow, type AgentStreamState, type AgentTranscriptEntry, foldAgentRows, useAgentStream } from "./agent-stream";
+
+export { LatestEvents, type LatestEventsProps } from "./latest-events";

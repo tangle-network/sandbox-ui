@@ -46,9 +46,9 @@ function NodeIcon({ entity, size }: { entity: HubEntity; size: number }) {
 /** Running has one quiet opacity signal; all other states use the shared glyph. */
 function StatusBadge({ status, quiet }: { status?: AgentGraphStatus; quiet?: string }) {
   if (!status) return null;
-  return <span className="ag-badge">{runStatus(status) === "running" && !quiet
-    ? <span className="ag-running-dot" data-motion="essential" aria-label="Running" style={ambientStyle} onAnimationStart={syncAmbient} />
-    : <RunStatusIcon status={quiet ? "waiting" : status} />}</span>;
+  return <span className="ag-badge">{runStatus(status) === "running"
+    ? <span className="ag-running-dot" data-motion="essential" aria-label="Running" style={quiet ? { animation: "none", background: "var(--muted-foreground)" } : ambientStyle} onAnimationStart={syncAmbient} />
+    : <RunStatusIcon status={status} />}</span>;
 }
 
 export interface HubNodeProps {
@@ -94,7 +94,7 @@ export function HubNode({ entity, x, y, tile, dimmed, selected, buttonRef, onOpe
         <StatusBadge status={entity.status} quiet={entity.quiet} />
       </span>
       <span className="ag-name">{entity.label}</span>
-      {sub && <span className="ag-sub" style={entity.quiet ? { color: "var(--surface-warning-text)" } : tone ? { color: tone } : undefined}>{sub}</span>}
+      {sub && <span className="ag-sub" style={tone ? { color: tone } : undefined}>{entity.quiet ? <>{statusMeta(entity.status ?? "running").label} · <span style={{ color: "var(--surface-warning-text)" }}>{sub}</span></> : sub}</span>}
     </button>
   );
 }

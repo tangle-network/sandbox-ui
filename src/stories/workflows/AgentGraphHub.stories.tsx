@@ -134,3 +134,6 @@ export const ReducedMotion: Story = { args: { at: 6.9 }, parameters: { reducedMo
 export const NoCalls: Story = { render: () => <AgentGraph layout="hub" nodes={agentsAt(0)} edges={spawns} tools={tools} calls={[]} now={s(0)} /> };
 export const CallLifecycle: Story = { args: { at: 3.8, loop: 30 } };
 export const FailedCall: Story = { args: { at: 22.2, selectedId: "coder" } };
+
+/** Recorded work silence qualifies Running; it does not turn the agent into Waiting. */
+export const Quiet: Story = { render: () => <div style={{ maxWidth: 820, margin: "0 auto" }}><AgentGraph layout="hub" nodes={agentsAt(6.9).map(node => node.id === "research" ? { ...node, events: [0, 1, 2].map(i => ({ id: `quiet-${i}`, label: "Recorded read", at: s(-840 + i * 60) })) } : node)} edges={spawns} tools={tools} calls={calls} you={you} now={s(6.9)} /></div> };

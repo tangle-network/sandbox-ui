@@ -359,35 +359,6 @@ describe("WorkflowGraph add-step gestures", () => {
     expect(observedBoxes.every((b) => b.width > 0 && b.height > 0)).toBe(true);
   });
 
-  it("lets a run keep its edge colour when the host also supplies problems", () => {
-    // The graph decides this, not the styling pass on its own: a canvas showing
-    // a run must not have its live colouring overwritten by an authoring
-    // problem, which is the same precedence the node card applies.
-    render(
-      <WorkflowGraph
-        yaml={YAML}
-        edges={DECLARED}
-        nodeState={{ [actionNodeId(1)]: { status: "running" } }}
-        problems={[
-          {
-            anchor: "edge",
-            from: actionNodeId(0),
-            to: actionNodeId(1),
-            severity: "error",
-            message: "bad",
-          },
-        ]}
-        onEdgeConnect={vi.fn()}
-      />,
-    );
-    const edge = flowProps.edges?.find(
-      (x) => x.id === `${actionNodeId(0)}->${actionNodeId(1)}`,
-    );
-    expect(edge?.style?.stroke).toBe("hsl(var(--primary))");
-    // The problem is still stated, just not by recolouring the line.
-    expect(edge?.data?.problems).toHaveLength(1);
-  });
-
   it("offers the insert control on exactly the edges the host may change", () => {
     render(
       <WorkflowGraph

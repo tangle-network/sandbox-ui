@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { toolGlyph } from "@tangle-network/charts/react";
 import { useEffect, useState } from "react";
 import { AgentGraph, type AgentGraphEdge, type AgentGraphNode } from "../../workflows";
 
@@ -122,7 +123,7 @@ export default meta;
 /** One manager, sixteen workers: the workers are packed into a grid sized to the canvas. */
 export const SeventeenAgents: StoryObj = {
   render: () => (
-    <div className="h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <Selectable nodes={runNodes} edges={runEdges} initial="agent_memscale" className="h-full w-full" />
     </div>
   ),
@@ -131,7 +132,7 @@ export const SeventeenAgents: StoryObj = {
 /** The Discovery run page's left pane: 360px wide beside the transcript. */
 export const WorkspacePane: StoryObj = {
   render: () => (
-    <div className="flex h-screen w-full bg-background">
+    <div className="flex h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <div className="h-full w-full max-w-[360px] shrink-0 border-border border-r">
         <Selectable nodes={runNodes} edges={runEdges} initial="agent_scheduler" className="h-full w-full" />
       </div>
@@ -145,7 +146,7 @@ export const WorkspacePane: StoryObj = {
 /** Sub-managers with their own workers, three levels deep. */
 export const NestedTeams: StoryObj = {
   render: () => (
-    <div className="h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <Selectable nodes={nestedNodes} edges={nestedEdges} initial="impl" className="h-full w-full" />
     </div>
   ),
@@ -154,14 +155,15 @@ export const NestedTeams: StoryObj = {
 /** The same run left to right, for a wide, short pane. */
 export const NestedTeamsLeftToRight: StoryObj = {
   render: () => (
-    <div className="h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <Selectable nodes={nestedNodes} edges={nestedEdges} initial="tests" direction="LR" className="h-full w-full" />
     </div>
   ),
 };
 
 // A live proving run: a lead and five workers, each doing a different kind of work. Events arrive every two seconds.
-const LIVE_START = Date.now() - 41 * 60_000;
+const LIVE_NOW = Date.now();
+const LIVE_START = LIVE_NOW - 41 * 60_000;
 const LIVE_WORK: readonly [string, AgentGraphNode["activity"], string, readonly string[]][] = [
   ["prove-scale", "proving", "Folding round 14 of 22; the lag term still dominates", ["bash cargo run --release -- prove --rows 2^22", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs"]],
   ["commit-wave", "building", "Rebuilding with the wave commitment behind a feature flag", ["bash cargo build -p commit --features wave", "edit crates/commit/src/wave.rs", "bash cargo test -p commit wave::"]],
@@ -180,7 +182,7 @@ function LiveRun() {
     id: label, label, model: MODELS[i % MODELS.length], harness: "opencode", effort: i % 2 ? "high" : "medium",
     status: activity === "waiting" ? "waiting" : "running", activity, turn,
     startedAt: LIVE_START + i * 4 * 60_000, commits: [14, 12, 1, 4, 0][i],
-    events: Array.from({ length: 3 + tick }, (_, k) => ({ id: `${label}-${k}`, label: calls[k % calls.length], at: Date.now() - (2 + tick - k) * 9_000 - i * 3_000 })),
+    events: Array.from({ length: 3 + tick }, (_, k) => ({ id: `${label}-${k}`, label: calls[k % calls.length], at: LIVE_NOW + (k < 3 ? -(2 - k) * 9_000 : (k - 2) * 2000) - i * 3_000 })),
   }));
   const nodes: AgentGraphNode[] = [
     { id: "lead", label: "lead", role: "manager", model: "anthropic/claude-sonnet-4-5", effort: "high", status: "running", activity: "thinking",
@@ -194,14 +196,46 @@ function LiveRun() {
   ];
   const edges: AgentGraphEdge[] = nodes.slice(1).map((n) => ({ from: "lead", to: n.id, kind: "spawn" }));
   const [selected, setSelected] = useState<string | null>(null);
-  return <AgentGraph live nodes={nodes} edges={edges} selectedId={selected} onSelect={setSelected} className="h-full w-full" />;
+  return <AgentGraph live now={LIVE_NOW + tick * 2000} renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={setSelected} className="h-full w-full" />;
 }
 
 /** A running run as live cards: who is working, on what, right now. */
 export const LiveRunCards: StoryObj = {
   render: () => (
-    <div className="h-screen w-full bg-background">
+    <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
       <LiveRun />
     </div>
   ),
 };
+
+const REPLAY_NOW = Date.UTC(2026, 9, 28, 12);
+function RunState({ state = "seventeen", burst = false }: { state?: string; burst?: boolean }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!burst) return;
+    const timer = setInterval(() => setTick(t => t + 1), 333);
+    return () => clearInterval(timer);
+  }, [burst]);
+  const now = REPLAY_NOW + tick * 333;
+  const nodes: AgentGraphNode[] = runNodes.map((node, i) => ({ ...node,
+    status: burst ? "running" : i === 1 ? "needs-you" : i === 2 ? "failed" : i === 3 ? "running" : node.status,
+    startedAt: REPLAY_NOW - 40 * 60_000,
+    turn: i === 1 ? "Approve the exact release proposal" : i === 2 ? "Benchmark harness exited 137 (OOM)" : i === 3 ? "Waiting for the remote benchmark" : node.turn,
+    result: i === 2 ? state === "long-failure" ? "Executor deadline expired while waiting for the child process to acknowledge completion. The failed attempt retained its command output and artifacts for inspection. No successful completion was recorded; open this agent to inspect the full recorded failure and the final tool events." : "Benchmark harness exited 137 (OOM)" : node.turn,
+    events: Array.from({ length: state === "none" ? 0 : state === "one" ? 1 : 4 }, (_, k) => ({ id: `${node.id}-${tick + k}`, label: ["bash cargo run --release -- prove", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs", "bash cargo test -p prover"][(tick + k) % 4], at: i === 3 && !burst ? REPLAY_NOW - (15 - k) * 60_000 : burst ? REPLAY_NOW + (tick + k - 3) * 333 : now - (3 - k) * 10_000 })),
+  }));
+  return <div className="h-screen w-full rounded-[var(--radius-container)] border border-border bg-background"><AgentGraph live renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={runEdges} now={now} selectedId={selected} onSelect={setSelected} className="h-full w-full" /></div>;
+}
+export const SeventeenLive: StoryObj = { render: () => <RunState /> };
+export const LiveNeedsYou: StoryObj = { render: () => <RunState /> };
+export const LiveFailed: StoryObj = { render: () => <RunState /> };
+export const LiveQuiet: StoryObj = { render: () => <RunState /> };
+export const NoEvents: StoryObj = { render: () => <RunState state="none" /> };
+export const OneEvent: StoryObj = { render: () => <RunState state="one" /> };
+export const Phone390: StoryObj = { globals: { viewport: { value: "mobile", isRotated: false } }, decorators: [Story => <div style={{ width: "100%", maxWidth: 390 }}><Story /></div>], render: () => <RunState /> };
+export const LightTheme: StoryObj = { globals: { sandboxTheme: "light" }, render: () => <RunState /> };
+export const ReducedMotion: StoryObj = { parameters: { reducedMotion: "reduce" }, render: () => <RunState /> };
+export const Burst: StoryObj = { render: () => <RunState burst /> };
+
+export const LiveFailedLong: StoryObj = { render: () => <RunState state="long-failure" /> };

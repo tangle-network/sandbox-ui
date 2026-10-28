@@ -19,19 +19,9 @@ import {
   Position,
   useInternalNode,
 } from "@xyflow/react";
-import {
-  CircleCheck,
-  CircleDashed,
-  CirclePause,
-  CircleQuestionMark,
-  CircleStop,
-  CircleX,
-  Hand,
-  Hourglass,
-  LoaderCircle,
-  type LucideIcon,
-  Users,
-} from "lucide-react";
+import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
+import { Users } from "lucide-react";
+import { ambientStyle, syncAmbient, quietActivity, useRunNow } from "./run-ui-state";
 import { MOTION_CONTROL } from "../lib/motion";
 import type {
   AgentFrame,
@@ -48,55 +38,24 @@ import {
   NodeMark,
   RESTING_BORDER,
   RESTING_SHADOW,
-  STATUS_COLOR,
-  statusBorder,
 } from "./node-ui";
 
-const MUTED = "hsl(var(--muted-foreground))";
-
-/** One word, one glyph and one colour per agent status — never colour alone.
- *  `flow` is the workflow status whose border, glow and edge colour it shares. */
-export const AGENT_STATUS: Record<
-  AgentGraphStatus,
-  { label: string; icon: LucideIcon; color: string; flow: WfNodeStatus }
-> = {
-  running: { label: "Running", icon: LoaderCircle, color: STATUS_COLOR.running, flow: "running" },
-  waiting: { label: "Waiting", icon: Hourglass, color: STATUS_COLOR.waiting, flow: "waiting" },
-  "needs-you": { label: "Needs you", icon: Hand, color: STATUS_COLOR.waiting, flow: "waiting" },
-  succeeded: { label: "Done", icon: CircleCheck, color: STATUS_COLOR.succeeded, flow: "succeeded" },
-  failed: { label: "Failed", icon: CircleX, color: STATUS_COLOR.failed, flow: "failed" },
-  stopped: { label: "Stopped", icon: CircleStop, color: MUTED, flow: "succeeded" },
-  idle: { label: "Idle", icon: CirclePause, color: MUTED, flow: "queued" },
-  unknown: { label: "Unknown", icon: CircleQuestionMark, color: MUTED, flow: "queued" },
-};
-
-/** A status this table has no entry for (a newer host) reads as unknown, not as a crash. */
+/** Workflow state adaptation stays at its boundary; agent states use ui directly. */
 export function agentStatus(status: AgentGraphStatus) {
-  return AGENT_STATUS[status] ?? AGENT_STATUS.unknown;
+  const meta = statusMeta(status);
+  const flow: WfNodeStatus = status === "needs-you" ? "waiting" : status === "waiting" || status === "idle" || status === "unknown" ? "queued" : status === "stopped" ? "succeeded" : status;
+  return { ...meta, color: `var(${meta.token})`, flow };
 }
 
 export function StatusGlyph({ status, size }: { status: AgentGraphStatus; size: number }) {
-  const s = agentStatus(status);
-  const Icon = s.icon;
-  return (
-    <Icon
-      aria-hidden
-      size={size}
-      strokeWidth={2.25}
-      className={status === "running" ? "shrink-0 motion-safe:animate-spin [animation-duration:1.6s]" : "shrink-0"}
-      style={{ color: s.color }}
-    />
-  );
+  return status === "running"
+    ? <span aria-hidden data-motion="essential" className="ag-running-dot" style={ambientStyle} onAnimationStart={syncAmbient} />
+    : <RunStatusIcon status={status} size={size} aria-hidden />;
 }
 
-/** Only states that ask for a reader colour a card's border; running and done cards stay on the resting hairline and
- *  say their state by glyph and word, so a busy run never reads as a wall of glowing outlines. */
 export function cardBorder(status: AgentGraphStatus) {
-  if (status === "running" || status === "succeeded") return { borderColor: RESTING_BORDER };
-  if (status === "unknown") return { borderColor: "hsl(var(--muted-foreground) / 0.45)", borderStyle: "dashed" as const };
-  if (status === "idle") return { borderColor: "hsl(var(--border))" };
-  if (status === "stopped") return { borderColor: RESTING_BORDER, boxShadow: RESTING_SHADOW };
-  return statusBorder(agentStatus(status).flow);
+  if (status === "needs-you" || status === "failed") return { borderColor: agentStatus(status).color, borderWidth: status === "needs-you" ? 1.5 : 1 };
+  return { borderColor: RESTING_BORDER };
 }
 
 /** The words a reader without the picture receives for one agent. */
@@ -110,6 +69,7 @@ export function agentSummary(agent: AgentGraphNode): string {
     agent.model,
     agentStatus(agent.status).label,
     agent.turn,
+    agent.result,
     cost,
     tokens,
   ]
@@ -118,7 +78,7 @@ export function agentSummary(agent: AgentGraphNode): string {
 }
 
 export type AgentCardNode = Node<
-  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection },
+  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onOpen?: () => void; parentLabel?: string },
   "agent"
 >;
 
@@ -149,69 +109,46 @@ export function Handles({ direction, source = true }: { direction: AgentGraphDir
   );
 }
 
-export function AgentCard({ data }: NodeProps<AgentCardNode>) {
-  const { agent, selected, direction } = data;
+export function AgentCardView({ agent, selected, direction, now: fixed, onOpen, parentLabel, handles = false }: AgentCardNode["data"] & { handles?: boolean }) {
+  const now = useRunNow(fixed);
+  const quiet = quietActivity(agent, now);
   const s = agentStatus(agent.status);
-  const meta = [agent.role, agent.harness].filter(Boolean).join(" · ");
-  const cost = fmtCost(agent.costUsd ?? undefined);
-  const tokens = fmtTokenTotal(agent.tokens);
-  return (
-    <div
-      data-status={agent.status}
-      data-selected={selected || undefined}
-      title={agentSummary(agent)}
-      className={`relative flex h-full w-full cursor-pointer flex-col justify-between rounded-xl border bg-card px-3 pt-2.5 pb-2 text-left hover:-translate-y-px motion-reduce:hover:translate-y-0 after:pointer-events-none after:absolute after:inset-0 after:rounded-xl after:opacity-0 after:shadow-[0_10px_28px_-10px_hsl(var(--foreground)/0.45)] after:transition-opacity after:duration-150 after:ease-out hover:after:opacity-100 motion-reduce:after:transition-none group-focus-visible/agent:outline-2 group-focus-visible/agent:outline-offset-4 group-focus-visible/agent:outline-ring ${MOTION_CONTROL}`}
-      style={{
-        boxShadow: RESTING_SHADOW,
-        ...cardBorder(agent.status),
-        ...(selected ? SELECTION_OUTLINE : {}),
-      }}
-    >
-      <Handles direction={direction} />
-      <div className="flex min-w-0 items-center gap-2.5">
-        <NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={30} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-[13px] text-foreground leading-[18px] tracking-[-0.01em]">
-            {agent.label}
-          </div>
-          <div className="truncate text-[11px] text-muted-foreground leading-4">{meta || " "}</div>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-0.5 self-start">
-          <StatusGlyph status={agent.status} size={15} />
-        </div>
-      </div>
-      <div className="flex min-w-0 items-center gap-1.5 text-[11px] leading-4">
-        <span className="shrink-0 font-medium" style={{ color: s.color === MUTED ? undefined : s.color }}>
-          {s.label}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-muted-foreground">
-          {agent.turn ? agent.turn : ""}
-        </span>
-        {(cost ?? tokens) && (
-          <span className="shrink-0 text-muted-foreground tabular-nums">{cost ?? tokens}</span>
-        )}
-      </div>
+  return <div data-status={agent.status} data-activity={quiet ? "quiet" : undefined} data-selected={selected || undefined}
+    title={agentSummary(agent)} className={`ag-agent-card relative flex h-full w-full flex-col gap-0.5 rounded-[var(--radius-card)] border bg-card px-3 py-2 text-left ${MOTION_CONTROL}`}
+    style={{ boxShadow: RESTING_SHADOW, ...cardBorder(agent.status), ...(selected ? SELECTION_OUTLINE : {}) }}>
+    {handles && <Handles direction={direction} />}
+    <div className="flex min-w-0 items-center gap-2">
+      <span className="grayscale hover:grayscale-0"><NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} /></span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{parentLabel && <span className="ag-parent-label">{parentLabel} / </span>}{agent.label}</span>
+      <span className="text-xs text-muted-foreground tabular-nums" title={agent.costUsd == null ? "Cost not reported" : "Cost"}>{fmtCost(agent.costUsd ?? undefined) ?? "—"}</span>
     </div>
-  );
+    <p className="m-0 line-clamp-2 min-h-4 text-xs text-foreground leading-4">{(agent.status === "failed" ? agent.result ?? agent.turn : agent.turn) || "—"}</p>
+    <div className="mt-auto flex items-center justify-between gap-1 text-xs" style={{ color: quiet ? "var(--surface-warning-text)" : s.color }}>
+      <span className="flex items-center gap-1"><StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}</span>
+      {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onOpen} onClick={event => { event.stopPropagation(); onOpen?.(); }}>Respond</button>}
+    </div>
+  </div>;
 }
 
+export function AgentCard({ data }: NodeProps<AgentCardNode>) { return <AgentCardView {...data} handles />; }
+
 export type AgentFrameNode = Node<
-  { frame: AgentFrame; statuses: readonly AgentGraphStatus[]; direction: AgentGraphDirection },
+  { frame: AgentFrame; statuses: readonly AgentGraphStatus[]; quietCount?: number; direction: AgentGraphDirection },
   "agentFrame"
 >;
 
 /** The statuses a grid caption counts: the ones a reader looks for. */
-const CAPTION_STATUSES: readonly AgentGraphStatus[] = ["running", "waiting", "failed"];
+const CAPTION_STATUSES: readonly (AgentGraphStatus | "quiet")[] = ["needs-you", "failed", "quiet", "waiting", "running"];
 
 export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
   const { frame, statuses, direction } = data;
   const counts = CAPTION_STATUSES.map((status) => ({
     status,
-    n: statuses.filter((s) => s === status).length,
+    n: status === "quiet" ? data.quietCount ?? 0 : statuses.filter((s) => s === status).length,
   })).filter((c) => c.n > 0);
   const words = [
     `${frame.group.memberIds.length} agents`,
-    ...counts.map((c) => `${c.n} ${agentStatus(c.status).label.toLowerCase()}`),
+    ...counts.map((c) => `${c.n} ${c.status === "quiet" ? "quiet" : agentStatus(c.status).label.toLowerCase()}`),
   ].join(", ");
   return (
     <div
@@ -230,8 +167,8 @@ export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
         </span>
         {counts.map((c) => (
           <span key={c.status} aria-hidden className="flex items-center gap-1 tabular-nums">
-            <StatusGlyph status={c.status} size={11} />
-            {c.n}
+            {c.status !== "quiet" && <StatusGlyph status={c.status} size={11} />}
+            {c.n}{c.status === "quiet" ? " quiet" : ""}
           </span>
         ))}
       </div>
@@ -244,11 +181,10 @@ export type AgentMessageEdge = Edge<
   "agentMessage"
 >;
 
-/** The secondary edges' colours: a message is quiet, a delegation is the
- *  primary accent's wash. Both stay well under a spawn edge's weight. */
+/** Resting message and delegation edges stay neutral. */
 export const MESSAGE_EDGE_COLOR: Record<Exclude<AgentGraphEdgeKind, "spawn">, string> = {
   message: "color-mix(in srgb, hsl(var(--muted-foreground)) 70%, transparent)",
-  delegation: "color-mix(in srgb, hsl(var(--primary)) 75%, transparent)",
+  delegation: "color-mix(in srgb, hsl(var(--muted-foreground)) 80%, transparent)",
 };
 
 type Box = { x: number; y: number; w: number; h: number };
@@ -316,7 +252,7 @@ export function AgentMessageEdgeView({ id, source, target, data, markerEnd }: Ed
         path={path}
         markerEnd={markerEnd}
         interactionWidth={10}
-        style={{ stroke: color, strokeWidth: 1.25, strokeDasharray: "4 4", fill: "none" }}
+        style={{ stroke: color, strokeWidth: 1.25, fill: "none" }}
       />
       {count > 1 && (
         <EdgeLabelRenderer>

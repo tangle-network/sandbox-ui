@@ -1,23 +1,16 @@
-/**
- * The hub layout of `AgentGraph`: who asked (You), the orchestrator, the agents
- * it runs and the tools they call, with each call travelling along its edge in
- * its kind's colour. Plain DOM and SVG on a fixed grid, so it renders on the
- * server, scales to its container, and costs no graph library.
- */
+/** The hub presents agent and tool calls on a stable canvas or a readable list. */
 
-import { type CSSProperties, type KeyboardEvent, type ReactNode, type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, type ReactNode, type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AgentGraphEdge, AgentGraphNode } from "./agent-graph-layout";
 import { AGENT_HUB_CSS } from "./agent-hub-css";
 import {
-  type AgentGraphCall, type AgentGraphTool, HUB_METRICS, HUB_METRICS_COMPACT, type HubMetrics, layoutHub, orthogonalPath, YOU_ID,
+  type AgentGraphCall, type AgentGraphTool, HUB_METRICS, type HubMetrics, layoutHub, orthogonalPath, YOU_ID,
 } from "./agent-hub-layout";
 import { CALL_COLOR, CALL_LABEL, type HubEntity, HubNode, HubPopover } from "./agent-hub-parts";
-import { shortModel } from "./naming";
-import { motionAllowed } from "./canvas-theme";
+import { quietActivity, tokenMilliseconds, useMotionAllowed, useRunNow } from "./run-ui-state";
+import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
 import { fmtCost } from "./format";
 
-/** A call shows on its edge while it runs and for this long after it ends. */
-const ACTIVE_MS = 2600;
 const PAD_X = 84;
 const PAD_Y = 36;
 
@@ -49,34 +42,68 @@ function useWidth(ref: RefObject<HTMLElement | null>) {
   return width;
 }
 
-function useNow(now: number | undefined) {
-  const [tick, setTick] = useState(() => Date.now());
+function CallStroke({ call, d, length, now, forward, animate }: { call: AgentGraphCall; d: string; length: number; now: number; forward: boolean; animate: boolean }) {
+  const ref = useRef<SVGPathElement>(null);
+  const routeRef = useRef<SVGPathElement>(null);
+  const [chevron, setChevron] = useState<{ x: number; y: number; angle: number; travel: number; decay: number }>();
+  const end = call.durationMs == null ? Infinity : call.startedAt + call.durationMs;
+  const returning = now >= end;
+  useLayoutEffect(() => {
+    const path = routeRef.current;
+    if (!path) return;
+    const middle = path.getTotalLength() / 2, point = path.getPointAtLength(middle), before = path.getPointAtLength(middle - 1), after = path.getPointAtLength(middle + 1);
+    const ambient = tokenMilliseconds("--duration-ambient", path);
+    setChevron({ x: point.x, y: point.y, angle: Math.atan2(after.y - before.y, after.x - before.x) * 180 / Math.PI + (forward === returning ? 180 : 0), travel: Math.min(ambient * .9, Math.max(ambient * .3, length / 320 * 1000)), decay: ambient * 4 });
+  }, [d, length, forward, returning]);
   useEffect(() => {
-    if (now !== undefined) return;
-    const timer = setInterval(() => setTick(Date.now()), 500);
-    return () => clearInterval(timer);
-  }, [now]);
-  return now ?? tick;
+    const el = ref.current;
+    const duration = chevron?.travel;
+    if (!el || !animate || call.kind === "failed" || !duration) return;
+    const age = now - (returning ? end : call.startedAt);
+    if (age > duration) return;
+    const reverse = forward === returning;
+    const animation = el.animate([{ strokeDashoffset: reverse ? -length : 24, opacity: .35 }, { strokeDashoffset: reverse ? 24 : -length, opacity: .35 }], { duration, easing: "linear" });
+    animation.currentTime = Math.max(0, age);
+    return () => animation.cancel();
+  }, [call.id, returning, animate, length, forward, chevron?.travel]);
+  const age = Math.max(0, now - end);
+  const tint = returning ? Math.max(0, .55 * (1 - age / (chevron?.decay || 1))) : .55;
+  return <g data-call-id={call.id} data-direction={forward !== returning ? "forward" : "return"} style={{ stroke: CALL_COLOR[call.kind] }}>
+    <path ref={routeRef} d={d} className="ag-edge-live" opacity={tint} />
+    {chevron && <path data-call-arrow opacity={returning ? tint / .55 : 1} d="M-3,-3 L1,0 L-3,3" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" transform={`translate(${chevron.x},${chevron.y}) rotate(${chevron.angle})`} />}
+    {animate && <path ref={ref} d={d} className="ag-flow" strokeDasharray={`24 ${length}`} opacity={0} />}
+  </g>;
 }
 
 export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now: nowProp, title = "Agent graph", selectedId, onSelect, className }: AgentHubCanvasProps) {
   const wrap = useRef<HTMLDivElement>(null);
   const width = useWidth(wrap);
-  const now = useNow(nowProp);
+  const now = useRunNow(nowProp);
   const [hover, setHover] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(selectedId ?? null);
   const buttons = useRef(new Map<string, HTMLButtonElement>());
   const closeRef = useRef<HTMLButtonElement>(null);
-  const animate = useMemo(() => motionAllowed(), []);
+  const animate = useMotionAllowed();
   const visibleCalls = useMemo(() => calls.filter((c) => c.startedAt <= now), [calls, now]);
-  const layout = useMemo(() => layoutHub({ nodes, edges, tools, calls, you: Boolean(you) }), [nodes, edges, tools, calls, you]);
+  const nextLayout = useMemo(() => layoutHub({ nodes, edges, tools, calls, you: Boolean(you) }), [nodes, edges, tools, calls, you]);
+  const layoutKey = JSON.stringify(nextLayout);
+  const layoutRef = useRef({ key: layoutKey, layout: nextLayout });
+  if (layoutRef.current.key !== layoutKey) layoutRef.current = { key: layoutKey, layout: nextLayout };
+  const layout = layoutRef.current.layout;
+  const callSummaries = useMemo(() => {
+    const summaries = { call: new Map<string, AgentGraphCall>(), answer: new Map<string, AgentGraphCall>(), "needs-you": new Map<string, AgentGraphCall>() };
+    for (const call of visibleCalls) if (call.kind !== "failed") {
+      const bucket = summaries[call.kind], id = call.kind === "call" ? call.to : call.from;
+      if (!bucket.has(id) || bucket.get(id)!.startedAt < call.startedAt) bucket.set(id, call);
+    }
+    return summaries;
+  }, [visibleCalls]);
 
-  // Full metrics when they fit at three quarters scale or better, else the compact grid.
-  // The last row's centre sits half a hub tile below its cell top, and its tile and name hang below that.
   const span = (m: HubMetrics) => ({ w: (layout.maxCol - layout.minCol) * m.cellX + PAD_X * 2, h: (layout.maxRow - layout.minRow) * m.cellY + PAD_Y * 2 + m.hubTile + m.label });
-  const metrics = width && width / span(HUB_METRICS).w < 0.75 ? HUB_METRICS_COMPACT : HUB_METRICS;
+  const metrics = HUB_METRICS;
   const { w, h } = span(metrics);
-  const scale = width ? Math.min(1, width / w) : 1;
+  const list = width > 0 && (width < 600 || width / w < .85);
+  const scale = width ? Math.max(.85, Math.min(1, width / w)) : 1;
 
   const entities = useMemo(() => {
     const map = new Map<string, HubEntity>();
@@ -87,26 +114,33 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
         map.set(p.id, { id: p.id, kind: "tool", label: tool.label, tool });
       } else {
         const agent = nodes.find((n) => n.id === p.id)!;
-        map.set(p.id, { id: p.id, kind: p.kind, label: agent.label, sub: agent.model ? shortModel(agent.model) : undefined, status: agent.status, agent });
+        map.set(p.id, { id: p.id, kind: p.kind, label: agent.label, sub: (agent.status === "succeeded" ? agent.result ?? callSummaries.answer.get(agent.id)?.label : undefined) ?? agent.turn ?? (agent.status === "needs-you" ? callSummaries["needs-you"].get(agent.id)?.label : undefined) ?? callSummaries.call.get(agent.id)?.label ?? undefined, status: agent.status, quiet: quietActivity(agent, now)?.label, agent });
       }
     }
     return map;
-  }, [layout, nodes, tools, you]);
+  }, [layout, nodes, tools, you, now, callSummaries]);
 
-  const at = (id: string) => {
-    const p = layout.placements.find((q) => q.id === id)!;
-    return { x: (p.col - layout.minCol) * metrics.cellX + PAD_X, y: (p.row - layout.minRow) * metrics.cellY + PAD_Y + metrics.hubTile / 2 };
-  };
+  const { positions, routes } = useMemo(() => {
+    const positions = new Map(layout.placements.map(p => [p.id, { x: (p.col - layout.minCol) * metrics.cellX + PAD_X, y: (p.row - layout.minRow) * metrics.cellY + PAD_Y + metrics.hubTile / 2, tile: p.kind === "hub" ? metrics.hubTile : p.kind === "you" ? metrics.tile - 8 : metrics.tile }]));
+    const bounds = layout.placements.map(p => { const { x, y, tile } = positions.get(p.id)!; return { id: p.id, tile: { left: x - tile / 2 - 4, right: x + tile / 2 + 4, top: y - tile / 2 - 4, bottom: y + tile / 2 + 4 }, label: { left: x - (p.kind === "tool" || p.kind === "you" ? 70 : 92), right: x + (p.kind === "tool" || p.kind === "you" ? 70 : 92), top: y + tile / 2 + 4, bottom: y + tile / 2 + (p.kind === "tool" || p.kind === "you" ? 30 : 64) } }; });
+    let lanes = 0;
+    const routes = new Map(layout.links.map(link => {
+      const a = positions.get(link.from)!, b = positions.get(link.to)!;
+      const fromHub = layout.placements.find(p => p.id === link.from)?.kind === "hub";
+      const lane = fromHub ? (++lanes % 2 ? -1 : 1) * Math.ceil(lanes / 2) * 12 : 0;
+      return [`${link.from}|${link.to}`, orthogonalPath(a, b, b.y < a.y, lane, 10, bounds.flatMap(rect => [...(rect.id === link.from || rect.id === link.to ? [] : [rect.tile]), rect.label]))];
+    }));
+    return { positions, routes };
+  }, [layout, metrics]);
+  const at = (id: string) => positions.get(id)!;
 
-  // Each edge carries its latest call while it is live: kind, direction and whether it still runs.
   const edgeState = (from: string, to: string) => {
     let latest: AgentGraphCall | undefined;
     for (const c of visibleCalls) {
       if ((c.from === from && c.to === to) || (c.from === to && c.to === from)) if (!latest || c.startedAt > latest.startedAt) latest = c;
     }
     if (!latest) return undefined;
-    const end = latest.durationMs == null ? Infinity : latest.startedAt + latest.durationMs;
-    return now - end <= ACTIVE_MS ? latest : undefined;
+    return latest;
   };
 
   const focus = hover ?? open;
@@ -120,11 +154,12 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
     return set;
   }, [focus, layout]);
 
+  const availableTools = tools.filter(tool => !visibleCalls.some(call => call.from === tool.id || call.to === tool.id));
   const agents = nodes.length;
   const lastMinute = visibleCalls.filter((c) => now - c.startedAt <= 60_000).length;
   const costs = nodes.map((n) => n.costUsd);
-  const cost = costs.every((c) => c != null) ? costs.reduce((s, c) => s + (c ?? 0), 0) : undefined;
-  const chips = nodes.filter((n) => n.status === "needs-you" || n.status === "failed");
+  const cost = costs.every((c) => c != null && Number.isFinite(c) && c >= 0) ? costs.reduce<number>((s, c) => s + (c ?? 0), 0) : undefined;
+  const chips = nodes.filter((n) => n.status === "needs-you" || n.status === "failed" || quietActivity(n, now));
 
   const openNode = (id: string) => {
     const next = open === id ? null : id;
@@ -133,11 +168,11 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
   };
   useEffect(() => { if (open) closeRef.current?.focus({ preventScroll: true }); }, [open]);
 
-  // Arrow keys move to the nearest node in that direction.
   const keydown = (id: string) => (event: KeyboardEvent<HTMLButtonElement>) => {
     const dirs: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
     const dir = dirs[event.key];
-    if (event.key === "Escape") { setOpen(null); return; }
+    if (event.key === "Escape") { setOpen(null); buttons.current.get(id)?.focus(); return; }
+    if (event.key === "Home") { event.preventDefault(); nodes[0] && buttons.current.get(nodes[0].id)?.focus(); return; }
     if (!dir) return;
     event.preventDefault();
     const from = at(id);
@@ -159,46 +194,48 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
     const p = at(openEntity.id);
     const right = (p.x + 140 + 280) * scale < (width || w);
     const left = right ? (p.x + 40) * scale : Math.max(8, (p.x - 40) * scale - 280);
-    const top = Math.max(8, (p.y - metrics.hubTile / 2 - 8) * scale);
+    const top = list ? 8 : Math.max(8, (p.y - metrics.hubTile / 2 - 8) * scale);
     const summary = openEntity.kind === "you" ? (typeof you === "object" ? you.summary : undefined)
-      : openEntity.agent?.turn ?? undefined;
+      : openEntity.agent?.turn ?? openEntity.sub ?? undefined;
     return <HubPopover entity={openEntity} entities={entities} calls={visibleCalls} now={now} left={left} top={top} summary={summary}
       closeRef={closeRef} onClose={() => { const id = open!; setOpen(null); buttons.current.get(id)?.focus(); }} />;
   })();
 
-  // Edges that leave one node along the same side share a lane offset so they run side by side.
-  const lanes = new Map<string, number>();
-  const laneOf = (node: string) => { const n = lanes.get(node) ?? 0; lanes.set(node, n + 1); return (n % 2 ? 1 : -1) * Math.ceil(n / 2) * 6; };
 
   return (
     <section className={`ag-root ${className ?? ""}`} aria-label={typeof title === "string" ? title : "Agent graph"}>
       <style>{AGENT_HUB_CSS}</style>
       <header className="ag-head">
         <span className="ag-title"><span className="ag-title-mark" aria-hidden />{title}</span>
-        {chips.map((n) => <span key={n.id} className={`ag-chip ag-chip-${n.status}`}>{n.status === "failed" ? "!" : "◷"} {n.label} {n.status === "failed" ? "failed" : "needs you"}</span>)}
+        {chips.map(n => <button type="button" key={n.id} className={`ag-chip ag-chip-${n.status}`} onClick={() => openNode(n.id)}><RunStatusIcon status={quietActivity(n, now) ? "waiting" : n.status} aria-hidden />{n.label} {quietActivity(n, now)?.label ?? statusMeta(n.status).label}</button>)}
         <span className="ag-stats">
           <span><b>{agents}</b> {agents === 1 ? "agent" : "agents"}</span>
           <span><b>{tools.length}</b> {tools.length === 1 ? "tool" : "tools"}</span>
           <span><b>{lastMinute}</b> calls/min</span>
-          <span title={cost === undefined ? "Not every agent recorded its cost" : undefined}><b>{cost === undefined ? "Unknown" : fmtCost(cost)}</b>{cost === undefined ? " cost" : ""}</span>
+          <span title={cost === undefined ? "Not every agent recorded its cost" : "Total recorded agent cost"}><b>{cost === undefined ? "—" : fmtCost(cost)}</b> cost</span>
         </span>
       </header>
-      <div ref={wrap} className="ag-canvas-wrap" style={{ height: h * scale }} onKeyDown={(e) => { if (e.key === "Escape") setOpen(null); }}>
-        <div className="ag-canvas" style={{ width: w, height: h, transform: `scale(${scale})` }}>
+      <div ref={wrap} className={`ag-canvas-wrap${list ? " ag-list-mode" : ""}`} style={list ? undefined : { height: h * scale }} onKeyDown={(e) => { if (e.key === "Escape") setOpen(null); }}>
+        {list ? <><ul className="ag-mobile">{[...entities.values()].filter(e => e.agent).sort((a, b) => {
+          const rank = (e: HubEntity) => e.status === "needs-you" ? 0 : e.status === "failed" ? 1 : e.quiet ? 2 : e.status === "waiting" ? 3 : e.status === "running" ? 4 : 5;
+          return rank(a) - rank(b);
+        }).map(entity => <li key={entity.id}>
+          <HubNode entity={entity} x={0} y={0} tile={32} dimmed={false} selected={open === entity.id}
+            buttonRef={el => { if (el) buttons.current.set(entity.id, el); else buttons.current.delete(entity.id); }}
+            onOpen={() => openNode(entity.id)} onHover={() => {}} onKeyDown={keydown(entity.id)} />
+          <div className="ag-tools">{tools.filter(t => visibleCalls.some(c => c.from === entity.id && c.to === t.id || c.to === entity.id && c.from === t.id)).map(t =>
+            <button type="button" key={t.id} onClick={() => openNode(t.id)}>{t.label}</button>)}</div>
+        </li>)}</ul>{availableTools.length > 0 && <div className="ag-available"><span>Available tools</span><div className="ag-tools">{availableTools.map(tool => <button type="button" key={tool.id} onClick={() => openNode(tool.id)}>{tool.label}</button>)}</div></div>}</> : <div className="ag-canvas" style={{ width: w, height: h, transform: `scale(${scale})` }}>
           <svg className="ag-edges" width={w} height={h} aria-hidden>
             {layout.links.map((l) => {
-              const a = at(l.from), b = at(l.to);
-              const fromHub = layout.placements.find((p) => p.id === l.from)?.kind === "hub";
-              const sameCol = Math.abs(a.x - b.x) < 1;
-              const { d, length } = orthogonalPath(a, b, l.from !== YOU_ID && (fromHub || sameCol), fromHub ? laneOf(l.from) : 0);
+              const { d, length } = routes.get(`${l.from}|${l.to}`)!;
               const live = edgeState(l.from, l.to);
               const touches = !related || (related.has(l.from) && related.has(l.to));
               const forward = live ? live.from === l.from : true;
               return (
                 <g key={`${l.from}-${l.to}`} className={touches ? undefined : "ag-dimmed"}>
                   <path d={d} className="ag-edge" />
-                  {live && <path d={d} className={`ag-edge-live${animate && live.kind !== "failed" ? " ag-flow" : ""}`}
-                    style={{ stroke: CALL_COLOR[live.kind], "--ag-len": `${length}px`, animationDirection: forward ? "normal" : "reverse" } as CSSProperties} />}
+                  {live && <CallStroke call={live} d={d} length={length} now={now} forward={forward} animate={animate} />}
                 </g>
               );
             })}
@@ -211,12 +248,12 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
               selected={open === p.id} buttonRef={(el) => { if (el) buttons.current.set(p.id, el); else buttons.current.delete(p.id); }}
               onOpen={() => openNode(p.id)} onHover={(on) => setHover((prev) => (on ? p.id : prev === p.id ? null : prev))} onKeyDown={keydown(p.id)} />;
           })}
-        </div>
+        </div>}
         {popover}
       </div>
-      <ul className="ag-legend" aria-label="Edge colours">
+      {!list && <ul className="ag-legend" aria-label="Edge colours">
         {(["call", "answer", "needs-you", "failed"] as const).map((k) => <li key={k}><span className="ag-legend-line" style={{ background: CALL_COLOR[k] }} />{CALL_LABEL[k]}</li>)}
-      </ul>
+      </ul>}
     </section>
   );
 }

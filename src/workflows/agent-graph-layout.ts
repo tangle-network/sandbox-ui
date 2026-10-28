@@ -1,21 +1,8 @@
 /**
- * Where every agent of a multi-agent run sits on the `AgentGraph` canvas.
- *
- * Only SPAWN edges shape the layout: they make the run's tree (a manager and
- * the workers it started). Message and delegation edges are drawn over the
- * finished layout and never move a card.
- *
- * A parent that spawned many workers which spawned nobody would, laid out as a
- * plain tree, put all of them in one row: sixteen 200px cards side by side is a
- * 3,000px strip that a 360px pane can only show as specks. Those leaf workers
- * are packed into a grid inside one frame instead, reached by one edge from
- * their parent, and the grid's column count is chosen for the canvas it is
- * shown in ({@link pickAgentLayout}). Workers that spawned workers of their own
- * stay tree nodes, so the depth of the run is still visible.
- *
- * Positions come from ELK's layered algorithm (the optional `elkjs` peer,
- * shared with `WorkflowGraph` through `loadElk`). Without it, a row-per-depth
- * layout keeps the graph drawable.
+ * Stable desktop geometry for AgentGraph. Spawn edges determine the tree and
+ * packed leaf groups; message and delegation edges never move cards.
+ * ELK lays out candidate column counts; a row-per-depth fallback keeps the
+ * graph usable without that optional peer. Narrow containers use Canvas's list.
  */
 
 import type { ElkNode } from "elkjs/lib/elk-api";
@@ -51,6 +38,10 @@ export interface AgentGraphNode {
   activity?: AgentGraphActivity | null;
   /** Live cards: its latest tool calls or events, oldest first; the card shows the last three. */
   events?: readonly AgentGraphEvent[] | null;
+  /** Recorded activity and full-stream median, when the visible event tail is bounded. Epoch milliseconds. */
+  lastActivityAt?: number;
+  /** Median interval between recorded events, in milliseconds. */
+  medianEventGapMs?: number;
   /** Live cards: the reasoning effort it runs at, e.g. "high". */
   effort?: string | null;
   /** Live cards: epoch ms it was spawned, for its time alive. */
@@ -84,9 +75,9 @@ export interface AgentGraphEdge {
 export type AgentGraphDirection = "TB" | "LR";
 
 /** Every agent card's size. Fixed, so a status or turn update never moves a card. */
-export const AGENT_CARD = { width: 200, height: 78 } as const;
+export const AGENT_CARD = { width: 240, height: 88 } as const;
 /** A live card: room for the header, a two-line thinking line and the last three events. Fixed for the same reason. */
-export const LIVE_AGENT_CARD = { width: 304, height: 152 } as const;
+export const LIVE_AGENT_CARD = { width: 304, height: 164 } as const;
 
 export type CardSize = { readonly width: number; readonly height: number };
 /** A parent with at least this many leaf workers draws them as a grid. */

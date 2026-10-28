@@ -52,6 +52,6 @@ export function useColorMode(wrapperRef: RefObject<HTMLDivElement | null>, hasGr
  *  run status, the shadow carries the running/waiting glow — and an outline
  *  composes with both without disturbing the laid-out box. */
 export const SELECTION_OUTLINE: CSSProperties = {
-  outline: "2px solid hsl(var(--primary))",
+  outline: "2px solid hsl(var(--foreground) / .7)",
   outlineOffset: 2,
 };

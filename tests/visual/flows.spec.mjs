@@ -17,9 +17,9 @@ const flows = [
     name: 'run-graph-view',
     story: 'run-traceworkspace--timeline-and-graph',
     act: async (page) => {
-      await page.getByRole('button', { name: 'graph', exact: true }).click()
+      if (await page.getByRole('radio', { name: 'Graph', exact: true }).getAttribute('aria-checked') !== 'true') await page.getByRole('radio', { name: 'Graph', exact: true }).click()
       // Agent cards only: the tree also draws a frame node around a parent's packed workers.
-      const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent')
+      const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent, .ag-phone-select')
       await expect(cards).toHaveCount(5)
       await cards.filter({ hasText: 'verifier' }).click()
       await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toBeVisible()
@@ -31,11 +31,12 @@ const flows = [
     name: 'run-graph-factory',
     story: 'run-traceworkspace--factory-run',
     act: async (page) => {
-      await page.getByRole('button', { name: 'graph', exact: true }).click()
-      await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
-      const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent')
+      if (await page.getByRole('radio', { name: 'Graph', exact: true }).getAttribute('aria-checked') !== 'true') await page.getByRole('radio', { name: 'Graph', exact: true }).click()
+      await expect(page.locator('.agent-graph[data-layout="ready"], .agent-graph[data-layout="list"]')).toBeVisible()
+      const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent, .ag-phone-select')
       await expect(cards).toHaveCount(96)
       await expect(page.getByRole('region', { name: 'Code at the cursor' })).toHaveCount(0)
+      if (await page.locator('[data-layout="list"]').count()) return
       const outside = await page.evaluate(() => {
         const pane = document.querySelector('.agent-graph').getBoundingClientRect()
         return [...document.querySelectorAll('.react-flow__node-agent, .react-flow__node-liveAgent')].filter((card) => {
@@ -54,12 +55,12 @@ const flows = [
     name: 'agentgraph-live-failed',
     story: 'workflows-agentgraph--live-run-cards',
     act: async (page) => {
-      await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
+      await expect(page.locator('.agent-graph[data-layout="ready"], .agent-graph[data-layout="list"]')).toBeVisible()
       const failed = page.locator('.ag-live-card[data-status="failed"]')
       await expect(failed).toHaveCount(1)
       await expect(failed.locator('.ag-live-failure')).toContainText('regressed 38%')
       await expect(page.locator('.ag-live-slot[data-status="failed"]')).toHaveCount(0)
-      await expect(page.locator('.ag-live-slot[data-status="succeeded"]')).toHaveCount(1)
+      await expect(page.locator('.ag-live-chip[data-status="succeeded"]')).toHaveCount(1)
     },
   },
   {

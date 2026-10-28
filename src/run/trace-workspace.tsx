@@ -1,19 +1,22 @@
 "use client"
 
 import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { toolGlyph } from "@tangle-network/charts/react"
 import type { FlowMarker, FlowSpan, FlowTrace } from "@tangle-network/charts"
 import { AgentTimeline, type AgentTimelineItem } from "@tangle-network/ui/chat"
-import { InlineThinkingItem } from "@tangle-network/ui/run"
+import { InlineThinkingItem, runStatus } from "@tangle-network/ui/run"
 import { X } from "lucide-react"
 import { cn } from "../lib/utils"
-import { AgentGraph, type AgentGraphEdge, type AgentGraphNode } from "../workflows/AgentGraph"
+import { activityTiming, ambientStyle, syncAmbient } from "../workflows/run-ui-state"
+import { AgentGraph, type AgentGraphEdge, type AgentGraphNode, type AgentGraphEvent, type AgentGraphProps } from "../workflows/AgentGraph"
 import { type AgentTranscriptEntry, useAgentStream } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
+import { LatestEvents } from "./latest-events"
 
 /** A moment on the run's event track: a release, a check verdict, a spawn, a crash or a steer. */
 export interface TraceEvent extends FlowMarker {}
 
-export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" | "markers" | "onSelect" | "onTimeChange" | "selectedId" | "onDeselect"> {
+export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" | "markers" | "onSelect" | "onTimeChange" | "selectedId" | "onDeselect" | "graph" | "latestEvents"> {
   trace: FlowTrace
   /** The selected agent's message stream (Server-Sent Events: rows, reset, end; reconnects with ?after=lastSeq). */
   streamUrl?: (agentId: string) => string
@@ -33,9 +36,11 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   onSelectAgent?: (agentId: string | undefined) => void
   /**
    * What the trace cannot say about a live agent, by agent id: its activity, thinking line, latest events, commits or
-   * result. The Graph view draws them on the agent's live card; status, model, cost and lifetime come from the trace.
+   * result. Timed agents follow the trace cursor. Workers without recorded timing retain their live identity and metadata.
    */
   agentCards?: Readonly<Record<string, Partial<AgentGraphNode>>>
+  /** Existing graph layouts and recorded edges/tools; node identity and clock stay with this workspace. */
+  agentGraph?: Partial<Pick<AgentGraphProps, "edges" | "tools" | "calls" | "you" | "direction" | "title" | "className">> & { defaultLayout?: AgentGraphProps["layout"] }
   className?: string
 }
 
@@ -49,26 +54,48 @@ function agentOf(span: FlowSpan, byId: Map<string, FlowSpan>): FlowSpan | undefi
 
 /** The trace's agents as a spawn tree at the cursor: an agent not started by then is left out, one that ends after it is
  *  still running, so the Graph and the Timeline always show the same moment. */
-function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, at: number | null, epoch: number | undefined, cards: TraceWorkspaceProps["agentCards"]) {
-  const nodes: AgentGraphNode[] = []
-  const edges: AgentGraphEdge[] = []
-  const seen = new Set<string>()
+function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, at: number | null, epoch: number | undefined, cards: TraceWorkspaceProps["agentCards"], extraEdges: readonly AgentGraphEdge[] = []) {
+  const nodes: AgentGraphNode[] = [], edges: AgentGraphEdge[] = [], seen = new Set<string>()
+  const timed = new Set(spans.flatMap(span => span.kind === "pipeline" && span.id ? [span.id] : []))
+  const recorded = new Map<string, AgentGraphEvent[]>()
+  for (const [index, span] of spans.entries()) {
+    if (span.kind === "pipeline" || (at !== null && span.startMs > at)) continue
+    const owner = agentOf(span, byId)
+    if (!owner?.id) continue
+    const events = recorded.get(owner.id) ?? []
+    const endpoints = [{ suffix: "start", label: "Started ", time: span.startMs }]
+    if (span.status !== "running" && span.endMs !== span.startMs && (at === null || span.endMs <= at)) endpoints.push({ suffix: "end", label: "Recorded ", time: span.endMs })
+    for (const endpoint of endpoints) events.push({ id: (span.id ?? String(index)) + ":" + endpoint.suffix, label: endpoint.label + span.name, at: epoch == null || !Number.isFinite(epoch) ? undefined : epoch + endpoint.time })
+    recorded.set(owner.id, events)
+  }
   for (const span of spans) {
-    if (span.kind !== "pipeline" || !span.id || (at !== null && span.startMs > at)) continue
-    // A host that sends one id twice (a run id reused as its root agent's) gets one agent, not a root nested in its own team.
-    if (seen.has(span.id)) continue
+    if (span.kind !== "pipeline" || !span.id || seen.has(span.id) || (at !== null && span.startMs > at)) continue
     seen.add(span.id)
-    const running = at === null ? span.status === "running" : span.endMs > at || span.status === "running"
-    nodes.push({
-      id: span.id, label: span.name, model: span.detail, costUsd: span.costUsd,
-      status: running ? "running" : span.status === "failed" ? "failed" : "succeeded",
-      startedAt: epoch === undefined ? undefined : epoch + span.startMs,
-      ...cards?.[span.id],
+    const card = cards?.[span.id]
+    const state = at !== null && (span.endMs > at || span.status === "running") ? "running" : runStatus(span.status ?? "unknown")
+    const activity = (span.activityAt ?? []).reduce((last, time) => Number.isFinite(time) && (at === null || time <= at) ? Math.max(last, time) : last, -Infinity)
+    const events = (card?.events ?? recorded.get(span.id) ?? []).filter(event => at === null || epoch != null && event.at != null && event.at <= epoch + at).sort((a, b) => (a.at ?? 0) - (b.at ?? 0))
+    const timing = activityTiming({ events,
+      lastActivityAt: epoch != null && Number.isFinite(epoch) && Number.isFinite(activity) ? epoch + activity : at === null ? card?.lastActivityAt : undefined,
+      medianEventGapMs: span.medianEventGapMs ?? (at === null ? card?.medianEventGapMs : undefined),
     })
-    const parent = span.parentId ? byId.get(span.parentId) : undefined
-    const spawner = parent && agentOf(parent, byId)
+    nodes.push({ ...card, id: span.id, label: card?.label ?? span.name, model: card?.model ?? span.detail,
+      status: at === null && card?.status ? card.status : state === "done" ? "succeeded" : state,
+      costUsd: at === null ? card?.costUsd ?? span.costUsd : span.endMs <= at ? span.costUsd : undefined,
+      startedAt: epoch == null || !Number.isFinite(epoch) ? at === null ? card?.startedAt : undefined : epoch + span.startMs,
+      ...timing, events: events.slice(-4),
+      turn: at === null ? card?.turn : undefined, result: at === null ? card?.result ?? span.output : span.endMs <= at ? span.output : undefined,
+      commits: at === null ? card?.commits : undefined, tokens: at === null ? card?.tokens : undefined,
+    })
+    const parent = span.parentId ? byId.get(span.parentId) : undefined, spawner = parent && agentOf(parent, byId)
     if (spawner?.id) edges.push({ from: spawner.id, to: span.id, kind: "spawn" })
   }
+  for (const [id, card] of Object.entries(cards ?? {})) if (!timed.has(id)) {
+    nodes.push(at === null ? { ...card, id, label: card.label ?? id, status: card.status ?? "unknown" }
+      : { id, label: card.label ?? id, model: card.model, harness: card.harness, role: card.role, status: "unknown", turn: "Timing unavailable at this cursor" })
+  }
+  const ids = new Set(nodes.map(node => node.id))
+  for (const edge of extraEdges) if (ids.has(edge.from) && ids.has(edge.to) && (edge.kind !== "spawn" || !edges.some(prior => prior.kind === "spawn" && prior.from === edge.from && prior.to === edge.to))) edges.push(edge)
   return { nodes, edges }
 }
 
@@ -94,13 +121,16 @@ function NotTimeIndexed({ label }: { label: string }) {
  * every panel shows what was true at the cursor, and the conversation shows what had been said by then.
  */
 export function TraceWorkspace({
-  trace, streamUrl, events, onTimeChange, files, scoreboard, selectedAgentId, onSelectAgent, agentCards, className, ...waterfall
+  trace, streamUrl, events, onTimeChange, files, scoreboard, selectedAgentId, onSelectAgent, agentCards, agentGraph, className, ...waterfall
 }: TraceWorkspaceProps) {
   const byId = useMemo(() => new Map(trace.spans.flatMap((span) => (span.id ? [[span.id, span] as const] : []))), [trace])
   const [ownSelection, setOwnSelection] = useState<string>()
   const selected = selectedAgentId ?? ownSelection
   const select = (agentId: string | undefined) => { setOwnSelection(agentId); onSelectAgent?.(agentId) }
-  const agent = selected ? byId.get(selected) : undefined
+  const agent = selected ? byId.get(selected) : undefined, card = selected ? agentCards?.[selected] : undefined
+  const agentId = agent?.id ?? (card ? selected : undefined), agentName = agent?.name ?? card?.label ?? agentId, agentModel = agent?.detail ?? card?.model
+  const { defaultLayout = "tree", ...graphOptions } = agentGraph ?? {}
+  const [graphLayout, setGraphLayout] = useState<"tree" | "hub">(defaultLayout)
   const [cursor, setCursor] = useState<number | null>(null)
   const stream = useAgentStream(selected && streamUrl ? streamUrl(selected) : undefined)
 
@@ -111,11 +141,13 @@ export function TraceWorkspace({
     const first = stream.entries[0]?.at
     return agent && first !== undefined ? first - agent.startMs : undefined
   }, [waterfall.startedAt, agent, stream.entries])
-  const [view, setView] = useState<"timeline" | "graph">("timeline")
-  const graph = useMemo(
-    () => (view === "graph" ? agentGraphAt(trace.spans, byId, cursor, waterfall.startedAt, agentCards) : undefined),
-    [view, trace, byId, cursor, waterfall.startedAt, agentCards],
-  )
+  const graph = useMemo(() => agentGraphAt(trace.spans, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges), [trace, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges])
+  const selectedNode = graph.nodes.find(node => node.id === agentId)
+  const facts = cursor === null || agent && agent.endMs <= cursor ? [...(agent?.facts ?? [])] : []
+  for (const [label, value] of [["Recorded result", selectedNode?.result], ["Activity", selectedNode?.turn]] as const) {
+    if (value && !facts.some(fact => fact.value === value)) facts.push({ label, value })
+  }
+  const graphNow = cursor !== null && waterfall.startedAt !== undefined ? waterfall.startedAt + cursor : undefined
   const shown = cursor === null || origin === undefined ? stream.entries : stream.entries.filter((entry) => entry.at - origin <= cursor)
   // Live means the stream is open and producing now: an ended, unreachable or scrubbed stream is not.
   const live = stream.alive && !stream.error && cursor === null
@@ -135,34 +167,20 @@ export function TraceWorkspace({
 
   return (
     <div className={cn("sandbox-trace-workspace flex min-h-0 flex-col gap-3", className)}>
-      <div role="group" aria-label="Run view" className="flex gap-1 self-end rounded-lg border border-border bg-card p-0.5 text-sm">
-        {(["timeline", "graph"] as const).map((option) => (
-          <button key={option} type="button" aria-pressed={view === option} onClick={() => setView(option)}
-            className="rounded-md px-3 py-1 capitalize text-muted-foreground aria-pressed:bg-muted aria-pressed:text-foreground">
-            {option}
-          </button>
-        ))}
-      </div>
-      {graph && (
-        <AgentGraph nodes={graph.nodes} edges={graph.edges} selectedId={agent?.id ?? null} onSelect={select}
-          live={cursor === null && graph.nodes.some((node) => node.status === "running")}
-          now={cursor !== null && waterfall.startedAt !== undefined ? waterfall.startedAt + cursor : undefined}
-          className="h-[60vh] min-h-[480px] rounded-xl border border-border bg-card" />
-      )}
-      {/* Hidden, not unmounted, in the Graph view: the waterfall owns the clock and live ticking the graph draws at. */}
-      <div hidden={view === "graph"}>
-        <TraceWaterfall
-          {...waterfall}
-          trace={trace}
-          markers={events}
-          selectedId={agent?.id}
-          onDeselect={() => select(undefined)}
-          onSelect={(span) => {
-            const owner = agentOf(span, byId)
-            if (owner?.id) select(owner.id)
-          }}
-          onTimeChange={(t) => { setCursor(t); onTimeChange?.(t) }}
-        />
+      <div className={agentId ? "min-w-0 lg:mr-[420px]" : "min-w-0"}>
+      <TraceWaterfall {...waterfall} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
+        onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
+        onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
+        latestEvents={<LatestEvents agents={graph.nodes} now={graphNow} live={cursor === null} selectedId={agentId} onSelect={select} />}
+        graph={<section className="flex h-[60vh] min-h-[480px] flex-col" aria-label="Agent graph">
+          <label className="flex h-8 shrink-0 items-center justify-end gap-2 px-3 text-xs text-muted-foreground">Layout
+            <select aria-label="Graph layout" value={graphLayout} onChange={event => setGraphLayout(event.currentTarget.value as "tree" | "hub")} className="rounded-[var(--radius-control)] border border-border bg-card px-2 py-1 text-foreground"><option value="tree">Tree</option><option value="hub">Hub</option></select>
+          </label>
+          <AgentGraph {...graphOptions} layout={graphLayout} renderEventIcon={event => toolGlyph(event.label)} nodes={graph.nodes} edges={graph.edges}
+            selectedId={agentId ?? null} onSelect={select} showLatestEvents={false} now={graphNow}
+            live={cursor === null && graph.nodes.some(node => ["running", "waiting", "needs-you", "failed"].includes(node.status))}
+            className={cn("min-h-0 flex-1", graphOptions.className)} />
+        </section>} />
       </div>
       {/* Without files the run has no code to follow, so no empty 70vh panel is reserved for it. */}
       {files && (
@@ -171,19 +189,25 @@ export function TraceWorkspace({
       {scoreboard && (
         <section aria-label="Scoreboard at the cursor" className="overflow-hidden rounded-xl border border-border bg-card">{scoreboard}</section>
       )}
-      {agent && (
+      {agentId && (
         // A drawer over the right edge: the code workspace keeps its full width underneath.
-        <aside aria-label={`${agent.name} conversation`} onKeyDown={(event) => { if (event.key === "Escape") select(undefined) }}
+        <aside aria-label={`${agentName} conversation`} onKeyDown={(event) => { if (event.key === "Escape") select(undefined) }}
           className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[420px] flex-col border-l border-border bg-card shadow-2xl">
           <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-            <span className={cn("h-2 w-2 shrink-0 rounded-full", live ? "bg-[var(--status-running,#34c48c)]" : "bg-muted-foreground/50")} aria-hidden />
-            <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{agent.name}</h3>
-            {agent.detail && <span className="truncate text-xs text-muted-foreground">{agent.detail}</span>}
+            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", live ? "bg-[var(--surface-info-text)]" : "bg-muted-foreground")} aria-hidden data-motion={live ? "essential" : undefined} style={live ? ambientStyle : undefined} onAnimationStart={syncAmbient} />
+            <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{agentName}</h3>
+            {agentModel && <span className="truncate text-xs text-muted-foreground">{agentModel}</span>}
             <button type="button" aria-label="Close conversation" title="Close (Esc)" onClick={() => select(undefined)}
               className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
               <X aria-hidden className="h-4 w-4" />
             </button>
           </header>
+          {facts.length > 0 && <section aria-label="Recorded agent details" tabIndex={0} className="max-h-[35vh] shrink-0 overflow-y-auto border-b border-border px-3 py-2 text-sm">
+            <dl className="space-y-2">{facts.map((fact, index) => <div key={index}>
+              <dt className="text-xs text-muted-foreground">{fact.label}</dt>
+              <dd className="m-0 whitespace-pre-wrap break-words">{fact.value}</dd>
+            </div>)}</dl>
+          </section>}
           <div
             ref={scroller}
             onScroll={(event) => {
@@ -194,7 +218,7 @@ export function TraceWorkspace({
             data-primary-content=""
             className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
           >
-            {streamUrl
+            {streamUrl && (cursor === null || origin !== undefined)
               ? <AgentTimeline items={items} isThinking={live && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
               : <NotTimeIndexed label="Conversation" />}
           </div>

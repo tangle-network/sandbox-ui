@@ -62,7 +62,6 @@ export interface HubMetrics {
 }
 
 export const HUB_METRICS: HubMetrics = { cellX: 184, cellY: 140, tile: 48, hubTile: 60, label: 34 };
-export const HUB_METRICS_COMPACT: HubMetrics = { cellX: 112, cellY: 112, tile: 40, hubTile: 48, label: 30 };
 
 const key = (col: number, row: number) => `${col},${row}`;
 
@@ -151,6 +150,7 @@ export function layoutHub(input: {
       }
     }
     place(tool.id, "tool", spot![0], spot![1]);
+    cell.set(tool.id, placements.at(-1)!);
   }
 
   const links: HubLink[] = [];
@@ -179,30 +179,43 @@ export function layoutHub(input: {
 }
 
 export interface Point { x: number; y: number }
+export interface HubBounds { left: number; right: number; top: number; bottom: number }
 
 /**
- * An orthogonal path between two tile centres with rounded elbows. Leaving the
- * hub, and between nodes in one column, it goes vertical first; otherwise
- * horizontal first. `lane` shifts a shared run sideways so parallel edges stay
- * apart. Returns the SVG path and its length (for the travelling pulse).
+ * A short rounded Manhattan route around tile and label bounds. Departure lanes
+ * separate parallel calls; the path length keeps finite trips at a consistent speed.
  */
-export function orthogonalPath(a: Point, b: Point, verticalFirst: boolean, lane = 0, radius = 10): { d: string; length: number } {
-  const dx = b.x - a.x, dy = b.y - a.y;
-  if (Math.abs(dx) < 1 || Math.abs(dy) < 1) {
-    return { d: `M${a.x},${a.y} L${b.x},${b.y}`, length: Math.hypot(dx, dy) };
+export function orthogonalPath(a: Point, b: Point, verticalFirst: boolean, lane = 0, radius = 10, obstacles: readonly HubBounds[] = []): { d: string; length: number } {
+  const clear = (p: Point, q: Point) => obstacles.every(rect => p.x === q.x
+    ? p.x <= rect.left || p.x >= rect.right || Math.max(p.y, q.y) <= rect.top || Math.min(p.y, q.y) >= rect.bottom
+    : p.y <= rect.top || p.y >= rect.bottom || Math.max(p.x, q.x) <= rect.left || Math.min(p.x, q.x) >= rect.right);
+  const xs = [...new Set([a.x + lane, (a.x + b.x) / 2, ...obstacles.flatMap(rect => [rect.left - 8, rect.right + 8])])];
+  const ys = [...new Set([a.y + lane, (a.y + b.y) / 2, ...obstacles.flatMap(rect => [rect.top - 8, rect.bottom + 8])])];
+  const candidates: Point[][] = [[a, { x: a.x, y: b.y }, b], [a, { x: b.x, y: a.y }, b]];
+  for (const x of xs) candidates.push([a, { x, y: a.y }, { x, y: b.y }, b]);
+  for (const y of ys) candidates.push([a, { x: a.x, y }, { x: b.x, y }, b]);
+  for (const x of xs) for (const y of ys) {
+    candidates.push([a, { x: a.x, y }, { x, y }, { x, y: b.y }, b], [a, { x, y: a.y }, { x, y }, { x: b.x, y }, b]);
   }
-  const r = Math.min(radius, Math.abs(dx) / 2, Math.abs(dy) / 2);
-  const sx = Math.sign(dx), sy = Math.sign(dy);
-  if (verticalFirst) {
-    const x = a.x + lane;
-    return {
-      d: `M${x},${a.y} L${x},${b.y - sy * r} Q${x},${b.y} ${x + sx * r},${b.y} L${b.x},${b.y}`,
-      length: Math.abs(dy) + Math.abs(b.x - x) - 2 * r + (Math.PI * r) / 2,
-    };
+  let points = candidates[verticalFirst ? 0 : 1]!, best = Infinity;
+  for (const candidate of candidates) {
+    const path = candidate.filter((p, i) => !i || p.x !== candidate[i - 1]!.x || p.y !== candidate[i - 1]!.y);
+    if (!path.slice(1).every((point, i) => clear(path[i]!, point))) continue;
+    const distance = path.slice(1).reduce((sum, point, i) => sum + Math.abs(point.x - path[i]!.x) + Math.abs(point.y - path[i]!.y), 0);
+    const trunk = path.find((point, i) => i && point.y !== path[i - 1]!.y)?.x ?? a.x;
+    const score = distance + path.length + (lane ? Math.abs(trunk - a.x - lane) : 0);
+    if (score < best) { best = score; points = path; }
   }
-  const y = a.y + lane;
-  return {
-    d: `M${a.x},${y} L${b.x - sx * r},${y} Q${b.x},${y} ${b.x},${y + sy * r} L${b.x},${b.y}`,
-    length: Math.abs(dx) + Math.abs(b.y - y) - 2 * r + (Math.PI * r) / 2,
-  };
+  points = points.filter((point, i) => !i || i === points.length - 1 || !(points[i - 1]!.x === point.x && point.x === points[i + 1]!.x || points[i - 1]!.y === point.y && point.y === points[i + 1]!.y));
+  let d = `M${a.x},${a.y}`, length = 0;
+  for (let i = 1; i < points.length; i++) {
+    const previous = points[i - 1]!, point = points[i]!, next = points[i + 1];
+    const incoming = Math.hypot(point.x - previous.x, point.y - previous.y);
+    length += incoming;
+    if (!next) { d += ` L${point.x},${point.y}`; continue; }
+    const outgoing = Math.hypot(next.x - point.x, next.y - point.y), r = Math.min(radius, incoming / 2, outgoing / 2);
+    d += ` L${point.x - Math.sign(point.x - previous.x) * r},${point.y - Math.sign(point.y - previous.y) * r} Q${point.x},${point.y} ${point.x + Math.sign(next.x - point.x) * r},${point.y + Math.sign(next.y - point.y) * r}`;
+    length -= 2 * r - Math.PI * r / 2;
+  }
+  return { d, length };
 }

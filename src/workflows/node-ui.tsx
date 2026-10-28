@@ -1,21 +1,9 @@
-/**
- * Shared presentational atoms for a workflow graph node — the type glyph, the
- * status color/label/badge maps, and the edge coloring. One source of truth so
- * the node card and the edges that point at it read as one system.
- *
- * Colors resolve to the SEMANTIC surface tokens (`--surface-success-text`,
- * `--surface-danger-text`, …), which carry a light AND a dark value tuned for
- * contrast against the card. A literal palette hex (`#22c55e`) or a stock
- * Tailwind shade (`text-red-400`) carries ONE value, so it can only ever hold its
- * contrast in one of the two themes — never use one for a status color.
- *
- * Inline `style` colors here use the RAW brand tokens (`hsl(var(--primary))`,
- * `var(--surface-…)`) — NOT the `--color-*` @theme aliases, which are undefined
- * in a consumer that only imports `tokens.css` (e.g. platform-web), where a
- * `var(--color-*)` would silently resolve to nothing. See the edge-color test.
+/** Workflow-node identity and shared run-status presentation.
+ * Raw Brand variables also resolve for consumers that load only tokens.css.
  */
 
-import { StatusPill as UiStatusPill, type StatusTone } from "@tangle-network/ui/primitives";
+import { type StatusTone } from "@tangle-network/ui/primitives";
+import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
 import {
   AlertTriangle,
   Bell,
@@ -30,7 +18,6 @@ import {
   Repeat,
   ScanSearch,
   Sparkles,
-  Check,
   UserCheck,
   Webhook,
   Zap,
@@ -50,19 +37,7 @@ import { providerLabel } from "./provider-label";
 export const MUTED_TRACK =
   "color-mix(in srgb, hsl(var(--muted-foreground)) 22%, transparent)";
 
-// Tone accent color (theme-reactive, resolving against the raw brand vars):
-// trigger = primary indigo; structural (parallel/foreach/decision control flow) =
-// warning amber; action = neutral. Drives a node's glyph tint and its resting
-/** Per-KIND accents — the QUIET identity channel. The 2026-10-09 canvas
- *  critique's first blocker: kind and state shared the same channel and hue
- *  family (sandbox-kind was green like DONE; structural-kind amber like
- *  WAITING; agent-kind indigo like RUNNING). The split:
- *    KIND  = the glyph-tile tint + a 2px top rule. Hues chosen to NEVER
- *           collide with the state family (green/amber/red are reserved
- *           for state alone).
- *    STATE = the border, ring, glow and fill (see statusBorder).
- * Kind hue duplicates are deliberate: shape + glyph carry identity; the
- * tint is a hint, not the signal. */
+/** Glyph accents identify the node kind; ui's status metadata owns run state. */
 export const KIND_ACCENT: Record<string, string> = {
   "agent.run": "hsl(var(--primary))",
   "script.run": "var(--surface-info-text)",
@@ -74,8 +49,7 @@ export const KIND_ACCENT: Record<string, string> = {
   notify: "var(--surface-info-text)",
 };
 
-/** Structural kinds (parallel/foreach/decision) rest SLATE — amber is
- *  reserved for `waiting`, full stop. */
+/** Structural nodes stay neutral; approval status owns warning ink. */
 export const TONE_ACCENT: Record<WfNodeTone, string> = {
   trigger: "hsl(var(--primary))",
   structural: "hsl(var(--muted-foreground))",
@@ -88,148 +62,31 @@ export function kindAccent(tone: WfNodeTone, kind: string | undefined): string {
   return (kind !== undefined ? KIND_ACCENT[kind] : undefined) ?? TONE_ACCENT[tone];
 }
 
-/** Resting elevation — the 2026-10-09 critique's depth finding: the card
- *  sat FLAT on the canvas (three near-identical greys, borders invisible).
- *  The card must sit ON the canvas, not in it: a real two-layer shadow plus a
- *  1px inner top highlight, foreground-token based so both themes get depth
- *  without a dark-mode black box. */
+/** Brand shadow channels stay black in dark mode. */
 export const RESTING_SHADOW =
-  "inset 0 1px 0 hsl(var(--foreground) / 0.07), " +
-  "0 1px 2px hsl(var(--foreground) / 0.10), " +
-  "0 12px 32px -14px hsl(var(--foreground) / 0.40)";
+  "inset 0 1px 0 hsl(var(--foreground) / 0.06), 0 1px 3px hsl(var(--shadow-color) / 0.08)";
 
 /** The resting card border: visible against the canvas in BOTH themes —
  *  `--border` vanished on dark. */
 export const RESTING_BORDER = "hsl(var(--foreground) / 0.14)";
 
-// Status colors, shared by the node (dot/progress/border) and the edges so a node
-// and the hop pointing at it read as one. Each is a semantic token with a
-// per-theme value, so the run state is legible in light and dark alike.
-const STATUS_QUEUED = "hsl(var(--muted-foreground))";
-const STATUS_DONE = "var(--surface-success-text)";
-const STATUS_FAILED = "var(--surface-danger-text)";
-export const STATUS_RUNNING = "hsl(var(--primary))";
-/** A run blocked on a human borrows the warning surface — the same amber the
- *  design system uses for "needs attention". It must never read as the primary
- *  "running" accent: the workflow is not working, it is waiting on the viewer. */
-const STATUS_WAITING = "var(--surface-warning-text)";
-export const STATUS_COLOR: Record<WfNodeStatus, string> = {
-  queued: STATUS_QUEUED,
-  running: STATUS_RUNNING,
-  waiting: STATUS_WAITING,
-  succeeded: STATUS_DONE,
-  failed: STATUS_FAILED,
-  skipped: STATUS_QUEUED,
-};
+/** Workflow waiting means human approval; peer waiting remains neutral in agent views. */
+const workflowStatus = (status: WfNodeStatus) => status === "waiting" ? "needs-you" : status === "skipped" ? "stopped" : status;
+const workflowMeta = (status: WfNodeStatus) => statusMeta(workflowStatus(status));
+const workflowStatuses: WfNodeStatus[] = ["queued", "running", "waiting", "succeeded", "failed", "skipped"];
+export const STATUS_RUNNING = `var(${statusMeta("running").token})`;
+export const STATUS_COLOR = Object.fromEntries(workflowStatuses.map(status => [status, `var(${workflowMeta(status).token})`])) as Record<WfNodeStatus, string>;
+export const STATUS_LABEL = Object.fromEntries(workflowStatuses.map(status => [status, workflowMeta(status).label])) as Record<WfNodeStatus, string>;
+/** Retained public styling contract, derived from the owner's status metadata. */
+export const STATUS_PILL = Object.fromEntries(workflowStatuses.map(status => [status, {
+  color: STATUS_COLOR[status], background: "transparent", borderColor: "hsl(var(--border))",
+}])) as Record<WfNodeStatus, { color: string; background: string; borderColor: string }>;
 
-/** An edge reads by the status of the node it points AT — with the 2026-10-09
- *  fix: SETTLED edges go quiet. A succeeded run used to paint every edge green
- *  ("the green wall"); now only the live front carries color: running keeps
- *  primary, waiting amber, failed danger, and succeeded/queued sit at a quiet
- *  neutral so the eye finds the front, not the history. */
 export function edgeColor(status: WfNodeStatus | undefined): string {
-  if (status === "running") return STATUS_RUNNING;
-  if (status === "waiting") return STATUS_WAITING;
-  if (status === "failed") return STATUS_FAILED;
-  return "color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)";
+  return status === "failed" || status === "waiting" ? STATUS_COLOR[status] : "color-mix(in srgb, hsl(var(--muted-foreground)) 80%, transparent)";
 }
-
-export const STATUS_LABEL: Record<WfNodeStatus, string> = {
-  queued: "Queued",
-  running: "Running",
-  waiting: "Waiting on you",
-  succeeded: "Done",
-  failed: "Failed",
-  skipped: "Not taken",
-};
-
-/** @deprecated `StatusPill` now renders ui's StatusPill from `STATUS_TONE`;
- *  kept for consumers that styled their own pill from it.
- *  Status pill styling — a tinted well in the status color. Built from the
- *  semantic surface trio (bg/border/text) so the pill keeps its contrast in both
- *  themes rather than washing out in one of them. */
-export const STATUS_PILL: Record<
-  WfNodeStatus,
-  { background: string; color: string; borderColor: string }
-> = {
-  queued: {
-    background: "color-mix(in srgb, hsl(var(--muted-foreground)) 12%, transparent)",
-    color: "hsl(var(--muted-foreground))",
-    borderColor: "color-mix(in srgb, hsl(var(--muted-foreground)) 28%, transparent)",
-  },
-  running: {
-    background: "color-mix(in srgb, hsl(var(--primary)) 14%, transparent)",
-    color: "hsl(var(--primary))",
-    borderColor: "color-mix(in srgb, hsl(var(--primary)) 40%, transparent)",
-  },
-  waiting: {
-    background: "var(--surface-warning-bg)",
-    color: "var(--surface-warning-text)",
-    borderColor: "var(--surface-warning-border)",
-  },
-  succeeded: {
-    background: "var(--surface-success-bg)",
-    color: "var(--surface-success-text)",
-    borderColor: "var(--surface-success-border)",
-  },
-  failed: {
-    background: "var(--surface-danger-bg)",
-    color: "var(--surface-danger-text)",
-    borderColor: "var(--surface-danger-border)",
-  },
-  skipped: {
-    background: "transparent",
-    color: "hsl(var(--muted-foreground))",
-    borderColor: "color-mix(in srgb, hsl(var(--muted-foreground)) 28%, transparent)",
-  },
-};
-
-/** The card's border + ring once a node has live run state. The emphasis
- *  law (the critique's second blocker, inverted): the EXCEPTION is the
- *  loudest thing on the canvas —
- *    failed   saturated danger + a halo wider than running's
- *    waiting  amber + glow (the node the viewer must act on)
- *    running  primary + glow (the live front)
- *    succeeded QUIET: a neutral border, no ring, no glow — done is the
- *             resting state of a healthy run and must not shout */
-export function statusBorder(status: WfNodeStatus): {
-  borderColor: string;
-  boxShadow?: string;
-  borderStyle?: "dashed";
-  opacity?: number;
-} {
-  switch (status) {
-    case "failed":
-      return {
-        borderColor: STATUS_FAILED,
-        boxShadow:
-          `0 0 0 2px color-mix(in srgb, ${STATUS_FAILED} 55%, transparent), ` +
-          `0 0 32px -4px color-mix(in srgb, ${STATUS_FAILED} 70%, transparent), ` +
-          RESTING_SHADOW,
-      };
-    case "running":
-    case "waiting": {
-      const color = STATUS_COLOR[status];
-      return {
-        borderColor: color,
-        boxShadow: `0 0 0 1px color-mix(in srgb, ${color} 45%, transparent), 0 0 24px -6px ${color}`,
-      };
-    }
-    case "queued":
-      // A not-yet-reached node stays quiet: the resting border, no accent.
-      return { borderColor: "hsl(var(--border))" };
-    case "skipped":
-      // The road not taken: dashed and dimmed, quieter even than queued.
-      return {
-        borderColor: "hsl(var(--muted-foreground) / 0.45)",
-        borderStyle: "dashed",
-        opacity: 0.5,
-      };
-    case "succeeded":
-      // DONE IS QUIET: neutral border, the resting shadow only. The pill's
-      // small check carries the state; the card does not paint itself green.
-      return { borderColor: RESTING_BORDER, boxShadow: RESTING_SHADOW };
-  }
+export function statusBorder(status: WfNodeStatus) {
+  return { borderColor: status === "failed" || status === "waiting" ? STATUS_COLOR[status] : RESTING_BORDER, boxShadow: RESTING_SHADOW };
 }
 
 /** Determinate progress fraction for a node's status: queued reads near-empty,
@@ -465,29 +322,9 @@ export const STATUS_TONE: Record<WfNodeStatus, StatusTone> = {
  *  longest label is two words ("Waiting on you") and the pill is often nested a
  *  level below the flex row it sits in. */
 export function StatusPill({ status }: { status: WfNodeStatus }) {
-  if (status === "succeeded") {
-    // DONE IS QUIET, but not ABSENT: the ui lib's neutral tone draws a dash
-    // (reads as disabled/skipped), so done renders its own pill — the muted
-    // surface trio with a real check. Quiet and affirmative.
-    return (
-      <span
-        className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium leading-4"
-        style={{
-          background: "color-mix(in srgb, hsl(var(--muted-foreground)) 10%, transparent)",
-          color: "hsl(var(--muted-foreground))",
-          borderColor: "color-mix(in srgb, hsl(var(--muted-foreground)) 26%, transparent)",
-        }}
-      >
-        <Check className="size-2.5" strokeWidth={3} aria-hidden />
-        {STATUS_LABEL[status]}
-      </span>
-    );
-  }
-  return (
-    <UiStatusPill tone={STATUS_TONE[status]} className="shrink-0">
-      {STATUS_LABEL[status]}
-    </UiStatusPill>
-  );
+  return <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs" style={{ color: STATUS_COLOR[status] }}>
+    <RunStatusIcon status={workflowStatus(status)} aria-hidden />{STATUS_LABEL[status]}
+  </span>;
 }
 
 /**

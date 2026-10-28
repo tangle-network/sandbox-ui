@@ -1,10 +1,3 @@
-/**
- * The topology of a multi-agent run: who spawned whom as a tree, and who
- * messaged or delegated to whom as curved secondary edges over it. Reached
- * through the lazy `AgentGraph` wrapper, which defers `@xyflow/react` (and
- * `elkjs`) to render time.
- */
-
 import {
   Background,
   Controls,
@@ -26,6 +19,7 @@ import {
   useState,
 } from "react";
 import type { AgentGraphProps } from "./AgentGraph";
+import { LatestEvents } from "../run/latest-events";
 import {
   AGENT_CARD,
   type AgentGraphStatus,
@@ -39,6 +33,7 @@ import {
 import {
   AGENT_NODE_CLASS,
   AgentCard,
+  AgentCardView,
   type AgentCardNode,
   AgentFrameBox,
   type AgentFrameNode,
@@ -48,9 +43,10 @@ import {
   agentSummary,
   MESSAGE_EDGE_COLOR,
 } from "./agent-graph-parts";
-import { LiveAgentCard, type LiveAgentCardNode } from "./agent-live-card";
-import { motionAllowed, useColorMode } from "./canvas-theme";
+import { LiveAgentCard, LiveAgentCardView, type LiveAgentCardNode } from "./agent-live-card";
+import { useColorMode } from "./canvas-theme";
 import { edgeColor } from "./node-ui";
+import { quietActivity, tokenMilliseconds, useMotionAllowed, useRunNow } from "./run-ui-state";
 
 const NODE_TYPES = { agent: AgentCard, liveAgent: LiveAgentCard, agentFrame: AgentFrameBox };
 const EDGE_TYPES = { agentMessage: AgentMessageEdgeView };
@@ -69,8 +65,9 @@ function useCanvasSize(): [
     observer.current?.disconnect();
     observer.current = null;
     if (!el || typeof ResizeObserver === "undefined") return;
+    const viewport = el.querySelector<HTMLElement>(".ag-graph-viewport") ?? el;
     const read = () => {
-      const r = el.getBoundingClientRect();
+      const r = viewport.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return;
       setSize((prev) =>
         prev && Math.abs(prev.width - r.width) < 1 && Math.abs(prev.height - r.height) < 1
@@ -79,10 +76,22 @@ function useCanvasSize(): [
       );
     };
     observer.current = new ResizeObserver(read);
-    observer.current.observe(el);
+    observer.current.observe(viewport);
     read();
   }, []);
   return [size, measure];
+}
+
+/** Keep the selected card inside the actual viewport without resetting the reader's camera. */
+function revealSelection(inst: ReactFlowInstance, wrapper: HTMLDivElement | null, id: string) {
+  const node = inst.getInternalNode(id), box = wrapper?.querySelector(".ag-graph-viewport")?.getBoundingClientRect();
+  const width = node?.measured.width ?? node?.width, height = node?.measured.height ?? node?.height;
+  if (!node || !box || !width || !height) return;
+  const current = inst.getViewport(), position = node.internals.positionAbsolute;
+  const zoom = Math.max(0.02, Math.min(current.zoom, (box.width - 2 * FIT_PADDING) / width, (box.height - 2 * FIT_PADDING) / height));
+  const x = Math.max(FIT_PADDING - position.x * zoom, Math.min(box.width - FIT_PADDING - (position.x + width) * zoom, current.x));
+  const y = Math.max(FIT_PADDING - position.y * zoom, Math.min(box.height - FIT_PADDING - (position.y + height) * zoom, current.y));
+  if (x !== current.x || y !== current.y || zoom !== current.zoom) void inst.setViewport({ x, y, zoom });
 }
 
 export function AgentGraphCanvas({
@@ -94,24 +103,28 @@ export function AgentGraphCanvas({
   className,
   emptyState,
   live = false,
+  renderEventIcon,
+  showLatestEvents = true,
   now,
 }: AgentGraphProps) {
   const card = live ? LIVE_AGENT_CARD : AGENT_CARD;
+  const clock = useRunNow(now);
+  const animateMotion = useMotionAllowed();
+  const [hovered, setHovered] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [canvas, measureCanvas] = useCanvasSize();
   const colorMode = useColorMode(wrapperRef, nodes.length > 0);
+  const narrow = canvas !== null && canvas.width < 600;
 
-  // The tree is rebuilt only when its shape changes: a host polling a live run
-  // hands over new arrays every tick, and a status change must not re-layout.
   const nextTopology = buildAgentTopology(nodes, edges);
   const topologyRef = useRef(nextTopology);
   if (topologyRef.current.key !== nextTopology.key) topologyRef.current = nextTopology;
   const topology = topologyRef.current;
 
-  // Every grid width is laid out once per tree; a resize only re-picks.
   const [layouts, setLayouts] = useState<{ key: string; all: AgentLayout[] } | null>(null);
   const layoutKey = `${direction}:${live ? "live" : "cards"}:${topology.key}`;
   useEffect(() => {
+    if (narrow) return;
     let live = true;
     Promise.all(candidateColumns(topology).map((c) => layoutAgents(topology, direction, c, card))).then(
       (all) => {
@@ -121,16 +134,17 @@ export function AgentGraphCanvas({
     return () => {
       live = false;
     };
-  }, [topology, direction, layoutKey, card]);
-  const layout = useMemo(
-    () =>
-      layouts && layouts.key === layoutKey && canvas
-        ? pickAgentLayout(layouts.all, canvas, FIT_PADDING)
-        : null,
-    [layouts, layoutKey, canvas],
-  );
+  }, [topology, direction, layoutKey, card, narrow]);
+  const priorLayout = useRef<AgentLayout | null>(null);
+  const layout = useMemo(() => {
+    if (!layouts || layouts.key !== layoutKey || !canvas) return null;
+    return priorLayout.current = selectedId && priorLayout.current && layouts.all.includes(priorLayout.current)
+      ? priorLayout.current : pickAgentLayout(layouts.all, canvas, FIT_PADDING);
+  }, [layouts, layoutKey, canvas, selectedId]);
 
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+
+  const rfRef = useRef<ReactFlowInstance | null>(null);
 
   const flowNodes = useMemo((): Node[] => {
     if (!layout) return [];
@@ -138,8 +152,7 @@ export function AgentGraphCanvas({
       id: frame.group.id,
       type: "agentFrame",
       position: { x: frame.x, y: frame.y },
-      width: frame.width,
-      height: frame.height,
+      width: frame.width, height: frame.height, measured: rfRef.current?.getInternalNode(frame.group.id)?.measured,
       zIndex: -1,
       selectable: false,
       focusable: false,
@@ -147,6 +160,7 @@ export function AgentGraphCanvas({
       data: {
         frame,
         direction,
+        quietCount: frame.group.memberIds.filter(id => byId.get(id) && quietActivity(byId.get(id)!, clock)).length,
         statuses: frame.group.memberIds.map(
           (id) => byId.get(id)?.status ?? ("unknown" as AgentGraphStatus),
         ),
@@ -162,18 +176,17 @@ export function AgentGraphCanvas({
         id,
         type: live ? "liveAgent" : "agent",
         position,
-        width: card.width,
-        height: card.height,
+        width: card.width, height: card.height, measured: rfRef.current?.getInternalNode(id)?.measured,
         className: AGENT_NODE_CLASS,
         draggable: false,
         ariaRole: "button",
         ariaLabel: agentSummary(agent),
         domAttributes: { "aria-pressed": selected },
-        data: { agent, selected, direction, now },
+        data: { agent, selected, direction, now: clock, onOpen: onSelect ? () => onSelect(agent.id) : undefined, renderEventIcon },
       } as AgentCardNode | LiveAgentCardNode);
     }
     return [...frames, ...cards];
-  }, [layout, topology, byId, selectedId, direction, live, card, now]);
+  }, [layout, topology, byId, selectedId, direction, live, card, clock, onSelect, renderEventIcon]);
 
   const flowEdges = useMemo((): Edge[] => {
     if (!layout) return [];
@@ -184,13 +197,6 @@ export function AgentGraphCanvas({
       const id = `spawn:${s.from}:${target}`;
       if (seen.has(id)) continue;
       seen.add(id);
-      const group = topology.groups.find((g) => g.id === target);
-      const statuses = group
-        ? group.memberIds.map((m) => byId.get(m)?.status)
-        : [byId.get(s.to)?.status];
-      // A grid's edge carries the loudest state among its workers.
-      const lead = (["failed", "waiting", "running"] as const).find((st) => statuses.includes(st));
-      const flow = lead ?? agentStatus(statuses[0] ?? "unknown").flow;
       out.push({
         id,
         source: s.from,
@@ -199,13 +205,14 @@ export function AgentGraphCanvas({
         pathOptions: { borderRadius: 14 },
         selectable: false,
         focusable: false,
-        style: { stroke: edgeColor(flow), strokeWidth: 1.5 },
+        style: { stroke: edgeColor(undefined), strokeWidth: 1.5 },
       } as Edge);
     }
     const ids = new Set(topology.agentIds);
     const messages = new Map<string, AgentMessageEdge>();
     for (const e of edges) {
       if (e.kind === "spawn" || e.from === e.to || !ids.has(e.from) || !ids.has(e.to)) continue;
+      if (![selectedId, hovered].some(id => id === e.from || id === e.to)) continue;
       const id = `${e.kind}:${e.from}:${e.to}`;
       const prior = messages.get(id);
       const count = (prior?.data?.count ?? 0) + Math.max(1, e.count ?? 1);
@@ -224,43 +231,42 @@ export function AgentGraphCanvas({
       });
     }
     return [...out, ...messages.values()];
-  }, [layout, topology, edges, byId]);
+  }, [layout, topology, edges, byId, selectedId, hovered]);
 
-  // Framing: fit the whole run when it first appears and whenever its layout
-  // changes (new agents, a new grid width). A resize alone refits only until
-  // the reader pans or zooms — after that the camera is theirs.
-  const rfRef = useRef<ReactFlowInstance | null>(null);
   const [ready, setReady] = useState(false);
-  // Hidden until the first fit lands, so the run never flashes unframed.
   const [shown, setShown] = useState(false);
   const readerMoved = useRef(false);
+  const selection = useRef(selectedId);
+  selection.current = selectedId;
   const framed = useRef<string | null>(null);
+  useEffect(() => { if (narrow) { rfRef.current = null; setReady(false); setShown(false); framed.current = null; } }, [narrow]);
   const layoutIdentity = layout ? `${layoutKey}:${layout.columns}` : null;
-  // A run too large to fit at the 0.2 floor (95 workers on a phone) still fits whole: the floor drops to the zoom that fits it.
   const minZoom = layout && canvas ? Math.max(0.02, Math.min(0.2, (canvas.width - 2 * FIT_PADDING) / layout.width, (canvas.height - 2 * FIT_PADDING) / layout.height)) : 0.2;
   useEffect(() => {
     const inst = rfRef.current;
     if (!ready || !inst || !layoutIdentity || !canvas) return;
     const relayout = framed.current !== layoutIdentity;
-    if (!relayout && readerMoved.current) return;
-    const animate = framed.current !== null && relayout && motionAllowed();
+    const preserveView = !relayout && readerMoved.current;
+    if (preserveView && !selection.current) return;
+    const animate = framed.current !== null && relayout && animateMotion;
     framed.current = layoutIdentity;
-    readerMoved.current = false;
+    readerMoved.current = preserveView;
     const frame = requestAnimationFrame(() => {
-      void inst.fitView({
+      if (preserveView) revealSelection(inst, wrapperRef.current, selection.current!);
+      else void inst.fitView({
         padding: `${FIT_PADDING}px`,
         maxZoom: 1,
         minZoom,
-        duration: animate ? 220 : 0,
+        duration: animate ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0,
       });
       setShown(true);
     });
     return () => cancelAnimationFrame(frame);
-  }, [ready, layoutIdentity, canvas, minZoom]);
+  }, [ready, layoutIdentity, canvas, minZoom, animateMotion]);
 
   const select = useCallback(
     (id: string) => {
-      if (byId.has(id)) onSelect?.(id);
+      if (byId.has(id)) { onSelect?.(id); wrapperRef.current?.querySelector<HTMLElement>(`[data-agent-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" }); }
     },
     [byId, onSelect],
   );
@@ -268,21 +274,38 @@ export function AgentGraphCanvas({
     (_event: ReactMouseEvent, node: Node) => select(node.id),
     [select],
   );
-  // React Flow makes a node tabbable but gives it no activation key; Enter and
-  // Space on a focused card select it, as a click does.
-  const handleKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      if (!(event.target instanceof HTMLElement)) return;
-      if (!event.target.classList.contains("react-flow__node")) return;
-      const id = event.target.getAttribute("data-id");
-      if (!id || !byId.has(id)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      select(id);
-    },
-    [byId, select],
-  );
+  const handleKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!(event.target instanceof HTMLElement)) return;
+    const id = event.target.closest(".react-flow__node")?.getAttribute("data-id");
+    if (!id || !byId.has(id)) return;
+    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); wrapperRef.current?.focus(); return; }
+    if (!event.target.classList.contains("react-flow__node")) return;
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); event.stopPropagation(); select(id); return; }
+    const origin = layout?.positions.get(id);
+    const vector = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
+    const target = event.key === "Home" ? topology.agentIds[0] : origin && vector ? [...(layout?.positions ?? [])]
+      .filter(([key, p]) => byId.has(key) && key !== id && (p.x - origin.x) * vector[0] + (p.y - origin.y) * vector[1] > 0)
+      .sort((a, b) => Math.hypot(a[1].x - origin.x, a[1].y - origin.y) - Math.hypot(b[1].x - origin.x, b[1].y - origin.y))[0]?.[0] : null;
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const position = layout?.positions.get(target);
+    wrapperRef.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(target)}"]`)?.focus();
+    if (position) void rfRef.current?.setCenter(position.x + card.width / 2, position.y + card.height / 2, { zoom: rfRef.current.getZoom(), duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
+  }, [byId, select, layout, topology, card, animateMotion]);
+  const activityRank = (agent: (typeof nodes)[number]) => agent.status === "needs-you" ? 0 : agent.status === "failed" ? 1 : quietActivity(agent, clock) ? 2 : agent.status === "waiting" ? 3 : agent.status === "running" ? 4 : 5;
+  const parentOf = new Map(edges.filter(e => e.kind === "spawn").map(e => [e.to, e.from]));
+  const depthOf = (id: string) => { const seen = new Set([id]); let depth = 0; while (parentOf.has(id) && !seen.has(parentOf.get(id)!)) { id = parentOf.get(id)!; seen.add(id); depth++; } return depth; };
+  const counts = ["needs-you", "failed", "quiet"].map(status => { const matches = nodes.filter(agent => status === "quiet" ? quietActivity(agent, clock) : agent.status === status); return { status, matches, current: matches.find(agent => agent.id === selectedId) ?? matches[0] }; });
+  const caption = <div className="flex h-10 shrink-0 items-center gap-3 px-3 text-xs text-muted-foreground" aria-label="Run status">
+    <span>{nodes.length} agents</span>
+    {counts.filter(group => group.matches.length).map(group => <button type="button" key={group.status} className="ag-status-button rounded-full border border-border px-2 py-1" style={{ color: group.status === "quiet" ? "var(--surface-warning-text)" : agentStatus(group.status as AgentGraphStatus).color }} onClick={() => {
+      const index = group.matches.findIndex(agent => agent.id === selectedId);
+      const next = group.matches[(index + 1) % group.matches.length]; select(next.id);
+      const p = layout?.positions.get(next.id);
+      if (p) void rfRef.current?.setCenter(p.x + card.width / 2, p.y + card.height / 2, { zoom: 1, duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
+    }}><span className="shrink-0">{group.matches.length} {group.status === "needs-you" ? "needs you" : group.status}</span><span className="ag-caption-target">{group.current.label}{group.status === "failed" && <span className="font-normal"> · {group.current.result ?? group.current.turn ?? "Failure cause not recorded"}</span>}</span></button>)}
+  </div>;
 
   if (nodes.length === 0) {
     return (
@@ -300,11 +323,24 @@ export function AgentGraphCanvas({
         wrapperRef.current = el;
         measureCanvas(el);
       }}
-      className={`agent-graph${live ? " ag-live" : ""} relative transition-opacity duration-150 ease-out motion-reduce:transition-none ${layout && shown ? "opacity-100" : "opacity-0"} ${className ?? ""}`}
-      data-layout={layout && shown ? "ready" : "pending"}
+      className={`agent-graph ag-live relative flex flex-col ${className ?? ""}`}
+      tabIndex={-1}
+      onKeyDownCapture={handleKeyDown}
+      data-layout={narrow ? "list" : layout && shown ? "ready" : "pending"}
       data-columns={layout?.columns}
     >
-      <ReactFlow
+      {caption}
+      {showLatestEvents && live && <LatestEvents agents={nodes} now={now} live={live} selectedId={selectedId} onSelect={onSelect ? select : undefined} />}
+      {narrow ? <ul className="ag-graph-viewport ag-phone-list overflow-auto" aria-label="Agents by attention">
+        {[...nodes].sort((a, b) => activityRank(a) - activityRank(b)).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
+          <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} data-agent-id={agent.id} className="ag-phone-select"
+            onClick={() => select(agent.id)} onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); select(agent.id); } }}>
+            {live || agent.status === "succeeded" || agent.status === "stopped"
+              ? <LiveAgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} renderEventIcon={renderEventIcon} onOpen={onSelect ? () => select(agent.id) : undefined} />
+              : <AgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} direction={direction} onOpen={onSelect ? () => select(agent.id) : undefined} />}
+          </div>
+        </li>)}
+      </ul> : <div className="ag-graph-viewport min-h-0 flex-1" style={{ opacity: shown ? 1 : 0 }}><ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
         nodeTypes={NODE_TYPES}
@@ -315,11 +351,11 @@ export function AgentGraphCanvas({
           setReady(true);
         }}
         onMoveStart={(event) => {
-          // Only a gesture has an event; our own fitView calls do not.
           if (event) readerMoved.current = true;
         }}
         onNodeClick={handleNodeClick}
-        onKeyDown={handleKeyDown}
+        onNodeMouseEnter={(_, node) => setHovered(node.id)}
+        onNodeMouseLeave={() => setHovered(null)}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={false}
         nodesConnectable={false}
@@ -327,7 +363,6 @@ export function AgentGraphCanvas({
         nodesFocusable
         edgesFocusable={false}
         deleteKeyCode={null}
-        // A pane, not a page: two-finger scroll pans, pinch (or ctrl+scroll) zooms.
         panOnScroll
         zoomOnScroll={false}
         zoomOnPinch
@@ -337,7 +372,7 @@ export function AgentGraphCanvas({
         maxZoom={1.75}
         aria-label="Agent topology"
       >
-        <Background gap={18} size={1.4} color="hsl(var(--muted-foreground) / 0.38)" />
+        <Background bgColor="var(--bg-root)" gap={16} size={1} color="hsl(var(--foreground) / 0.06)" />
         {nodes.length > MINIMAP_MIN_NODES && (
           <MiniMap
             pannable
@@ -353,7 +388,7 @@ export function AgentGraphCanvas({
           position="bottom-right"
           fitViewOptions={{ padding: `${FIT_PADDING}px`, maxZoom: 1 }}
         />
-      </ReactFlow>
+      </ReactFlow></div>}
     </div>
   );
 }

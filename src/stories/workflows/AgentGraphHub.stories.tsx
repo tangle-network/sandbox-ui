@@ -2,11 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { useEffect, useState } from "react";
 import { AgentGraph, type AgentGraphCall, type AgentGraphNode, type AgentGraphTool } from "../../workflows";
 
-/**
- * The hub layout: a run drawn around its orchestrator, with each call travelling
- * along its edge. The fixture is a scripted release run replayed on a clock, so
- * the stories show the run at chosen moments and the Live story plays it.
- */
+/** Replay one release run at fixed states and through call transitions. */
 
 const T0 = Date.UTC(2026, 9, 24, 21, 0, 0);
 const s = (sec: number) => T0 + sec * 1000;
@@ -74,7 +70,7 @@ const spawns = ["research", "writer", "coder", "analyst"].map((id) => ({ from: "
 const you = { summary: "Ship the annual billing toggle by Friday" };
 
 function Replay({ at, loop, selectedId }: { at?: number; loop?: number; selectedId?: string }) {
-  const [sec, setSec] = useState(at ?? 0);
+  const [sec, setSec] = useState(at ?? 6.9);
   useEffect(() => {
     if (!loop) return;
     const started = performance.now() - (at ?? 0) * 1000;
@@ -97,7 +93,7 @@ export default meta;
 type Story = StoryObj<typeof Replay>;
 
 /** The whole run on a 30-second loop: calls travel out, answers travel back. */
-export const Live: Story = { args: { at: 0, loop: 30 } };
+export const Live: Story = { args: { at: 6.9, loop: 30 } };
 /** Four agents at work; Analyst is hammering the database. */
 export const Working: Story = { args: { at: 6.9 } };
 /** Writer is blocked on a person: amber edge to You, a chip in the header. */
@@ -128,3 +124,16 @@ export const LargeRun: Story = {
     </div>;
   },
 };
+
+export const Light: Story = { args: { at: 14 }, globals: { sandboxTheme: "light" } };
+export const Phone390: Story = {
+  args: { at: 22.2 }, globals: { viewport: { value: "mobile", isRotated: false } },
+  decorators: [Story => <div style={{ width: "100%", maxWidth: 390 }}><Story /></div>],
+};
+export const ReducedMotion: Story = { args: { at: 6.9 }, parameters: { reducedMotion: "reduce" } };
+export const NoCalls: Story = { render: () => <AgentGraph layout="hub" nodes={agentsAt(0)} edges={spawns} tools={tools} calls={[]} now={s(0)} /> };
+export const CallLifecycle: Story = { args: { at: 3.8, loop: 30 } };
+export const FailedCall: Story = { args: { at: 22.2, selectedId: "coder" } };
+
+/** Recorded work silence qualifies Running; it does not turn the agent into Waiting. */
+export const Quiet: Story = { render: () => <div style={{ maxWidth: 820, margin: "0 auto" }}><AgentGraph layout="hub" nodes={agentsAt(6.9).map(node => node.id === "research" ? { ...node, events: [0, 1, 2].map(i => ({ id: `quiet-${i}`, label: "Recorded read", at: s(-840 + i * 60) })) } : node)} edges={spawns} tools={tools} calls={calls} you={you} now={s(6.9)} /></div> };

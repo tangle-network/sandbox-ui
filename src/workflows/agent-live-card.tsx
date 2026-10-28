@@ -1,142 +1,101 @@
-/**
- * The live agent card for `AgentGraph live`: one agent at work, while it works. Its status pill breathes while it runs,
- * its thinking line reads in two lines, and its latest events stream in at the bottom with what they did and how long
- * ago, older lines fading as new ones arrive. A finished or stopped agent shrinks to a chip with its result in the same
- * slot; a failed agent keeps its whole card, its failure in place of the thinking line and its events at the times they ran,
- * so the layout never moves while a run updates.
- */
-
 import type { Node, NodeProps } from "@xyflow/react";
-import { FileText, GitBranch, Globe, Hourglass, type LucideIcon, Pencil, Search, Sparkles, Terminal } from "lucide-react";
-import { useEffect, useState } from "react";
-import type { AgentGraphDirection, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
+import { Wrench } from "lucide-react";
+import type { ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { AgentGraphDirection, AgentGraphEvent, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import { agentStatus, agentSummary, Handles, StatusGlyph, cardBorder } from "./agent-graph-parts";
 import { SELECTION_OUTLINE } from "./canvas-theme";
+import { fmtCost, fmtEventTime } from "./format";
+import { shortModel } from "./naming";
 import { KIND_ACCENT, NodeMark, RESTING_SHADOW } from "./node-ui";
+import { quietActivity, tokenMilliseconds, useAttention, useMotionAllowed, useRunNow } from "./run-ui-state";
 
 export type LiveAgentCardNode = Node<
-  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number },
-  "liveAgent"
+  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onOpen?: () => void; parentLabel?: string; renderEventIcon?: (event: AgentGraphEvent) => ReactNode }, "liveAgent"
 >;
-
-// A failure keeps its evidence: only finished and stopped agents settle into a chip (critique P0 #5).
 const SETTLED: ReadonlySet<AgentGraphStatus> = new Set(["succeeded", "stopped"]);
 
-// An event names its tool first ("bash cargo test", "edit src/fold.rs"); the glyph says which kind of work it was.
-const EVENT_GLYPHS: readonly (readonly [RegExp, LucideIcon])[] = [
-  [/^(bash|sh|run|exec|cargo|npm|pnpm|make)\b/, Terminal],
-  [/^(edit|write|patch|apply)\b/, Pencil],
-  [/^(read|cat|open|view|ls|glob)\b/, FileText],
-  [/^(grep|search|find|rg)\b/, Search],
-  [/^(web|fetch|http|browse)\b/, Globe],
-  [/^(spawn|steer|release|merge|commit|git)\b/, GitBranch],
-  [/^(wait|sleep|queue)\b/, Hourglass],
-];
-const eventGlyph = (label: string) => EVENT_GLYPHS.find(([match]) => match.test(label.toLowerCase()))?.[1] ?? Sparkles;
-
-function clockTime(at: number | undefined): string | undefined {
-  return at == null || !Number.isFinite(at) ? undefined : new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+function middleLabel(label: string) {
+  return label.length <= 52 ? label : `${label.slice(0, 32)} … ${label.slice(-17)}`;
 }
 
-function ago(at: number | undefined, now: number): string | undefined {
-  if (at == null || !Number.isFinite(at)) return undefined;
-  const s = Math.max(0, Math.round((now - at) / 1000));
-  if (s < 5) return "now";
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h`;
-}
-
-function aliveFor(startedAt: number | null | undefined, now: number): string | undefined {
-  if (startedAt == null || !Number.isFinite(startedAt)) return undefined;
-  const s = Math.max(0, Math.round((now - startedAt) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m`;
-}
-
-/** Time alive ticks once a second while the host follows now; a replay passes its own clock. */
-function useNow(fixed: number | undefined, live: boolean): number {
-  const [now, setNow] = useState(() => fixed ?? Date.now());
-  useEffect(() => {
-    if (fixed !== undefined || !live) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [fixed, live]);
-  return fixed ?? now;
-}
-
-export function LiveAgentCard({ data }: NodeProps<LiveAgentCardNode>) {
-  const { agent, selected, direction } = data;
+/** One shell survives settling. A failure retains its evidence and absolute event times. */
+export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixed, handles = false, onOpen, parentLabel, renderEventIcon }: {
+  agent: AgentGraphNode; selected: boolean; direction?: AgentGraphDirection; now?: number; handles?: boolean; onOpen?: () => void; parentLabel?: string; renderEventIcon?: (event: AgentGraphEvent) => ReactNode;
+}) {
+  const now = useRunNow(fixed);
+  const ref = useRef<HTMLDivElement>(null);
+  useAttention(ref, agent.status);
   const settled = SETTLED.has(agent.status);
   const failed = agent.status === "failed";
-  const now = useNow(data.now, !settled && !failed);
+  const quiet = quietActivity(agent, now);
   const s = agentStatus(agent.status);
-  const alive = aliveFor(agent.startedAt, now);
-
-  if (settled) {
-    return (
-      <div className="ag-live-slot" data-status={agent.status} title={agentSummary(agent)}>
-        <Handles direction={direction} />
-        <div className="ag-live-chip" data-selected={selected || undefined} style={selected ? SELECTION_OUTLINE : undefined}>
-          <StatusGlyph status={agent.status} size={13} />
-          <span className="ag-live-chip-name">{agent.label}</span>
-          <span className="ag-live-chip-result">{agent.result ?? s.label}</span>
-        </div>
-      </div>
-    );
-  }
-
-  // The vendor prefix ("anthropic/") is in the brand mark already; the tooltip keeps the full id.
-  const meta = [agent.model?.replace(/^[\w-]+\//, ""), agent.effort].filter(Boolean).join(" · ");
-  const events = (agent.events ?? []).slice(-3);
+  const meta = [agent.model ? shortModel(agent.model) : undefined, agent.effort].filter(Boolean).join(" · ");
+  const [events, setEvents] = useState(() => (agent.events ?? []).slice(-4));
+  const cost = Number.isFinite(agent.costUsd) ? fmtCost(agent.costUsd!) : undefined;
+  const metrics = [cost, !failed && agent.startedAt != null ? `${fmtEventTime(agent.startedAt, now, false)} elapsed` : undefined, Number.isFinite(agent.commits) ? `${agent.commits} ${agent.commits === 1 ? "commit" : "commits"}` : undefined].filter(Boolean).join(" · ") || "—";
+  const tail = useRef<HTMLOListElement>(null);
+  const motion = useMotionAllowed();
+  const previous = useRef(events.at(-1)?.id);
+  const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const latest = useRef(agent.events);
+  latest.current = agent.events;
+  useEffect(() => {
+    if (pending.current !== undefined) return;
+    pending.current = setTimeout(() => { setEvents((latest.current ?? []).slice(-4)); pending.current = undefined; }, tokenMilliseconds("--duration-ambient", ref.current) * .15);
+  }, [agent.events]);
+  useEffect(() => () => clearTimeout(pending.current), []);
+  const tailAnimation = useRef<Animation | null>(null);
+  useEffect(() => () => tailAnimation.current?.cancel(), []);
+  useLayoutEffect(() => {
+    const last = events.at(-1)?.id;
+    const old = previous.current;
+    previous.current = last;
+    const element = tail.current;
+    if (!motion) { tailAnimation.current?.cancel(); return; }
+    if (!element || !old || old === last) return;
+    const queued = events.findIndex(event => event.id === old);
+    const offset = new DOMMatrix(getComputedStyle(element).transform).m42 + 16;
+    tailAnimation.current?.cancel();
+    const frames = queued < 0 ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: `translateY(${offset}px)` }, { transform: "translateY(-16px)" }];
+    tailAnimation.current = element.animate(frames, { duration: tokenMilliseconds("--duration-stream", element), easing: getComputedStyle(element).getPropertyValue("--ease-standard").trim() });
+  }, [events, motion]);
   return (
-    <div
-      className="ag-live-card"
-      data-status={agent.status}
-      data-activity={agent.activity ?? undefined}
-      data-selected={selected || undefined}
-      title={agentSummary(agent)}
-      style={{ boxShadow: RESTING_SHADOW, ...cardBorder(agent.status), ...(selected ? SELECTION_OUTLINE : {}), ["--ag-status" as string]: s.color }}
-    >
-      <Handles direction={direction} />
-      <div className="ag-live-head">
-        <NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={28} />
-        <div className="ag-live-names">
-          <span className="ag-live-name">{agent.label}</span>
-          {meta && <span className="ag-live-meta">{meta}</span>}
+    <div className="ag-live-slot">
+      {handles && <Handles direction={direction} />}
+      <div ref={ref} className={`ag-live-card${settled ? " ag-live-chip" : ""}`} data-status={agent.status}
+        data-sparse={events.length === 0 || undefined} data-activity={quiet ? "quiet" : agent.activity ?? undefined} data-selected={selected || undefined}
+        title={agentSummary(agent)}
+        style={{ boxShadow: RESTING_SHADOW, ...cardBorder(agent.status), ...(selected ? SELECTION_OUTLINE : {}), ["--ag-status" as string]: s.color }}>
+        {settled && <><StatusGlyph status={agent.status} size={16} /><span className="ag-live-chip-status">{s.label}</span></>}
+        <div className="ag-live-head">
+          <span className="grayscale hover:grayscale-0"><NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} /></span>
+          <div className="ag-live-names">
+            <span className="ag-live-name">{parentLabel && <span className="ag-parent-label">{parentLabel} / </span>}{agent.label}</span>
+            {!settled && meta && <span className="ag-live-meta">{meta}</span>}
+          </div>
+          <div className="ag-live-stats">
+            {failed && onOpen ? <button type="button" className="ag-live-pill ag-live-inspect nodrag nopan" onClick={event => { event.stopPropagation(); onOpen(); }}><StatusGlyph status={agent.status} size={16} />{s.label}<span>Inspect</span></button> : <span className={`ag-live-pill${quiet ? " ag-live-quiet" : ""}`}><StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}</span>}
+            {!settled && <span className="ag-live-accounting" title={metrics}>{metrics}</span>}
+          </div>
         </div>
-        <div className="ag-live-stats">
-          <span className="ag-live-pill"><span className="ag-live-dot" aria-hidden />{s.label}</span>
-          <span>
-            {alive && <span title="Time alive">{alive}</span>}
-            {agent.commits != null && <span title="Commits shipped">{alive ? " · " : ""}{agent.commits} {agent.commits === 1 ? "commit" : "commits"}</span>}
-          </span>
-        </div>
+        {settled ? <><span className="ag-live-chip-result">{agent.result ?? agent.turn ?? s.label}</span>{cost && <span className="ag-live-chip-cost" title="Cost">{cost}</span>}</> : <>
+          <div className="ag-live-thinking-row"><p className={`ag-live-thinking${failed ? " ag-live-failure" : ""}`}>
+            {failed ? agent.result ?? events.at(-1)?.label ?? agent.turn ?? s.label : agent.turn || "—"}
+          </p>
+          {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onOpen} title={onOpen ? undefined : "Responses unavailable in this view"} onClick={event => { event.stopPropagation(); onOpen?.(); }}>Respond</button>}</div>
+          {events.length > 0 && <div className="ag-live-events-clip"><ol ref={tail} className="ag-live-events" aria-label="Latest events">
+            {events.map(event => <li key={event.id} title={event.label}>
+              {renderEventIcon?.(event) ?? <Wrench size={12} strokeWidth={1.75} aria-hidden />}
+              <span className="ag-live-event-label">{middleLabel(event.label)}</span>
+              <time className="ag-live-event-at" dateTime={Number.isFinite(event.at) ? new Date(event.at!).toISOString() : undefined}>{failed && event.at != null ? "at " : ""}{fmtEventTime(event.at, now, failed)}</time>
+            </li>)}
+          </ol></div>}
+        </>}
       </div>
-      {failed ? (
-        <p className="ag-live-thinking ag-live-failure">{agent.result ?? events.at(-1)?.label ?? s.label}</p>
-      ) : (
-        <p className="ag-live-thinking" key={agent.turn ?? ""}>
-          {agent.turn || <span className="ag-live-quiet">{s.label}</span>}
-        </p>
-      )}
-      <ol className="ag-live-events" aria-label="Latest events">
-        {events.map((event) => {
-          const Glyph = eventGlyph(event.label);
-          // A failed card is frozen: its events keep the clock time they ran, not an age that keeps growing.
-          const when = failed ? clockTime(event.at) : ago(event.at, now);
-          return (
-            <li key={event.id}>
-              <Glyph aria-hidden size={12} strokeWidth={2} />
-              <span className="ag-live-event-label">{event.label}</span>
-              {when && <time className="ag-live-event-at">{when}</time>}
-            </li>
-          );
-        })}
-      </ol>
     </div>
   );
+}
+export function LiveAgentCard({ data }: NodeProps<LiveAgentCardNode>) {
+  return <LiveAgentCardView {...data} handles />;
 }

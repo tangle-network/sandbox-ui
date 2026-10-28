@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.3
+
+- Wrapped Hub attention headers retain their height so phone metrics stay visible above the scrollable canvas.
+- Adopt the Charts footer correction so desktop playback times remain separate from the mini rail.
+
 ## 2.0.2
 
 - Hub tool and call counters keep unavailable history unknown, including node details; explicitly empty histories remain measured zero. Bounded Hub views scroll to every agent and keep opened details visible.

@@ -142,3 +142,6 @@ export const Quiet: Story = { render: () => <div style={{ maxWidth: 820, margin:
 export const UnreportedHistory: Story = { render: () => <AgentGraph layout="hub" nodes={agentsAt(0)} edges={spawns} now={s(0)} /> };
 /** An explicitly recorded empty history is measured zero. */
 export const EmptyHistory: Story = { render: () => <AgentGraph layout="hub" nodes={agentsAt(0)} edges={spawns} tools={[]} calls={[]} now={s(0)} /> };
+
+/** Wrapped attention chips and metrics retain their own height above a bounded canvas. */
+export const BoundedAttention: Story = { render: () => <div style={{ height: 480 }}><AgentGraph layout="hub" nodes={agentsAt(22.2).map(node => node.id === "orch" ? { ...node, events: [0, 1, 2].map(i => ({ id: `root-quiet-${i}`, label: "Recorded activity", at: s(-840 + i * 60) })) } : node)} edges={spawns} tools={tools} calls={calls} you={you} now={s(22.2)} className="h-full" /></div> };

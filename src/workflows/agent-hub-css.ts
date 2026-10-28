@@ -4,7 +4,7 @@ export const AGENT_HUB_CSS = `
   color: var(--ag-fg); font-size: 12px; line-height: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ag-root * { box-sizing: border-box; }
 .ag-head, .ag-title, .ag-chip, .ag-legend li, .ag-pop-head, .ag-pop-foot { display: flex; align-items: center; gap: 8px; }
-.ag-head { flex-wrap: wrap; min-height: 40px; }
+.ag-head { flex-wrap: wrap; flex-shrink: 0; min-height: 40px; }
 .ag-title, .ag-pop-name { font-weight: 600; font-size: 14px; line-height: 20px; }
 .ag-title-mark { width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--ag-accent); }
 .ag-chip, .ag-pill { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; border: 1px solid var(--ag-border); border-radius: var(--radius-pill); font-size: 12px; font-weight: 500; min-height: 24px; background: transparent; color: var(--ag-muted); }

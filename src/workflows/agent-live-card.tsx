@@ -73,7 +73,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
         data-sparse={events.length === 0 || undefined} data-activity={quiet ? "quiet" : agent.activity ?? undefined} data-selected={selected || undefined}
         title={agentSummary(agent)}
         style={{ boxShadow: RESTING_SHADOW, ...cardBorder(agent.status), ...(selected ? SELECTION_OUTLINE : {}), ["--ag-status" as string]: s.color }}>
-        {settled && <StatusGlyph status={agent.status} size={16} />}
+        {settled && <><StatusGlyph status={agent.status} size={16} /><span className="ag-live-chip-status">{s.label}</span></>}
         <div className="ag-live-head">
           <span className="grayscale hover:grayscale-0"><NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} /></span>
           <div className="ag-live-names">

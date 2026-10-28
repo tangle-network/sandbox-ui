@@ -174,7 +174,7 @@ export function AgentGraphCanvas({
         ariaRole: "button",
         ariaLabel: agentSummary(agent),
         domAttributes: { "aria-pressed": selected },
-        data: { agent, selected, direction, now: clock, onRespond: () => onSelect?.(agent.id), renderEventIcon },
+        data: { agent, selected, direction, now: clock, onRespond: onSelect ? () => onSelect(agent.id) : undefined, renderEventIcon },
       } as AgentCardNode | LiveAgentCardNode);
     }
     return [...frames, ...cards];
@@ -261,7 +261,7 @@ export function AgentGraphCanvas({
 
   const select = useCallback(
     (id: string) => {
-      if (byId.has(id)) onSelect?.(id);
+      if (byId.has(id)) { onSelect?.(id); wrapperRef.current?.querySelector<HTMLElement>(`[data-agent-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "nearest" }); }
     },
     [byId, onSelect],
   );
@@ -324,9 +324,9 @@ export function AgentGraphCanvas({
       {caption}
       {narrow ? <ul className="ag-phone-list overflow-auto" aria-label="Agents by attention">
         {[...nodes].sort((a, b) => activityRank(a) - activityRank(b)).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
-          <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} className="ag-phone-select"
+          <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} data-agent-id={agent.id} className="ag-phone-select"
             onClick={() => select(agent.id)} onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); select(agent.id); } }}>
-            <LiveAgentCardView agent={agent} selected={selectedId === agent.id} now={clock} renderEventIcon={renderEventIcon} onRespond={() => select(agent.id)} />
+            <LiveAgentCardView agent={agent} selected={selectedId === agent.id} now={clock} renderEventIcon={renderEventIcon} onRespond={onSelect ? () => select(agent.id) : undefined} />
           </div>
         </li>)}
       </ul> : <div className="min-h-0 flex-1" style={{ opacity: shown ? 1 : 0 }}><ReactFlow

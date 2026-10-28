@@ -85,7 +85,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
           <div className="ag-live-thinking-row"><p className={`ag-live-thinking${failed ? " ag-live-failure" : ""}`}>
             {failed ? agent.result ?? events.at(-1)?.label ?? s.label : agent.turn || "—"}
           </p>
-          {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" onClick={event => { event.stopPropagation(); onRespond?.(); }}>Respond</button>}</div>
+          {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onRespond} title={onRespond ? undefined : "Responses unavailable in this view"} onClick={event => { event.stopPropagation(); onRespond?.(); }}>Respond</button>}</div>
           <div className="ag-live-events-clip"><ol ref={tail} className="ag-live-events" aria-label="Latest events">
             {events.map(event => <li key={event.id} title={event.label}>
               {renderEventIcon?.(event) ?? <Wrench size={12} strokeWidth={1.75} aria-hidden />}

@@ -39,7 +39,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
   const meta = [agent.model ? shortModel(agent.model) : undefined, agent.effort].filter(Boolean).join(" · ");
   const [events, setEvents] = useState(() => (agent.events ?? []).slice(-4));
   const cost = Number.isFinite(agent.costUsd) ? fmtCost(agent.costUsd!) : undefined;
-  const metrics = [cost, !failed && agent.startedAt != null ? eventTime(agent.startedAt, now, false) : undefined, Number.isFinite(agent.commits) ? `${agent.commits} ${agent.commits === 1 ? "commit" : "commits"}` : undefined].filter(Boolean).join(" · ") || "—";
+  const metrics = [cost, !failed && agent.startedAt != null ? `${eventTime(agent.startedAt, now, false)} elapsed` : undefined, Number.isFinite(agent.commits) ? `${agent.commits} ${agent.commits === 1 ? "commit" : "commits"}` : undefined].filter(Boolean).join(" · ") || "—";
   const tail = useRef<HTMLOListElement>(null);
   const motion = useMotionAllowed();
   const previous = useRef(events.at(-1)?.id);

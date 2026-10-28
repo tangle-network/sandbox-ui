@@ -74,8 +74,7 @@ export const KIND_ACCENT: Record<string, string> = {
   notify: "var(--surface-info-text)",
 };
 
-/** Structural kinds (parallel/foreach/decision) rest SLATE — amber is
- *  reserved for `waiting`, full stop. */
+/** Structural nodes stay neutral; approval status owns warning ink. */
 export const TONE_ACCENT: Record<WfNodeTone, string> = {
   trigger: "hsl(var(--primary))",
   structural: "hsl(var(--muted-foreground))",
@@ -90,9 +89,7 @@ export function kindAccent(tone: WfNodeTone, kind: string | undefined): string {
 
 /** Brand shadow channels stay black in dark mode. */
 export const RESTING_SHADOW =
-  "inset 0 1px 0 hsl(var(--foreground) / 0.07), " +
-  "0 1px 2px hsl(var(--shadow-color) / 0.10), " +
-  "0 12px 32px -14px hsl(var(--shadow-color) / 0.40)";
+  "inset 0 1px 0 hsl(var(--foreground) / 0.06), 0 1px 3px hsl(var(--shadow-color) / 0.08)";
 
 /** The resting card border: visible against the canvas in BOTH themes —
  *  `--border` vanished on dark. */

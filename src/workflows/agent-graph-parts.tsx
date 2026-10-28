@@ -120,7 +120,7 @@ export function AgentCardView({ agent, selected, direction, now: fixed, onRespon
     <div className="flex min-w-0 items-center gap-2">
       <span className="grayscale hover:grayscale-0"><NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} /></span>
       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{parentLabel && <span className="ag-parent-label">{parentLabel} / </span>}{agent.label}</span>
-      <span className="text-xs text-muted-foreground tabular-nums">{fmtCost(agent.costUsd ?? undefined) ?? "—"}</span>
+      <span className="text-xs text-muted-foreground tabular-nums" title={agent.costUsd == null ? "Cost not reported" : "Cost"}>{fmtCost(agent.costUsd ?? undefined) ?? "—"}</span>
     </div>
     <p className="m-0 line-clamp-2 min-h-4 text-xs text-foreground leading-4">{(agent.status === "failed" ? agent.result ?? agent.turn : agent.turn) || "—"}</p>
     <div className="mt-auto flex items-center justify-between gap-1 text-xs" style={{ color: quiet ? "var(--surface-warning-text)" : s.color }}>

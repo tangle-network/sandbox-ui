@@ -4,7 +4,7 @@ for (const theme of ['dark', 'light']) {
   for (const width of [1280, 390]) {
     test(`run UI ${theme} ${width}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 })
-      await page.goto(`/iframe.html?id=workflows-agentgraph--live-run-cards&viewMode=story&globals=theme:${theme}`)
+      await page.goto(`/iframe.html?id=workflows-agentgraph--live-run-cards&viewMode=story&globals=sandboxTheme:${theme}`)
       await expect(page.locator('[data-layout="ready"], [data-layout="list"]')).toBeVisible()
       const failed = page.locator('.ag-live-card[data-status="failed"]')
       await expect(failed).toContainText('regressed 38%')

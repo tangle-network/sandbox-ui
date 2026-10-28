@@ -157,7 +157,7 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
   const agents = nodes.length;
   const lastMinute = visibleCalls.filter((c) => now - c.startedAt <= 60_000).length;
   const costs = nodes.map((n) => n.costUsd);
-  const cost = costs.every((c) => c != null) ? costs.reduce((s, c) => s + (c ?? 0), 0) : undefined;
+  const cost = costs.every((c) => c != null && Number.isFinite(c) && c >= 0) ? costs.reduce<number>((s, c) => s + (c ?? 0), 0) : undefined;
   const chips = nodes.filter((n) => n.status === "needs-you" || n.status === "failed" || quietActivity(n, now));
 
   const openNode = (id: string) => {
@@ -211,7 +211,7 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
           <span><b>{agents}</b> {agents === 1 ? "agent" : "agents"}</span>
           <span><b>{tools.length}</b> {tools.length === 1 ? "tool" : "tools"}</span>
           <span><b>{lastMinute}</b> calls/min</span>
-          <span title={cost === undefined ? "Not every agent recorded its cost" : undefined}><b>{cost === undefined ? "—" : fmtCost(cost)}</b>{cost === undefined ? " cost" : ""}</span>
+          <span title={cost === undefined ? "Not every agent recorded its cost" : "Total recorded agent cost"}><b>{cost === undefined ? "—" : fmtCost(cost)}</b> cost</span>
         </span>
       </header>
       <div ref={wrap} className={`ag-canvas-wrap${list ? " ag-list-mode" : ""}`} style={list ? undefined : { height: h * scale }} onKeyDown={(e) => { if (e.key === "Escape") setOpen(null); }}>

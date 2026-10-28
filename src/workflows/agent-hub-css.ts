@@ -34,7 +34,7 @@ export const AGENT_HUB_CSS = `
 .ag-name { margin-top: 6px; font-size: 14px; font-weight: 600; line-height: 20px; }
 .ag-sub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; }
 .ag-node-tool .ag-name { max-width: 132px; }
-.ag-sub, .ag-node-tool .ag-name { font-size: 12px; font-weight: 400; color: var(--ag-muted); }
+.ag-sub { font-size: 13px; line-height: 17px; font-weight: 400; color: var(--ag-muted); } .ag-node-tool .ag-name { font-size: 12px; font-weight: 400; color: var(--ag-muted); }
 .ag-badge { position: absolute; top: -5px; right: -5px; display: grid; place-items: center; background: var(--ag-surface); border-radius: var(--radius-pill); box-shadow: 0 0 0 2px var(--ag-surface); }
 .ag-running-dot { display: inline-block; flex-shrink: 0; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-info-text); animation: tangle-breathe var(--motion-ambient) infinite; }
 .ag-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; color: var(--ag-muted); }

@@ -5,7 +5,7 @@ for (const theme of ['dark', 'light']) {
     test(`run UI ${theme} ${width}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 })
       await page.goto(`/iframe.html?id=workflows-agentgraph--live-run-cards&viewMode=story&globals=theme:${theme}`)
-      await expect(page.locator('[data-layout="ready"]')).toBeVisible()
+      await expect(page.locator('[data-layout="ready"], [data-layout="list"]')).toBeVisible()
       const failed = page.locator('.ag-live-card[data-status="failed"]')
       await expect(failed).toContainText('regressed 38%')
       await expect(page.locator('.ag-live-slot[data-status="failed"]')).toHaveCount(0)
@@ -13,7 +13,7 @@ for (const theme of ['dark', 'light']) {
       const waiting = page.locator('[data-status="waiting"] .ag-live-pill').first()
       const running = page.locator('[data-status="running"] .ag-live-pill').first()
       expect(await waiting.evaluate(el => getComputedStyle(el).color)).not.toBe(await running.evaluate(el => getComputedStyle(el).color))
-      expect(await waiting.evaluate(el => getComputedStyle(el).color)).toBe(await waiting.evaluate(el => getComputedStyle(document.documentElement).getPropertyValue('--surface-neutral-text').trim()))
+      expect(await waiting.evaluate(el => getComputedStyle(el).color)).toBe(await waiting.evaluate(el => { const probe = document.createElement('span'); probe.style.color = 'var(--surface-neutral-text)'; el.append(probe); const color = getComputedStyle(probe).color; probe.remove(); return color }))
       if (width === 390) {
         await expect(page.locator('[data-layout="list"]')).toBeVisible()
         await expect(page.locator('.react-flow__controls')).toHaveCount(0)

@@ -246,14 +246,7 @@ const hslToRgb = (h, s, l) => {
   return [f(0), f(8), f(4)];
 };
 
-/**
- * A token's value as sRGB bytes, following `var()` chains.
- *
- * Both value shapes brand ships are handled because the ladder uses both and
- * the difference is invisible until it paints: the MD3 tokens are complete
- * hexes (`#191826`) while the shadcn bridge holds raw HSL CHANNELS
- * (`244 23% 12%`) that only become a colour once an `hsl()` wraps them.
- */
+/** Resolve Brand hex, HSL colors and channels, following aliases. */
 export function resolveColor(token, tokens, seen = new Set()) {
   if (seen.has(token)) throw new Error(`cyclic token reference at ${token}`);
   seen.add(token);
@@ -270,7 +263,7 @@ export function resolveColor(token, tokens, seen = new Set()) {
   if (hex)
     return [0, 2, 4].map((i) => Number.parseInt(hex[1].slice(i, i + 2), 16));
 
-  const channels = raw.match(
+  const channels = raw.replace(/^hsl\((.*)\)$/, "$1").match(
     /^(-?[\d.]+)\s+(-?[\d.]+)%\s+(-?[\d.]+)%$/,
   );
   if (channels)

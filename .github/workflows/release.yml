@@ -46,6 +46,11 @@ jobs:
       - name: Install trusted-publishing npm
         run: npm install --global npm@12.1.0
 
+      - name: Admit the release version
+        uses: tangle-network/agent-runtime/.github/actions/admit-release@76b8de28191e31f0c1301a3621bab2188f8695e7
+        with:
+          tarballs: ${{ runner.temp }}/release/package.tgz
+
       - name: Publish and verify npm artifact
         run: >-
           node "${{ runner.temp }}/release/publish-package.mjs"

@@ -45,31 +45,32 @@ function useWidth(ref: RefObject<HTMLElement | null>) {
 function CallStroke({ call, d, length, now, forward, animate }: { call: AgentGraphCall; d: string; length: number; now: number; forward: boolean; animate: boolean }) {
   const ref = useRef<SVGPathElement>(null);
   const routeRef = useRef<SVGPathElement>(null);
-  const [chevron, setChevron] = useState<{ x: number; y: number; angle: number }>();
+  const [chevron, setChevron] = useState<{ x: number; y: number; angle: number; travel: number; decay: number }>();
   const end = call.durationMs == null ? Infinity : call.startedAt + call.durationMs;
   const returning = now >= end;
   useLayoutEffect(() => {
     const path = routeRef.current;
     if (!path) return;
     const middle = path.getTotalLength() / 2, point = path.getPointAtLength(middle), before = path.getPointAtLength(middle - 1), after = path.getPointAtLength(middle + 1);
-    setChevron({ x: point.x, y: point.y, angle: Math.atan2(after.y - before.y, after.x - before.x) * 180 / Math.PI + (forward === returning ? 180 : 0) });
-  }, [d, forward, returning]);
+    const ambient = tokenMilliseconds("--duration-ambient", path);
+    setChevron({ x: point.x, y: point.y, angle: Math.atan2(after.y - before.y, after.x - before.x) * 180 / Math.PI + (forward === returning ? 180 : 0), travel: Math.min(ambient * .9, Math.max(ambient * .3, length / 320 * 1000)), decay: ambient * 4 });
+  }, [d, length, forward, returning]);
   useEffect(() => {
     const el = ref.current;
-    if (!el || !animate || call.kind === "failed") return;
-    const ambient = tokenMilliseconds("--duration-ambient", el);
-    const duration = Math.min(ambient * .9, Math.max(ambient * .3, length / 320 * 1000));
+    const duration = chevron?.travel;
+    if (!el || !animate || call.kind === "failed" || !duration) return;
     const age = now - (returning ? end : call.startedAt);
     if (age > duration) return;
     const reverse = forward === returning;
     const animation = el.animate([{ strokeDashoffset: reverse ? -length : 24, opacity: .35 }, { strokeDashoffset: reverse ? 24 : -length, opacity: .35 }], { duration, easing: "linear" });
     animation.currentTime = Math.max(0, age);
     return () => animation.cancel();
-  }, [call.id, returning, animate, length, forward]);
+  }, [call.id, returning, animate, length, forward, chevron?.travel]);
   const age = Math.max(0, now - end);
+  const tint = returning ? Math.max(0, .55 * (1 - age / (chevron?.decay || 1))) : .55;
   return <g data-call-id={call.id} data-direction={forward !== returning ? "forward" : "return"} style={{ stroke: CALL_COLOR[call.kind] }}>
-    <path ref={routeRef} d={d} className="ag-edge-live" opacity={returning ? Math.max(.35, .55 - age / 40_000) : .55} />
-    {chevron && <path data-call-arrow d="M-3,-3 L1,0 L-3,3" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" transform={`translate(${chevron.x},${chevron.y}) rotate(${chevron.angle})`} />}
+    <path ref={routeRef} d={d} className="ag-edge-live" opacity={tint} />
+    {chevron && <path data-call-arrow opacity={returning ? tint / .55 : 1} d="M-3,-3 L1,0 L-3,3" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" transform={`translate(${chevron.x},${chevron.y}) rotate(${chevron.angle})`} />}
     {animate && <path ref={ref} d={d} className="ag-flow" strokeDasharray={`24 ${length}`} opacity={0} />}
   </g>;
 }

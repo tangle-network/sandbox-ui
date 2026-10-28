@@ -321,7 +321,7 @@ export function AgentGraphCanvas({
       data-columns={layout?.columns}
     >
       {caption}
-      {narrow ? <ul className="ag-phone-list overflow-auto" aria-label="Agents by attention">
+      {narrow ? <ul className="ag-graph-viewport ag-phone-list overflow-auto" aria-label="Agents by attention">
         {[...nodes].sort((a, b) => activityRank(a) - activityRank(b)).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
           <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} data-agent-id={agent.id} className="ag-phone-select"
             onClick={() => select(agent.id)} onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); select(agent.id); } }}>

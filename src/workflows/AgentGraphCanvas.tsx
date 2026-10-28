@@ -190,14 +190,14 @@ export function AgentGraphCanvas({
     const out: Edge[] = [];
     const seen = new Set<string>();
     for (const s of topology.spawns) {
-      const target = topology.groupOf.get(s.to) ?? s.to;
-      if (layout.frames.some(frame => frame.group.id === target && frame.group.parentId === s.from)) continue;
-      const id = `spawn:${s.from}:${target}`;
+      const source = topology.groups.find(group => group.parentId === s.from)?.id ?? s.from, target = topology.groupOf.get(s.to) ?? s.to;
+      if (source === target) continue;
+      const id = `spawn:${source}:${target}`;
       if (seen.has(id)) continue;
       seen.add(id);
       out.push({
         id,
-        source: s.from,
+        source,
         target,
         type: "smoothstep",
         pathOptions: { borderRadius: 14 },

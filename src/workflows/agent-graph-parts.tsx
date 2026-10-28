@@ -146,7 +146,7 @@ export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
         borderColor: "hsl(var(--foreground) / 0.08)",
       }}
     >
-      <Handles direction={direction} source={false} />
+      <Handles direction={direction} />
       <span className="sr-only">{frame.group.memberIds.length} workers</span>
     </div>
   );

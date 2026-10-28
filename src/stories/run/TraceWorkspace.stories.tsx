@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { waitFor } from "@testing-library/dom";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { FlowSpan, FlowTrace } from "@tangle-network/charts";
-import { TraceWorkspace } from "../../run";
+import { TraceWorkspace, type TraceWorkspaceProps } from "../../run";
 // The host imports the waterfall's stylesheet once, as the TraceWaterfall docs say.
 import "@tangle-network/charts/react/flow-waterfall.css";
 
@@ -82,6 +83,11 @@ export const RecordedActivity: StoryObj<typeof meta> = {
 
 /** Synthetic long failure metadata; the conversation is intentionally not its source. */
 const fullFailure = "Checkout tests failed. " + "The retained compiler diagnostic identifies the affected integration boundary and the original exit status. ".repeat(10) + "Final retained diagnostic.";
+function OpenDrawer(args: TraceWorkspaceProps) {
+  const [selected, select] = useState<string | undefined>("verifier");
+  return <TraceWorkspace {...args} selectedAgentId={selected} onSelectAgent={select} />;
+}
 export const AgentDrawerOpen: StoryObj<typeof meta> = {
+  render: args => <OpenDrawer {...args} />,
   args: { trace: { ...trace, spans: trace.spans.map(span => span.id === "verifier" ? { ...span, facts: [{ label: "Failure", value: fullFailure }] } : span) }, agentCards: { verifier: { result: fullFailure } }, selectedAgentId: "verifier", defaultView: "graph", live: false },
 };

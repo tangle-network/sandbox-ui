@@ -330,3 +330,17 @@ for (const theme of ['dark', 'light']) for (const width of [1280, 390]) test(`se
   await expect.poll(() => details.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
 })
+
+test('selected recorded facts appear only when known at the cursor', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/iframe.html?id=run-traceworkspace--agent-drawer-open&viewMode=story&globals=sandboxTheme:light')
+  const details = page.getByRole('region', { name: 'Recorded agent details' })
+  await expect(details.getByText('Failure', { exact: true })).toBeVisible()
+  await page.getByRole('radio', { name: 'Agents', exact: true }).click()
+  await page.getByRole('slider', { name: 'Playback position' }).fill('500000')
+  await expect(details).toHaveCount(0)
+  await page.getByRole('slider', { name: 'Playback position' }).fill('800000')
+  await expect(details.getByText('Failure', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Close conversation', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toHaveCount(0)
+})

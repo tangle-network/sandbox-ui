@@ -142,6 +142,11 @@ export function TraceWorkspace({
     return agent && first !== undefined ? first - agent.startMs : undefined
   }, [waterfall.startedAt, agent, stream.entries])
   const graph = useMemo(() => agentGraphAt(trace.spans, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges), [trace, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges])
+  const selectedNode = graph.nodes.find(node => node.id === agentId)
+  const facts = cursor === null || agent && agent.endMs <= cursor ? [...(agent?.facts ?? [])] : []
+  for (const [label, value] of [["Recorded result", selectedNode?.result], ["Activity", selectedNode?.turn]] as const) {
+    if (value && !facts.some(fact => fact.value === value)) facts.push({ label, value })
+  }
   const graphNow = cursor !== null && waterfall.startedAt !== undefined ? waterfall.startedAt + cursor : undefined
   const shown = cursor === null || origin === undefined ? stream.entries : stream.entries.filter((entry) => entry.at - origin <= cursor)
   // Live means the stream is open and producing now: an ended, unreachable or scrubbed stream is not.
@@ -197,6 +202,12 @@ export function TraceWorkspace({
               <X aria-hidden className="h-4 w-4" />
             </button>
           </header>
+          {facts.length > 0 && <section aria-label="Recorded agent details" tabIndex={0} className="max-h-[35vh] shrink-0 overflow-y-auto border-b border-border px-3 py-2 text-sm">
+            <dl className="space-y-2">{facts.map((fact, index) => <div key={index}>
+              <dt className="text-xs text-muted-foreground">{fact.label}</dt>
+              <dd className="m-0 whitespace-pre-wrap break-words">{fact.value}</dd>
+            </div>)}</dl>
+          </section>}
           <div
             ref={scroller}
             onScroll={(event) => {

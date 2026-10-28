@@ -181,5 +181,12 @@ test('live headers retain recorded metadata without clipping', async ({ page }) 
   await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
   const clipped = await page.locator('.ag-live-meta, .ag-live-accounting').evaluateAll(elements => elements.filter(el => el.getClientRects().length && el.scrollWidth > el.clientWidth + 1).map(el => el.textContent))
   expect(clipped).toEqual([])
-  await expect(page.locator('.ag-live-chip')).toContainText('Done')
+})
+
+test('compact terminal rows retain Done and Stopped words', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.goto('/iframe.html?id=workflows-agentgraph--seventeen-agents&viewMode=story&globals=sandboxTheme:light')
+  await expect(page.locator('.agent-graph[data-layout="list"]')).toBeVisible()
+  await expect(page.locator('.ag-live-chip[data-status="succeeded"]').first()).toContainText('Done')
+  await expect(page.locator('.ag-live-chip[data-status="stopped"]').first()).toContainText('Stopped')
 })

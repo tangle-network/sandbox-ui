@@ -315,3 +315,18 @@ test('historical Running observations never add a liveness loop', async ({ page 
   await expect(feed.getByText('Running', { exact: true })).toBeVisible()
   expect(await feed.evaluate(element => element.getAnimations({ subtree: true }).filter(animation => animation.effect?.getTiming().iterations === Infinity).length)).toBe(0)
 })
+
+for (const theme of ['dark', 'light']) for (const width of [1280, 390]) test(`selected recorded evidence remains fully readable ${theme} ${width}`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 })
+  await page.goto(`/iframe.html?id=run-traceworkspace--agent-drawer-open&viewMode=story&globals=sandboxTheme:${theme}`)
+  const drawer = page.getByRole('complementary', { name: 'verifier conversation' })
+  const details = drawer.getByRole('region', { name: 'Recorded agent details' })
+  await expect(details.getByText('Failure', { exact: true })).toBeVisible()
+  const reason = details.locator('dd').filter({ hasText: 'Final retained diagnostic.' })
+  await expect(reason).toHaveText('Checkout tests failed. ' + 'The retained compiler diagnostic identifies the affected integration boundary and the original exit status. '.repeat(10) + 'Final retained diagnostic.')
+  expect(await reason.evaluate(element => getComputedStyle(element).webkitLineClamp)).toBe('none')
+  await details.focus()
+  await page.keyboard.press('End')
+  await expect.poll(() => details.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+})

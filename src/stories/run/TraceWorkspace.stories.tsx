@@ -79,3 +79,9 @@ export const RecordedActivity: StoryObj<typeof meta> = {
   ...GraphView,
   args: { trace: { ...trace, spans: trace.spans.map(span => span.id === "root" ? { ...span, activityAt: [0, 30_000, 60_000], medianEventGapMs: 30_000 } : span) }, startedAt: Date.now() - trace.totalMs, live: false, defaultView: "agents" },
 };
+
+/** Synthetic long failure metadata; the conversation is intentionally not its source. */
+const fullFailure = "Checkout tests failed. " + "The retained compiler diagnostic identifies the affected integration boundary and the original exit status. ".repeat(10) + "Final retained diagnostic.";
+export const AgentDrawerOpen: StoryObj<typeof meta> = {
+  args: { trace: { ...trace, spans: trace.spans.map(span => span.id === "verifier" ? { ...span, facts: [{ label: "Failure", value: fullFailure }] } : span) }, agentCards: { verifier: { result: fullFailure } }, selectedAgentId: "verifier", defaultView: "graph", live: false },
+};

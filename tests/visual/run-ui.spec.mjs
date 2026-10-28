@@ -353,6 +353,5 @@ test('passive activity history remains keyboard scrollable', async ({ page }) =>
   await expect(feed).toContainText('Paused while reading')
   await history.press('End')
   await expect.poll(() => history.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
-  const bounds = await history.evaluate(element => ({ end: element.lastElementChild.getBoundingClientRect().bottom, bottom: element.getBoundingClientRect().bottom }))
-  expect(bounds.end).toBeLessThanOrEqual(bounds.bottom + 1)
+  await expect.poll(() => history.evaluate(element => element.lastElementChild.getBoundingClientRect().bottom - element.getBoundingClientRect().bottom)).toBeLessThanOrEqual(1)
 })

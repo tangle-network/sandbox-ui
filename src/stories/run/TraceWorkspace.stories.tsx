@@ -73,3 +73,9 @@ export const GraphView: StoryObj<typeof meta> = {
     button.click();
   },
 };
+
+/** Producer timestamps reach the internal Graph without an agentCards clock adapter. */
+export const RecordedActivity: StoryObj<typeof meta> = {
+  ...GraphView,
+  args: { trace: { ...trace, spans: trace.spans.map(span => span.id === "root" ? { ...span, activityAt: [0, 30_000, 60_000], medianEventGapMs: 30_000 } : span) }, startedAt: Date.now() - trace.totalMs, live: false, defaultView: "agents" },
+};

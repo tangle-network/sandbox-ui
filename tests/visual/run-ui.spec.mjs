@@ -164,3 +164,13 @@ test('phone overview preserves known cost and failure evidence', async ({ page }
   expect(await done.textContent()).toContain('Wrote battery-drain report')
   expect(await done.textContent()).toContain('$0.41')
 })
+
+test('trace graph uses recorded activity and leaves missing activity unknown', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.goto('/iframe.html?id=run-traceworkspace--recorded-activity&viewMode=story&globals=sandboxTheme:dark')
+  await page.getByRole('button', { name: 'graph', exact: true }).click()
+  await expect(page.locator('.agent-graph[data-layout="ready"]')).toBeVisible()
+  await expect(page.locator('.agent-graph [data-activity="quiet"]')).toHaveCount(1)
+  await expect(page.locator('.ag-live-card[data-activity="quiet"]')).toContainText('Quiet 29m')
+  await expect(page.locator('.ag-live-card[data-activity="quiet"]')).toContainText('root')
+})

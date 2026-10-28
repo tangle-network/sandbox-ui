@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.10
+
+- `IntegrationConnectionDetail` accepts an optional `onBack` callback. Plain primary Back clicks prevent link navigation and invoke it, while modified clicks retain normal link behavior.
+
 ## 1.1.9
 
 - Brand defaults live in `theme.brand`, below host theme refinements. Light-default hosts and their channel adapters can override them through the existing `theme` layer. The package builds against the generated Brand palette.

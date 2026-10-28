@@ -51,6 +51,10 @@ export interface AgentGraphNode {
   activity?: AgentGraphActivity | null;
   /** Live cards: its latest tool calls or events, oldest first; the card shows the last three. */
   events?: readonly AgentGraphEvent[] | null;
+  /** Recorded activity and full-stream median, when the visible event tail is bounded. Epoch milliseconds. */
+  lastActivityAt?: number;
+  /** Median interval between recorded events, in milliseconds. */
+  medianEventGapMs?: number;
   /** Live cards: the reasoning effort it runs at, e.g. "high". */
   effort?: string | null;
   /** Live cards: epoch ms it was spawned, for its time alive. */

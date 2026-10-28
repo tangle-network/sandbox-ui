@@ -1,14 +1,15 @@
 import type { Node, NodeProps } from "@xyflow/react";
-import { toolGlyph } from "@tangle-network/charts/react";
+import { Wrench } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { AgentGraphDirection, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
+import type { AgentGraphDirection, AgentGraphEvent, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import { agentStatus, agentSummary, Handles, StatusGlyph, cardBorder } from "./agent-graph-parts";
 import { SELECTION_OUTLINE } from "./canvas-theme";
 import { KIND_ACCENT, NodeMark, RESTING_SHADOW } from "./node-ui";
 import { quietActivity, tokenMilliseconds, useAttention, useMotionAllowed, useRunNow } from "./run-ui-state";
 
 export type LiveAgentCardNode = Node<
-  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onRespond?: () => void }, "liveAgent"
+  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onRespond?: () => void; renderEventIcon?: (event: AgentGraphEvent) => ReactNode }, "liveAgent"
 >;
 const SETTLED: ReadonlySet<AgentGraphStatus> = new Set(["succeeded", "stopped"]);
 
@@ -23,8 +24,8 @@ function middleLabel(label: string) {
 }
 
 /** One shell survives settling. A failure retains its evidence and absolute event times. */
-export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixed, handles = false, onRespond }: {
-  agent: AgentGraphNode; selected: boolean; direction?: AgentGraphDirection; now?: number; handles?: boolean; onRespond?: () => void;
+export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixed, handles = false, onRespond, renderEventIcon }: {
+  agent: AgentGraphNode; selected: boolean; direction?: AgentGraphDirection; now?: number; handles?: boolean; onRespond?: () => void; renderEventIcon?: (event: AgentGraphEvent) => ReactNode;
 }) {
   const now = useRunNow(fixed);
   const ref = useRef<HTMLDivElement>(null);
@@ -87,7 +88,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
           {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" onClick={event => { event.stopPropagation(); onRespond?.(); }}>Respond</button>}</div>
           <div className="ag-live-events-clip"><ol ref={tail} className="ag-live-events" aria-label="Latest events">
             {events.map(event => <li key={event.id} title={event.label}>
-              {toolGlyph(event.label)}
+              {renderEventIcon?.(event) ?? <Wrench size={12} strokeWidth={1.75} aria-hidden />}
               <span className="ag-live-event-label">{middleLabel(event.label)}</span>
               <time className="ag-live-event-at">{eventTime(event.at, now, failed)}</time>
             </li>)}

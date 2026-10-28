@@ -10,6 +10,7 @@
 import { lazy, type ReactNode, Suspense, useMemo, useState } from "react";
 import type {
   AgentGraphDirection,
+  AgentGraphEvent,
   AgentGraphEdge,
   AgentGraphNode,
 } from "./agent-graph-layout";
@@ -21,6 +22,7 @@ export type { AgentGraphCall, AgentGraphCallKind, AgentGraphTool } from "./agent
 export type {
   AgentGraphActivity,
   AgentGraphDirection,
+  AgentGraphEvent,
   AgentGraphEdge,
   AgentGraphEdgeKind,
   AgentGraphEvent,
@@ -63,6 +65,8 @@ export interface AgentGraphProps {
    * agent shrinks to a chip with its `result`, and a new spawn grows in. Cards keep a fixed size, so updates never move one.
    */
   live?: boolean;
+  /** Host tool identity, such as charts' toolGlyph(event.label). Core graphs need no charts dependency. */
+  renderEventIcon?: (event: AgentGraphEvent) => ReactNode;
 }
 
 function lazyCanvas() {

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { toolGlyph } from "@tangle-network/charts/react";
 import { useEffect, useState } from "react";
 import { AgentGraph, type AgentGraphEdge, type AgentGraphNode } from "../../workflows";
 
@@ -194,7 +195,7 @@ function LiveRun() {
   ];
   const edges: AgentGraphEdge[] = nodes.slice(1).map((n) => ({ from: "lead", to: n.id, kind: "spawn" }));
   const [selected, setSelected] = useState<string | null>(null);
-  return <AgentGraph live nodes={nodes} edges={edges} selectedId={selected} onSelect={setSelected} className="h-full w-full" />;
+  return <AgentGraph live renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={setSelected} className="h-full w-full" />;
 }
 
 /** A running run as live cards: who is working, on what, right now. */
@@ -223,7 +224,7 @@ function RunState({ state = "seventeen", burst = false }: { state?: string; burs
     result: i === 2 ? "Benchmark harness exited 137 (OOM)" : node.turn,
     events: Array.from({ length: state === "none" ? 0 : state === "one" ? 1 : 4 }, (_, k) => ({ id: `${node.id}-${tick + k}`, label: ["bash cargo run --release -- prove", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs", "bash cargo test -p prover"][k], at: i === 3 && !burst ? REPLAY_NOW - (15 - k) * 60_000 : now - (3 - k) * 10_000 })),
   }));
-  return <div className="h-screen w-full rounded-[var(--radius-container)] border border-border bg-background"><AgentGraph live nodes={nodes} edges={runEdges} now={now} selectedId={selected} onSelect={setSelected} className="h-full w-full" /></div>;
+  return <div className="h-screen w-full rounded-[var(--radius-container)] border border-border bg-background"><AgentGraph live renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={runEdges} now={now} selectedId={selected} onSelect={setSelected} className="h-full w-full" /></div>;
 }
 export const SeventeenLive: StoryObj = { render: () => <RunState /> };
 export const LiveNeedsYou: StoryObj = { render: () => <RunState /> };

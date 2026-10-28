@@ -95,6 +95,7 @@ export function AgentGraphCanvas({
   className,
   emptyState,
   live = false,
+  renderEventIcon,
   now,
 }: AgentGraphProps) {
   const card = live ? LIVE_AGENT_CARD : AGENT_CARD;
@@ -173,11 +174,11 @@ export function AgentGraphCanvas({
         ariaRole: "button",
         ariaLabel: agentSummary(agent),
         domAttributes: { "aria-pressed": selected },
-        data: { agent, selected, direction, now: clock, onRespond: () => onSelect?.(agent.id) },
+        data: { agent, selected, direction, now: clock, onRespond: () => onSelect?.(agent.id), renderEventIcon },
       } as AgentCardNode | LiveAgentCardNode);
     }
     return [...frames, ...cards];
-  }, [layout, topology, byId, selectedId, direction, live, card, clock, onSelect]);
+  }, [layout, topology, byId, selectedId, direction, live, card, clock, onSelect, renderEventIcon]);
 
   const flowEdges = useMemo((): Edge[] => {
     if (!layout) return [];
@@ -325,7 +326,7 @@ export function AgentGraphCanvas({
         {[...nodes].sort((a, b) => activityRank(a) - activityRank(b)).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
           <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} className="ag-phone-select"
             onClick={() => select(agent.id)} onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); select(agent.id); } }}>
-            <LiveAgentCardView agent={agent} selected={selectedId === agent.id} now={clock} onRespond={() => select(agent.id)} />
+            <LiveAgentCardView agent={agent} selected={selectedId === agent.id} now={clock} renderEventIcon={renderEventIcon} onRespond={() => select(agent.id)} />
           </div>
         </li>)}
       </ul> : <div className="min-h-0 flex-1" style={{ opacity: shown ? 1 : 0 }}><ReactFlow

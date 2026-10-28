@@ -43,12 +43,13 @@ export function syncAmbient(event: AnimationEvent<HTMLElement | SVGElement>) {
 }
 export function quietActivity(agent: AgentGraphNode, now: number) {
   if (agent.status !== "running") return null;
-  const times = (agent.events ?? []).flatMap(e => e.at != null && Number.isFinite(e.at) ? [e.at] : []).sort((a, b) => a - b);
-  const last = times.at(-1) ?? agent.startedAt;
+  const measured = Number.isFinite(agent.lastActivityAt) && Number.isFinite(agent.medianEventGapMs) && agent.medianEventGapMs! >= 0;
+  const times = measured ? [] : (agent.events ?? []).flatMap(e => e.at != null && Number.isFinite(e.at) ? [e.at] : []).sort((a, b) => a - b);
+  const last = Number.isFinite(agent.lastActivityAt) ? agent.lastActivityAt : times.at(-1) ?? agent.startedAt;
   if (last == null || !Number.isFinite(last)) return null;
   const gaps = times.slice(1).map((time, i) => time - times[i]).sort((a, b) => a - b);
   const middle = Math.floor(gaps.length / 2);
-  const median = gaps.length ? gaps.length % 2 ? gaps[middle] : (gaps[middle - 1] + gaps[middle]) / 2 : 0;
+  const median = Number.isFinite(agent.medianEventGapMs) && agent.medianEventGapMs! >= 0 ? agent.medianEventGapMs! : gaps.length ? gaps.length % 2 ? gaps[middle] : (gaps[middle - 1] + gaps[middle]) / 2 : 0;
   const quietMs = Math.max(0, now - last);
   return quietMs > Math.max(5 * 60_000, 3 * median) ? { quietMs, label: `Quiet ${Math.floor(quietMs / 60_000)}m` } : null;
 }

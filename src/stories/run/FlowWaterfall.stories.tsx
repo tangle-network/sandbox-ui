@@ -1,9 +1,10 @@
 import { waitFor } from "@testing-library/dom";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { FlowSpan, FlowTrace } from "@tangle-network/charts";
+import { otlpFlowTrace, type OtlpSpan, type FlowSpan, type FlowTrace } from "@tangle-network/charts";
 import { FlowWaterfall, TimelineView } from "@tangle-network/charts/react";
 import "@tangle-network/charts/react/flow-waterfall.css";
 import recorded from "./fixtures/discovery-waterfall.json";
+import controlSession from "./fixtures/control-session.json";
 
 const trace = recorded as FlowTrace;
 const live: FlowTrace = { ...trace, spans: trace.spans.map((span, index): FlowSpan => span.kind === "pipeline" ? { ...span, status: index ? "needs-you" : "running", outcome: { tone: index ? "warn" : "live", label: index ? "Needs you" : "Running" } } : span) };
@@ -29,7 +30,7 @@ export const SearchMatch: Story = { args: { query: "Echo" } };
 export const LongNames: Story = { args: { trace: { ...trace, spans: trace.spans.map(span => ({ ...span, name: `${span.name} validating-the-very-long-release-proposal-and-signed-artifacts` })) } } };
 // SpanCard is exercised through its public owner. A click pins it; Escape returns to the row.
 const pinCard: Story["play"] = async ({ canvasElement }) => {
-  const bar = await waitFor(() => { const bar = canvasElement.querySelector<HTMLElement>(".fw-bar"); if (!bar) throw new Error("Waiting for trace bar"); return bar; });
+  const bar = await waitFor(() => { const bar = canvasElement.querySelector<HTMLElement>('.fw-row:not([data-span-id^="family:"]) .fw-bar'); if (!bar) throw new Error("Waiting for trace bar"); return bar; });
   bar.click();
   await waitFor(() => { if (!canvasElement.querySelector(".fw-card")) throw new Error("Span card did not open"); });
 };
@@ -38,3 +39,5 @@ export const SpanCardFailedFull: Story = { args: { trace: failureHeavy, defaultV
 export const SpanCardDone: Story = { play: pinCard };
 export const SpanCardRunning: Story = { args: { trace: live, live: true }, play: pinCard };
 export const TimelineFolded: Story = { render: () => <TimelineView lanes={[{ id: "root", label: "Root", spans: [{ start: 0, end: 1000, state: "done" }], ticks: [] }, { id: "worker", parent: "root", label: "Worker", spans: [{ start: 100, end: 900, state: "done" }], ticks: [] }]} options={{ measure: "Agent timeline" }} defaultCollapsed={["root"]} /> };
+
+export const ControlSession: Story = { args: { trace: otlpFlowTrace(controlSession as OtlpSpan[]) } };

@@ -17,7 +17,7 @@ export const CALL_COLOR: Record<AgentGraphCallKind, string> = {
   "needs-you": `var(${statusMeta("needs-you").token})`,
   failed: `var(${statusMeta("failed").token})`,
 };
-export const CALL_LABEL: Record<AgentGraphCallKind, string> = { call: "Call", answer: "Answer", "needs-you": "Needs you", failed: "Failed" };
+export const CALL_LABEL: Record<AgentGraphCallKind, string> = { call: "Call", answer: "Answer", "needs-you": statusMeta("needs-you").label, failed: statusMeta("failed").label };
 
 
 export interface HubEntity {
@@ -69,7 +69,7 @@ export function HubNode({ entity, x, y, tile, dimmed, selected, buttonRef, onOpe
   useAttention(attentionRef, entity.status ?? "unknown");
   const attention = entity.status === "needs-you" || entity.status === "failed";
   const tone = attention ? `var(${statusMeta(entity.status!).token})` : undefined;
-  const sub = entity.quiet ?? (entity.status === "needs-you" ? "Needs you · Respond" : entity.status ? statusMeta(entity.status).label : entity.sub);
+  const sub = entity.quiet ?? (entity.status === "needs-you" ? "Needs you · Respond" : entity.status === "waiting" ? entity.agent?.turn || "Waiting on peer" : entity.status ? statusMeta(entity.status).label : entity.sub);
   return (
     <button
       ref={(el) => { attentionRef.current = el; if (typeof buttonRef === "function") buttonRef(el); else if (buttonRef) buttonRef.current = el; }}

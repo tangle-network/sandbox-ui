@@ -40,7 +40,7 @@ export const SpanCardFailed: Story = { args: { trace: failureHeavy }, play: pinC
 export const SpanCardFailedFull: Story = { args: { trace: failureHeavy, defaultView: "spans" }, play: pinCard };
 export const SpanCardDone: Story = { play: pinCard };
 export const SpanCardRunning: Story = { args: { trace: live, live: true }, play: pinCard };
-export const TimelineFolded: Story = { render: () => <TimelineView lanes={[{ id: "root", label: "Root", spans: [{ start: 0, end: 1000, state: "done" }], ticks: [] }, { id: "worker", parent: "root", label: "Worker", spans: [{ start: 100, end: 900, state: "done" }], ticks: [] }]} options={{ measure: "Agent timeline" }} defaultCollapsed={["root"]} /> };
+export const TimelineFolded: Story = { render: () => <TimelineView lanes={[{ id: "root", label: "Root", spans: [{ start: 0, end: 1000, state: "done" }], ticks: [] }, { id: "worker", parent: "root", label: "Worker", spans: [{ start: 100, end: 900, state: "done" }], ticks: [] }]} options={{ measure: "Agent timeline", formatTime: ms => `${ms / 1000}s` }} defaultCollapsed={["root"]} /> };
 
 export const ControlSession: Story = { args: { trace: otlpFlowTrace(controlSession as OtlpSpan[]) } };
 export const Discovery21c: Story = { args: { trace: otlpFlowTrace(discovery21c as OtlpSpan[]) } };

@@ -1,7 +1,8 @@
 # Changelog
 
-## 1.1.11
+## 2.0.0
 
+- Breaking: the optional charts peer and public trace types move to the 2.x line. Token totals can be absent when telemetry was not reported; consumers must handle unknown totals instead of assuming zero.
 - AgentGraph and its hub use the shared run status metadata. Waiting on a peer is neutral; Needs you has a Respond action; failed agents retain their evidence. Recorded activity identifies quiet agents in the cards and run counts.
 - Containers narrower than 600px show readable, selectable agent lists. Desktop cards use the shared radius, shadow and selection roles.
 - Running marks share one opacity-only ambient epoch, including reduced motion. Streaming event tails keep their position; finite attention rings replace spinners and the repeating sheen.

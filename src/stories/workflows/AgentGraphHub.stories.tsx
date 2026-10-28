@@ -137,3 +137,8 @@ export const FailedCall: Story = { args: { at: 22.2, selectedId: "coder" } };
 
 /** Recorded work silence qualifies Running; it does not turn the agent into Waiting. */
 export const Quiet: Story = { render: () => <div style={{ maxWidth: 820, margin: "0 auto" }}><AgentGraph layout="hub" nodes={agentsAt(6.9).map(node => node.id === "research" ? { ...node, events: [0, 1, 2].map(i => ({ id: `quiet-${i}`, label: "Recorded read", at: s(-840 + i * 60) })) } : node)} edges={spawns} tools={tools} calls={calls} you={you} now={s(6.9)} /></div> };
+
+/** Agent activity can arrive without tool inventory or call history. */
+export const UnreportedHistory: Story = { render: () => <AgentGraph layout="hub" nodes={agentsAt(0)} edges={spawns} now={s(0)} /> };
+/** An explicitly recorded empty history is measured zero. */
+export const EmptyHistory: Story = { render: () => <AgentGraph layout="hub" nodes={agentsAt(0)} edges={spawns} tools={[]} calls={[]} now={s(0)} /> };

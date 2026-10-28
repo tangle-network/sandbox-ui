@@ -140,14 +140,15 @@ export function AgentGraphCanvas({
 
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
+  const rfRef = useRef<ReactFlowInstance | null>(null);
+
   const flowNodes = useMemo((): Node[] => {
     if (!layout) return [];
     const frames: AgentFrameNode[] = layout.frames.map((frame) => ({
       id: frame.group.id,
       type: "agentFrame",
       position: { x: frame.x, y: frame.y },
-      width: frame.width,
-      height: frame.height,
+      width: frame.width, height: frame.height, measured: rfRef.current?.getInternalNode(frame.group.id)?.measured,
       zIndex: -1,
       selectable: false,
       focusable: false,
@@ -171,8 +172,7 @@ export function AgentGraphCanvas({
         id,
         type: live ? "liveAgent" : "agent",
         position,
-        width: card.width,
-        height: card.height,
+        width: card.width, height: card.height, measured: rfRef.current?.getInternalNode(id)?.measured,
         className: AGENT_NODE_CLASS,
         draggable: false,
         ariaRole: "button",
@@ -229,7 +229,6 @@ export function AgentGraphCanvas({
     return [...out, ...messages.values()];
   }, [layout, topology, edges, byId, selectedId, hovered]);
 
-  const rfRef = useRef<ReactFlowInstance | null>(null);
   const [ready, setReady] = useState(false);
   const [shown, setShown] = useState(false);
   const readerMoved = useRef(false);

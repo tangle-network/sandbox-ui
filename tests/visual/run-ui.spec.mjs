@@ -245,6 +245,14 @@ test('one run view control preserves selection and exposes both graph layouts', 
   await expect(page.getByRole('region', { name: 'Latest activity' })).toHaveCount(1)
   await page.locator('.ag-live-card[data-status="failed"], .ag-agent-card[data-status="failed"]').first().click()
   await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toBeVisible()
+  // After the drawer resize settles, clock ticks must not reinitialize node measurement.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  await page.evaluate(() => {
+    window.__runResizeErrors = []
+    addEventListener('error', event => { if (event.message.includes('ResizeObserver loop')) window.__runResizeErrors.push(event.message) })
+  })
+  await page.waitForTimeout(2200)
+  expect(await page.evaluate(() => window.__runResizeErrors)).toEqual([])
   await page.getByRole('radio', { name: 'Steps', exact: true }).click()
   await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toBeVisible()
   await page.getByRole('radio', { name: 'Graph', exact: true }).click()

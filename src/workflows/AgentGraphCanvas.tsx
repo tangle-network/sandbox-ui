@@ -71,8 +71,9 @@ function useCanvasSize(): [
     observer.current?.disconnect();
     observer.current = null;
     if (!el || typeof ResizeObserver === "undefined") return;
+    const viewport = el.querySelector<HTMLElement>(".ag-graph-viewport") ?? el;
     const read = () => {
-      const r = el.getBoundingClientRect();
+      const r = viewport.getBoundingClientRect();
       if (r.width === 0 || r.height === 0) return;
       setSize((prev) =>
         prev && Math.abs(prev.width - r.width) < 1 && Math.abs(prev.height - r.height) < 1
@@ -81,7 +82,7 @@ function useCanvasSize(): [
       );
     };
     observer.current = new ResizeObserver(read);
-    observer.current.observe(el);
+    observer.current.observe(viewport);
     read();
   }, []);
   return [size, measure];
@@ -335,7 +336,7 @@ export function AgentGraphCanvas({
               : <AgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} direction={direction} onRespond={onSelect ? () => select(agent.id) : undefined} />}
           </div>
         </li>)}
-      </ul> : <div className="min-h-0 flex-1" style={{ opacity: shown ? 1 : 0 }}><ReactFlow
+      </ul> : <div className="ag-graph-viewport min-h-0 flex-1" style={{ opacity: shown ? 1 : 0 }}><ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
         nodeTypes={NODE_TYPES}

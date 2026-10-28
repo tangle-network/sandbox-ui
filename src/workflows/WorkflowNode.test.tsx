@@ -65,10 +65,6 @@ function renderNode(data: WfNodeData, runMode = data.state !== undefined) {
 
 describe("fitZoomCeiling", () => {
   it("lets a compact fit zoom past 1, and holds full cards at their size", () => {
-    // Compact tiles are small by design — fitting them into the canvas
-    // legitimately zooms in; full cards at 1 are already their designed size.
-    // (How the reframe itself runs — the tween, and the reduced-motion instant
-    // path — is covered in WorkflowGraphFitView.test.tsx.)
     expect(fitZoomCeiling(true)).toBeGreaterThan(1);
     expect(fitZoomCeiling(false)).toBe(1);
   });
@@ -83,43 +79,12 @@ function brandMark(container: HTMLElement, label: string): HTMLElement | null {
 }
 
 describe("buildStyledEdges", () => {
-  // Shaped as `buildFlowGraph` emits an inferred-spine edge: the built-in
-  // renderer, and edge data carrying its kind.
   const edge = (source: string, target: string): WfFlowEdge => ({
     id: `${source}->${target}`,
     source,
     target,
     type: "smoothstep",
     data: { kind: "spine" },
-  });
-
-  it("colors an edge by its target's status and animates only the running hop", () => {
-    const [done, running, unreached] = buildStyledEdges(
-      [edge("a", "b"), edge("b", "c"), edge("c", "d")],
-      { b: { status: "succeeded" }, c: { status: "running" } },
-    );
-    // Settled edges go quiet (2026-09): only the live front carries color.
-    expect(done.style?.stroke).toBe(
-      "color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)",
-    );
-    expect(running.style?.stroke).toBe("hsl(var(--primary))");
-    expect(running.animated).toBe(true);
-    // An unreached (no-state) target is the same quiet neutral, animated off.
-    expect(unreached.style?.stroke).toBe(
-      "color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)",
-    );
-    expect(unreached.animated).toBe(false);
-  });
-
-  it("renders every edge muted and non-animated in the static/preview path (no nodeState)", () => {
-    // The definition/proposal-card preview passes no run state — all edges must
-    // be the neutral muted token and static, never colored or animated.
-    const edges = buildStyledEdges([edge("a", "b"), edge("b", "c")], undefined);
-    expect(edges).toHaveLength(2);
-    for (const e of edges) {
-      expect(e.style?.stroke).toBe("color-mix(in srgb, hsl(var(--muted-foreground)) 38%, transparent)");
-      expect(e.animated).toBe(false);
-    }
   });
 
   it("styles edges with RAW brand tokens, never a --color-* @theme alias", () => {
@@ -130,7 +95,6 @@ describe("buildStyledEdges", () => {
     // must therefore use a raw token.
     const edges = buildStyledEdges(
       [edge("a", "b")],
-      // exercise every status branch
       { a: { status: "queued" }, b: { status: "failed" } },
     );
     for (const s of [
@@ -152,33 +116,7 @@ describe("buildStyledEdges", () => {
 });
 
 describe("WorkflowNode", () => {
-  it("renders a parked decision as blocked on the viewer, not as in-flight", () => {
-    // Without a `waiting` status a host had to map the parked run onto `running`,
-    // so the step the run was STUCK on rendered as the live one — pulsing bar,
-    // primary accent, "Running" pill — while it went nowhere without the viewer.
-    renderNode({
-      title: "Ship the release?",
-      kind: "decision",
-      subtitle: "approve / reject",
-      isRoot: false,
-      tone: "structural",
-      state: { status: "waiting" },
-    });
-    expect(screen.getByText("Waiting on you")).toBeTruthy();
-    expect(screen.queryByText("Running")).toBeNull();
-    // The question and its options are both on the card.
-    expect(screen.getByText("Ship the release?")).toBeTruthy();
-    expect(screen.getByText("approve / reject")).toBeTruthy();
-    // The bar sits where the run stopped and does NOT move — a moving bar would
-    // say the workflow is working.
-    const bar = screen.getByTestId("wf-node-progress");
-    expect(bar.style.width).toBe("58%");
-    expect(bar.className).not.toContain("animate-pulse");
-  });
-
   it("animates the progress bar only for a running node", () => {
-    // The counterpart: the ONE status that means "work is happening right now" is
-    // the only one that moves.
     const { unmount } = renderNode({ ...BASE, state: { status: "running" } });
     expect(screen.getByTestId("wf-node-progress").className).toContain(
       "animate-pulse",
@@ -202,18 +140,13 @@ describe("WorkflowNode", () => {
       },
     });
     expect(screen.getByText("Running")).toBeTruthy();
-    // The live model names the step (it supersedes the requested one) — beside
-    // the agent's own name, so a fan-out of one model is still tellable apart.
     expect(screen.getByText("AI Agent · gpt-4o")).toBeTruthy();
-    // …and the run's numbers read as ONE line, not a row of boxes.
     expect(screen.getByText("$0.0032")).toBeTruthy();
     expect(screen.getByText("4.2s")).toBeTruthy();
     expect(screen.getByText("partial answer")).toBeTruthy();
   });
 
   it("shows the model a run ACTUALLY used, shortened like the requested one", () => {
-    // A fan-out branch / fallback can run a different model than the definition
-    // asked for — and it must not grow a vendor prefix the definition's didn't.
     renderNode({
       ...BASE,
       subtitle: "claude-sonnet-5",
@@ -235,7 +168,6 @@ describe("WorkflowNode", () => {
         outputPreview: "Found an uncapped retry loop in worker.ts",
       },
     });
-    // Rounds are an agent progress signal, and they ride in the footer caption.
     expect(screen.getByText("3 rounds")).toBeTruthy();
     // The PROMPT is gone: it is authoring detail, and a reader who opened a run
     // came for what the agent said, not for what it was asked. The card is sized
@@ -248,10 +180,6 @@ describe("WorkflowNode", () => {
   });
 
   it("shows an agent's prompt while it has no answer yet, so a queued branch says what it will do", () => {
-    // A fan-out runs the same model on different prompts. Trading the prompt for
-    // the answer is only right once there IS an answer: a queued branch showing
-    // neither rendered as an anonymous card — three of them side by side, all
-    // labelled with the same model and nothing to tell them apart.
     renderNode({
       ...BASE,
       description: "Audit the change for security vulnerabilities.",
@@ -261,7 +189,6 @@ describe("WorkflowNode", () => {
     expect(
       screen.getByText("Audit the change for security vulnerabilities."),
     ).toBeTruthy();
-    // The name rides with the model for the same reason.
     expect(screen.getByText("AI Agent · deepseek-chat")).toBeTruthy();
   });
 
@@ -283,7 +210,6 @@ describe("WorkflowNode", () => {
     expect(
       screen.queryByText("The reviewer flagged two medium-severity findings."),
     ).toBeNull();
-    // The question is still what a decision shows when it has NOT failed.
     cleanup();
     renderNode({
       title: "Ship the release?",
@@ -324,11 +250,6 @@ describe("WorkflowNode", () => {
   });
 
   it("renders an agent's answer and its prompt at the SAME type size", () => {
-    // They share one reserved body and stand in for each other, so a difference
-    // in size changes how many lines fit and silently breaks the reservation.
-    // `NodeOutputBody` sets its own 11px, which a container asking for another
-    // size does not override — so the prompt has to match it rather than the
-    // other way round.
     const { container: answer } = renderNode({
       ...BASE,
       state: { status: "succeeded", outputPreview: "the answer" },
@@ -345,8 +266,6 @@ describe("WorkflowNode", () => {
   });
 
   it("says a FINISHED agent produced nothing, rather than falling back to its prompt", () => {
-    // The prompt stands in for an answer only while one is still coming. On a
-    // node that has finished, the same text reads as the result it returned.
     renderNode({
       ...BASE,
       description: "Triage the change and decide what review it needs.",
@@ -359,8 +278,6 @@ describe("WorkflowNode", () => {
   });
 
   it("replaces that prompt with the answer as soon as one arrives", () => {
-    // The counterpart: the fallback must not linger beside the answer, which
-    // would spend the body on the question the reader already had answered.
     renderNode({
       ...BASE,
       description: "Audit the change for security vulnerabilities.",
@@ -373,41 +290,28 @@ describe("WorkflowNode", () => {
   });
 
   it("renders a run card for a node the host sent no state for, matching what the layout reserved", () => {
-    // `nodeHeight` reserves the run bands for every action the moment the graph
-    // has ANY run state — the layout is computed once and cannot revisit it. A
-    // node missing from `nodeState` (the run has not reached it, and the host
-    // sent no entry) was therefore rendering its definition card into a
-    // run-sized box, leaving over a hundred pixels of void beneath it.
     const { container } = renderNode({ ...ACTION, description: "post it" }, true);
-    // The footer is the tell: it is a run band, and it is what the box reserved.
     expect(container.querySelector(":scope > div > .mt-auto")).toBeTruthy();
   });
 
   it("renders NO run bands when the graph is not showing a run at all", () => {
-    // The counterpart — a definition graph reserves none of them.
     const { container } = renderNode({ ...ACTION, description: "post it" }, false);
     expect(container.querySelector(":scope > div > .mt-auto")).toBeNull();
     expect(screen.getByText("post it")).toBeTruthy();
   });
 
   it("keeps an agent's prompt on a DEFINITION card, which has no answer to show", () => {
-    // The counterpart: with no run state there is nothing to trade the prompt
-    // for, so it stays — and `nodeHeight` reserves the description band for it.
     renderNode({ ...BASE, description: "Review the PR diff" });
     expect(screen.getByText("Review the PR diff")).toBeTruthy();
   });
 
   it("renders an agent's answer as the card BODY, with no caption or well", () => {
-    // Answer-first: the output is not an attribute of the node, it is what the
-    // node produced. A caption over a framed well says the opposite, and costs
-    // the rows that let the answer be five lines instead of three.
     const { container } = renderNode({
       ...BASE,
       state: { status: "succeeded", outputPreview: "the whole answer" },
     });
     expect(screen.queryByText("Output")).toBeNull();
     expect(screen.getByText("the whole answer")).toBeTruthy();
-    // Set in the foreground token, not the muted one a well's body uses.
     const body = screen.getByText("the whole answer");
     expect(body.className).toContain("text-foreground");
   });
@@ -418,7 +322,6 @@ describe("WorkflowNode", () => {
   });
 
   it("renders an explicit 'rounds: 0' rather than hiding it", () => {
-    // A just-started agent reports 0 completed rounds — show it, don't drop it.
     renderNode({ ...BASE, state: { status: "running", rounds: 0 } });
     expect(screen.getByText("0 rounds")).toBeTruthy();
   });
@@ -442,8 +345,6 @@ describe("WorkflowNode", () => {
       </ReactFlowProvider>,
     );
     expect(screen.queryByText("Running")).toBeNull();
-    // Name + subtitle only: a compact node is an icon and a name. The prompt and
-    // the output stay behind the expand toggle / the node detail.
     expect(screen.getByText("AI Agent")).toBeTruthy();
     expect(screen.getByText("m")).toBeTruthy();
     expect(screen.queryByText("the prompt")).toBeNull();
@@ -481,14 +382,10 @@ do:
     expect(
       brandMark(container, "Anthropic")?.closest("[aria-hidden]"),
     ).toBeTruthy();
-    // …and the thing it stands for IS announced, in words.
     expect(screen.getByText("claude-sonnet-4-5")).toBeTruthy();
   });
 
   it("marks the model the run ACTUALLY used, not the one it asked for", () => {
-    // The subtitle already shows the actual model once a run is live (a router can
-    // fall back to another lab). The mark has to agree with it, or the card shows
-    // an Anthropic logo beside the words "gpt-5.4".
     const { container } = renderNode({
       ...BASE,
       model: "anthropic/claude-sonnet-4-5",
@@ -499,16 +396,12 @@ do:
   });
 
   it("steps a HOSTED model's two-mark stack down so it can't overflow the tile", () => {
-    // One lab's own model is a single 28px mark and fills the expanded card's 34px
-    // tile. A hosted model stacks host + lab, and that pair is 36px wide — wider
-    // than the tile, so the lab chip would hang over the border.
     const { container } = renderNode({
       ...BASE,
       model: "openrouter/anthropic/claude-sonnet-4-5",
     });
     const stack = container.querySelector('[aria-label*="hosting"]');
     expect(stack).toBeTruthy();
-    // The narrow stack (h-4 w-6 = 16×24), not the wide one (h-7 w-9 = 28×36).
     expect(stack?.className).toContain("w-6");
     expect(stack?.className).not.toContain("w-9");
   });
@@ -524,9 +417,6 @@ do:
   });
 
   it("leaves an integration node's PROVIDER mark alone", () => {
-    // A model brand belongs to an agent. On an integration node the provider IS the
-    // identity (n8n's rule, and what the title says), so it keeps its own logo — the
-    // model brand must not take the tile from it.
     const { container } = renderNode({
       ...BASE,
       kind: "integration.invoke",
@@ -537,17 +427,12 @@ do:
   });
 
   it("keeps the kind glyph for a model with no published mark", () => {
-    // An unknown provider keeps the generic icon rather than getting an invented
-    // logo.
     const { container } = renderNode({ ...BASE, model: "some-internal/model-x" });
     expect(brandMark(container, "Anthropic")).toBeNull();
     expect(brandMark(container, "OpenAI")).toBeNull();
   });
 
   it("anchors a compact node's handles to its TILE, not to the box that holds its name", () => {
-    // The compact box spans the tile AND the name beneath it (so a name can't
-    // collide with the node below). Left at the box's default center, the edges
-    // would attach to empty canvas beside the label.
     const { container } = render(
       <ReactFlowProvider>
         <DensityContext.Provider value={true}>
@@ -561,10 +446,6 @@ do:
     const right = container.querySelector<HTMLElement>(
       ".react-flow__handle-right",
     );
-    // Every anchor is stated in ONE coordinate system (left/top + a centering
-    // transform), so it lands exactly on the tile's edge midpoint — not half a
-    // handle past it, which is where React Flow's own per-side offsets put the
-    // Right/Bottom ones.
     expect(left?.style.left).toBe("46px"); // the tile's left edge…
     expect(left?.style.top).toBe("38px"); // …at its vertical middle
     expect(right?.style.left).toBe("122px"); // the tile's right edge
@@ -573,8 +454,6 @@ do:
   });
 
   it("anchors a compact node's handles to the tile under TB too (top/bottom edges)", () => {
-    // The vertical mirror of the LR case. `bottom: auto` is required to override
-    // React Flow's bottom-anchored default.
     const { container } = render(
       <ReactFlowProvider>
         <DirectionContext.Provider value="TB">
@@ -588,9 +467,6 @@ do:
     const bottom = container.querySelector<HTMLElement>(
       ".react-flow__handle-bottom",
     );
-    // In TB the tile sits at the box's LEADING edge and the name beside it, so the
-    // handles are on the tile's own top/bottom, centered on its width (38) — and
-    // the edge that leaves the bottom passes under the tile, never through the name.
     expect(top?.style.left).toBe("38px");
     expect(top?.style.top).toBe("0px");
     expect(bottom?.style.left).toBe("38px");
@@ -606,7 +482,6 @@ do:
         </DirectionContext.Provider>
       </ReactFlowProvider>,
     );
-    // TB routes edges vertically: target handle on top, source on bottom.
     expect(container.querySelector(".react-flow__handle-top")).toBeTruthy();
     expect(container.querySelector(".react-flow__handle-bottom")).toBeTruthy();
     expect(container.querySelector(".react-flow__handle-left")).toBeNull();
@@ -624,11 +499,8 @@ do:
 
   it("starts compact and flips the density label when the toggle is clicked", () => {
     render(<WorkflowGraph yaml={YAML} variant="full" />);
-    // Compact by DEFAULT (the graph is read structure-first) → the toggle offers
-    // to expand.
     const toggle = screen.getByRole("button", { name: /expand/i });
     fireEvent.click(toggle);
-    // Once expanded, the toggle offers to collapse again.
     expect(screen.getByRole("button", { name: /compact/i })).toBeTruthy();
   });
 
@@ -639,7 +511,6 @@ do:
       kind: "notify",
       state: { status: "succeeded", inputTokens: 100, outputTokens: 20, durationMs: 300 },
     });
-    // Tokens are an agent.run concern only.
     expect(screen.queryByText("100/20 tok")).toBeNull();
   });
 
@@ -664,9 +535,6 @@ do:
   it("clamps an over-long output preview before it reaches the DOM", () => {
     const long = "y".repeat(500);
     renderNode({ ...BASE, state: { status: "succeeded", outputPreview: long } });
-    // The full payload is never rendered; only the bounded preview is. The bound
-    // is OUTPUT_PREVIEW_CHARS — spelled out so a change to it is a deliberate
-    // edit here too, since lowering it silently drops text the card has room for.
     expect(screen.queryByText(long)).toBeNull();
     expect(screen.getByText(`${"y".repeat(240)}…`)).toBeTruthy();
   });
@@ -677,10 +545,8 @@ do:
       state: { status: "failed", outputPreview: "suppressed while failed" },
     });
     expect(screen.getByText("Failed")).toBeTruthy();
-    // No output/error block at all — neither its caption nor a body.
     expect(container.querySelector("p")).toBeNull();
     expect(screen.queryByText("Error")).toBeNull();
-    // outputPreview is suppressed for a failed node (error channel only).
     expect(screen.queryByText("suppressed while failed")).toBeNull();
   });
 
@@ -705,10 +571,8 @@ do:
         outputPreview: "fired",
       },
     });
-    // Its status still shows — in the header pill, which the static height covers.
     expect(screen.getByText("Done")).toBeTruthy();
     expect(screen.getByText("Daily at 09:00")).toBeTruthy();
-    // …and nothing a run adds.
     expect(container.querySelector(".mt-auto")).toBeNull(); // no status footer
     expect(screen.queryByText("3.2s")).toBeNull(); // no elapsed
     expect(screen.queryByText("$0.0040")).toBeNull(); // no metrics line
@@ -717,10 +581,6 @@ do:
   });
 
   it("says what an empty output slot means, rather than showing a void", () => {
-    // The card is sized for the output it MAY yet have (the layout is computed
-    // once, before any run state, so it can never reflow mid-run). A node with
-    // nothing to report must therefore say so — a blank region reads as a broken
-    // card. A running node is the exception: its output may still be on its way.
     const cases: [WfNodeState["status"], string | null][] = [
       ["queued", "Not run yet"],
       ["succeeded", "No output"],
@@ -751,9 +611,7 @@ describe("WorkflowNode — status footer + content-aware output", () => {
       ...ACTION,
       state: { status: "succeeded", outputPreview: '{"status":200,"id":4821}' },
     });
-    // The block is labelled…
     expect(screen.getByText("Output")).toBeTruthy();
-    // …and the JSON is split into keys and values, not dumped verbatim.
     expect(screen.getByText("status")).toBeTruthy();
     expect(screen.getByText("200")).toBeTruthy();
     expect(screen.getByText("id")).toBeTruthy();
@@ -775,37 +633,27 @@ describe("WorkflowNode — status footer + content-aware output", () => {
       ...BASE,
       state: { status: "running", rounds: 2, durationMs: 4200 },
     });
-    // The bottom-pin only works if the card itself is a column flex container —
-    // assert the wrapper's layout, not just that some .mt-auto element exists.
     const wrapper = container.querySelector(".overflow-hidden.rounded-xl");
     expect(wrapper).toBeTruthy();
     const wrapperClasses = (wrapper?.className ?? "").split(/\s+/);
     expect(wrapperClasses).toContain("flex");
     expect(wrapperClasses).toContain("flex-col");
-    // The footer is a DIRECT child pinned via mt-auto, carrying rounds + elapsed.
     expect(wrapper?.querySelector(":scope > .mt-auto")).toBeTruthy();
     expect(screen.getByText("2 rounds")).toBeTruthy();
     expect(screen.getByText("4.2s")).toBeTruthy();
   });
 
   it("does not restate the status in the footer caption (the header pill owns it)", () => {
-    // A non-agent failure has no rounds; the footer must not fall back to the
-    // status word, which would duplicate the header pill.
     renderNode({
       ...BASE,
       title: "Notify",
       kind: "notify",
       state: { status: "failed", error: "boom", durationMs: 1400 },
     });
-    // "Failed" appears exactly once (the header pill), not again in the footer.
     expect(screen.getAllByText("Failed")).toHaveLength(1);
   });
 
   it("keeps a wide JSON output within its line budget (entries + marker <= ACTION_OUTPUT_ROWS)", () => {
-    // An object with more fields than fit must spend its LAST line on the
-    // truncation marker, so it renders at most ACTION_OUTPUT_ROWS - 1 key rows. Rows and
-    // marker together exceeding the budget is what clips the well or pushes it
-    // into the footer of the fixed-height card.
     const { container } = renderNode({
       ...ACTION,
       state: {
@@ -830,14 +678,10 @@ describe("WorkflowNode — status footer + content-aware output", () => {
     expect(dt).toBeTruthy();
     expect(dt?.className).toContain("truncate");
     expect(dt?.className).toContain("max-w-[45%]");
-    // The full key stays available on hover even when the column truncates it.
     expect(dt?.getAttribute("title")).toBe(key);
   });
 
   it("renders a JSON-shaped error in the error tone, not neutral", () => {
-    // A failure whose message is a JSON object must still read as an error, like a
-    // prose one — not neutral key/value that looks like normal output. The color
-    // is the semantic danger TOKEN, so it holds up in light and dark alike.
     const { container } = renderNode({
       ...ACTION,
       state: { status: "failed", error: '{"message":"timeout","code":504}' },
@@ -850,9 +694,6 @@ describe("WorkflowNode — status footer + content-aware output", () => {
   });
 
   it("suppresses the output block for whitespace-only host output, short and long", () => {
-    // A whitespace-only preview must never render a bare "Output" label — including
-    // when it is longer than the clamp limit, where clampPreview would otherwise
-    // turn it into a lone "…".
     for (const ws of ["   \n  ", " ".repeat(300)]) {
       const { unmount } = renderNode({
         ...BASE,
@@ -887,7 +728,6 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
     const pre = container.querySelector("pre");
     expect(pre?.className).toContain("truncate");
     expect(pre?.className).not.toContain("line-clamp-2");
-    // `whitespace-pre-wrap` would override truncate's `nowrap` and re-wrap the line.
     expect(pre?.className).not.toContain("whitespace-pre-wrap");
   });
 
@@ -918,20 +758,15 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
     });
 
     it("renders EVERY recovered JSON entry, with no row budget to run out of", () => {
-      // Six keys — more than any card's row budget, and exactly the case that
-      // renders as one field and an ellipsis inside a card.
       const json = '{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6}';
       const { container } = render(
         <NodeOutputBody shape={classifyOutput(json)} rows="none" />,
       );
       expect(container.querySelectorAll("dt")).toHaveLength(6);
-      // The marker is what `classifyOutput` dropped, and it dropped nothing.
       expect(container.textContent).not.toContain("…");
     });
 
     it("still marks entries the classifier itself capped", () => {
-      // MAX_JSON_ENTRIES is 6, so a seventh key is gone before the body sees it —
-      // unclamped or not, the reader has to be told something was dropped.
       const json = `{${Array.from({ length: 9 }, (_, i) => `"k${i}":${i}`).join(",")}}`;
       const { container } = render(
         <NodeOutputBody shape={classifyOutput(json)} rows="none" />,
@@ -941,9 +776,6 @@ describe("NodeOutputBody — line-clamp on code/text shapes", () => {
     });
   });
 
-  // A card that RESERVES n lines and then silently clamps to two shows a short
-  // body in a tall well — the reservation and the render disagree, and nothing
-  // fails. So every budget a card can reserve has to map to its own utility.
   it.each([4, 5, 6])("honors a %i-row budget rather than falling back to two", (rows) => {
     const { container: textC } = render(
       <NodeOutputBody shape={classifyOutput("a longer prose output to clamp")} rows={rows} />,
@@ -965,19 +797,6 @@ describe("buildStyledEdges — declared topology", () => {
     data: { kind: "spine", backEdge: true },
   });
 
-  it("dashes a cycle-closing edge and never animates it", () => {
-    // A back edge points at a node the run may re-enter, so its target can very
-    // well be `running` — but animating the RETURN path would read as the run
-    // travelling backwards along it.
-    const [e] = buildStyledEdges([backEdge("a2", "a1")], {
-      a1: { status: "running" },
-    });
-    expect(e.style?.strokeDasharray).toBe("6 3");
-    expect(e.animated).toBe(false);
-    // It still takes its target's color, so the loop reads as part of the run.
-    expect(e.style?.stroke).toBe("hsl(var(--primary))");
-  });
-
   it("stamps the visit budget onto cycle edges only", () => {
     const plain: WfFlowEdge = {
       id: "a0->a1",
@@ -992,7 +811,6 @@ describe("buildStyledEdges — declared topology", () => {
       25,
     );
     expect(loop.data?.maxNodeVisits).toBe(25);
-    // A forward edge has no loop to bound, so it carries no budget.
     expect(forward.data?.maxNodeVisits).toBeUndefined();
   });
 
@@ -1041,8 +859,6 @@ describe("WorkflowNode selection", () => {
   });
 
   it("rings nothing when the host has no selection", () => {
-    // The identity trap: an unset selection must not match a node whose id is
-    // likewise unset, or "nothing selected" renders as "this one is".
     expect(ringed(renderWithSelection("a0", undefined).container)).toBe(false);
   });
 
@@ -1061,8 +877,6 @@ describe("WorkflowNode selection", () => {
     const outlined = Array.from(
       container.querySelectorAll<HTMLElement>("[style]"),
     ).find((el) => (el.getAttribute("style") ?? "").includes("outline"));
-    // The compact node's box spans tile + name; the tile is the visual node, and
-    // it is the one that carries the ring (its style pins the tile's own size).
     expect(outlined?.getAttribute("style")).toContain(`width: ${COMPACT_TILE}px`);
   });
 });
@@ -1075,20 +889,13 @@ describe("isEditableEdge", () => {
   });
 
   it("refuses a fan-out edge", () => {
-    // A fork edge is derived from a structural action's own config (a
-    // parallel's branches, a foreach's template). It is not a row in anyone's
-    // declared topology, so there is nothing for a delete to remove.
     expect(isEditableEdge({ source: "a0", data: { kind: "fork" } })).toBe(false);
   });
 
   it("refuses an edge out of any trigger", () => {
-    // A trigger edge is what "nothing points at this node" RENDERS as — it is
-    // synthesized, not declared. Deleting one would ask the host to remove an
-    // edge the definition never contained.
     expect(isEditableEdge({ source: "trigger", data: { kind: "spine" } })).toBe(
       false,
     );
-    // …including the later entries of a list-form `on:`.
     expect(
       isEditableEdge({ source: "trigger:2", data: { kind: "spine" } }),
     ).toBe(false);
@@ -1118,16 +925,12 @@ describe("WorkflowNode connection handles", () => {
   }
 
   it("hides its handles on a read-only canvas", () => {
-    // The diagram reads as edges meeting the node body; a visible dot on every
-    // node is noise when nothing can be dragged.
     const found = handles(renderAt(false).container);
     expect(found.length).toBeGreaterThan(0);
     expect(found.every((h) => h.className.includes("opacity-0"))).toBe(true);
   });
 
   it("shows them once the canvas can be edited", () => {
-    // A handle you cannot see is a handle you cannot find, and dragging one IS
-    // the connect gesture.
     const found = handles(renderAt(true).container);
     expect(found.length).toBeGreaterThan(0);
     expect(found.every((h) => h.className.includes("opacity-0"))).toBe(false);

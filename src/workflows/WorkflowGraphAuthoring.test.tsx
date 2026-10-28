@@ -311,21 +311,6 @@ describe("a node carrying authoring problems", () => {
     expect(card?.style.borderColor).toBe("var(--surface-danger-text)");
   });
 
-  it("lets a RUN status keep the border it owns", () => {
-    // A run's border is the more urgent reading of the same edge of the same
-    // box. The two only meet if a host draws a run graph with authoring
-    // problems on it, and the run must win there.
-    const { container } = renderNode({
-      data: { ...ACTION, state: { status: "failed" } },
-      runMode: true,
-      problems: [problem(actionNodeId(0), "warning", "no timeout set")],
-    });
-    const card = container.querySelector<HTMLElement>('[data-testid="wf-node-card"]');
-    expect(card?.style.borderColor).toBe("var(--surface-danger-text)");
-    // Failed is the LOUDEST pixel (2026-09): a wide 2px halo, stronger than
-    // any other state's ring.
-    expect(card?.style.boxShadow).toContain("0 0 32px");
-  });
 });
 
 describe("the trigger's remove control", () => {

@@ -39,6 +39,7 @@ import {
 import {
   AGENT_NODE_CLASS,
   AgentCard,
+  AgentCardView,
   type AgentCardNode,
   AgentFrameBox,
   type AgentFrameNode,
@@ -294,12 +295,12 @@ export function AgentGraphCanvas({
   const counts = ["needs-you", "failed", "quiet"].map(status => ({ status, matches: nodes.filter(agent => status === "quiet" ? quietActivity(agent, clock) : agent.status === status) }));
   const caption = <div className="flex h-10 shrink-0 items-center gap-3 px-3 text-xs text-muted-foreground" aria-label="Run status">
     <span>{nodes.length} agents</span>
-    {counts.filter(group => group.matches.length).map(group => <button type="button" key={group.status} className="rounded-full border border-border px-2 py-1" style={{ color: group.status === "quiet" ? "var(--surface-warning-text)" : agentStatus(group.status as AgentGraphStatus).color }} onClick={() => {
+    {counts.filter(group => group.matches.length).map(group => <button type="button" key={group.status} className="ag-status-button rounded-full border border-border px-2 py-1" style={{ color: group.status === "quiet" ? "var(--surface-warning-text)" : agentStatus(group.status as AgentGraphStatus).color }} onClick={() => {
       const index = group.matches.findIndex(agent => agent.id === selectedId);
       const next = group.matches[(index + 1) % group.matches.length]; select(next.id);
       const p = layout?.positions.get(next.id);
       if (p) void rfRef.current?.setCenter(p.x + card.width / 2, p.y + card.height / 2, { zoom: 1, duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
-    }}>{group.matches.length} {group.status === "needs-you" ? "needs you" : group.status}</button>)}
+    }}><span className="shrink-0">{group.matches.length} {group.status === "needs-you" ? "needs you" : group.status}</span><span className="ag-caption-target">{group.matches.find(agent => agent.id === selectedId)?.label ?? group.matches[0].label}</span></button>)}
   </div>;
 
   if (nodes.length === 0) {
@@ -329,7 +330,9 @@ export function AgentGraphCanvas({
         {[...nodes].sort((a, b) => activityRank(a) - activityRank(b)).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
           <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} data-agent-id={agent.id} className="ag-phone-select"
             onClick={() => select(agent.id)} onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); select(agent.id); } }}>
-            <LiveAgentCardView agent={agent} selected={selectedId === agent.id} now={clock} renderEventIcon={renderEventIcon} onRespond={onSelect ? () => select(agent.id) : undefined} />
+            {live || agent.status === "succeeded" || agent.status === "stopped"
+              ? <LiveAgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} renderEventIcon={renderEventIcon} onRespond={onSelect ? () => select(agent.id) : undefined} />
+              : <AgentCardView agent={agent} parentLabel={byId.get(parentOf.get(agent.id) ?? "")?.label} selected={selectedId === agent.id} now={clock} direction={direction} onRespond={onSelect ? () => select(agent.id) : undefined} />}
           </div>
         </li>)}
       </ul> : <div className="min-h-0 flex-1" style={{ opacity: shown ? 1 : 0 }}><ReactFlow

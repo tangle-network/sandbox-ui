@@ -99,6 +99,7 @@ for (const theme of ['dark', 'light']) for (const width of [1280, 390]) {
   })
 }
 
+// test:visual schedules this benchmark after the other browser workers finish.
 test('17 agents stream at 3 events per second for 60 seconds', async ({ page }, testInfo) => {
   test.setTimeout(90_000)
   await page.setViewportSize({ width: 1280, height: 900 })

@@ -78,7 +78,7 @@ export function agentSummary(agent: AgentGraphNode): string {
 }
 
 export type AgentCardNode = Node<
-  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number },
+  { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onRespond?: () => void; parentLabel?: string },
   "agent"
 >;
 
@@ -109,26 +109,28 @@ export function Handles({ direction, source = true }: { direction: AgentGraphDir
   );
 }
 
-export function AgentCard({ data }: NodeProps<AgentCardNode>) {
-  const { agent, selected, direction } = data;
-  const now = useRunNow(data.now);
+export function AgentCardView({ agent, selected, direction, now: fixed, onRespond, parentLabel, handles = false }: AgentCardNode["data"] & { handles?: boolean }) {
+  const now = useRunNow(fixed);
   const quiet = quietActivity(agent, now);
   const s = agentStatus(agent.status);
   return <div data-status={agent.status} data-activity={quiet ? "quiet" : undefined} data-selected={selected || undefined}
-    title={agentSummary(agent)} className={`relative flex h-full w-full flex-col gap-1 rounded-[var(--radius-card)] border bg-card px-3 py-2 text-left ${MOTION_CONTROL}`}
+    title={agentSummary(agent)} className={`ag-agent-card relative flex h-full w-full flex-col gap-0.5 rounded-[var(--radius-card)] border bg-card px-3 py-2 text-left ${MOTION_CONTROL}`}
     style={{ boxShadow: RESTING_SHADOW, ...cardBorder(agent.status), ...(selected ? SELECTION_OUTLINE : {}) }}>
-    <Handles direction={direction} />
+    {handles && <Handles direction={direction} />}
     <div className="flex min-w-0 items-center gap-2">
       <span className="grayscale hover:grayscale-0"><NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} /></span>
-      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{agent.label}</span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{parentLabel && <span className="ag-parent-label">{parentLabel} / </span>}{agent.label}</span>
       <span className="text-xs text-muted-foreground tabular-nums">{fmtCost(agent.costUsd ?? undefined) ?? "—"}</span>
     </div>
-    <p className="m-0 line-clamp-2 min-h-4 text-xs text-foreground leading-4">{agent.turn || "—"}</p>
-    <div className="mt-auto flex items-center gap-1 text-xs" style={{ color: quiet ? "var(--surface-warning-text)" : s.color }}>
-      <StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}
+    <p className="m-0 line-clamp-2 min-h-4 text-xs text-foreground leading-4">{(agent.status === "failed" ? agent.result ?? agent.turn : agent.turn) || "—"}</p>
+    <div className="mt-auto flex items-center justify-between gap-1 text-xs" style={{ color: quiet ? "var(--surface-warning-text)" : s.color }}>
+      <span className="flex items-center gap-1"><StatusGlyph status={agent.status} size={16} />{quiet?.label ?? s.label}</span>
+      {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onRespond} onClick={event => { event.stopPropagation(); onRespond?.(); }}>Respond</button>}
     </div>
   </div>;
 }
+
+export function AgentCard({ data }: NodeProps<AgentCardNode>) { return <AgentCardView {...data} handles />; }
 
 export type AgentFrameNode = Node<
   { frame: AgentFrame; statuses: readonly AgentGraphStatus[]; quietCount?: number; direction: AgentGraphDirection },

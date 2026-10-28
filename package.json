@@ -3,7 +3,7 @@
   "version": "1.1.10",
   "license": "MIT",
   "packageManager": "pnpm@12.6.0",
-  "description": "Unified UI component library for Tangle Sandbox \u2014 primitives, chat, dashboard, terminal, editor, and workspace components",
+  "description": "Unified UI component library for Tangle Sandbox — primitives, chat, dashboard, terminal, editor, and workspace components",
   "repository": {
     "type": "git",
     "url": "https://github.com/tangle-network/sandbox-ui"
@@ -140,7 +140,7 @@
     "typecheck": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test:visual": "pnpm build-storybook --quiet && playwright test",
+    "test:visual": "pnpm build-storybook --quiet && playwright test --grep-invert '17 agents stream' && playwright test tests/visual/run-ui.spec.mjs --grep '17 agents stream' --workers=1",
     "signoff": "pnpm lint:motion && pnpm typecheck && pnpm build && pnpm test && pnpm test:package && pnpm test:bridge && pnpm test:visual",
     "test": "vitest run",
     "test:package": "node scripts/package-smoke.mjs && PACKAGE_OMIT_OPTIONAL_PEERS='[\"@hocuspocus/provider\",\"@tiptap/core\",\"@tiptap/extension-collaboration\",\"@tiptap/extension-collaboration-caret\",\"@tiptap/react\",\"@tiptap/starter-kit\",\"pdfjs-dist\",\"yjs\"]' node scripts/package-smoke.mjs",

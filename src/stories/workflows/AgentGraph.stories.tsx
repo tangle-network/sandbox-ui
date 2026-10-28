@@ -162,7 +162,8 @@ export const NestedTeamsLeftToRight: StoryObj = {
 };
 
 // A live proving run: a lead and five workers, each doing a different kind of work. Events arrive every two seconds.
-const LIVE_START = Date.now() - 41 * 60_000;
+const LIVE_NOW = Date.now();
+const LIVE_START = LIVE_NOW - 41 * 60_000;
 const LIVE_WORK: readonly [string, AgentGraphNode["activity"], string, readonly string[]][] = [
   ["prove-scale", "proving", "Folding round 14 of 22; the lag term still dominates", ["bash cargo run --release -- prove --rows 2^22", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs"]],
   ["commit-wave", "building", "Rebuilding with the wave commitment behind a feature flag", ["bash cargo build -p commit --features wave", "edit crates/commit/src/wave.rs", "bash cargo test -p commit wave::"]],
@@ -181,7 +182,7 @@ function LiveRun() {
     id: label, label, model: MODELS[i % MODELS.length], harness: "opencode", effort: i % 2 ? "high" : "medium",
     status: activity === "waiting" ? "waiting" : "running", activity, turn,
     startedAt: LIVE_START + i * 4 * 60_000, commits: [14, 12, 1, 4, 0][i],
-    events: Array.from({ length: 3 + tick }, (_, k) => ({ id: `${label}-${k}`, label: calls[k % calls.length], at: Date.now() - (2 + tick - k) * 9_000 - i * 3_000 })),
+    events: Array.from({ length: 3 + tick }, (_, k) => ({ id: `${label}-${k}`, label: calls[k % calls.length], at: LIVE_NOW + (k < 3 ? -(2 - k) * 9_000 : (k - 2) * 2000) - i * 3_000 })),
   }));
   const nodes: AgentGraphNode[] = [
     { id: "lead", label: "lead", role: "manager", model: "anthropic/claude-sonnet-4-5", effort: "high", status: "running", activity: "thinking",
@@ -195,7 +196,7 @@ function LiveRun() {
   ];
   const edges: AgentGraphEdge[] = nodes.slice(1).map((n) => ({ from: "lead", to: n.id, kind: "spawn" }));
   const [selected, setSelected] = useState<string | null>(null);
-  return <AgentGraph live renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={setSelected} className="h-full w-full" />;
+  return <AgentGraph live now={LIVE_NOW + tick * 2000} renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={edges} selectedId={selected} onSelect={setSelected} className="h-full w-full" />;
 }
 
 /** A running run as live cards: who is working, on what, right now. */

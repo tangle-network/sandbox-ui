@@ -45,7 +45,7 @@ export function quietActivity(agent: AgentGraphNode, now: number) {
   if (agent.status !== "running") return null;
   const measured = Number.isFinite(agent.lastActivityAt) && Number.isFinite(agent.medianEventGapMs) && agent.medianEventGapMs! >= 0;
   const times = measured ? [] : (agent.events ?? []).flatMap(e => e.at != null && Number.isFinite(e.at) ? [e.at] : []).sort((a, b) => a - b);
-  const last = Number.isFinite(agent.lastActivityAt) ? agent.lastActivityAt : times.at(-1) ?? agent.startedAt;
+  const last = Number.isFinite(agent.lastActivityAt) ? agent.lastActivityAt : times.at(-1);
   if (last == null || !Number.isFinite(last)) return null;
   const gaps = times.slice(1).map((time, i) => time - times[i]).sort((a, b) => a - b);
   const middle = Math.floor(gaps.length / 2);

@@ -182,7 +182,7 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/ui':
-        specifier: 11.51.1
+        specifier: ^11.51.1
         version: 11.51.1(972c139e63882234900c4c3f5b317d13)
       diff:
         specifier: ^9.0.0
@@ -237,11 +237,11 @@ importers:
         specifier: 5.10.2
         version: 5.10.2
       '@tangle-network/brand':
-        specifier: 1.31.1
+        specifier: ^1.31.1
         version: 1.31.1(react@19.3.1)
       '@tangle-network/charts':
-        specifier: 1.0.2
-        version: 1.0.2(react@19.3.1)
+        specifier: ^2.0.0
+        version: 2.0.0(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1929,8 +1929,8 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/charts@1.0.2':
-    resolution: {integrity: sha512-Hc+GV4L3XnHTpytjYBu1LorYnxy2S2HRQ7hOXby2obf88ueK1oyNOEOfL+TZ32JDJc4eQvNu9TZMWwhZPGoq4w==}
+  '@tangle-network/charts@2.0.0':
+    resolution: {integrity: sha512-CZZyj/e4HM2bpXt6JzekcUZ9csNKIho40imKYwDJjgHoVGYhd52uTRzH41N4Mvc9sXLG6YB9zoi9uIvhlNyLvg==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -5455,7 +5455,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/charts@1.0.2(react@19.3.1)':
+  '@tangle-network/charts@2.0.0(react@19.3.1)':
     optionalDependencies:
       react: 19.3.1
 

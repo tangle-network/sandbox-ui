@@ -104,7 +104,7 @@ const fmtMs = (ms: number) => (ms < 1000 ? `${Math.round(ms / 100) * 100 || Math
 export interface HubPopoverProps {
   entity: HubEntity;
   entities: Map<string, HubEntity>;
-  calls: readonly AgentGraphCall[];
+  calls?: readonly AgentGraphCall[];
   now: number;
   left: number;
   top: number;
@@ -124,14 +124,14 @@ export function HubPopover({ entity, entities, calls, now, left, top, summary, c
       const relative = getComputedStyle(dialog).position !== "absolute";
       const maxHeight = Math.max(0, container.clientHeight - 16);
       const height = Math.min(dialog.scrollHeight + dialog.offsetHeight - dialog.clientHeight, maxHeight);
-      const next = relative ? { left, top } : { left: Math.max(8, Math.min(left, container.clientWidth - dialog.offsetWidth - 8)), top: Math.max(8, Math.min(top, container.clientHeight - height - 8)), maxHeight };
+      const next = relative ? { left, top } : { left: Math.max(container.scrollLeft + 8, Math.min(left, container.scrollLeft + container.clientWidth - dialog.offsetWidth - 8)), top: Math.max(container.scrollTop + 8, Math.min(top, container.scrollTop + container.clientHeight - height - 8)), maxHeight };
       setFitted(previous => previous.left === next.left && previous.top === next.top && previous.maxHeight === next.maxHeight ? previous : next);
     };
     fit();
     const observer = new ResizeObserver(fit); observer.observe(dialog); observer.observe(container);
     return () => observer.disconnect();
   }, [left, top]);
-  const mine = calls.filter((c) => (c.from === entity.id || c.to === entity.id) && c.startedAt <= now).sort((a, b) => b.startedAt - a.startedAt);
+  const mine = (calls ?? []).filter((c) => (c.from === entity.id || c.to === entity.id) && c.startedAt <= now).sort((a, b) => b.startedAt - a.startedAt);
   const recent = mine.slice(0, 5);
   const lastMinute = mine.filter((c) => now - c.startedAt <= 60_000).length;
   const status = entity.status ? statusMeta(entity.status).label : undefined;
@@ -168,7 +168,7 @@ export function HubPopover({ entity, entities, calls, now, left, top, summary, c
       </ul>}
       <p className="ag-pop-foot">
         {cost != null && <b>{fmtCost(cost)}</b>}
-        {lastMinute} {lastMinute === 1 ? "call" : "calls"} in the last minute
+        <span title={calls === undefined ? "Call history not reported" : undefined}>{calls === undefined ? "—" : lastMinute} {lastMinute === 1 ? "call" : "calls"} in the last minute</span>
       </p>
     </div>
   );

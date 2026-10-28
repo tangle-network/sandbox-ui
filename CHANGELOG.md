@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2
+
+- Hub tool and call counters keep unavailable history unknown, including node details; explicitly empty histories remain measured zero. Bounded Hub views scroll to every agent and keep opened details visible.
+- Adopt Charts 2.0.3 so reduced motion breathes the Live badge's dot while its text stays still.
+
 ## 2.0.1
 
 - Run attention counts stay readable beside long failure details in narrower desktop panes. Small headers wrap their count chips while preserving complete status labels.

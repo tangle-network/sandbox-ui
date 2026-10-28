@@ -14,7 +14,7 @@ export const AGENT_HUB_CSS = `
 .ag-pill-succeeded { color: var(--surface-success-text); }
 .ag-stats { margin-left: auto; display: flex; gap: 12px; flex-wrap: wrap; color: var(--ag-muted); font-variant-numeric: tabular-nums; }
 .ag-stats b, .ag-pop-call b, .ag-pop-foot b { color: var(--ag-fg); font-weight: 500; }
-.ag-canvas-wrap { position: relative; border: 1px solid var(--ag-border); border-radius: var(--radius-container); background: var(--bg-root); overflow: hidden; }
+.ag-canvas-wrap { position: relative; min-height: 0; border: 1px solid var(--ag-border); border-radius: var(--radius-container); background: var(--bg-root); overflow: auto; }
 .ag-canvas { position: absolute; inset: 0 auto auto 0; transform-origin: 0 0; }
 .ag-edges { position: absolute; inset: 0; overflow: visible; }
 .ag-edge { fill: none; stroke: color-mix(in srgb, var(--ag-muted) 80%, transparent); stroke-width: 1.25; }

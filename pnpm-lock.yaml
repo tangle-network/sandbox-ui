@@ -240,8 +240,8 @@ importers:
         specifier: ^1.31.1
         version: 1.31.1(react@19.3.1)
       '@tangle-network/charts':
-        specifier: ^2.0.1
-        version: 2.0.1(react@19.3.1)
+        specifier: ^2.0.2
+        version: 2.0.2(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1929,8 +1929,8 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/charts@2.0.1':
-    resolution: {integrity: sha512-gBlPu5qxdk7BegOQ9NddZAhkTRnFL8wZZHVJCEmorQhQWrDShKbOg25A7QYtjtAtmsZ8L36bm2es4Z6dx7Vxqg==}
+  '@tangle-network/charts@2.0.2':
+    resolution: {integrity: sha512-5fBl0Aki2NneWphIAAGsgAt0f2rvABx7ECu4H7Wnl5/T2GB5FXxmgIJc5GxW7Qu9yarMhqJFdqK6+ZMbLl09nQ==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -5455,7 +5455,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/charts@2.0.1(react@19.3.1)':
+  '@tangle-network/charts@2.0.2(react@19.3.1)':
     optionalDependencies:
       react: 19.3.1
 

@@ -1,14 +1,14 @@
 import type { Node, NodeProps } from "@xyflow/react";
 import { Wrench } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AgentGraphDirection, AgentGraphEvent, AgentGraphNode, AgentGraphStatus } from "./agent-graph-layout";
 import { agentStatus, agentSummary, Handles, StatusGlyph, cardBorder } from "./agent-graph-parts";
 import { SELECTION_OUTLINE } from "./canvas-theme";
 import { fmtCost, fmtEventTime } from "./format";
 import { shortModel } from "./naming";
 import { KIND_ACCENT, NodeMark, RESTING_SHADOW } from "./node-ui";
-import { quietActivity, tokenMilliseconds, useAttention, useMotionAllowed, useRunNow } from "./run-ui-state";
+import { quietActivity, tokenMilliseconds, useAttention, useRunNow } from "./run-ui-state";
 
 export type LiveAgentCardNode = Node<
   { agent: AgentGraphNode; selected: boolean; direction: AgentGraphDirection; now?: number; onOpen?: () => void; parentLabel?: string; renderEventIcon?: (event: AgentGraphEvent) => ReactNode }, "liveAgent"
@@ -31,35 +31,17 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
   const quiet = quietActivity(agent, now);
   const s = agentStatus(agent.status);
   const meta = [agent.model ? shortModel(agent.model) : undefined, agent.effort].filter(Boolean).join(" · ");
-  const [events, setEvents] = useState(() => (agent.events ?? []).slice(-4));
+  const [events, setEvents] = useState(() => (agent.events ?? []).slice(-3));
   const cost = Number.isFinite(agent.costUsd) ? fmtCost(agent.costUsd!) : undefined;
   const metrics = [cost, !failed && agent.startedAt != null ? `${fmtEventTime(agent.startedAt, now, false)} elapsed` : undefined, Number.isFinite(agent.commits) ? `${agent.commits} ${agent.commits === 1 ? "commit" : "commits"}` : undefined].filter(Boolean).join(" · ") || "—";
-  const tail = useRef<HTMLOListElement>(null);
-  const motion = useMotionAllowed();
-  const previous = useRef(events.at(-1)?.id);
   const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const latest = useRef(agent.events);
   latest.current = agent.events;
   useEffect(() => {
     if (pending.current !== undefined) return;
-    pending.current = setTimeout(() => { setEvents((latest.current ?? []).slice(-4)); pending.current = undefined; }, tokenMilliseconds("--duration-ambient", ref.current) * .15);
+    pending.current = setTimeout(() => { setEvents((latest.current ?? []).slice(-3)); pending.current = undefined; }, tokenMilliseconds("--duration-ambient", ref.current) * .15);
   }, [agent.events]);
   useEffect(() => () => clearTimeout(pending.current), []);
-  const tailAnimation = useRef<Animation | null>(null);
-  useEffect(() => () => tailAnimation.current?.cancel(), []);
-  useLayoutEffect(() => {
-    const last = events.at(-1)?.id;
-    const old = previous.current;
-    previous.current = last;
-    const element = tail.current;
-    if (!motion) { tailAnimation.current?.cancel(); return; }
-    if (!element || !old || old === last) return;
-    const queued = events.findIndex(event => event.id === old);
-    const offset = new DOMMatrix(getComputedStyle(element).transform).m42 + 16;
-    tailAnimation.current?.cancel();
-    const frames = queued < 0 ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: `translateY(${offset}px)` }, { transform: "translateY(-16px)" }];
-    tailAnimation.current = element.animate(frames, { duration: tokenMilliseconds("--duration-stream", element), easing: getComputedStyle(element).getPropertyValue("--ease-standard").trim() });
-  }, [events, motion]);
   return (
     <div className="ag-live-slot">
       {handles && <Handles direction={direction} />}
@@ -84,7 +66,7 @@ export function LiveAgentCardView({ agent, selected, direction = "TB", now: fixe
             {failed ? agent.result ?? events.at(-1)?.label ?? agent.turn ?? s.label : agent.turn || "—"}
           </p>
           {agent.status === "needs-you" && <button type="button" className="ag-live-respond nodrag nopan" disabled={!onOpen} title={onOpen ? undefined : "Responses unavailable in this view"} onClick={event => { event.stopPropagation(); onOpen?.(); }}>Respond</button>}</div>
-          {events.length > 0 && <div className="ag-live-events-clip"><ol ref={tail} className="ag-live-events" aria-label="Latest events">
+          {events.length > 0 && <div className="ag-live-events-clip"><ol className="ag-live-events" aria-label="Latest events">
             {events.map(event => <li key={event.id} title={event.label}>
               {renderEventIcon?.(event) ?? <Wrench size={12} strokeWidth={1.75} aria-hidden />}
               <span className="ag-live-event-label">{middleLabel(event.label)}</span>

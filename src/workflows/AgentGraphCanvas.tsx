@@ -22,6 +22,7 @@ import type { AgentGraphProps } from "./AgentGraph";
 import { LatestEvents } from "../run/latest-events";
 import {
   AGENT_CARD,
+  FRAME_CAPTION,
   type AgentGraphStatus,
   LIVE_AGENT_CARD,
   type AgentLayout,
@@ -157,14 +158,7 @@ export function AgentGraphCanvas({
       selectable: false,
       focusable: false,
       draggable: false,
-      data: {
-        frame,
-        direction,
-        quietCount: frame.group.memberIds.filter(id => byId.get(id) && quietActivity(byId.get(id)!, clock)).length,
-        statuses: frame.group.memberIds.map(
-          (id) => byId.get(id)?.status ?? ("unknown" as AgentGraphStatus),
-        ),
-      },
+      data: { frame, direction },
     }));
     const cards: (AgentCardNode | LiveAgentCardNode)[] = [];
     for (const id of topology.agentIds) {
@@ -172,12 +166,15 @@ export function AgentGraphCanvas({
       const position = layout.positions.get(id);
       if (!agent || !position) continue;
       const selected = selectedId === id;
+      const owned = layout.frames.find(frame => frame.group.parentId === id);
+      const width = owned ? owned.width - 24 : card.width, height = owned ? FRAME_CAPTION - 16 : card.height;
+      const measured = rfRef.current?.getInternalNode(id)?.measured;
       cards.push({
         id,
         type: live ? "liveAgent" : "agent",
         position,
-        width: card.width, height: card.height, measured: rfRef.current?.getInternalNode(id)?.measured,
-        className: AGENT_NODE_CLASS,
+        width, height, measured: measured?.width === width && measured.height === height ? measured : undefined,
+        className: `${AGENT_NODE_CLASS}${owned ? " ag-frame-owner" : ""}`,
         draggable: false,
         ariaRole: "button",
         ariaLabel: agentSummary(agent),
@@ -194,6 +191,7 @@ export function AgentGraphCanvas({
     const seen = new Set<string>();
     for (const s of topology.spawns) {
       const target = topology.groupOf.get(s.to) ?? s.to;
+      if (layout.frames.some(frame => frame.group.id === target && frame.group.parentId === s.from)) continue;
       const id = `spawn:${s.from}:${target}`;
       if (seen.has(id)) continue;
       seen.add(id);
@@ -253,6 +251,7 @@ export function AgentGraphCanvas({
     readerMoved.current = preserveView;
     const frame = requestAnimationFrame(() => {
       if (preserveView) revealSelection(inst, wrapperRef.current, selection.current!);
+      else if (live) void inst.setViewport({ x: FIT_PADDING, y: FIT_PADDING, zoom: 1, duration: animate ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
       else void inst.fitView({
         padding: `${FIT_PADDING}px`,
         maxZoom: 1,
@@ -262,7 +261,7 @@ export function AgentGraphCanvas({
       setShown(true);
     });
     return () => cancelAnimationFrame(frame);
-  }, [ready, layoutIdentity, canvas, minZoom, animateMotion]);
+  }, [ready, layoutIdentity, canvas, minZoom, animateMotion, live]);
 
   const select = useCallback(
     (id: string) => {
@@ -294,6 +293,9 @@ export function AgentGraphCanvas({
     if (position) void rfRef.current?.setCenter(position.x + card.width / 2, position.y + card.height / 2, { zoom: rfRef.current.getZoom(), duration: animateMotion ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
   }, [byId, select, layout, topology, card, animateMotion]);
   const activityRank = (agent: (typeof nodes)[number]) => agent.status === "needs-you" ? 0 : agent.status === "failed" ? 1 : quietActivity(agent, clock) ? 2 : agent.status === "waiting" ? 3 : agent.status === "running" ? 4 : 5;
+  const readingOrder = useRef<string[]>([]);
+  const known = new Set(readingOrder.current);
+  readingOrder.current = [...readingOrder.current.filter(id => byId.has(id)), ...nodes.filter(agent => !known.has(agent.id)).sort((a, b) => activityRank(a) - activityRank(b)).map(agent => agent.id)];
   const parentOf = new Map(edges.filter(e => e.kind === "spawn").map(e => [e.to, e.from]));
   const depthOf = (id: string) => { const seen = new Set([id]); let depth = 0; while (parentOf.has(id) && !seen.has(parentOf.get(id)!)) { id = parentOf.get(id)!; seen.add(id); depth++; } return depth; };
   const counts = ["needs-you", "failed", "quiet"].map(status => { const matches = nodes.filter(agent => status === "quiet" ? quietActivity(agent, clock) : agent.status === status); return { status, matches, current: matches.find(agent => agent.id === selectedId) ?? matches[0] }; });
@@ -332,7 +334,7 @@ export function AgentGraphCanvas({
       {caption}
       {showLatestEvents && live && <LatestEvents agents={nodes} now={now} live={live} selectedId={selectedId} onSelect={onSelect ? select : undefined} />}
       {narrow ? <ul className="ag-graph-viewport ag-phone-list overflow-auto" aria-label="Agents by attention">
-        {[...nodes].sort((a, b) => activityRank(a) - activityRank(b)).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
+        {readingOrder.current.map(id => byId.get(id)!).map(agent => <li key={agent.id} style={{ ["--depth" as string]: depthOf(agent.id) }}>
           <div role="button" tabIndex={0} aria-pressed={selectedId === agent.id} aria-label={agentSummary(agent)} data-agent-id={agent.id} className="ag-phone-select"
             onClick={() => select(agent.id)} onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) { e.preventDefault(); select(agent.id); } }}>
             {live || agent.status === "succeeded" || agent.status === "stopped"

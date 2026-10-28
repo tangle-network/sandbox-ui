@@ -17,8 +17,8 @@ const PAD_Y = 36;
 export interface AgentHubCanvasProps {
   nodes: readonly AgentGraphNode[];
   edges: readonly AgentGraphEdge[];
-  tools?: readonly AgentGraphTool[];
-  calls?: readonly AgentGraphCall[];
+  tools?: readonly AgentGraphTool[]; // Omitted inventory is unknown; [] is recorded zero.
+  calls?: readonly AgentGraphCall[]; // Omitted history is unknown; [] is recorded zero.
   /** Draw the person who asked as "You"; `summary` is the ask, shown in its popover. */
   you?: { label?: string; summary?: string } | boolean;
   /** Epoch ms the graph is drawn at; calls after it are not shown yet. Defaults to now, ticking. */
@@ -75,7 +75,8 @@ function CallStroke({ call, d, length, now, forward, animate }: { call: AgentGra
   </g>;
 }
 
-export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now: nowProp, title = "Agent graph", selectedId, onSelect, className }: AgentHubCanvasProps) {
+export function AgentHubCanvas(props: AgentHubCanvasProps) {
+  const { nodes, edges, tools = [], calls = [], you, now: nowProp, title = "Agent graph", selectedId, onSelect, className } = props;
   const wrap = useRef<HTMLDivElement>(null);
   const width = useWidth(wrap);
   const now = useRunNow(nowProp);
@@ -155,7 +156,6 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
   }, [focus, layout]);
 
   const availableTools = tools.filter(tool => !visibleCalls.some(call => call.from === tool.id || call.to === tool.id));
-  const agents = nodes.length;
   const lastMinute = visibleCalls.filter((c) => now - c.startedAt <= 60_000).length;
   const costs = nodes.map((n) => n.costUsd);
   const cost = costs.every((c) => c != null && Number.isFinite(c) && c >= 0) ? costs.reduce<number>((s, c) => s + (c ?? 0), 0) : undefined;
@@ -197,7 +197,7 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
     const top = list ? 8 : Math.max(8, (p.y - metrics.hubTile / 2 - 8) * scale);
     const summary = openEntity.kind === "you" ? (typeof you === "object" ? you.summary : undefined)
       : openEntity.agent?.turn ?? openEntity.sub ?? undefined;
-    return <HubPopover entity={openEntity} entities={entities} calls={visibleCalls} now={now} left={left} top={top} summary={summary}
+    return <HubPopover entity={openEntity} entities={entities} calls={props.calls === undefined ? undefined : visibleCalls} now={now} left={left} top={top} summary={summary}
       closeRef={closeRef} onClose={() => { const id = open!; setOpen(null); buttons.current.get(id)?.focus(); }} />;
   })();
 
@@ -209,9 +209,9 @@ export function AgentHubCanvas({ nodes, edges, tools = [], calls = [], you, now:
         <span className="ag-title"><span className="ag-title-mark" aria-hidden />{title}</span>
         {chips.map(n => <button type="button" key={n.id} className={`ag-chip ag-chip-${n.status}`} onClick={() => openNode(n.id)}><RunStatusIcon status={quietActivity(n, now) ? "waiting" : n.status} aria-hidden />{n.label} {quietActivity(n, now)?.label ?? statusMeta(n.status).label}</button>)}
         <span className="ag-stats">
-          <span><b>{agents}</b> {agents === 1 ? "agent" : "agents"}</span>
-          <span><b>{tools.length}</b> {tools.length === 1 ? "tool" : "tools"}</span>
-          <span><b>{lastMinute}</b> calls/min</span>
+          <span><b>{nodes.length}</b> {nodes.length === 1 ? "agent" : "agents"}</span>
+          <span title={props.tools === undefined ? "Tool history not reported" : undefined}><b>{props.tools?.length ?? "—"}</b> {tools.length === 1 ? "tool" : "tools"}</span>
+          <span title={props.calls === undefined ? "Call history not reported" : undefined}><b>{props.calls === undefined ? "—" : lastMinute}</b> calls/min</span>
           <span title={cost === undefined ? "Not every agent recorded its cost" : "Total recorded agent cost"}><b>{cost === undefined ? "—" : fmtCost(cost)}</b> cost</span>
         </span>
       </header>

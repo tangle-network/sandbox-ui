@@ -48,9 +48,9 @@ export interface AgentGraphProps {
    * each call travelling along its edge in its kind's colour.
    */
   layout?: "tree" | "hub";
-  /** Hub layout: the tools and services agents call, drawn as outer nodes. */
+  /** Hub tools/services. Omit unreported inventory; [] records no tools. */
   tools?: readonly AgentGraphTool[];
-  /** Hub layout: recorded calls between nodes, newest last. They colour and animate edges and fill popovers. */
+  /** Hub calls, newest last. Omit unreported history; [] records no calls. They colour edges and fill popovers. */
   calls?: readonly AgentGraphCall[];
   /** Hub layout: draw the person who asked as "You". */
   you?: { label?: string; summary?: string } | boolean;

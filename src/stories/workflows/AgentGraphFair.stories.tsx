@@ -87,7 +87,7 @@ function FairRun({ transition = false }: { transition?: boolean }) {
   return <div data-fair-phase={tick} style={{ height: "100vh", width: "100%", position: "relative", background: "var(--bg-root)" }}>
     <AgentGraph live nodes={nodes} edges={runEdges} now={now} selectedId={selected} onSelect={setSelected} className="h-full w-full" />
     <script id="fair-run-input" type="application/json">{JSON.stringify({ synthetic: true, now, nodes })}</script>
-    {picked && <aside role="dialog" aria-label={`${picked.label} evidence`} style={{ position: "absolute", right: 16, bottom: 16, maxWidth: 320, padding: 16, border: "1px solid var(--border-default)", borderRadius: "var(--radius-card)", color: "var(--text-primary)", background: "var(--bg-elevated)", boxShadow: "var(--shadow-overlay)" }}><b>{picked.label}</b><p>{picked.result ?? picked.turn ?? "No result recorded"}</p><button type="button" onClick={() => setSelected(null)}>Close</button></aside>}
+    {picked && <aside role="dialog" aria-label={`${picked.label} evidence`} style={{ position: "absolute", right: 16, bottom: 16, maxWidth: 320, padding: 16, border: "1px solid var(--border-default)", borderRadius: "var(--radius-card)", color: "var(--text-primary)", background: "var(--bg-elevated)", boxShadow: "var(--shadow-overlay)" }}><b>{picked.label}</b><p>{(["failed", "succeeded", "stopped"].includes(picked.status) ? picked.result : picked.turn) ?? "No result recorded"}</p><button type="button" onClick={() => setSelected(null)}>Close</button></aside>}
   </div>;
 }
 const meta = { title: "workflows/AgentGraph Fair", parameters: { layout: "fullscreen" } } satisfies Meta;

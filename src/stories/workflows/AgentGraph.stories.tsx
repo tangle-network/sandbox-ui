@@ -172,12 +172,18 @@ const LIVE_WORK: readonly [string, AgentGraphNode["activity"], string, readonly 
   ["verify-lag", "waiting", "Waiting on prove-scale's round-14 transcript", ["wait prove-scale transcript", "read logs/round-13.json", "wait slot on host"]],
 ];
 
-function LiveRun() {
+function useStoryTick(interval: number, at?: number) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => setTick((t) => t + 1), 2000);
+    if (at != null) return;
+    const timer = setInterval(() => setTick(t => t + 1), interval);
     return () => clearInterval(timer);
-  }, []);
+  }, [interval, at]);
+  return at == null ? tick : Math.floor(at * 1000 / interval);
+}
+
+function LiveRun({ at }: { at?: number }) {
+  const tick = useStoryTick(2000, at);
   const workers: AgentGraphNode[] = LIVE_WORK.map(([label, activity, turn, calls], i) => ({
     id: label, label, model: MODELS[i % MODELS.length], harness: "opencode", effort: i % 2 ? "high" : "medium",
     status: activity === "waiting" ? "waiting" : "running", activity, turn,
@@ -200,23 +206,19 @@ function LiveRun() {
 }
 
 /** A running run as live cards: who is working, on what, right now. */
-export const LiveRunCards: StoryObj = {
-  render: () => (
+export const LiveRunCards: StoryObj<{ at?: number }> = {
+  argTypes: { at: { type: "number", control: "number" } },
+  render: ({ at }) => (
     <div className="h-screen w-full overflow-hidden rounded-[var(--radius-container)] border border-border bg-background">
-      <LiveRun />
+      <LiveRun at={at} />
     </div>
   ),
 };
 
 const REPLAY_NOW = Date.UTC(2026, 9, 28, 12);
-function RunState({ state = "seventeen", burst = false }: { state?: string; burst?: boolean }) {
+function RunState({ state = "seventeen", burst = false, at }: { state?: string; burst?: boolean; at?: number }) {
   const [selected, setSelected] = useState<string | null>(null);
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!burst) return;
-    const timer = setInterval(() => setTick(t => t + 1), 333);
-    return () => clearInterval(timer);
-  }, [burst]);
+  const tick = useStoryTick(333, burst ? at : 0);
   const now = REPLAY_NOW + tick * 333;
   const nodes: AgentGraphNode[] = runNodes.map((node, i) => ({ ...node,
     status: burst ? "running" : i === 1 ? "needs-you" : i === 2 ? "failed" : i === 3 ? "running" : node.status,
@@ -225,7 +227,7 @@ function RunState({ state = "seventeen", burst = false }: { state?: string; burs
     result: i === 2 ? state === "long-failure" ? "Executor deadline expired while waiting for the child process to acknowledge completion. The failed attempt retained its command output and artifacts for inspection. No successful completion was recorded; open this agent to inspect the full recorded failure and the final tool events." : "Benchmark harness exited 137 (OOM)" : node.turn,
     events: Array.from({ length: state === "none" ? 0 : state === "one" ? 1 : 4 }, (_, k) => ({ id: `${node.id}-${tick + k}`, label: ["bash cargo run --release -- prove", "read src/sumcheck/fold.rs", "edit src/sumcheck/fold.rs", "bash cargo test -p prover"][(tick + k) % 4], at: i === 3 && !burst ? REPLAY_NOW - (15 - k) * 60_000 : burst ? REPLAY_NOW + (tick + k - 3) * 333 : now - (3 - k) * 10_000 })),
   }));
-  return <div className="h-screen w-full rounded-[var(--radius-container)] border border-border bg-background"><AgentGraph live renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={runEdges} now={now} selectedId={selected} onSelect={setSelected} className="h-full w-full" /></div>;
+  return <div data-story-tick={tick} className="h-screen w-full rounded-[var(--radius-container)] border border-border bg-background"><AgentGraph live renderEventIcon={event => toolGlyph(event.label)} nodes={nodes} edges={runEdges} now={now} selectedId={selected} onSelect={setSelected} className="h-full w-full" /></div>;
 }
 export const SeventeenLive: StoryObj = { render: () => <RunState /> };
 export const LiveNeedsYou: StoryObj = { render: () => <RunState /> };
@@ -236,6 +238,6 @@ export const OneEvent: StoryObj = { render: () => <RunState state="one" /> };
 export const Phone390: StoryObj = { globals: { viewport: { value: "mobile", isRotated: false } }, decorators: [Story => <div style={{ width: "100%", maxWidth: 390 }}><Story /></div>], render: () => <RunState /> };
 export const LightTheme: StoryObj = { globals: { sandboxTheme: "light" }, render: () => <RunState /> };
 export const ReducedMotion: StoryObj = { parameters: { reducedMotion: "reduce" }, render: () => <RunState /> };
-export const Burst: StoryObj = { render: () => <RunState burst /> };
+export const Burst: StoryObj<{ at?: number }> = { argTypes: { at: { type: "number", control: "number" } }, render: ({ at }) => <RunState burst at={at} /> };
 
 export const LiveFailedLong: StoryObj = { render: () => <RunState state="long-failure" /> };

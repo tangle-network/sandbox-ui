@@ -56,6 +56,7 @@ export async function openStory(page, id, theme, viewport, baseURL, { reducedMot
     viewMode: 'story',
     globals: `sandboxTheme:${theme}`,
   })
+  if (/^workflows-agentgraph--(live-run-cards|burst)$/.test(id)) params.set('args', 'at:0')
   await page.goto(`/iframe.html?${params}`, { waitUntil: 'load' })
 
   // Walk until the first visible element; the selector engine would inspect every cell in large tables.

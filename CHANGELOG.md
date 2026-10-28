@@ -4,6 +4,7 @@
 
 - Breaking: the optional charts peer and public trace types move to the 2.x line. Token totals can be absent when telemetry was not reported; consumers must handle unknown totals instead of assuming zero.
 - AgentGraph and its hub use the shared run status metadata. Waiting on a peer is neutral; Needs you has a Respond action; failed agents retain their evidence. Recorded activity identifies quiet agents in the cards and run counts.
+- TraceWorkspace has one Agents/Steps/Graph control, one time cursor and one selection across tree and hub layouts. Latest activity retains observed status changes and pauses while the reader hovers or focuses it. Untimed workers remain selectable without invented timestamps.
 - Containers narrower than 600px show readable, selectable agent lists. Desktop cards use the shared radius, shadow and selection roles.
 - Running marks share one opacity-only ambient epoch, including reduced motion. Streaming event tails keep their position; finite attention rings replace spinners and the repeating sheen.
 - The catalog covers live, failed, needs-you, quiet, phone and reduced-motion graph states, and real recorded waterfall fixtures. Brand 1.31.1 and ui 11.51.1 supply their tokens and status semantics.

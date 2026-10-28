@@ -27,11 +27,11 @@ function EventRow({ entry, now, onSelect }: { entry: Entry; now: number; onSelec
     ], { duration: tokenMilliseconds(motion ? "--duration-arrive" : "--duration-fast", element), easing: style.getPropertyValue("--ease-entrance").trim() || "ease-out" });
     return () => animation.cancel();
   }, [entry.id, motion]);
-  const meta = statusMeta(entry.status), age = fmtEventTime(entry.at, now);
+  const meta = statusMeta(entry.observed ? entry.status : "unknown"), age = fmtEventTime(entry.at, now);
   return <li ref={ref}><button type="button" disabled={!onSelect} onClick={() => onSelect?.(entry)} title={entry.name + ": " + entry.label}>
-    <span className="ag-latest-dot" style={{ background: "var(" + meta.token + ")" }} aria-hidden />
+    <span className="ag-latest-dot" style={{ background: entry.observed ? "var(" + meta.token + ")" : "transparent", border: entry.observed ? undefined : "1.5px solid var(" + meta.token + ")" }} aria-hidden />
     <strong>{entry.name}</strong>
-    {entry.observed && <span className="ag-latest-state" style={{ color: "var(" + meta.token + ")" }}><RunStatusIcon status={entry.status} size={14} aria-hidden />{meta.label}</span>}
+    {entry.observed && <span className="ag-latest-state" style={{ color: "var(" + meta.token + ")" }}>{entry.status !== "running" && <RunStatusIcon status={entry.status} size={14} aria-hidden />}{meta.label}</span>}
     <span className="ag-latest-label">{entry.label}</span>
     <time>{entry.observed ? "Observed " : ""}{age}{age !== "now" && age !== "—" ? " ago" : ""}</time>
   </button></li>;

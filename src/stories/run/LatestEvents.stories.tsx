@@ -21,3 +21,4 @@ const meta = { title: "Run/LatestEvents", component: LatestEvents, parameters: {
 export default meta;
 export const Reading: StoryObj<typeof meta> = { args: { agents: [] }, render: () => <ReadingFixture /> };
 export const Empty: StoryObj<typeof meta> = { args: { agents: [] } };
+export const ReadOnly: StoryObj<typeof meta> = { args: { agents: [{ id: "worker", label: "worker", status: "unknown", events: Array.from({ length: 5 }, (_, index) => ({ id: String(index), label: `Recorded event ${index + 1}`, at: Date.UTC(2026, 9, 28, 12) + index })) }], now: Date.UTC(2026, 9, 28, 12, 1), live: false } };

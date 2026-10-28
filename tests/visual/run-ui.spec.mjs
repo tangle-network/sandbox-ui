@@ -344,3 +344,15 @@ test('selected recorded facts appear only when known at the cursor', async ({ pa
   await page.getByRole('button', { name: 'Close conversation', exact: true }).click()
   await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toHaveCount(0)
 })
+
+test('passive activity history remains keyboard scrollable', async ({ page }) => {
+  await page.goto('/iframe.html?id=run-latestevents--read-only&viewMode=story&globals=sandboxTheme:light')
+  const feed = page.getByRole('region', { name: 'Latest activity' })
+  const history = feed.getByRole('list', { name: 'Recorded activity events' })
+  await history.focus()
+  await expect(feed).toContainText('Paused while reading')
+  await history.press('End')
+  await expect.poll(() => history.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+  const bounds = await history.evaluate(element => ({ end: element.lastElementChild.getBoundingClientRect().bottom, bottom: element.getBoundingClientRect().bottom }))
+  expect(bounds.end).toBeLessThanOrEqual(bounds.bottom + 1)
+})

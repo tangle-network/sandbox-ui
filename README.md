@@ -28,7 +28,7 @@ Optional peers are required only by the subpaths that use them; see [package.jso
 
 ### Retained conversations
 
-`Conversation`, `indexRecord` and `withPrompts` from `@tangle-network/sandbox-ui/run/record` render retained agent events in one virtualized chat column. Import the shared stylesheet. Producers validate their record format before passing presentation data; this component does not install a parser or interpret absent captures as successful work. Source ids, prompt reconstruction, pending tool receipts, collapsed idle polls, source callbacks and assessment flags remain available.
+`Conversation`, `AgentTree`, `indexRecord` and `withPrompts` from `@tangle-network/sandbox-ui/run/record` show retained conversations and their recorded hierarchy. `AgentTree` takes `index`, selected `actor`, recorded-time `cutoff` and `select(id)`. Load the shared stylesheet and pass validated presentation data. Original source IDs, reconstructed prompts, pending tool receipts, collapsed idle polls, source callbacks and assessment flags remain available.
 
 ## Usage
 

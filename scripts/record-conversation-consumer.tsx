@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Conversation, indexRecord, withPrompts, type ConversationRecord } from "@tangle-network/sandbox-ui/run";
+import { Conversation, indexRecord, withPrompts, type ConversationRecord } from "@tangle-network/sandbox-ui/run/record";
 import retained from "./record-conversation.json";
 
 // Use the retained capture with linked-session and clipped-result boundary variants.

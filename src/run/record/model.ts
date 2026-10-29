@@ -106,14 +106,16 @@ export function preview(call: ToolCall) {
 /** Identity is established by the importer, never inferred from labels or timestamps. */
 export function indexRecord<R extends RunRecord>(record: R) {
   type Event = R['events'][number]
-  const nodes = new Map(record.nodes.map((node) => [node.id, node]))
+  const inputNodes = record.nodes as R['nodes'][number][]
+  const inputEvents = record.events as Event[]
+  const nodes = new Map(inputNodes.map((node) => [node.id, node]))
   const canonical = (id: string) => nodes.get(id)?.agentId ?? id
-  const actors = record.nodes.filter(
+  const actors = inputNodes.filter(
     (node) => node.kind !== 'session' || !node.agentId,
   )
-  const events = record.events.map(withoutHostPaths).sort((a, b) => ms(a.at) - ms(b.at))
+  const events = inputEvents.map(event => withoutHostPaths(event)).sort((a, b) => ms(a.at) - ms(b.at))
   const byEvent = new Map(events.map((event) => [event.id, event]))
-  const recordedOrder = new Map(record.events.map((event, i) => [event.id, i]))
+  const recordedOrder = new Map(inputEvents.map((event, i) => [event.id, i]))
   const byActor = new Map<string, Event[]>()
   const results = new Map<string, Event[]>()
   const calls = new Map<string, { event: Event; call: ToolCall }[]>()

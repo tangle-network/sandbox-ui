@@ -16,9 +16,4 @@ export { type AgentStreamRow, type AgentStreamState, type AgentTranscriptEntry, 
 
 export { LatestEvents, type LatestEventsProps } from "./latest-events";
 
-// Recorded transcripts retain their source ids and uncaptured-data semantics.
-export { Conversation, type ConversationProps, type EventFlag } from "./record/Conversation";
-export { indexRecord, type RecordIndex } from "./record/model";
-export { withPrompts } from "./record/prompts";
-export type { ConversationNode, ConversationEvent, ConversationRecord } from "./record/types";
-export * as recordModel from "./record/model";
+export * from "./record";

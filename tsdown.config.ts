@@ -7,6 +7,7 @@ export default defineConfig({
     chat: "src/chat/index.ts",
     workflows: "src/workflows/index.ts",
     run: "src/run/index.ts",
+    "run/record": "src/run/record/index.ts",
     workspace: "src/workspace/index.ts",
     workbench: "src/workbench/index.ts",
     "workbench/embedded-app": "src/workbench/embedded-app.ts",

@@ -14,8 +14,8 @@ assert.ok(consumer, 'Use the fresh installed shared-package consumer')
 const require = createRequire(resolve(consumer, 'package.json'))
 const assets = dirname(require.resolve('@tangle-network/sandbox-ui/workspace-viewer.js'))
 const evidence = process.env.RUNTIME_AUTHORITY_EVIDENCE
-let documentEntry = '@tangle-network/sandbox-ui/hooks/use-document'
-try { require.resolve(documentEntry) } catch { documentEntry = '@tangle-network/sandbox-ui/hooks' }
+const installed = JSON.parse(await readFile(resolve(consumer, 'node_modules/@tangle-network/sandbox-ui/package.json'), 'utf8'))
+const documentEntry = installed.exports['./hooks/use-document'] ? '@tangle-network/sandbox-ui/hooks/use-document' : '@tangle-network/sandbox-ui/hooks'
 
 async function openHost() {
   const scratch = await mkdtemp(resolve(consumer, '.authority-host-'))

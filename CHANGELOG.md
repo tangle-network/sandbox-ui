@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.10
+## 2.0.11
 
 - Use Charts' canonical multi-agent topology and presentation helpers. Sandbox UI supplies model/provider identity; the private renderer, layouts and authored graph styles are removed.
 

@@ -1,0 +1,57 @@
+import { test, expect } from 'playwright/test'
+import { assertStoryHealthy, openStory, waitForDiffRender } from './story-ready.mjs'
+
+test.use({ video: 'on' })
+test.afterEach(async ({ page }) => { await assertStoryHealthy(page) })
+const viewports = { desktop: { width: 1512, height: 982 }, phone: { width: 390, height: 844 } }
+for (const theme of ['light', 'dark']) for (const [size, viewport] of Object.entries(viewports)) {
+  test('changed files commit and push through the real diff '+theme+' '+size, async ({ page, baseURL }, info) => {
+    await openStory(page, 'workbench-changespane--interactive', theme, viewport, baseURL)
+    const files=page.getByRole('option'), message=page.getByRole('textbox',{name:'Commit message'})
+    await files.first().click()
+    await expect(files.first()).toHaveAttribute('aria-selected','true')
+    await waitForDiffRender(page,'maxDelayMs')
+    await message.fill('fail this commit'); await message.press('Control+Enter')
+    await expect(page.getByRole('alert')).toContainText('pre-commit hook failed')
+    await expect(message).toHaveValue('fail this commit')
+    await message.fill('Improve retry'); await page.getByRole('button',{name:'Commit',exact:true}).click()
+    await expect(files).toHaveCount(0); await expect(message).toHaveValue('')
+    const push=page.getByRole('button',{name:'Push',exact:true})
+    await expect(push).toBeEnabled(); await push.click(); await expect(push).toBeDisabled()
+    await info.attach('completed commit and push',{body:await page.screenshot(),contentType:'image/png'})
+  })
+  test('native diff renderer and identical contents '+theme+' '+size, async ({ page, baseURL }, info) => {
+    await openStory(page,'workbench-diffview--changed-line',theme,viewport,baseURL)
+    await waitForDiffRender(page,'Math.min')
+    expect(await page.locator('diffs-container').evaluate(node=>node.shadowRoot.textContent)).toContain('1000 * attempt')
+    await info.attach('real diff renderer',{body:await page.screenshot(),contentType:'image/png'})
+    await openStory(page,'workbench-diffview--no-changes',theme,viewport,baseURL)
+    await expect(page.getByText('No changes — baseline and working copy are identical.',{exact:true})).toBeVisible()
+  })
+  test('preview frame interaction and unsafe navigation '+theme+' '+size, async ({ page, baseURL }, info) => {
+    await openStory(page,'workbench-previewview--verified-response',theme,viewport,baseURL)
+    const frame=page.frameLocator('iframe')
+    await expect(frame.getByRole('heading',{name:'Local preview fixture'})).toBeVisible()
+    await frame.getByRole('button',{name:'Test preview interaction'}).click()
+    await expect(frame.getByText('The preview button works.',{exact:true})).toBeVisible()
+    await page.getByRole('textbox',{name:'Preview address'}).fill('javascript:alert(1)')
+    await page.getByRole('textbox',{name:'Preview address'}).press('Enter')
+    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(frame.getByText('The preview button works.',{exact:true})).toBeVisible()
+    await openStory(page,'workbench-previewview--unsafe-address',theme,viewport,baseURL)
+    await expect(page.locator('iframe')).toHaveCount(0)
+    await info.attach('unsafe preview refused',{body:await page.screenshot(),contentType:'image/png'})
+  })
+  test('embedded application readiness and invalid address '+theme+' '+size, async ({ page, baseURL }, info) => {
+    await openStory(page,'workbench-embeddedappview--ready',theme,viewport,baseURL)
+    const frame=page.frameLocator('iframe')
+    await expect(frame.getByRole('heading',{name:'Local preview fixture'})).toBeVisible()
+    await frame.getByRole('button',{name:'Test preview interaction'}).click()
+    await expect(frame.getByText('The preview button works.',{exact:true})).toBeVisible()
+    await openStory(page,'workbench-embeddedappview--starting',theme,viewport,baseURL)
+    await expect(page.locator('iframe')).toHaveCount(0)
+    await openStory(page,'workbench-embeddedappview--invalid-address',theme,viewport,baseURL)
+    await expect(page.locator('iframe')).toHaveCount(0); await expect(page.getByRole('alert')).toBeVisible()
+    await info.attach('invalid embedded address refused',{body:await page.screenshot(),contentType:'image/png'})
+  })
+}

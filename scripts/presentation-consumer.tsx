@@ -1,3 +1,4 @@
+import { RecordConversationConsumer } from "./record-conversation-consumer";
 import React, { createRef, useLayoutEffect, useState, type ReactNode } from "react";
 import {
   Heading, PageHeader, PageShell, SectionTitle, Card, CardHeader, CardContent,
@@ -71,6 +72,7 @@ export function PresentationConsumer(): ReactNode {
   }, []);
 
   return (
+    <>
     <main data-presentation data-action-count={actions}>
       <PageShell>
         <PageHeader
@@ -104,5 +106,7 @@ export function PresentationConsumer(): ReactNode {
         </Card>
       </PageShell>
     </main>
+    <RecordConversationConsumer />
+    </>
   );
 }

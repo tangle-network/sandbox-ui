@@ -3,8 +3,9 @@ import type { ConversationRecord as RunRecord } from './types.js'
 /** The conversation needs an opening prompt even when the provider did not retain its first user turn. */
 export function withPrompts<T extends RunRecord>(record: T): T {
   const events = record.events.map((event) => ({ ...event, detail: { ...event.detail } }))
+  const owners = new Map(record.nodes.map(node => [node.id, node.agentId ?? node.id]))
   for (const node of record.nodes.filter((item) => item.kind === 'agent')) {
-    const own = events.filter((event) => event.node === node.id)
+    const own = events.filter((event) => (owners.get(event.node) ?? event.node) === node.id)
     const firstReply = own.find((event) => event.detail.role === 'assistant')?.at
     const userTurns = own.filter((event) => event.detail.role === 'user' &&
       typeof event.detail.publicText === 'string' &&

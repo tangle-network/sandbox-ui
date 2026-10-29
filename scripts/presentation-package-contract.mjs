@@ -30,9 +30,11 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
   const fixture = join(consumerDir, "presentation");
   mkdirSync(fixture);
   copyFileSync(join(root, "scripts/presentation-consumer.tsx"), join(fixture, "consumer.tsx"));
+  copyFileSync(join(root, "scripts/record-conversation-consumer.tsx"), join(fixture, "record-conversation-consumer.tsx"));
+  copyFileSync(join(root, "src/run/record/__fixtures__/live-conversation.json"), join(fixture, "record-conversation.json"));
   execFileSync(join(root, "node_modules/.bin/tsc"), [
     "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2022", "--jsx", "react-jsx",
-    "--module", "ESNext", "--moduleResolution", "bundler", "--lib", "ES2022,DOM",
+    "--resolveJsonModule", "--module", "ESNext", "--moduleResolution", "bundler", "--lib", "ES2022,DOM",
     join(fixture, "consumer.tsx"),
   ], { cwd: consumerDir, stdio: "inherit" });
 
@@ -210,6 +212,18 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Resource usage");
               await page.keyboard.press("ArrowRight");
               await page.waitForFunction(() => document.querySelector('[role="region"]').scrollLeft > 0);
+              const transcript = page.locator("[data-record-conversation]");
+              assert.equal(await transcript.getAttribute("data-initial-prompts"), "1");
+              assert.equal(await transcript.getAttribute("data-steering-prompts"), "1");
+              for (const [sha, event] of [["a".repeat(64), "68c9a9f9ef0f:18"], ["b".repeat(64), "standalone-result"]]) {
+                await transcript.locator(`[data-load-full="${sha}"]`).click();
+                await page.waitForFunction(value => document.querySelector("[data-source-open]")?.getAttribute("data-source-open") === value, `${sha}:${event}`);
+              }
+              assert.match(await transcript.innerText(), /4,000,001 bytes, middle omitted/);
+              assert.match(await transcript.innerText(), /5,000,001 bytes, middle omitted/);
+              await transcript.getByRole("button", { name: "Filter retained prompts" }).click();
+              await transcript.getByText("Retained follow-up", { exact: true }).waitFor();
+              assert(!await transcript.getByText("Reconstructed duplicate must not appear", { exact: true }).count());
               assert.deepEqual(errors, [], "packed browser consumer must not throw");
               states.push({ lane, width, mode, ...measured });
             } finally {

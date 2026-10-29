@@ -11,7 +11,7 @@ export function validateRecordConversation({ root, consumerDir }) {
     import { renderToStaticMarkup } from "react-dom/server";
     import { Conversation, indexRecord } from "@tangle-network/sandbox-ui/run";
     const require = createRequire(import.meta.url);
-    assert.throws(() => require.resolve("@drewstone/agent-record/record"), /MODULE_NOT_FOUND/);
+    assert.throws(() => require.resolve("@drewstone/agent-record/record"), { code: "MODULE_NOT_FOUND" });
     const record = JSON.parse(readFileSync(process.env.RECORD_CONVERSATION_FIXTURE, "utf8"));
     const html = renderToStaticMarkup(createElement(Conversation, {
       index: indexRecord(record), actor: "run-live", cutoff: Infinity, query: "", category: "all",

@@ -71,7 +71,7 @@ const failureText = (text: string) => {
 }
 
 /** One tool call as the kit's row: its verb and subject, collapsed; the input and output when opened; failures inline. */
-function toolItem(id: string, call: ToolCall, result: RecordEvent | undefined, state: CallState, durationMs: number | null, live: boolean): AgentTimelineItem {
+function toolItems(id: string, call: ToolCall, result: RecordEvent | undefined, state: CallState, durationMs: number | null, live: boolean, opener: ConversationRenderContext['opener']): AgentTimelineItem[] {
   const name = toolName(call.name)
   const output = result ? textOf(result) || result.detail.contentOmitted || '' : undefined
   const status = state === 'error' ? 'error' : state === 'pending' || (state === 'missing' && live) ? 'running' : 'completed'
@@ -92,12 +92,14 @@ function toolItem(id: string, call: ToolCall, result: RecordEvent | undefined, s
   const known = KIT_TOOLS.has(name.toLowerCase())
   const meta = getToolDisplayMetadata(part)
   const detail = argsLabel(call.input) ?? (meta.description || (known ? undefined : preview(call)))
-  return {
+  const item: AgentTimelineItem = {
     id,
     kind: 'tool',
     part,
     call: { id, type: TYPES[name.toLowerCase()] ?? 'unknown', label: known ? meta.title : name.replaceAll('_', ' '), status: status === 'error' ? 'error' : status === 'running' ? 'running' : 'success', ...(detail ? { detail } : {}), ...(durationMs !== null && durationMs >= 0 ? { duration: durationMs } : {}) },
   }
+  const clip = clipOf(result?.detail.clip)
+  return result && clip ? [item, { id: `${id}:clip`, kind: 'custom', content: <ClipNote clip={clip} open={opener(result)} /> }] : [item]
 }
 
 const toolNote = (part: ToolPart) => {
@@ -201,7 +203,7 @@ export function rowItems(row: ConversationRow, context: ConversationRenderContex
   else if (finding) items.push({ id: event.id, kind: 'status', tone: 'info', label: 'Recorded finding', detail: compact(message).slice(0, 600) })
   else if (standalone) {
     const unpaired = event.detail.toolCallId !== undefined && (index.calls.get(toolKey(event.node, event.detail.toolCallId))?.length ?? 0) > 1
-    items.push(toolItem(event.id, { id: event.id, name: event.label || 'Tool result' }, event, unpaired ? 'ambiguous' : event.detail.isError ? 'error' : 'returned', null, live))
+    items.push(...toolItems(event.id, { id: event.id, name: event.label || 'Tool result' }, event, unpaired ? 'ambiguous' : event.detail.isError ? 'error' : 'returned', null, live, context.opener))
   } else if (message) items.push({ id: event.id, kind: 'message', role: 'assistant', content: message })
   else if (!calls.length && !reasoning && !withheld.length) items.push({ id: event.id, kind: 'status', label: event.detail.contentOmitted ?? 'No text body is present in this record.' })
   const at = anchor(event)
@@ -213,7 +215,7 @@ export function rowItems(row: ConversationRow, context: ConversationRenderContex
     const state: CallState = ambiguous ? 'ambiguous' : last ? (last.detail.isError ? 'error' : 'returned') : all.some((result) => ms(result.at) > cutoff) ? 'pending' : 'missing'
     const recorded = typeof last?.detail.durationMs === 'number' ? last.detail.durationMs : null
     const duration = recorded ?? (last && last.detail.atBasis !== 'carried' ? ms(last.at) - ms(event.at) : null)
-    items.push(toolItem(`tool:${at}:${call.id}`, call, last, state, duration, live))
+    items.push(...toolItems(`tool:${at}:${call.id}`, call, last, state, duration, live, context.opener))
   }
   return items
 }

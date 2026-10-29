@@ -124,3 +124,7 @@
 .record-conversation .event-flag.polarity-none { color: hsl(var(--muted-foreground)); background: transparent; }
 .record-conversation .link-button { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--accent-text); font: inherit; cursor: pointer; }
 .record-conversation .link-button:hover, .record-conversation .link-button:focus-visible { text-decoration: underline; }
+
+.record-conversation .ar-turn { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 8px; padding-top: 12px; border-top: 1px solid hsl(var(--border)); }
+.record-conversation .ar-turn time, .record-conversation .ar-idle-event time { flex: none; color: hsl(var(--muted-foreground)); font: var(--font-size-sm)/1.5 var(--font-sans); }
+.record-conversation .ar-idle-event { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 16px; padding: 4px 0; }

@@ -136,10 +136,11 @@ export function VirtualList<T>({
       return
     }
     if (!scrollTo(goal.key, true)) return
-    // The row is in the document once the viewport state caught up: bring it into the page's view as well, so a
-    // conversation panel below the fold scrolls up with it.
+    // Once rendered, its actual geometry wins over heights not measured by ResizeObserver yet.
     const row = rows.current.get(goal.key)
     if (row?.isConnected) {
+      const element = scroller.current!
+      element.scrollTop += row.getBoundingClientRect().top - element.getBoundingClientRect().top - 8
       const box = row.getBoundingClientRect()
       if (box.top < 72 || box.top > window.innerHeight - 96) window.scrollBy({ top: box.top - 120 })
     }
@@ -154,8 +155,10 @@ export function VirtualList<T>({
     const element = scroller.current
     if (!element) return
     // The reader's own scroll ends the settling.
-    const release = () => {
-      pending.current = null
+    const release = (event: Event) => {
+      const key = event instanceof KeyboardEvent ? event.key : ''
+      pending.current = items.length && (key === 'Home' || key === 'End') ? { key: keyOf(items[key === 'Home' ? 0 : items.length - 1]!), until: performance.now() + 2000 } : null
+      if (pending.current) { event.preventDefault(); settle() }
     }
     element.addEventListener('wheel', release, { passive: true })
     element.addEventListener('touchstart', release, { passive: true })
@@ -167,7 +170,7 @@ export function VirtualList<T>({
       element.removeEventListener('pointerdown', release)
       element.removeEventListener('keydown', release)
     }
-  }, [scroller])
+  }, [scroller, items, keyOf, offsets])
 
   const bind = (key: string) => (element: HTMLDivElement | null) => {
     if (!element) {

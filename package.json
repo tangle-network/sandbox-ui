@@ -132,7 +132,12 @@
     "./run/record": {
       "import": "./dist/run/record.js",
       "types": "./dist/run/record.d.ts"
-    }
+    },
+    "./run/live": {
+      "import": "./dist/run/live.js",
+      "types": "./dist/run/live.d.ts"
+    },
+    "./workspace-viewer.js": "./dist/workspace-viewer.js"
   },
   "files": [
     "dist",

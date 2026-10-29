@@ -64,7 +64,7 @@ export function HarnessLogo({ type, model, size = 16, className }: HarnessLogoPr
         "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] text-[var(--harness-color)]",
         className,
       )}
-      style={{ height: size, width: size, "--harness-color": brand.color ?? "var(--accent-text)", backgroundColor: "color-mix(in srgb, var(--harness-color) 12%, hsl(var(--background)))" } as React.CSSProperties}
+      style={{ height: size, width: size, "--harness-color": brand.color ?? "var(--accent-text)", backgroundColor: brand.fullColor ? "hsl(var(--primary-foreground))" : "color-mix(in srgb, var(--harness-color) 12%, hsl(var(--background)))" } as React.CSSProperties}
     >
       {brand.logoUrl && brand.fullColor ? <img src={brand.logoUrl} alt="" className="h-[80%] w-[80%] object-contain" /> : brand.logoUrl ? (
         <span

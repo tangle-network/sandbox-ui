@@ -11,6 +11,7 @@ export default async function proveRecordedToolPreview(page, transcript, { lane,
   assert.equal(await logos.count(), 6);
   for (const logo of await logos.all()) {
     assert.match(await logo.getAttribute('title'), /Recorded model/);
+    if (await logo.getAttribute('aria-label') === 'Kimi') assert(await logo.evaluate(node => getComputedStyle(node).backgroundColor.match(/[\d.]+/g).slice(0, 3).every(value => Number(value) > 230)), 'the original black/blue Kimi mark retains a light backing in both themes');
     assert(await logo.evaluate(node => { const box = node.getBoundingClientRect(), color = getComputedStyle(node).backgroundColor; const glyph = node.firstElementChild.getBoundingClientRect(); return box.width >= 28 && glyph.width >= 16 && color !== 'rgba(0, 0, 0, 0)' }));
   }
   await row.hover();

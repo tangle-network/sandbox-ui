@@ -98,7 +98,7 @@
 
 /* Recorded transcript: one chat column; source rows own only provenance and windowing. */
 .record-conversation { height: 29rem; overflow: auto; scroll-behavior: auto; overscroll-behavior: contain; }
-.record-conversation .virtual-row { display: flow-root; overflow-anchor: auto; }
+.record-conversation .virtual-row { overflow-anchor: auto; }
 .record-conversation .chat-empty { padding: 1rem; font: var(--font-size-base)/1.5 var(--font-sans); color: hsl(var(--muted-foreground)); }
 .record-conversation .chat-row.selected { box-shadow: -10px 0 0 -8px var(--accent-text); }
 .record-conversation .chat-row.flagged { box-shadow: -10px 0 0 -8px hsl(var(--muted-foreground)); }

@@ -199,7 +199,7 @@ export function VirtualList<T>({
       {items.slice(start, end).map((item, i) => {
         const key = keyOf(item)
         return (
-          <div key={key} ref={bind(key)} className="virtual-row">
+          <div key={key} ref={bind(key)} className="virtual-row" style={{ display: 'flow-root' }}>
             {render(item, start + i)}
           </div>
         )

@@ -177,9 +177,7 @@ export function Conversation({
       else map.set(row.event.id, row.key)
     return map
   }, [rows])
-  const retained = (index.byActor.get(actor) ?? []).some(
-    (item) => !isLifecycle(item) && (item.detail.role || textOf(item) || callsOf(item).length),
-  )
+  const retained = (index.byActor.get(actor) ?? []).some(item => !isLifecycle(item) && (item.detail.role || textOf(item) || callsOf(item).length))
   // Another agent starts at its first message, unless the change came with an event to show.
   const targetRef = useRef(target)
   targetRef.current = target
@@ -197,13 +195,15 @@ export function Conversation({
   useEffect(() => {
     const element = scroll.current
     if (!element) return
-    const track = () => {
-      following.current = followRef.current && element.scrollHeight - element.scrollTop - element.clientHeight < 24
-    }
+    const track = () => { following.current = followRef.current && element.scrollHeight - element.scrollTop - element.clientHeight < 24 }
     element.addEventListener('scroll', track, { passive: true })
     return () => element.removeEventListener('scroll', track)
   }, [])
+  const arrival = useRef<{ actor: string; id?: string }>({ actor })
   useLayoutEffect(() => {
+    const tail = rows.at(-1), event = tail?.kind === 'event' ? tail.event : tail?.events.at(-1)
+    let animate = live && arrival.current.actor === actor && !!arrival.current.id && arrival.current.id !== event?.id
+    arrival.current = { actor, id: event?.id }
     const element = scroll.current
     if (!element || !following.current) return
     element.scrollTop = element.scrollHeight
@@ -212,6 +212,12 @@ export function Conversation({
     let frame = requestAnimationFrame(function pin() {
       if (!following.current) return
       element.scrollTop = element.scrollHeight
+      const row = event && element.querySelector<HTMLElement>(`[data-message="${CSS.escape(event.id)}"], [data-entry="${CSS.escape(event.id)}"]`)
+      if (animate && row) {
+        animate = false
+        const style = getComputedStyle(element), value = style.getPropertyValue('--duration-stream').trim(), duration = parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)
+        if (duration > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) row.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: style.getPropertyValue('--ease-expo').trim() || 'linear' })
+      }
       if (++frames < 20) frame = requestAnimationFrame(pin)
     })
     return () => cancelAnimationFrame(frame)
@@ -253,17 +259,11 @@ export function Conversation({
     )
   }
   const keyOf = useCallback((row: ConversationRow) => row.key, [])
-  const estimate = useCallback(
-    (row: ConversationRow) =>
-      row.kind !== 'event'
-        ? 36
-        : isLifecycle(row.event)
-            ? 26
-            : !textOf(row.event) && callsOf(row.event).length
-              ? 16 + 36 * callsOf(row.event).length
-              : 96,
-    [],
-  )
+  const estimate = useCallback((row: ConversationRow) => {
+    if (row.kind !== 'event') return 36
+    if (isLifecycle(row.event)) return 26
+    return !textOf(row.event) && callsOf(row.event).length ? 16 + 36 * callsOf(row.event).length : 96
+  }, [])
   const context = { index, cutoff, selected, opened, anchor, opener, setOpen, flagMarks, paired, thinkingSpan, flags, live }
   // Each row's kit items, built once per change: a row's first gap follows the kind of the row above it.
   const itemsOf = useMemo(() => rows.map((row) => rowItems(row, context)), [rows, opened, cutoff, selected, live, index, thinkingSpan]) // eslint-disable-line react-hooks/exhaustive-deps

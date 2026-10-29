@@ -20,4 +20,18 @@ export default async function proveRecordedToolPreview(page, transcript, { lane,
   }
   await page.mouse.move(1, 1);
   await preview.waitFor({ state: "hidden" });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await transcript.getByRole("button", { name: "Append live turn", exact: true }).click();
+  await transcript.getByText("Live turn 1", { exact: true }).waitFor();
+  await transcript.getByRole("button", { name: "Append live turn", exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('[data-entry="arrival-1"]')?.getAnimations().some(a => a.playState === "running"));
+  const motion = await transcript.locator('[data-entry="arrival-1"]').evaluate(async node => {
+    const animations = node.getAnimations(), frames = animations.flatMap(a => a.effect.getKeyframes());
+    await Promise.all(animations.map(a => a.finished)); return frames;
+  });
+  assert(motion.some(frame => Number(frame.opacity) === 0) && motion.some(frame => Number(frame.opacity) === 1));
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await transcript.getByRole("button", { name: "Append live turn", exact: true }).click();
+  await transcript.getByText("Live turn 3", { exact: true }).waitFor();
+  assert.equal(await transcript.locator('[data-entry="arrival-2"]').evaluate(node => node.getAnimations().length), 0);
 }

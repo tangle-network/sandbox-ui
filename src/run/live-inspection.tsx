@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { SandboxArtifactPane } from '../workbench/sandbox-artifact-pane'
+import { WorkspaceFilesPane } from '../workspace/workspace-files-pane'
+import { CodeView } from '../workbench/code-view'
+import { DiffView } from '../workbench/diff-view'
 import { useDocument } from '../hooks/use-document'
 
 type Inspection = {
@@ -39,7 +41,7 @@ export function useLiveInspection(url: string | undefined, live: boolean, fetche
     files: entry ? (
       <section aria-label="Retained files" className="flex min-h-0 flex-1 flex-col" data-file-scope={inventory.data?.files?.scope} data-file-complete={inventory.data?.files?.complete} data-file={entry.path} data-file-hash={entry.sha256}>
         {valid ? <>
-          <SandboxArtifactPane className="min-h-0 flex-1" artifact={{ id: `${entry.path}:${entry.sha256}`, path: entry.path, filename: entry.path.split('/').at(-1) ?? entry.path, content: file.content, ...(file.before ? { baselineContent: file.before.content } : {}) }} paths={files.map((item) => item.path)} showTree onFileSelect={select} />
+          <WorkspaceFilesPane className="min-h-0 flex-1" paths={files.map(item => item.path)} selectedPath={entry.path} onSelect={path => { if (files.some(item => item.path === path)) select(path) }} preview={{ path: entry.path, content: <CodeView path={entry.path} filename={entry.path.split('/').at(-1) ?? entry.path} content={file.content} showTree={false} />, ...(file.before ? { compare: { label: file.before.source.ref, content: <DiffView filename={entry.path} baseline={file.before.content} current={file.content} /> } } : {}) }} />
           <details className="ws-status"><summary>Provenance</summary><code>{entry.sha256}</code>{file.before && <p>Compared with {file.before.source.kind} <code>{file.before.source.ref}</code>: <code>{file.before.sha256}</code></p>}<p><a href={download && download.key === fileKey ? download.href : undefined} download={entry.path.split('/').at(-1)}>Download</a></p></details>
         </> : <p className="ws-status" role={content.loading ? 'status' : 'alert'}>{content.loading ? `Reading ${entry.path}…` : `This retained file is unavailable: ${content.error ?? 'its content identity did not match the inventory'}`}</p>}
       </section>

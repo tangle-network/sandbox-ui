@@ -139,7 +139,7 @@ test('installed Runtime view preserves failure and unknown lifecycle evidence ac
       runtimeOutcome = { kind: 'no-winner', reason: 'no-result-selected' }
       await page.reload()
       await page.locator('[data-run-outcome="no-winner"]').getByText('No winner: no-result-selected', { exact: true }).waitFor()
-      const rootNode = page.locator('.react-flow__node[data-id="lane-g"]')
+      const rootNode = page.getByRole('button', { name: /^root,/ })
       await rootNode.waitFor()
       assert.match(await rootNode.getAttribute('aria-label'), /Stopped.*No winner: no-result-selected/)
       assert.doesNotMatch(await rootNode.getAttribute('aria-label'), /Done/)

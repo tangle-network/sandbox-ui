@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { VirtualList } from './VirtualList.js'
+import { useFollowTail } from '../use-follow-tail.js'
 import { AgentTimelineColumn } from '@tangle-network/ui/chat'
 import { ConversationRowView, isLifecycle, lastKind, rowItems } from './ConversationRowView.js'
 import type { ConversationEvent as RecordEvent } from './types.js'
@@ -178,27 +179,7 @@ export function Conversation({
     return map
   }, [rows])
   const retained = (index.byActor.get(actor) ?? []).some(item => !isLifecycle(item) && (item.detail.role || textOf(item) || callsOf(item).length))
-  // Another agent starts at its first message, unless the change came with an event to show.
-  const targetRef = useRef(target)
-  targetRef.current = target
-  // Follow the tail only while the reader is at the bottom: new rows of a live record keep them there; anywhere
-  // else, the rows above keep their measured heights and the reading place does not move.
-  const following = useRef(false)
-  const followRef = useRef(follow)
-  followRef.current = follow
-  useLayoutEffect(() => {
-    // A live conversation opens at its newest event and follows it; a recorded one opens at its first message.
-    following.current = follow && !targetRef.current
-    if (scroll.current && !targetRef.current) scroll.current.scrollTop = follow ? scroll.current.scrollHeight : 0
-  }, [actor])
-  useLayoutEffect(() => { if (!follow) following.current = false }, [follow])
-  useEffect(() => {
-    const element = scroll.current
-    if (!element) return
-    const track = () => { following.current = followRef.current && element.scrollHeight - element.scrollTop - element.clientHeight < 24 }
-    element.addEventListener('scroll', track, { passive: true })
-    return () => element.removeEventListener('scroll', track)
-  }, [])
+  const { following } = useFollowTail(scroll, { identity: actor, content: rows, follow, target })
   const arrival = useRef<{ actor: string; id?: string }>({ actor })
   useLayoutEffect(() => {
     const tail = rows.at(-1), event = tail?.kind === 'event' ? tail.event : tail?.events.at(-1), entry = tail?.kind === 'event' ? tail.event.id : tail?.events[0]?.id
@@ -206,19 +187,14 @@ export function Conversation({
     arrival.current = { actor, id: event?.id }
     const element = scroll.current
     if (!element || !following.current) return
-    element.scrollTop = element.scrollHeight
-    // New rows are measured after they render; hold the bottom until they settle.
-    let frames = 0
-    let frame = requestAnimationFrame(function pin() {
+    const frame = requestAnimationFrame(() => {
       if (!following.current) return
-      element.scrollTop = element.scrollHeight
       const row = entry && element.querySelector<HTMLElement>(`[data-entry="${CSS.escape(entry)}"]`)
       if (animate && row) {
         animate = false
         const style = getComputedStyle(element), value = style.getPropertyValue('--duration-stream').trim(), duration = parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)
         if (duration > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) row.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: style.getPropertyValue('--ease-expo').trim() || 'linear' })
       }
-      if (++frames < 20) frame = requestAnimationFrame(pin)
     })
     return () => cancelAnimationFrame(frame)
   }, [rows])

@@ -1,8 +1,8 @@
 import { runStatus } from '@tangle-network/ui/run'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { TraceWorkspace } from './trace-workspace'
-import type { AgentStreamOpener } from './agent-stream'
+import { useEventStream, type AgentStreamOpener } from './event-stream'
 import { type AgentGraphNode, type AgentGraphStatus } from '../workflows/AgentGraph'
 import { useLiveInspection } from './live-inspection'
 
@@ -49,26 +49,27 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
   const [rendered, setRendered] = useState(0)
   const [agent, setAgent] = useState<string>()
   const [conversationOpen, setConversationOpen] = useState(true)
-  useEffect(() => {
-    const source = transport?.openEventSource ? transport.openEventSource(`${api}/events`, setConnected) : new EventSource(`${api}/events`)
-    source.addEventListener('snapshot', (message) => {
-      try {
-        const frame = JSON.parse((message as MessageEvent<string>).data) as Frame
-        if (!Array.isArray(frame.snapshots)) throw new Error('Invalid snapshot stream')
-        setSnapshots((prior) => {
-          const byRoot = new Map((frame.reset ? [] : prior).map((snapshot) => [snapshot.root, snapshot]))
-          for (const snapshot of frame.snapshots) byRoot.set(snapshot.root, snapshot)
-          return [...byRoot.values()]
-        })
-        setRendered(frame.sequence); setError(null); setConnected(true)
-      } catch (cause) { setError(String(cause)) }
-    })
-    source.addEventListener('unavailable', () => setError('The run snapshot is unavailable'))
-    // Runtime ends the stream when its server closes; the run is then final, not reconnecting.
-    source.addEventListener('end', () => { source.close(); setEnded(true) })
-    if (!transport?.openEventSource) (source as EventSource).onerror = () => setConnected(false)
-    return () => source.close()
-  }, [api, transport?.openEventSource])
+  useEventStream(`${api}/events`, {
+    opener: transport?.openEventSource,
+    onLiveChange: setConnected,
+    events: {
+      snapshot: message => {
+        try {
+          const frame = JSON.parse(message.data) as Frame
+          if (!Array.isArray(frame.snapshots)) throw new Error('Invalid snapshot stream')
+          setSnapshots(prior => {
+            const byRoot = new Map((frame.reset ? [] : prior).map(snapshot => [snapshot.root, snapshot]))
+            for (const snapshot of frame.snapshots) byRoot.set(snapshot.root, snapshot)
+            return [...byRoot.values()]
+          })
+          setRendered(frame.sequence); setError(null); setConnected(true)
+        } catch (cause) { setError(String(cause)) }
+      },
+      unavailable: () => setError('The run snapshot is unavailable'),
+      end: () => setEnded(true),
+    },
+  })
+
   const runs = snapshots.flatMap((snapshot, root) => snapshot.supervisors.map((run) => ({ snapshot, root, run, key: JSON.stringify([snapshot.root, run.id]) })))
   const active = runs.find((run) => run.key === selected) ?? runs[0]
   const facts = active?.snapshot.pursuit?.nodes.filter((node) => node.runId === active.run.id) ?? []

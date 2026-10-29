@@ -1,14 +1,9 @@
 "use client"
 
-import { useEffect, useReducer } from "react"
+import { useReducer, useRef } from "react"
+import { useEventStream, type AgentStreamOpener } from "./event-stream"
+export type { AgentStreamSource, AgentStreamOpener } from "./event-stream"
 import type { ToolCallData, ToolCallType } from "@tangle-network/ui/run"
-
-/** Host-owned authenticated streams keep their own reconnect and session lifecycle. */
-export interface AgentStreamSource {
-  addEventListener(type: string, listener: (event: MessageEvent<string>) => void): void
-  close(): void
-}
-export type AgentStreamOpener = (url: string, onLiveChange?: (live: boolean) => void) => AgentStreamSource
 
 /** One row of an agent's message stream (tangle-tools `/api/discovery/runs/<run>/agents/<agent>/stream`). */
 export interface AgentStreamRow {
@@ -151,39 +146,30 @@ function reduce(state: AgentStreamState, action: Action): AgentStreamState {
  */
 export function useAgentStream(url: string | undefined, openEventSource?: AgentStreamOpener): AgentStreamState {
   const [state, dispatch] = useReducer(reduce, { entries: [], lastSeq: 0, alive: false })
-  useEffect(() => {
-    if (!url || (!openEventSource && typeof EventSource === "undefined")) return
-    dispatch({ type: "reset" })
-    let lastSeq = 0
-    let closed = false
-    let source: AgentStreamSource | undefined
-    let retry: ReturnType<typeof setTimeout> | undefined
-    const open = () => {
-      const target = new URL(url, globalThis.location?.href)
-      if (lastSeq > 0) target.searchParams.set("after", String(lastSeq))
-      source = openEventSource ? openEventSource(target.toString(), live => { if (!closed && !live) dispatch({ type: "unreachable" }) }) : new EventSource(target.toString())
-      // The native transport reconnects here; an injected transport owns its session and reconnect policy.
-      let opened = false
-      if (!openEventSource) (source as EventSource).onopen = () => { opened = true }
-      source.addEventListener("rows", (message) => {
-        const data = JSON.parse((message as MessageEvent<string>).data) as { generation?: string | number; events: AgentStreamRow[]; lastSeq?: number; alive?: boolean }
-        lastSeq = Math.max(lastSeq, data.lastSeq ?? 0, ...data.events.map((row) => row.seq))
-        dispatch({ type: "rows", generation: data.generation, rows: data.events, alive: data.alive })
-      })
-      source.addEventListener("reset", (message) => {
-        lastSeq = 0
-        dispatch({ type: "reset", generation: (JSON.parse((message as MessageEvent<string>).data) as { generation?: string | number }).generation })
-      })
-      source.addEventListener("end", () => { closed = true; source?.close(); dispatch({ type: "end" }) })
-      if (!openEventSource) (source as EventSource).onerror = () => {
-        source?.close()
-        if (closed) return
-        if (!opened) dispatch({ type: "unreachable" })
-        retry = setTimeout(open, 1_000)
-      }
-    }
-    open()
-    return () => { closed = true; clearTimeout(retry); source?.close() }
-  }, [url, openEventSource])
+  const cursor = useRef<{ lastSeq: number; generation?: string | number }>({ lastSeq: 0 })
+  useEventStream(url, {
+    opener: openEventSource,
+    after: () => cursor.current.lastSeq,
+    onStart: () => { cursor.current = { lastSeq: 0 }; dispatch({ type: "reset" }) },
+    onLiveChange: live => { if (!live) dispatch({ type: "unreachable" }) },
+    events: {
+      rows: message => {
+        try {
+          const data = JSON.parse(message.data) as { generation?: string | number; events: AgentStreamRow[]; lastSeq?: number; alive?: boolean }
+          if (!Array.isArray(data.events)) throw new Error("Invalid agent rows stream")
+          if (data.generation !== undefined && data.generation !== cursor.current.generation) cursor.current = { lastSeq: 0, generation: data.generation }
+          cursor.current.lastSeq = Math.max(cursor.current.lastSeq, data.lastSeq ?? 0, ...data.events.map(row => row.seq))
+          dispatch({ type: "rows", generation: data.generation, rows: data.events, alive: data.alive })
+        } catch (cause) { dispatch({ type: "error", message: String(cause) }) }
+      },
+      reset: message => {
+        try {
+          const { generation } = JSON.parse(message.data) as { generation?: string | number }
+          cursor.current = { lastSeq: 0, generation }; dispatch({ type: "reset", generation })
+        } catch (cause) { dispatch({ type: "error", message: String(cause) }) }
+      },
+      end: () => dispatch({ type: "end" }),
+    },
+  })
   return state
 }

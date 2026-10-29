@@ -17,3 +17,4 @@ export { type AgentStreamSource, type AgentStreamOpener, type AgentStreamRow, ty
 export { LatestEvents, type LatestEventsProps } from "./latest-events";
 
 export * from "./record";
+export { useEventStream, type EventStreamHandlers } from "./event-stream";

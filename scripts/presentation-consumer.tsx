@@ -1,4 +1,4 @@
-import { RecordConversationConsumer, VirtualListConsumer } from "./record-conversation-consumer";
+import { RecordConversationConsumer, VirtualListConsumer, RecordTopologyConsumer } from "./record-conversation-consumer";
 import React, { createRef, useLayoutEffect, useState, type ReactNode } from "react";
 import {
   Heading, PageHeader, PageShell, SectionTitle, Card, CardHeader, CardContent,
@@ -108,6 +108,7 @@ export function PresentationConsumer(): ReactNode {
     </main>
     <RecordConversationConsumer />
     <VirtualListConsumer />
+    <RecordTopologyConsumer />
     </>
   );
 }

@@ -50,5 +50,15 @@ for (const theme of ['light', 'dark']) for (const width of [1512, 390]) {
     const screenshot = info.outputPath(`101-agents-${theme}-${width}.png`)
     await page.screenshot({ path: screenshot, fullPage: true })
     await info.attach(`101-agents-${theme}-${width}`, { path: screenshot, contentType: 'image/png' })
+    // A portal must carry the graph's scoped tokens across an opposite document theme.
+    await graph.evaluate((el, theme) => { document.documentElement.dataset.theme = theme === 'light' ? 'dark' : 'light'; document.documentElement.style.colorScheme = theme === 'light' ? 'dark' : 'light'; el.dataset.theme = theme; el.style.colorScheme = theme }, theme)
+    await page.keyboard.press('Tab')
+    await selected.focus()
+    const expected = await graph.evaluate(el => { const probe = document.createElement('span'); probe.style.cssText = 'color:hsl(var(--foreground));background-color:hsl(var(--card))'; el.append(probe); const css = getComputedStyle(probe), colors = { color: css.color, backgroundColor: css.backgroundColor }; probe.remove(); return colors })
+    await expect.poll(() => page.getByRole('tooltip').evaluate(el => { const css = getComputedStyle(el); return { color: css.color, backgroundColor: css.backgroundColor } })).toEqual(expected)
+    await expect(page.getByRole('tooltip')).toHaveAttribute('data-theme', theme)
+    await page.screenshot({ path: info.outputPath(`scoped-${theme}-${width}.png`) })
+    await selected.press('Escape')
+
   })
 }

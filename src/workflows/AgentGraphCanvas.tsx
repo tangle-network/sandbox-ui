@@ -10,11 +10,13 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
+  type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -382,16 +384,25 @@ export function AgentGraphCanvas({
           fitViewOptions={{ padding: `${FIT_PADDING}px`, maxZoom: 1 }}
         />
       </ReactFlow></div>}
-      {hovered && byId.has(hovered.id) && <AgentMetrics id={detailsId} agent={byId.get(hovered.id)!} rect={hovered.rect} onEnter={keepDetails} onLeave={leaveDetails} onClose={() => { hideDetails(); returningFocus.current = true; hoverTarget.current?.focus({ preventScroll: true }); returningFocus.current = false; }} />}
+      {hovered && byId.has(hovered.id) && <AgentMetrics anchor={wrapperRef.current} mode={colorMode} id={detailsId} agent={byId.get(hovered.id)!} rect={hovered.rect} onEnter={keepDetails} onLeave={leaveDetails} onClose={() => { hideDetails(); returningFocus.current = true; hoverTarget.current?.focus({ preventScroll: true }); returningFocus.current = false; }} />}
     </div>
   );
 }
 
 /** Metrics stay at reading size outside the zoomed canvas and its clipping container. */
-function AgentMetrics({ id, agent, rect, onEnter, onLeave, onClose }: { id: string; agent: AgentGraphProps["nodes"][number]; rect: DOMRect; onEnter: () => void; onLeave: () => void; onClose: () => void }) {
+function AgentMetrics({ anchor, mode, id, agent, rect, onEnter, onLeave, onClose }: { anchor: HTMLElement | null; mode: string; id: string; agent: AgentGraphProps["nodes"][number]; rect: DOMRect; onEnter: () => void; onLeave: () => void; onClose: () => void }) {
+  const [theme, setTheme] = useState<CSSProperties>({});
+  useLayoutEffect(() => {
+    if (!anchor) return;
+    const read = () => { const css = getComputedStyle(anchor); setTheme(Object.fromEntries(Array.from(css).filter(name => name.startsWith("--")).map(name => [name, css.getPropertyValue(name)])) as CSSProperties); };
+    read();
+    const observer = new MutationObserver(read);
+    for (let el: HTMLElement | null = anchor; el; el = el.parentElement) observer.observe(el, { attributes: true, attributeFilter: ["class", "style", "data-theme", "data-sandbox-theme"] });
+    return () => observer.disconnect();
+  }, [anchor]);
   const width = Math.min(420, window.innerWidth - 24), height = Math.min(560, window.innerHeight - 24);
   const left = Math.max(12, Math.min(rect.right + 12 + width <= window.innerWidth ? rect.right + 12 : rect.left - width - 12, window.innerWidth - width - 12));
-  return createPortal(<div id={id} data-agent-metrics role="tooltip" tabIndex={0} onMouseEnter={onEnter} onMouseLeave={onLeave} onWheel={event => event.stopPropagation()} onBlur={onLeave} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }} className="rounded-xl border border-border bg-card p-4 text-sm text-foreground shadow-xl" style={{ position: "fixed", zIndex: 1000, width, maxHeight: height, overflow: "auto", left, top: Math.max(12, Math.min(rect.top, window.innerHeight - height - 12)) }}>
+  return createPortal(<div id={id} data-agent-metrics data-theme={anchor?.closest("[data-theme]")?.getAttribute("data-theme") ?? mode} role="tooltip" tabIndex={0} onMouseEnter={onEnter} onMouseLeave={onLeave} onWheel={event => event.stopPropagation()} onBlur={onLeave} onKeyDown={event => { if (event.key === "Escape") { event.preventDefault(); onClose(); } }} className={`${mode} rounded-xl border border-border bg-card p-4 text-sm text-foreground shadow-xl`} style={{ ...theme, colorScheme: mode, position: "fixed", zIndex: 1000, width, maxHeight: height, overflow: "auto", left, top: Math.max(12, Math.min(rect.top, window.innerHeight - height - 12)) }}>
     <div className="mb-2 flex items-center justify-between gap-3"><strong>{agent.label}</strong><span>{agentStatus(agent.status).label}</span></div>
     <p className="mb-3 text-muted-foreground">{[agent.model, agent.harness, agent.role].filter(Boolean).join(" · ")}</p>
     <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 gap-y-1.5">

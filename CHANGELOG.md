@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.4
+
+- Agent trees open at reading size with stable columns, a context map for overflow, collapsible teams and bounded phone pages. Selecting a distant or collapsed agent reveals it without shrinking its text.
+- Pointer and keyboard detail cards retain complete recorded metrics, scroll long tool inventories, and preserve unknown values. Run-card supporting type has a 13px floor.
+
 ## 2.0.3
 
 - Wrapped Hub attention headers retain their height so phone metrics stay visible above the scrollable canvas.

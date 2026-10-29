@@ -20,7 +20,7 @@ import {
   useInternalNode,
 } from "@xyflow/react";
 import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
-import { Users } from "lucide-react";
+import { ChevronDown, Users } from "lucide-react";
 import { ambientStyle, syncAmbient, quietActivity, useRunNow } from "./run-ui-state";
 import { MOTION_CONTROL } from "../lib/motion";
 import type {
@@ -133,7 +133,7 @@ export function AgentCardView({ agent, selected, direction, now: fixed, onOpen, 
 export function AgentCard({ data }: NodeProps<AgentCardNode>) { return <AgentCardView {...data} handles />; }
 
 export type AgentFrameNode = Node<
-  { frame: AgentFrame; statuses: readonly AgentGraphStatus[]; quietCount?: number; direction: AgentGraphDirection },
+  { frame: AgentFrame; statuses: readonly AgentGraphStatus[]; quietCount?: number; direction: AgentGraphDirection; label?: string; onToggle?: () => void },
   "agentFrame"
 >;
 
@@ -159,12 +159,11 @@ export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
       }}
     >
       <Handles direction={direction} source={false} />
-      <div className="flex h-[26px] items-center gap-2.5 px-3 text-[11px] text-muted-foreground leading-4">
+      <div className="flex h-10 items-center gap-2.5 px-3 text-sm text-muted-foreground leading-5">
+        <button type="button" className="nodrag nopan flex min-w-0 items-center gap-1.5 rounded text-left font-medium" aria-label={`${frame.collapsed ? "Expand" : "Collapse"} ${data.label ?? "agent"} team`} aria-expanded={!frame.collapsed} onClick={event => { event.stopPropagation(); data.onToggle?.(); }}>
+          <ChevronDown size={16} className={frame.collapsed ? "-rotate-90" : undefined} /><Users size={14} /><span className="truncate">{data.label ? `${data.label} · ` : ""}{frame.group.memberIds.length} agents</span>
+        </button>
         <span className="sr-only">{words}</span>
-        <span aria-hidden className="flex items-center gap-1.5 font-medium">
-          <Users size={12} strokeWidth={2} />
-          {frame.group.memberIds.length} agents
-        </span>
         {counts.map((c) => (
           <span key={c.status} aria-hidden className="flex items-center gap-1 tabular-nums">
             {c.status !== "quiet" && <StatusGlyph status={c.status} size={11} />}

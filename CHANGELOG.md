@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.20
+
+- Share the retained agent hierarchy through the record surface, with canonical identities, selected-agent actions, future/ended wording and the maintained execution-status icon.
+
 ## 2.0.19
 
 - Discard prior-account run/document state and ETags when authenticated transport changes. Remove retained previews, coverage claims and download URLs on permission or absence responses, with valid revalidation recovery. Expose the same document hook without unrelated optional peers.

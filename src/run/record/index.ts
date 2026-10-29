@@ -4,3 +4,4 @@ export { withPrompts } from "./prompts";
 export type { ConversationNode, ConversationEvent, ConversationRecord } from "./types";
 export * as recordModel from "./model";
 export { VirtualList } from "./VirtualList";
+export { AgentTree } from "./AgentTree";

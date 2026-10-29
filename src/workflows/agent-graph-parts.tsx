@@ -20,7 +20,6 @@ import {
   useInternalNode,
 } from "@xyflow/react";
 import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
-import { Users } from "lucide-react";
 import { ambientStyle, syncAmbient, quietActivity, useRunNow } from "./run-ui-state";
 import { MOTION_CONTROL } from "../lib/motion";
 import type {
@@ -119,7 +118,7 @@ export function AgentCardView({ agent, selected, direction, now: fixed, onOpen, 
     {handles && <Handles direction={direction} />}
     <div className="flex min-w-0 items-center gap-2">
       <span className="grayscale hover:grayscale-0"><NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} /></span>
-      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{parentLabel && <span className="ag-parent-label">{parentLabel} / </span>}{agent.label}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold leading-[18px]">{parentLabel && <span className="ag-parent-label">{parentLabel} / </span>}{agent.label}</span>
       <span className="text-xs text-muted-foreground tabular-nums" title={agent.costUsd == null ? "Cost not reported" : "Cost"}>{fmtCost(agent.costUsd ?? undefined) ?? "—"}</span>
     </div>
     <p className="m-0 line-clamp-2 min-h-4 text-xs text-foreground leading-4">{(agent.status === "failed" ? agent.result ?? agent.turn : agent.turn) || "—"}</p>
@@ -133,23 +132,12 @@ export function AgentCardView({ agent, selected, direction, now: fixed, onOpen, 
 export function AgentCard({ data }: NodeProps<AgentCardNode>) { return <AgentCardView {...data} handles />; }
 
 export type AgentFrameNode = Node<
-  { frame: AgentFrame; statuses: readonly AgentGraphStatus[]; quietCount?: number; direction: AgentGraphDirection },
+  { frame: AgentFrame; direction: AgentGraphDirection },
   "agentFrame"
 >;
 
-/** The statuses a grid caption counts: the ones a reader looks for. */
-const CAPTION_STATUSES: readonly (AgentGraphStatus | "quiet")[] = ["needs-you", "failed", "quiet", "waiting", "running"];
-
 export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
-  const { frame, statuses, direction } = data;
-  const counts = CAPTION_STATUSES.map((status) => ({
-    status,
-    n: status === "quiet" ? data.quietCount ?? 0 : statuses.filter((s) => s === status).length,
-  })).filter((c) => c.n > 0);
-  const words = [
-    `${frame.group.memberIds.length} agents`,
-    ...counts.map((c) => `${c.n} ${c.status === "quiet" ? "quiet" : agentStatus(c.status).label.toLowerCase()}`),
-  ].join(", ");
+  const { frame, direction } = data;
   return (
     <div
       className="relative h-full w-full rounded-2xl border"
@@ -158,20 +146,8 @@ export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
         borderColor: "hsl(var(--foreground) / 0.08)",
       }}
     >
-      <Handles direction={direction} source={false} />
-      <div className="flex h-[26px] items-center gap-2.5 px-3 text-[11px] text-muted-foreground leading-4">
-        <span className="sr-only">{words}</span>
-        <span aria-hidden className="flex items-center gap-1.5 font-medium">
-          <Users size={12} strokeWidth={2} />
-          {frame.group.memberIds.length} agents
-        </span>
-        {counts.map((c) => (
-          <span key={c.status} aria-hidden className="flex items-center gap-1 tabular-nums">
-            {c.status !== "quiet" && <StatusGlyph status={c.status} size={11} />}
-            {c.n}{c.status === "quiet" ? " quiet" : ""}
-          </span>
-        ))}
-      </div>
+      <Handles direction={direction} />
+      <span className="sr-only">{frame.group.memberIds.length} workers</span>
     </div>
   );
 }

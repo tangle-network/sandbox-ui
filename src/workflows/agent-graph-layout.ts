@@ -48,7 +48,7 @@ export interface AgentGraphNode {
   startedAt?: number | null;
   /** Live cards: commits it shipped. */
   commits?: number | null;
-  /** Live cards: a settled agent's result, shown on its chip, e.g. "rc2 · 14 commits". */
+  /** Live cards: a settled agent's result in its compact row, e.g. "rc2 · 14 commits". */
   result?: string | null;
 }
 
@@ -77,15 +77,15 @@ export type AgentGraphDirection = "TB" | "LR";
 /** Every agent card's size. Fixed, so a status or turn update never moves a card. */
 export const AGENT_CARD = { width: 240, height: 88 } as const;
 /** A live card: room for the header, a two-line thinking line and the last three events. Fixed for the same reason. */
-export const LIVE_AGENT_CARD = { width: 304, height: 164 } as const;
+export const LIVE_AGENT_CARD = { width: 296, height: 164 } as const;
 
 export type CardSize = { readonly width: number; readonly height: number };
 /** A parent with at least this many leaf workers draws them as a grid. */
 export const GRID_MIN_LEAVES = 4;
 const GRID_GAP = 10;
 const FRAME_PAD = 12;
-/** The band above a grid that carries its caption. */
-export const FRAME_CAPTION = 26;
+/** The manager stays with its workers instead of reserving an otherwise empty tree layer. */
+export const FRAME_CAPTION = 80;
 const MAX_GRID_COLUMNS = 6;
 const LAYER_GAP = 56;
 const SIBLING_GAP = 24;
@@ -191,13 +191,14 @@ interface Unit {
 /** The boxes the layouter places: each ungrouped agent, and each grid as one block. */
 function layoutUnits(topology: AgentTopology, columns: number, card: CardSize) {
   const units: Unit[] = [];
+  const ownerGroup = new Map(topology.groups.map(group => [group.parentId, group.id]));
   for (const id of topology.agentIds) {
-    if (!topology.groupOf.has(id)) units.push({ id, width: card.width, height: card.height });
+    if (!topology.groupOf.has(id) && !ownerGroup.has(id)) units.push({ id, width: card.width, height: card.height });
   }
   for (const g of topology.groups) {
     units.push({ id: g.id, ...gridSize(g.memberIds.length, columns, card) });
   }
-  const unitOf = (id: string) => topology.groupOf.get(id) ?? id;
+  const unitOf = (id: string) => topology.groupOf.get(id) ?? ownerGroup.get(id) ?? id;
   const seen = new Set<string>();
   const links: { from: string; to: string }[] = [];
   for (const s of topology.spawns) {
@@ -310,6 +311,7 @@ export async function layoutAgents(
     positions.delete(g.id);
     const size = gridSize(g.memberIds.length, columns, card);
     frames.push({ group: g, ...origin, ...size });
+    positions.set(g.parentId, { x: origin.x + FRAME_PAD, y: origin.y + 8 });
     const cols = Math.max(1, Math.min(columns, g.memberIds.length));
     g.memberIds.forEach((id, i) => {
       positions.set(id, {

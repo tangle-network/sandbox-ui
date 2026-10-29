@@ -26,8 +26,7 @@ const flows = [
     },
   },
   {
-    // A host that reuses its run id as the root agent's id, with 95 workers and no files: one root, not nested in its own
-    // team; every agent drawn inside the canvas at desktop and phone (a blank or root-only frame fails); no empty Files panel.
+    // Fit view reveals all 95 workers and their manager header without overlap or an empty Files pane.
     name: 'run-graph-factory',
     story: 'run-traceworkspace--factory-run',
     act: async (page) => {
@@ -37,17 +36,20 @@ const flows = [
       await expect(cards).toHaveCount(96)
       await expect(page.getByRole('region', { name: 'Code at the cursor' })).toHaveCount(0)
       if (await page.locator('[data-layout="list"]').count()) return
-      const outside = await page.evaluate(() => {
+      await page.getByRole('button', { name: 'Fit View', exact: true }).click()
+      await expect.poll(() => page.evaluate(() => {
         const pane = document.querySelector('.agent-graph').getBoundingClientRect()
         return [...document.querySelectorAll('.react-flow__node-agent, .react-flow__node-liveAgent')].filter((card) => {
           const r = card.getBoundingClientRect()
           return r.width === 0 || r.left < pane.left - 1 || r.right > pane.right + 1 || r.top < pane.top - 1 || r.bottom > pane.bottom + 1
         }).length
-      })
-      expect(outside).toBe(0)
+      })).toBe(0)
       const root = await cards.filter({ hasText: 'root' }).first().boundingBox()
       const frame = await page.locator('.react-flow__node-agentFrame').first().boundingBox()
-      expect(root.y + root.height).toBeLessThanOrEqual(frame.y + 1)
+      const workersTop = await cards.evaluateAll(nodes => Math.min(...nodes.filter(node => !node.classList.contains('ag-frame-owner')).map(node => node.getBoundingClientRect().top)))
+      expect(root.y).toBeGreaterThanOrEqual(frame.y)
+      expect(root.y + root.height).toBeLessThanOrEqual(workersTop)
+      await expect(page.locator('.ag-frame-owner')).toHaveCount(1)
     },
   },
   {

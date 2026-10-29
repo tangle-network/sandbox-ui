@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.4
+
+- Keep live graph cards at a readable scale, place managers with their worker groups, and align complete result rows.
+- Preserve phone reading order through state changes; show complete recent-change text and timestamps.
+- Render recorded command updates immediately without routine queue motion, using the shared type and control scale.
+- Adopt the compact Charts phone layout, static key and clarified work and recorded-end encodings.
+
 ## 2.0.3
 
 - Wrapped Hub attention headers retain their height so phone metrics stay visible above the scrollable canvas.

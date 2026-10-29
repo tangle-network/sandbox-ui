@@ -60,7 +60,7 @@ try {
       await page.screenshot({ path: `${output}/native-supervisor-${width}-${theme}.png`, fullPage: true })
       await page.getByLabel('Run', { exact: true }).selectOption({ label: 'workflow' })
       await appendFile(join(workflow, 'journal.jsonl'), '{"type":"result","agentId":"one","result":"Complete"}\n')
-      await page.getByRole('button', { name: /^Research, Done,/ }).waitFor()
+      await page.getByRole('button', { name: /^Research,.*Done/ }).waitFor()
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       await page.waitForTimeout(Math.max(0, 10100 - (Date.now() - began)))
       await web.close()

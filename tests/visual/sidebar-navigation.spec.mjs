@@ -251,7 +251,7 @@ for (const theme of ['light', 'dark']) {
       if (reducedMotion === 'reduce') {
         await expect(page.getByText('Responding', { exact: true })).toBeVisible()
         const status = page.getByRole('status', { name: 'Agent responding' })
-        expect(await status.evaluate(node => node.getAnimations().filter(a => a.playState === 'running').length)).toBe(0)
+        await expect.poll(() => status.evaluate(node => node.getAnimations().filter(a => a.playState === 'running').length)).toBe(0)
       }
       await page.screenshot({ path: info.outputPath(`quiet-desktop-${theme}-${reducedMotion}.png`) })
     })

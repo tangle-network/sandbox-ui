@@ -201,7 +201,7 @@ export function Conversation({
   }, [])
   const arrival = useRef<{ actor: string; id?: string }>({ actor })
   useLayoutEffect(() => {
-    const tail = rows.at(-1), event = tail?.kind === 'event' ? tail.event : tail?.events.at(-1)
+    const tail = rows.at(-1), event = tail?.kind === 'event' ? tail.event : tail?.events.at(-1), entry = tail?.kind === 'event' ? tail.event.id : tail?.events[0]?.id
     let animate = live && arrival.current.actor === actor && !!arrival.current.id && arrival.current.id !== event?.id
     arrival.current = { actor, id: event?.id }
     const element = scroll.current
@@ -212,7 +212,7 @@ export function Conversation({
     let frame = requestAnimationFrame(function pin() {
       if (!following.current) return
       element.scrollTop = element.scrollHeight
-      const row = event && element.querySelector<HTMLElement>(`[data-message="${CSS.escape(event.id)}"], [data-entry="${CSS.escape(event.id)}"]`)
+      const row = entry && element.querySelector<HTMLElement>(`[data-entry="${CSS.escape(entry)}"]`)
       if (animate && row) {
         animate = false
         const style = getComputedStyle(element), value = style.getPropertyValue('--duration-stream').trim(), duration = parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)

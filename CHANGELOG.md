@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.15
+
+- Preserve selected agent and files when closing a conversation. Support the host authenticated stream transport, retain full tool values, and size the retained workspace in its existing section.
+
 ## 2.0.12
 
 - Use Charts' canonical multi-agent topology and presentation helpers. Sandbox UI supplies model/provider identity; the private renderer, layouts and authored graph styles are removed.

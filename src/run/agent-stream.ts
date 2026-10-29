@@ -3,6 +3,13 @@
 import { useEffect, useReducer } from "react"
 import type { ToolCallData, ToolCallType } from "@tangle-network/ui/run"
 
+/** Host-owned authenticated streams keep their own reconnect and session lifecycle. */
+export interface AgentStreamSource {
+  addEventListener(type: string, listener: (event: MessageEvent<string>) => void): void
+  close(): void
+}
+export type AgentStreamOpener = (url: string, onLiveChange?: (live: boolean) => void) => AgentStreamSource
+
 /** One row of an agent's message stream (tangle-tools `/api/discovery/runs/<run>/agents/<agent>/stream`). */
 export interface AgentStreamRow {
   seq: number
@@ -53,10 +60,9 @@ const toolType = (name: string | undefined): ToolCallType => {
   return (TOOL_TYPES.has(key) ? key : "unknown") as ToolCallType
 }
 
-const brief = (value: unknown, max = 240): string | undefined => {
+const toolText = (value: unknown): string | undefined => {
   if (value === undefined || value === null) return undefined
-  const text = typeof value === "string" ? value : JSON.stringify(value)
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text
+  return typeof value === "string" ? value : JSON.stringify(value)
 }
 
 const failed = (result: unknown): boolean =>
@@ -97,7 +103,7 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
       const id = event.toolCallId ?? `t-${row.seq}`
       next.push({
         id, at, kind: "tool",
-        call: { id, type: toolType(event.toolName), label: event.toolName ?? "tool", status: "running", detail: brief(event.args, 120) },
+        call: { id, type: toolType(event.toolName), label: event.toolName ?? "tool", status: "running", detail: toolText(event.args) },
       })
     } else if (event.kind === "tool-result") {
       const index = next.findIndex((entry) => entry.kind === "tool" && entry.call.id === event.toolCallId)
@@ -105,7 +111,7 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
       if (entry?.kind === "tool") {
         next[index] = {
           ...entry,
-          call: { ...entry.call, status: failed(event.result) ? "error" : "success", output: brief(event.result), duration: Math.max(0, at - entry.at) },
+          call: { ...entry.call, status: failed(event.result) ? "error" : "success", output: toolText(event.result), duration: Math.max(0, at - entry.at) },
         }
       }
     }
@@ -143,22 +149,22 @@ function reduce(state: AgentStreamState, action: Action): AgentStreamState {
  * Follow one agent's message stream over Server-Sent Events: `rows`, `reset` and `end` events, reconnecting with
  * `?after=<lastSeq>` when the server closes the connection, so a long turn streams without gaps or repeats.
  */
-export function useAgentStream(url: string | undefined): AgentStreamState {
+export function useAgentStream(url: string | undefined, openEventSource?: AgentStreamOpener): AgentStreamState {
   const [state, dispatch] = useReducer(reduce, { entries: [], lastSeq: 0, alive: false })
   useEffect(() => {
-    if (!url || typeof EventSource === "undefined") return
+    if (!url || (!openEventSource && typeof EventSource === "undefined")) return
     dispatch({ type: "reset" })
     let lastSeq = 0
     let closed = false
-    let source: EventSource | undefined
+    let source: AgentStreamSource | undefined
     let retry: ReturnType<typeof setTimeout> | undefined
     const open = () => {
       const target = new URL(url, globalThis.location?.href)
       if (lastSeq > 0) target.searchParams.set("after", String(lastSeq))
-      source = new EventSource(target.toString())
-      // Only a connection that never opened is unreachable; a server closing an open stream is a normal reconnect.
+      source = openEventSource ? openEventSource(target.toString(), live => { if (!closed && !live) dispatch({ type: "unreachable" }) }) : new EventSource(target.toString())
+      // The native transport reconnects here; an injected transport owns its session and reconnect policy.
       let opened = false
-      source.onopen = () => { opened = true }
+      if (!openEventSource) (source as EventSource).onopen = () => { opened = true }
       source.addEventListener("rows", (message) => {
         const data = JSON.parse((message as MessageEvent<string>).data) as { generation?: string | number; events: AgentStreamRow[]; lastSeq?: number; alive?: boolean }
         lastSeq = Math.max(lastSeq, data.lastSeq ?? 0, ...data.events.map((row) => row.seq))
@@ -169,7 +175,7 @@ export function useAgentStream(url: string | undefined): AgentStreamState {
         dispatch({ type: "reset", generation: (JSON.parse((message as MessageEvent<string>).data) as { generation?: string | number }).generation })
       })
       source.addEventListener("end", () => { closed = true; source?.close(); dispatch({ type: "end" }) })
-      source.onerror = () => {
+      if (!openEventSource) (source as EventSource).onerror = () => {
         source?.close()
         if (closed) return
         if (!opened) dispatch({ type: "unreachable" })
@@ -178,6 +184,6 @@ export function useAgentStream(url: string | undefined): AgentStreamState {
     }
     open()
     return () => { closed = true; clearTimeout(retry); source?.close() }
-  }, [url])
+  }, [url, openEventSource])
   return state
 }

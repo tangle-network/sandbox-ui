@@ -243,8 +243,8 @@ importers:
         specifier: ^1.31.1
         version: 1.31.1(react@19.3.1)
       '@tangle-network/charts':
-        specifier: 2.0.14
-        version: 2.0.14(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 2.0.17
+        version: 2.0.17(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1943,8 +1943,8 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/charts@2.0.14':
-    resolution: {integrity: sha512-lsw0PuECEjl/2dRLLppQQSevDGnnJLPA8Bc7ddzdRcwVgmBOwDTukvxngL7cpDmrbpe+XGZb0+mORgA0svz6dQ==}
+  '@tangle-network/charts@2.0.17':
+    resolution: {integrity: sha512-NpLQY3QDwNv7UW8qXDfnbKZ8qI57GwwBQDxcU+R8d2NOkNq4lbxNgRnIM1A4J0lFWiKQfyf4EOCSoL0626LYPg==}
     peerDependencies:
       '@xyflow/react': ^12.0.0
       elkjs: ^0.12.0
@@ -5664,7 +5664,7 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/charts@2.0.14(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@tangle-network/charts@2.0.17(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     optionalDependencies:
       '@xyflow/react': 12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       elkjs: 0.12.0

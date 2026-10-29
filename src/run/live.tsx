@@ -10,7 +10,7 @@ import { useLiveInspection } from './live-inspection'
 type Spend = { usd: number; usdKnown?: boolean }
 type Worker = { materialization?: { status: string; backend?: string; model?: { status: string; id?: string } }; id: string; parent?: string; label: string; status: string; startedAt?: string; endedAt?: string; runtime?: string; verdict?: string; reason?: string; liveTail?: string[]; lastActivityAt?: number; medianEventGapMs?: number; spend?: Spend; metered?: Spend }
 type Node = { id: string; runId: string; parentId?: string; label?: string; runtime?: string; status?: string; settledAt?: number; timing?: { startedAt: number; settledAt?: number }; model?: string; backend?: string }
-type Snapshot = { pursuit?: { nodes: Node[] }; root: string; generatedAt: number; completeness: string; diagnostics: { source: string; reason: string }[]; supervisors: { id: string; status: string; task?: string; startedAt?: string; completedAt?: string; reason?: string; lastActivityAt?: number; medianEventGapMs?: number; driverSpend?: Spend; totals?: { tokensKnown?: boolean; tokensInput?: number; tokensOutput?: number }; workers: Worker[] }[] }
+type Snapshot = { pursuit?: { nodes: Node[] }; root: string; generatedAt: number; completeness: string; diagnostics: { source: string; reason: string }[]; supervisors: { id: string; status: string; outcome?: { kind: 'winner' } | { kind: 'no-winner' | 'failed'; reason: string }; lastRoute?: { kind: 'stopped'; reason: string; code?: string } | { kind: 'unrouted'; detail: string }; task?: string; startedAt?: string; completedAt?: string; reason?: string; lastActivityAt?: number; medianEventGapMs?: number; driverSpend?: Spend; totals?: { tokensKnown?: boolean; tokensInput?: number; tokensOutput?: number }; workers: Worker[] }[] }
 const time = (value?: string) => { const ms = value ? Date.parse(value) : Number.NaN; return Number.isFinite(ms) ? ms : undefined }
 const iso = (ms?: number) => ms !== undefined && Number.isFinite(ms) ? new Date(ms).toISOString() : undefined
 // A run with no spawn journal (a retained or observer-only run) has its agents only as pursuit nodes; their spawn and
@@ -21,7 +21,7 @@ const withNodes = (run: Snapshot['supervisors'][number], nodes: Node[]): Worker[
 ]
 // A missing or unknown spend is unknown, never zero, and never drops the agent.
 const cost = (...spends: (Spend | undefined)[]) => spends.every((spend) => spend && spend.usdKnown !== false && Number.isFinite(spend.usd) && spend.usd >= 0) ? spends.reduce((sum, spend) => sum + (spend?.usd ?? 0), 0) : undefined
-const flowStatus = (status: string) => runStatus(status === 'down' ? 'failed' : status === 'cancelled' ? 'stopped' : status)
+const flowStatus = (status: string) => runStatus(status === 'down' ? 'failed' : status === 'cancelled' || status === 'no-winner' ? 'stopped' : status)
 const graphStatus = (status: string): AgentGraphStatus => { const state = flowStatus(status); return state === 'done' ? 'succeeded' : state }
 const isOpen = (status: string) => ['running', 'waiting', 'needs-you'].includes(flowStatus(status))
 type Frame = { sequence: number; observedAt: number; reset: boolean; snapshots: Snapshot[] }
@@ -70,6 +70,8 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
   const facts = active?.snapshot.pursuit?.nodes.filter((node) => node.runId === active.run.id) ?? []
   const detail = (id: string) => { const node = facts.find((node) => node.id === id), receipt = active?.run.workers.find((worker) => worker.id === id)?.materialization; return [node?.model ?? (receipt?.model?.status === 'known' ? receipt.model.id : undefined), node?.backend ?? receipt?.backend].filter(Boolean).join(' · ') || undefined }
   const run = active && { ...active.run, workers: withNodes(active.run, facts) }
+  const outcome = run?.outcome
+  const outcomeText = outcome ? outcome.kind === 'winner' ? 'Winner' : `${outcome.kind === 'no-winner' ? 'No winner' : 'Failed'}: ${outcome.reason}` : undefined
   const startedAt = run ? Math.min(...[run.startedAt, ...run.workers.map((worker) => worker.startedAt)].flatMap((value) => value && Number.isFinite(Date.parse(value)) ? [Date.parse(value)] : [])) : undefined
   const trace = useMemo((): FlowTrace => {
     const at = active?.snapshot.generatedAt ?? Date.now()
@@ -88,7 +90,7 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
   // Every recorded worker gets a card, timed or not; the waterfall only places workers with a recorded start.
   const workers = run?.workers.filter((worker) => worker.id !== run.id) ?? []
   const nodes: AgentGraphNode[] = run ? [
-    { id: run.id, label: 'root', status: graphStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), lastActivityAt: run.lastActivityAt, medianEventGapMs: run.medianEventGapMs, result: run.status === 'cancelled' ? 'Cancelled' : graphStatus(run.status) === 'failed' ? run.reason || 'Failure cause not recorded' : undefined },
+    { id: run.id, label: 'root', status: graphStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), lastActivityAt: run.lastActivityAt, medianEventGapMs: run.medianEventGapMs, result: outcomeText ?? (run.status === 'cancelled' ? 'Cancelled' : graphStatus(run.status) === 'failed' ? run.reason || 'Failure cause not recorded' : undefined) },
     ...workers.map((worker) => ({ id: worker.id, label: worker.label, harness: worker.runtime, model: detail(worker.id), status: graphStatus(worker.status), costUsd: cost(worker.spend, worker.metered), startedAt: time(worker.startedAt), lastActivityAt: worker.lastActivityAt, medianEventGapMs: worker.medianEventGapMs, turn: worker.liveTail?.at(-1), events: worker.liveTail?.slice(-3).map((label, index) => ({ id: `${worker.id}:${index}:${label}`, label })), result: worker.status === 'cancelled' ? 'Cancelled' : graphStatus(worker.status) === 'failed' ? worker.reason || 'Failure cause not recorded' : worker.verdict })),
   ] : []
   const selectedAgent = agent
@@ -103,6 +105,8 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
         <span role="status">{ended ? 'Finished · viewer closed' : connected ? '● Connected' : snapshots.length ? '○ Reconnecting' : 'Connecting…'}</span>
       </header>
       {active?.run.task && active.run.task !== active.run.id && <p>{active.run.task}</p>}
+      {outcomeText && <p role="status" data-run-outcome={outcome!.kind}>{outcomeText}</p>}
+      {run?.lastRoute && <p data-recorded-route={run.lastRoute.kind}>{run.lastRoute.kind === 'stopped' ? `Stopped: ${run.lastRoute.reason}` : `Unrouted: ${run.lastRoute.detail}`}</p>}
       {error && <p role="alert">{error}</p>}
       {/* With no run to show, every root's diagnostics say why; an unreadable root is never "no agents". */}
       {(active ? [active.snapshot] : snapshots).filter((snapshot) => snapshot.completeness === 'partial').map((snapshot) => <p key={snapshot.root} role="alert">Partial capture: {snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>)}

@@ -33,7 +33,7 @@ const run = { schema: 'agent-workspace.run.v1', run: { id: 'lane-g', play: 'lane
 test('installed Runtime view preserves failure and unknown lifecycle evidence across four host theme/viewport states', { timeout: 120_000 }, async () => {
   const evidence = process.env.RUN_UI_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
-  let theme = 'dark', runtimeTotals
+  let theme = 'dark', runtimeTotals, runtimeOutcome
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://localhost').pathname
     const json = data => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(data)) }
@@ -43,7 +43,7 @@ test('installed Runtime view preserves failure and unknown lifecycle evidence ac
     }
     if (path === '/api/events') {
       res.setHeader('content-type', 'text/event-stream')
-      const snapshot = { root: 'fixture', generatedAt: now, completeness: 'complete', diagnostics: [], supervisors: [{ id: 'lane-g', totals: runtimeTotals, status: 'running', startedAt: iso(start), lastActivityAt: now - 2000, medianEventGapMs: 30_000, workers: nodes.slice(1).map(n => ({ id: n.id, parent: 'lane-g', label: n.label, status: n.status === 'failed' ? 'down' : n.status, runtime: n.harness, startedAt: n.id.endsWith(':s15') ? undefined : n.start, endedAt: n.end ?? undefined, lastActivityAt: Date.parse(n.lastAt), medianEventGapMs: 30_000, liveTail: [n.turn], reason: n.failureReason ?? undefined })) }] }
+      const snapshot = { root: 'fixture', generatedAt: now, completeness: 'complete', diagnostics: [], supervisors: [{ id: 'lane-g', totals: runtimeTotals, ...(runtimeOutcome ? { outcome: runtimeOutcome } : {}), status: runtimeOutcome ? runtimeOutcome.kind === 'winner' ? 'done' : runtimeOutcome.kind : 'running', startedAt: iso(start), lastActivityAt: now - 2000, medianEventGapMs: 30_000, workers: nodes.slice(1).map(n => ({ id: n.id, parent: 'lane-g', label: n.label, status: n.status === 'failed' ? 'down' : n.status, runtime: n.harness, startedAt: n.id.endsWith(':s15') ? undefined : n.start, endedAt: n.end ?? undefined, lastActivityAt: Date.parse(n.lastAt), medianEventGapMs: 30_000, liveTail: [n.turn], reason: n.failureReason ?? undefined })) }] }
       snapshot.supervisors[0].workers = snapshot.supervisors[0].workers.filter(worker => worker.id !== 'lane-g:s16')
       for (const worker of snapshot.supervisors[0].workers) delete worker.parent
       snapshot.pursuit = { nodes: [{ id: 'lane-g:s16', runId: 'lane-g', parentId: 'lane-g', label: 'Agent 16' }] }
@@ -136,6 +136,20 @@ test('installed Runtime view preserves failure and unknown lifecycle evidence ac
       await page.locator('.fw-root').waitFor()
       assert.ok(await page.getByTitle('0 tokens', { exact: true }).count(), 'Authoritative measured zero is retained')
       assert.equal(await page.getByTitle('Tokens not reported', { exact: true }).count(), 0)
+      runtimeOutcome = { kind: 'no-winner', reason: 'no-result-selected' }
+      await page.reload()
+      await page.locator('[data-run-outcome="no-winner"]').getByText('No winner: no-result-selected', { exact: true }).waitFor()
+      const rootNode = page.locator('.react-flow__node[data-id="lane-g"]')
+      await rootNode.waitFor()
+      assert.match(await rootNode.getAttribute('aria-label'), /Stopped.*No winner: no-result-selected/)
+      assert.doesNotMatch(await rootNode.getAttribute('aria-label'), /Done/)
+      assert.equal(await page.locator('[data-recorded-route]').count(), 0, 'An old no-winner result does not manufacture retrospective stop or code evidence')
+      runtimeOutcome = { kind: 'failed', reason: 'Recorded provider refusal: native capture unavailable' }
+      await page.reload()
+      await page.locator('[data-run-outcome="failed"]').getByText('Failed: Recorded provider refusal: native capture unavailable', { exact: true }).waitFor()
+      await rootNode.waitFor()
+      assert.match(await rootNode.getAttribute('aria-label'), /Failed.*Recorded provider refusal: native capture unavailable/)
+      runtimeOutcome = undefined
       assert.deepEqual(errors, [])
       await context.close()
     }

@@ -1,8 +1,12 @@
 # Changelog
 
-## 2.0.11
+## 2.0.12
 
 - Use Charts' canonical multi-agent topology and presentation helpers. Sandbox UI supplies model/provider identity; the private renderer, layouts and authored graph styles are removed.
+
+## 2.0.11
+
+- Session hooks call the sidecar's `agents/sessions` and `agents/events` routes, and `useSandboxMetrics` reads `/v1/sandboxes/{id}/runtime/metrics/json`. The Sandbox API's `/v1/sidecar-proxy` spelling and its `session/` alias are being retired; pass the runtime proxy base (`/v1/sandboxes/{id}/runtime`) as `apiUrl`.
 
 ## 2.0.9
 

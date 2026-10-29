@@ -421,7 +421,7 @@ export function useSessionStream({
   const refetch = useCallback(async () => {
     if (!token || !sessionId || !apiUrl) return;
     try {
-      const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}/messages?limit=200`;
+      const url = `${apiUrl}/agents/sessions/${encodeURIComponent(sessionId)}/messages?limit=200`;
       const data = await fetchJson<ApiMessage[] | { messages: ApiMessage[] }>(url, token);
       const apiMessages = Array.isArray(data) ? data : (data.messages ?? []);
 
@@ -487,7 +487,7 @@ export function useSessionStream({
     seedGenerationRef.current.set(sessionId, generation);
     let seeded: SessionDegradation | null;
     try {
-      const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}`;
+      const url = `${apiUrl}/agents/sessions/${encodeURIComponent(sessionId)}`;
       const status = await fetchJson<{ hubConnectionsDegraded?: unknown }>(url, token);
       const field = status.hubConnectionsDegraded;
       if (field === undefined || field === null) {
@@ -544,7 +544,7 @@ export function useSessionStream({
         // same resume semantics as Last-Event-ID on the sidecar.
         eventQuery.set('since', lastEventIdRef.current);
       }
-      const url = `${apiUrl}/session/events?${eventQuery.toString()}`;
+      const url = `${apiUrl}/agents/events?${eventQuery.toString()}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
         signal: controller.signal,
@@ -928,7 +928,7 @@ export function useSessionStream({
     setIsStreaming(true);
 
     try {
-      const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}/messages`;
+      const url = `${apiUrl}/agents/sessions/${encodeURIComponent(sessionId)}/messages`;
       const response = await fetchJson<{
         info?: { id?: string };
         userMessageId?: string;
@@ -990,7 +990,7 @@ export function useSessionStream({
   const abort = useCallback(async () => {
     if (!token || !sessionId || !apiUrl) return;
     try {
-      const url = `${apiUrl}/session/sessions/${encodeURIComponent(sessionId)}/abort`;
+      const url = `${apiUrl}/agents/sessions/${encodeURIComponent(sessionId)}/abort`;
       await fetchJson<unknown>(url, token, { method: 'POST' });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to abort';

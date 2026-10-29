@@ -92,6 +92,6 @@
 .ag-frame-owner .ag-live-accounting { display: none; } .ag-frame-owner .ag-agent-card { flex-direction: row; align-items: center; gap: 16px; }
 @container (width < 600px) {
   .ag-latest header { float: none; width: auto; height: 24px; flex-direction: row; align-items: center; justify-content: start; gap: 8px; } .ag-latest header > button { margin-left: auto; }
-  .ag-latest ol { grid-template-columns: 1fr; margin-left: 0; height: calc(var(--ag-latest-rows) * 64px); }
+  .ag-latest ol { grid-template-columns: 1fr; margin-left: 0; height: 64px; }
 }
 @media (pointer: coarse) { .ag-live-respond { min-height: 44px; min-width: 44px; } }

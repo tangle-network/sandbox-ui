@@ -92,7 +92,7 @@ function revealSelection(inst: ReactFlowInstance, wrapper: HTMLDivElement | null
   const width = node?.measured.width ?? node?.width, height = node?.measured.height ?? node?.height;
   if (!node || !box || !width || !height) return;
   const current = inst.getViewport(), position = node.internals.positionAbsolute;
-  const zoom = Math.max(0.02, Math.min(1, (box.width - 2 * FIT_PADDING) / width, (box.height - 2 * FIT_PADDING) / height));
+  const zoom = current.zoom;
   const x = Math.max(FIT_PADDING - position.x * zoom, Math.min(box.width - FIT_PADDING - (position.x + width) * zoom, current.x));
   const y = Math.max(FIT_PADDING - position.y * zoom, Math.min(box.height - FIT_PADDING - (position.y + height) * zoom, current.y));
   if (x !== current.x || y !== current.y || zoom !== current.zoom) void inst.setViewport({ x, y, zoom });

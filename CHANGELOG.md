@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.6
+
+- Keep phone activity in a stable, scrollable row so operator requests and failures remain near the top during updates.
+- Preserve the reader’s zoom when selecting wide teams or resizing a selected graph; explicit zoom controls retain their behavior.
+- Adopt Charts’ complete timeline facts and readable phone names.
+
+
 ## 2.0.5
 
 - Collapsible agent teams, a context map for overflow, visible-only desktop nodes and bounded phone pages keep 100+ agents readable and reachable. Selecting a collapsed agent reveals it.

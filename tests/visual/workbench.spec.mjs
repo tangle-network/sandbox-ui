@@ -19,7 +19,7 @@ for (const theme of ['light', 'dark']) for (const [size, viewport] of Object.ent
     await expect(message).toHaveValue('fail this commit')
     await message.fill('Improve retry'); await page.getByRole('button',{name:'Commit',exact:true}).click()
     await expect(files).toHaveCount(0); await expect(message).toHaveValue('')
-    const push=page.getByRole('button',{name:'Push',exact:true})
+    const push=page.getByRole('button',{name:/^Push(?:\s*↑\d+)?$/})
     await expect(push).toBeEnabled(); await push.click()
     await expect(page.locator('[aria-label$=" ahead"]')).toHaveCount(0); await expect(push).toBeDisabled()
     await info.attach('completed commit and push',{body:await page.screenshot(),contentType:'image/png'})

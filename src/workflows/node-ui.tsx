@@ -1,3 +1,5 @@
+import { RESTING_SHADOW, RESTING_BORDER, edgeColor } from "@tangle-network/charts/react/agent-graph/presentation";
+export { RESTING_SHADOW, RESTING_BORDER, edgeColor } from "@tangle-network/charts/react/agent-graph/presentation";
 /** Workflow-node identity and shared run-status presentation.
  * Raw Brand variables also resolve for consumers that load only tokens.css.
  */
@@ -63,12 +65,9 @@ export function kindAccent(tone: WfNodeTone, kind: string | undefined): string {
 }
 
 /** Brand shadow channels stay black in dark mode. */
-export const RESTING_SHADOW =
-  "inset 0 1px 0 hsl(var(--foreground) / 0.06), 0 1px 3px hsl(var(--shadow-color) / 0.08)";
 
 /** The resting card border: visible against the canvas in BOTH themes —
  *  `--border` vanished on dark. */
-export const RESTING_BORDER = "hsl(var(--foreground) / 0.14)";
 
 /** Workflow waiting means human approval; peer waiting remains neutral in agent views. */
 const workflowStatus = (status: WfNodeStatus) => status === "waiting" ? "needs-you" : status === "skipped" ? "stopped" : status;
@@ -82,9 +81,7 @@ export const STATUS_PILL = Object.fromEntries(workflowStatuses.map(status => [st
   color: STATUS_COLOR[status], background: "transparent", borderColor: "hsl(var(--border))",
 }])) as Record<WfNodeStatus, { color: string; background: string; borderColor: string }>;
 
-export function edgeColor(status: WfNodeStatus | undefined): string {
-  return status === "failed" || status === "waiting" ? STATUS_COLOR[status] : "color-mix(in srgb, hsl(var(--muted-foreground)) 80%, transparent)";
-}
+
 export function statusBorder(status: WfNodeStatus) {
   return { borderColor: status === "failed" || status === "waiting" ? STATUS_COLOR[status] : RESTING_BORDER, boxShadow: RESTING_SHADOW };
 }

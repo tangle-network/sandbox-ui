@@ -1,3 +1,5 @@
+import { GraphErrorBoundary, retryImport } from "@tangle-network/charts/react/agent-graph/presentation";
+export { GraphErrorBoundary, retryImport } from "@tangle-network/charts/react/agent-graph/presentation";
 /**
  * Lazy + error-isolated boundary for {@link WorkflowGraph}. React Flow (~50KB)
  * is only needed on the workflow detail page and on workflow proposal cards, so
@@ -15,10 +17,8 @@
  */
 
 import {
-  Component,
   type ComponentType,
   lazy,
-  type ReactNode,
   Suspense,
   useMemo,
   useState,
@@ -28,21 +28,7 @@ import type { WorkflowGraphProps } from "./WorkflowGraph";
 /** Re-run `factory` up to `retries` times with a short backoff before giving up.
  *  Covers a transient dynamic-import rejection (network blip, a chunk briefly
  *  unavailable behind a CDN) without bothering the user. Exported for tests. */
-export function retryImport<T>(
-  factory: () => Promise<T>,
-  retries = 2,
-  delayMs = 350,
-): Promise<T> {
-  return factory().catch((err) => {
-    if (retries <= 0) throw err;
-    return new Promise<T>((resolve, reject) => {
-      setTimeout(
-        () => retryImport(factory, retries - 1, delayMs).then(resolve, reject),
-        delayMs,
-      );
-    });
-  });
-}
+
 
 function lazyWorkflowGraph(): ComponentType<WorkflowGraphProps> {
   return lazy(() =>
@@ -52,20 +38,7 @@ function lazyWorkflowGraph(): ComponentType<WorkflowGraphProps> {
   );
 }
 
-export class GraphErrorBoundary extends Component<
-  { fallback: ReactNode; children: ReactNode },
-  { hasError: boolean }
-> {
-  state = { hasError: false };
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  render() {
-    return this.state.hasError ? this.props.fallback : this.props.children;
-  }
-}
 
 /** Graceful degradation when the graph can't render: the workflow is still
  *  fully legible as YAML, with a retry for a recoverable load failure. */

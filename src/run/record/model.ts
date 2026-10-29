@@ -33,7 +33,7 @@ export function hostless(text: string | undefined) {
   })
 }
 /** An event with every recorded text read through `hostless`; an event without a host path is returned as it is. */
-function withoutHostPaths(event: RecordEvent): RecordEvent {
+function withoutHostPaths<T extends RecordEvent>(event: T): T {
   const d = event.detail
   const text = hostless(d.publicText), reasoning = hostless(d.reasoning)
   const calls = d.publicToolCalls?.map((call) => (call.input && hostless(call.input) !== call.input ? { ...call, input: hostless(call.input) } : call))
@@ -104,7 +104,8 @@ export function preview(call: ToolCall) {
 }
 
 /** Identity is established by the importer, never inferred from labels or timestamps. */
-export function indexRecord(record: RunRecord) {
+export function indexRecord<R extends RunRecord>(record: R) {
+  type Event = R['events'][number]
   const nodes = new Map(record.nodes.map((node) => [node.id, node]))
   const canonical = (id: string) => nodes.get(id)?.agentId ?? id
   const actors = record.nodes.filter(
@@ -113,9 +114,9 @@ export function indexRecord(record: RunRecord) {
   const events = record.events.map(withoutHostPaths).sort((a, b) => ms(a.at) - ms(b.at))
   const byEvent = new Map(events.map((event) => [event.id, event]))
   const recordedOrder = new Map(record.events.map((event, i) => [event.id, i]))
-  const byActor = new Map<string, RecordEvent[]>()
-  const results = new Map<string, RecordEvent[]>()
-  const calls = new Map<string, { event: RecordEvent; call: ToolCall }[]>()
+  const byActor = new Map<string, Event[]>()
+  const results = new Map<string, Event[]>()
+  const calls = new Map<string, { event: Event; call: ToolCall }[]>()
   for (const event of events) {
     const actor = canonical(event.node)
     const lane = byActor.get(actor) ?? []
@@ -151,7 +152,7 @@ export function indexRecord(record: RunRecord) {
     end,
   }
 }
-export type RecordIndex = ReturnType<typeof indexRecord>
+export type RecordIndex<R extends RunRecord = RunRecord> = ReturnType<typeof indexRecord<R>>
 
 /** Whether any event of this agent recorded token usage or a list price: a status alone measures nothing. */
 export function measuredUsage(index: RecordIndex, id: string) {

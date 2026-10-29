@@ -21,3 +21,4 @@ export { Conversation, type ConversationProps, type EventFlag } from "./record/C
 export { indexRecord, type RecordIndex } from "./record/model";
 export { withPrompts } from "./record/prompts";
 export type { ConversationNode, ConversationEvent, ConversationRecord } from "./record/types";
+export * as recordModel from "./record/model";

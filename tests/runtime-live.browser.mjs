@@ -36,7 +36,7 @@ try {
       assert.equal((await fetch(`${web.url}api/top`, { method: 'POST' })).status, 405)
       await page.goto(web.url)
       assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), theme)
-      const card = page.locator('.ag-live-card').filter({ has: page.locator('.ag-live-name').getByText('Research', { exact: true }) })
+      const card = page.getByRole('button', { name: /^Research,.*Running/ })
       await card.waitFor()
       assert.equal(await page.getByRole('radio', { name: 'Graph', exact: true }).count(), 1)
       await card.click()

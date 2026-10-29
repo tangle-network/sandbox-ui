@@ -38,8 +38,6 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
     join(fixture, "consumer.tsx"),
   ], { cwd: consumerDir, stdio: "inherit" });
 
-  // This host compiles only installed package sources, never a validator's list
-  // of expected class names. The public Brand imports own the shared theme.
   writeFileSync(join(fixture, "host.css"), `
 @import "tailwindcss" source(none);
 @import "@tangle-network/brand/styles/tokens.css";
@@ -223,6 +221,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               }
               assert.match(await transcript.innerText(), /4,000,001 bytes, middle omitted/);
               assert.match(await transcript.innerText(), /5,000,001 bytes, middle omitted/);
+              await (await import("../tests/integration/record-tools.browser.mjs")).default(page, transcript, { lane, width, mode });
               await transcript.getByRole("button", { name: "Filter retained prompts" }).click();
               await transcript.getByText("Retained follow-up", { exact: true }).waitFor();
               assert(!await transcript.getByText("Reconstructed duplicate must not appear", { exact: true }).count());

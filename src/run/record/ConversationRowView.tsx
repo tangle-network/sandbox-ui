@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { AgentTimelineStep, SpeakerHeader, agentTimelineStepKind, type AgentTimelineItem, type AgentTimelineStepKind } from '@tangle-network/ui/chat'
-import { InlineThinkingItem, RunRowShell, type ToolCallType } from '@tangle-network/ui/run'
+import { ExpandedToolDetail, InlineThinkingItem, RunRowShell, type ToolCallType } from '@tangle-network/ui/run'
 import type { ToolPart } from '@tangle-network/ui/types'
-import { getToolDisplayMetadata } from '@tangle-network/ui/utils'
+import { getToolCategory, getToolDisplayMetadata } from '@tangle-network/ui/utils'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@tangle-network/ui/primitives'
+import { Brain, Timer, Settings } from 'lucide-react'
 import type { ConversationEvent as RecordEvent } from './types.js'
 import { callsOf, compact, ms, preview, textOf, toolKey, utcTime } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
@@ -10,8 +12,6 @@ import { argsLabel, callStatus, hollowSummary, outputTokens, pollSummary, thinki
 import type { CallState, ConversationRow } from './conversation-rows.js'
 import type { EventFlag } from './Conversation.js'
 import { promptText } from './prompt-text.js'
-
-/** Shared chat bubbles, speaker headers and timeline steps; source rows retain virtualization and provenance. */
 
 /** A run-lifecycle event (start, stop, restart), drawn as a thin marker row. */
 export const isLifecycle = (event: RecordEvent) =>
@@ -25,22 +25,15 @@ const spanLabel = (value: number) => {
   return minutes < 60 ? `${minutes} m ${seconds % 60} s` : `${Math.floor(minutes / 60)} h ${minutes % 60} m`
 }
 
-function ToolIcon({ name }: { name: string }) {
-  const lower = name.toLowerCase()
-  const path = /think|reason/.test(lower)
-    ? 'M8 2.5a4 4 0 0 0-2.5 7.1V11h5V9.6A4 4 0 0 0 8 2.5M6 13.5h4'
-    : /search|grep|find/.test(lower)
-      ? 'M10 10l3.5 3.5M11 7a4 4 0 1 0-8 0 4 4 0 0 0 8 0'
-      : /bash|shell|exec|run|command/.test(lower)
-        ? 'M2 3h12v10H2zM4 6l2 2-2 2M8 10h4'
-        : /await|wait|sleep|poll/.test(lower)
-          ? 'M8 2.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11M8 5v3l2 1.5'
-          : 'M10 8a2 2 0 1 0-4 0 2 2 0 0 0 4 0'
-  return (
-    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-      <path d={path} stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
+function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind: 'tool' }>; previous?: AgentTimelineStepKind }) {
+  const part = item.part!, cost = part.state.metadata?.costUsd, time = part.state.time, category = getToolCategory(part.tool)
+  const tone = part.state.status === 'error' ? 'var(--surface-danger-text)' : ['command', 'write', 'edit'].includes(category) ? 'var(--tone-teal-icon)' : 'var(--accent-text)'
+  return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row rounded-[var(--radius-control)] border-l-2 border-l-[var(--record-tool-tone)] bg-[color-mix(in_srgb,var(--record-tool-tone)_7%,transparent)] px-1.5 py-0.5 hover:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)]" style={{ '--record-tool-tone': tone } as CSSProperties} data-tool-category={category} data-tool-status={part.state.status}>
+    <AgentTimelineStep item={item} previous={previous} renderToolActions={toolNote} />
+  </div></HoverCardTrigger><HoverCardContent className="record-tool-preview w-[min(640px,calc(100vw-32px))] max-h-[min(70vh,620px)] overflow-auto text-sm [&_pre]:text-[13px] [&_code]:text-[13px]" side="top" collisionPadding={16}>
+    <strong>{item.call.label}</strong><dl className="my-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1"><dt>Duration</dt><dd className="m-0 text-right">{time?.end != null && time.start != null ? spanLabel(time.end - time.start) : 'Not recorded'}</dd><dt>Cost</dt><dd className="m-0 text-right">{typeof cost === 'number' ? `$${cost.toFixed(4)}` : 'Not recorded'}</dd></dl>
+    <ExpandedToolDetail part={part} />
+  </HoverCardContent></HoverCard>
 }
 
 /** The tools the kit names itself ("Read", "Shell"); any other tool reads by its own name. */
@@ -86,7 +79,7 @@ function toolItems(id: string, call: ToolCall, result: RecordEvent | undefined, 
       ...(output !== undefined ? { output } : {}),
       ...(status === 'error' ? { error: failureText(output ?? '') || 'The call failed.' } : {}),
       ...(durationMs !== null && durationMs >= 0 ? { time: { start: 0, end: durationMs } } : {}),
-      ...(note ? { metadata: { note } } : {}),
+      metadata: { ...(note ? { note } : {}), ...(typeof result?.detail.costListUsd === 'number' ? { costUsd: result.detail.costListUsd } : {}) },
     },
   }
   const known = KIT_TOOLS.has(name.toLowerCase())
@@ -142,7 +135,7 @@ function pollItem(row: Extract<ConversationRow, { kind: 'polls' }>): AgentTimeli
     id: row.key,
     kind: 'custom',
     content: (
-      <RunRowShell icon={<ToolIcon name={row.name} />} title={toolName(row.name)} description={[summary.label, args].filter(Boolean).join(' · ')} descriptionMono>
+      <RunRowShell icon={<Timer size={14} aria-hidden="true" />} title={toolName(row.name)} description={[summary.label, args].filter(Boolean).join(' · ')} descriptionMono>
         <ol className="poll-calls">
           {row.events.map((event) => (
             <li key={event.id} data-message={event.id}><time dateTime={event.at}>{utcTime(event.at)}</time><span className="mono">{argsLabel(callsOf(event)[0]?.input) ?? compact(callsOf(event)[0]?.input ?? '')}</span></li>
@@ -157,7 +150,7 @@ function pollItem(row: Extract<ConversationRow, { kind: 'polls' }>): AgentTimeli
 const hollowItem = (row: Extract<ConversationRow, { kind: 'hollow' }>): AgentTimelineItem => ({
   id: row.key,
   kind: 'custom',
-  content: <RunRowShell icon={<ToolIcon name={row.calls[0]?.name ?? 'tool'} />} title={hollowSummary(row.calls)} description="args not captured" durationMs={row.spanMs || undefined} />,
+  content: <RunRowShell icon={<Settings size={14} aria-hidden="true" />} title={hollowSummary(row.calls)} description="args not captured" durationMs={row.spanMs || undefined} />,
 })
 
 /** What one record row shows, as the kit's timeline items. */
@@ -197,7 +190,7 @@ export function rowItems(row: ConversationRow, context: ConversationRenderContex
     const output = outputTokens(event.detail)
     const span = thinkingSpan.get(event.id)
     const label = output !== null ? `${span !== undefined && span >= 1000 ? `for ${spanLabel(span)} · ` : ''}${tokenLabel(output)} output tokens · ${withheld.join(' · ')}` : withheld.join(' · ')
-    items.push({ id: `${event.id}:thinking`, kind: 'custom', content: <span data-thinking-withheld><RunRowShell icon={<ToolIcon name="think" />} title="Thought" description={label} /></span> })
+    items.push({ id: `${event.id}:thinking`, kind: 'custom', content: <span data-thinking-withheld><RunRowShell icon={<Brain size={14} aria-hidden="true" />} title="Thought" description={label} /></span> })
   }
   if (failed) items.push({ id: event.id, kind: 'status', tone: 'error', label: 'The request failed', detail: message ? compact(message).slice(0, 400) : 'No assistant response is present in this record.' })
   else if (finding) items.push({ id: event.id, kind: 'status', tone: 'info', label: 'Recorded finding', detail: compact(message).slice(0, 600) })
@@ -227,7 +220,7 @@ export function ConversationRowView({ row, items, previous, turn, context }: { r
   const { selected, opened, anchor, setOpen, flagMarks, opener, flags } = context
   const events = row.kind === 'event' ? [row.event] : row.events
   const event = events[0]!
-  const steps = <>{turn && <div className="ar-turn" data-turn-start><SpeakerHeader speaker={{ id: event.node, name: context.index.nodes.get(event.node)?.label ?? 'Agent' }} /><time dateTime={event.at} title={event.at}>{utcTime(event.at)}</time></div>}{items.map((item, i) => <AgentTimelineStep key={item.id} item={item} previous={i ? agentTimelineStepKind(items[i - 1]!) : previous} renderToolActions={toolNote} />)}</>
+  const steps = <>{turn && <div className="ar-turn" data-turn-start><SpeakerHeader speaker={{ id: event.node, name: context.index.nodes.get(event.node)?.label ?? 'Agent' }} /><time dateTime={event.at} title={event.at}>{utcTime(event.at)}</time></div>}{items.map((item, i) => item.kind === 'tool' && item.part ? <ToolStep key={item.id} item={item} previous={i ? agentTimelineStepKind(items[i - 1]!) : previous} /> : <AgentTimelineStep key={item.id} item={item} previous={i ? agentTimelineStepKind(items[i - 1]!) : previous} renderToolActions={toolNote} />)}</>
   const rowProps = {
     className: ['chat-row', events.some((e) => e.id === selected) && 'selected', row.kind === 'event' && flags?.has(event.id) && 'flagged'].filter(Boolean).join(' '),
     'data-entry': event.id,

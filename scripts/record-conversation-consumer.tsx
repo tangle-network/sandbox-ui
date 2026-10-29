@@ -14,26 +14,25 @@ result.detail.clip = { bytes: 4_000_001, sha256: "a".repeat(64) };
 record.events.push({ ...structuredClone(result), id: "standalone-result", at: "2026-10-05T06:01:00.000Z", detail: { ...result.detail, toolCallId: "unpaired", clip: { bytes: 5_000_001, sha256: "b".repeat(64) } } });
 record.events.push({ ...structuredClone(record.events[0]!), id: "follow-up", at: "2026-10-05T06:01:01.000Z", detail: { role: "user", publicText: "Retained follow-up", nativeRecordId: "follow-up" } });
 const prompted = withPrompts(record);
-const index = indexRecord(prompted);
 const initial = prompted.events.filter(event => event.detail.promptKind === "initial");
 const steering = prompted.events.filter(event => event.detail.promptKind === "steering");
 if (initial.length !== 1 || steering.length !== 1 || initial[0]!.id.startsWith("prompt:")) throw new Error("Linked session prompts were not retained/classified");
 
 export function RecordConversationConsumer() {
-  const [source, setSource] = useState("");
-  const [category, setCategory] = useState("all");
+  const [source, setSource] = useState(""), [category, setCategory] = useState("all"), [arrivals, append] = useState(0);
+  const index = indexRecord({ ...prompted, events: [...prompted.events, ...Array.from({ length: arrivals }, (_, i) => ({ id: `arrival-${i}`, node: "linked-session", kind: "message", category: "other", label: "Agent", at: new Date(Date.parse("2026-10-05T06:01:02Z") + i * 1000).toISOString(), detail: { role: "assistant", publicText: `Live turn ${i + 1}` } }))] });
   return <section data-record-conversation data-initial-prompts={initial.length} data-steering-prompts={steering.length} style={{ margin: 16, minWidth: 0 }}>
     <button type="button" onClick={() => setCategory(category === "all" ? "prompts" : "all")}>Filter retained prompts</button>
     <output data-source-open={source} style={{ overflowWrap: "anywhere" }}>{source}</output>
-    <Conversation index={index} actor={agent.id} selected={category === "all" ? "standalone-result" : "follow-up"} cutoff={Infinity} query="" category={category} openSource={(sha, event) => setSource(`${sha}:${event.id}`)} />
+    <button type="button" onClick={() => { setCategory("all"); append(value => value + 1); }}>Append live turn</button>
+    <Conversation key={arrivals ? "live" : "recorded"} live={arrivals > 0} index={index} actor={agent.id} selected={arrivals ? undefined : category === "all" ? "standalone-result" : "follow-up"} cutoff={Infinity} query="" category={category} openSource={(sha, event) => setSource(`${sha}:${event.id}`)} />
   </section>;
 }
 
 
 export function VirtualListConsumer() {
   const scroller = useRef<HTMLDivElement>(null);
-  const [count, setCount] = useState(500);
-  const [target, setTarget] = useState<string>();
+  const [count, setCount] = useState(500), [target, setTarget] = useState<string>();
   const items = Array.from({ length: count }, (_, id) => ({ id: `source:${id}`, label: `Source entry ${id}` }));
   return <section data-virtual-list-consumer style={{ margin: 16 }}>
     <button type="button" onClick={() => { setCount(value => value + 50); setTarget(`source:${count + 49}`); }}>Append retained entries</button>

@@ -26,6 +26,10 @@ declarations. Interface 4.x, 5.0.x, and 5.1.x are not admitted. New majors requi
 qualification before the peer range is extended.
 Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which. `/files` needs `pdfjs-dist` only for `PdfViewer`, which `FilePreview` uses for PDFs; without it the viewer says so and falls back to the browser's own PDF viewer. The `ui` README covers its worker and asset setup through `configurePdfViewer`.
 
+### Retained conversations
+
+`Conversation`, `indexRecord` and `withPrompts` from `@tangle-network/sandbox-ui/run` render retained agent events in one virtualized chat column. Import the shared stylesheet. Producers validate their record format before passing presentation data; this component does not install a parser or interpret absent captures as successful work. Source ids, prompt reconstruction, pending tool receipts, collapsed idle polls, source callbacks and assessment flags remain available.
+
 ## Usage
 
 ```tsx

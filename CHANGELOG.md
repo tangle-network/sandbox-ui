@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Own the retained conversation renderer previously in agent-record, including windowing, source anchors, prompt reconstruction, tool receipts, idle groups and uncaptured-data labels. Export it from `run`; validated presentation inputs require no runtime parser dependency.
+
 ## 2.0.5
 
 - Collapsible agent teams, a context map for overflow, visible-only desktop nodes and bounded phone pages keep 100+ agents readable and reachable. Selecting a collapsed agent reveals it.

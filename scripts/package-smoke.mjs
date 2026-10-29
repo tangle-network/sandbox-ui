@@ -17,6 +17,7 @@ import { build } from "vite";
 import { writeIntegrationsContract } from "./integrations-package-contract.mjs";
 import { validateInterfaceContract } from "./interface-package-contract.mjs";
 import { presentationConsumerSpecs, validatePresentationConsumer } from "./presentation-package-contract.mjs";
+import { validateRecordConversation } from "./record-conversation-package-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // The real path, not the one `tmpdir()` reports: on macOS `/var` is a symlink
@@ -353,6 +354,8 @@ createRoot(document.getElementById("root")).render(
         "and update stubMarker() in this file.",
     );
   }
+
+  await validateRecordConversation({ root, consumerDir });
 
   // The omitted-peer pass retains all its existing coverage. Reuse the full
   // install once for the presentation browser/type/CSS contract.

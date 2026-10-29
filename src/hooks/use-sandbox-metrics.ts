@@ -208,7 +208,7 @@ export function useSandboxMetrics({
         const headers: Record<string, string> = {};
         if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(
-          `${apiBaseUrl}/v1/sidecar-proxy/${encodeURIComponent(sandboxId)}/metrics/json`,
+          `${apiBaseUrl}/v1/sandboxes/${encodeURIComponent(sandboxId)}/runtime/metrics/json`,
           {
             method: "GET",
             credentials: "include",

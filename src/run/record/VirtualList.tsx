@@ -156,7 +156,7 @@ export function VirtualList<T>({
     if (!element) return
     // The reader's own scroll ends the settling.
     const release = (event: Event) => {
-      const key = event instanceof KeyboardEvent ? event.key : ''
+      const key = event instanceof KeyboardEvent && event.target === element && !event.defaultPrevented ? event.key : ''
       pending.current = items.length && (key === 'Home' || key === 'End') ? { key: keyOf(items[key === 'Home' ? 0 : items.length - 1]!), until: performance.now() + 2000 } : null
       if (pending.current) { event.preventDefault(); settle() }
     }

@@ -229,6 +229,14 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               assert(await windowed.locator("[data-source-entry]").count() < 100, "500 entries must use a bounded DOM window");
               await windowed.getByRole("list").focus();
               await page.keyboard.press("End");
+              await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+              console.log("initial-variable-End", { lane, width, mode, ...await windowed.getByRole("list").evaluate(element => ({
+                display: getComputedStyle(element).display, top: element.scrollTop, total: element.scrollHeight, height: element.clientHeight,
+                focused: document.activeElement === element,
+                first: element.querySelector("[data-source-entry]")?.getAttribute("data-source-entry"),
+                last: [...element.querySelectorAll("[data-source-entry]")].at(-1)?.getAttribute("data-source-entry"),
+                firstSpacer: element.firstElementChild?.getAttribute("style"), lastSpacer: element.lastElementChild?.getAttribute("style"),
+              })) });
               await windowed.getByText("Source entry 499", { exact: true }).waitFor();
               await page.keyboard.press("Home");
               await windowed.getByText("Source entry 0", { exact: true }).waitFor();

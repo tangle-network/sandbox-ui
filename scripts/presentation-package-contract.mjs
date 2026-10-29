@@ -46,9 +46,11 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
 @import "@tangle-network/brand/styles/theme.css";
 @import "@tangle-network/brand/styles/named-themes.css";
 @import "@tangle-network/brand/styles/globals.css";
+@import "@tangle-network/charts/react/agent-graph.css";
 @source "../node_modules/@tangle-network/ui/src/**/*.tsx";
 @source "../node_modules/@tangle-network/ui/src/**/*.ts";
 @source "../node_modules/@tangle-network/sandbox-ui/dist/**/*.js";
+@source "../node_modules/@tangle-network/charts/dist/**/*.js";
 `);
   // The published Tailwind source entry, written exactly as a consumer writes
   // it: no node_modules paths. Its own `@source` lines must reach this
@@ -249,7 +251,18 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
               assert.equal(await list.evaluate(element => element.scrollTop), 0, "reader input retains the top window");
               assert.deepEqual(errors, [], "packed browser consumer must not throw");
-              states.push({ lane, width, mode, ...measured });
+              const topology = page.locator("[data-record-topology]");
+              await topology.scrollIntoViewIfNeeded();
+              await topology.locator('.agent-graph[data-layout="ready"],.agent-graph[data-layout="list"]').waitFor();
+              const node = topology.locator(".ag-phone-select,.react-flow__node-agent,.react-flow__node-liveAgent").first();
+              await node.click();
+              assert.equal(await topology.getByLabel("Topology selection").textContent(), await topology.getAttribute("data-agent-id"));
+              const cardStyle = await topology.locator(".ag-live-card").first().evaluate(card => ({
+                background: getComputedStyle(card).backgroundColor, radius: parseFloat(getComputedStyle(card).borderRadius),
+              }));
+              assert.notEqual(cardStyle.background, "rgba(0, 0, 0, 0)", "each public style entry carries authored graph surfaces");
+              assert(cardStyle.radius > 0, "each public style entry carries graph geometry");
+              states.push({ lane, width, mode, topology: cardStyle, ...measured });
             } finally {
               await page.close();
             }

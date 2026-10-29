@@ -22,12 +22,13 @@ async function openHost() {
   const entry = resolve(scratch, 'host.js')
   await writeFile(entry, `import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{LiveRun}from'@tangle-network/sandbox-ui/run/live';import{useDocument}from'${documentEntry}';
 const transport=account=>({fetch:(url,init)=>fetch(url,{...init,headers:{...init?.headers,'X-Account':account}}),openEventSource:url=>new EventSource(url+'?account='+account)});const A=transport('A'),B=transport('B');
-function Probe({transport}){const doc=useDocument('/probe',undefined,true,transport.fetch);return React.createElement('output',{'aria-label':'Document authority'},doc.data?.owner??doc.error??'Loading document')}
+function Probe({transport}){const doc=useDocument('/probe',250,true,transport.fetch);return React.createElement('output',{'aria-label':'Document authority'},doc.data?.owner??doc.error??'Loading document')}
 function Host(){const[t,set]=useState(A);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>set(B)},'Switch account'),React.createElement(Probe,{transport:t}),React.createElement(LiveRun,{api:'/api',transport:t}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
   const module = await build({ configFile: false, logLevel: 'silent', define: { 'process.env.NODE_ENV': JSON.stringify('production') }, build: { write: false, lib: { entry, formats: ['es'], fileName: () => 'host.js' }, rollupOptions: { output: { chunkFileNames: 'host/[name]-[hash].js' } } } })
   const chunks = new Map((Array.isArray(module) ? module : [module]).flatMap(result => result.output).map(item => [item.fileName, item.type === 'chunk' ? item.code : item.source]))
   const requests = [], clients = new Set()
-  let inventoryStatus = 200, fileStatus = 200, delayedProbe, delayedEvents
+  let inventoryStatus = 200, fileStatus = 200, delayedProbe, delayedEvents, delayedAProbe, aReads = 0, sawARefresh
+  const aRefresh = new Promise(resolve => { sawARefresh = resolve })
   const content = 'Private A retained bytes\n', hash = createHash('sha256').update(content).digest('hex')
   const frame = account => `event: snapshot\ndata: ${JSON.stringify({ sequence: 1, observedAt: Date.now(), reset: true, snapshots: [{ root: account, generatedAt: Date.now(), completeness: 'complete', diagnostics: [], supervisors: [{ id: `run-${account}`, status: 'running', task: `Private ${account} task`, startedAt: new Date().toISOString(), workers: [{ id: `worker-${account}`, label: `${account} worker`, status: 'running', startedAt: new Date().toISOString() }] }] }] })}\n\nevent: end\ndata: {}\n\n`
   const server = createServer(async (req, res) => {
@@ -36,6 +37,7 @@ function Host(){const[t,set]=useState(A);return React.createElement(React.Fragme
     requests.push({ path, account, etag: req.headers['if-none-match'] })
     if (path === '/probe') {
       if (account === 'B') { delayedProbe = res; return }
+      if (aReads++) { res.writeHead(200, { 'content-type': 'application/json', ETag: '"probe-A"' }); res.flushHeaders(); delayedAProbe = res; sawARefresh(); return }
       return json({ owner: 'Private A document' }, 200, '"probe-A"')
     }
     if (path === '/api/events') {
@@ -72,9 +74,9 @@ function Host(){const[t,set]=useState(A);return React.createElement(React.Fragme
   await page.getByText('Provenance', { exact: true }).click()
   await page.getByRole('link', { name: 'Download', exact: true }).waitFor()
   return {
-    page, requests, content,
+    page, requests, content, aRefresh,
     refuse: (target, status) => { if (target === 'file') fileStatus = status; else inventoryStatus = status },
-    releaseB: () => { delayedProbe.writeHead(403, { 'content-type': 'application/json' }); delayedProbe.end('{"reason":"B refused"}'); delayedEvents.end(frame('B')) },
+    releaseB: () => { delayedProbe.writeHead(403, { 'content-type': 'application/json' }); delayedProbe.end('{"reason":"B refused"}'); delayedEvents.end(frame('B')); delayedAProbe?.end('{"owner":"Late private A document"}') },
     capture: async name => { if (evidence) { await mkdir(evidence, { recursive: true }); await page.screenshot({ path: `${evidence}/${name}.png`, fullPage: true }) } },
     close: async () => { await browser.close(); for (const client of clients) client.end(); delayedProbe?.end(); await new Promise(resolve => server.close(resolve)); await rm(scratch, { recursive: true, force: true }) },
   }
@@ -84,6 +86,7 @@ test('same API switches account before new evidence or a refusal can expose old 
   const host = await openHost(), { page } = host
   try {
     await page.getByText('Finished · viewer closed', { exact: true }).waitFor()
+    await host.aRefresh
     await page.getByRole('button', { name: 'Switch account', exact: true }).click()
     await page.waitForFunction(() => !document.querySelector('main.ws-live')?.textContent.includes('Private A task'), null, { timeout: 5000 })
     assert.equal(await page.getByRole('link', { name: 'Download', exact: true }).count(), 0)
@@ -100,6 +103,7 @@ test('same API switches account before new evidence or a refusal can expose old 
     await page.getByText('Private B task', { exact: true }).waitFor()
     assert.equal(await page.getByText('Private A document', { exact: true }).count(), 0)
     assert.equal(await page.getByRole('link', { name: 'Download', exact: true }).count(), 0)
+    assert.equal(await page.getByText('Late private A document', { exact: true }).count(), 0, 'A late old-account completion cannot restore its data')
     await host.capture('account-b-refused')
   } finally { await host.close() }
 })

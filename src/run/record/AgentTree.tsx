@@ -44,7 +44,7 @@ export function AgentTree({ index, actor, cutoff, select }: {
             aria-pressed={actor === node.id} data-node={node.id} data-future={future ? '' : undefined}
             title={node.label + (node.assignment ? ' · ' + node.assignment : '') + ' · ' + state}
             onClick={() => select(node.id)}>
-            <RunStatusIcon status={runStatus(future ? 'unknown' : node.status ?? 'unknown')} className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <RunStatusIcon status={runStatus(future ? 'unknown' : node.status === 'down' || node.status === 'no-winner' ? 'stopped' : node.status ?? 'unknown')} className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span className="grid min-w-0 gap-0.5 break-words">
               <span className="font-semibold">{node.label}</span>
               <span className="text-muted-foreground">{roleOf(node)} · {state}</span>

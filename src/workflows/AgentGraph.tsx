@@ -6,7 +6,7 @@ import { ProviderIcon } from "../integrations/provider-logo";
 import { KIND_ACCENT, NodeMark } from "./node-ui";
 
 export interface AgentGraphProps extends ChartAgentGraphProps {}
-export type { AgentGraphCall, AgentGraphCallKind, AgentGraphDirection, AgentGraphEvent, AgentGraphEdge, AgentGraphEdgeKind, AgentGraphNode, AgentGraphStatus, AgentGraphTool } from "@tangle-network/charts/react/agent-graph";
+export type { AgentGraphActivity, AgentGraphCall, AgentGraphCallKind, AgentGraphDirection, AgentGraphEvent, AgentGraphEdge, AgentGraphEdgeKind, AgentGraphNode, AgentGraphStatus, AgentGraphTool } from "@tangle-network/charts/react/agent-graph";
 
 function agentMark(agent: AgentGraphNode, layout: "tree" | "hub", size: number) {
   if (layout === "tree") return <NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={size} />;

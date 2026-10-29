@@ -70,6 +70,7 @@ export function VirtualList<T>({
     let frame = 0
     const update = () => {
       frame = 0
+      if (element.getAttribute('aria-label') === 'Retained source entries') console.log('VL viewport', element.scrollTop, element.clientHeight)
       setViewport((current) =>
         current.top === element.scrollTop && current.height === element.clientHeight
           ? current
@@ -135,6 +136,7 @@ export function VirtualList<T>({
       pending.current = null
       return
     }
+    if (scroller.current?.getAttribute('aria-label') === 'Retained source entries') console.log('VL settle', goal.key, viewport.top, scroller.current.scrollTop, scroller.current.scrollHeight, rows.current.has(goal.key))
     if (!scrollTo(goal.key, true)) return
     // Once rendered, its actual geometry wins over heights not measured by ResizeObserver yet.
     const row = rows.current.get(goal.key)

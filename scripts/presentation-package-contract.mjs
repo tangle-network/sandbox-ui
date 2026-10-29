@@ -96,6 +96,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
             const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
             const errors = [];
             page.on("pageerror", (error) => errors.push(error.message));
+            page.on("console", message => { if (message.text().startsWith("VL ")) console.log(message.text()); });
             try {
               await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" });
               await page.waitForFunction(() => document.documentElement.dataset.presentationReady === "true");

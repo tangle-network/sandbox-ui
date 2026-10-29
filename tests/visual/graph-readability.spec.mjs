@@ -30,9 +30,11 @@ for (const theme of ['light', 'dark']) for (const width of [1512, 390]) {
       for (const text of ['Input', '24,000 tokens', 'Output', '12,000 tokens', 'Cached', '87,456 tokens', 'Tool calls', '36 · bash 24 · read 12', 'Latency p50 / p90 / p99', '12 s / 24 s / 36 s', 'Failures / retries', '2 / 1']) await expect(metrics).toContainText(text)
       await metrics.hover()
       await page.mouse.wheel(0, 1600)
+      await expect.poll(() => metrics.evaluate(el => el.scrollTop)).toBeGreaterThan(0)
       await expect(metrics.getByText('Recorded tool 40', { exact: true })).toBeInViewport()
       await page.mouse.move(0, 0)
     }
+    await page.keyboard.press('Tab')
     await selected.focus()
     await expect(page.getByRole('tooltip')).toContainText('24,000 tokens')
     await selected.press('Tab')

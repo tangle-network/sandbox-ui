@@ -33,7 +33,7 @@ function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind:
   return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row" data-tool-category={getToolCategory(part.tool)} data-tool-status={part.state.status}>
     <AgentTimelineStep item={item} previous={previous} renderToolActions={toolNote} />
   </div></HoverCardTrigger><HoverCardContent className="record-tool-preview" side="top" collisionPadding={16}>
-    <strong>{item.call.label}</strong><dl><dt>Duration</dt><dd>{time?.end != null ? spanLabel(time.end - time.start) : 'Not recorded'}</dd><dt>Cost</dt><dd>{typeof cost === 'number' ? `$${cost.toFixed(4)}` : 'Not recorded'}</dd></dl>
+    <strong>{item.call.label}</strong><dl><dt>Duration</dt><dd>{time?.end != null && time.start != null ? spanLabel(time.end - time.start) : 'Not recorded'}</dd><dt>Cost</dt><dd>{typeof cost === 'number' ? `$${cost.toFixed(4)}` : 'Not recorded'}</dd></dl>
     <ExpandedToolDetail part={part} />
   </HoverCardContent></HoverCard>
 }

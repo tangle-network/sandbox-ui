@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.9
+
+- Export the existing retained-row `VirtualList` from `run/record` and `run`; measured rows contain their margins in every host.
+
 ## 2.0.8
 
 - Preserve producer-specific node, capture and event types in retained conversation projections; expose tool-call types so downstream declarations can be emitted.

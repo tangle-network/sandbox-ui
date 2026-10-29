@@ -8,6 +8,7 @@ for (const theme of ['light', 'dark']) for (const width of [1512, 390]) {
     await expect(graph).toHaveAttribute('data-layout', width === 390 ? 'list' : 'ready')
     const cards = page.locator('.react-flow__node-liveAgent, .ag-phone-select')
     expect(await cards.count()).toBeLessThan(100)
+    await page.screenshot({ path: info.outputPath(`initial-${theme}-${width}.png`) })
     if (width === 1512) {
       const scale = () => page.locator('.react-flow__viewport').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).a)
       expect(await scale()).toBeGreaterThanOrEqual(1)
@@ -32,6 +33,7 @@ for (const theme of ['light', 'dark']) for (const width of [1512, 390]) {
       await page.mouse.wheel(0, 1600)
       await expect.poll(() => metrics.evaluate(el => el.scrollTop)).toBeGreaterThan(0)
       await expect(metrics.getByText('Recorded tool 40', { exact: true })).toBeInViewport()
+      await page.screenshot({ path: info.outputPath(`full-metrics-${theme}-${width}.png`) })
       await page.mouse.move(0, 0)
     }
     await page.keyboard.press('Tab')
@@ -45,6 +47,8 @@ for (const theme of ['light', 'dark']) for (const width of [1512, 390]) {
     await expect(page.getByRole('tooltip')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await assertStoryHealthy(page)
-    await info.attach(`101-agents-${theme}-${width}`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
+    const screenshot = info.outputPath(`101-agents-${theme}-${width}.png`)
+    await page.screenshot({ path: screenshot, fullPage: true })
+    await info.attach(`101-agents-${theme}-${width}`, { path: screenshot, contentType: 'image/png' })
   })
 }

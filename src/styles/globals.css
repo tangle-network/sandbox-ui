@@ -21,6 +21,7 @@
 @source "../../src/**/*.ts";
 @source "../../node_modules/@tangle-network/ui/src/**/*.tsx";
 @source "../../node_modules/@tangle-network/ui/src/**/*.ts";
+@source "../../node_modules/@tangle-network/charts/dist/**/*.js";
 
 /* Run cards use Brand's status, motion, radius and shadow owners. */
 

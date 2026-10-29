@@ -14,6 +14,8 @@ export const TAILWIND_ENTRY_SOURCES = [
   "./**/*.js",
   "../../ui/dist/**/*.js",
   "../node_modules/@tangle-network/ui/dist/**/*.js",
+  "../../charts/dist/**/*.js",
+  "../node_modules/@tangle-network/charts/dist/**/*.js",
 ]
 
 export function withEntrySources(css) {

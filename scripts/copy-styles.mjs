@@ -69,4 +69,5 @@ const tailwindEntry = await readFile(join(srcStylesDir, "tailwind.css"), "utf8")
 const authoredCss = postcss.parse(globalsCss).nodes
   .filter(node => node.type !== "comment" && !(node.type === "atrule" && ["import", "source"].includes(node.name)))
   .map(node => node.toString()).join("\n")
-await writeFile(join(distDir, "tailwind.css"), withEntrySources(`${tailwindEntry}\n${authoredCss}`))
+const graphCss = await readFile(require.resolve("@tangle-network/charts/react/agent-graph.css"), "utf8")
+await writeFile(join(distDir, "tailwind.css"), withEntrySources(`${tailwindEntry}\n${graphCss}\n${authoredCss}`))

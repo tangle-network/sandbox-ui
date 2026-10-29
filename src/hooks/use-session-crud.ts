@@ -34,7 +34,7 @@ async function sessionFetch<T>(
 export function useSessions(apiUrl: string, token: string | null) {
   return useQuery<Session[]>({
     queryKey: ['sessions', apiUrl, token],
-    queryFn: () => sessionFetch<Session[]>(apiUrl, token!, '/session/sessions'),
+    queryFn: () => sessionFetch<Session[]>(apiUrl, token!, '/agents/sessions'),
     enabled: !!token,
     staleTime: 30_000,
   });
@@ -46,7 +46,7 @@ export function useCreateSession(apiUrl: string, token: string | null) {
 
   return useMutation({
     mutationFn: async (title: string) => {
-      return sessionFetch<Session>(apiUrl, token!, '/session/sessions', {
+      return sessionFetch<Session>(apiUrl, token!, '/agents/sessions', {
         method: 'POST',
         body: JSON.stringify({ title, backend: { type: 'opencode' } }),
       });
@@ -63,7 +63,7 @@ export function useDeleteSession(apiUrl: string, token: string | null) {
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      return sessionFetch<unknown>(apiUrl, token!, `/session/sessions/${encodeURIComponent(sessionId)}`, {
+      return sessionFetch<unknown>(apiUrl, token!, `/agents/sessions/${encodeURIComponent(sessionId)}`, {
         method: 'DELETE',
       });
     },
@@ -79,7 +79,7 @@ export function useRenameSession(apiUrl: string, token: string | null) {
 
   return useMutation({
     mutationFn: async ({ sessionId, title }: { sessionId: string; title: string }) => {
-      return sessionFetch<Session>(apiUrl, token!, `/session/sessions/${encodeURIComponent(sessionId)}`, {
+      return sessionFetch<Session>(apiUrl, token!, `/agents/sessions/${encodeURIComponent(sessionId)}`, {
         method: 'PATCH',
         body: JSON.stringify({ title }),
       });

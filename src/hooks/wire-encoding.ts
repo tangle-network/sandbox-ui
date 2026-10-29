@@ -1,7 +1,7 @@
 /**
  * Sidecar message wire-encoding.
  *
- * The sidecar's send-message route (`POST /session/sessions/:id/messages`)
+ * The sidecar's send-message route (`POST /agents/sessions/:id/messages`)
  * base64-DECODES every text part at the request boundary (`decodeTextParts`)
  * and hands the original UTF-8 to the agent — the LLM never sees base64. The
  * encoding is done unconditionally because readable prompt bodies

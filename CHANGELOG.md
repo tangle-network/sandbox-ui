@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.11
+
+- Session hooks call the sidecar's `agents/sessions` and `agents/events` routes, and `useSandboxMetrics` reads `/v1/sandboxes/{id}/runtime/metrics/json`. The Sandbox API's `/v1/sidecar-proxy` spelling and its `session/` alias are being retired; pass the runtime proxy base (`/v1/sandboxes/{id}/runtime`) as `apiUrl`.
+
 ## 2.0.9
 
 - Export the existing retained-row `VirtualList` from `run/record` and `run`; measured rows contain their margins in every host.

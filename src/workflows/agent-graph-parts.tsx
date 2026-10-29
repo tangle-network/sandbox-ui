@@ -20,6 +20,7 @@ import {
   useInternalNode,
 } from "@xyflow/react";
 import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
+import { ChevronDown } from "lucide-react";
 import { ambientStyle, syncAmbient, quietActivity, useRunNow } from "./run-ui-state";
 import { MOTION_CONTROL } from "../lib/motion";
 import type {
@@ -132,7 +133,7 @@ export function AgentCardView({ agent, selected, direction, now: fixed, onOpen, 
 export function AgentCard({ data }: NodeProps<AgentCardNode>) { return <AgentCardView {...data} handles />; }
 
 export type AgentFrameNode = Node<
-  { frame: AgentFrame; direction: AgentGraphDirection },
+  { frame: AgentFrame; direction: AgentGraphDirection; label: string; onToggle: () => void },
   "agentFrame"
 >;
 
@@ -147,7 +148,7 @@ export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
       }}
     >
       <Handles direction={direction} />
-      <span className="sr-only">{frame.group.memberIds.length} workers</span>
+      <button type="button" className="nodrag nopan absolute right-3 top-2 flex h-16 w-8 flex-col items-center justify-center gap-1 rounded text-sm text-muted-foreground hover:bg-muted focus-visible:outline" aria-label={`${frame.collapsed ? "Expand" : "Collapse"} ${data.label} team`} aria-expanded={!frame.collapsed} title={`${data.label} · ${frame.group.memberIds.length} agents`} onClick={event => { event.stopPropagation(); data.onToggle(); }}><ChevronDown size={16} className={frame.collapsed ? "-rotate-90" : undefined} /><span>{frame.group.memberIds.length}</span></button>
     </div>
   );
 }

@@ -34,7 +34,7 @@
 .ag-live-name { grid-column: 2; grid-row: 1; font-size: var(--font-size-sm); line-height: 18px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ag-live-meta, .ag-live-stats { font-size: var(--font-size-xs); line-height: 16px; color: var(--ag-muted); }
 .ag-live-meta { grid-column: 2 / -1; grid-row: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ag-live-accounting { grid-column: 2 / -1; grid-row: 3; font-size: var(--font-size-xs); font-variant-numeric: tabular-nums; }
+.ag-live-accounting { grid-column: 2 / -1; grid-row: 3; font-size: var(--font-size-xs); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .ag-live-pill { grid-column: 3; grid-row: 1; justify-self: end; display: inline-flex; align-items: center; gap: 4px; color: var(--ag-status); }
 .ag-running-dot { display: inline-block; flex: none; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--surface-info-text); }
 [data-activity="quiet"] .ag-running-dot { background: var(--surface-warning-text); animation: none !important; }
@@ -72,7 +72,6 @@
   .ag-live-card.ag-live-chip { min-height: 80px; height: 80px; }
 }
 
-.ag-live-accounting { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .ag-live-chip-status { grid-column: 3; grid-row: 1; font-size: var(--font-size-xs); color: var(--ag-status); }
 .ag-live-chip-cost { grid-column: 4; grid-row: 1; font-size: var(--font-size-xs); color: var(--ag-muted); font-variant-numeric: tabular-nums; }
 .ag-parent-label { color: var(--ag-muted); font-size: var(--font-size-xs); font-weight: 400; }

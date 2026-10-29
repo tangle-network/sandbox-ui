@@ -34,6 +34,8 @@ export interface AgentGraphNode {
   turn?: string | null;
   costUsd?: number | null;
   tokens?: number | null;
+  /** Recorded metrics with units; retained in pointer and keyboard detail cards. */
+  facts?: readonly { label: string; value: string }[];
   /** Live cards: what it is doing now, from its real state; the card carries it as `data-activity` for hosts to style. */
   activity?: AgentGraphActivity | null;
   /** Live cards: its latest tool calls or events, oldest first; the card shows the last three. */
@@ -86,7 +88,6 @@ const GRID_GAP = 10;
 const FRAME_PAD = 12;
 /** The manager stays with its workers instead of reserving an otherwise empty tree layer. */
 export const FRAME_CAPTION = 80;
-const MAX_GRID_COLUMNS = 6;
 const LAYER_GAP = 56;
 const SIBLING_GAP = 24;
 
@@ -160,6 +161,7 @@ export interface AgentFrame {
   y: number;
   width: number;
   height: number;
+  collapsed?: boolean;
 }
 
 export interface AgentLayout {
@@ -172,7 +174,8 @@ export interface AgentLayout {
   height: number;
 }
 
-function gridSize(members: number, columns: number, card: CardSize): { width: number; height: number } {
+function gridSize(members: number, columns: number, card: CardSize, collapsed = false): { width: number; height: number } {
+  if (collapsed) return { width: card.width + 2 * FRAME_PAD, height: FRAME_CAPTION };
   const cols = Math.max(1, Math.min(columns, members));
   const rows = Math.ceil(members / cols);
   return {
@@ -189,14 +192,14 @@ interface Unit {
 }
 
 /** The boxes the layouter places: each ungrouped agent, and each grid as one block. */
-function layoutUnits(topology: AgentTopology, columns: number, card: CardSize) {
+function layoutUnits(topology: AgentTopology, columns: number, card: CardSize, collapsed: ReadonlySet<string>) {
   const units: Unit[] = [];
   const ownerGroup = new Map(topology.groups.map(group => [group.parentId, group.id]));
   for (const id of topology.agentIds) {
     if (!topology.groupOf.has(id) && !ownerGroup.has(id)) units.push({ id, width: card.width, height: card.height });
   }
   for (const g of topology.groups) {
-    units.push({ id: g.id, ...gridSize(g.memberIds.length, columns, card) });
+    units.push({ id: g.id, ...gridSize(g.memberIds.length, columns, card, collapsed.has(g.id)) });
   }
   const unitOf = (id: string) => topology.groupOf.get(id) ?? ownerGroup.get(id) ?? id;
   const seen = new Set<string>();
@@ -292,8 +295,9 @@ export async function layoutAgents(
   direction: AgentGraphDirection,
   columns: number,
   card: CardSize = AGENT_CARD,
+  collapsed: ReadonlySet<string> = new Set(),
 ): Promise<AgentLayout> {
-  const { units, links } = layoutUnits(topology, columns, card);
+  const { units, links } = layoutUnits(topology, columns, card, collapsed);
   const placed =
     (await placeWithElk(units, links, direction)) ?? placeByDepth(units, links, direction);
   const positions = new Map<string, { x: number; y: number }>();
@@ -309,9 +313,11 @@ export async function layoutAgents(
   for (const g of topology.groups) {
     const origin = positions.get(g.id) ?? { x: 0, y: 0 };
     positions.delete(g.id);
-    const size = gridSize(g.memberIds.length, columns, card);
-    frames.push({ group: g, ...origin, ...size });
+    const closed = collapsed.has(g.id);
+    const size = gridSize(g.memberIds.length, columns, card, closed);
+    frames.push({ group: g, ...origin, ...size, collapsed: closed });
     positions.set(g.parentId, { x: origin.x + FRAME_PAD, y: origin.y + 8 });
+    if (closed) continue;
     const cols = Math.max(1, Math.min(columns, g.memberIds.length));
     g.memberIds.forEach((id, i) => {
       positions.set(id, {
@@ -321,42 +327,4 @@ export async function layoutAgents(
     });
   }
   return { columns, positions, frames, width, height };
-}
-
-/** The grid widths worth trying for this run: one per column count a grid can use. */
-export function candidateColumns(topology: AgentTopology): number[] {
-  const largest = Math.max(0, ...topology.groups.map((g) => g.memberIds.length));
-  const top = Math.min(MAX_GRID_COLUMNS, largest);
-  return top <= 1 ? [1] : Array.from({ length: top }, (_, i) => i + 1);
-}
-
-/**
- * The layout that shows the run largest in this canvas: the highest zoom at
- * which it fits whole, capped at the cards' designed size. Layouts that all
- * reach that cap tie, and the tie goes to the one whose shape is closest to the
- * canvas's, so a wide canvas gets a wide grid and a phone a tall one.
- */
-export function pickAgentLayout(
-  layouts: readonly AgentLayout[],
-  canvas: { width: number; height: number },
-  padding: number,
-): AgentLayout | null {
-  let best: AgentLayout | null = null;
-  let bestZoom = -1;
-  let bestShape = Number.POSITIVE_INFINITY;
-  const aspect = canvas.width / Math.max(1, canvas.height);
-  for (const l of layouts) {
-    const zoom = Math.min(
-      1,
-      (canvas.width - 2 * padding) / Math.max(1, l.width),
-      (canvas.height - 2 * padding) / Math.max(1, l.height),
-    );
-    const shape = Math.abs(Math.log(l.width / Math.max(1, l.height) / aspect));
-    if (zoom > bestZoom + 0.02 || (Math.abs(zoom - bestZoom) <= 0.02 && shape < bestShape)) {
-      best = l;
-      bestZoom = zoom;
-      bestShape = shape;
-    }
-  }
-  return best;
 }

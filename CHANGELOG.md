@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.5
+
+- Collapsible agent teams, a context map for overflow, visible-only desktop nodes and bounded phone pages keep 100+ agents readable and reachable. Selecting a collapsed agent reveals it.
+- Pointer and keyboard detail cards retain complete recorded metrics with units, wrap and scroll long tool inventories, and preserve unknown values. Supplied facts replace matching default estimates.
+
 ## 2.0.4
 
 - Keep live graph cards at a readable scale, place managers with their worker groups, and align complete result rows.

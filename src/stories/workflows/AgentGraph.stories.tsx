@@ -241,3 +241,17 @@ export const ReducedMotion: StoryObj = { parameters: { reducedMotion: "reduce" }
 export const Burst: StoryObj<{ at?: number }> = { argTypes: { at: { type: "number", control: "number" } }, render: ({ at }) => <RunState burst at={at} /> };
 
 export const LiveFailedLong: StoryObj = { render: () => <RunState state="long-failure" /> };
+
+/** The same scale as a Discovery run, with complete recorded metrics and a distant selection. */
+export const HundredWorkers: StoryObj = { render: () => <LargeRun /> };
+function LargeRun() {
+  const [selected, setSelected] = useState<string | null>("root");
+  const nodes: AgentGraphNode[] = [{ id: "root", label: "root", status: "running", model: "glm-5.3", tokens: null }, ...Array.from({ length: 100 }, (_, i) => ({
+    id: `worker-${i}`, label: `proving-worker-${i}`, status: "running" as const, model: "glm-5.3", tokens: 123456, costUsd: 1.25,
+    turn: "Checking the retained proof against the published target", facts: [{ label: "tokens", value: "24,000 in / 12,000 out / 87,456 cached" }, { label: "COST", value: "Not recorded" }, { label: "Input", value: "24,000 tokens" }, { label: "Output", value: "12,000 tokens" }, { label: "Cached", value: "87,456 tokens" }, { label: "Tool calls", value: "36 · bash 24 · read 12" }, { label: "Latency p50 / p90 / p99", value: "12 s / 24 s / 36 s" }, { label: "Failures / retries", value: "2 / 1" }, ...Array.from({ length: 40 }, (_, n) => ({ label: n === 38 ? "agent-runtime-coordination_action_spawn_agents" : `Recorded tool ${n + 1}`, value: `${n + 1} calls · 2 s · 0 failures` }))],
+  }))];
+  return <div className="flex h-screen w-full flex-col bg-background">
+    <div className="flex h-12 shrink-0 items-center gap-4 px-4 text-sm"><button type="button" onClick={() => setSelected("worker-99")}>Select last agent</button><span aria-live="polite">{selected}</span></div>
+    <AgentGraph nodes={nodes} edges={nodes.slice(1).map(node => ({ from: "root", to: node.id, kind: "spawn" }))} selectedId={selected} onSelect={setSelected} live showLatestEvents={false} className="min-h-0 flex-1" />
+  </div>;
+}

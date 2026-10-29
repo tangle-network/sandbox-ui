@@ -33,10 +33,21 @@ const flows = [
       if (await page.getByRole('radio', { name: 'Graph', exact: true }).getAttribute('aria-checked') !== 'true') await page.getByRole('radio', { name: 'Graph', exact: true }).click()
       await expect(page.locator('.agent-graph[data-layout="ready"], .agent-graph[data-layout="list"]')).toBeVisible()
       const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent, .ag-phone-select')
-      await expect(cards).toHaveCount(96)
+      await expect(page.getByLabel('Run status')).toContainText('96 agents')
+      expect(await cards.count()).toBeLessThan(96)
       await expect(page.getByRole('region', { name: 'Code at the cursor' })).toHaveCount(0)
-      if (await page.locator('[data-layout="list"]').count()) return
+      if (await page.locator('[data-layout="list"]').count()) {
+        const seen = new Set()
+        for (let n = 0; n < 4; n++) {
+          for (const id of await cards.evaluateAll(nodes => nodes.map(node => node.dataset.agentId))) seen.add(id)
+          if (n < 3) await page.getByRole('button', { name: 'Next', exact: true }).click()
+        }
+        expect(seen.size).toBe(96)
+        for (let n = 0; n < 3; n++) await page.getByRole('button', { name: 'Previous', exact: true }).click()
+        return
+      }
       await page.getByRole('button', { name: 'Fit View', exact: true }).click()
+      await expect(cards).toHaveCount(96)
       await expect.poll(() => page.evaluate(() => {
         const pane = document.querySelector('.agent-graph').getBoundingClientRect()
         return [...document.querySelectorAll('.react-flow__node-agent, .react-flow__node-liveAgent')].filter((card) => {

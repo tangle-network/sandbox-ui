@@ -247,7 +247,9 @@ export function AgentGraphCanvas({
       if (preserveView) revealSelection(inst, wrapperRef.current, selection.current!);
       else {
         const id = selection.current ?? topology.agentIds[0], position = layout?.positions.get(id), width = inst.getInternalNode(id)?.width ?? card.width;
-        if (position) void inst.setViewport({ x: Math.max(FIT_PADDING - position!.x, canvas.width / 2 - position.x - width / 2), y: FIT_PADDING - position.y, zoom: 1 }, { duration: animate ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
+        const x = layout!.width + 2 * FIT_PADDING <= canvas.width ? (canvas.width - layout!.width) / 2 : position ? Math.max(FIT_PADDING - position.x, canvas.width / 2 - position.x - width / 2) : FIT_PADDING;
+        const y = layout!.height + 2 * FIT_PADDING <= canvas.height ? FIT_PADDING : FIT_PADDING - (position?.y ?? 0);
+        void inst.setViewport({ x, y, zoom: 1 }, { duration: animate ? tokenMilliseconds("--duration-base", wrapperRef.current) : 0 });
       }
       setShown(true);
     });
@@ -335,7 +337,7 @@ export function AgentGraphCanvas({
           </div>
         </li>)}
         {nodes.length > PHONE_PAGE && <li className="flex items-center justify-between gap-2 border-t border-border pt-3 text-sm" aria-label="Agent pages">
-          <button type="button" disabled={!first} onClick={() => setPhonePage(page => page - 1)}>Previous</button><span>{first + 1}–{Math.min(nodes.length, first + PHONE_PAGE)} of {nodes.length}</span><button type="button" disabled={first + PHONE_PAGE >= nodes.length} onClick={() => setPhonePage(page => page + 1)}>Next</button>
+          <button type="button" className="rounded px-2 py-1 hover:bg-muted disabled:opacity-40 focus-visible:outline" disabled={!first} onClick={() => { setPhonePage(page => page - 1); wrapperRef.current?.querySelector(".ag-phone-list")?.scrollTo({ top: 0 }); }}>Previous</button><span>{first + 1}–{Math.min(nodes.length, first + PHONE_PAGE)} of {nodes.length}</span><button type="button" className="rounded px-2 py-1 hover:bg-muted disabled:opacity-40 focus-visible:outline" disabled={first + PHONE_PAGE >= nodes.length} onClick={() => { setPhonePage(page => page + 1); wrapperRef.current?.querySelector(".ag-phone-list")?.scrollTo({ top: 0 }); }}>Next</button>
         </li>}
       </ul> : <div className="ag-graph-viewport min-h-0 flex-1" style={{ opacity: shown ? 1 : 0 }}><ReactFlow
         nodes={flowNodes}
@@ -394,7 +396,7 @@ function AgentMetrics({ anchor, mode, id, agent, rect, onEnter, onLeave, onClose
   const [theme, setTheme] = useState<CSSProperties>({});
   useLayoutEffect(() => {
     if (!anchor) return;
-    const read = () => { const css = getComputedStyle(anchor); setTheme(Object.fromEntries(Array.from(css).filter(name => name.startsWith("--")).map(name => [name, css.getPropertyValue(name)])) as CSSProperties); };
+    const read = () => { const css = getComputedStyle(anchor); setTheme(Object.fromEntries(Array.from(css).filter(name => name.startsWith("--") && !name.startsWith("--tw-")).map(name => [name, css.getPropertyValue(name)])) as CSSProperties); };
     read();
     const observer = new MutationObserver(read);
     for (let el: HTMLElement | null = anchor; el; el = el.parentElement) observer.observe(el, { attributes: true, attributeFilter: ["class", "style", "data-theme", "data-sandbox-theme"] });

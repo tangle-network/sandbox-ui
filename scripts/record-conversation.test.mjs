@@ -1,3 +1,4 @@
+// @vitest-environment node
 // Moved from drewstone/agent-record eeb144905e2906529619d0730dbd315a58e93856.
 // The conversation's row rules on a small live record: which calls collapse as polls, which never do, and how the
 // viewer labels what the record does not hold.

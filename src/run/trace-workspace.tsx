@@ -9,7 +9,7 @@ import { X } from "lucide-react"
 import { cn } from "../lib/utils"
 import { activityTiming, ambientStyle, syncAmbient } from "../workflows/run-ui-state"
 import { AgentGraph, type AgentGraphEdge, type AgentGraphNode, type AgentGraphEvent, type AgentGraphProps } from "../workflows/AgentGraph"
-import { type AgentTranscriptEntry, useAgentStream } from "./agent-stream"
+import { type AgentTranscriptEntry, type AgentStreamOpener, useAgentStream } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
 import { LatestEvents } from "./latest-events"
 
@@ -20,18 +20,22 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   trace: FlowTrace
   /** The selected agent's message stream (Server-Sent Events: rows, reset, end; reconnects with ?after=lastSeq). */
   streamUrl?: (agentId: string) => string
+  /** Optional host transport for account-bound streams. */
+  openEventSource?: AgentStreamOpener
   events?: TraceEvent[]
   /** The time the reader moved to, in trace ms; null while following live or showing the whole run. */
   onTimeChange?: (t: number | null) => void
   /**
    * The code workspace as of the cursor and scoped to the selected agent, usually a WorkspaceFilesPane: the page answers
-   * the as-of query. It spans the full width and at least 70% of the viewport. Keep its key on the commit so a scrub
+   * the as-of query. It spans the full width; this workspace supplies the bounded height virtual panes need. Keep its key on the commit so a scrub
    * keeps its state.
    */
   files?: ReactNode
   /** The scoreboard as of the cursor, under the code workspace; omitted when not given. */
   scoreboard?: ReactNode
   selectedAgentId?: string
+  /** Hide the conversation while retaining its selected agent and file context. Defaults to open. */
+  conversationOpen?: boolean
   /** Called with the agent the reader selected, or undefined when they close its drawer or press Escape. */
   onSelectAgent?: (agentId: string | undefined) => void
   /**
@@ -121,7 +125,7 @@ function NotTimeIndexed({ label }: { label: string }) {
  * every panel shows what was true at the cursor, and the conversation shows what had been said by then.
  */
 export function TraceWorkspace({
-  trace, streamUrl, events, onTimeChange, files, scoreboard, selectedAgentId, onSelectAgent, agentCards, agentGraph, className, ...waterfall
+  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, agentCards, agentGraph, className, ...waterfall
 }: TraceWorkspaceProps) {
   const byId = useMemo(() => new Map(trace.spans.flatMap((span) => (span.id ? [[span.id, span] as const] : []))), [trace])
   const [ownSelection, setOwnSelection] = useState<string>()
@@ -129,10 +133,11 @@ export function TraceWorkspace({
   const select = (agentId: string | undefined) => { setOwnSelection(agentId); onSelectAgent?.(agentId) }
   const agent = selected ? byId.get(selected) : undefined, card = selected ? agentCards?.[selected] : undefined
   const agentId = agent?.id ?? (card ? selected : undefined), agentName = agent?.name ?? card?.label ?? agentId, agentModel = agent?.detail ?? card?.model
+  const showConversation = !!agentId && conversationOpen !== false
   const { defaultLayout = "tree", ...graphOptions } = agentGraph ?? {}
   const [graphLayout, setGraphLayout] = useState<"tree" | "hub">(defaultLayout)
   const [cursor, setCursor] = useState<number | null>(null)
-  const stream = useAgentStream(selected && streamUrl ? streamUrl(selected) : undefined)
+  const stream = useAgentStream(selected && streamUrl ? streamUrl(selected) : undefined, openEventSource)
 
   // As of the cursor: entries that began by then, measured on the trace clock (trace ms from the run's first span).
   // The run's epoch comes from the page (`startedAt`); without it, the agent's first message anchors its own start.
@@ -167,7 +172,7 @@ export function TraceWorkspace({
 
   return (
     <div className={cn("sandbox-trace-workspace flex min-h-0 flex-col gap-3", className)}>
-      <div className={agentId ? "min-w-0 lg:mr-[420px]" : "min-w-0"}>
+      <div className={showConversation ? "min-w-0 lg:mr-[420px]" : "min-w-0"}>
       <TraceWaterfall {...waterfall} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
         onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
@@ -184,12 +189,12 @@ export function TraceWorkspace({
       </div>
       {/* Without files the run has no code to follow, so no empty 70vh panel is reserved for it. */}
       {files && (
-        <section aria-label="Code at the cursor" className="flex min-h-[70vh] flex-col overflow-hidden rounded-xl border border-border bg-card">{files}</section>
+        <section aria-label="Code at the cursor" className="flex h-[70vh] min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card">{files}</section>
       )}
       {scoreboard && (
         <section aria-label="Scoreboard at the cursor" className="overflow-hidden rounded-xl border border-border bg-card">{scoreboard}</section>
       )}
-      {agentId && (
+      {showConversation && (
         // A drawer over the right edge: the code workspace keeps its full width underneath.
         <aside aria-label={`${agentName} conversation`} onKeyDown={(event) => { if (event.key === "Escape") select(undefined) }}
           className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[420px] flex-col border-l border-border bg-card shadow-2xl">

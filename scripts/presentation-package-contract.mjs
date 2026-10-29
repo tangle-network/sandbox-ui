@@ -230,7 +230,9 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               await windowed.getByRole("button", { name: "Append retained entries" }).click();
               await windowed.getByText("Source entry 549", { exact: true }).waitFor();
               assert(await windowed.locator("[data-source-entry]").count() < 100, "appended target must remain windowed");
-              await windowed.getByRole("list").evaluate(element => { element.scrollTop = 0; element.dispatchEvent(new Event("scroll")); });
+              // Real reader input ends the target-settling phase.
+              await windowed.getByRole("list").hover();
+              await page.mouse.wheel(0, -20000);
               await windowed.getByText("Source entry 0", { exact: true }).waitFor();
               assert.deepEqual(errors, [], "packed browser consumer must not throw");
               states.push({ lane, width, mode, ...measured });

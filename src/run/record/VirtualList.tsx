@@ -70,7 +70,6 @@ export function VirtualList<T>({
     let frame = 0
     const update = () => {
       frame = 0
-      if (element.getAttribute('aria-label') === 'Retained source entries') console.log('VL viewport', element.scrollTop, element.clientHeight)
       setViewport((current) =>
         current.top === element.scrollTop && current.height === element.clientHeight
           ? current
@@ -136,13 +135,10 @@ export function VirtualList<T>({
       pending.current = null
       return
     }
-    if (scroller.current?.getAttribute('aria-label') === 'Retained source entries') console.log('VL settle', JSON.stringify({ goal: goal.key, viewport: viewport.top, actual: scroller.current.scrollTop, height: scroller.current.scrollHeight, start, end, total: offsets[items.length], goalOffset: offsets[items.findIndex(item => keyOf(item) === goal.key)], present: rows.current.has(goal.key), spacer: scroller.current.firstElementChild?.getAttribute('style'), spacerHeight: scroller.current.firstElementChild?.getBoundingClientRect().height, spacerCss: scroller.current.firstElementChild ? [getComputedStyle(scroller.current.firstElementChild).display, getComputedStyle(scroller.current.firstElementChild).height, getComputedStyle(scroller.current.firstElementChild).maxHeight, getComputedStyle(scroller.current.firstElementChild).transition] : null, row: rows.current.get(goal.key)?.getBoundingClientRect().top, box: scroller.current.getBoundingClientRect().top }))
     if (!scrollTo(goal.key, true)) return
-    // Once rendered, its actual geometry wins over heights not measured by ResizeObserver yet.
+    // Bring a rendered target into the page's view as well as its own scroller.
     const row = rows.current.get(goal.key)
     if (row?.isConnected) {
-      const element = scroller.current!
-      element.scrollTop += row.getBoundingClientRect().top - element.getBoundingClientRect().top - 8
       const box = row.getBoundingClientRect()
       if (box.top < 72 || box.top > window.innerHeight - 96) window.scrollBy({ top: box.top - 120 })
     }
@@ -200,7 +196,7 @@ export function VirtualList<T>({
 
   return (
     <>
-      <div style={{ height: offsets[start], overflowAnchor: 'none' }} aria-hidden="true" />
+      <div style={{ height: offsets[start], transitionProperty: 'none' }} aria-hidden="true" />
       {items.slice(start, end).map((item, i) => {
         const key = keyOf(item)
         return (
@@ -209,7 +205,7 @@ export function VirtualList<T>({
           </div>
         )
       })}
-      <div style={{ height: offsets[items.length]! - offsets[end]!, overflowAnchor: 'none' }} aria-hidden="true" />
+      <div style={{ height: offsets[items.length]! - offsets[end]!, transitionProperty: 'none' }} aria-hidden="true" />
     </>
   )
 }

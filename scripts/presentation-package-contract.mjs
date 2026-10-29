@@ -96,7 +96,6 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
             const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
             const errors = [];
             page.on("pageerror", (error) => errors.push(error.message));
-            page.on("console", message => { if (message.text().startsWith("VL ")) console.log(message.text()); });
             try {
               await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" });
               await page.waitForFunction(() => document.documentElement.dataset.presentationReady === "true");
@@ -230,18 +229,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               assert(await windowed.locator("[data-source-entry]").count() < 100, "500 entries must use a bounded DOM window");
               await windowed.getByRole("list").focus();
               await page.keyboard.press("End");
-              await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-              console.log("initial-variable-End", { lane, width, mode, ...await windowed.getByRole("list").evaluate(element => ({
-                display: getComputedStyle(element).display, top: element.scrollTop, total: element.scrollHeight, height: element.clientHeight,
-                focused: document.activeElement === element,
-                first: element.querySelector("[data-source-entry]")?.getAttribute("data-source-entry"),
-                last: [...element.querySelectorAll("[data-source-entry]")].at(-1)?.getAttribute("data-source-entry"),
-                firstSpacer: element.firstElementChild?.getAttribute("style"), lastSpacer: element.lastElementChild?.getAttribute("style"),
-              })) });
-              await windowed.getByText("Source entry 499", { exact: true }).waitFor().catch(async error => {
-                console.log("final-variable-End", await windowed.getByRole("list").evaluate(e => ({top:e.scrollTop,total:e.scrollHeight,first:e.querySelector("[data-source-entry]")?.textContent,last:[...e.querySelectorAll("[data-source-entry]")].at(-1)?.textContent,html:e.innerHTML.slice(-700)})));
-                throw error;
-              });
+              await windowed.getByText("Source entry 499", { exact: true }).waitFor();
               await page.keyboard.press("Home");
               await windowed.getByText("Source entry 0", { exact: true }).waitFor();
               await windowed.getByRole("button", { name: "Append retained entries" }).click();

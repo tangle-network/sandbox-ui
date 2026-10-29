@@ -16,7 +16,8 @@ assert.ok(output, 'Keep the native browser proof outside the checkout')
 await mkdir(output, { recursive: true })
 const checks = [], browser = await chromium.launch({ headless: true })
 try {
-  for (const theme of ['light', 'dark']) for (const width of [1512, 390]) {
+  // Runtime currently declares dark in its own shell; light is a separate host-theme integration precondition.
+  for (const theme of ['dark']) for (const width of [1512, 390]) {
     const began = Date.now(), root = await mkdtemp(join(tmpdir(), 'sandbox-runtime-native-'))
     const workflow = join(root, 'workflow'), workspace = join(root, 'workspace'), supervisor = join(workspace, '.agent/supervisor/root')
     await mkdir(workflow); await mkdir(supervisor, { recursive: true })
@@ -34,6 +35,7 @@ try {
       assert.equal((await fetch(`${web.url}api/top`, { headers: { origin: 'https://other.example' } })).status, 403)
       assert.equal((await fetch(`${web.url}api/top`, { method: 'POST' })).status, 405)
       await page.goto(web.url)
+      assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), theme)
       const card = page.locator('.ag-live-card').filter({ has: page.locator('.ag-live-name').getByText('Research', { exact: true }) })
       await card.waitFor()
       assert.equal(await page.getByRole('radio', { name: 'Graph', exact: true }).count(), 1)
@@ -53,12 +55,12 @@ try {
       await page.getByLabel('Run', { exact: true }).selectOption({ label: 'root' })
       await page.getByText('Recorded supervisor', { exact: true }).waitFor()
       assert.equal(await conversation.count(), 0, 'Changing roots closes the previously selected agent stream')
-      await page.locator('.ag-live-card').filter({ has: page.locator('.ag-live-name').getByText('root', { exact: true }) }).click()
+      await page.getByRole('button', { name: /^root, Done,/ }).click()
       await page.getByRole('complementary', { name: 'root conversation' }).getByText('recorded.txt', { exact: false }).first().waitFor()
       await page.screenshot({ path: `${output}/native-supervisor-${width}-${theme}.png`, fullPage: true })
       await page.getByLabel('Run', { exact: true }).selectOption({ label: 'workflow' })
       await appendFile(join(workflow, 'journal.jsonl'), '{"type":"result","agentId":"one","result":"Complete"}\n')
-      await page.locator('.ag-live-card[data-status="succeeded"]').filter({ has: page.locator('.ag-live-name').getByText('Research', { exact: true }) }).waitFor()
+      await page.getByRole('button', { name: /^Research, Done,/ }).waitFor()
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
       await page.waitForTimeout(Math.max(0, 10100 - (Date.now() - began)))
       await web.close()

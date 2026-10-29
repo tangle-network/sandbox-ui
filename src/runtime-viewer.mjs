@@ -1,3 +1,4 @@
+import '@tangle-network/charts/react/flow-waterfall.css'
 import { StrictMode, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { LiveRun } from '../dist/run/live.js'

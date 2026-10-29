@@ -8,6 +8,7 @@ export default defineConfig({
     workflows: "src/workflows/index.ts",
     run: "src/run/index.ts",
     "run/record": "src/run/record/index.ts",
+    "run/live": "src/run/live.tsx",
     workspace: "src/workspace/index.ts",
     workbench: "src/workbench/index.ts",
     "workbench/embedded-app": "src/workbench/embedded-app.ts",
@@ -48,7 +49,7 @@ export default defineConfig({
     ],
   },
   loader: { ".svg": "dataurl" },
-  onSuccess: "node scripts/copy-styles.mjs",
+  onSuccess: "node scripts/copy-styles.mjs && node scripts/build-runtime-viewer.mjs",
   // Bundling drops per-file "use client" directives, as tsup did before.
   // Consumers mark their own client boundaries.
   checks: { moduleLevelDirective: false },

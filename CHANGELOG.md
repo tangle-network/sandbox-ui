@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.18
+
+- Own the native Runtime live view, authenticated selected-agent inspection and retained files; ship standalone assets from the same component. Share the existing ETag document reader and preserve recorded no-winner/refusal outcomes. Read-only file inspection uses the existing files/code/diff components without pulling terminal peers into a live-view import.
+
 ## 2.0.15
 
 - Preserve selected agent and files when closing a conversation. Support the host authenticated stream transport, retain full tool values, and size the retained workspace in its existing section.

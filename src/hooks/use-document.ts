@@ -14,15 +14,16 @@ const NETWORK_RETRIES = 4
 export function useDocument<T>(url: string | null, poll?: number, keepPrevious = false, fetcher = globalThis.fetch) {
   // `stale`: the server sent its last composed copy while it recomposes (X-Workspace-Stale); a page says how old it is,
   // and `failing` why its last compose failed when it did (X-Workspace-Compose-Error, audit F11).
-  // State is tagged with its URL: a changed ref or version never shows the previous payload under the new label.
-  const [state, setState] = useState<{ url: string | null; data?: T; error?: string; status?: number; loading: boolean; stale?: boolean; failing?: string }>({ url, loading: !!url })
+  // State and ETags belong to both the resource and authenticated fetcher.
+  const [state, setState] = useState<{ url: string | null; fetcher: typeof fetcher; data?: T; error?: string; status?: number; loading: boolean; stale?: boolean; failing?: string }>({ url, fetcher, loading: !!url })
   const etag = useRef<string | null>(null)
-  const shown = useRef<string | null | undefined>(undefined)
+  const shown = useRef<{ url: string | null; fetcher: typeof fetcher } | undefined>(undefined)
   useEffect(() => {
-    if (shown.current !== url) {
-      shown.current = url
+    const sameAccount = shown.current?.fetcher === fetcher
+    if (shown.current?.url !== url || !sameAccount) {
+      shown.current = { url, fetcher }
       etag.current = null
-      setState((current) => (keepPrevious && url && current.data !== undefined ? { ...current, url, loading: true, error: undefined } : { url, loading: !!url }))
+      setState((current) => (sameAccount && keepPrevious && url && current.data !== undefined ? { ...current, url, loading: true, error: undefined } : { url, fetcher, loading: !!url }))
     }
     if (!url) return
     let alive = true
@@ -48,7 +49,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
         // Only a fresh 200 or 304 ends a stale episode and restores its quick retries; an error answer is not fresh (root, #180).
         if (!stale && (response.ok || response.status === 304)) retries = 0
         if (response.status === 304) {
-          setState((current) => (current.stale === stale && current.failing === failing ? current : { ...current, stale, failing }))
+          setState((current) => (!current.error && current.stale === stale && current.failing === failing ? current : { ...current, loading: false, error: undefined, status: 304, stale, failing }))
           return
         }
         if (!response.ok) {
@@ -59,12 +60,15 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
           } catch {
             /* the status is the reason */
           }
-          setState((current) => ({ ...current, loading: false, error: reason, status: response.status }))
+          if (!alive) return
+          const refused = [401, 403, 404].includes(response.status)
+          if (refused) etag.current = null
+          setState((current) => ({ ...(refused ? { url, fetcher } : current), loading: false, error: reason, status: response.status }))
           return
         }
         etag.current = response.headers.get('ETag')
         const data = (await response.json()) as T
-        if (alive) setState({ url, data, loading: false, status: response.status, stale, failing })
+        if (alive) setState({ url, fetcher, data, loading: false, status: response.status, stale, failing })
       } catch (error) {
         if (alive && !controller.signal.aborted && dropped < NETWORK_RETRIES) lost = true
         else if (alive && !controller.signal.aborted)
@@ -88,6 +92,6 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
       window.clearTimeout(timer)
     }
   }, [url, poll, fetcher]) // eslint-disable-line react-hooks/exhaustive-deps
-  return keepPrevious || state.url === url ? state : { url, loading: !!url }
+  return state.fetcher === fetcher && (keepPrevious || state.url === url) ? state : { url, loading: !!url }
 }
 

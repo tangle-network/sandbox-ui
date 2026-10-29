@@ -16,12 +16,12 @@ export function useLiveInspection(url: string | undefined, live: boolean, fetche
   const inventory = useDocument<Inspection>(url ?? null, live ? 3000 : undefined, false, fetcher)
   const [selected, select] = useState<string>()
   const [download, setDownload] = useState<{ key: string; href: string }>()
-  const files = inventory.data?.files?.entries ?? []
+  const files = inventory.error ? [] : inventory.data?.files?.entries ?? []
   const entry = files.find((file) => file.path === selected) ?? files[0]
   const fileUrl = entry && url ? `${url}/file?path=${encodeURIComponent(entry.path)}` : null
   const content = useDocument<Inspection>(fileUrl, live ? 3000 : undefined, false, fetcher)
   const file = content.data?.file
-  const valid = file && entry && file.path === entry.path && file.sha256 === entry.sha256 && file.byteLength === entry.byteLength
+  const valid = !inventory.error && !content.error && file && entry && file.path === entry.path && file.sha256 === entry.sha256 && file.byteLength === entry.byteLength
   const fileKey = valid ? `${entry.path}:${entry.sha256}` : undefined
   useEffect(() => {
     if (!fileKey || !file) return
@@ -30,12 +30,12 @@ export function useLiveInspection(url: string | undefined, live: boolean, fetche
     return () => URL.revokeObjectURL(href)
   }, [fileKey, file?.content])
   const coverage = inventory.data?.coverage
-  const scoreboard = inventory.status === 404 ? undefined : coverage ? (
+  const scoreboard = inventory.error ? <p className="ws-status" role="alert">Conversation inspection unavailable: {inventory.error}</p> : coverage ? (
     <details className="ws-status" open={coverage.status !== 'complete'} data-capture-status={coverage.status}>
       <summary>{coverage.status === 'complete' ? 'Conversation retained' : 'Conversation incomplete'}</summary>
       <p>{coverage.reason ?? coverage.source}</p>{!!inventory.data?.context?.length && <details><summary>Recorded context</summary>{inventory.data.context.map((row, index) => <pre className="ws-code" key={`${row.at}:${index}`}>{row.event.text}</pre>)}</details>}{inventory.data?.files?.scope === 'none' && <p>{inventory.data.files.reason ?? 'No workspace inventory was captured.'}</p>}
     </details>
-  ) : inventory.error ? <p className="ws-status" role="alert">Conversation inspection unavailable: {inventory.error}</p> : undefined
+  ) : undefined
   return {
     scoreboard: <>{scoreboard}{inventory.data?.files && !inventory.data.files.complete && <p className="ws-status" role="alert">Workspace inventory incomplete: {inventory.data.files.reason ?? 'Some files could not be retained.'}</p>}</>,
     files: entry ? (

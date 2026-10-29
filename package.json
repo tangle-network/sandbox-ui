@@ -1,6 +1,6 @@
 {
   "name": "@tangle-network/sandbox-ui",
-  "version": "2.0.18",
+  "version": "2.0.19",
   "license": "MIT",
   "packageManager": "pnpm@12.6.0",
   "description": "Unified UI component library for Tangle Sandbox \u2014 primitives, chat, dashboard, terminal, editor, and workspace components",
@@ -99,6 +99,10 @@
     "./pages": {
       "import": "./dist/pages.js",
       "types": "./dist/pages.d.ts"
+    },
+    "./hooks/use-document": {
+      "import": "./dist/hooks/use-document.js",
+      "types": "./dist/hooks/use-document.d.ts"
     },
     "./hooks": {
       "import": "./dist/hooks.js",

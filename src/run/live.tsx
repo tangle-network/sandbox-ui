@@ -1,5 +1,5 @@
 import { runStatus } from '@tangle-network/ui/run'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { TraceWorkspace } from './trace-workspace'
 import type { AgentStreamOpener } from './agent-stream'
@@ -26,6 +26,7 @@ const graphStatus = (status: string): AgentGraphStatus => { const state = flowSt
 const isOpen = (status: string) => ['running', 'waiting', 'needs-you'].includes(flowStatus(status))
 type Frame = { sequence: number; observedAt: number; reset: boolean; snapshots: Snapshot[] }
 
+/** Keep one transport identity per authenticated account; changing it discards the previous view. */
 export interface LiveRunTransport {
   fetch?: typeof globalThis.fetch
   openEventSource?: AgentStreamOpener
@@ -33,7 +34,10 @@ export interface LiveRunTransport {
 
 /** Both the Discovery host and agent-runtime-top mount this same stream consumer and shared run workspace. */
 export function LiveRun(props: { api: string; transport?: LiveRunTransport }) {
-  return <LiveRunView key={props.api} {...props} />
+  const scope = useRef({ api: props.api, transport: props.transport, fetcher: props.transport?.fetch, opener: props.transport?.openEventSource, revision: 0 })
+  if (scope.current.api !== props.api || scope.current.transport !== props.transport || scope.current.fetcher !== props.transport?.fetch || scope.current.opener !== props.transport?.openEventSource)
+    scope.current = { api: props.api, transport: props.transport, fetcher: props.transport?.fetch, opener: props.transport?.openEventSource, revision: scope.current.revision + 1 }
+  return <LiveRunView key={scope.current.revision} {...props} />
 }
 
 function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTransport }) {

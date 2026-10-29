@@ -14,11 +14,13 @@ assert.ok(consumer, 'Use the fresh installed shared-package consumer')
 const require = createRequire(resolve(consumer, 'package.json'))
 const assets = dirname(require.resolve('@tangle-network/sandbox-ui/workspace-viewer.js'))
 const evidence = process.env.RUNTIME_AUTHORITY_EVIDENCE
+let documentEntry = '@tangle-network/sandbox-ui/hooks/use-document'
+try { require.resolve(documentEntry) } catch { documentEntry = '@tangle-network/sandbox-ui/hooks' }
 
 async function openHost() {
   const scratch = await mkdtemp(resolve(consumer, '.authority-host-'))
   const entry = resolve(scratch, 'host.js')
-  await writeFile(entry, `import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{LiveRun}from'@tangle-network/sandbox-ui/run/live';import{useDocument}from'@tangle-network/sandbox-ui/hooks';
+  await writeFile(entry, `import React,{useState} from 'react';import{createRoot}from'react-dom/client';import{LiveRun}from'@tangle-network/sandbox-ui/run/live';import{useDocument}from'${documentEntry}';
 const transport=account=>({fetch:(url,init)=>fetch(url,{...init,headers:{...init?.headers,'X-Account':account}}),openEventSource:url=>new EventSource(url+'?account='+account)});const A=transport('A'),B=transport('B');
 function Probe({transport}){const doc=useDocument('/probe',undefined,true,transport.fetch);return React.createElement('output',{'aria-label':'Document authority'},doc.data?.owner??doc.error??'Loading document')}
 function Host(){const[t,set]=useState(A);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>set(B)},'Switch account'),React.createElement(Probe,{transport:t}),React.createElement(LiveRun,{api:'/api',transport:t}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
@@ -54,7 +56,8 @@ function Host(){const[t,set]=useState(A);return React.createElement(React.Fragme
     res.setHeader('content-type', 'text/html'); res.end('<!doctype html><html class="dark" data-theme="dark"><link rel="stylesheet" href="/styles.css"><div id="host"></div><script type="module" src="/host.js"></script></html>')
   })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
-  const browser = await chromium.launch({ headless: true }), context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  if (evidence) await mkdir(evidence, { recursive: true })
+  const browser = await chromium.launch({ headless: true }), context = await browser.newContext({ viewport: { width: 1280, height: 900 }, ...(evidence ? { recordVideo: { dir: evidence, size: { width: 1280, height: 900 } } } : {}) })
   await context.addInitScript(() => {
     window.authorityUrls = { created: [], revoked: [] }
     const create = URL.createObjectURL.bind(URL), revoke = URL.revokeObjectURL.bind(URL)

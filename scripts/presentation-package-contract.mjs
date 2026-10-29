@@ -230,9 +230,22 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               await windowed.getByRole("button", { name: "Append retained entries" }).click();
               await windowed.getByText("Source entry 549", { exact: true }).waitFor();
               assert(await windowed.locator("[data-source-entry]").count() < 100, "appended target must remain windowed");
+              const list = windowed.getByRole("list");
+              await list.evaluate(element => element.addEventListener("wheel", event => {
+                element.dataset.observedWheel = String(event.deltaY);
+              }, { once: true }));
+              const listMetrics = () => list.evaluate(element => ({
+                top: element.scrollTop, height: element.clientHeight, total: element.scrollHeight,
+                wheel: element.dataset.observedWheel ?? null,
+                first: element.querySelector("[data-source-entry]")?.getAttribute("data-source-entry"),
+                last: [...element.querySelectorAll("[data-source-entry]")].at(-1)?.getAttribute("data-source-entry"),
+              }));
               // Real reader input ends the target-settling phase.
-              await windowed.getByRole("list").hover();
+              await list.hover();
+              console.log("list-before-wheel", { lane, width, mode, ...await listMetrics() });
               await page.mouse.wheel(0, -20000);
+              await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+              console.log("list-after-wheel", { lane, width, mode, ...await listMetrics() });
               await windowed.getByText("Source entry 0", { exact: true }).waitFor();
               assert.deepEqual(errors, [], "packed browser consumer must not throw");
               states.push({ lane, width, mode, ...measured });

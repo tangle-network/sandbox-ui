@@ -92,6 +92,6 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
       window.clearTimeout(timer)
     }
   }, [url, poll, fetcher]) // eslint-disable-line react-hooks/exhaustive-deps
-  return state.fetcher === fetcher && (keepPrevious || state.url === url) ? state : { url, loading: !!url }
+  return state.fetcher === fetcher && (keepPrevious || state.url === url) ? state : { url, fetcher, loading: !!url }
 }
 

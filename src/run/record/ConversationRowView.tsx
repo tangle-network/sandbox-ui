@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { AgentTimelineStep, SpeakerHeader, agentTimelineStepKind, type AgentTimelineItem, type AgentTimelineStepKind } from '@tangle-network/ui/chat'
 import { ExpandedToolDetail, InlineThinkingItem, RunRowShell, type ToolCallType } from '@tangle-network/ui/run'
 import type { ToolPart } from '@tangle-network/ui/types'
 import { getToolCategory, getToolDisplayMetadata } from '@tangle-network/ui/utils'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@tangle-network/ui/primitives'
-import { Brain, Search, Terminal, Timer, Settings } from 'lucide-react'
+import { Brain, Timer, Settings } from 'lucide-react'
 import type { ConversationEvent as RecordEvent } from './types.js'
 import { callsOf, compact, ms, preview, textOf, toolKey, utcTime } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
@@ -25,15 +25,13 @@ const spanLabel = (value: number) => {
   return minutes < 60 ? `${minutes} m ${seconds % 60} s` : `${Math.floor(minutes / 60)} h ${minutes % 60} m`
 }
 
-const TOOL_ICONS = { command: Terminal, read: Search, search: Search, write: Terminal, edit: Terminal, task: Settings, web: Search, todo: Timer, other: Settings }
-function ToolIcon({ name }: { name: string }) { const Icon = /think|reason/.test(name) ? Brain : /await|wait|sleep|poll/.test(name) ? Timer : TOOL_ICONS[getToolCategory(name)]; return <Icon size={14} aria-hidden="true" /> }
-
 function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind: 'tool' }>; previous?: AgentTimelineStepKind }) {
-  const part = item.part!, cost = part.state.metadata?.costUsd, time = part.state.time
-  return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row" data-tool-category={getToolCategory(part.tool)} data-tool-status={part.state.status}>
+  const part = item.part!, cost = part.state.metadata?.costUsd, time = part.state.time, category = getToolCategory(part.tool)
+  const tone = part.state.status === 'error' ? 'var(--surface-danger-text)' : ['command', 'write', 'edit'].includes(category) ? 'var(--tone-teal-icon)' : 'var(--accent-text)'
+  return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row rounded-[var(--radius-control)] border-l-2 border-l-[var(--record-tool-tone)] bg-[color-mix(in_srgb,var(--record-tool-tone)_7%,transparent)] px-1.5 py-0.5 hover:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)]" style={{ '--record-tool-tone': tone } as CSSProperties} data-tool-category={category} data-tool-status={part.state.status}>
     <AgentTimelineStep item={item} previous={previous} renderToolActions={toolNote} />
-  </div></HoverCardTrigger><HoverCardContent className="record-tool-preview" side="top" collisionPadding={16}>
-    <strong>{item.call.label}</strong><dl><dt>Duration</dt><dd>{time?.end != null && time.start != null ? spanLabel(time.end - time.start) : 'Not recorded'}</dd><dt>Cost</dt><dd>{typeof cost === 'number' ? `$${cost.toFixed(4)}` : 'Not recorded'}</dd></dl>
+  </div></HoverCardTrigger><HoverCardContent className="record-tool-preview w-[min(640px,calc(100vw-32px))] max-h-[min(70vh,620px)] overflow-auto text-sm [&_pre]:text-[13px] [&_code]:text-[13px]" side="top" collisionPadding={16}>
+    <strong>{item.call.label}</strong><dl className="my-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1"><dt>Duration</dt><dd className="m-0 text-right">{time?.end != null && time.start != null ? spanLabel(time.end - time.start) : 'Not recorded'}</dd><dt>Cost</dt><dd className="m-0 text-right">{typeof cost === 'number' ? `$${cost.toFixed(4)}` : 'Not recorded'}</dd></dl>
     <ExpandedToolDetail part={part} />
   </HoverCardContent></HoverCard>
 }
@@ -137,7 +135,7 @@ function pollItem(row: Extract<ConversationRow, { kind: 'polls' }>): AgentTimeli
     id: row.key,
     kind: 'custom',
     content: (
-      <RunRowShell icon={<ToolIcon name={row.name} />} title={toolName(row.name)} description={[summary.label, args].filter(Boolean).join(' · ')} descriptionMono>
+      <RunRowShell icon={<Timer size={14} aria-hidden="true" />} title={toolName(row.name)} description={[summary.label, args].filter(Boolean).join(' · ')} descriptionMono>
         <ol className="poll-calls">
           {row.events.map((event) => (
             <li key={event.id} data-message={event.id}><time dateTime={event.at}>{utcTime(event.at)}</time><span className="mono">{argsLabel(callsOf(event)[0]?.input) ?? compact(callsOf(event)[0]?.input ?? '')}</span></li>
@@ -152,7 +150,7 @@ function pollItem(row: Extract<ConversationRow, { kind: 'polls' }>): AgentTimeli
 const hollowItem = (row: Extract<ConversationRow, { kind: 'hollow' }>): AgentTimelineItem => ({
   id: row.key,
   kind: 'custom',
-  content: <RunRowShell icon={<ToolIcon name={row.calls[0]?.name ?? 'tool'} />} title={hollowSummary(row.calls)} description="args not captured" durationMs={row.spanMs || undefined} />,
+  content: <RunRowShell icon={<Settings size={14} aria-hidden="true" />} title={hollowSummary(row.calls)} description="args not captured" durationMs={row.spanMs || undefined} />,
 })
 
 /** What one record row shows, as the kit's timeline items. */
@@ -192,7 +190,7 @@ export function rowItems(row: ConversationRow, context: ConversationRenderContex
     const output = outputTokens(event.detail)
     const span = thinkingSpan.get(event.id)
     const label = output !== null ? `${span !== undefined && span >= 1000 ? `for ${spanLabel(span)} · ` : ''}${tokenLabel(output)} output tokens · ${withheld.join(' · ')}` : withheld.join(' · ')
-    items.push({ id: `${event.id}:thinking`, kind: 'custom', content: <span data-thinking-withheld><RunRowShell icon={<ToolIcon name="think" />} title="Thought" description={label} /></span> })
+    items.push({ id: `${event.id}:thinking`, kind: 'custom', content: <span data-thinking-withheld><RunRowShell icon={<Brain size={14} aria-hidden="true" />} title="Thought" description={label} /></span> })
   }
   if (failed) items.push({ id: event.id, kind: 'status', tone: 'error', label: 'The request failed', detail: message ? compact(message).slice(0, 400) : 'No assistant response is present in this record.' })
   else if (finding) items.push({ id: event.id, kind: 'status', tone: 'info', label: 'Recorded finding', detail: compact(message).slice(0, 600) })

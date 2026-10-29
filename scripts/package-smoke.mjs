@@ -67,6 +67,12 @@ try {
     throw new Error("dist/chat.js is missing; run pnpm build before test:package");
   }
 
+  execFileSync(join(root, "node_modules/.bin/tsc"), [
+    "--ignoreConfig", "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2022",
+    "--jsx", "react-jsx", "--module", "ESNext", "--moduleResolution", "bundler", "--lib", "ES2022,DOM",
+    join(root, "scripts/record-conversation-types.tsx"),
+  ], { cwd: root, stdio: "inherit" });
+
   mkdirSync(join(consumerDir, "src"), { recursive: true });
 
   let tarballPath;

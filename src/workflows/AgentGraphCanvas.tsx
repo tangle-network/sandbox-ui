@@ -277,7 +277,9 @@ export function AgentGraphCanvas({
     event.stopPropagation();
     const position = layout?.positions.get(target);
     if (position) void rfRef.current?.setCenter(position.x + card.width / 2, position.y + card.height / 2, { zoom: 1 });
-    requestAnimationFrame(() => requestAnimationFrame(() => wrapperRef.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(target)}"]`)?.focus()));
+    const focus = () => wrapperRef.current?.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(target)}"]`);
+    const visible = focus();
+    if (visible) visible.focus(); else requestAnimationFrame(() => requestAnimationFrame(() => focus()?.focus()));
   }, [byId, select, layout, topology, card, animateMotion]);
   const activityRank = (agent: (typeof nodes)[number]) => agent.status === "needs-you" ? 0 : agent.status === "failed" ? 1 : quietActivity(agent, clock) ? 2 : agent.status === "waiting" ? 3 : agent.status === "running" ? 4 : 5;
   const parentOf = new Map(edges.filter(e => e.kind === "spawn").map(e => [e.to, e.from]));

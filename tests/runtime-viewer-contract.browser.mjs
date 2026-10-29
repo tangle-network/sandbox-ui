@@ -107,6 +107,7 @@ test('installed Runtime view preserves failure and unknown lifecycle evidence ac
       await files.getByRole('radio', { name: 'File', exact: true }).click()
       await files.getByText('Provenance', { exact: true }).click()
       await files.getByText(retained.sha256, { exact: true }).waitFor()
+      assert.equal(await files.evaluate(node => { const right = node.getBoundingClientRect().right; return [...node.querySelectorAll('code')].every(code => [...code.getClientRects()].every(rect => rect.right <= right + 1)) }), true, 'Every retained provenance digest remains readable inside the phone pane')
       const download = await Promise.all([page.waitForEvent('download'), files.getByRole('link', { name: 'Download', exact: true }).click()]).then(([item]) => item)
       assert.equal(await readFile(await download.path(), 'utf8'), retained.content, 'Download preserves exact retained bytes')
       await files.scrollIntoViewIfNeeded()

@@ -1,9 +1,16 @@
 # Changelog
 
+## 2.0.5
+
+- Collapsible agent teams, a context map for overflow, visible-only desktop nodes and bounded phone pages keep 100+ agents readable and reachable. Selecting a collapsed agent reveals it.
+- Pointer and keyboard detail cards retain complete recorded metrics with units, scroll long tool inventories and preserve unknown values.
+
 ## 2.0.4
 
-- Agent trees open at reading size with stable columns, a context map for overflow, collapsible teams and bounded phone pages. Selecting a distant or collapsed agent reveals it without shrinking its text.
-- Pointer and keyboard detail cards retain complete recorded metrics, scroll long tool inventories, and preserve unknown values. Run-card supporting type has a 13px floor.
+- Keep live graph cards at a readable scale, place managers with their worker groups, and align complete result rows.
+- Preserve phone reading order through state changes; show complete recent-change text and timestamps.
+- Render recorded command updates immediately without routine queue motion, using the shared type and control scale.
+- Adopt the compact Charts phone layout, static key and clarified work and recorded-end encodings.
 
 ## 2.0.3
 

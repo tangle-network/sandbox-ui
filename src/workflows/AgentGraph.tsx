@@ -59,9 +59,9 @@ export interface AgentGraphProps {
   /** Hub layout: the header title. Default "Agent graph". */
   title?: ReactNode;
   /**
-   * Tree layout: live cards for a running run. Each card shows a status pill that breathes while it runs, its thinking
-   * line (`turn`) and last three `events` streaming in with how long ago each ran (`at`), its model, effort, time alive and commits; a settled
-   * agent shrinks to a chip with its `result`, and a new spawn grows in. Cards keep a fixed size, so updates never move one.
+   * Tree layout: readable task summaries, the latest three events and model/accounting details. Desktop slots stay
+   * fixed through status updates; completed results compact while failures retain their evidence. Phones preserve
+   * their initial attention order. Only the running dot breathes; commands update without routine sliding.
    */
   live?: boolean;
   /** Host tool identity, such as charts' toolGlyph(event.label). Core graphs need no charts dependency. */

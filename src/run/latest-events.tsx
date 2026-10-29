@@ -1,7 +1,7 @@
 import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AgentGraphNode, AgentGraphStatus } from "../workflows/agent-graph-layout";
-import { tokenMilliseconds, useMotionAllowed, useRunNow } from "../workflows/run-ui-state";
+import { tokenMilliseconds, useRunNow } from "../workflows/run-ui-state";
 import { fmtEventTime } from "../workflows/format";
 
 export interface LatestEventsProps {
@@ -16,19 +16,8 @@ export interface LatestEventsProps {
 type Entry = { id: string; agentId: string; name: string; label: string; at?: number; status: AgentGraphStatus; observed?: boolean };
 
 function EventRow({ entry, now, onSelect }: { entry: Entry; now: number; onSelect?: (entry: Entry) => void }) {
-  const ref = useRef<HTMLLIElement>(null), motion = useMotionAllowed();
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const style = getComputedStyle(element);
-    const animation = element.animate([
-      { opacity: 0, ...(motion ? { transform: "translateY(calc(" + style.getPropertyValue("--arrive-distance") + " * -1))" } : {}) },
-      { opacity: 1, ...(motion ? { transform: "none" } : {}) },
-    ], { duration: tokenMilliseconds(motion ? "--duration-arrive" : "--duration-fast", element), easing: style.getPropertyValue("--ease-entrance").trim() || "ease-out" });
-    return () => animation.cancel();
-  }, [entry.id, motion]);
   const meta = statusMeta(entry.observed ? entry.status : "unknown"), age = fmtEventTime(entry.at, now);
-  return <li ref={ref}><button type="button" disabled={!onSelect} onClick={() => onSelect?.(entry)} title={entry.name + ": " + entry.label}>
+  return <li><button type="button" disabled={!onSelect} onClick={() => onSelect?.(entry)} title={entry.name + ": " + entry.label}>
     <span className="ag-latest-dot" style={{ background: entry.observed ? "var(" + meta.token + ")" : "transparent", border: entry.observed ? undefined : "1.5px solid var(" + meta.token + ")" }} aria-hidden />
     <strong>{entry.name}</strong>
     {entry.observed && <span className="ag-latest-state" style={{ color: "var(" + meta.token + ")" }}>{entry.status !== "running" && <RunStatusIcon status={entry.status} size={14} aria-hidden />}{meta.label}</span>}
@@ -78,7 +67,7 @@ export function LatestEvents({ agents, n = 5, now, live = now === undefined, sel
   return <section className="ag-latest" aria-label="Latest activity" tabIndex={0} onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
     onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
     <header><strong>Latest activity</strong><span>{paused ? "Paused while reading" : "Recorded events · age"}</span>{paused && <button type="button" onClick={refresh}>Show latest</button>}</header>
-    <ol tabIndex={0} aria-label="Recorded activity events" style={{ height: Math.min(limit, 3) * 28 }}>
+    <ol tabIndex={0} aria-label="Recorded activity events" style={{ "--ag-latest-rows": Math.min(limit, 3) } as CSSProperties}>
       {visible.length ? visible.map(entry => <EventRow key={entry.id} entry={entry} now={clock} onSelect={onSelect ? item => { setPins(old => old.filter(pin => pin.agentId !== item.agentId)); onSelect(item.agentId); } : undefined} />) : <li className="ag-latest-empty">No activity events were reported.</li>}
     </ol>
     <span className="sr-only" role="status" aria-live="polite">{announcement}</span>

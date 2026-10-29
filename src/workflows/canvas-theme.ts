@@ -47,11 +47,8 @@ export function useColorMode(wrapperRef: RefObject<HTMLDivElement | null>, hasGr
   return mode;
 }
 
-/** The selected node's ring. An `outline` rather than a border or a box-shadow
- *  because both of those are already spoken for — the border carries tone and
- *  run status, the shadow carries the running/waiting glow — and an outline
- *  composes with both without disturbing the laid-out box. */
+/** Selection preserves the status border and stays quieter than failure or a response request. */
 export const SELECTION_OUTLINE: CSSProperties = {
-  outline: "2px solid hsl(var(--foreground) / .7)",
+  outline: "1px solid hsl(var(--foreground) / .45)",
   outlineOffset: 2,
 };

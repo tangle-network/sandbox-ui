@@ -20,7 +20,7 @@ import {
   useInternalNode,
 } from "@xyflow/react";
 import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
-import { ChevronDown, Users } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { ambientStyle, syncAmbient, quietActivity, useRunNow } from "./run-ui-state";
 import { MOTION_CONTROL } from "../lib/motion";
 import type {
@@ -119,7 +119,7 @@ export function AgentCardView({ agent, selected, direction, now: fixed, onOpen, 
     {handles && <Handles direction={direction} />}
     <div className="flex min-w-0 items-center gap-2">
       <span className="grayscale hover:grayscale-0"><NodeMark kind="agent.run" model={agent.model ?? undefined} accent={KIND_ACCENT["agent.run"]} tile={18} /></span>
-      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-[18px]">{parentLabel && <span className="ag-parent-label">{parentLabel} / </span>}{agent.label}</span>
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold leading-[18px]">{parentLabel && <span className="ag-parent-label">{parentLabel} / </span>}{agent.label}</span>
       <span className="text-xs text-muted-foreground tabular-nums" title={agent.costUsd == null ? "Cost not reported" : "Cost"}>{fmtCost(agent.costUsd ?? undefined) ?? "—"}</span>
     </div>
     <p className="m-0 line-clamp-2 min-h-4 text-xs text-foreground leading-4">{(agent.status === "failed" ? agent.result ?? agent.turn : agent.turn) || "—"}</p>
@@ -133,23 +133,12 @@ export function AgentCardView({ agent, selected, direction, now: fixed, onOpen, 
 export function AgentCard({ data }: NodeProps<AgentCardNode>) { return <AgentCardView {...data} handles />; }
 
 export type AgentFrameNode = Node<
-  { frame: AgentFrame; statuses: readonly AgentGraphStatus[]; quietCount?: number; direction: AgentGraphDirection; label?: string; onToggle?: () => void },
+  { frame: AgentFrame; direction: AgentGraphDirection; label: string; onToggle: () => void },
   "agentFrame"
 >;
 
-/** The statuses a grid caption counts: the ones a reader looks for. */
-const CAPTION_STATUSES: readonly (AgentGraphStatus | "quiet")[] = ["needs-you", "failed", "quiet", "waiting", "running"];
-
 export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
-  const { frame, statuses, direction } = data;
-  const counts = CAPTION_STATUSES.map((status) => ({
-    status,
-    n: status === "quiet" ? data.quietCount ?? 0 : statuses.filter((s) => s === status).length,
-  })).filter((c) => c.n > 0);
-  const words = [
-    `${frame.group.memberIds.length} agents`,
-    ...counts.map((c) => `${c.n} ${c.status === "quiet" ? "quiet" : agentStatus(c.status).label.toLowerCase()}`),
-  ].join(", ");
+  const { frame, direction } = data;
   return (
     <div
       className="relative h-full w-full rounded-2xl border"
@@ -158,19 +147,8 @@ export function AgentFrameBox({ data }: NodeProps<AgentFrameNode>) {
         borderColor: "hsl(var(--foreground) / 0.08)",
       }}
     >
-      <Handles direction={direction} source={false} />
-      <div className="flex h-10 items-center gap-2.5 px-3 text-sm text-muted-foreground leading-5">
-        <button type="button" className="nodrag nopan flex min-w-0 items-center gap-1.5 rounded text-left font-medium" aria-label={`${frame.collapsed ? "Expand" : "Collapse"} ${data.label ?? "agent"} team`} aria-expanded={!frame.collapsed} onClick={event => { event.stopPropagation(); data.onToggle?.(); }}>
-          <ChevronDown size={16} className={frame.collapsed ? "-rotate-90" : undefined} /><Users size={14} /><span className="truncate">{data.label ? `${data.label} · ` : ""}{frame.group.memberIds.length} agents</span>
-        </button>
-        <span className="sr-only">{words}</span>
-        {counts.map((c) => (
-          <span key={c.status} aria-hidden className="flex items-center gap-1 tabular-nums">
-            {c.status !== "quiet" && <StatusGlyph status={c.status} size={11} />}
-            {c.n}{c.status === "quiet" ? " quiet" : ""}
-          </span>
-        ))}
-      </div>
+      <Handles direction={direction} />
+      <button type="button" className="nodrag nopan absolute right-3 top-2 flex h-16 w-8 flex-col items-center justify-center gap-1 rounded text-sm text-muted-foreground hover:bg-muted focus-visible:outline" aria-label={`${frame.collapsed ? "Expand" : "Collapse"} ${data.label} team`} aria-expanded={!frame.collapsed} title={`${data.label} · ${frame.group.memberIds.length} agents`} onClick={event => { event.stopPropagation(); data.onToggle(); }}><ChevronDown size={16} className={frame.collapsed ? "-rotate-90" : undefined} /><span>{frame.group.memberIds.length}</span></button>
     </div>
   );
 }

@@ -216,7 +216,7 @@ export function TraceWorkspace({
               : <NotTimeIndexed label="Conversation" />}
           </div>
           {unseen && (
-            <button type="button" onClick={jump}
+            <button type="button" onClick={() => jump()}
               className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-border bg-background px-3 py-1 text-xs shadow-sm">
               New output
             </button>

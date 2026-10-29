@@ -1,5 +1,6 @@
 /** Original real HTTP lifecycle, unknown/failure, selected transcript and navigation/camera contracts moved with LiveRun. */
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
 import { readFile, mkdir } from 'node:fs/promises'
 import { resolve, extname, dirname } from 'node:path'
@@ -34,9 +35,13 @@ test('installed Runtime view preserves failure and unknown lifecycle evidence ac
   const evidence = process.env.RUN_UI_EVIDENCE_DIR
   if (evidence) await mkdir(evidence, { recursive: true })
   let theme = 'dark', runtimeTotals, runtimeOutcome
+  const retained = { path: 'src/recorded.txt', content: 'Recorded workspace bytes\n', before: { content: 'Earlier workspace bytes\n', source: { kind: 'release', ref: 'original' } } }
+  const identity = content => ({ sha256: createHash('sha256').update(content).digest('hex'), byteLength: Buffer.byteLength(content) })
+  Object.assign(retained, identity(retained.content)); Object.assign(retained.before, identity(retained.before.content))
   const server = createServer(async (req, res) => {
     const path = new URL(req.url, 'http://localhost').pathname
     const json = data => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(data)) }
+    if (path.startsWith('/api/agents/') && !path.endsWith('/stream')) return json({ coverage: { status: 'complete', source: 'retained-http-fixture' }, files: { scope: 'workspace', complete: true, entries: [retained] }, ...(path.endsWith('/file') ? { file: retained } : {}) })
     if (path.startsWith('/api/agents/')) {
       res.setHeader('content-type', 'text/event-stream')
       return res.end(`event: rows\ndata: ${JSON.stringify({ generation: 'fixture', alive: false, events: [{ seq: 1, at: iso(now - 1000), event: { kind: 'text', text: 'Recorded response from the worker without a start timestamp.' } }] })}\n\nevent: end\ndata: {}\n\n`)
@@ -94,6 +99,18 @@ test('installed Runtime view preserves failure and unknown lifecycle evidence ac
       assert.equal(await recordedFailure.evaluate(node => node.scrollHeight <= node.clientHeight), true, 'The complete recorded reason remains readable even when the transcript does not repeat it')
       await capture('runtime-failure-details')
       await page.getByRole('button', { name: 'Close conversation', exact: true }).click()
+      const files = page.getByRole('region', { name: 'Retained files', exact: true })
+      await files.locator('[data-primary-content]').getByText(retained.content.trim(), { exact: true }).waitFor()
+      assert.equal(await files.getAttribute('data-file-hash'), retained.sha256)
+      await files.getByRole('radio', { name: 'Diff vs original', exact: true }).click()
+      await files.getByLabel('Diff for src/recorded.txt', { exact: true }).waitFor()
+      await files.getByRole('radio', { name: 'File', exact: true }).click()
+      await files.getByText('Provenance', { exact: true }).click()
+      await files.getByText(retained.sha256, { exact: true }).waitFor()
+      const download = await Promise.all([page.waitForEvent('download'), files.getByRole('link', { name: 'Download', exact: true }).click()]).then(([item]) => item)
+      assert.equal(await readFile(await download.path(), 'utf8'), retained.content, 'Download preserves exact retained bytes')
+      await files.scrollIntoViewIfNeeded()
+      await capture('runtime-retained-files')
       await fit()
       assert.ok(await page.locator('.ws-live [data-activity="quiet"]').count())
       assert.equal(await cardNamed('Agent 16').getAttribute('data-status'), 'unknown', 'An identity without a recorded lifecycle stays unknown')

@@ -30,7 +30,7 @@ function ToolIcon({ name }: { name: string }) { const Icon = /think|reason/.test
 
 function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind: 'tool' }>; previous?: AgentTimelineStepKind }) {
   const part = item.part!, cost = part.state.metadata?.costUsd, time = part.state.time
-  return <HoverCard openDelay={250}><HoverCardTrigger asChild><div className="record-tool-row" data-tool-category={getToolCategory(part.tool)} data-tool-status={part.state.status}>
+  return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row" data-tool-category={getToolCategory(part.tool)} data-tool-status={part.state.status}>
     <AgentTimelineStep item={item} previous={previous} renderToolActions={toolNote} />
   </div></HoverCardTrigger><HoverCardContent className="record-tool-preview" side="top" collisionPadding={16}>
     <strong>{item.call.label}</strong><dl><dt>Duration</dt><dd>{time?.end != null ? spanLabel(time.end - time.start) : 'Not recorded'}</dd><dt>Cost</dt><dd>{typeof cost === 'number' ? `$${cost.toFixed(4)}` : 'Not recorded'}</dd></dl>

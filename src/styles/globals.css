@@ -95,3 +95,36 @@
   .ag-latest ol { grid-template-columns: 1fr; margin-left: 0; height: 64px; }
 }
 @media (pointer: coarse) { .ag-live-respond { min-height: 44px; min-width: 44px; } }
+
+/* Recorded transcript: one chat column; source rows own only provenance and windowing. */
+.record-conversation { height: 29rem; overflow: auto; scroll-behavior: auto; overscroll-behavior: contain; }
+.record-conversation .virtual-row { display: flow-root; overflow-anchor: auto; }
+.record-conversation .chat-empty { padding: 1rem; font: var(--font-size-base)/1.5 var(--font-sans); color: hsl(var(--muted-foreground)); }
+.record-conversation .chat-row.selected { box-shadow: -10px 0 0 -8px var(--accent-text); }
+.record-conversation .chat-row.flagged { box-shadow: -10px 0 0 -8px hsl(var(--muted-foreground)); }
+.record-conversation .chat-row > :is(.publication-note, .clip-note, .event-flags) { margin: 4px 0 8px; }
+.record-conversation .ar-prompt-more { display: flex; justify-content: flex-end; margin: 4px 0 0; }
+.record-conversation .tool-note { font: var(--font-size-sm)/20px var(--font-sans); color: hsl(var(--muted-foreground)); white-space: nowrap; }
+.record-conversation .lifecycle-note { display: flex; gap: 8px; align-items: baseline; margin: 8px 0; padding: 0 12px; font: var(--font-size-sm)/1.5 var(--font-sans); color: hsl(var(--muted-foreground)); }
+.record-conversation .lifecycle-note b { color: hsl(var(--foreground)); font-weight: 600; }
+.record-conversation .lifecycle-note > span { min-width: 0; overflow-wrap: anywhere; }
+.record-conversation .poll-calls { margin: 0; padding: 4px 12px 8px; list-style: none; max-height: 18rem; overflow: auto; }
+.record-conversation .poll-calls li { display: flex; gap: 12px; padding: 2px 0; font: var(--font-size-sm)/1.5 var(--font-sans); color: hsl(var(--muted-foreground)); }
+.record-conversation .poll-calls .mono { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); }
+.record-conversation .transcript-edge { display: flex; justify-content: center; gap: 16px; margin: 8px 0 0; }
+.record-conversation .publication-note { font: var(--font-size-sm)/1.4 var(--font-sans); color: hsl(var(--muted-foreground)); overflow-wrap: anywhere; }
+.record-conversation .publication-note:empty { display: none; }
+.record-conversation .clip-note { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font: var(--font-size-sm)/1.5 var(--font-sans); color: hsl(var(--muted-foreground)); }
+.record-conversation .event-flags { display: inline-flex; gap: 4px; margin-left: 8px; }
+.record-conversation .event-flag { padding: 0 4px; min-height: 0; border: 0; border-radius: var(--radius-control); font: 600 var(--font-size-sm)/1.6 var(--font-sans); cursor: pointer; }
+.record-conversation .event-flag.polarity-good { color: var(--accent-text); background: color-mix(in srgb, var(--accent-text) 14%, transparent); }
+.record-conversation .event-flag.polarity-bad { color: hsl(var(--muted-foreground)); background: color-mix(in srgb, hsl(var(--muted-foreground)) 14%, transparent); }
+.record-conversation .event-flag.polarity-neutral { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
+.record-conversation .event-flag:is(.polarity-unknown, .polarity-uncalibrated) { color: hsl(var(--muted-foreground)); background: transparent; box-shadow: inset 0 0 0 1px hsl(var(--border)); border-style: dashed; }
+.record-conversation .event-flag.polarity-none { color: hsl(var(--muted-foreground)); background: transparent; }
+.record-conversation .link-button { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: var(--accent-text); font: inherit; cursor: pointer; }
+.record-conversation .link-button:hover, .record-conversation .link-button:focus-visible { text-decoration: underline; }
+
+.record-conversation .ar-turn { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 8px; padding-top: 12px; border-top: 1px solid hsl(var(--border)); }
+.record-conversation .ar-turn time, .record-conversation .ar-idle-event time { flex: none; color: hsl(var(--muted-foreground)); font: var(--font-size-sm)/1.5 var(--font-sans); }
+.record-conversation .ar-idle-event { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 16px; padding: 4px 0; }

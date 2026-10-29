@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.0
+
+- Own the retained conversation renderer previously in agent-record, including windowing, source anchors, prompt reconstruction, tool receipts, idle groups and uncaptured-data labels. Export it from `run`; validated presentation inputs require no runtime parser dependency.
+
 ## 2.0.6
 
 - Keep phone activity in a stable, scrollable row so operator requests and failures remain near the top during updates.

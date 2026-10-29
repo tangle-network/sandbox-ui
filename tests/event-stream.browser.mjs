@@ -36,7 +36,7 @@ function protocol(chunks){
     agent++
     if(agent===1){res.write(event('rows',{generation:'old',events:[row(7,'text',{text:'Old generation answer'})]}));first=res;return}
     if(agent===2)return res.end(event('rows',{generation:0,events:[row(1,'text',{text:'New generation answer'})]}))
-    return res.end(event('rows',{generation:0,events:[row(1,'text',{text:'New generation answer'}),row(2,'tool-call',{toolCallId:'read-1',toolName:'read',args:{path:'retained.txt'}}),row(3,'tool-result',{toolCallId:'read-1',result:'Retained bytes'})]})+event('end',{}))
+    return res.end(event('rows',{generation:0,events:[row(1,'text',{text:'New generation answer'}),row(2,'tool-call',{toolCallId:'read-1',toolName:'read',args:{path:'retained.txt'}}),row(3,'tool-result',{toolCallId:'read-1',result:'Retained bytes'})].filter(item=>item.seq>=Number(url.searchParams.get('after')??0))})+event('end',{}))
   })
   return {server,requests,continue:()=>first.end(),workspace:()=>workspace,close:()=>{for(const response of clients)response.end()}}
 }
@@ -50,8 +50,9 @@ for(const theme of ['light','dark'])for(const width of [1512,390])test(`packed s
     await page.goto(`http://127.0.0.1:${wire.server.address().port}/`)
     await page.waitForFunction(()=>document.querySelector('[data-state]')?.textContent.includes('Old generation answer'))
     wire.continue()
-    await page.waitForFunction(()=>{const state=JSON.parse(document.querySelector('[data-state]').textContent);return state.generation===0&&state.lastSeq===3&&!state.alive})
+    await page.waitForFunction(()=>{const state=JSON.parse(document.querySelector('[data-state]').textContent);return state.generation===0&&!state.alive})
     const state=JSON.parse(await page.locator('[data-state]').textContent())
+    assert.equal(state.lastSeq,3,'native reconnect must resume the replacement generation rather than the prior high cursor')
     assert.equal(state.entries.filter(item=>item.kind==='message').length,1);assert.equal(state.entries[0].content,'New generation answer')
     assert.equal(state.entries[1].call.output,'Retained bytes');assert.equal(state.entries[1].call.status,'success');assert.equal(state.entries[1].call.duration,1000)
     assert.deepEqual(wire.requests,[{path:'/agent',after:null},{path:'/agent',after:'7'},{path:'/agent',after:'1'}])

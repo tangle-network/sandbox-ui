@@ -136,7 +136,7 @@ export function VirtualList<T>({
       pending.current = null
       return
     }
-    if (scroller.current?.getAttribute('aria-label') === 'Retained source entries') console.log('VL settle', goal.key, viewport.top, scroller.current.scrollTop, scroller.current.scrollHeight, rows.current.has(goal.key))
+    if (scroller.current?.getAttribute('aria-label') === 'Retained source entries') console.log('VL settle', JSON.stringify({ goal: goal.key, viewport: viewport.top, actual: scroller.current.scrollTop, height: scroller.current.scrollHeight, start, end, total: offsets[items.length], goalOffset: offsets[items.findIndex(item => keyOf(item) === goal.key)], present: rows.current.has(goal.key), spacer: scroller.current.firstElementChild?.getAttribute('style'), row: rows.current.get(goal.key)?.getBoundingClientRect().top, box: scroller.current.getBoundingClientRect().top }))
     if (!scrollTo(goal.key, true)) return
     // Once rendered, its actual geometry wins over heights not measured by ResizeObserver yet.
     const row = rows.current.get(goal.key)

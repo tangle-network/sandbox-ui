@@ -238,7 +238,10 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
                 last: [...element.querySelectorAll("[data-source-entry]")].at(-1)?.getAttribute("data-source-entry"),
                 firstSpacer: element.firstElementChild?.getAttribute("style"), lastSpacer: element.lastElementChild?.getAttribute("style"),
               })) });
-              await windowed.getByText("Source entry 499", { exact: true }).waitFor();
+              await windowed.getByText("Source entry 499", { exact: true }).waitFor().catch(async error => {
+                console.log("final-variable-End", await windowed.getByRole("list").evaluate(e => ({top:e.scrollTop,total:e.scrollHeight,first:e.querySelector("[data-source-entry]")?.textContent,last:[...e.querySelectorAll("[data-source-entry]")].at(-1)?.textContent,html:e.innerHTML.slice(-700)})));
+                throw error;
+              });
               await page.keyboard.press("Home");
               await windowed.getByText("Source entry 0", { exact: true }).waitFor();
               await windowed.getByRole("button", { name: "Append retained entries" }).click();

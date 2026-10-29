@@ -3,6 +3,16 @@ import { mkdir } from "node:fs/promises";
 
 export default async function proveRecordedToolPreview(page, transcript, { lane, width, mode }) {
   const row = transcript.locator(".record-tool-row").last();
+  await page.mouse.move(1, 1);
+  const summary = row.locator('[data-record-tool-summary]');
+  assert.match(await summary.innerText(), /Returned/);
+  assert(await summary.evaluate(node => getComputedStyle(node).opacity === '1' && node.getBoundingClientRect().width > 40));
+  const logos = transcript.locator('[data-record-harness-logos] > span');
+  assert.equal(await logos.count(), 6);
+  for (const logo of await logos.all()) {
+    assert.match(await logo.getAttribute('title'), /Recorded model/);
+    assert(await logo.evaluate(node => { const box = node.getBoundingClientRect(), color = getComputedStyle(node).backgroundColor; const glyph = node.firstElementChild.getBoundingClientRect(); return box.width >= 28 && glyph.width >= 16 && color !== 'rgba(0, 0, 0, 0)' }));
+  }
   await row.hover();
   const preview = page.locator(".record-tool-preview");
   await preview.waitFor();

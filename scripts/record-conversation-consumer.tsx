@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 import { Conversation, VirtualList, indexRecord, withPrompts, type ConversationRecord } from "@tangle-network/sandbox-ui/run/record";
 import retained from "./record-conversation.json";
+import { HarnessLogo } from "@tangle-network/sandbox-ui/dashboard";
 import { AgentGraph } from "@tangle-network/sandbox-ui/workflows";
 
-// Use the retained capture with linked-session and clipped-result boundary variants.
 const record: ConversationRecord = structuredClone(retained);
 const agent = record.nodes[0]!;
 agent.assignment = "Reconstructed duplicate must not appear";
@@ -22,14 +22,13 @@ export function RecordConversationConsumer() {
   const [source, setSource] = useState(""), [category, setCategory] = useState("all"), [arrivals, append] = useState(0);
   const index = indexRecord({ ...prompted, events: [...prompted.events, ...Array.from({ length: arrivals }, (_, i) => ({ id: `arrival-${i}`, node: "linked-session", kind: "message", category: "other", label: "Agent", at: new Date(Date.parse("2026-10-05T06:01:02Z") + i * 1000).toISOString(), detail: { role: "assistant", publicText: `Live turn ${i + 1}` } }))] });
   return <section data-record-conversation data-initial-prompts={initial.length} data-steering-prompts={steering.length} style={{ margin: 16, minWidth: 0 }}>
+    <aside data-record-harness-logos>{["opencode", "claude-code", "codex", "glm", "kimi", "grok"].map(type => <HarnessLogo key={type} type={type} model="Recorded model" size={28} />)}</aside>
     <button type="button" onClick={() => setCategory(category === "all" ? "prompts" : "all")}>Filter retained prompts</button>
     <output data-source-open={source} style={{ overflowWrap: "anywhere" }}>{source}</output>
     <button type="button" onClick={() => { setCategory("all"); append(value => value + 1); }}>Append live turn</button>
     <Conversation key={arrivals ? "live" : "recorded"} live={arrivals > 0} index={index} actor={agent.id} selected={arrivals ? undefined : category === "all" ? "standalone-result" : "follow-up"} cutoff={Infinity} query="" category={category} openSource={(sha, event) => setSource(`${sha}:${event.id}`)} />
   </section>;
 }
-
-
 export function VirtualListConsumer() {
   const scroller = useRef<HTMLDivElement>(null);
   const [count, setCount] = useState(500), [target, setTarget] = useState<string>();

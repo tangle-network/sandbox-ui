@@ -26,6 +26,7 @@ export default defineConfig({
     connectors: "src/connectors/index.ts",
     pages: "src/pages/index.ts",
     hooks: "src/hooks/index.ts",
+    "hooks/use-document": "src/hooks/use-document.ts",
     "sdk-hooks": "src/sdk-hooks.ts",
     stores: "src/stores/index.ts",
     types: "src/types/index.ts",

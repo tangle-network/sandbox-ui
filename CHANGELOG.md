@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.19
+
+- Discard prior-account run/document state and ETags when authenticated transport changes. Remove retained previews, coverage claims and download URLs on permission or absence responses, with valid revalidation recovery. Expose the same document hook without unrelated optional peers.
+
 ## 2.0.18
 
 - Own the native Runtime live view, authenticated selected-agent inspection and retained files; ship standalone assets from the same component. Share the existing ETag document reader and preserve recorded no-winner/refusal outcomes. Read-only file inspection uses the existing files/code/diff components without pulling terminal peers into a live-view import.

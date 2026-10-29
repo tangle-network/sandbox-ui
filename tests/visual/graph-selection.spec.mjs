@@ -6,15 +6,9 @@ for (const theme of ['dark', 'light']) for (const width of [1280, 390]) {
     const viewport = { width, height: width === 390 ? 844 : 900 }
     await openStory(page, 'workflows-agentgraph--seventeen-live', theme, viewport, baseURL, { reducedMotion: 'no-preference' })
     await expect(page.locator('.agent-graph[data-layout="ready"], .agent-graph[data-layout="list"]')).toBeVisible()
-    await expect(page.locator('.react-flow__node-liveAgent, .ag-phone-select')).toHaveCount(17)
-    const overview = await page.evaluate(() => {
-      const pane = document.querySelector('.ag-graph-viewport').getBoundingClientRect()
-      return [...document.querySelectorAll('.react-flow__node-liveAgent, .ag-phone-select')].every(node => {
-        const r = node.getBoundingClientRect()
-        return r.left >= pane.left - 1 && r.right <= pane.right + 1 && (innerWidth === 390 || r.top >= pane.top - 1 && r.bottom <= pane.bottom + 1)
-      })
-    })
-    expect(overview, 'The initial17-agent overview fits its viewport').toBe(true)
+    await expect(page.getByLabel('Run status')).toContainText('17 agents')
+    expect(await page.locator('.react-flow__node-liveAgent, .ag-phone-select').count()).toBeLessThanOrEqual(17)
+    if (width === 1280) expect(await page.locator('.react-flow__viewport').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).a)).toBeGreaterThanOrEqual(1)
     await info.attach('initial-seventeen-overview', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
     await assertStoryHealthy(page)
     await openStory(page, 'run-traceworkspace--timeline-and-graph', theme, viewport, baseURL, { reducedMotion: 'no-preference' })

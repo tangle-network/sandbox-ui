@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import { AgentTimelineStep, SpeakerHeader, agentTimelineStepKind, type AgentTimelineItem, type AgentTimelineStepKind } from '@tangle-network/ui/chat'
 import { ExpandedToolDetail, InlineThinkingItem, RunRowShell, type ToolCallType } from '@tangle-network/ui/run'
 import type { ToolPart } from '@tangle-network/ui/types'
-import { getToolCategory, getToolDisplayMetadata } from '@tangle-network/ui/utils'
+import { formatDuration, getToolCategory, getToolDisplayMetadata } from '@tangle-network/ui/utils'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@tangle-network/ui/primitives'
 import { Brain, Timer, Settings } from 'lucide-react'
 import type { ConversationEvent as RecordEvent } from './types.js'
@@ -18,17 +18,12 @@ export const isLifecycle = (event: RecordEvent) =>
   event.category === 'lifecycle' || event.detail.lifecycle !== undefined
 
 const tokenLabel = (value: number) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
-const spanLabel = (value: number) => {
-  const seconds = Math.round(value / 1000)
-  if (seconds < 60) return `${seconds} s`
-  const minutes = Math.floor(seconds / 60)
-  return minutes < 60 ? `${minutes} m ${seconds % 60} s` : `${Math.floor(minutes / 60)} h ${minutes % 60} m`
-}
+const spanLabel = (value: number) => value < 1000 ? `${Math.round(value)} ms` : formatDuration(value)
 
 function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind: 'tool' }>; previous?: AgentTimelineStepKind }) {
   const part = item.part!, cost = part.state.metadata?.costUsd, time = part.state.time, category = getToolCategory(part.tool)
   const tone = part.state.status === 'error' ? 'var(--surface-danger-text)' : ['command', 'write', 'edit'].includes(category) ? 'var(--tone-teal-icon)' : 'var(--accent-text)'
-  return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row rounded-[var(--radius-control)] border-l-2 border-l-[var(--record-tool-tone)] bg-[color-mix(in_srgb,var(--record-tool-tone)_7%,transparent)] px-1.5 py-0.5 hover:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)]" style={{ '--record-tool-tone': tone } as CSSProperties} data-tool-category={category} data-tool-status={part.state.status}>
+  return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row [&_[data-run-row-duration]]:hidden rounded-[var(--radius-control)] border-l-2 border-l-[var(--record-tool-tone)] bg-[color-mix(in_srgb,var(--record-tool-tone)_7%,transparent)] px-1.5 py-0.5 hover:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)]" style={{ '--record-tool-tone': tone } as CSSProperties} data-tool-category={category} data-tool-status={part.state.status}>
     <AgentTimelineStep item={item} previous={previous} renderToolActions={toolNote} />
   </div></HoverCardTrigger><HoverCardContent className="record-tool-preview w-[min(640px,calc(100vw-32px))] max-h-[min(70vh,620px)] overflow-auto text-sm [&_pre]:text-[13px] [&_code]:text-[13px]" side="top" collisionPadding={16}>
     <strong>{item.call.label}</strong><dl className="my-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1"><dt>Duration</dt><dd className="m-0 text-right">{time?.end != null && time.start != null ? spanLabel(time.end - time.start) : 'Not recorded'}</dd><dt>Cost</dt><dd className="m-0 text-right">{typeof cost === 'number' ? `$${cost.toFixed(4)}` : 'Not recorded'}</dd></dl>
@@ -96,9 +91,12 @@ function toolItems(id: string, call: ToolCall, result: RecordEvent | undefined, 
 }
 
 const toolNote = (part: ToolPart) => {
-  const note = (part.state.metadata as { note?: string } | undefined)?.note
-  return note ? <span className="tool-note">{note}</span> : null
+  const note = part.state.metadata?.note, time = part.state.time
+  const duration = time?.end != null && time.start != null ? spanLabel(time.end - time.start) : 'Not recorded'
+  const result = typeof note === 'string' ? note : part.state.status === 'error' ? 'Failed' : part.state.status === 'running' ? 'Running' : 'Returned'
+  return <span data-record-tool-summary="" className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[13px] tabular-nums" style={{ color: part.state.status === 'error' ? 'var(--surface-danger-text)' : 'hsl(var(--muted-foreground))' }}><time data-record-tool-duration="">{duration}</time><span data-record-tool-result="">{result}</span></span>
 }
+
 type Clip = { bytes: number; sha256: string | null }
 const clipOf = (value: unknown): Clip | undefined => (value && typeof value === 'object' && 'bytes' in value ? (value as Clip) : undefined)
 /** A clipped body names what was left out and opens its full source text. */

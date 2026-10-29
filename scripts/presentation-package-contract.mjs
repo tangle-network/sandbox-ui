@@ -236,11 +236,15 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               }, { once: true }));
               const listMetrics = () => list.evaluate(element => ({
                 top: element.scrollTop, height: element.clientHeight, total: element.scrollHeight,
+                display: getComputedStyle(element).display, flexDirection: getComputedStyle(element).flexDirection,
+                rowHeight: element.querySelector(".virtual-row")?.getBoundingClientRect().height,
+                firstSpacer: element.firstElementChild?.getAttribute("style"), lastSpacer: element.lastElementChild?.getAttribute("style"),
                 wheel: element.dataset.observedWheel ?? null,
                 first: element.querySelector("[data-source-entry]")?.getAttribute("data-source-entry"),
                 last: [...element.querySelectorAll("[data-source-entry]")].at(-1)?.getAttribute("data-source-entry"),
               }));
               // Real reader input ends the target-settling phase.
+              await list.click({ position: { x: 8, y: 8 } });
               await list.hover();
               console.log("list-before-wheel", { lane, width, mode, ...await listMetrics() });
               await page.mouse.wheel(0, -20000);

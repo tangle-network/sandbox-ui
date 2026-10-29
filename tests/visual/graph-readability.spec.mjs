@@ -46,6 +46,8 @@ for (const theme of ['light', 'dark']) for (const width of [1512, 390]) {
     await expect(page.getByRole('tooltip')).toBeFocused()
     await page.getByRole('tooltip').press('End')
     await expect(page.getByRole('tooltip').getByText('Recorded tool 40', { exact: true })).toBeInViewport()
+    const longLabel = page.getByRole('tooltip').getByText('agent-runtime-coordination_action_spawn_agents', { exact: true })
+    expect(await longLabel.evaluate(el => { const range = document.createRange(); range.selectNodeContents(el); return [...range.getClientRects()].every(box => box.right <= el.getBoundingClientRect().right + 1) })).toBe(true)
     await page.getByRole('tooltip').press('Escape')
     await expect(page.getByRole('tooltip')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

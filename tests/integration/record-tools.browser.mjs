@@ -7,6 +7,7 @@ export default async function proveRecordedToolPreview(page, transcript, { lane,
   const summary = row.locator('[data-record-tool-summary]');
   assert.match(await summary.innerText(), /Returned/);
   assert(await summary.evaluate(node => getComputedStyle(node).opacity === '1' && node.getBoundingClientRect().width > 40));
+  assert(await row.evaluate(node => { const a = node.getBoundingClientRect(), b = node.querySelector('[data-record-tool-summary]').getBoundingClientRect(); return b.right <= a.right && b.right >= a.right - 16; }), 'duration and result stay inside the colored row right edge');
   const logos = transcript.locator('[data-record-harness-logos] > span');
   assert.equal(await logos.count(), 6);
   for (const logo of await logos.all()) {

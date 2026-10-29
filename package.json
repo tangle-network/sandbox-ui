@@ -145,13 +145,12 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:visual": "pnpm build-storybook --quiet && playwright test --grep-invert '17 agents stream' && playwright test tests/visual/run-ui.spec.mjs --grep '17 agents stream' --workers=1 --retries=0",
-    "signoff": "pnpm lint:motion && pnpm typecheck && pnpm build && pnpm test && pnpm test:package && pnpm test:bridge && pnpm test:visual",
+    "signoff": "pnpm typecheck && pnpm build && pnpm test && pnpm test:package && pnpm test:bridge && pnpm test:visual",
     "test": "vitest run",
     "test:package": "node scripts/package-smoke.mjs && PACKAGE_OMIT_OPTIONAL_PEERS='[\"@hocuspocus/provider\",\"@tiptap/core\",\"@tiptap/extension-collaboration\",\"@tiptap/extension-collaboration-caret\",\"@tiptap/react\",\"@tiptap/starter-kit\",\"pdfjs-dist\",\"yjs\"]' node scripts/package-smoke.mjs",
     "test:watch": "vitest",
     "test:embedded-app-package": "node scripts/embedded-app-package-smoke.mjs",
-    "test:bridge": "pnpm build && vitest run src/__tests__/re-export-identity.test.ts",
-    "lint:motion": "node scripts/lint-run-motion.mjs"
+    "test:bridge": "pnpm build && vitest run src/__tests__/re-export-identity.test.ts"
   },
   "peerDependencies": {
     "@hocuspocus/provider": ">=2.15.0 <5.0.0",

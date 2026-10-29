@@ -25,11 +25,6 @@ import {
 } from "react";
 import type { WorkflowGraphProps } from "./WorkflowGraph";
 
-/** Re-run `factory` up to `retries` times with a short backoff before giving up.
- *  Covers a transient dynamic-import rejection (network blip, a chunk briefly
- *  unavailable behind a CDN) without bothering the user. Exported for tests. */
-
-
 function lazyWorkflowGraph(): ComponentType<WorkflowGraphProps> {
   return lazy(() =>
     retryImport(() =>
@@ -37,9 +32,6 @@ function lazyWorkflowGraph(): ComponentType<WorkflowGraphProps> {
     ),
   );
 }
-
-
-
 /** Graceful degradation when the graph can't render: the workflow is still
  *  fully legible as YAML, with a retry for a recoverable load failure. */
 function GraphFallback({

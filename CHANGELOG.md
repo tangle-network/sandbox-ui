@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.10
+
+- Use Charts' canonical multi-agent topology and presentation helpers. Sandbox UI supplies model/provider identity; the private renderer, layouts and authored graph styles are removed.
+
 ## 2.0.9
 
 - Export the existing retained-row `VirtualList` from `run/record` and `run`; measured rows contain their margins in every host.

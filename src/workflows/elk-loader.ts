@@ -1,1 +1,1 @@
-export { getELK } from "@tangle-network/charts/react/agent-graph";
+export { loadElk } from "@tangle-network/charts/react/agent-graph/presentation";

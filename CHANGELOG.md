@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.1.0
+## 2.0.7
 
 - Own the retained conversation renderer previously in agent-record, including windowing, source anchors, prompt reconstruction, tool receipts, idle groups and uncaptured-data labels. Export it from `run`; validated presentation inputs require no runtime parser dependency.
 

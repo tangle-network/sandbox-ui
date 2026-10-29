@@ -243,8 +243,8 @@ importers:
         specifier: ^1.31.1
         version: 1.31.1(react@19.3.1)
       '@tangle-network/charts':
-        specifier: ^2.0.9
-        version: 2.0.9(react@19.3.1)
+        specifier: 2.0.14
+        version: 2.0.14(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1943,8 +1943,25 @@ packages:
       react:
         optional: true
 
-  '@tangle-network/charts@2.0.9':
-    resolution: {integrity: sha512-UUZYPfCktN6co2oL5hXfScPbE+w56OHAvltQ+V9/Si9shrpTgIJq9GbnMynd0f+QHHJw4hFEjZe+DVIMmwQVtA==}
+  '@tangle-network/charts@2.0.14':
+    resolution: {integrity: sha512-lsw0PuECEjl/2dRLLppQQSevDGnnJLPA8Bc7ddzdRcwVgmBOwDTukvxngL7cpDmrbpe+XGZb0+mORgA0svz6dQ==}
+    peerDependencies:
+      '@xyflow/react': ^12.0.0
+      elkjs: ^0.12.0
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18 || ^19
+    peerDependenciesMeta:
+      '@xyflow/react':
+        optional: true
+      elkjs:
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
+  '@tangle-network/charts@2.0.5':
+    resolution: {integrity: sha512-lT9fm0hulfiatJWNTXVHOr4yZaklIJB96vIXLrf7f6XVxOoijLW82jQmRMZMatMAi52Xrrx3f06/tzom+KSzuw==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
@@ -5647,7 +5664,14 @@ snapshots:
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/charts@2.0.9(react@19.3.1)':
+  '@tangle-network/charts@2.0.14(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    optionalDependencies:
+      '@xyflow/react': 12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      elkjs: 0.12.0
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
+  '@tangle-network/charts@2.0.5(react@19.3.1)':
     optionalDependencies:
       react: 19.3.1
 

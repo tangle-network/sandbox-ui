@@ -18,12 +18,7 @@ export const isLifecycle = (event: RecordEvent) =>
   event.category === 'lifecycle' || event.detail.lifecycle !== undefined
 
 const tokenLabel = (value: number) => new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
-const spanLabel = (value: number) => {
-  const seconds = Math.round(value / 1000)
-  if (seconds < 60) return `${seconds} s`
-  const minutes = Math.floor(seconds / 60)
-  return minutes < 60 ? `${minutes} m ${seconds % 60} s` : `${Math.floor(minutes / 60)} h ${minutes % 60} m`
-}
+const spanLabel = (value: number) => value < 1000 ? `${Math.round(value)} ms` : formatDuration(value)
 
 function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind: 'tool' }>; previous?: AgentTimelineStepKind }) {
   const part = item.part!, cost = part.state.metadata?.costUsd, time = part.state.time, category = getToolCategory(part.tool)
@@ -97,7 +92,7 @@ function toolItems(id: string, call: ToolCall, result: RecordEvent | undefined, 
 
 const toolNote = (part: ToolPart) => {
   const note = part.state.metadata?.note, time = part.state.time
-  const duration = time?.end != null && time.start != null ? formatDuration(time.end - time.start) : 'Not recorded'
+  const duration = time?.end != null && time.start != null ? spanLabel(time.end - time.start) : 'Not recorded'
   const result = typeof note === 'string' ? note : part.state.status === 'error' ? 'Failed' : part.state.status === 'running' ? 'Running' : 'Returned'
   return <span data-record-tool-summary="" className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[13px] tabular-nums" style={{ color: part.state.status === 'error' ? 'var(--surface-danger-text)' : 'hsl(var(--muted-foreground))' }}><time data-record-tool-duration="">{duration}</time><span data-record-tool-result="">{result}</span></span>
 }

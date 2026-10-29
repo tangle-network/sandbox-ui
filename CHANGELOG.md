@@ -3,6 +3,7 @@
 ## 2.0.8
 
 - Preserve producer-specific node, capture and event types in retained conversation projections; expose tool-call types so downstream declarations can be emitted.
+- Provide the narrow `run/record` entry so offline report bundles do not load graph features. Existing `run` exports remain the same bindings.
 
 ## 2.0.7
 

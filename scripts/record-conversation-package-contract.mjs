@@ -9,7 +9,7 @@ export function validateRecordConversation({ root, consumerDir }) {
     import { readFileSync } from "node:fs";
     import { createElement } from "react";
     import { renderToStaticMarkup } from "react-dom/server";
-    import { Conversation, indexRecord } from "@tangle-network/sandbox-ui/run";
+    import { Conversation, indexRecord } from "@tangle-network/sandbox-ui/run/record";
     const require = createRequire(import.meta.url);
     assert.throws(() => require.resolve("@drewstone/agent-record/record"), { code: "MODULE_NOT_FOUND" });
     const record = JSON.parse(readFileSync(process.env.RECORD_CONVERSATION_FIXTURE, "utf8"));

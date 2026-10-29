@@ -128,7 +128,11 @@
     "./globals.css": "./dist/globals.css",
     "./tokens.css": "./dist/tokens.css",
     "./tailwind.css": "./dist/tailwind.css",
-    "./tailwind": "./tailwind.config.cjs"
+    "./tailwind": "./tailwind.config.cjs",
+    "./run/record": {
+      "import": "./dist/run/record.js",
+      "types": "./dist/run/record.d.ts"
+    }
   },
   "files": [
     "dist",

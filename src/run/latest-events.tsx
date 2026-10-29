@@ -1,5 +1,5 @@
 import { RunStatusIcon, statusMeta } from "@tangle-network/ui/run";
-import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { AgentGraphNode, AgentGraphStatus } from "../workflows/agent-graph-layout";
 import { tokenMilliseconds, useRunNow } from "../workflows/run-ui-state";
 import { fmtEventTime } from "../workflows/format";
@@ -67,7 +67,7 @@ export function LatestEvents({ agents, n = 5, now, live = now === undefined, sel
   return <section className="ag-latest" aria-label="Latest activity" tabIndex={0} onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}
     onFocusCapture={() => setFocused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
     <header><strong>Latest activity</strong><span>{paused ? "Paused while reading" : "Recorded events · age"}</span>{paused && <button type="button" onClick={refresh}>Show latest</button>}</header>
-    <ol tabIndex={0} aria-label="Recorded activity events" style={{ "--ag-latest-rows": Math.min(limit, 3) } as CSSProperties}>
+    <ol tabIndex={0} aria-label="Recorded activity events">
       {visible.length ? visible.map(entry => <EventRow key={entry.id} entry={entry} now={clock} onSelect={onSelect ? item => { setPins(old => old.filter(pin => pin.agentId !== item.agentId)); onSelect(item.agentId); } : undefined} />) : <li className="ag-latest-empty">No activity events were reported.</li>}
     </ol>
     <span className="sr-only" role="status" aria-live="polite">{announcement}</span>

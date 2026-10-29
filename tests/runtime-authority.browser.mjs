@@ -96,6 +96,7 @@ test('same API switches account before new evidence or a refusal can expose old 
     await page.waitForTimeout(200)
     const b = host.requests.filter(request => request.account === 'B')
     assert.ok(b.some(request => request.path === '/probe'))
+    console.log('Auth scope requests', JSON.stringify(b))
     assert.ok(b.every(request => request.etag === undefined), 'New account requests never carry A entity tags')
     await host.capture('account-b-before-evidence')
     host.releaseB()

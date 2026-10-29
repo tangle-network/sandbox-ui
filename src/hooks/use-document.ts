@@ -39,6 +39,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
       try {
         const response = await fetcher(url, {
           credentials: 'same-origin',
+          cache: 'no-store',
           signal: controller.signal,
           headers: etag.current ? { 'If-None-Match': etag.current } : {},
         })

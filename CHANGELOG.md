@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.7
+
+- Validate the readable run UI against the shared Charts implementation used by the served Discovery Overview and timeline.
+
 ## 2.0.6
 
 - Keep phone activity in a stable, scrollable row so operator requests and failures remain near the top during updates.

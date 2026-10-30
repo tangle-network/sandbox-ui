@@ -68,13 +68,14 @@ export function VirtualList<T>({
       })
     observer.current?.observe(element)
   }
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    for (const row of rows.current.values()) observe(row)
+    return () => {
       cancelAnimationFrame(frame.current)
+      frame.current = 0
       observer.current?.disconnect()
-    },
-    [],
-  )
+    }
+  }, [])
 
   useEffect(() => {
     const element = scroller.current
@@ -111,8 +112,7 @@ export function VirtualList<T>({
   }, [items, keyOf, estimate, version]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const find = (y: number) => {
-    let low = 0
-    let high = items.length
+    let low = 0, high = items.length
     while (low < high) {
       const mid = (low + high) >> 1
       if (offsets[mid + 1]! <= y) low = mid + 1

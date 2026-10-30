@@ -193,6 +193,7 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
       await graph.getByRole('button',{name:/fit view/i}).click()
       if(evidence)await page.screenshot({path:evidence+'/retained-graph-'+theme+'-'+width+'.png',fullPage:true})
       await page.goto('http://127.0.0.1:'+server.address().port+'/?theme='+theme+'&failure')
+      const failedCursor=page.getByRole('slider',{name:'Playback position',exact:true});await failedCursor.focus();await page.keyboard.press('Home')
       await page.getByRole('button',{name:'Show full trace',exact:true}).click()
       await page.locator('.topology > summary').click()
       const failed = page.locator('[data-graph] [data-node="native-failure:s0"]')

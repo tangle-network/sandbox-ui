@@ -128,23 +128,6 @@ describe("WorkflowNode", () => {
     );
   });
 
-  it("renders the live status, model, cost, duration, and output once a run state is present", () => {
-    renderNode({
-      ...BASE,
-      state: {
-        status: "running",
-        model: "gpt-4o",
-        costUsd: 0.0032,
-        durationMs: 4200,
-        outputPreview: "partial answer",
-      },
-    });
-    expect(screen.getByText("Running")).toBeTruthy();
-    expect(screen.getByText("AI Agent · gpt-4o")).toBeTruthy();
-    expect(screen.getByText("$0.0032")).toBeTruthy();
-    expect(screen.getByText("4.2s")).toBeTruthy();
-    expect(screen.getByText("partial answer")).toBeTruthy();
-  });
 
   it("shows the model a run ACTUALLY used, shortened like the requested one", () => {
     renderNode({

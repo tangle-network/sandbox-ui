@@ -219,8 +219,8 @@ importers:
         version: 2.9.1
     devDependencies:
       '@drewstone/agent-record':
-        specifier: https://github.com/drewstone/agent-record/releases/download/v3.0.2/drewstone-agent-record-3.0.2.tgz
-        version: https://github.com/drewstone/agent-record/releases/download/v3.0.2/drewstone-agent-record-3.0.2.tgz(a106ce37c66ad2a70bc936da9bf6794f)
+        specifier: https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz
+        version: https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz(a106ce37c66ad2a70bc936da9bf6794f)
       '@fontsource/geist':
         specifier: 5.3.0
         version: 5.3.0
@@ -488,9 +488,9 @@ packages:
     resolution: {integrity: sha512-OoKoR0f76dCY666JlcbhmVTs2drYj1GUXZTYTcbUgJjh9Nv41aFfZ21bPQTERm5+L5cBDo466NltB2lplS5GBw==}
     engines: {node: '>=20.19.0'}
 
-  '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v3.0.2/drewstone-agent-record-3.0.2.tgz':
-    resolution: {integrity: sha512-bhhRDFobjv8S8IhM6ZEiUMvqTiUfXo3HrwwBxeL5GQsQZlQ6pKMEilV21hKHBtbrT/8J3teFZA+pcdTWNVURrA==, tarball: https://github.com/drewstone/agent-record/releases/download/v3.0.2/drewstone-agent-record-3.0.2.tgz}
-    version: 3.0.2
+  '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz':
+    resolution: {integrity: sha512-cQ682TTmAIMEYN4IqVZL/ngoqX0OsPCv988WI2j8IT9I6/m4dMdmjIB5TpR+rCSKYCEmg0GbuXQ1ZCd1Vq2Q3g==, tarball: https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz}
+    version: 3.0.3
     hasBin: true
     peerDependencies:
       react: '>=18.3.0 <20'
@@ -4423,11 +4423,11 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.2': {}
 
-  '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v3.0.2/drewstone-agent-record-3.0.2.tgz(a106ce37c66ad2a70bc936da9bf6794f)':
+  '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz(a106ce37c66ad2a70bc936da9bf6794f)':
     dependencies:
       '@tangle-network/charts': 4.0.2(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.11(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/harness-sessions': 0.1.7
-      '@tangle-network/sandbox-ui': 3.0.0(b26deb6f8501ef348067a6ff7d8652a6)
+      '@tangle-network/sandbox-ui': 3.0.0(7622895e4191f56c1cd2088e46418722)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       zod: 4.6.6
@@ -5663,7 +5663,7 @@ snapshots:
     dependencies:
       '@tangle-network/agent-trace-contract': 2.2.0
 
-  '@tangle-network/sandbox-ui@3.0.0(b26deb6f8501ef348067a6ff7d8652a6)':
+  '@tangle-network/sandbox-ui@3.0.0(7622895e4191f56c1cd2088e46418722)':
     dependencies:
       '@lobehub/icons-static-svg': 1.98.0
       '@pierre/diffs': 1.6.1(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -5687,7 +5687,7 @@ snapshots:
       tailwindcss-animate: 1.0.7(tailwindcss@4.3.3)
       yaml: 2.9.1
     optionalDependencies:
-      '@drewstone/agent-record': https://github.com/drewstone/agent-record/releases/download/v3.0.2/drewstone-agent-record-3.0.2.tgz(a106ce37c66ad2a70bc936da9bf6794f)
+      '@drewstone/agent-record': https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz(a106ce37c66ad2a70bc936da9bf6794f)
       '@hocuspocus/provider': 4.7.1(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33)
       '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.3.1)
       '@tangle-network/charts': 4.0.2(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.11(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode, RefObject } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, type ReactNode, type RefObject } from 'react'
 
 /**
  * Renders only the rows near the viewport of `scroller`. Row heights are measured as they render; unmeasured
@@ -13,6 +13,10 @@ export function VirtualList<T>({
   estimate = 96,
   overscan = 900,
   target,
+  origin,
+  targetAlign = 'start',
+  virtualize = true,
+  keepMounted,
 }: {
   items: readonly T[]
   keyOf: (item: T) => string
@@ -23,14 +27,24 @@ export function VirtualList<T>({
   overscan?: number
   /** Bring this row to the top of the scroller (and into the page's view) whenever it changes. */
   target?: string
+  /** Offset within an outer scroller, such as a file tree below its search header. */
+  origin?: RefObject<HTMLElement | null>
+  targetAlign?: 'start' | 'nearest'
+  /** Preserve row identity as a collection crosses the virtualization threshold. */
+  virtualize?: boolean
+  /** Keep one roving tab stop mounted when the reader scrolls away from it. */
+  keepMounted?: string
 }) {
   const heights = useRef(new Map<string, number>())
   const [version, setVersion] = useState(0)
   const [viewport, setViewport] = useState({ top: 0, height: 900 })
   const observer = useRef<ResizeObserver | null>(null)
-  const nodes = useRef(new Map<Element, string>())
 
   const frame = useRef(0)
+  const originTop = () => {
+    const element = scroller.current, node = origin?.current
+    return element && node ? node.getBoundingClientRect().top - (element === document.scrollingElement ? 0 : element.getBoundingClientRect().top + element.clientTop) + element.scrollTop : 0
+  }
   // Created on the first row binding: refs attach before effects run, so an effect-created observer would
   // miss every row of the first commit.
   const observe = (element: Element) => {
@@ -38,7 +52,7 @@ export function VirtualList<T>({
       observer.current = new ResizeObserver((entries) => {
         let changed = false
         for (const entry of entries) {
-          const key = nodes.current.get(entry.target)
+          const key = (entry.target as HTMLElement).dataset.virtualKey
           if (!key) continue
           const height = Math.ceil(entry.borderBoxSize?.[0]?.blockSize ?? (entry.target as HTMLElement).offsetHeight)
           if (height > 0 && heights.current.get(key) !== height) {
@@ -58,8 +72,6 @@ export function VirtualList<T>({
     () => () => {
       cancelAnimationFrame(frame.current)
       observer.current?.disconnect()
-      observer.current = null
-      nodes.current.clear()
     },
     [],
   )
@@ -70,25 +82,25 @@ export function VirtualList<T>({
     let frame = 0
     const update = () => {
       frame = 0
-      setViewport((current) =>
-        current.top === element.scrollTop && current.height === element.clientHeight
-          ? current
-          : { top: element.scrollTop, height: element.clientHeight },
-      )
+      const top = element.scrollTop - originTop()
+      setViewport(current => current.top === top && current.height === element.clientHeight ? current : { top, height: element.clientHeight })
     }
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update)
     }
     update()
-    element.addEventListener('scroll', schedule, { passive: true })
+    const source = element === document.scrollingElement ? window : element
+    source.addEventListener('scroll', schedule, { passive: true })
+    if (source === window) window.addEventListener('resize', schedule)
     const resize = new ResizeObserver(schedule)
     resize.observe(element)
     return () => {
       cancelAnimationFrame(frame)
-      element.removeEventListener('scroll', schedule)
+      source.removeEventListener('scroll', schedule)
+      if (source === window) window.removeEventListener('resize', schedule)
       resize.disconnect()
     }
-  }, [scroller])
+  }, [scroller, origin])
 
   const offsets = useMemo(() => {
     const result = new Float64Array(items.length + 1)
@@ -108,22 +120,21 @@ export function VirtualList<T>({
     }
     return low
   }
-  const start = Math.max(0, find(viewport.top - overscan))
-  const end = Math.min(items.length, find(viewport.top + viewport.height + overscan) + 1)
+  const start = virtualize ? Math.max(0, find(viewport.top - overscan)) : 0
+  const end = virtualize ? Math.min(items.length, find(viewport.top + viewport.height + overscan) + 1) : items.length
 
-  const scrollTo = useCallback(
-    (key: string, align: boolean) => {
+  const scrollTo = (key: string, align: boolean) => {
       const element = scroller.current
       const index = items.findIndex((item) => keyOf(item) === key)
       if (!element || index < 0) return false
-      const top = offsets[index]!
-      const bottom = offsets[index + 1]!
-      if (align || top < element.scrollTop || bottom > element.scrollTop + element.clientHeight)
+      const origin = originTop(), top = origin + offsets[index]!
+      const bottom = origin + offsets[index + 1]!
+      if (align || top < element.scrollTop)
         element.scrollTop = Math.max(0, top - 8)
+      else if (bottom > element.scrollTop + element.clientHeight)
+        element.scrollTop = Math.max(0, bottom - element.clientHeight)
       return true
-    },
-    [items, keyOf, offsets, scroller],
-  )
+  }
   // A target is settled, not jumped to once: rows above it are measured only after the first jump renders them, which
   // moves it. Each measurement re-aligns it until the reader scrolls, or after two seconds.
   const pending = useRef<{ key: string; until: number } | null>(null)
@@ -135,10 +146,10 @@ export function VirtualList<T>({
       pending.current = null
       return
     }
-    if (!scrollTo(goal.key, true)) return
+    if (!scrollTo(goal.key, targetAlign === 'start')) return
     // Bring a rendered target into the page's view as well as its own scroller.
     const row = rows.current.get(goal.key)
-    if (row?.isConnected) {
+    if (targetAlign === 'start' && row?.isConnected) {
       const box = row.getBoundingClientRect()
       if (box.top < 72 || box.top > window.innerHeight - 96) window.scrollBy({ top: box.top - 120 })
     }
@@ -158,54 +169,38 @@ export function VirtualList<T>({
       pending.current = items.length && (key === 'Home' || key === 'End') ? { key: keyOf(items[key === 'Home' ? 0 : items.length - 1]!), until: performance.now() + 2000 } : null
       if (pending.current) { event.preventDefault(); settle() }
     }
-    element.addEventListener('wheel', release, { passive: true })
-    element.addEventListener('touchstart', release, { passive: true })
-    element.addEventListener('pointerdown', release)
-    element.addEventListener('keydown', release)
-    return () => {
-      element.removeEventListener('wheel', release)
-      element.removeEventListener('touchstart', release)
-      element.removeEventListener('pointerdown', release)
-      element.removeEventListener('keydown', release)
-    }
+    const events = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
+    for (const type of events) element.addEventListener(type, release, { passive: type === 'wheel' || type === 'touchstart' })
+    return () => { for (const type of events) element.removeEventListener(type, release) }
   }, [scroller, items, keyOf, offsets])
 
   const bind = (key: string) => (element: HTMLDivElement | null) => {
-    if (!element) {
-      rows.current.delete(key)
-      return
-    }
-    rows.current.set(key, element)
-    for (const [node, value] of nodes.current) if (value === key && node !== element) {
-      observer.current?.unobserve(node)
-      nodes.current.delete(node)
-    }
-    if (!nodes.current.has(element)) {
-      nodes.current.set(element, key)
+    const previous = rows.current.get(key)
+    if (previous) observer.current?.unobserve(previous)
+    if (element) {
+      rows.current.set(key, element)
       observe(element)
-    }
+    } else rows.current.delete(key)
   }
-  useEffect(() => {
-    // Forget elements React removed.
-    for (const node of [...nodes.current.keys()])
-      if (!node.isConnected) {
-        observer.current?.unobserve(node)
-        nodes.current.delete(node)
-      }
-  })
 
-  return (
-    <>
-      <div style={{ height: offsets[start], transitionProperty: 'none' }} aria-hidden="true" />
-      {items.slice(start, end).map((item, i) => {
+  const indices = Array.from({ length: end - start }, (_, i) => start + i)
+  const kept = keepMounted ? items.findIndex(item => keyOf(item) === keepMounted) : -1
+  if (kept >= 0 && kept < start) indices.unshift(kept)
+  else if (kept >= end) indices.push(kept)
+  let previous = 0
+  return <>
+      {indices.map(index => {
+        const item = items[index]!
         const key = keyOf(item)
+        const space = offsets[index]! - offsets[previous]!
+        previous = index + 1
         return (
-          <div key={key} ref={bind(key)} className="virtual-row" style={{ display: 'flow-root' }}>
-            {render(item, start + i)}
-          </div>
+          <Fragment key={key}>
+            {space > 0 && <div style={{ height: space, transitionProperty: 'none' }} aria-hidden="true" />}
+            <div ref={bind(key)} data-virtual-key={key} className="virtual-row" style={{ display: 'flow-root' }}>{render(item, index)}</div>
+          </Fragment>
         )
       })}
-      <div style={{ height: offsets[items.length]! - offsets[end]!, transitionProperty: 'none' }} aria-hidden="true" />
+      <div style={{ height: offsets[items.length]! - offsets[previous]!, transitionProperty: 'none' }} aria-hidden="true" />
     </>
-  )
 }

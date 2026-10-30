@@ -5,8 +5,8 @@
  * trees given the same key share one remembered expansion.
  *
  * Rendering is lazy: only the children of expanded folders are walked or
- * mounted, and a folder with more than `CHILD_PAGE` children renders them a page
- * at a time, so a vault with thousands of files costs only what is on screen.
+ * mounted; folders retain their child paging, and collections over 100 visible
+ * rows use the shared viewport list. Keyboard navigation reveals offscreen rows.
  *
  * The tree follows the WAI-ARIA tree pattern with a single tab stop: arrow keys
  * move between rows, Right/Left expand, collapse or move to a child or parent,
@@ -40,6 +40,7 @@ import {
 } from 'lucide-react'
 import type { FileNode } from '@tangle-network/ui/files'
 import { revealInScroller } from '../lib/reveal-in-scroller'
+import { VirtualList } from '../run/record/VirtualList'
 
 /** Children rendered per folder before a "Show more" row. */
 export const VAULT_TREE_CHILD_PAGE = 200
@@ -198,8 +199,6 @@ export function VaultTree({
   status,
   className,
 }: VaultTreeProps) {
-  // Expansion belongs to its key: switching workspaces swaps in that
-  // workspace's remembered folders instead of carrying the last one's over.
   const [expansion, setExpansion] = useState(() => ({ key: storageKey, expanded: readExpanded(storageKey) }))
   let keyed = expansion
   if (expansion.key !== storageKey) {
@@ -212,10 +211,12 @@ export function VaultTree({
   const [focusedPath, setFocusedPath] = useState<string | null>(null)
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
   const pendingFocusRef = useRef<string | null>(null)
-  const pendingRevealRef = useRef<string | null>(null)
+  const treeRef = useRef<HTMLDivElement>(null), scroller = useRef<HTMLElement | null>(null)
+  const [target, setTarget] = useState<string>()
+  const previousPaths = useRef<Set<string> | null>(null)
+  const animatedPaths = useRef(new Set<string>())
+  const revealed = useRef<string>()
 
-  // One walk of the listed tree indexes every node, its parent, and its sorted
-  // children. Rows below only visit folders that are open.
   const index = useMemo(() => {
     const nodes = new Map<string, FileNode>()
     const parents = new Map<string, string | null>()
@@ -258,10 +259,7 @@ export function VaultTree({
     return out
   }, [index, isOpen, pageLimits])
 
-  const nodeRows = useMemo(
-    () => rows.filter((row): row is Extract<TreeRow, { kind: 'node' }> => row.kind === 'node'),
-    [rows],
-  )
+  const nodeRows = useMemo(() => rows.filter((row): row is Extract<TreeRow, { kind: 'node' }> => row.kind === 'node'), [rows])
 
   const updateExpanded = useCallback((change: (next: Set<string>) => void) => {
     setExpansion((current) => {
@@ -284,38 +282,31 @@ export function VaultTree({
     onFolderToggle?.(path, open)
   }, [expandAll, expandedPaths, updateExpanded, onFolderToggle])
 
-  // Opening or linking to a file opens the folders on its path and nothing
-  // else. A later collapse by the reader is respected: this runs only when the
-  // selected file changes.
+  // Reveal once per selection, respecting later manual collapse and scroll.
   useEffect(() => {
-    if (!selectedPath || !index.nodes.has(selectedPath)) return
+    if (!selectedPath || !index.nodes.has(selectedPath)) { revealed.current = undefined; return }
+    if (revealed.current === selectedPath) return
+    revealed.current = selectedPath
     const ancestors: string[] = []
     for (let parent = index.parents.get(selectedPath) ?? null; parent; parent = index.parents.get(parent) ?? null) {
       ancestors.push(parent)
     }
-    pendingRevealRef.current = selectedPath
+    setTarget(selectedPath)
+    // Linking beyond the current child page must reveal that file, not a permanent missing selection.
+    setPageLimits(current => {
+      const next = new Map(current)
+      for (const path of [selectedPath, ...ancestors]) {
+        const parent = index.parents.get(path) ?? null
+        if (parent) next.set(parent, Math.max(next.get(parent) ?? VAULT_TREE_CHILD_PAGE, (index.children.get(parent)?.findIndex(n => n.path === path) ?? -1) + 1))
+      }
+      return next
+    })
     if (ancestors.some((path) => !expandedPaths.has(path))) {
       updateExpanded((next) => {
         for (const path of ancestors) next.add(path)
       })
     }
-    // Reveal runs per selection, not per expansion change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPath, index])
-
-  useEffect(() => {
-    const reveal = pendingRevealRef.current
-    if (reveal && rowRefs.current.has(reveal)) {
-      pendingRevealRef.current = null
-      const row = rowRefs.current.get(reveal)
-      if (row) revealInScroller(row)
-    }
-    const focus = pendingFocusRef.current
-    if (focus && rowRefs.current.has(focus)) {
-      pendingFocusRef.current = null
-      rowRefs.current.get(focus)?.focus()
-    }
-  }, [rows])
+  }, [selectedPath, index]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visiblePaths = useMemo(() => new Set(nodeRows.map((row) => row.node.path)), [nodeRows])
   const tabStop = (focusedPath && visiblePaths.has(focusedPath) && focusedPath)
@@ -327,8 +318,8 @@ export function VaultTree({
     if (!path) return
     setFocusedPath(path)
     const element = rowRefs.current.get(path)
-    if (element) element.focus()
-    else pendingFocusRef.current = path
+    if (element) { setTarget(undefined); element.focus({ preventScroll: true }); revealInScroller(element) }
+    else { pendingFocusRef.current = path; setTarget(path) }
   }, [])
 
   const activate = useCallback((node: FileNode) => {
@@ -345,19 +336,14 @@ export function VaultTree({
     const dir = node.type === 'directory'
     const open = dir && isOpen(node.path)
     let handled = true
-    switch (event.key) {
-      case 'ArrowDown':
-        focusRow(nodeRows[at + 1]?.node.path)
-        break
-      case 'ArrowUp':
-        focusRow(nodeRows[at - 1]?.node.path)
-        break
-      case 'Home':
-        focusRow(nodeRows[0]?.node.path)
-        break
-      case 'End':
-        focusRow(nodeRows[nodeRows.length - 1]?.node.path)
-        break
+    const moves: Record<string, string | undefined> = {
+      ArrowDown: nodeRows[at + 1]?.node.path,
+      ArrowUp: nodeRows[at - 1]?.node.path,
+      Home: nodeRows[0]?.node.path,
+      End: nodeRows[nodeRows.length - 1]?.node.path,
+    }
+    if (event.key in moves) focusRow(moves[event.key])
+    else switch (event.key) {
       case 'ArrowRight':
         if (dir && !open) setFolderOpen(node.path, true)
         else if (open) {
@@ -394,21 +380,28 @@ export function VaultTree({
     }
     return out
   }, [status])
-  // The open file's parent: its guide is drawn in the stronger hairline.
   const openParent = selectedPath ? index.parents.get(selectedPath) ?? null : null
-  return (
-    <div role="tree" aria-label={label} data-vault-tree-rows className={`flex flex-col gap-px ${className ?? ''}`}>
-      {rows.map((row) => {
+  // New source paths arrive once; viewport remounts during scrolling do not replay their entrance.
+  const arrivals = useMemo(() => new Set(previousPaths.current ? [...index.nodes.keys()].filter(path => !previousPaths.current!.has(path)) : []), [index])
+  useEffect(() => {
+    previousPaths.current = new Set(index.nodes.keys())
+    for (const path of animatedPaths.current) if (!index.nodes.has(path)) animatedPaths.current.delete(path)
+  }, [index])
+  const keyOf = (row: TreeRow) => row.kind === 'node' ? row.node.path : `more:${row.parent}`
+  const render = (row: TreeRow) => {
         if (row.kind === 'more') {
           return (
             <button
               key={`more:${row.parent}`}
               type="button"
-              onClick={() => setPageLimits((current) => {
-                const next = new Map(current)
-                next.set(row.parent, Math.max(VAULT_TREE_CHILD_PAGE, current.get(row.parent) ?? 0) + VAULT_TREE_CHILD_PAGE)
-                return next
-              })}
+              onClick={() => {
+                focusRow(index.children.get(row.parent)?.[(index.children.get(row.parent)?.length ?? 0) - row.hidden]?.path)
+                setPageLimits(current => {
+                  const next = new Map(current)
+                  next.set(row.parent, Math.max(VAULT_TREE_CHILD_PAGE, current.get(row.parent) ?? 0) + VAULT_TREE_CHILD_PAGE)
+                  return next
+                })
+              }}
               style={{ paddingInlineStart: row.depth * INDENT + 28 }}
               className="flex min-h-8 w-full items-center rounded-md pr-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
@@ -430,8 +423,12 @@ export function VaultTree({
           <div
             key={node.path}
             ref={(element) => {
-              if (element) rowRefs.current.set(node.path, element)
-              else rowRefs.current.delete(node.path)
+              if (element) {
+                rowRefs.current.set(node.path, element)
+                if (arrivals.has(node.path)) animatedPaths.current.add(node.path)
+                if (pendingFocusRef.current === node.path) { pendingFocusRef.current = null; element.focus({ preventScroll: true }) }
+                if (target === node.path && rows.length <= 100) revealInScroller(element)
+              } else rowRefs.current.delete(node.path)
             }}
             role="treeitem"
             aria-level={depth + 1}
@@ -451,6 +448,7 @@ export function VaultTree({
             style={{ paddingInlineStart: depth * INDENT + 4 }}
             className={[
               'group relative flex min-h-8 w-full cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 text-sm transition-colors [@media(pointer:coarse)]:min-h-10',
+              arrivals.has(node.path) && !animatedPaths.current.has(node.path) ? 'agent-arrive' : '',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
               selected
                 ? 'bg-[var(--ix-sel-bg)] font-medium text-[var(--accent-text)]'
@@ -477,7 +475,14 @@ export function VaultTree({
               : <span aria-label={change} className={`w-3.5 shrink-0 text-center font-mono text-xs font-semibold ${CHANGE[change].ink}`}>{CHANGE[change].letter}</span>)}
           </div>
         )
-      })}
-    </div>
-  )
+  }
+  return <div ref={element => {
+    treeRef.current = element
+    if (!element) return
+    let parent = element?.parentElement ?? null
+    while (parent && !/auto|scroll/.test(getComputedStyle(parent).overflowY)) parent = parent.parentElement
+    scroller.current = parent ?? document.scrollingElement as HTMLElement
+  }} role="tree" aria-label={label} data-vault-tree-rows className={className}>
+    <VirtualList items={rows} keyOf={keyOf} render={render} scroller={scroller} origin={treeRef} estimate={33} overscan={320} target={target} targetAlign="nearest" virtualize={rows.length > 100} keepMounted={tabStop ?? undefined} />
+  </div>
 }

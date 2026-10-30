@@ -15,6 +15,6 @@ export function formatRelativeAge(date: string | number | Date, now = Date.now()
   const timestamp = date instanceof Date ? date.getTime() : new Date(date).getTime();
   if (Number.isNaN(timestamp)) return "";
   const elapsed = Math.max(0, now - timestamp);
-  const unit = UNITS.find(([, duration]) => elapsed >= duration);
+  const unit = UNITS.find(([, duration]) => !(elapsed < duration));
   return unit ? `${Math.floor(elapsed / unit[1])}${unit[0]}` : "now";
 }

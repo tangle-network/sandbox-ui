@@ -108,9 +108,8 @@ existing `ProviderIcon` resolver.
 
 ## Validation surfaces
 
-The repository's existing `pnpm test` collects
-`src/integrations/settings-views.test.tsx` alongside the unchanged panel and hook
-contracts. `pnpm test:package` builds named integration imports and type contracts
+The packed-consumer and real-browser flows validate the integration contracts.
+`pnpm test:package` builds named integration imports and type contracts
 inside the existing clean tarball consumer, including its optional-peer omission
 runs. The existing `pnpm typecheck`, `pnpm build`, `pnpm build-storybook` and
 `pnpm test:visual` remain the validation commands; no alternate test runner is added.

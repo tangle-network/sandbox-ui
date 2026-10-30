@@ -214,7 +214,6 @@ export function VaultTree({
   const treeRef = useRef<HTMLDivElement>(null), scroller = useRef<HTMLElement | null>(null)
   const [target, setTarget] = useState<string>()
   const previousPaths = useRef<Set<string> | null>(null)
-  const animatedPaths = useRef(new Set<string>())
   const revealed = useRef<string | undefined>(undefined)
 
   const index = useMemo(() => {
@@ -382,11 +381,7 @@ export function VaultTree({
   }, [status])
   const openParent = selectedPath ? index.parents.get(selectedPath) ?? null : null
   // New source paths arrive once; viewport remounts during scrolling do not replay their entrance.
-  const arrivals = useMemo(() => new Set(previousPaths.current ? [...index.nodes.keys()].filter(path => !previousPaths.current!.has(path)) : []), [index])
-  useEffect(() => {
-    previousPaths.current = new Set(index.nodes.keys())
-    for (const path of animatedPaths.current) if (!index.nodes.has(path)) animatedPaths.current.delete(path)
-  }, [index])
+  useEffect(() => { previousPaths.current = new Set(index.nodes.keys()) }, [index])
   const keyOf = (row: TreeRow) => row.kind === 'node' ? row.node.path : `more:${row.parent}`
   const render = (row: TreeRow) => {
         if (row.kind === 'more') {
@@ -425,7 +420,11 @@ export function VaultTree({
             ref={(element) => {
               if (element) {
                 rowRefs.current.set(node.path, element)
-                if (arrivals.has(node.path)) animatedPaths.current.add(node.path)
+                if (previousPaths.current && !previousPaths.current.has(node.path)) {
+                  previousPaths.current.add(node.path)
+                  element.classList.add('agent-arrive')
+                  Promise.allSettled(element.getAnimations().map(animation => animation.finished)).then(() => element.classList.remove('agent-arrive'))
+                }
                 if (pendingFocusRef.current === node.path) { pendingFocusRef.current = null; element.focus({ preventScroll: true }) }
                 if (target === node.path && rows.length <= 100) revealInScroller(element)
               } else rowRefs.current.delete(node.path)
@@ -448,7 +447,6 @@ export function VaultTree({
             style={{ paddingInlineStart: depth * INDENT + 4 }}
             className={[
               'group relative flex min-h-8 w-full cursor-pointer select-none items-center gap-1.5 rounded-md pr-2 text-sm transition-colors [@media(pointer:coarse)]:min-h-10',
-              arrivals.has(node.path) && !animatedPaths.current.has(node.path) ? 'agent-arrive' : '',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
               selected
                 ? 'bg-[var(--ix-sel-bg)] font-medium text-[var(--accent-text)]'

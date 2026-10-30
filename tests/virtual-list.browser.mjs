@@ -11,7 +11,7 @@ const host = createRequire(resolve('package.json'))
 const installed = createRequire(resolve(consumer, 'package.json'))
 assert.equal(installed('react/package.json').version, '18.3.1')
 const { build } = await import(pathToFileURL(host.resolve('vite')))
-const { chromium } = await import(pathToFileURL(host.resolve('playwright')))
+const { chromium } = host('playwright')
 await mkdir(output, { recursive: true })
 await writeFile(join(consumer, 'index.html'), '<!doctype html><html><head><style>body{margin:0}button{position:fixed;right:0;top:0}#pane{height:900px;overflow:auto}</style></head><body><div id="app"></div><script type="module" src="/strict.jsx"></script></body></html>')
 await writeFile(join(consumer, 'strict.jsx'), `

@@ -131,12 +131,12 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
           assert.match(await page.locator('[data-token-caption]').innerText(),/Some responses lack counters/)
         }
         if(name==='inverted'){
-          for(const id of [uniqueCall.id,uniqueResult.id]){const span=projected.spans.find(span=>span.meta?.eventId===id);assert.ok(span,id+' source retained');assert.equal(span.startMs,span.endMs);assert.equal(span.approx,true);assert.equal(span.status,'unknown');assert.match(span.facts.find(fact=>fact.label==='Timing').value,/result timestamp precedes call/)}
+          for(const id of [uniqueCall.id,uniqueResult.id]){const span=projected.spans.find(span=>span.kind==='tool'&&span.meta?.eventId===id);assert.ok(span,id+' source retained');assert.equal(span.startMs,span.endMs);assert.equal(span.approx,true);assert.equal(span.status,'unknown');assert.match(span.facts.find(fact=>fact.label==='Timing').value,/result timestamp precedes call/)}
         }
         if(name==='ambiguous'){
           const ambiguousIds=[calls[0].id,calls[1].id,results[0].id,results[1].id]
-          for(const id of ambiguousIds){const span=projected.spans.find(span=>span.meta?.eventId===id);assert.ok(span,id+' source retained');assert.equal(span.startMs,span.endMs);assert.equal(span.approx,true);assert.equal(span.status,'unknown');assert.match(span.facts.find(fact=>fact.label==='Timing').value,/ambiguous/i)}
-          const joined=projected.spans.find(span=>span.meta?.eventId===uniqueCall.id)
+          for(const id of ambiguousIds){const span=projected.spans.find(span=>span.kind==='tool'&&span.meta?.eventId===id);assert.ok(span,id+' source retained');assert.equal(span.startMs,span.endMs);assert.equal(span.approx,true);assert.equal(span.status,'unknown');assert.match(span.facts.find(fact=>fact.label==='Timing').value,/ambiguous/i)}
+          const joined=projected.spans.find(span=>span.kind==='tool'&&span.meta?.eventId===uniqueCall.id)
           assert.equal(joined.endMs-joined.startMs,Date.parse(uniqueResult.at)-Date.parse(uniqueCall.at));assert.equal(joined.approx,false);assert.equal(joined.status,'done');assert.equal(projected.toolCalls,3)
           await page.getByRole('combobox',{name:'Measure',exact:true}).selectOption('tool-time')
           assert.match(await page.locator('[data-token-caption]').innerText(),/ambiguous and out-of-order results are omitted/)

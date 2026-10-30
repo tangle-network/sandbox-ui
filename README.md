@@ -26,6 +26,12 @@ declarations. Interface 4.x, 5.0.x, and 5.1.x are not admitted. New majors requi
 qualification before the peer range is extended.
 Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which. `/files` needs `pdfjs-dist` only for `PdfViewer`, which `FilePreview` uses for PDFs; without it the viewer says so and falls back to the browser's own PDF viewer. The `ui` README covers its worker and asset setup through `configurePdfViewer`.
 
+### Retained reports
+
+Import `ResearchReport` from `@tangle-network/sandbox-ui/record/ResearchReport` for report-only server rendering. It needs the Core report/data peer and React; it avoids the optional WorkGraph feature and chat session stores. `record` retains the complete record/report/WorkGraph surface for hosts that use those features. Load the shared stylesheet for both.
+
+Charts4 and UI11.51.7 provide the shared clock and canonical run statuses; graph producers send `done` for completed work. Standalone report assets bundle the same UTC timestamp implementation during release.
+
 ### Retained conversations
 
 `Conversation`, `AgentTree`, `indexRecord` and `withPrompts` from `@tangle-network/sandbox-ui/run/record` show retained conversations and their recorded hierarchy. `AgentTree` takes `index`, selected `actor`, recorded-time `cutoff` and `select(id)`. Load the shared stylesheet and pass validated presentation data. Original source IDs, reconstructed prompts, pending tool receipts, collapsed idle polls, source callbacks and assessment flags remain available.

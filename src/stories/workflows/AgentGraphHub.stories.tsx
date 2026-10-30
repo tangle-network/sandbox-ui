@@ -51,11 +51,11 @@ function agentsAt(sec: number): AgentGraphNode[] {
     if (id === "writer" && sec >= 12.4 && sec < 24) return "needs-you";
     if (id === "coder" && sec >= 21.4) return "failed";
     const done: Record<string, number> = { research: 10.6, analyst: 11.4, writer: 26 };
-    if (done[id] !== undefined && sec >= done[id]!) return "succeeded";
+    if (done[id] !== undefined && sec >= done[id]!) return "done";
     return sec >= 1.4 ? "running" : "idle";
   };
   const agent = (id: string, label: string, model: string, costUsd: number): AgentGraphNode => ({
-    id, label, model, status: id === "orch" ? (sec >= 26 ? "succeeded" : "running") : status(id), costUsd: sec > 2 ? costUsd * Math.min(1, sec / 26) : 0,
+    id, label, model, status: id === "orch" ? (sec >= 26 ? "done" : "running") : status(id), costUsd: sec > 2 ? costUsd * Math.min(1, sec / 26) : 0,
     turn: id === "coder" && sec >= 21.4 ? "2 of 14 checkout tests fail: proration rounds the wrong way" : undefined,
   });
   return [
@@ -112,7 +112,7 @@ export const LargeRun: Story = {
       "memscale-3", "tape-route-3", "memscale-4", "tape-route-4", "memscale-5", "tape-route-5", "memscale-6", "tape-route-6"];
     const nodes: AgentGraphNode[] = [
       { id: "root", label: "root", model: "zai/glm-5.3", status: "running", costUsd: null },
-      ...workers.map((w, i) => ({ id: w, label: w, model: "zai/glm-5.3", status: (i % 5 === 3 ? "failed" : i < 9 ? "succeeded" : "running") as AgentGraphNode["status"], costUsd: null })),
+      ...workers.map((w, i) => ({ id: w, label: w, model: "zai/glm-5.3", status: (i % 5 === 3 ? "failed" : i < 9 ? "done" : "running") as AgentGraphNode["status"], costUsd: null })),
     ];
     const big: AgentGraphTool[] = [{ id: "shell", label: "Shell" }, { id: "files", label: "Files" }, { id: "git", label: "Git" }];
     const bigCalls = workers.flatMap((w, i) => [

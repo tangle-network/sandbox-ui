@@ -265,7 +265,7 @@ try {
   const jsSpecifiers = [];
   const cssSpecifiers = [];
   for (const [subpath, value] of Object.entries(manifest.exports)) {
-    if (subpath === "./record" && omittedOptionalPeers.includes("@drewstone/agent-record")) continue;
+    if ((subpath === "./record" || subpath === "./record/ResearchReport") && omittedOptionalPeers.includes("@drewstone/agent-record")) continue;
     const target = exportTarget(value);
     if (target?.endsWith(".js")) {
       jsSpecifiers.push(packageSpecifier(manifest.name, subpath));

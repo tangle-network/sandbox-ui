@@ -2,7 +2,7 @@
 
 ## 3.0.0
 
-- Use Charts4 and the shared UI clock/status owner, with one physical UI module for graph and transcript readers. Rebuild standalone report assets with explicit UTC user-message times for server/browser consistency.
+- Use Charts4 and UI11.51.7 for shared clocks and canonical graph statuses (`done` replaces `succeeded`). Expose the existing ResearchReport module without unused graph/session-store imports. Rebuild standalone report assets with explicit UTC user-message times for server/browser consistency.
 
 ## 2.0.20
 

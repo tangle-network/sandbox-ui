@@ -190,7 +190,7 @@ test('compact terminal rows retain Done and Stopped words', async ({ page }) => 
   await page.setViewportSize({ width: 390, height: 900 })
   await page.goto('/iframe.html?id=workflows-agentgraph--seventeen-agents&viewMode=story&globals=sandboxTheme:light')
   await expect(page.locator('.agent-graph[data-layout="list"]')).toBeVisible()
-  await expect(page.locator('.ag-live-chip[data-status="succeeded"]').first().getByText('Done', { exact: true }).filter({ visible: true })).toBeVisible()
+  await expect(page.locator('.ag-live-chip[data-status="done"]').first().getByText('Done', { exact: true }).filter({ visible: true })).toBeVisible()
   await expect(page.locator('.ag-live-chip[data-status="stopped"]').first().getByText('Stopped', { exact: true }).filter({ visible: true })).toBeVisible()
 })
 

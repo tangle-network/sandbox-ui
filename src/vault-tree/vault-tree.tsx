@@ -214,7 +214,7 @@ export function VaultTree({
   const treeRef = useRef<HTMLDivElement>(null), scroller = useRef<HTMLElement | null>(null)
   const [target, setTarget] = useState<string>()
   const previousPaths = useRef<Set<string> | null>(null)
-  const revealed = useRef<string | undefined>(undefined)
+  const revealed = useRef<{ scope: string | undefined; path: string } | undefined>(undefined)
 
   const index = useMemo(() => {
     const nodes = new Map<string, FileNode>()
@@ -284,8 +284,8 @@ export function VaultTree({
   // Reveal once per selection, respecting later manual collapse and scroll.
   useEffect(() => {
     if (!selectedPath || !index.nodes.has(selectedPath)) { revealed.current = undefined; return }
-    if (revealed.current === selectedPath) return
-    revealed.current = selectedPath
+    if (revealed.current?.path === selectedPath && revealed.current.scope === storageKey) return
+    revealed.current = { scope: storageKey, path: selectedPath }
     const ancestors: string[] = []
     for (let parent = index.parents.get(selectedPath) ?? null; parent; parent = index.parents.get(parent) ?? null) {
       ancestors.push(parent)
@@ -305,7 +305,7 @@ export function VaultTree({
         for (const path of ancestors) next.add(path)
       })
     }
-  }, [selectedPath, index]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedPath, index, storageKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visiblePaths = useMemo(() => new Set(nodeRows.map((row) => row.node.path)), [nodeRows])
   const tabStop = (focusedPath && visiblePaths.has(focusedPath) && focusedPath)
@@ -481,6 +481,6 @@ export function VaultTree({
     while (parent && !/auto|scroll/.test(getComputedStyle(parent).overflowY)) parent = parent.parentElement
     scroller.current = parent ?? document.scrollingElement as HTMLElement
   }} role="tree" aria-label={label} data-vault-tree-rows className={className}>
-    <VirtualList items={rows} keyOf={keyOf} render={render} scroller={scroller} origin={treeRef} estimate={33} overscan={320} target={target} targetAlign="nearest" virtualize={rows.length > 100} keepMounted={tabStop ?? undefined} />
+    <VirtualList key={storageKey} items={rows} keyOf={keyOf} render={render} scroller={scroller} origin={treeRef} estimate={33} overscan={320} target={target} targetAlign="nearest" virtualize={rows.length > 100} keepMounted={tabStop ?? undefined} />
   </div>
 }

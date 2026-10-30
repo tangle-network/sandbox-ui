@@ -1,3 +1,4 @@
+import { formatCompact } from '@tangle-network/charts'
 import type { ConversationEvent as RecordEvent } from './types.js'
 
 /**
@@ -261,12 +262,11 @@ export function pollSummary(events: readonly RecordEvent[]) {
     measured++
     tokens += parts.reduce((sum, value) => sum + value, 0)
   }
-  const count = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
   const tokenText = !measured
     ? 'tokens unknown'
     : measured < events.length
-      ? `~${count.format(tokens)} tokens (${measured} of ${events.length} measured)`
-      : `~${count.format(tokens)} tokens`
+      ? `~${formatCompact(tokens)} tokens (${measured} of ${events.length} measured)`
+      : `~${formatCompact(tokens)} tokens`
   return {
     polls: events.length,
     spanMs: span,

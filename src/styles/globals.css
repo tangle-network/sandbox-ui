@@ -14,6 +14,7 @@
  * nothing. A gate whose own source satisfies it is not a gate. */
 @import "tailwindcss" source(none);
 @import "./tailwind.css";
+@import "./record.css";
 @import "@tangle-network/charts/react/agent-graph.css";
 
 /* Scan sandbox-ui and forwarded UI component sources so exported components ship their needed utilities. */

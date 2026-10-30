@@ -8,6 +8,7 @@ export default defineConfig({
     workflows: "src/workflows/index.ts",
     run: "src/run/index.ts",
     "run/record": "src/run/record/index.ts",
+    record: "src/record/index.ts",
     "run/live": "src/run/live.tsx",
     workspace: "src/workspace/index.ts",
     workbench: "src/workbench/index.ts",

@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
-import { RunStatusIcon, runStatus } from '@tangle-network/ui/run'
+import { RunStatusIcon, runStatus, statusMeta } from '@tangle-network/ui/run'
 import { ms, roleOf, type RecordIndex } from './model.js'
 import type { ConversationNode } from './types.js'
 
@@ -34,9 +34,9 @@ export function AgentTree({ index, actor, cutoff, select }: {
       {entries.map(({ node, children }) => {
         const firstEvent = index.byActor.get(node.id)?.[0]
         const begin = node.start ? ms(node.start) : firstEvent ? ms(firstEvent.at) : undefined
-        const end = typeof node.end === 'string' ? node.end : undefined
-        const future = begin !== undefined && begin > cutoff, ended = end !== undefined && ms(end) <= cutoff
-        const state = future ? 'Not yet started' : ended ? node.status === 'done' ? 'Finished' : node.status === 'down' ? 'Stopped' : node.status ?? 'Ended' : end ? 'Not yet settled' : 'No terminal record'
+        const future = begin !== undefined && begin > cutoff, pending = typeof node.end === 'string' && ms(node.end) > cutoff
+        const status = runStatus(future || pending ? 'unknown' : node.status ?? 'unknown')
+        const state = future ? 'Not yet started' : pending ? 'Not yet settled' : statusMeta(status).label
         return <li className="min-w-0" key={node.id}>
           <button type="button"
             className="flex w-full min-w-0 items-start gap-2 rounded border border-transparent px-2 py-1.5 text-left text-sm text-foreground hover:border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-pressed:border-border aria-pressed:bg-muted data-[future]:opacity-55"
@@ -44,7 +44,7 @@ export function AgentTree({ index, actor, cutoff, select }: {
             aria-pressed={actor === node.id} data-node={node.id} data-future={future ? '' : undefined}
             title={node.label + (node.assignment ? ' · ' + node.assignment : '') + ' · ' + state}
             onClick={() => select(node.id)}>
-            <RunStatusIcon status={runStatus(future ? 'unknown' : node.status === 'down' || node.status === 'no-winner' ? 'stopped' : node.status ?? 'unknown')} className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <RunStatusIcon status={status} className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span className="grid min-w-0 gap-0.5 break-words">
               <span className="font-semibold">{node.label}</span>
               <span className="text-muted-foreground">{roleOf(node)} · {state}</span>

@@ -531,3 +531,20 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 Apache-2.0
 
 The native Runtime viewer is `LiveRun` from `@tangle-network/sandbox-ui/run/live`. It composes the same trace workspace, selected-agent conversation, retained files and capture coverage. Hosts may supply the existing fetch/EventSource transport for their authenticated session; an API or authenticated transport change clears the previous view, while frames within one stable transport preserve selection and the camera. Keep the transport object stable for that account. `@tangle-network/sandbox-ui/workspace-viewer.js` is the self-contained browser entry for Runtime's existing asset-directory contract, with `styles.css` beside it. `useDocument` owns same-origin ETag reads. `useEventStream` from `/run` owns native reconnect, terminal end and stale callback cleanup; `useAgentStream` resumes retained rows by generation and sequence. Authenticated openers keep their session and reconnect policy. Producers own validation and accounting.
+
+## Retained records and reports
+
+`@tangle-network/sandbox-ui/record` owns `AgentRecord`, `ResearchReport` and `RecordWorkGraph`. Install the optional `@drewstone/agent-record` peer for this feature; its public `/record` and `/report` entries own validation, models, provenance relationships and report exports. The generic `/run/record` transcript remains usable without that parser package.
+
+```tsx
+import { parseRecord } from '@drewstone/agent-record/record'
+import { AgentRecord } from '@tangle-network/sandbox-ui/record'
+import '@tangle-network/sandbox-ui/styles'
+
+const record = parseRecord(input)
+<AgentRecord records={[record]} />
+```
+
+Selection keeps original run, actor and event IDs, a recorded timestamp, and Messages, Event details or Usage. Charts owns the waterfall clock, playback and zoom. Usage distinguishes missing counters from zero and metered windows from individual responses. Capture gaps and original source references stay visible. The evidence graph keeps recorded entity kinds and relationships and uses the maintained graph camera.
+
+Research reports retain source documents, exact citations, Markdown/math, print and JSON/LaTeX exports. Optional source search accepts only a same-origin path and displays only the selected play's retained bytes. `agent-record-report` continues to write a single offline HTML file using this package's report viewer and stylesheet.

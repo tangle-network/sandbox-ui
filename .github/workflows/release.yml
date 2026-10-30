@@ -47,7 +47,7 @@ jobs:
         run: npm install --global npm@12.1.0
 
       - name: Admit the release version
-        uses: tangle-network/agent-runtime/.github/actions/admit-release@76b8de28191e31f0c1301a3621bab2188f8695e7
+        uses: tangle-network/agent-runtime/.github/actions/admit-release@7a8a935077e77af78ebd549e8670acf274e963ba
         with:
           tarballs: ${{ runner.temp }}/release/package.tgz
 

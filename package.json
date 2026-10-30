@@ -171,8 +171,8 @@
     "@nanostores/react": ">=0.8.4 <2.0.0",
     "@tangle-network/agent-interface": "^1.0.0 || ^2.0.0 || ^3.0.0 || ^5.2.0",
     "@tangle-network/brand": "^1.31.3",
-    "@tangle-network/charts": "^3.0.2",
-    "@tangle-network/ui": "^11.51.3",
+    "@tangle-network/charts": "^2.0.25 || ^3.0.2",
+    "@tangle-network/ui": "^11.51.4",
     "@tanstack/react-query": "^5.0.0",
     "@tiptap/core": ">=3.20.4 <4.0.0",
     "@tiptap/extension-collaboration": ">=3.20.4 <4.0.0",
@@ -278,8 +278,8 @@
     "@storybook/react-vite": "^10.6.3",
     "@tailwindcss/postcss": "^4.3.3",
     "@tangle-network/agent-interface": "5.10.2",
-    "@tangle-network/brand": "1.31.3",
-    "@tangle-network/charts": "3.0.2",
+    "@tangle-network/brand": "^1.31.3",
+    "@tangle-network/charts": "^3.0.2",
     "@tanstack/react-query": "^5.104.5",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
@@ -313,6 +313,7 @@
     "vite": "^8.3.5",
     "vitest": "^5.0.5",
     "yjs": "^13.6.33",
-    "@drewstone/agent-record": "https://github.com/drewstone/agent-record/releases/download/v2.0.0/drewstone-agent-record-2.0.0.tgz"
+    "@drewstone/agent-record": "https://github.com/drewstone/agent-record/releases/download/v2.0.0/drewstone-agent-record-2.0.0.tgz",
+    "@tangle-network/ui": "^11.51.4"
   }
 }

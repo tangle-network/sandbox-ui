@@ -95,7 +95,7 @@ export function RecordUsage({
         if (event.detail.toolCallId === undefined) continue
         const calls =
           index.calls.get(toolKey(event.node, event.detail.toolCallId)) ?? []
-        if (calls.length !== 1) {
+        if (calls.length !== 1 || index.results.get(toolKey(event.node, event.detail.toolCallId))?.length !== 1) {
           ambiguous++
           continue
         }

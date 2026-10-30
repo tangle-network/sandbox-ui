@@ -258,8 +258,8 @@ importers:
         specifier: ^1.31.3
         version: 1.31.3(react@19.3.1)
       '@tangle-network/charts':
-        specifier: ^4.0.0
-        version: 4.0.0(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.7(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^4.0.1
+        version: 4.0.1(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.7(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1981,8 +1981,8 @@ packages:
       react-dom:
         optional: true
 
-  '@tangle-network/charts@4.0.0':
-    resolution: {integrity: sha512-v8QGuGAh6G52nIqwlLfr6y0mr/LfL+EjXlXPLBu4pBmvzWLtP/4tLnxscglY4QpFG1eNPfLZv2831xXa4TyB5w==}
+  '@tangle-network/charts@4.0.1':
+    resolution: {integrity: sha512-p9e8Nd6e0+NLdQ06W3vyZ3x6pZcL+vklv1j/JJcDC7Uu2lKBb+XwP1+yC2k+hk3L1I6+JgLzRPg+cKlFLHUpgA==}
     peerDependencies:
       '@tangle-network/brand': ^1.31.3
       '@tangle-network/ui': ^11.51.6
@@ -5711,7 +5711,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@tangle-network/charts@4.0.0(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.7(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@tangle-network/charts@4.0.1(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.7(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     optionalDependencies:
       '@tangle-network/brand': 1.31.3(react@19.3.1)
       '@tangle-network/ui': 11.51.7(d56e3d7864cba854d7eacd97c62b4344)

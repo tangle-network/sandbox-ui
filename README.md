@@ -30,7 +30,7 @@ Optional peers are required only by the subpaths that use them; see [package.jso
 
 Import `ResearchReport` from `@tangle-network/sandbox-ui/record/ResearchReport` for report-only server rendering. It needs the Core report/data peer and React; it avoids the optional WorkGraph feature and chat session stores. `record` retains the complete record/report/WorkGraph surface for hosts that use those features. Load the shared stylesheet for both.
 
-Charts4 and UI11.51.7 provide the shared clock and canonical run statuses; graph producers send `done` for completed work. Standalone report assets bundle the same UTC timestamp implementation during release.
+The Charts and UI peers in [package.json](./package.json) provide the shared clock and canonical run statuses; graph producers send `done` for completed work. Standalone report assets bundle the same UTC timestamp implementation during release.
 
 ### Retained conversations
 

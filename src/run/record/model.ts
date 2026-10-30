@@ -355,7 +355,7 @@ export function recordFlowTrace(record: RunRecord, live = false, observedAt = Da
       spans.push({ id: `${traceId}:${detail.spanId}`, parentId: typeof detail.parentSpanId === 'string' ? `${traceId}:${detail.parentSpanId}` : parentId, kind: spanKind, name: event.label, startMs: offset(start), endMs: offset(Number.isFinite(end) ? Math.max(start, end) : running ? last : start), status: detail.isError ? 'failed' : state, meta: { eventId: event.id } })
       if (spanKind === 'tool') { toolCalls++; if (typeof detail.toolCallId === 'string') explicitTools.add(toolKey(event.node, detail.toolCallId)) }
     } else if (response) {
-      spans.push({ id: event.id, parentId, kind: 'model', name: event.label, startMs: offset(start), endMs: offset(start), approx: true, status: runStatus(detail.responseStatus ?? 'unknown'), promptTokens: prompt, completionTokens: completion, facts, meta: { eventId: event.id, timing: 'Response timestamp; generation duration was not recorded' } })
+      spans.push({ id: event.id, parentId, kind: 'model', name: event.label, startMs: offset(start), endMs: offset(start), approx: true, status: runStatus(typeof detail.responseStatus === 'string' ? detail.responseStatus : 'unknown'), promptTokens: prompt, completionTokens: completion, facts, meta: { eventId: event.id, timing: 'Response timestamp; generation duration was not recorded' } })
     }
   }
   for (const key of new Set([...index.calls.keys(), ...index.results.keys()])) {

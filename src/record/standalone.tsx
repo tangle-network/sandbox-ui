@@ -1,10 +1,9 @@
-import { parseReportOptions, type ReportOptions } from '@drewstone/agent-record/report'
+import { parseReportOptions, parseResearchReport, type ReportOptions, type ResearchReportData } from '@drewstone/agent-record/report'
 import type { RecordSelection } from '@drewstone/agent-record/record'
 import type { ResearchView } from './selection.js'
 import { StrictMode, useEffect, useState } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { ResearchReport } from './ResearchReport.js'
-import { parseResearchReport, type ResearchReportData } from '@drewstone/agent-record/report'
 import { readReportLocation, reportLocationSearch, type ResearchDocumentSelection } from './selection.js'
 
 function StandaloneReport({ report, options }: { report: ResearchReportData; options: ReportOptions }) {

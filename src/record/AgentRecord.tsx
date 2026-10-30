@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { RecordEvent, RecordSelection, RunRecord } from '@drewstone/agent-record/record'
+import { runStatus, statusMeta } from '@tangle-network/ui/run'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { FlowSpan } from '@tangle-network/charts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@tangle-network/ui/primitives'
@@ -107,7 +108,7 @@ function RecordView({ records, record, selection, onChange, behaviors }: { recor
         <AgentTree index={index} actor={actor} cutoff={cutoff} select={selectActor} />
       </details>
       <section className="conversation-panel" aria-label="Agent record details">
-        <div className="conversation-head"><div className="agent-identity"><span className="agent-avatar" data-agent-avatar aria-hidden>{roleOf(node).slice(0, 1).toUpperCase()}</span><div><h3 data-agent-title>{node?.label ?? 'Messages'}</h3><p data-agent-role>{[roleOf(node), modelIdentity(node, record), node?.status ?? 'State unknown'].filter(Boolean).join(' · ')}</p></div></div>
+        <div className="conversation-head"><div className="agent-identity"><span className="agent-avatar" data-agent-avatar aria-hidden>{roleOf(node).slice(0, 1).toUpperCase()}</span><div><h3 data-agent-title>{node?.label ?? 'Messages'}</h3><p data-agent-role>{[roleOf(node), modelIdentity(node, record), statusMeta(runStatus(node?.status ?? 'unknown')).label].filter(Boolean).join(' · ')}</p></div></div>
           <Select label="Agent" field="agent" value={actor} onChange={selectActor}>{index.actors.map(item => <option key={item.id} value={item.id}>{item.label} · {roleOf(item)}</option>)}</Select>
         </div>
         <Capture record={record} index={index} actor={actor} />

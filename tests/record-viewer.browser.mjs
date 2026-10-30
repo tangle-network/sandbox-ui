@@ -157,6 +157,8 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
         await button.focus();await page.keyboard.press('Enter')
         assert.equal(await page.locator('[data-agent]').inputValue(),node.id,'stopped actor selection preserves original identity')
       }
+      assert.match(await page.locator('[data-agent-role]').innerText(),/Stopped/)
+      assert.doesNotMatch(await page.locator('[data-agent-role]').innerText(),/\bdown\b/)
       for(const node of stoppedRecord.nodes.filter(node=>node.kind==='runtime')){
         const expected=node.status==='down'?'Stopped':node.status==='done'?'Done':'Unknown'
         const row=page.locator('[data-flow-waterfall] [data-span-id='+JSON.stringify(node.id)+']')

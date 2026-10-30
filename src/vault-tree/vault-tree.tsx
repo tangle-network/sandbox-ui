@@ -420,7 +420,7 @@ export function VaultTree({
             ref={(element) => {
               if (element) {
                 rowRefs.current.set(node.path, element)
-                if (previousPaths.current && !previousPaths.current.has(node.path)) {
+                if (previousPaths.current && !previousPaths.current.has(node.path) && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
                   previousPaths.current.add(node.path)
                   element.classList.add('agent-arrive')
                   Promise.allSettled(element.getAnimations().map(animation => animation.finished)).then(() => element.classList.remove('agent-arrive'))

@@ -398,7 +398,7 @@ export function VaultTree({
                 })
               }}
               style={{ paddingInlineStart: row.depth * INDENT + 28 }}
-              className="flex min-h-8 w-full items-center rounded-md pr-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              className="flex min-h-8 w-full items-center rounded-md pr-2 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
               Show {Math.min(row.hidden, VAULT_TREE_CHILD_PAGE)} more of {row.hidden}
             </button>
@@ -470,7 +470,7 @@ export function VaultTree({
             <span className="min-w-0 flex-1 truncate">{node.name}</span>
             {change && (dir
               ? <span aria-label={`holds ${change === 'added' ? 'added' : 'changed'} files`} className={`size-1.5 shrink-0 rounded-full ${change === 'added' ? 'bg-[var(--surface-success-text)]' : 'bg-[var(--surface-warning-text)]'}`} />
-              : <span aria-label={change} className={`w-3.5 shrink-0 text-center font-mono text-xs font-semibold ${CHANGE[change].ink}`}>{CHANGE[change].letter}</span>)}
+              : <span aria-label={change} className={`w-3.5 shrink-0 text-center font-mono text-sm font-semibold ${CHANGE[change].ink}`}>{CHANGE[change].letter}</span>)}
           </div>
         )
   }

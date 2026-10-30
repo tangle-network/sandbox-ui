@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0
+
+- Use Charts4 and the shared UI clock/status owner, with one physical UI module for graph and transcript readers. Rebuild standalone report assets with explicit UTC user-message times for server/browser consistency.
+
 ## 2.0.20
 
 - Share the retained agent hierarchy through the record surface, with canonical identities, selected-agent actions, future/ended wording and the maintained execution-status icon.

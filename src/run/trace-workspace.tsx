@@ -85,7 +85,7 @@ function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, a
       medianEventGapMs: span.medianEventGapMs ?? (at === null ? card?.medianEventGapMs : undefined),
     })
     nodes.push({ ...card, id: span.id, label: card?.label ?? span.name, model: card?.model ?? span.detail,
-      status: at === null && card?.status ? card.status : state === "done" ? "succeeded" : state,
+      status: at === null && card?.status ? card.status : state,
       costUsd: at === null ? card?.costUsd ?? span.costUsd : span.endMs <= at ? span.costUsd : undefined,
       startedAt: epoch == null || !Number.isFinite(epoch) ? at === null ? card?.startedAt : undefined : epoch + span.startMs,
       ...timing, events: events.slice(-4),

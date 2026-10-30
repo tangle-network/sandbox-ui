@@ -1,9 +1,9 @@
-import { runStatus } from '@tangle-network/ui/run'
+import { isOpen, runStatus } from '@tangle-network/ui/run'
 import { useMemo, useRef, useState } from 'react'
 import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { TraceWorkspace } from './trace-workspace'
 import { useEventStream, type AgentStreamOpener } from './event-stream'
-import { type AgentGraphNode, type AgentGraphStatus } from '../workflows/AgentGraph'
+import { type AgentGraphNode } from '../workflows/AgentGraph'
 import { useLiveInspection } from './live-inspection'
 
 // A display-only subset of Runtime's TopSnapshot wire contract. Runtime owns all lifecycle/accounting projection.
@@ -21,9 +21,6 @@ const withNodes = (run: Snapshot['supervisors'][number], nodes: Node[]): Worker[
 ]
 // A missing or unknown spend is unknown, never zero, and never drops the agent.
 const cost = (...spends: (Spend | undefined)[]) => spends.every((spend) => spend && spend.usdKnown !== false && Number.isFinite(spend.usd) && spend.usd >= 0) ? spends.reduce((sum, spend) => sum + (spend?.usd ?? 0), 0) : undefined
-const flowStatus = (status: string) => runStatus(status === 'down' ? 'failed' : status === 'cancelled' || status === 'no-winner' ? 'stopped' : status)
-const graphStatus = (status: string): AgentGraphStatus => { const state = flowStatus(status); return state === 'done' ? 'succeeded' : state }
-const isOpen = (status: string) => ['running', 'waiting', 'needs-you'].includes(flowStatus(status))
 type Frame = { sequence: number; observedAt: number; reset: boolean; snapshots: Snapshot[] }
 
 /** Keep one transport identity per authenticated account; changing it discards the previous view. */
@@ -86,17 +83,17 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
       const start = Math.max(0, Date.parse(worker.startedAt) - first)
       const end = time(worker.endedAt) ?? (isOpen(worker.status) ? at : Date.parse(worker.startedAt))
       const costUsd = cost(worker.spend, worker.metered)
-      return [{ id: worker.id, parentId: worker.parent && worker.parent !== worker.id ? worker.parent : run!.id, name: worker.label, kind: 'pipeline', startMs: start, endMs: Math.max(start, end - first), status: flowStatus(worker.status), ...(costUsd !== undefined ? { costUsd } : {}), ...(worker.lastActivityAt !== undefined ? { activityAt: [worker.lastActivityAt - first], medianEventGapMs: worker.medianEventGapMs } : {}), ...(detail(worker.id) ? { detail: detail(worker.id) } : {}), ...(flowStatus(worker.status) === 'failed' && worker.reason ? { facts: [{ label: 'Failure', value: worker.reason }] } : {}), ...(worker.status === 'cancelled' ? { outcome: { tone: 'neutral', label: 'Cancelled' } as const } : {}) }]
+      return [{ id: worker.id, parentId: worker.parent && worker.parent !== worker.id ? worker.parent : run!.id, name: worker.label, kind: 'pipeline', startMs: start, endMs: Math.max(start, end - first), status: runStatus(worker.status), ...(costUsd !== undefined ? { costUsd } : {}), ...(worker.lastActivityAt !== undefined ? { activityAt: [worker.lastActivityAt - first], medianEventGapMs: worker.medianEventGapMs } : {}), ...(detail(worker.id) ? { detail: detail(worker.id) } : {}), ...(runStatus(worker.status) === 'failed' && worker.reason ? { facts: [{ label: 'Failure', value: worker.reason }] } : {}) }]
     })
-    if (run?.startedAt && run.status !== 'unobserved' && !spans.some((span) => span.id === run.id)) spans.unshift({ id: run.id, name: 'root', kind: 'pipeline', detail: detail(run.id), startMs: Math.max(0, Date.parse(run.startedAt) - first), endMs: Math.max(0, Date.parse(run.completedAt ?? new Date(at).toISOString()) - first), status: flowStatus(run.status), ...(flowStatus(run.status) === 'failed' && run.reason ? { facts: [{ label: 'Failure', value: run.reason }] } : {}), ...(run.lastActivityAt !== undefined ? { activityAt: [run.lastActivityAt - first], medianEventGapMs: run.medianEventGapMs } : {}), ...(cost(run.driverSpend) !== undefined ? { costUsd: cost(run.driverSpend) } : {}), ...(run.status === 'cancelled' ? { outcome: { tone: 'neutral', label: 'Cancelled' } as const } : {}) })
+    if (run?.startedAt && run.status !== 'unobserved' && !spans.some((span) => span.id === run.id)) spans.unshift({ id: run.id, name: 'root', kind: 'pipeline', detail: detail(run.id), startMs: Math.max(0, Date.parse(run.startedAt) - first), endMs: Math.max(0, Date.parse(run.completedAt ?? new Date(at).toISOString()) - first), status: runStatus(run.status), ...(runStatus(run.status) === 'failed' && run.reason ? { facts: [{ label: 'Failure', value: run.reason }] } : {}), ...(run.lastActivityAt !== undefined ? { activityAt: [run.lastActivityAt - first], medianEventGapMs: run.medianEventGapMs } : {}), ...(cost(run.driverSpend) !== undefined ? { costUsd: cost(run.driverSpend) } : {}) })
     const totals = run?.totals
     return { spans, totalMs: Math.max(0, ...spans.map((span) => span.endMs)), ...(totals?.tokensKnown !== false && typeof totals?.tokensInput === 'number' && Number.isFinite(totals.tokensInput) && totals.tokensInput >= 0 ? { promptTokens: totals.tokensInput } : {}), ...(totals?.tokensKnown !== false && typeof totals?.tokensOutput === 'number' && Number.isFinite(totals.tokensOutput) && totals.tokensOutput >= 0 ? { completionTokens: totals.tokensOutput } : {}), errors: spans.filter((span) => span.status === 'failed').length }
   }, [active?.snapshot, active?.run, startedAt])
   // Every recorded worker gets a card, timed or not; the waterfall only places workers with a recorded start.
   const workers = run?.workers.filter((worker) => worker.id !== run.id) ?? []
   const nodes: AgentGraphNode[] = run ? [
-    { id: run.id, label: 'root', status: graphStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), lastActivityAt: run.lastActivityAt, medianEventGapMs: run.medianEventGapMs, result: outcomeText ?? (run.status === 'cancelled' ? 'Cancelled' : graphStatus(run.status) === 'failed' ? run.reason || 'Failure cause not recorded' : undefined) },
-    ...workers.map((worker) => ({ id: worker.id, label: worker.label, harness: worker.runtime, model: detail(worker.id), status: graphStatus(worker.status), costUsd: cost(worker.spend, worker.metered), startedAt: time(worker.startedAt), lastActivityAt: worker.lastActivityAt, medianEventGapMs: worker.medianEventGapMs, turn: worker.liveTail?.at(-1), events: worker.liveTail?.slice(-3).map((label, index) => ({ id: `${worker.id}:${index}:${label}`, label })), result: worker.status === 'cancelled' ? 'Cancelled' : graphStatus(worker.status) === 'failed' ? worker.reason || 'Failure cause not recorded' : worker.verdict })),
+    { id: run.id, label: 'root', status: runStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), lastActivityAt: run.lastActivityAt, medianEventGapMs: run.medianEventGapMs, result: outcomeText ?? run.reason ?? (runStatus(run.status) === 'failed' ? 'Failure cause not recorded' : undefined) },
+    ...workers.map((worker) => ({ id: worker.id, label: worker.label, harness: worker.runtime, model: detail(worker.id), status: runStatus(worker.status), costUsd: cost(worker.spend, worker.metered), startedAt: time(worker.startedAt), lastActivityAt: worker.lastActivityAt, medianEventGapMs: worker.medianEventGapMs, turn: worker.liveTail?.at(-1), events: worker.liveTail?.slice(-3).map((label, index) => ({ id: `${worker.id}:${index}:${label}`, label })), result: worker.reason ?? (runStatus(worker.status) === 'failed' ? 'Failure cause not recorded' : worker.verdict) })),
   ] : []
   const selectedAgent = agent
   const inspection = useLiveInspection(active && selectedAgent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(selectedAgent)}` : undefined, !!run && isOpen(run.status), transport?.fetch)

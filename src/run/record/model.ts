@@ -89,10 +89,10 @@ export function preview(call: ToolCall) {
   return compact(call.input)
 }
 
-/** Identity is established by the importer, never inferred from labels or timestamps. */
+/** Preserve importer identity; retained `down` means stopped, unlike a live Runtime failure. */
 export function indexRecord<R extends RunRecord>(record: R) {
   type Event = R['events'][number]
-  const inputNodes = record.nodes as R['nodes'][number][]
+  const inputNodes = (record.nodes as R['nodes'][number][]).map(node => node.status === 'down' ? { ...node, status: 'stopped' } : node)
   const inputEvents = record.events as Event[]
   const nodes = new Map(inputNodes.map((node) => [node.id, node]))
   const canonical = (id: string) => nodes.get(id)?.agentId ?? id

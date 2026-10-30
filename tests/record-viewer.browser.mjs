@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, writeFile, mkdir, rm } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { createRequire } from 'node:module'
+import { pathToFileURL } from 'node:url'
 import test from 'node:test'
 import { build } from 'vite'
 import { chromium } from 'playwright'
@@ -42,6 +43,17 @@ test('record usage keeps original source actions and measured semantics through 
   const evidence = process.env.RUN_UI_EVIDENCE_DIR, checks = []
   if (evidence) await mkdir(evidence, { recursive: true })
   const scratch = await mkdtemp(resolve(dirname(manifest), '.usage-host-')), entry = resolve(scratch, 'host.js')
+  // Real native-journal ingestion is the negative control for the legacy publication importer.
+  const { ingestRun } = await import(pathToFileURL(require.resolve('@drewstone/agent-record/adapters/agent-runtime')))
+  const native = resolve(scratch, 'native-failure'); await mkdir(native)
+  await writeFile(resolve(native, 'run-input.json'), JSON.stringify({ task: { objective: 'Retain a native failure' } }))
+  await writeFile(resolve(native, 'spawn-journal.jsonl'), [
+    { kind:'event', root:'native-failure', event:{ kind:'spawned', id:'native-failure', at:'2026-10-30T20:00:00Z' } },
+    { kind:'event', root:'native-failure', event:{ kind:'spawned', id:'native-failure:s0', at:'2026-10-30T20:00:01Z' } },
+    { kind:'event', root:'native-failure', event:{ kind:'settled', id:'native-failure:s0', status:'down', reason:'Native checkout failed', at:'2026-10-30T20:00:02Z' } },
+  ].map(row => JSON.stringify(row)).join('\n')+'\n')
+  const failedRecord = ingestRun(native, { runId:'native-failure' }).record
+  assert.equal(failedRecord.nodes.find(node => node.id === 'native-failure:s0').status, 'down')
   await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord,RecordWorkGraph}from'@tangle-network/sandbox-ui/record';import{parseRecord}from'@drewstone/agent-record/record';
 import{fromResearchPublication}from'@drewstone/agent-record/adapters/research-publication';import{recordModel}from'@tangle-network/sandbox-ui/run/record';const raw=await fetch('/retained-record'+location.search).then(response=>response.json());const record=raw.schema==='research-publication.events.v1'?fromResearchPublication(raw):parseRecord(raw);window.recordedProjection=recordModel.recordFlowTrace(record);const initial={runId:record.runId,nodeId:record.nodes.find(node=>node.kind==='agent')?.id??'root',view:'usage'};
 function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=useState(false);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>{window.chosen=initial;set(initial)}},'Return to full usage'),React.createElement('button',{onClick:()=>showGraph(true)},'Read retained relationships'),graph?React.createElement(RecordWorkGraph,{record}):React.createElement(AgentRecord,{records:[record],selection,onSelectionChange:value=>{window.chosen=value;set(value)},theme:new URL(location.href).searchParams.get('theme')}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
@@ -50,7 +62,7 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
   let theme='light'
   const server=createServer(async(req,res)=>{
     const path=new URL(req.url,'http://localhost').pathname
-    if(path==='/retained-record'){res.setHeader('content-type','application/json');const params=new URL(req.url,'http://localhost').searchParams;const selected=cases.get(params.get('boundary'));return res.end(selected?JSON.stringify(selected):params.has('stopped')?stoppedBytes:bytes)}
+    if(path==='/retained-record'){res.setHeader('content-type','application/json');const params=new URL(req.url,'http://localhost').searchParams;const selected=cases.get(params.get('boundary'));return res.end(selected?JSON.stringify(selected):params.has('failure')?JSON.stringify(failedRecord):params.has('stopped')?stoppedBytes:bytes)}
     if(path==='/styles.css'){res.setHeader('content-type','text/css');return res.end(await readFile(styles))}
     const chunk=chunks.get(path.slice(1));if(chunk!==undefined){res.setHeader('content-type',path.endsWith('.css')?'text/css':'text/javascript');return res.end(chunk)}
     res.setHeader('content-type','text/html; charset=utf-8');res.end(`<!doctype html><html class="${theme}" data-theme="${theme}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><div id="host"></div><script type="module" src="/host.js"></script></html>`)
@@ -180,6 +192,21 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
       await graph.getByRole('button',{name:/zoom in/i}).click()
       await graph.getByRole('button',{name:/fit view/i}).click()
       if(evidence)await page.screenshot({path:evidence+'/retained-graph-'+theme+'-'+width+'.png',fullPage:true})
+      await page.goto('http://127.0.0.1:'+server.address().port+'/?theme='+theme+'&failure')
+      const failedCursor=page.getByRole('slider',{name:'Playback position',exact:true});await failedCursor.focus();await page.keyboard.press('Home')
+      await page.getByRole('button',{name:'Show full trace',exact:true}).click()
+      await page.locator('.topology > summary').click()
+      const failed = page.locator('[data-graph] [data-node="native-failure:s0"]')
+      assert.match(await failed.getAttribute('aria-label'),/Failed/)
+      assert.equal(await failed.locator('[data-run-status]').getAttribute('data-run-status'),'failed')
+      await failed.focus();await page.keyboard.press('Enter')
+      assert.equal(await page.locator('[data-agent]').inputValue(),'native-failure:s0')
+      assert.match(await page.locator('[data-agent-role]').innerText(),/Failed/)
+      const failedRow=page.locator('[data-flow-waterfall] [data-span-id="native-failure:s0"]')
+      assert.equal(await failedRow.locator('.fw-agent-dot').first().getAttribute('title'),'Failed')
+      assert.equal(await failedRow.locator('.fw-agent-dot').first().getAttribute('data-outcome'),'failed')
+      assert.equal(await page.evaluate(()=>window.recordedProjection.spans.find(span=>span.id==='native-failure:s0').status),'failed')
+      if(evidence)await page.screenshot({path:evidence+'/retained-native-failure-'+theme+'-'+width+'.png',fullPage:true})
       assert.deepEqual(errors,[])
       checks.push({theme,width,retainedEvents:record.events.length,recordSha256:digest,captions,sourceActions})
       await page.waitForTimeout(Math.max(0,10_100-(Date.now()-began)))

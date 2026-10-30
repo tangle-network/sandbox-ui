@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.1
+
+- Forward the complete shared utility bindings and adopt shared formatter and hover-card behavior from UI and Charts. Keep mobile graph details reachable and restore the actual opening control, including repeated tool calls and header status chips. Preserve historical stopped actors separately from native Runtime failures; rebuild standalone viewer assets with the same public cohort.
+
 ## 3.0.0
 
 - Use Charts4 and UI11.51.7 for shared clocks and canonical graph statuses (`done` replaces `succeeded`). Expose the existing ResearchReport module without unused graph/session-store imports. Rebuild standalone report assets with explicit UTC user-message times for server/browser consistency.

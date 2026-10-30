@@ -1,10 +1,9 @@
 import { parseReportOptions, parseResearchReport, type ReportOptions, type ResearchReportData } from '@drewstone/agent-record/report'
 import type { RecordSelection } from '@drewstone/agent-record/record'
-import type { ResearchView } from './selection.js'
 import { StrictMode, useEffect, useState } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 import { ResearchReport } from './ResearchReport.js'
-import { readReportLocation, reportLocationSearch, type ResearchDocumentSelection } from './selection.js'
+import { readReportLocation, reportLocationSearch, type ResearchDocumentSelection, type ResearchView } from './selection.js'
 
 function StandaloneReport({ report, options }: { report: ResearchReportData; options: ReportOptions }) {
   // Match the static server markup first, then apply the browser's citation.

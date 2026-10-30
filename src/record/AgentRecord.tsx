@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import type { RecordEvent, RecordSelection, RunRecord } from '@drewstone/agent-record/record'
-import { runStatus, statusMeta } from '@tangle-network/ui/run'
+import { runStatus, statusMeta } from '@tangle-network/ui/run/status-meta'
 import { FlowWaterfall } from '@tangle-network/charts/react'
 import type { FlowSpan } from '@tangle-network/charts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@tangle-network/ui/primitives'

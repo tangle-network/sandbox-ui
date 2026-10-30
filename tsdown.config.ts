@@ -9,6 +9,7 @@ export default defineConfig({
     run: "src/run/index.ts",
     "run/record": "src/run/record/index.ts",
     record: "src/record/index.ts",
+    "record/ResearchReport": "src/record/ResearchReport.tsx",
     "run/live": "src/run/live.tsx",
     workspace: "src/workspace/index.ts",
     workbench: "src/workbench/index.ts",
@@ -34,13 +35,11 @@ export default defineConfig({
     utils: "src/utils/index.ts",
     assets: "src/assets/index.ts",
   },
-  format: ["esm"],
   platform: "neutral",
   // The grapheme addon publishes module/main entries without an exports map.
   inputOptions: { resolve: { mainFields: ["module", "main"] } },
   dts: true,
   clean: true,
-  fixedExtension: false,
   // Provider logos ship inside the bundle as data URLs, so consumers need no
   // asset loader for them.
   deps: {

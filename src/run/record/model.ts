@@ -1,7 +1,7 @@
 import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { formatCompact as fmt, formatSpanDuration as interval, formatUtcTime as utcTime, reportedCount, sumReportedCounts } from '@tangle-network/charts'
 export { fmt, interval, utcTime }
-import { isOpen, runStatus } from '@tangle-network/ui/run'
+import { isOpen, runStatus } from '@tangle-network/ui/run/status-meta'
 import type { ConversationEvent as RecordEvent, ConversationNode as RecordNode, ConversationRecord as RunRecord } from './types.js'
 
 export interface ToolCall {

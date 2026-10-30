@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
-import { RunStatusIcon, runStatus, statusMeta } from '@tangle-network/ui/run'
+import { RunStatusIcon, runStatus, statusMeta } from '@tangle-network/ui/run/status-meta'
 import { ms, roleOf, type RecordIndex } from './model.js'
 import type { ConversationNode } from './types.js'
 

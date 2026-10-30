@@ -1,4 +1,4 @@
-import { isOpen, runStatus } from '@tangle-network/ui/run'
+import { isOpen, runStatus } from '@tangle-network/ui/run/status-meta'
 import { useMemo, useRef, useState } from 'react'
 import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { TraceWorkspace } from './trace-workspace'
@@ -95,8 +95,7 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
     { id: run.id, label: 'root', status: runStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), lastActivityAt: run.lastActivityAt, medianEventGapMs: run.medianEventGapMs, result: outcomeText ?? run.reason ?? (runStatus(run.status) === 'failed' ? 'Failure cause not recorded' : undefined) },
     ...workers.map((worker) => ({ id: worker.id, label: worker.label, harness: worker.runtime, model: detail(worker.id), status: runStatus(worker.status), costUsd: cost(worker.spend, worker.metered), startedAt: time(worker.startedAt), lastActivityAt: worker.lastActivityAt, medianEventGapMs: worker.medianEventGapMs, turn: worker.liveTail?.at(-1), events: worker.liveTail?.slice(-3).map((label, index) => ({ id: `${worker.id}:${index}:${label}`, label })), result: worker.reason ?? (runStatus(worker.status) === 'failed' ? 'Failure cause not recorded' : worker.verdict) })),
   ] : []
-  const selectedAgent = agent
-  const inspection = useLiveInspection(active && selectedAgent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(selectedAgent)}` : undefined, !!run && isOpen(run.status), transport?.fetch)
+  const inspection = useLiveInspection(active && agent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(agent)}` : undefined, !!run && isOpen(run.status), transport?.fetch)
   const known = new Set(nodes.map((node) => node.id))
   const edges = workers.map((worker) => ({ from: worker.parent && worker.parent !== worker.id && known.has(worker.parent) ? worker.parent : run!.id, to: worker.id, kind: 'spawn' as const }))
   const agentCards = Object.fromEntries(nodes.map(({ id, label, harness, model, turn, events, result, status, costUsd, startedAt, lastActivityAt, medianEventGapMs }) => [id, { label, harness, model, turn, events, result, ...(startedAt === undefined ? { status, costUsd, lastActivityAt, medianEventGapMs } : {}) }]))
@@ -113,7 +112,7 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
       {/* With no run to show, every root's diagnostics say why; an unreadable root is never "no agents". */}
       {(active ? [active.snapshot] : snapshots).filter((snapshot) => snapshot.completeness === 'partial').map((snapshot) => <p key={snapshot.root} role="alert">Partial capture: {snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>)}
       {active ? (
-        <TraceWorkspace key={active.key} trace={trace} label="Run" selectedAgentId={selectedAgent} conversationOpen={conversationOpen} openEventSource={transport?.openEventSource} onSelectAgent={(id) => { if (id) setAgent(id); setConversationOpen(id !== undefined) }} live={isOpen(active.run.status) || run!.workers.some((worker) => isOpen(worker.status))} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} agentGraph={{ defaultLayout: 'tree', edges }} defaultView="graph" maxHeight={650} files={inspection.files} scoreboard={inspection.scoreboard} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
+        <TraceWorkspace key={active.key} trace={trace} label="Run" agentId={agent} conversationOpen={conversationOpen} openEventSource={transport?.openEventSource} onSelectAgent={(id) => { if (id) setAgent(id); setConversationOpen(id !== undefined) }} live={isOpen(active.run.status) || run!.workers.some((worker) => isOpen(worker.status))} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} agentGraph={{ defaultLayout: 'tree', edges }} defaultView="graph" maxHeight={650} files={inspection.files} scoreboard={inspection.scoreboard} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
       ) : connected && !snapshots.some((snapshot) => snapshot.completeness === 'partial') && <p role="status">No recorded agents in these roots.</p>}
     </main>
   )

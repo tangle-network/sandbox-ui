@@ -182,8 +182,8 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/ui':
-        specifier: ^11.51.4
-        version: 11.51.4(d56e3d7864cba854d7eacd97c62b4344)
+        specifier: ^11.51.7
+        version: 11.51.7(d56e3d7864cba854d7eacd97c62b4344)
       diff:
         specifier: ^9.0.0
         version: 9.0.0
@@ -220,7 +220,7 @@ importers:
     devDependencies:
       '@drewstone/agent-record':
         specifier: https://github.com/drewstone/agent-record/releases/download/v2.0.0/drewstone-agent-record-2.0.0.tgz
-        version: https://github.com/drewstone/agent-record/releases/download/v2.0.0/drewstone-agent-record-2.0.0.tgz(09d98fa94c84a22878532a6eddce5cc8)
+        version: https://github.com/drewstone/agent-record/releases/download/v2.0.0/drewstone-agent-record-2.0.0.tgz(d9e0b70edb4f0029598ad17f46dc9378)
       '@fontsource/geist':
         specifier: 5.3.0
         version: 5.3.0
@@ -258,8 +258,8 @@ importers:
         specifier: ^1.31.3
         version: 1.31.3(react@19.3.1)
       '@tangle-network/charts':
-        specifier: ^3.0.3
-        version: 3.0.3(@tangle-network/brand@1.31.3(react@19.3.1))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^4.0.0
+        version: 4.0.0(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.7(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1981,16 +1981,19 @@ packages:
       react-dom:
         optional: true
 
-  '@tangle-network/charts@3.0.3':
-    resolution: {integrity: sha512-Uwsj5UQ38brUJTN4UWrLoE9iEidgWvzSLpPAqayZTJID66lDA/HB7jkhdoumpsLvLanD4r8rnwLrm6MVZwa9yw==}
+  '@tangle-network/charts@4.0.0':
+    resolution: {integrity: sha512-v8QGuGAh6G52nIqwlLfr6y0mr/LfL+EjXlXPLBu4pBmvzWLtP/4tLnxscglY4QpFG1eNPfLZv2831xXa4TyB5w==}
     peerDependencies:
       '@tangle-network/brand': ^1.31.3
+      '@tangle-network/ui': ^11.51.6
       '@xyflow/react': ^12.0.0
       elkjs: ^0.12.0
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18 || ^19
     peerDependenciesMeta:
       '@tangle-network/brand':
+        optional: true
+      '@tangle-network/ui':
         optional: true
       '@xyflow/react':
         optional: true
@@ -2067,8 +2070,8 @@ packages:
       yjs:
         optional: true
 
-  '@tangle-network/ui@11.51.4':
-    resolution: {integrity: sha512-nCgYm3eu0y5vNVVnOqvC2mKfkBchvtYxWADsfMpAJLQ0u8oldb5GE2VJ5k9nAUfk0z/w9h5VoIInZvq6IpMmhw==}
+  '@tangle-network/ui@11.51.7':
+    resolution: {integrity: sha512-70BdCRg6jVx9QTYoTY0mJDBQ64ccZ+RpY1Qj2Jo2DhRyaYObZVfR1c9Lfp3etrvbhvJLnZgymeGSrtV23Ro0DQ==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <3.0.0'
@@ -4450,11 +4453,11 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.2': {}
 
-  '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v2.0.0/drewstone-agent-record-2.0.0.tgz(09d98fa94c84a22878532a6eddce5cc8)':
+  '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v2.0.0/drewstone-agent-record-2.0.0.tgz(d9e0b70edb4f0029598ad17f46dc9378)':
     dependencies:
       '@tangle-network/charts': 2.0.25(@tangle-network/brand@1.31.3(react@19.3.1))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/harness-sessions': 0.1.7
-      '@tangle-network/sandbox-ui': 2.0.21(d2b004de83602911fa50a46d847b1135)
+      '@tangle-network/sandbox-ui': 2.0.21(22a8dd4b6c17742f8e63d5a9f0d766b5)
       katex: 0.19.1
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
@@ -5708,9 +5711,10 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@tangle-network/charts@3.0.3(@tangle-network/brand@1.31.3(react@19.3.1))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@tangle-network/charts@4.0.0(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.7(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     optionalDependencies:
       '@tangle-network/brand': 1.31.3(react@19.3.1)
+      '@tangle-network/ui': 11.51.7(d56e3d7864cba854d7eacd97c62b4344)
       '@xyflow/react': 12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       elkjs: 0.12.0
       react: 19.3.1
@@ -5720,7 +5724,7 @@ snapshots:
     dependencies:
       '@tangle-network/agent-trace-contract': 2.2.0
 
-  '@tangle-network/sandbox-ui@2.0.21(d2b004de83602911fa50a46d847b1135)':
+  '@tangle-network/sandbox-ui@2.0.21(22a8dd4b6c17742f8e63d5a9f0d766b5)':
     dependencies:
       '@lobehub/icons-static-svg': 1.98.0
       '@pierre/diffs': 1.6.1(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -5729,7 +5733,7 @@ snapshots:
       '@radix-ui/react-select': 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/agent-interface': 5.10.2
       '@tangle-network/brand': 1.31.3(react@19.3.1)
-      '@tangle-network/ui': 11.51.4(d56e3d7864cba854d7eacd97c62b4344)
+      '@tangle-network/ui': 11.51.7(d56e3d7864cba854d7eacd97c62b4344)
       diff: 9.0.0
       eventsource-parser: 4.1.2
       lucide-react: 1.61.0(@types/react@19.3.0)(react@19.3.1)
@@ -5762,7 +5766,7 @@ snapshots:
       - '@types/react-dom'
       - tailwindcss
 
-  '@tangle-network/ui@11.51.4(d56e3d7864cba854d7eacd97c62b4344)':
+  '@tangle-network/ui@11.51.7(d56e3d7864cba854d7eacd97c62b4344)':
     dependencies:
       '@pierre/theme': 1.1.0
       '@pierre/trees': 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(shiki@4.5.0)

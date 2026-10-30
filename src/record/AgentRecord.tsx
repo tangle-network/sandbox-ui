@@ -70,9 +70,9 @@ function RecordView({ records, record, selection, onChange, behaviors }: { recor
     onChange({ runId: record.runId, nodeId: id, eventId: first?.id, view: 'chat', at: first && ms(first.at) > cutoff ? first.at : selection.at })
   }
   const selectSpan = (span: FlowSpan) => {
-    const item = index.byEvent.get(typeof span.meta?.eventId === 'string' ? span.meta.eventId : span.id)
+    const item = index.byEvent.get(typeof span.meta?.eventId === 'string' ? span.meta.eventId : span.id ?? '')
     if (item) inspect(item)
-    else if (index.nodes.has(span.id)) selectActor(span.id)
+    else if (span.id !== undefined && index.nodes.has(span.id)) selectActor(span.id)
   }
   const navigate = (direction: number) => {
     if (!visible.length) return
@@ -92,7 +92,7 @@ function RecordView({ records, record, selection, onChange, behaviors }: { recor
           const at = time === null ? undefined : new Date(index.start + time).toISOString()
           if (at !== selection.at) update({ at })
         }} onSelect={selectSpan} query={search} onQueryChange={setSearch}
-        matchSpan={span => { const item = index.byEvent.get(typeof span.meta?.eventId === 'string' ? span.meta.eventId : span.id); return item ? eventMatches(item, index, query, category) : !query && category === 'all' }}
+        matchSpan={span => { const item = index.byEvent.get(typeof span.meta?.eventId === 'string' ? span.meta.eventId : span.id ?? ''); return item ? eventMatches(item, index, query, category) : !query && category === 'all' }}
         markers={marks.map(mark => ({ at: ms(mark.event.at) - index.start, label: `${mark.behavior} · ${Math.round(mark.confidence * 100)}%` }))} />
       {marks.length > 0 && <ul aria-label="Recorded behavior verdicts">{marks.map((mark, i) => <li key={i}><button type="button" onClick={() => inspect(mark.event, true)}>{mark.behavior} · {Math.round(mark.confidence * 100)}%{mark.quote ? ` · ${mark.quote}` : ''}</button></li>)}</ul>}
     </details>

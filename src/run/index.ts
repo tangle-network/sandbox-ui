@@ -4,7 +4,7 @@ export {
   InlineThinkingItem, type InlineThinkingItemProps, InlineToolItem, type InlineToolItemProps,
   LiveDuration, RunGroup, type RunGroupProps, RunRowShell, type RunRowShellProps,
   type RunRowStatus, RunRowStatusDot,
-  RunStatusIcon, runStatus, statusMeta, type RunStatus, type RunStatusIconProps, type StatusMeta,
+  RunStatusIcon, runStatus, statusMeta, isOpen, type RunStatus, type RunStatusIconProps, type StatusMeta,
   ToolCallFeed, parseToolEvent, type ToolCallData, type ToolCallFeedProps, type ToolCallStatus, type ToolCallType,
   RunPhaseList, type RunPhase, showsTaskPriority, TaskList, taskProgress, taskStatus,
   type TaskListItem, type TaskListProps, type TaskStatus,

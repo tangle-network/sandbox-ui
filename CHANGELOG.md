@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0
+
+- Use Charts4 and UI11.51.7 for shared clocks and canonical graph statuses (`done` replaces `succeeded`). Expose the existing ResearchReport module without unused graph/session-store imports. Rebuild standalone report assets with explicit UTC user-message times for server/browser consistency.
+
 ## 2.0.20
 
 - Share the retained agent hierarchy through the record surface, with canonical identities, selected-agent actions, future/ended wording and the maintained execution-status icon.

@@ -1,7 +1,7 @@
 import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { formatCompact as fmt, formatSpanDuration as interval, formatUtcTime as utcTime, reportedCount, sumReportedCounts } from '@tangle-network/charts'
 export { fmt, interval, utcTime }
-import { runStatus } from '@tangle-network/ui/run'
+import { isOpen, runStatus } from '@tangle-network/ui/run/status-meta'
 import type { ConversationEvent as RecordEvent, ConversationNode as RecordNode, ConversationRecord as RunRecord } from './types.js'
 
 export interface ToolCall {
@@ -309,7 +309,7 @@ export function recordFlowTrace(record: RunRecord, live = false, observedAt = Da
   const last = Math.max(first, index.end, live ? observedAt : first)
   const spans: FlowSpan[] = []
   const actors = new Set(index.actors.map((node) => node.id))
-  const runningNodes = new Set(index.actors.filter((node) => live && !node.end && ['running', 'waiting', 'needs-you'].includes(runStatus(node.status ?? 'unknown'))).map((node) => node.id))
+  const runningNodes = new Set(index.actors.filter((node) => live && !node.end && isOpen(node.status ?? 'unknown')).map((node) => node.id))
   const offset = (at: number) => Math.max(0, at - first)
   for (const node of index.actors) {
     if (node.kind === 'finding') continue

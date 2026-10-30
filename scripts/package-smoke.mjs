@@ -58,10 +58,6 @@ function exportTarget(value) {
   return undefined;
 }
 
-function packageSpecifier(packageName, subpath) {
-  return subpath === "." ? packageName : `${packageName}/${subpath.slice(2)}`;
-}
-
 try {
   if (!existsSync(join(root, "dist/chat.js"))) {
     throw new Error("dist/chat.js is missing; run pnpm build before test:package");
@@ -155,7 +151,9 @@ try {
   const optionalPeers = declaredOptionalPeers
     .filter((name) => !omittedOptionalPeers.includes(name))
     .map((name) => {
-      const version = manifest.devDependencies?.[name] ?? manifest.peerDependencies?.[name];
+      const requested = manifest.devDependencies?.[name] ?? manifest.peerDependencies?.[name];
+      const installed = join(root, "node_modules", name, "package.json");
+      const version = requested && /^[~^<>=*0-9]/.test(requested) && existsSync(installed) ? JSON.parse(readFileSync(installed, "utf8")).version : requested;
       return version ? `${name}@${version}` : name;
     });
 
@@ -265,14 +263,14 @@ try {
   const jsSpecifiers = [];
   const cssSpecifiers = [];
   for (const [subpath, value] of Object.entries(manifest.exports)) {
-    if (subpath === "./record" && omittedOptionalPeers.includes("@drewstone/agent-record")) continue;
-    const target = exportTarget(value);
+    if ((subpath === "./record" || subpath === "./record/ResearchReport") && omittedOptionalPeers.includes("@drewstone/agent-record")) continue;
+    const target = exportTarget(value), specifier = subpath === "." ? manifest.name : `${manifest.name}/${subpath.slice(2)}`;
     if (target?.endsWith(".js")) {
-      jsSpecifiers.push(packageSpecifier(manifest.name, subpath));
+      jsSpecifiers.push(specifier);
     } else if (target?.endsWith(".css") && subpath !== "./tailwind.css") {
       // ./tailwind.css is Tailwind SOURCE, not browser CSS; the presentation
       // contract compiles it the way a consumer does.
-      cssSpecifiers.push(packageSpecifier(manifest.name, subpath));
+      cssSpecifiers.push(specifier);
     }
   }
 

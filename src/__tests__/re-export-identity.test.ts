@@ -35,8 +35,8 @@ import { GitHubLoginButton as A1 } from "@tangle-network/sandbox-ui/auth";
 import { GitHubLoginButton as A2 } from "@tangle-network/ui/auth";
 import { cn as U1 } from "@tangle-network/sandbox-ui/utils";
 import { cn as U2 } from "@tangle-network/ui/utils";
-import { useAutoScroll as H1 } from "@tangle-network/sandbox-ui/hooks";
-import { useAutoScroll as H2 } from "@tangle-network/ui/hooks";
+import { useAutoScroll as H1, useRunNow as RN1 } from "@tangle-network/sandbox-ui/hooks";
+import { useAutoScroll as H2, useRunNow as RN2 } from "@tangle-network/ui/hooks";
 import { useSdkSession as SK1 } from "@tangle-network/sandbox-ui/sdk-hooks";
 import { useSdkSession as SK2 } from "@tangle-network/ui/sdk-hooks";
 import { activeSessionsAtom as ST1 } from "@tangle-network/sandbox-ui/stores";
@@ -82,6 +82,8 @@ const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
   ["auth.GitHubLoginButton", A1, A2],
   ["utils.cn", U1, U2],
   ["hooks.useAutoScroll", H1, H2],
+  ["hooks.useRunNow", RN1, RN2],
+  ["root.useRunNow", sandboxRoot.useRunNow, RN2],
   ["sdk-hooks.useSdkSession", SK1, SK2],
   ["stores.activeSessionsAtom", ST1, ST2],
   ["tool-previews.CommandPreview (via root)", TP1, TP2],

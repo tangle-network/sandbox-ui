@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { VirtualList } from './VirtualList.js'
 import { useFollowTail } from '../use-follow-tail.js'
-import { AgentTimelineColumn } from '@tangle-network/ui/chat'
+import { AgentTimelineColumn } from '@tangle-network/ui/chat/agent-timeline'
 import { ConversationRowView, isLifecycle, lastKind, rowItems } from './ConversationRowView.js'
 import type { ConversationEvent as RecordEvent } from './types.js'
 import {

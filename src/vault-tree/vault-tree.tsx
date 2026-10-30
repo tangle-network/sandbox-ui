@@ -215,7 +215,7 @@ export function VaultTree({
   const [target, setTarget] = useState<string>()
   const previousPaths = useRef<Set<string> | null>(null)
   const animatedPaths = useRef(new Set<string>())
-  const revealed = useRef<string>()
+  const revealed = useRef<string | undefined>(undefined)
 
   const index = useMemo(() => {
     const nodes = new Map<string, FileNode>()

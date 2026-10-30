@@ -10,11 +10,9 @@ import { chromium } from 'playwright'
 
 // A retained Discovery projection with real per-response counters, metered windows and tool returns.
 test('record usage keeps original source actions and measured semantics through the shared figure', { timeout: 150_000 }, async () => {
-  const require = createRequire(process.env.SANDBOX_UI_PACKAGE ?? resolve('package.json'))
+  const manifest = process.env.SANDBOX_UI_PACKAGE ?? resolve('package.json')
+  const require = createRequire(manifest)
   const styles = require.resolve('@tangle-network/sandbox-ui/styles')
-  const viewer = require.resolve('@tangle-network/sandbox-ui/record')
-  const core = require.resolve('@drewstone/agent-record/record')
-  const publicationAdapter = require.resolve('@drewstone/agent-record/adapters/research-publication')
   const bytes = await readFile(new URL('./fixtures/waterfall-discovery-record.json', import.meta.url))
   const digest = createHash('sha256').update(bytes).digest('hex'), record = JSON.parse(bytes)
   assert.equal(record.events.length, 281)
@@ -29,11 +27,11 @@ test('record usage keeps original source actions and measured semantics through 
   assert.equal(stoppedActors.length,2,'the immutable real publication retains two stopped actors')
   const evidence = process.env.RUN_UI_EVIDENCE_DIR, checks = []
   if (evidence) await mkdir(evidence, { recursive: true })
-  const scratch = await mkdtemp(resolve('.usage-host-')), entry = resolve(scratch, 'host.js')
-  await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord,RecordWorkGraph}from${JSON.stringify(viewer)};import{parseRecord}from${JSON.stringify(core)};
-import{fromResearchPublication}from${JSON.stringify(publicationAdapter)};const raw=await fetch('/retained-record'+location.search).then(response=>response.json());const record=raw.schema==='research-publication.events.v1'?fromResearchPublication(raw):parseRecord(raw);const initial={runId:record.runId,nodeId:'root',view:'usage'};
+  const scratch = await mkdtemp(resolve(dirname(manifest), '.usage-host-')), entry = resolve(scratch, 'host.js')
+  await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord,RecordWorkGraph}from'@tangle-network/sandbox-ui/record';import{parseRecord}from'@drewstone/agent-record/record';
+import{fromResearchPublication}from'@drewstone/agent-record/adapters/research-publication';const raw=await fetch('/retained-record'+location.search).then(response=>response.json());const record=raw.schema==='research-publication.events.v1'?fromResearchPublication(raw):parseRecord(raw);const initial={runId:record.runId,nodeId:'root',view:'usage'};
 function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=useState(false);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>{window.chosen=initial;set(initial)}},'Return to full usage'),React.createElement('button',{onClick:()=>showGraph(true)},'Read retained relationships'),graph?React.createElement(RecordWorkGraph,{record}):React.createElement(AgentRecord,{records:[record],selection,onSelectionChange:value=>{window.chosen=value;set(value)},theme:new URL(location.href).searchParams.get('theme')}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
-  const built = await build({ configFile:false, logLevel:'silent', resolve:{dedupe:['react','react-dom']}, define:{'process.env.NODE_ENV':JSON.stringify('production')}, build:{write:false,lib:{entry,formats:['es'],fileName:()=> 'host.js'},rollupOptions:{output:{chunkFileNames:'usage/[name]-[hash].js'}}} })
+  const built = await build({ root:dirname(manifest), configFile:false, logLevel:'silent', resolve:{dedupe:['react','react-dom']}, define:{'process.env.NODE_ENV':JSON.stringify('production')}, build:{write:false,lib:{entry,formats:['es'],fileName:()=> 'host.js'},rollupOptions:{output:{chunkFileNames:'usage/[name]-[hash].js'}}} })
   const chunks = new Map((Array.isArray(built)?built:[built]).flatMap(result=>result.output).map(item=>[item.fileName,item.type==='chunk'?item.code:item.source]))
   let theme='light'
   const server=createServer(async(req,res)=>{

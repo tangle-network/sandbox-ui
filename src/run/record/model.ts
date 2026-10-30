@@ -363,13 +363,13 @@ export function recordFlowTrace(record: RunRecord, live = false, observedAt = Da
     const calls = index.calls.get(key) ?? [], results = index.results.get(key) ?? []
     const result = calls.length === 1 && results.length === 1 && ms(results[0]!.at) >= ms(calls[0]!.event.at) ? results[0] : undefined
     const ambiguous = calls.length > 1 || results.length > 1
+    const timing = ambiguous ? 'Ambiguous retained call/result identity; no duration measured' : calls.length && results.length ? 'Recorded result timestamp precedes call; no interval measured' : 'Unmatched retained call or result; no interval measured'
     for (const { event, call } of calls) {
       toolCalls++
       const start = ms(event.at), parentId = index.canonical(event.node)
-      const timing = ambiguous ? 'Ambiguous retained call/result identity; no duration measured' : 'No matching tool result retained'
       spans.push({ id: `${event.id}:tool:${call.id}`, parentId, kind: 'tool', name: call.name, startMs: offset(start), endMs: offset(result ? ms(result.at) : start), approx: !result || event.detail.atBasis === 'carried' || result.detail.atBasis === 'carried', status: result?.detail.isError ? 'failed' : result ? 'done' : 'unknown', facts: result ? undefined : [{ label: 'Timing', value: timing }], meta: { eventId: event.id, ...(!result ? { timing } : {}) } })
     }
-    if (!result) for (const event of results) spans.push({ id: `${event.id}:result`, parentId: index.canonical(event.node), kind: 'tool', name: event.label, startMs: offset(ms(event.at)), endMs: offset(ms(event.at)), approx: true, status: event.detail.isError ? 'failed' : 'unknown', facts: [{ label: 'Timing', value: 'Unmatched or ambiguous result; no duration measured' }], meta: { eventId: event.id } })
+    if (!result) for (const event of results) spans.push({ id: `${event.id}:result`, parentId: index.canonical(event.node), kind: 'tool', name: event.label, startMs: offset(ms(event.at)), endMs: offset(ms(event.at)), approx: true, status: event.detail.isError ? 'failed' : 'unknown', facts: [{ label: 'Timing', value: timing }], meta: { eventId: event.id } })
   }
   return { spans, totalMs: last - first, promptTokens: sumReportedCounts(promptTokens), completionTokens: sumReportedCounts(completionTokens), toolCalls, ...(costKnown && !costMissing ? { costUsd: cost, costBasis: 'list' } : {}) }
 }

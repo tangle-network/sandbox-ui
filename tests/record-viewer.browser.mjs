@@ -36,8 +36,9 @@ test('record usage keeps original source actions and measured semantics through 
   const results = calls.map(call => structuredClone(record.events.find(event => event.node === call.node && event.detail.toolCallId === call.detail.publicToolCalls[0].id)))
   assert.ok(results.every(Boolean))
   const uniqueCall=calls[2], uniqueResult=results[2]
+  const invertedCall=structuredClone(uniqueCall), invertedResult=structuredClone(uniqueResult);invertedCall.at=uniqueResult.at;invertedResult.at=uniqueCall.at
   for(let i=0;i<2;i++){calls[i].detail.publicToolCalls[0].id='repeated-call';calls[i].detail.toolCallIds=['repeated-call'];results[i].detail.toolCallId='repeated-call'}
-  const cases = new Map([['unknown',boundary('unmeasured',[unknown])],['zero',boundary('recorded zero',[zero])],['partial',boundary('incomplete counters',[partial])],['scoped',boundary('scoped-only retained window',[scoped])],['ambiguous',boundary('repeated identity and out-of-order rows',[results[1],calls[1],uniqueCall,calls[0],results[0],uniqueResult])]])
+  const cases = new Map([['inverted',boundary('inverted recorded timestamps',[invertedCall,invertedResult])],['unknown',boundary('unmeasured',[unknown])],['zero',boundary('recorded zero',[zero])],['partial',boundary('incomplete counters',[partial])],['scoped',boundary('scoped-only retained window',[scoped])],['ambiguous',boundary('repeated identity and out-of-order rows',[results[1],calls[1],uniqueCall,calls[0],results[0],uniqueResult])]])
   const evidence = process.env.RUN_UI_EVIDENCE_DIR, checks = []
   if (evidence) await mkdir(evidence, { recursive: true })
   const scratch = await mkdtemp(resolve(dirname(manifest), '.usage-host-')), entry = resolve(scratch, 'host.js')
@@ -117,7 +118,7 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
       await page.locator('[data-tokens]').scrollIntoViewIfNeeded()
       if(evidence)await page.screenshot({path:`${evidence}/usage-${theme}-${width}.png`,fullPage:true})
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false)
-      for(const name of ['unknown','scoped','zero','partial','ambiguous']){
+      for(const name of ['unknown','scoped','zero','partial','ambiguous','inverted']){
         await page.goto(`http://127.0.0.1:${server.address().port}/?theme=${theme}&boundary=${name}`)
         await page.locator('.fw-summary').waitFor()
         const projected=await page.evaluate(()=>window.recordedProjection)
@@ -128,6 +129,9 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
           assert.equal(projected.promptTokens,undefined);assert.equal(projected.completionTokens,3)
           assert.match(projected.spans.find(span=>span.meta?.eventId===partial.id).facts.find(fact=>fact.label==='Tokens').value,/≥ 10 measured; incomplete counters/)
           assert.match(await page.locator('[data-token-caption]').innerText(),/Some responses lack counters/)
+        }
+        if(name==='inverted'){
+          for(const id of [uniqueCall.id,uniqueResult.id]){const span=projected.spans.find(span=>span.meta?.eventId===id);assert.ok(span,id+' source retained');assert.equal(span.startMs,span.endMs);assert.equal(span.approx,true);assert.equal(span.status,'unknown');assert.match(span.facts.find(fact=>fact.label==='Timing').value,/result timestamp precedes call/)}
         }
         if(name==='ambiguous'){
           const ambiguousIds=[calls[0].id,calls[1].id,results[0].id,results[1].id]

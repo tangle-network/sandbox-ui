@@ -317,6 +317,6 @@
     "vite": "^8.3.5",
     "vitest": "^5.0.5",
     "yjs": "^13.6.33",
-    "@drewstone/agent-record": "https://github.com/drewstone/agent-record/releases/download/v3.0.2/drewstone-agent-record-3.0.2.tgz"
+    "@drewstone/agent-record": "https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz"
   }
 }

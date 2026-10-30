@@ -329,7 +329,7 @@ export function WorkspaceFilesPane({
           preview={preview}
           split={split}
           tabs={split && tabs}
-          empty={isEmpty}
+          files={index}
           backRef={backRef}
           onBack={onBack}
           onOpen={(path) => onSelect?.(path, index.get(path))}
@@ -344,7 +344,7 @@ interface FilesViewerProps {
   preview?: WorkspaceFilesPreview;
   split: boolean;
   tabs: boolean;
-  empty: boolean;
+  files: ReadonlyMap<string, FileNode>;
   backRef: RefObject<HTMLButtonElement | null>;
   onBack?: () => void;
   onOpen: (path: string) => void;
@@ -354,7 +354,7 @@ interface FilesViewerProps {
 const baseName = (path: string) => path.replace(/\/+$/, "").split("/").pop() || path;
 
 /** The editor side of the pane: open-file tabs, a File | Diff toggle, the full-screen control, and the open file. */
-function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, expand }: FilesViewerProps) {
+function FilesViewer({ preview, split, tabs, files, backRef, onBack, onOpen, expand }: FilesViewerProps) {
   const path = preview?.path;
   const [open, setOpen] = useState<string[]>(() => (path ? [path] : []));
   useEffect(() => {
@@ -362,12 +362,12 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
   }, [path]);
   const [mode, setMode] = useState<"file" | "diff">("file");
   useEffect(() => setMode("file"), [path]);
+  const shown = open.filter(entry => entry === path || files.get(entry)?.type === "file");
   const close = (target: string) => {
-    const at = open.indexOf(target);
-    const rest = open.filter((entry) => entry !== target);
-    setOpen(rest);
+    const rest = shown.filter((entry) => entry !== target);
+    setOpen(paths => paths.filter(entry => entry !== target));
     if (target !== path) return;
-    const neighbour = rest[Math.min(at, rest.length - 1)];
+    const neighbour = rest[Math.min(shown.indexOf(target), rest.length - 1)];
     if (neighbour) onOpen(neighbour);
     else onBack?.();
   };
@@ -377,16 +377,16 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* Stacked, the row has no neighbour to line up with: on a phone the File | Diff toggle wraps under it instead of clipping. */}
-      <div className={cn(HEADER_ROW, "sticky top-0 z-10 gap-2 pr-[var(--files-inset)]", !(tabs && open.length > 0) && "pl-[var(--files-inset)]", !split && "h-auto min-h-11 flex-wrap py-1.5 pointer-coarse:h-auto")}>
+      <div className={cn(HEADER_ROW, "sticky top-0 z-10 gap-2 pr-[var(--files-inset)]", !(tabs && shown.length > 0) && "pl-[var(--files-inset)]", !split && "h-auto min-h-11 flex-wrap py-1.5 pointer-coarse:h-auto")}>
         {onBack && !split && preview && (
           <Button ref={backRef} type="button" variant="ghost" size="sm" onClick={onBack} className="-ml-2 shrink-0 gap-1 px-2 text-muted-foreground">
             <ArrowLeft aria-hidden="true" />
             Back to files
           </Button>
         )}
-        {tabs && open.length > 0 ? (
+        {tabs && shown.length > 0 ? (
           <FileTabs
-            tabs={open.map((entry) => ({ id: entry, name: baseName(entry), path: entry }))}
+            tabs={shown.map((entry) => ({ id: entry, name: baseName(entry), path: entry }))}
             activeId={path}
             onSelect={onOpen}
             onClose={close}
@@ -404,7 +404,7 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
             className={cn("shrink-0 p-0.5 [&>button]:py-1", !split && "order-last")}
           />
         )}
-        {preview?.actions && <div className="flex shrink-0 items-center gap-2">{preview.actions}</div>}
+        {preview?.actions && <div className={cn("flex min-w-0 max-w-full flex-wrap items-center gap-2", !split && "order-last")}>{preview.actions}</div>}
         {expand && (
           <Button type="button" variant="ghost" size="icon-sm" onClick={expand.toggle} aria-pressed={expand.expanded}
             aria-label={expand.expanded ? "Exit full screen" : "Full screen"} title={expand.expanded ? "Exit full screen (Esc)" : "Full screen"}
@@ -419,7 +419,7 @@ function FilesViewer({ preview, split, tabs, empty, backRef, onBack, onOpen, exp
         </div>
       ) : (
         <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
-          {empty ? null : "Select a file to open it here."}
+          {files.size === 0 ? null : "Select a file to open it here."}
         </div>
       )}
     </div>

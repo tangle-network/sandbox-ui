@@ -1,6 +1,6 @@
 "use client"
 
-import { type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { toolGlyph } from "@tangle-network/charts/react"
 import type { FlowMarker, FlowSpan, FlowTrace } from "@tangle-network/charts"
 import { AgentTimeline, type AgentTimelineItem } from "@tangle-network/ui/chat"
@@ -12,6 +12,7 @@ import { AgentGraph, type AgentGraphEdge, type AgentGraphNode, type AgentGraphEv
 import { type AgentTranscriptEntry, type AgentStreamOpener, useAgentStream } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
 import { LatestEvents } from "./latest-events"
+import { useFollowTail } from "./use-follow-tail"
 
 /** A moment on the run's event track: a release, a check verdict, a spawn, a crash or a steer. */
 export interface TraceEvent extends FlowMarker {}
@@ -160,15 +161,7 @@ export function TraceWorkspace({
 
   // Follow the newest output unless the reader scrolled up; then offer a "New output" pill instead of jumping.
   const scroller = useRef<HTMLDivElement>(null)
-  const pinned = useRef(true)
-  const [unseen, setUnseen] = useState(false)
-  useLayoutEffect(() => {
-    const element = scroller.current
-    if (!element) return
-    if (pinned.current) element.scrollTop = element.scrollHeight
-    else setUnseen(true)
-  }, [items.length, items[items.length - 1]])
-  useEffect(() => { pinned.current = true; setUnseen(false) }, [selected])
+  const { unseen, jump } = useFollowTail(scroller, { identity: showConversation ? selected : undefined, content: items })
 
   return (
     <div className={cn("sandbox-trace-workspace flex min-h-0 flex-col gap-3", className)}>
@@ -215,11 +208,6 @@ export function TraceWorkspace({
           </section>}
           <div
             ref={scroller}
-            onScroll={(event) => {
-              const element = event.currentTarget
-              pinned.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48
-              if (pinned.current) setUnseen(false)
-            }}
             data-primary-content=""
             className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
           >
@@ -228,7 +216,7 @@ export function TraceWorkspace({
               : <NotTimeIndexed label="Conversation" />}
           </div>
           {unseen && (
-            <button type="button" onClick={() => { const element = scroller.current; if (element) element.scrollTop = element.scrollHeight; pinned.current = true; setUnseen(false) }}
+            <button type="button" onClick={() => jump()}
               className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-border bg-background px-3 py-1 text-xs shadow-sm">
               New output
             </button>

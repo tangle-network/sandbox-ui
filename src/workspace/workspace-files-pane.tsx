@@ -404,7 +404,7 @@ function FilesViewer({ preview, split, tabs, files, backRef, onBack, onOpen, exp
             className={cn("shrink-0 p-0.5 [&>button]:py-1", !split && "order-last")}
           />
         )}
-        {preview?.actions && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{preview.actions}</div>}
+        {preview?.actions && <div className={cn("flex min-w-0 max-w-full flex-wrap items-center gap-2", !split && "order-last")}>{preview.actions}</div>}
         {expand && (
           <Button type="button" variant="ghost" size="icon-sm" onClick={expand.toggle} aria-pressed={expand.expanded}
             aria-label={expand.expanded ? "Exit full screen" : "Full screen"} title={expand.expanded ? "Exit full screen (Esc)" : "Full screen"}

@@ -115,7 +115,7 @@ export {
   useRunGroups,
   type UseRunGroupsOptions,
   useRunCollapseState,
-  useLiveTime,
+  useLiveTime, useRunNow,
   usePtySession,
   type UsePtySessionOptions,
   type UsePtySessionReturn,

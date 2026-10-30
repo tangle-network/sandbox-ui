@@ -33,8 +33,8 @@ import { getSanitizedMarkdownHeadingIdFromRawFragment as MH2 } from "@tangle-net
 import { getSanitizedMarkdownHeadingIdFromRawFragment as MHR } from "@tangle-network/sandbox-ui";
 import { GitHubLoginButton as A1 } from "@tangle-network/sandbox-ui/auth";
 import { GitHubLoginButton as A2 } from "@tangle-network/ui/auth";
-import { cn as U1 } from "@tangle-network/sandbox-ui/utils";
-import { cn as U2 } from "@tangle-network/ui/utils";
+import * as sandboxUtils from "@tangle-network/sandbox-ui/utils";
+import * as canonicalUtils from "@tangle-network/ui/utils";
 import { useAutoScroll as H1, useRunNow as RN1 } from "@tangle-network/sandbox-ui/hooks";
 import { useAutoScroll as H2, useRunNow as RN2 } from "@tangle-network/ui/hooks";
 import { useSdkSession as SK1 } from "@tangle-network/sandbox-ui/sdk-hooks";
@@ -80,7 +80,6 @@ const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
   ["markdown.getSanitizedMarkdownHeadingIdFromRawFragment", MH1, MH2],
   ["root.getSanitizedMarkdownHeadingIdFromRawFragment", MHR, MH2],
   ["auth.GitHubLoginButton", A1, A2],
-  ["utils.cn", U1, U2],
   ["hooks.useAutoScroll", H1, H2],
   ["hooks.useRunNow", RN1, RN2],
   ["root.useRunNow", sandboxRoot.useRunNow, RN2],
@@ -90,6 +89,12 @@ const cases: ReadonlyArray<readonly [string, unknown, unknown]> = [
 ];
 
 describe("re-export bridge identity", () => {
+  test("forwards every canonical utility through both public entries", () => {
+    for (const [name, binding] of Object.entries(canonicalUtils)) {
+      expect(Reflect.get(sandboxUtils, name), `utils.${name}`).toBe(binding);
+      expect(Reflect.get(sandboxRoot, name), `root.${name}`).toBe(binding);
+    }
+  });
   test("keeps both public terminal component names", () => {
     expect(Reflect.get(sandboxRoot, "TerminalLine")).toBe(canonicalPrimitives.TerminalLine);
     expect(sandboxRoot.TerminalDisplayLine).toBe(canonicalPrimitives.TerminalLine);

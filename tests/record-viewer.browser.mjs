@@ -25,18 +25,31 @@ test('record usage keeps original source actions and measured semantics through 
   assert.equal(createHash('sha256').update(stoppedBytes).digest('hex'),'eaca6f51114ccea5c3213d39b83ae69f4b61f14d8ea4d1c4df0408152227b700')
   const stoppedActors=stoppedRecord.nodes.filter(node=>node.status==='down')
   assert.equal(stoppedActors.length,2,'the immutable real publication retains two stopped actors')
+  // Adversarial public inputs derived from the unchanged retained fixture; never research outputs.
+  const boundary = (name, events) => ({ ...record, title: 'Boundary input: '+name, events, claims: [], verdicts: [], publications: [] })
+  const unknown = structuredClone(firstUsage); delete unknown.detail.usage; delete unknown.detail.usageScope
+  const zero = structuredClone(firstUsage); zero.detail.usage = { input:0, output:0, cacheRead:0, cacheWrite:0 }
+  const partial = structuredClone(firstUsage); partial.detail.usage = { input:7, output:3 }
+  const scoped = record.events.find(event => event.detail.usageScope !== undefined); assert.ok(scoped)
+  const calls = record.events.filter(event => event.node === 'root' && event.detail.publicToolCalls?.length === 1).slice(0,3).map(event => structuredClone(event))
+  assert.equal(calls.length,3)
+  const results = calls.map(call => structuredClone(record.events.find(event => event.node === call.node && event.detail.toolCallId === call.detail.publicToolCalls[0].id)))
+  assert.ok(results.every(Boolean))
+  const uniqueCall=calls[2], uniqueResult=results[2]
+  for(let i=0;i<2;i++){calls[i].detail.publicToolCalls[0].id='repeated-call';calls[i].detail.toolCallIds=['repeated-call'];results[i].detail.toolCallId='repeated-call'}
+  const cases = new Map([['unknown',boundary('unmeasured',[unknown])],['zero',boundary('recorded zero',[zero])],['partial',boundary('incomplete counters',[partial])],['scoped',boundary('scoped-only retained window',[scoped])],['ambiguous',boundary('repeated identity and out-of-order rows',[results[1],calls[1],uniqueCall,calls[0],results[0],uniqueResult])]])
   const evidence = process.env.RUN_UI_EVIDENCE_DIR, checks = []
   if (evidence) await mkdir(evidence, { recursive: true })
   const scratch = await mkdtemp(resolve(dirname(manifest), '.usage-host-')), entry = resolve(scratch, 'host.js')
   await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AgentRecord,RecordWorkGraph}from'@tangle-network/sandbox-ui/record';import{parseRecord}from'@drewstone/agent-record/record';
-import{fromResearchPublication}from'@drewstone/agent-record/adapters/research-publication';const raw=await fetch('/retained-record'+location.search).then(response=>response.json());const record=raw.schema==='research-publication.events.v1'?fromResearchPublication(raw):parseRecord(raw);const initial={runId:record.runId,nodeId:'root',view:'usage'};
+import{fromResearchPublication}from'@drewstone/agent-record/adapters/research-publication';import{recordModel}from'@tangle-network/sandbox-ui/run/record';const raw=await fetch('/retained-record'+location.search).then(response=>response.json());const record=raw.schema==='research-publication.events.v1'?fromResearchPublication(raw):parseRecord(raw);window.recordedProjection=recordModel.recordFlowTrace(record);const initial={runId:record.runId,nodeId:record.nodes.find(node=>node.kind==='agent')?.id??'root',view:'usage'};
 function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=useState(false);return React.createElement(React.Fragment,null,React.createElement('button',{onClick:()=>{window.chosen=initial;set(initial)}},'Return to full usage'),React.createElement('button',{onClick:()=>showGraph(true)},'Read retained relationships'),graph?React.createElement(RecordWorkGraph,{record}):React.createElement(AgentRecord,{records:[record],selection,onSelectionChange:value=>{window.chosen=value;set(value)},theme:new URL(location.href).searchParams.get('theme')}))}createRoot(document.getElementById('host')).render(React.createElement(Host));`)
   const built = await build({ root:dirname(manifest), configFile:false, logLevel:'silent', resolve:{dedupe:['react','react-dom']}, define:{'process.env.NODE_ENV':JSON.stringify('production')}, build:{write:false,lib:{entry,formats:['es'],fileName:()=> 'host.js'},rollupOptions:{output:{chunkFileNames:'usage/[name]-[hash].js'}}} })
   const chunks = new Map((Array.isArray(built)?built:[built]).flatMap(result=>result.output).map(item=>[item.fileName,item.type==='chunk'?item.code:item.source]))
   let theme='light'
   const server=createServer(async(req,res)=>{
     const path=new URL(req.url,'http://localhost').pathname
-    if(path==='/retained-record'){res.setHeader('content-type','application/json');return res.end(new URL(req.url,'http://localhost').searchParams.has('stopped')?stoppedBytes:bytes)}
+    if(path==='/retained-record'){res.setHeader('content-type','application/json');const params=new URL(req.url,'http://localhost').searchParams;const selected=cases.get(params.get('boundary'));return res.end(selected?JSON.stringify(selected):params.has('stopped')?stoppedBytes:bytes)}
     if(path==='/styles.css'){res.setHeader('content-type','text/css');return res.end(await readFile(styles))}
     const chunk=chunks.get(path.slice(1));if(chunk!==undefined){res.setHeader('content-type',path.endsWith('.css')?'text/css':'text/javascript');return res.end(chunk)}
     res.setHeader('content-type','text/html');res.end(`<!doctype html><html class="${theme}" data-theme="${theme}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><div id="host"></div><script type="module" src="/host.js"></script></html>`)
@@ -104,7 +117,31 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
       await page.locator('[data-tokens]').scrollIntoViewIfNeeded()
       if(evidence)await page.screenshot({path:`${evidence}/usage-${theme}-${width}.png`,fullPage:true})
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false)
+      for(const name of ['unknown','scoped','zero','partial','ambiguous']){
+        await page.goto(`http://127.0.0.1:${server.address().port}/?theme=${theme}&boundary=${name}`)
+        await page.locator('.fw-summary').waitFor()
+        const projected=await page.evaluate(()=>window.recordedProjection)
+        const tokens=page.locator('.fw-summary > div').filter({has:page.locator('dt').filter({hasText:/^Tokens$/})}).locator('dd')
+        if(name==='zero'){assert.equal(projected.promptTokens,0);assert.equal(projected.completionTokens,0);assert.equal(await tokens.innerText(),'0')}
+        else{assert.equal(await tokens.innerText(),'—');assert.equal(await tokens.getAttribute('title'),'Tokens not reported')}
+        if(name==='partial'){
+          assert.equal(projected.promptTokens,undefined);assert.equal(projected.completionTokens,3)
+          assert.match(projected.spans.find(span=>span.meta?.eventId===partial.id).facts.find(fact=>fact.label==='Tokens').value,/≥ 10 measured; incomplete counters/)
+          assert.match(await page.locator('[data-token-caption]').innerText(),/Some responses lack counters/)
+        }
+        if(name==='ambiguous'){
+          const ambiguousIds=[calls[0].id,calls[1].id,results[0].id,results[1].id]
+          for(const id of ambiguousIds){const span=projected.spans.find(span=>span.meta?.eventId===id);assert.ok(span,id+' source retained');assert.equal(span.startMs,span.endMs);assert.equal(span.approx,true);assert.equal(span.status,'unknown');assert.match(span.facts.find(fact=>fact.label==='Timing').value,/ambiguous/i)}
+          const joined=projected.spans.find(span=>span.meta?.eventId===uniqueCall.id)
+          assert.equal(joined.endMs-joined.startMs,Date.parse(uniqueResult.at)-Date.parse(uniqueCall.at));assert.equal(joined.approx,false);assert.equal(joined.status,'done');assert.equal(projected.toolCalls,3)
+          await page.getByRole('combobox',{name:'Measure',exact:true}).selectOption('tool-time')
+          assert.match(await page.locator('[data-token-caption]').innerText(),/ambiguous and out-of-order results are omitted/)
+          const point=page.locator('[data-tokens] .tgc-series-observation:visible,[data-tokens] circle[data-id]:visible').first();await point.focus();await page.keyboard.press('Enter')
+          await page.waitForFunction(()=>window.chosen?.view==='source');assert.equal((await page.evaluate(()=>window.chosen)).eventId,uniqueResult.id)
+        }
+      }
       await page.goto('http://127.0.0.1:'+server.address().port+'/?theme='+theme+'&stopped')
+      const stoppedCursor=page.getByRole('slider',{name:'Playback position',exact:true});await stoppedCursor.focus();await page.keyboard.press('Home')
       await page.getByRole('button',{name:'Show full trace',exact:true}).click()
       await page.locator('.topology > summary').click()
       for(const node of stoppedActors){
@@ -114,6 +151,13 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
         assert.equal(await button.locator('[data-run-status]').getAttribute('data-run-status'),'stopped')
         await button.focus();await page.keyboard.press('Enter')
         assert.equal(await page.locator('[data-agent]').inputValue(),node.id,'stopped actor selection preserves original identity')
+      }
+      for(const node of stoppedRecord.nodes.filter(node=>node.kind==='runtime')){
+        const expected=node.status==='down'?'Stopped':node.status==='done'?'Done':'Unknown'
+        const row=page.locator('[data-flow-waterfall] [data-span-id='+JSON.stringify(node.id)+']')
+        await row.locator('.fw-agent-dot').first().waitFor();assert.equal(await row.locator('.fw-agent-dot').first().getAttribute('title'),expected)
+        assert.equal(await row.locator('.fw-agent-dot').first().getAttribute('data-outcome'),expected==='Done'?'ok':'neutral')
+        if(expected!=='Unknown')assert.equal(await row.locator('.fw-row-state').innerText(),expected)
       }
       if(evidence)await page.screenshot({path:evidence+'/stopped-'+theme+'-'+width+'.png',fullPage:true})
       await page.getByRole('button',{name:'Read retained relationships',exact:true}).click()

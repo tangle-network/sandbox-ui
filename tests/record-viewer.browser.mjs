@@ -53,7 +53,7 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
     if(path==='/retained-record'){res.setHeader('content-type','application/json');const params=new URL(req.url,'http://localhost').searchParams;const selected=cases.get(params.get('boundary'));return res.end(selected?JSON.stringify(selected):params.has('stopped')?stoppedBytes:bytes)}
     if(path==='/styles.css'){res.setHeader('content-type','text/css');return res.end(await readFile(styles))}
     const chunk=chunks.get(path.slice(1));if(chunk!==undefined){res.setHeader('content-type',path.endsWith('.css')?'text/css':'text/javascript');return res.end(chunk)}
-    res.setHeader('content-type','text/html');res.end(`<!doctype html><html class="${theme}" data-theme="${theme}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><div id="host"></div><script type="module" src="/host.js"></script></html>`)
+    res.setHeader('content-type','text/html; charset=utf-8');res.end(`<!doctype html><html class="${theme}" data-theme="${theme}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><div id="host"></div><script type="module" src="/host.js"></script></html>`)
   })
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve))
   const browser=await chromium.launch({headless:true})
@@ -65,6 +65,7 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
       await page.goto(`http://127.0.0.1:${server.address().port}/?theme=${theme}`)
       await page.getByRole('button',{name:'Return to full usage',exact:true}).waitFor({timeout:10_000}).catch(async error=>{if(evidence)await page.screenshot({path:`${evidence}/host-failure-${theme}-${width}.png`,fullPage:true});throw new Error(JSON.stringify({errors}),{cause:error})})
       const reset=async()=>{await page.getByRole('button',{name:'Return to full usage',exact:true}).click();await page.getByRole('tab',{name:'Usage',exact:true}).waitFor()}
+      assert.equal(await page.evaluate(()=>document.characterSet),'UTF-8','real UTF-8 retained labels decode correctly')
       const tree=page.locator('[data-graph]')
       await page.locator('.topology > summary').click()
       await tree.waitFor()
@@ -167,6 +168,7 @@ function Host(){const[selection,set]=useState(initial);const[graph,showGraph]=us
       await page.getByRole('button',{name:'Read retained relationships',exact:true}).click()
       const graph=page.locator('[data-work-graph]')
       await graph.waitFor()
+      await page.waitForFunction(theme=>document.querySelector('[data-work-graph] .react-flow')?.classList.contains(theme),theme)
       for(const node of stoppedRecord.nodes) assert.equal(await graph.locator('[data-graph-node-id='+JSON.stringify('node:'+node.id)+']').count(),1,'Blog retained graph preserves each original identity once')
       const firstNode=graph.locator('[data-graph-node-id]').first()
       await firstNode.focus();await page.keyboard.press('Enter')

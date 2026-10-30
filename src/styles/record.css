@@ -111,11 +111,8 @@
   color: var(--ar-fg);
   font: var(--ar-text-m)/1.45 var(--ar-font-body);
   text-align: left;
-  color-scheme: light;
   min-width: 0;
 }
-.agent-record[data-theme="dark"] { color-scheme: dark; }
-@media (prefers-color-scheme: dark) { .agent-record:not([data-theme]) { color-scheme: dark; } }
 .agent-record {
   --ar-control-height: 2.15rem;
   --ar-control-radius: 4px;

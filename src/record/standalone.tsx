@@ -30,6 +30,9 @@ function StandaloneReport({ report, options }: { report: ResearchReportData; opt
     onDocumentChange={document => remember(document.playId, document)} />
 }
 
+const scheme = matchMedia('(prefers-color-scheme: dark)')
+const theme = () => { document.documentElement.dataset.theme = scheme.matches ? 'dark' : 'light' }
+scheme.addEventListener('change', theme); theme()
 const container = document.getElementById('research-report')
 const data = document.getElementById('research-report-data')
 if (container && data) {

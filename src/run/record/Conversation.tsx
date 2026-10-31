@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { VirtualList } from './VirtualList.js'
 import { useFollowTail } from '../use-follow-tail.js'
-import { AgentTimelineColumn } from '@tangle-network/ui/chat/agent-timeline'
-import { ConversationRowView, isLifecycle, lastKind, rowItems } from './ConversationRowView.js'
+import { AgentTimelineColumn, agentTimelineStepKind } from '@tangle-network/ui/chat/agent-timeline'
+import { ConversationRowView, isLifecycle, rowItems } from './ConversationRowView.js'
 import type { ConversationEvent as RecordEvent } from './types.js'
 import {
   callsOf,
@@ -254,7 +254,7 @@ export function Conversation({
       return turn
     })
   }, [rows])
-  const render = (row: ConversationRow, i: number) => <ConversationRowView row={row} items={itemsOf[i] ?? []} previous={i ? lastKind(itemsOf[i - 1] ?? []) : undefined} turn={turns[i]} context={context} />
+  const render = (row: ConversationRow, i: number) => <ConversationRowView row={row} items={itemsOf[i] ?? []} previous={i && itemsOf[i - 1]?.length ? agentTimelineStepKind(itemsOf[i - 1]!.at(-1)!) : undefined} turn={turns[i]} context={context} />
   return (
     <>
       <div

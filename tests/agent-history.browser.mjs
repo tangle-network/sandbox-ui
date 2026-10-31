@@ -13,8 +13,8 @@ const frame = (event, data) => `event: ${event}\ndata: ${JSON.stringify(data)}\n
 const row = (seq, text, extra = {}) => ({ seq, at: new Date(Date.UTC(2026, 9, 30, 0, 0, seq)).toISOString(), attempt: seq + 1, event: { kind: 'text_delta', text }, ...extra })
 async function bundle(scratch) {
   const entry = resolve(scratch, 'history.jsx')
-  await writeFile(entry, `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{useAgentStream}from'@tangle-network/sandbox-ui/run';
-function Host(){const[alive,setAlive]=useState(true),[agent,setAgent]=useState('agent');const state=useAgentStream('/'+agent,undefined,{url:'/history?node='+agent,alive});return <><output data-state>{JSON.stringify(state)}</output><button onClick={()=>state.history?.beginningPage()}>Beginning</button><button onClick={()=>state.history?.latest()}>Latest</button><button onClick={()=>state.history?.older()}>Older</button><button onClick={()=>state.history?.newer()}>Newer</button><button onClick={()=>setAlive(false)}>Settle</button><button onClick={()=>{setAlive(false);setAgent('other')}}>Select other</button></>}createRoot(document.getElementById('host')).render(<Host/>);`)
+  await writeFile(entry, `import React,{useLayoutEffect,useState}from'react';import{createRoot}from'react-dom/client';import{useAgentStream}from'@tangle-network/sandbox-ui/run';
+function Host(){const[alive,setAlive]=useState(true),[agent,setAgent]=useState('agent');const state=useAgentStream('/'+agent,undefined,{url:'/history?node='+agent,alive});useLayoutEffect(()=>{(window.commits??=[]).push({agent,ids:state.entries.map(item=>item.id),generation:state.generation,loading:state.history?.loading})},[agent,state]);return <><output data-state>{JSON.stringify(state)}</output><button onClick={()=>state.history?.beginningPage()}>Beginning</button><button onClick={()=>state.history?.latest()}>Latest</button><button onClick={()=>state.history?.older()}>Older</button><button onClick={()=>state.history?.newer()}>Newer</button><button onClick={()=>setAlive(false)}>Settle</button><button onClick={()=>{setAlive(true);setAgent('other')}}>Select other</button></>}createRoot(document.getElementById('host')).render(<Host/>);`)
   const built = await build({ configFile: false, logLevel: 'silent', define: { 'process.env.NODE_ENV': JSON.stringify('production') }, build: { write: false, lib: { entry, formats: ['es'], fileName: () => 'host.js' }, rollupOptions: { output: { chunkFileNames: 'host/[name]-[hash].js' } } } })
   return new Map((Array.isArray(built) ? built : [built]).flatMap(result => result.output).map(item => [item.fileName, item.type === 'chunk' ? item.code : item.source]))
 }
@@ -27,7 +27,7 @@ function protocol(chunks) {
     if (url.pathname === '/') return res.end('<!doctype html><div id="host"></div><script type="module" src="/assets/host.js"></script>')
     requests.push({ path: url.pathname, query: Object.fromEntries(url.searchParams) })
     if (url.pathname === '/history') {
-      if (url.searchParams.get('node') === 'other') return res.writeHead(403).end('refused')
+      if (url.searchParams.get('node') === 'other') return setTimeout(()=>res.writeHead(403).end('refused'),250)
       const limit = Number(url.searchParams.get('limit')), before = url.searchParams.get('before'), after = url.searchParams.get('after')
       const selected = before !== null ? rows.filter(item => item.seq < Number(before)).slice(-limit) : after !== null ? rows.filter(item => item.seq > Number(after)).slice(0, limit) : rows.slice(-limit)
       return setTimeout(() => { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ generation, events: selected, firstSeq: selected[0]?.seq ?? null, lastSeq: selected.at(-1)?.seq ?? null, hasEarlier: !!selected[0]?.seq, hasMore: !!selected.length && selected.at(-1).seq < rows.at(-1).seq, alive })) }, delay)
@@ -92,9 +92,12 @@ test('packed bounded history keeps native cursor, identity, settlement and refus
     await wait(page, () => !JSON.parse(document.querySelector('[data-state]').textContent).alive)
     assert.deepEqual((await state(page)).entries.map(item => item.id), retained)
     await page.getByRole('button', { name: 'Select other', exact: true }).click()
+    const first = await page.evaluate(() => window.commits.find(commit => commit.agent === 'other'))
+    assert.equal(first.agent, 'other'); assert.deepEqual(first.ids, []); assert.equal(first.generation, undefined); assert.equal(first.loading, true)
     await wait(page, () => JSON.parse(document.querySelector('[data-state]').textContent).error?.includes('HTTP 403'))
     const refused = await state(page)
     assert.equal(refused.entries.length, 0); assert.equal(refused.history.loading, false)
     assert.equal(wire.clients.size, 0)
+    assert.equal(wire.requests.filter(item => item.path === '/other').length, 0, 'a refused bootstrap never opens another stream')
   } finally { wire.close(); await browser.close(); await new Promise(resolve => wire.server.close(resolve)); await rm(scratch, { recursive: true, force: true }) }
 })

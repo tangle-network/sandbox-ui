@@ -146,11 +146,11 @@ export function pollCall(event: RecordEvent, calls: readonly RowCall[], answered
   return call
 }
 
-export type ConversationRow =
-  | { kind: 'event'; key: string; event: RecordEvent }
-  | { kind: 'polls'; key: string; name: string; input: string | undefined; events: RecordEvent[] }
-  | { kind: 'hollow'; key: string; events: RecordEvent[]; calls: Array<{ name: string; count: number }>; spanMs: number }
-  | { kind: 'idle'; key: string; events: RecordEvent[] }
+export type ConversationRow<Event = RecordEvent> =
+  | { kind: 'event'; key: string; event: Event }
+  | { kind: 'polls'; key: string; name: string; input: string | undefined; events: Event[] }
+  | { kind: 'hollow'; key: string; events: Event[]; calls: Array<{ name: string; count: number }>; spanMs: number }
+  | { kind: 'idle'; key: string; events: Event[] }
 
 /** Whether any paired result carries answer text; injected so this module stays types-only. */
 export type ResultCaptured = (event: RecordEvent, callId: string) => boolean
@@ -184,15 +184,15 @@ export function hollowCalls(
 }
 
 /** Fold consecutive rows only; a user message, error or substantive work always breaks the group. */
-function foldRows<T>(
-  rows: readonly ConversationRow[],
-  identify: (event: RecordEvent) => T | null,
+export function foldRows<Event, T>(
+  rows: readonly ConversationRow<Event>[],
+  identify: (event: Event) => T | null,
   same: (a: T, b: T) => boolean,
-  build: (events: RecordEvent[], value: T) => ConversationRow,
+  build: (events: Event[], value: T) => ConversationRow<Event>,
   min = 2,
-): ConversationRow[] {
-  const out: ConversationRow[] = []
-  let run: { rows: Extract<ConversationRow, { kind: 'event' }>[]; value: T } | null = null
+): ConversationRow<Event>[] {
+  const out: ConversationRow<Event>[] = []
+  let run: { rows: Extract<ConversationRow<Event>, { kind: 'event' }>[]; value: T } | null = null
   const close = () => {
     if (run) out.push(...(run.rows.length >= min ? [build(run.rows.map(r => r.event), run.value)] : run.rows))
     run = null
@@ -202,7 +202,7 @@ function foldRows<T>(
     if (value === null) { close(); out.push(row); continue }
     if (run && !same(run.value, value)) close()
     run ??= { rows: [], value }
-    run.rows.push(row as Extract<ConversationRow, { kind: 'event' }>)
+    run.rows.push(row as Extract<ConversationRow<Event>, { kind: 'event' }>)
   }
   close()
   return out
@@ -226,13 +226,14 @@ export function collapsePolls(items: readonly RecordEvent[], { callsOf, answered
   return foldRows(items.map(event => ({ kind: 'event', key: keyOf(event), event })), event => pollCall(event, callsOf(event), id => answered(event, id)), (a, b) => a.name === b.name && (emptyArgs(a.input) ? '' : a.input!.trim()) === (emptyArgs(b.input) ? '' : b.input!.trim()), (events, call) => ({ kind: 'polls', key: `polls:${keyOf(events[0]!)}`, name: call.name, input: call.input, events }), min)
 }
 
+export const idleReply = (text: string): string | null => text.trim().length <= 280 && /\b(waiting|ending the turn|end turn|no new updates|nothing new)\b/i.test(text) ? text.trim() : null
+
 /** Exact repeated idle replies fold without hiding changed statements, tools, errors, prompts or source evidence. */
 export function collapseIdleTurns(rows: readonly ConversationRow[], callsOf: (event: RecordEvent) => readonly RowCall[]): ConversationRow[] {
   return foldRows(rows, event => {
     const d = event.detail
     if (d.role !== 'assistant' || event.category === 'lifecycle' || d.lifecycle || d.reasoning || d.recordedClaim || d.responseStatus === 'error' || d.isError || d.contentOmitted || d.publicationNote || d.clip || thinkingMarkers(d).length || callsOf(event).length) return null
-    const text = typeof d.publicText === 'string' ? d.publicText.trim() : ''
-    return text.length <= 280 && /\b(waiting|ending the turn|end turn|no new updates|nothing new)\b/i.test(text) ? text : null
+    return idleReply(typeof d.publicText === 'string' ? d.publicText : '')
   }, (a, b) => a === b, events => ({ kind: 'idle', key: `idle:${anchorOf(events[0]!)}`, events }))
 }
 

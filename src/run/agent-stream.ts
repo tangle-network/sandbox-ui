@@ -21,15 +21,19 @@ export interface AgentStreamRow {
     toolName?: string
     args?: unknown
     result?: unknown
+    isError?: boolean
+    atBasis?: string
+    durationMs?: number
+    costUsd?: number
     id?: string
     sealed?: boolean
   }
 }
 
-export type AgentTranscriptEntry = { id: string; at: number; scope?: string; attempt?: number } & (
+export type AgentTranscriptEntry = { id: string; at: number; scope?: string; attempt?: number; provenance?: string; isError?: boolean } & (
   | { kind: "message"; role: "assistant" | "user"; content: string; sealed?: boolean }
   | { kind: "reasoning"; text: string }
-  | { kind: "tool"; call: ToolCallData; name?: string; input?: unknown }
+  | { kind: "tool"; call: ToolCallData; name?: string; input?: unknown; costUsd?: number }
   | { kind: "notice"; text: string }
 )
 export interface AgentStreamPage {
@@ -68,7 +72,7 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
     const event = row.event
     if (!event) continue
     const at = Date.parse(row.at ?? ""), scope = JSON.stringify([row.stream ?? null, row.attempt ?? null])
-    const base = { id: event.id ?? `${scope}:${row.seq}`, at, scope, attempt: row.attempt }, last = next.at(-1)
+    const base = { id: event.id ?? `${scope}:${row.seq}`, at, scope, attempt: row.attempt, provenance: event.provenance, isError: event.isError }, last = next.at(-1)
     const kind = event.kind.replaceAll("_", "-").replace(/-delta$/, "")
     if ((kind === "text" || kind === "reasoning") && event.text) {
       if (kind === "text") {
@@ -86,8 +90,8 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
       if (kind === "tool-call") {
         const name = event.toolName ?? "tool", type = name.toLowerCase()
         next.push({ ...base, id, kind: "tool", name, input: event.args, call: { id, type: (TOOL_TYPES.has(type) ? type : "unknown") as ToolCallType, label: name, status: "running", detail: textOf(event.args) } })
-      } else if (prior?.kind === "tool") next[index] = { ...prior, call: { ...prior.call, status: failed(event.result) ? "error" : "success", output: textOf(event.result), ...(Number.isFinite(at) && Number.isFinite(prior.at) ? { duration: Math.max(0, at - prior.at) } : {}) } }
-      else next.push({ ...base, id, kind: "tool", call: { id, type: "unknown", label: event.toolName ?? "Tool result", status: failed(event.result) ? "error" : "success", output: textOf(event.result) } })
+      } else if (prior?.kind === "tool") next[index] = { ...prior, costUsd: event.costUsd ?? prior.costUsd, call: { ...prior.call, status: event.isError || failed(event.result) ? "error" : "success", output: textOf(event.result), ...(event.durationMs !== undefined ? { duration: event.durationMs } : event.atBasis !== "carried" && Number.isFinite(at) && Number.isFinite(prior.at) ? { duration: Math.max(0, at - prior.at) } : {}) } }
+      else next.push({ ...base, id, kind: "tool", call: { id, type: "unknown", label: event.toolName ?? "Tool result", status: event.isError || failed(event.result) ? "error" : "success", output: textOf(event.result) } })
     } else if (event.text) next.push({ ...base, kind: "notice", text: event.text })
   }
   return next
@@ -120,14 +124,17 @@ async function readPage(url: string, direction: Direction, before: Window, signa
 }
 
 function useAgentWindow(url: string | undefined, history?: AgentStreamHistory) {
-  const [state, put] = useState(() => empty(url, history)), current = useRef(state)
-  const [beginning, begin] = useState(false), [revision, reload] = useState(0)
-  const pageReader = useRef<(direction: Direction) => void>(() => {}), previous = useRef({ url, alive: history?.alive })
-  const update = (value: Window) => { current.current = value; put(value) }
+  const identity = url ? JSON.stringify([url, history?.url]) : undefined
+  const [stored, put] = useState(() => empty(identity, history)), current = useRef(stored)
+  const state = stored.identity === identity ? stored : empty(identity, history)
+  const [head, begin] = useState<string>(), [revision, reload] = useState(0)
+  const beginning = identity !== undefined && head === identity
+  const pageReader = useRef<(direction: Direction) => void>(() => {}), previous = useRef({ identity, alive: history?.alive })
+  const update = (value: Window) => { if (value.identity === identity) { current.current = value; put(value) } }
   useEffect(() => {
-    const retain = previous.current.url === url && previous.current.alive && history?.alive === false
-    previous.current = { url, alive: history?.alive }
-    if (!retain) update(empty(url, history))
+    const retain = previous.current.identity === identity && previous.current.alive && history?.alive === false
+    previous.current = { identity, alive: history?.alive }
+    if (!retain) update(empty(identity, history))
     if (!url || !history) return
     const controller = new AbortController(), fromHead = beginning || (!history.alive && !retain)
     let cancelled = false, pending = false
@@ -141,13 +148,13 @@ function useAgentWindow(url: string | undefined, history?: AgentStreamHistory) {
         if (direction === "head" && !page.events.length) { queueMicrotask(() => void load("tail")); return }
         update(receive(current.current, page, direction, fromHead))
         if (!fromHead && direction !== "before" && !history.alive && page.hasMore && current.current.lastSeq !== cursor) queueMicrotask(() => void load("after"))
-      } catch (cause) { if (!cancelled && !controller.signal.aborted) update({ ...current.current, loading: false, ready: true, error: cause instanceof Error ? cause.message : String(cause) }) }
+      } catch (cause) { if (!cancelled && !controller.signal.aborted) update({ ...current.current, loading: false, error: cause instanceof Error ? cause.message : String(cause) }) }
       finally { pending = false }
     }
     pageReader.current = direction => { if (direction === "before") update({ ...current.current, reading: true }); void load(direction) }
     void load(retain && current.current.lastSeq >= 0 ? "after" : fromHead ? "head" : "tail")
     return () => { cancelled = true; controller.abort(); pageReader.current = () => {} }
-  }, [url, history?.url, history?.alive, beginning, revision]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [identity, history?.alive, beginning, revision]) // eslint-disable-line react-hooks/exhaustive-deps
   return { state, current, update, beginning, begin, reload, pageReader }
 }
 
@@ -163,7 +170,7 @@ export function useAgentStream(url: string | undefined, openEventSource?: AgentS
     onLiveChange: live => { if (!live && !current.current.ended) update({ ...current.current, error: current.current.error ?? "The agent stream is unreachable; the viewer may be closed." }) },
     events: {
       rows: message => { try { update(receive(current.current, JSON.parse(message.data) as AgentStreamPage, "after", false)) } catch (cause) { update({ ...current.current, error: String(cause) }) } },
-      reset: message => { try { update({ ...empty(url, history), generation: (JSON.parse(message.data) as AgentStreamPage).generation, ready: true, loading: false }) } catch (cause) { update({ ...current.current, error: String(cause) }) } },
+      reset: message => { try { update({ ...empty(state.identity, history), generation: (JSON.parse(message.data) as AgentStreamPage).generation, ready: true, loading: false }) } catch (cause) { update({ ...current.current, error: String(cause) }) } },
       end: () => update({ ...current.current, alive: false, ended: true, loading: false, error: undefined }),
       unavailable: () => update({ ...current.current, error: "Live updates are temporarily unavailable" }),
     },
@@ -172,5 +179,5 @@ export function useAgentStream(url: string | undefined, openEventSource?: AgentS
   try { entries = foldAgentRows([], history?.projectRows?.(state.rows) ?? state.rows) } catch (cause) { error = cause instanceof Error ? cause.message : String(cause) }
   return { generation: state.generation, entries, lastSeq: state.lastSeq, alive: state.alive, error,
     ...(history ? { history: { loading: state.loading, earlier: state.earlier, more: state.more, reading: state.reading, beginning, emptyTail: state.ended && !state.rows.length && state.first === null && state.lastSeq < 0,
-      older: () => pageReader.current("before"), newer: () => pageReader.current("after"), latest: () => { begin(false); reload(value => value + 1) }, beginningPage: () => begin(true) } } : {}) }
+      older: () => { if (current.current.identity === state.identity) pageReader.current("before") }, newer: () => { if (current.current.identity === state.identity) pageReader.current("after") }, latest: () => { begin(undefined); reload(value => value + 1) }, beginningPage: () => begin(state.identity) } } : {}) }
 }

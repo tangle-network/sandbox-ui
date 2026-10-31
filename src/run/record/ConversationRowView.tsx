@@ -13,17 +13,18 @@ import { Brain, Timer, Settings } from 'lucide-react'
 import type { ConversationEvent as RecordEvent } from './types.js'
 import { callsOf, compact, ms, preview, textOf, toolKey, utcTime } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
-import { argsLabel, callStatus, hollowSummary, outputTokens, pollSummary, thinkingMarkers } from './conversation-rows.js'
+import { argsLabel, callStatus, foldRows, hollowSummary, idleReply, outputTokens, pollSummary, thinkingMarkers } from './conversation-rows.js'
 import type { CallState, ConversationRow } from './conversation-rows.js'
 import type { EventFlag } from './Conversation.js'
 import { promptText } from './prompt-text.js'
+import type { AgentTranscriptEntry } from '../agent-stream.js'
 
 /** A run-lifecycle event (start, stop, restart), drawn as a thin marker row. */
 export const isLifecycle = (event: RecordEvent) =>
   event.category === 'lifecycle' || event.detail.lifecycle !== undefined
 
 
-function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind: 'tool' }>; previous?: AgentTimelineStepKind }) {
+export function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind: 'tool' }>; previous?: AgentTimelineStepKind }) {
   const part = item.part!, cost = part.state.metadata?.costUsd, time = part.state.time, category = getToolCategory(part.tool)
   const tone = part.state.status === 'error' ? 'var(--surface-danger-text)' : ['command', 'write', 'edit'].includes(category) ? 'var(--tone-teal-icon)' : 'var(--accent-text)'
   return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row [&>[data-timeline-step]]:mx-0 [&_[data-run-row-duration]]:hidden rounded-[var(--radius-control)] border-l-2 border-l-[var(--record-tool-tone)] bg-[color-mix(in_srgb,var(--record-tool-tone)_7%,transparent)] px-1.5 py-0.5 hover:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)]" style={{ '--record-tool-tone': tone } as CSSProperties} data-tool-category={category} data-tool-status={part.state.status}>
@@ -62,35 +63,53 @@ const failureText = (text: string) => {
 }
 
 /** One tool call as the kit's row: its verb and subject, collapsed; the input and output when opened; failures inline. */
-function toolItems(id: string, call: ToolCall, result: RecordEvent | undefined, state: CallState, durationMs: number | null, live: boolean, opener: ConversationRenderContext['opener']): AgentTimelineItem[] {
-  const name = toolName(call.name)
-  const output = result ? textOf(result) || result.detail.contentOmitted || '' : undefined
-  const status = state === 'error' ? 'error' : state === 'pending' || (state === 'missing' && live) ? 'running' : 'completed'
+function toolItem(id: string, call: ToolCall, output: string | undefined, state: CallState, durationMs: number | null, live: boolean, cost?: number): Extract<AgentTimelineItem, { kind: 'tool' }> {
+  const name = toolName(call.name), status = state === 'error' ? 'error' : state === 'pending' || (state === 'missing' && live) ? 'running' : 'completed'
   const note = state === 'ambiguous' || (state === 'missing' && !live) ? callStatus(state, live) : undefined
-  const part: ToolPart = {
-    type: 'tool',
-    id,
-    tool: name,
-    state: {
-      status,
-      input: inputOf(call.input),
-      ...(output !== undefined ? { output } : {}),
-      ...(status === 'error' ? { error: failureText(output ?? '') || 'The call failed.' } : {}),
-      ...(durationMs !== null && durationMs >= 0 ? { time: { start: 0, end: durationMs } } : {}),
-      metadata: { ...(note ? { note } : {}), ...(typeof result?.detail.costListUsd === 'number' ? { costUsd: result.detail.costListUsd } : {}) },
-    },
-  }
-  const known = KIT_TOOLS.has(name.toLowerCase())
-  const meta = getToolDisplayMetadata(part)
+  const duration = durationMs !== null && durationMs >= 0 ? durationMs : undefined
+  const part: ToolPart = { type: 'tool', id, tool: name, state: {
+    status, input: inputOf(call.input), ...(output !== undefined ? { output } : {}),
+    ...(status === 'error' ? { error: failureText(output ?? '') || 'The call failed.' } : {}),
+    ...(duration !== undefined ? { time: { start: 0, end: duration } } : {}),
+    metadata: { ...(note ? { note } : {}), ...(cost !== undefined ? { costUsd: cost } : {}) },
+  } }
+  const known = KIT_TOOLS.has(name.toLowerCase()), meta = getToolDisplayMetadata(part)
   const detail = argsLabel(call.input) ?? (meta.description || (known ? undefined : preview(call)))
-  const item: AgentTimelineItem = {
-    id,
-    kind: 'tool',
-    part,
-    call: { id, type: TYPES[name.toLowerCase()] ?? 'unknown', label: known ? meta.title : name.replaceAll('_', ' '), status: status === 'error' ? 'error' : status === 'running' ? 'running' : 'success', ...(detail ? { detail } : {}), ...(durationMs !== null && durationMs >= 0 ? { duration: durationMs } : {}) },
-  }
+  return { id, kind: 'tool', part, call: { id, type: TYPES[name.toLowerCase()] ?? 'unknown', label: known ? meta.title : name.replaceAll('_', ' '), status: status === 'error' ? 'error' : status === 'running' ? 'running' : 'success', ...(detail ? { detail } : {}), ...(duration !== undefined ? { duration } : {}) } }
+}
+
+function toolItems(id: string, call: ToolCall, result: RecordEvent | undefined, state: CallState, durationMs: number | null, live: boolean, opener: ConversationRenderContext['opener']): AgentTimelineItem[] {
+  const output = result ? textOf(result) || result.detail.contentOmitted || '' : undefined
+  const item = toolItem(id, call, output, state, durationMs, live, typeof result?.detail.costListUsd === 'number' ? result.detail.costListUsd : undefined)
   const clip = clipOf(result?.detail.clip)
   return result && clip ? [item, { id: `${id}:clip`, kind: 'custom', content: <ClipNote clip={clip} open={opener(result)} /> }] : [item]
+}
+
+/** The same prompt control for retained and streamed turns; opening state belongs to the reader. */
+export function PromptMore({ text, id, opened, setOpen }: { text: string; id: string; opened: ReadonlySet<string>; setOpen: (id: string, open: boolean) => void }) {
+  if (promptText(text).length <= 280) return null
+  const short = !opened.has(id)
+  return <p className="ar-prompt-more"><button type="button" className="link-button" data-open-key={id} aria-expanded={!short} onClick={() => setOpen(id, short)}>{short ? 'Full prompt' : 'Shorter'}</button></p>
+}
+
+/** Live values use the same canonical items and tool presentation as retained conversations. */
+export function timelineItems(entries: readonly AgentTranscriptEntry[], streaming: boolean, opened?: ReadonlySet<string>): AgentTimelineItem[] {
+  const rows = foldRows<AgentTranscriptEntry, string>(entries.map(event => ({ kind: 'event', key: event.id, event })),
+    entry => entry.kind === 'message' && entry.role === 'assistant' && entry.provenance !== 'recorded-result' ? idleReply(entry.content) : null,
+    (a, b) => a === b, events => ({ kind: 'idle', key: events[0]!.id, events }))
+  return rows.map((row, index): AgentTimelineItem => {
+    const entry = row.kind === 'event' ? row.event : row.events[0]!
+    if (row.kind === 'idle') return idleItem(entry.id, row.events.map(event => ({ id: event.id, at: Number.isFinite(event.at) ? new Date(event.at).toISOString() : undefined, text: (event as Extract<AgentTranscriptEntry, { kind: 'message' }>).content })))
+    if (entry.kind === 'message') {
+      const body = entry.role === 'user' ? promptText(entry.content) : entry.content
+      const short = entry.role === 'user' && opened && !opened.has(`prompt:${entry.id}`) && body.length > 280
+      return { id: entry.id, kind: 'message', role: entry.role, content: short ? `${body.slice(0, 280).trimEnd()}…` : body, isStreaming: streaming && index === rows.length - 1, ...(entry.role === 'user' && Number.isFinite(entry.at) ? { timestamp: new Date(entry.at) } : {}) }
+    }
+    if (entry.kind === 'tool') return toolItem(entry.id, { id: entry.id, name: entry.name ?? entry.call.label, input: entry.input === undefined ? entry.call.detail : typeof entry.input === 'string' ? entry.input : JSON.stringify(entry.input) }, entry.call.output, entry.call.status === 'error' ? 'error' : entry.call.status === 'running' ? streaming ? 'pending' : 'missing' : 'returned', entry.call.duration ?? null, streaming, entry.costUsd)
+    if (entry.kind === 'notice' && entry.isError) return { id: entry.id, kind: 'status', tone: 'error', label: 'Execution error', detail: entry.text }
+    if (entry.kind === 'notice') return { id: entry.id, kind: 'custom', content: <p className="text-xs text-muted-foreground">{entry.text}</p> }
+    return { id: entry.id, kind: 'custom', content: <InlineThinkingItem part={{ type: 'reasoning', text: entry.text }} defaultOpen={false} openWhileActive={false} /> }
+  })
 }
 
 const toolNote = (part: ToolPart) => {
@@ -147,23 +166,20 @@ function pollItem(row: Extract<ConversationRow, { kind: 'polls' }>): AgentTimeli
   }
 }
 
-/** Consecutive tool turns whose arguments and results were not captured: one row naming the calls. */
-const hollowItem = (row: Extract<ConversationRow, { kind: 'hollow' }>): AgentTimelineItem => ({
-  id: row.key,
-  kind: 'custom',
-  content: <RunRowShell icon={<Settings size={14} aria-hidden="true" />} title={hollowSummary(row.calls)} description="args not captured" durationMs={row.spanMs || undefined} />,
-})
+/** The exact idle replies stay inspectable inside one shared fold in either conversation. */
+function idleItem(id: string, events: readonly { id: string; at?: string; text: string }[], selected?: string): AgentTimelineItem {
+  return {
+    id, kind: 'fold', summary: `${events.length} idle turns · ${events[0]!.text}`,
+    defaultOpen: events.some(event => event.id === selected),
+    items: events.map(event => ({ id: event.id, kind: 'custom', content: <div className="ar-idle-event" data-message={event.id}><time dateTime={event.at}>{event.at ? utcTime(event.at) : 'Unknown time'}</time><AgentTimelineStep item={{ id: event.id, kind: 'message', role: 'assistant', content: event.text }} /></div> })),
+  }
+}
 
 /** What one record row shows, as the kit's timeline items. */
 export function rowItems(row: ConversationRow, context: ConversationRenderContext): AgentTimelineItem[] {
   if (row.kind === 'polls') return [pollItem(row)]
-  if (row.kind === 'hollow') return [hollowItem(row)]
-  if (row.kind === 'idle') return [{
-    id: `${row.key}:${context.selected ?? ''}`, kind: 'fold',
-    summary: `${row.events.length} idle turns · ${textOf(row.events[0]!)}`,
-    defaultOpen: row.events.some(event => event.id === context.selected),
-    items: row.events.map(event => ({ id: event.id, kind: 'custom', content: <div className="ar-idle-event" data-message={event.id}><time dateTime={event.at}>{utcTime(event.at)}</time><AgentTimelineStep item={{ id: event.id, kind: 'message', role: 'assistant', content: textOf(event) }} /></div> })),
-  }]
+  if (row.kind === 'hollow') return [{ id: row.key, kind: 'custom', content: <RunRowShell icon={<Settings size={14} aria-hidden="true" />} title={hollowSummary(row.calls)} description="args not captured" durationMs={row.spanMs || undefined} /> }]
+  if (row.kind === 'idle') return [idleItem(`${row.key}:${context.selected ?? ''}`, row.events.map(event => ({ id: event.id, at: event.at, text: textOf(event) })), context.selected)]
   const { index, cutoff, anchor, thinkingSpan, opened, paired, live } = context
   const event = row.event
   if (isLifecycle(event)) {
@@ -214,9 +230,6 @@ export function rowItems(row: ConversationRow, context: ConversationRenderContex
   return items
 }
 
-/** The kind of a row's last item, which sets the gap above the next row. */
-export const lastKind = (items: readonly AgentTimelineItem[]): AgentTimelineStepKind | undefined => (items.length ? agentTimelineStepKind(items[items.length - 1]!) : undefined)
-
 export function ConversationRowView({ row, items, previous, turn, context }: { row: ConversationRow; items: readonly AgentTimelineItem[]; previous?: AgentTimelineStepKind; turn?: boolean; context: ConversationRenderContext }) {
   const { selected, opened, anchor, setOpen, flagMarks, opener, flags } = context
   const events = row.kind === 'event' ? [row.event] : row.events
@@ -232,25 +245,15 @@ export function ConversationRowView({ row, items, previous, turn, context }: { r
   const message = textOf(event)
   const standalone = event.detail.toolCallId !== undefined || event.detail.role === 'toolResult'
   const clip = clipOf(event.detail.clip)
-  if (event.detail.role === 'user' && message && !standalone) {
-    const key = `prompt:${anchor(event)}`
-    const long = promptText(message).length > 280
-    const short = long && !opened.has(key)
-    return (
-      <article {...rowProps}>
-        {steps}
-        {long && <p className="ar-prompt-more"><button type="button" className="link-button" data-open-key={key} aria-expanded={!short} onClick={() => setOpen(key, short)}>{short ? 'Full prompt' : 'Shorter'}</button></p>}
-        {!short && <ClipNote clip={clip} open={opener(event)} />}
-        {flagMarks(event)}
-      </article>
-    )
-  }
+  const prompt = event.detail.role === 'user' && !!message && !standalone, key = `prompt:${anchor(event)}`
+  const short = prompt && promptText(message).length > 280 && !opened.has(key)
   const finding = event.detail.recordedClaim !== undefined
-  const notes = [event.detail.publicationNote, finding ? event.detail.assessment : undefined].filter((note): note is string => Boolean(note))
+  const notes = (prompt ? [] : [event.detail.publicationNote, finding ? event.detail.assessment : undefined]).filter((note): note is string => Boolean(note))
   return (
     <article {...rowProps}>
       {steps}
-      {message && !standalone && <ClipNote clip={callsOf(event).length ? undefined : clip} open={opener(event)} />}
+      {prompt && <PromptMore text={message} id={key} opened={opened} setOpen={setOpen} />}
+      {message && !standalone && !short && <ClipNote clip={!prompt && callsOf(event).length ? undefined : clip} open={opener(event)} />}
       {notes.map((note) => <p key={note} className="publication-note">{note}</p>)}
       {flagMarks(event)}
     </article>

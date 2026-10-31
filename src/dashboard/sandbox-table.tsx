@@ -244,13 +244,13 @@ export function SandboxTable({
                             icon={<Users />}
                             title={"Shared with " + (sb.team.name ?? "Team") + " \u00b7 " + sb.team.role}
                           >
-                            {sb.team.name ?? "Team"}
-                            <span className="font-normal text-muted-foreground"> - {sb.team.role}</span>
+                            <span className="flex min-w-0 items-center gap-1">
+                              <span className="truncate">{sb.team.name ?? "Team"}</span>
+                              <span className="shrink-0 font-normal text-muted-foreground">- {sb.team.role}</span>
+                            </span>
                           </Tag>
                         ) : (
-                          <Tag icon={<User />} title="Personal sandbox">
-                            Personal
-                          </Tag>
+                          <Tag icon={<User />} title="Personal sandbox">Personal</Tag>
                         )}
                       </td>
                     )}

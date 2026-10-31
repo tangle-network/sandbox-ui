@@ -4,7 +4,6 @@
   {"component": "DiffView", "source": "src/workbench/diff-view.tsx", "storyFile": "src/stories/workbench/DiffView.stories.tsx", "task": "Read complete changed lines"},
   {"component": "PreviewView", "source": "src/workbench/preview-view.tsx", "storyFile": "src/stories/workbench/PreviewView.stories.tsx", "task": "Inspect application preview state"},
   {"component": "TerminalView", "source": "src/terminal/terminal-view.tsx", "storyFile": "src/stories/terminal/TerminalView.stories.tsx", "task": "Read command output and connection state"},
-  {"component": "AgentMessagingConnection", "source": "src/connections/agent-messaging-connection.tsx", "storyFile": "src/stories/connections/AgentMessagingConnection.stories.tsx", "task": "Connect a private agent to the shared member messaging route"},
   {"component": "AgentGraph", "source": "src/workflows/AgentGraph.tsx", "storyFile": "src/stories/workflows/AgentGraph.stories.tsx", "task": "Find needs-you, failed and quiet agents at phone and desktop widths"},
   {"component": "AgentHubCanvas", "source": "src/workflows/AgentHubCanvas.tsx", "storyFile": "src/stories/workflows/AgentGraphHub.stories.tsx", "task": "Inspect live agent and tool calls"},
   {"component": "FlowWaterfall", "source": "src/run/trace-waterfall.tsx", "storyFile": "src/stories/run/FlowWaterfall.stories.tsx", "task": "Locate failed and quiet work in time"},

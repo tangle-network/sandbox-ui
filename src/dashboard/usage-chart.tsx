@@ -39,6 +39,7 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
   const total = data.reduce((sum, d) => sum + d.value, 0);
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
   const isEmpty = data.length === 0 || total === 0;
+  const labelEvery = data.length <= 7 ? 1 : Math.ceil(data.length / 7);
 
   return (
     <Card className={className}>
@@ -112,25 +113,23 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
             })}
           </div>
 
-          {/* X-axis labels */}
-          <div className="mt-2 ml-10 flex gap-1">
-            {data.map((point, index) => (
-              <div
-                key={point.date}
-                className={cn(
-                  "flex flex-1 justify-center text-muted-foreground text-xs",
-                  hoveredIndex === index && colors.text,
-                )}
-              >
-                {/* Show every nth label to avoid crowding; a shown label may
-                    run past its own column into the empty ones beside it. */}
-                <span className="whitespace-nowrap">
-                  {data.length <= 7 || index % Math.ceil(data.length / 7) === 0
-                    ? formatDate(point.date)
-                    : ""}
-                </span>
-              </div>
-            ))}
+          {/* X-axis labels: every nth label, each given the n columns it
+              stands for, so a date never truncates to its first letters. */}
+          <div
+            className="mt-2 ml-10 grid gap-1"
+            style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}
+          >
+            {data.map((point, index) =>
+              index % labelEvery === 0 ? (
+                <div
+                  key={point.date}
+                  style={{ gridColumn: `${index + 1} / span ${Math.min(labelEvery, data.length - index)}` }}
+                  className={cn("truncate text-muted-foreground text-xs", hoveredIndex === index && colors.text)}
+                >
+                  {formatDate(point.date)}
+                </div>
+              ) : null,
+            )}
           </div>
         </div>
 

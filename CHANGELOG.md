@@ -1,3 +1,8 @@
+## 3.0.3
+
+- Share bounded native stream history and canonical timeline items, with scoped tool identity, stable generation reconnects and immediate request isolation.
+- Reuse the retained tool, prompt and idle presentation for live consumers.
+
 # Changelog
 
 ## 3.0.2

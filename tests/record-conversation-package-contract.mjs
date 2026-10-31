@@ -9,7 +9,10 @@ export function validateRecordConversation({ root, consumerDir }) {
     import { readFileSync } from "node:fs";
     import { createElement } from "react";
     import { renderToStaticMarkup } from "react-dom/server";
-    import { Conversation, indexRecord } from "@tangle-network/sandbox-ui/run/record";
+    import { Conversation, indexRecord, ToolStep } from "@tangle-network/sandbox-ui/run/record";
+    const simpleTool = renderToStaticMarkup(createElement(ToolStep, { item: { id: "public-tool", kind: "tool", call: { id: "public-tool", type: "bash", label: "Shell", status: "success" } } }));
+    assert.match(simpleTool, /data-timeline-step="tool"/);
+    assert.match(simpleTool, /Shell/);
     const require = createRequire(import.meta.url);
     if (JSON.parse(process.env.PACKAGE_OMIT_OPTIONAL_PEERS ?? "[]").includes("@drewstone/agent-record")) {
       assert.throws(() => require.resolve("@drewstone/agent-record/record"), { code: "MODULE_NOT_FOUND" });

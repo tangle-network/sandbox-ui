@@ -3,14 +3,15 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 import { toolGlyph } from "@tangle-network/charts/react"
 import type { FlowMarker, FlowSpan, FlowTrace } from "@tangle-network/charts"
-import { AgentTimeline, type AgentTimelineItem } from "@tangle-network/ui/chat"
-import { InlineThinkingItem, runStatus } from "@tangle-network/ui/run"
+import { AgentTimeline } from "@tangle-network/ui/chat"
+import { runStatus } from "@tangle-network/ui/run"
 import { X } from "lucide-react"
 import { cn } from "../lib/utils"
 import { activityTiming, ambientStyle, syncAmbient } from "../workflows/run-ui-state"
 import { AgentGraph, type AgentGraphEdge, type AgentGraphNode, type AgentGraphEvent, type AgentGraphProps } from "../workflows/AgentGraph"
-import { type AgentTranscriptEntry, type AgentStreamOpener, useAgentStream } from "./agent-stream"
+import { type AgentStreamOpener, useAgentStream } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
+import { timelineItems } from "./record/ConversationRowView"
 import { LatestEvents } from "./latest-events"
 import { useFollowTail } from "./use-follow-tail"
 
@@ -104,21 +105,7 @@ function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, a
   return { nodes, edges }
 }
 
-function timelineItems(entries: readonly AgentTranscriptEntry[], streaming: boolean): AgentTimelineItem[] {
-  return entries.map((entry, index): AgentTimelineItem => {
-    if (entry.kind === "message") {
-      return { id: entry.id, kind: "message", role: entry.role, content: entry.content, isStreaming: streaming && index === entries.length - 1 }
-    }
-    if (entry.kind === "tool") return { id: entry.id, kind: "tool", call: entry.call }
-    if (entry.kind === "notice") return { id: entry.id, kind: "custom", content: <p className="text-xs text-muted-foreground">{entry.text}</p> }
-    // Reasoning stays one collapsed row the reader can open.
-    return { id: entry.id, kind: "custom", content: <InlineThinkingItem part={{ type: "reasoning", text: entry.text }} defaultOpen={false} openWhileActive={false} /> }
-  })
-}
 
-function NotTimeIndexed({ label }: { label: string }) {
-  return <p className="p-4 text-sm text-muted-foreground">{label}: not time-indexed</p>
-}
 
 /**
  * The run workspace: the agent timeline and span waterfall over one clock, the selected agent's conversation
@@ -213,7 +200,7 @@ export function TraceWorkspace({
           >
             {streamUrl && (cursor === null || origin !== undefined)
               ? <AgentTimeline items={items} isThinking={live && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
-              : <NotTimeIndexed label="Conversation" />}
+              : <p className="p-4 text-sm text-muted-foreground">Conversation: not time-indexed</p>}
           </div>
           {unseen && (
             <button type="button" onClick={() => jump()}

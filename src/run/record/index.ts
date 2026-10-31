@@ -5,3 +5,4 @@ export type { ConversationNode, ConversationEvent, ConversationRecord } from "./
 export * as recordModel from "./model";
 export { VirtualList } from "./VirtualList";
 export { AgentTree } from "./AgentTree";
+export { PromptMore, ToolStep, timelineItems } from "./ConversationRowView";

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Camera, Clock, HardDrive, Plus, RotateCcw } from "lucide-react"
+import { Tag } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { focusField } from "@tangle-network/ui/utils"
 
@@ -50,14 +51,14 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-foreground">Snapshots</h3>
+        <h3 className="text-sm font-semibold text-foreground">Snapshots</h3>
         <button
           type="button"
           onClick={() => setShowCreate(!showCreate)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary/20 border border-primary/30 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary/20 border border-primary/30 px-3 py-1.5 text-xs font-medium text-[var(--accent-text)] hover:bg-primary hover:text-primary-foreground transition-colors"
         >
           <Plus className="h-3.5 w-3.5" />
-          Create Snapshot
+          Create snapshot
         </button>
       </div>
 
@@ -96,7 +97,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
           {/* Liveness of the in-flight load, not decoration — @see ProcessList. */}
           <Camera className="mx-auto h-6 w-6 text-muted-foreground animate-pulse mb-2" data-motion="essential" />
-          <p className="text-sm text-muted-foreground">Loading snapshots...</p>
+          <p className="text-sm text-muted-foreground">Loading snapshots…</p>
         </div>
       ) : snapshots.length > 0 ? (
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
@@ -130,9 +131,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
                     {s.tags?.length ? (
                       <div className="flex items-center gap-1 flex-wrap">
                         {s.tags.map((tag) => (
-                          <span key={tag} className="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-medium text-muted-foreground border border-[var(--md3-outline-variant)]">
-                            {tag}
-                          </span>
+                          <Tag key={tag}>{tag}</Tag>
                         ))}
                       </div>
                     ) : (
@@ -154,7 +153,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
                         <button
                           type="button"
                           onClick={() => onSaveAsTemplate(s.id)}
-                          className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20 transition-colors border border-primary/20"
+                          className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-[var(--accent-text)] hover:bg-primary/20 transition-colors border border-primary/20"
                           title="Save as reusable template"
                         >
                           Save as Template

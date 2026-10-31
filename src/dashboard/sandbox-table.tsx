@@ -25,6 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Tag,
 } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
@@ -239,24 +240,17 @@ export function SandboxTable({
                     {hasTeamSandboxes && (
                       <td className="hidden px-4 py-3 align-middle xl:table-cell">
                         {sb.team ? (
-                          <div
-                            className="inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-full bg-[var(--accent-surface-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-text)]"
+                          <Tag
+                            icon={<Users />}
                             title={"Shared with " + (sb.team.name ?? "Team") + " \u00b7 " + sb.team.role}
                           >
-                            <Users className="h-3 w-3 shrink-0" aria-hidden="true" />
-                            <span className="min-w-0 truncate">{sb.team.name ?? "Team"}</span>
-                            <span className="shrink-0 font-normal text-muted-foreground">
-                              - {sb.team.role}
-                            </span>
-                          </div>
+                            {sb.team.name ?? "Team"}
+                            <span className="font-normal text-muted-foreground"> - {sb.team.role}</span>
+                          </Tag>
                         ) : (
-                          <div
-                            className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-high px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
-                            title="Personal sandbox"
-                          >
-                            <User className="h-3 w-3" aria-hidden="true" />
+                          <Tag icon={<User />} title="Personal sandbox">
                             Personal
-                          </div>
+                          </Tag>
                         )}
                       </td>
                     )}
@@ -295,12 +289,12 @@ export function SandboxTable({
                             const lifecycle: React.ReactNode[] = []
                             if (onStop) lifecycle.push(
                               <DropdownMenuItem key="stop" onClick={runItem(onStop)}>
-                                <PowerOff className="mr-2 h-4 w-4" /> Stop Sandbox
+                                <PowerOff className="mr-2 h-4 w-4" /> Stop sandbox
                               </DropdownMenuItem>,
                             )
                             if (onKeepAlive) lifecycle.push(
                               <DropdownMenuItem key="keep-alive" onClick={runItem(onKeepAlive)}>
-                                <Clock className="mr-2 h-4 w-4" /> Keep Alive
+                                <Clock className="mr-2 h-4 w-4" /> Keep alive
                               </DropdownMenuItem>,
                             )
                             if (lifecycle.length) overflowSections.push(lifecycle)
@@ -308,25 +302,25 @@ export function SandboxTable({
                             const observability: React.ReactNode[] = []
                             if (onUsage) observability.push(
                               <DropdownMenuItem key="usage" onClick={runItem(onUsage)}>
-                                <BarChart2 className="mr-2 h-4 w-4" /> View Usage
+                                <BarChart2 className="mr-2 h-4 w-4" /> View usage
                               </DropdownMenuItem>,
                             )
                             if (onHealth) observability.push(
                               <DropdownMenuItem key="health" onClick={runItem(onHealth)}>
-                                <Activity className="mr-2 h-4 w-4" /> Health Check
+                                <Activity className="mr-2 h-4 w-4" /> Health check
                               </DropdownMenuItem>,
                             )
                             if (observability.length) overflowSections.push(observability)
 
                             if (onFork) overflowSections.push([
                               <DropdownMenuItem key="fork" onClick={runItem(onFork)}>
-                                <Copy className="mr-2 h-4 w-4" /> Fork Sandbox
+                                <Copy className="mr-2 h-4 w-4" /> Fork sandbox
                               </DropdownMenuItem>,
                             ])
                           } else if (isResumable(sb.status)) {
                             if (onFork) overflowSections.push([
                               <DropdownMenuItem key="fork" onClick={runItem(onFork)}>
-                                <Copy className="mr-2 h-4 w-4" /> Fork Sandbox
+                                <Copy className="mr-2 h-4 w-4" /> Fork sandbox
                               </DropdownMenuItem>,
                             ])
                           }

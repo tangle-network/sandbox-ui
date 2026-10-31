@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Tag,
 } from "@tangle-network/ui/primitives"
 import {
   MoreVertical, PowerOff, Power, Copy, Clock, Activity,
@@ -100,7 +101,7 @@ function Spec({ icon, value, unit }: { icon: React.ReactNode; value: number; uni
     <span className="flex shrink-0 items-center gap-1.5">
       <span className="text-muted-foreground" aria-hidden="true">{icon}</span>
       <span className="font-mono text-xs tabular-nums text-foreground">{value}</span>
-      <span className="text-[10px] text-muted-foreground">{unit}</span>
+      <span className="text-xs text-muted-foreground">{unit}</span>
     </span>
   )
 }
@@ -128,7 +129,7 @@ export function SandboxCard({
     if (status === "hibernating") return onWake
     return undefined
   }
-  const resumeLabel = isHibernating ? "Wake Sandbox" : "Resume Sandbox"
+  const resumeLabel = isHibernating ? "Wake sandbox" : "Resume sandbox"
   const resumeHandler = isStopped ? resolveResumeHandler(sandbox.status) : undefined
 
   const isArchived = sandbox.status === "archived"
@@ -150,7 +151,7 @@ export function SandboxCard({
 
   return (
     <div className={cn(
-      "group relative flex flex-col justify-between overflow-hidden rounded-lg border bg-surface-container p-5 transition-colors",
+      "group relative flex flex-col overflow-hidden rounded-lg border bg-surface-container p-5 transition-colors",
       isRunning ? "border-[var(--status-running)]/30" : "border-[var(--md3-outline-variant)]",
       "hover:border-foreground/15",
       className
@@ -160,23 +161,23 @@ export function SandboxCard({
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <h3 className="min-w-0 flex-1 truncate text-sm font-bold text-foreground" title={sandbox.name} aria-label={sandbox.name}>
+            <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground" title={sandbox.name} aria-label={sandbox.name}>
               {sandbox.name}
             </h3>
             {sandbox.team && (
-              <span
-                className="inline-flex min-w-0 max-w-40 items-center gap-1 rounded-full bg-[var(--accent-surface-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-text)]"
+              <Tag
+                icon={<Users />}
+                className="max-w-40"
                 title={`Shared with ${sandbox.team.name ?? "Team"} · ${sandbox.team.role}`}
               >
-                <Users className="h-3 w-3 shrink-0" aria-hidden="true" />
-                <span className="min-w-0 truncate">{sandbox.team.name ?? "Team"}</span>
-              </span>
+                {sandbox.team.name ?? "Team"}
+              </Tag>
             )}
           </div>
-          <p className="mt-0.5 min-w-0 truncate font-mono text-[10px] tracking-wider text-muted-foreground uppercase">
-            {sandbox.nodeId || "Unknown Node"}
+          <p className="mt-0.5 min-w-0 truncate font-mono text-xs text-muted-foreground">
+            {sandbox.nodeId || "Unknown node"}
             {sandbox.team && (
-              <span className="ml-2 normal-case tracking-normal">
+              <span className="ml-2">
                 · your role: {sandbox.team.role}
               </span>
             )}
@@ -195,15 +196,15 @@ export function SandboxCard({
           <DropdownMenuContent align="end" className="min-w-[180px]">
             {isRunning && (
               <>
-                {onStop && <DropdownMenuItem onClick={() => onStop(sandbox.id)}><PowerOff className="mr-2 h-4 w-4" /> Stop Sandbox</DropdownMenuItem>}
-                {onKeepAlive && <DropdownMenuItem onClick={() => onKeepAlive(sandbox.id)}><Clock className="mr-2 h-4 w-4" /> Keep Alive</DropdownMenuItem>}
+                {onStop && <DropdownMenuItem onClick={() => onStop(sandbox.id)}><PowerOff className="mr-2 h-4 w-4" /> Stop sandbox</DropdownMenuItem>}
+                {onKeepAlive && <DropdownMenuItem onClick={() => onKeepAlive(sandbox.id)}><Clock className="mr-2 h-4 w-4" /> Keep alive</DropdownMenuItem>}
                 {(onStop || onKeepAlive) && <DropdownMenuSeparator />}
-                {onUsage && <DropdownMenuItem onClick={() => onUsage(sandbox.id)}><BarChart2 className="mr-2 h-4 w-4" /> View Usage</DropdownMenuItem>}
-                {onHealth && <DropdownMenuItem onClick={() => onHealth(sandbox.id)}><Activity className="mr-2 h-4 w-4" /> Health Check</DropdownMenuItem>}
+                {onUsage && <DropdownMenuItem onClick={() => onUsage(sandbox.id)}><BarChart2 className="mr-2 h-4 w-4" /> View usage</DropdownMenuItem>}
+                {onHealth && <DropdownMenuItem onClick={() => onHealth(sandbox.id)}><Activity className="mr-2 h-4 w-4" /> Health check</DropdownMenuItem>}
                 {(onUsage || onHealth) && <DropdownMenuSeparator />}
                 {onFork && (
                   <>
-                    <DropdownMenuItem onClick={() => onFork(sandbox.id)}><Copy className="mr-2 h-4 w-4" /> Fork Sandbox</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onFork(sandbox.id)}><Copy className="mr-2 h-4 w-4" /> Fork sandbox</DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>
                 )}
@@ -212,13 +213,13 @@ export function SandboxCard({
             {isStopped && (
               <>
                 {resumeHandler && <DropdownMenuItem onClick={() => resumeHandler(sandbox.id)}><Power className="mr-2 h-4 w-4" /> {resumeLabel}</DropdownMenuItem>}
-                {onFork && <DropdownMenuItem onClick={() => onFork(sandbox.id)}><Copy className="mr-2 h-4 w-4" /> Fork Sandbox</DropdownMenuItem>}
+                {onFork && <DropdownMenuItem onClick={() => onFork(sandbox.id)}><Copy className="mr-2 h-4 w-4" /> Fork sandbox</DropdownMenuItem>}
                 {(resumeHandler || onFork) && <DropdownMenuSeparator />}
               </>
             )}
             {onDelete && canAdminSandbox(sandbox) && (
               <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => onDelete(sandbox.id)}>
-                <Trash2 className="mr-2 h-4 w-4" /> Delete Sandbox
+                <Trash2 className="mr-2 h-4 w-4" /> Delete sandbox
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -231,7 +232,7 @@ export function SandboxCard({
         <div className="flex items-center justify-between">
           <SandboxStatusPill status={sandbox.status} />
           {isRunning && sandbox.uptime && (
-            <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
               up {sandbox.uptime}
             </span>
           )}
@@ -264,19 +265,19 @@ export function SandboxCard({
           </div>
         ) : isTransitioning ? (
           <div className="rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-high p-3">
-            <div className="mb-1.5 flex justify-between text-[11px] font-medium text-muted-foreground">
+            <div className="mb-1.5 flex justify-between text-xs font-medium text-muted-foreground">
               <span>{sandbox.provisioningMessage || "Starting…"}</span>
               <span className="font-mono tabular-nums">{sandbox.provisioningPercent ?? 0}%</span>
             </div>
             <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
+                className="h-full rounded-full bg-primary"
                 style={{ width: `${sandbox.provisioningPercent || 5}%` }}
               />
             </div>
           </div>
         ) : isArchived && sandbox.archivedAt ? (
-          <p className="font-mono text-[11px] text-muted-foreground">{sandbox.archivedAt}</p>
+          <p className="font-mono text-xs text-muted-foreground">{sandbox.archivedAt}</p>
         ) : null}
 
         {/* Allocated resources */}
@@ -290,7 +291,7 @@ export function SandboxCard({
 
         {/* Custom image — shown only when the operator overrode the runtime image */}
         {sandbox.customImage && (
-          <div className="flex items-center gap-1.5 truncate font-mono text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 truncate font-mono text-xs text-muted-foreground">
             <Box className="h-3 w-3 shrink-0" aria-hidden="true" />
             <span className="truncate" title={sandbox.customImage}>{sandbox.customImage}</span>
           </div>
@@ -298,7 +299,7 @@ export function SandboxCard({
       </div>
 
       {/* Footer Action */}
-      {sandbox.status !== "expired" && <div className="border-t border-[var(--md3-outline-variant)] pt-3">
+      {sandbox.status !== "expired" && <div className="mt-auto border-t border-[var(--md3-outline-variant)] pt-3">
         {isRunning ? (
           <button
             type="button"
@@ -306,7 +307,7 @@ export function SandboxCard({
             className={cn("flex w-full items-center justify-center gap-2 min-h-11 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97]", focusRing)}
           >
             <Network className="h-4 w-4" />
-            Connect Session
+            Connect session
           </button>
         ) : (
           <button
@@ -322,7 +323,7 @@ export function SandboxCard({
             )}
           >
             <Play className="h-4 w-4" />
-            {isTransitioning ? "Starting..." : resumeLabel}
+            {isTransitioning ? "Starting…" : resumeLabel}
           </button>
         )}
       </div>}
@@ -349,7 +350,7 @@ export function NewSandboxCard({ onClick, className }: NewSandboxCardProps) {
         <Plus className="h-6 w-6" />
       </div>
       <span className="mt-4 text-sm font-semibold text-foreground">
-        New Sandbox
+        New sandbox
       </span>
       <span className="mt-1 text-xs text-muted-foreground">
         Spin up an isolated sandbox

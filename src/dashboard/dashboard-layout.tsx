@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Bell, Users, ExternalLink } from "lucide-react"
+import { Plus, Bell, Users, ExternalLink, Menu, X } from "lucide-react"
 import { focusRing } from "@tangle-network/ui/utils"
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
@@ -146,26 +146,7 @@ export interface DashboardLayoutProps {
 // ============================================================================
 
 
-function MenuIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Menu icon</title>
-      <line x1="4" x2="20" y1="12" y2="12" />
-      <line x1="4" x2="20" y1="6" y2="6" />
-      <line x1="4" x2="20" y1="18" y2="18" />
-    </svg>
-  )
-}
 
-function XIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Close icon</title>
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  )
-}
 
 function formatNotifDate(raw: string): string {
   const d = new Date(raw)
@@ -321,7 +302,7 @@ function DashboardLayoutInner({
 
           {(sidebarLeading != null || topBarLeading != null || onNewSandbox) && <div className={cn("flex shrink-0 flex-col gap-2 pt-3", showLabels ? "px-2" : "items-center px-1")}>
             {(sidebarLeading != null || topBarLeading != null) && <SidebarLeading content={sidebarLeading} legacy={topBarLeading} collapsed={!showLabels} />}
-            {onNewSandbox && <RailButton icon={Plus} label="New Sandbox" variant="primary" showLabel={showLabels} className="min-h-11" onClick={() => { if (mobile) setMobileMenuOpen(false); onNewSandbox() }} />}
+            {onNewSandbox && <RailButton icon={Plus} label="New sandbox" variant="primary" showLabel={showLabels} className="min-h-11" onClick={() => { if (mobile) setMobileMenuOpen(false); onNewSandbox() }} />}
           </div>}
 
           <SidebarRailNav
@@ -482,14 +463,14 @@ function DashboardLayoutInner({
       <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <nav aria-label="Mobile navigation" className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-4 lg:hidden">
           <Link href={logoHref} to={logoHref} aria-label="Home" className={cn("rounded-md p-1", focusRing)}><Logo variant={variant} size="sm" iconOnly /></Link>
-          <DialogTrigger asChild><button type="button" aria-label="Open menu" className={cn("flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-container-high", focusRing)}><MenuIcon className="h-5 w-5" /></button></DialogTrigger>
+          <DialogTrigger asChild><button type="button" aria-label="Open menu" className={cn("flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-container-high", focusRing)}><Menu className="h-5 w-5" /></button></DialogTrigger>
         </nav>
         <DialogContent aria-describedby={undefined} hideCloseButton
           className="inset-y-0 left-0 flex h-dvh max-w-[calc(100vw-24px)] translate-x-0 translate-y-0 gap-0 rounded-none border-y-0 border-l-0 bg-surface-container-low p-0 lg:hidden"
           style={{ width: panelOpen && hasPanels ? SIDEBAR_MOBILE_WIDTH + SIDEBAR_PANEL_WIDTH : SIDEBAR_MOBILE_WIDTH }}
           onClick={(event) => { if ((event.target as HTMLElement).closest("a[href]")) setMobileMenuOpen(false) }}>
           <DialogTitle className="sr-only">Navigation</DialogTitle>
-          <DialogClose aria-label="Close menu" className={cn("absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-container-high", focusRing)}><XIcon className="h-5 w-5" /></DialogClose>
+          <DialogClose aria-label="Close menu" className={cn("absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-md hover:bg-surface-container-high", focusRing)}><X className="h-5 w-5" /></DialogClose>
           {mobileSidebarContent}
         </DialogContent>
       </Dialog>

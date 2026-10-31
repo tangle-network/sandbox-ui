@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Copy, Check, Globe, Plus, Trash2 } from "lucide-react"
 import { cn } from "../lib/utils"
+import { StatusPill } from "@tangle-network/ui/primitives"
 import { focusField, focusRing } from "@tangle-network/ui/utils"
 
 export interface ExposedPort {
@@ -99,14 +100,12 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
                     <Copy className="h-4 w-4 shrink-0" aria-hidden="true" />
                   )}
                 </button>
-                <span className={cn(
-                  "col-start-1 row-start-2 inline-flex items-center justify-self-start rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider sm:col-start-3 sm:row-start-1",
-                  p.status === "active"
-                    ? "bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]"
-                    : "bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]"
-                )}>
-                  <span className="sr-only">Status: </span>{p.status}
-                </span>
+                <StatusPill
+                  tone={p.status === "active" ? "success" : "warning"}
+                  className="col-start-1 row-start-2 justify-self-start sm:col-start-3 sm:row-start-1"
+                >
+                  <span className="sr-only">Status: </span>{p.status.charAt(0).toUpperCase() + p.status.slice(1)}
+                </StatusPill>
                 {onRemovePort && (
                   <button
                     type="button"

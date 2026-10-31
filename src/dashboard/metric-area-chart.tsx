@@ -14,9 +14,9 @@ export type MetricChartTone = "primary" | "success" | "warning" | "danger";
 
 const TONE_VARS: Record<MetricChartTone, string> = {
   primary: "var(--brand-primary, hsl(var(--primary)))",
-  success: "var(--status-running, #22c55e)",
-  warning: "var(--status-creating, #eab308)",
-  danger: "var(--status-error, #ef4444)",
+  success: "var(--status-running)",
+  warning: "var(--surface-warning-text)",
+  danger: "var(--status-error)",
 };
 
 export interface MetricAreaChartProps {
@@ -126,7 +126,7 @@ export function MetricAreaChart({
       data-testid={`metric-chart-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <p className="font-medium text-muted-foreground text-xs uppercase tracking-[0.12em]">
+        <p className="font-medium text-muted-foreground text-xs">
           {label}
         </p>
         <div className="text-right">
@@ -194,7 +194,7 @@ export function MetricAreaChart({
           </svg>
         )}
       </div>
-      <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground tabular-nums">
+      <div className="mt-1.5 flex justify-between text-xs text-muted-foreground tabular-nums">
         <span>{values.length > 0 ? formatValue(0) : ""}</span>
         <span>{values.length > 0 ? formatValue(yMax) : ""}</span>
       </div>

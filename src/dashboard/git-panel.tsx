@@ -77,10 +77,10 @@ export function GitPanel({ status, log, loading = false, onRefresh, className }:
     <div className={cn("rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden", className)}>
       <div className="flex items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-4 py-3">
         <div className="flex items-center gap-2">
-          <GitBranch className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold text-foreground">{status.branch}</span>
+          <GitBranch className="size-4 text-muted-foreground" />
+          <span className="text-sm font-semibold text-foreground">{status.branch}</span>
           {status.isDirty && (
-            <span className="rounded-full bg-[var(--surface-warning-bg)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--surface-warning-text)]">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {changedCount} change{changedCount !== 1 ? "s" : ""}
             </span>
           )}
@@ -100,7 +100,7 @@ export function GitPanel({ status, log, loading = false, onRefresh, className }:
               <div key={`s-${f}`} className="flex items-center gap-2 text-xs">
                 <FilePlus className="h-3 w-3 text-[var(--surface-success-text)]" />
                 <span className="font-mono text-foreground truncate">{f}</span>
-                <span className="text-[var(--surface-success-text)] text-[10px] font-bold ml-auto">STAGED</span>
+                <span className="ml-auto text-xs font-medium text-[var(--surface-success-text)]">Staged</span>
               </div>
             ))}
             {status.modified.map((f) => (
@@ -122,13 +122,13 @@ export function GitPanel({ status, log, loading = false, onRefresh, className }:
       {/* Recent commits */}
       {log.length > 0 && (
         <div className="px-4 py-3">
-          <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Recent Commits</div>
+          <div className="mb-2 text-xs font-medium text-muted-foreground">Recent commits</div>
           <div className="space-y-2">
             {log.slice(0, 5).map((commit) => (
               <div key={commit.shortSha} className="flex items-start gap-2 text-xs">
                 <GitCommit className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">
-                  <span className="font-mono text-primary mr-1.5">{commit.shortSha}</span>
+                  <span className="font-mono text-[var(--text-secondary)] mr-1.5">{commit.shortSha}</span>
                   <span className="text-foreground">{commit.message}</span>
                 </div>
               </div>

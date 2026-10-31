@@ -122,7 +122,7 @@ export function BackendSelector({
                 ? "min-w-[240px] max-w-[320px]"
                 : "w-[var(--radix-select-trigger-width)]",
               "rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)]",
-              "bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+              "bg-surface-container-highest shadow-[var(--shadow-dropdown),var(--edge-highlight)]",
               "data-[state=open]:animate-in data-[state=closed]:animate-out",
               "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
               "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

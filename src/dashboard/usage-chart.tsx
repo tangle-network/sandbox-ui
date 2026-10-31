@@ -15,8 +15,7 @@ export interface UsageChartProps {
 }
 
 const colors = {
-  bar: "bg-[image:var(--accent-gradient-strong)]",
-  barHover: "hover:brightness-110",
+  bar: "bg-primary",
   text: "text-[var(--accent-text)]",
 };
 
@@ -48,7 +47,7 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
           {title}
         </CardTitle>
         <div className="shrink-0 whitespace-nowrap text-right">
-          <span className={cn("font-bold text-2xl", colors.text)}>
+          <span className={cn("font-medium text-2xl tabular-nums", colors.text)}>
             {formatValue(total)}
           </span>
           <span className="ml-1 text-muted-foreground text-sm">{unit}</span>
@@ -67,7 +66,7 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
             {/* Chart Container */}
             <div className="relative">
           {/* Y-axis labels */}
-          <div className="absolute top-0 left-0 flex h-48 flex-col justify-between text-muted-foreground text-xs">
+          <div className="absolute top-0 left-0 flex h-48 flex-col justify-between text-muted-foreground text-xs tabular-nums">
             <span>{formatValue(maxValue)}</span>
             <span>{formatValue(Math.round(maxValue / 2))}</span>
             <span>0</span>
@@ -83,14 +82,14 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
                 // biome-ignore lint/a11y/noStaticElementInteractions: chart bar uses hover for tooltip display
                 <div
                   key={point.date}
-                  className="group relative flex flex-1 flex-col items-center"
+                  className="group relative flex h-full flex-1 flex-col items-center justify-end"
                   onMouseEnter={() => setHoveredIndex(index)}
                   onMouseLeave={() => setHoveredIndex(null)}
                 >
                   {/* Tooltip */}
                   {isHovered && (
-                    <div className="absolute -top-12 z-10 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-highest px-3 py-1.5 text-sm shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]">
-                      <p className="font-medium">
+                    <div className="absolute -top-12 z-10 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-highest px-3 py-1.5 text-sm shadow-[var(--shadow-dropdown),var(--edge-highlight)]">
+                      <p className="font-medium tabular-nums">
                         {formatValue(point.value)} {unit}
                       </p>
                       <p className="text-muted-foreground text-xs">
@@ -102,9 +101,8 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
                   {/* Bar */}
                   <div
                     className={cn(
-                      "min-h-[2px] w-full rounded-t-sm transition-all duration-200",
+                      "min-h-[2px] w-full rounded-t-sm transition-opacity",
                       colors.bar,
-                      colors.barHover,
                       isHovered && "opacity-80",
                     )}
                     style={{ height: `${Math.max(heightPercent, 1)}%` }}
@@ -120,14 +118,17 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
               <div
                 key={point.date}
                 className={cn(
-                  "flex-1 truncate text-center text-muted-foreground text-xs",
+                  "flex flex-1 justify-center text-muted-foreground text-xs",
                   hoveredIndex === index && colors.text,
                 )}
               >
-                {/* Show every nth label to avoid crowding */}
-                {data.length <= 7 || index % Math.ceil(data.length / 7) === 0
-                  ? formatDate(point.date)
-                  : ""}
+                {/* Show every nth label to avoid crowding; a shown label may
+                    run past its own column into the empty ones beside it. */}
+                <span className="whitespace-nowrap">
+                  {data.length <= 7 || index % Math.ceil(data.length / 7) === 0
+                    ? formatDate(point.date)
+                    : ""}
+                </span>
               </div>
             ))}
           </div>
@@ -137,19 +138,19 @@ export function UsageChart({ data, title, unit, className }: UsageChartProps) {
         <div className="mt-4 grid grid-cols-3 gap-4 border-[var(--md3-outline-variant)] border-t pt-4">
           <div className="text-center">
             <p className="text-muted-foreground text-xs">Average</p>
-            <p className="font-medium">
+            <p className="font-medium tabular-nums">
               {formatValue(Math.round(total / data.length))} {unit}
             </p>
           </div>
           <div className="text-center">
             <p className="text-muted-foreground text-xs">Peak</p>
-            <p className="font-medium">
+            <p className="font-medium tabular-nums">
               {formatValue(maxValue)} {unit}
             </p>
           </div>
           <div className="text-center">
             <p className="text-muted-foreground text-xs">Total</p>
-            <p className={cn("font-medium", colors.text)}>
+            <p className="font-medium tabular-nums">
               {formatValue(total)} {unit}
             </p>
           </div>

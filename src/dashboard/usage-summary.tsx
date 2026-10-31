@@ -34,28 +34,28 @@ export function UsageSummary({ data, loading = false, className }: UsageSummaryP
     <div className={cn("grid grid-cols-2 gap-4 lg:grid-cols-4", className)}>
       <StatCard
         variant="sandbox"
-        title="Compute Hours"
+        title="Compute hours"
         value={data.computeHours.toFixed(1)}
         subtitle="This billing period"
         icon={<Clock className="h-5 w-5" />}
       />
       <StatCard
         variant="sandbox"
-        title="Active Sessions"
+        title="Active sessions"
         value={data.activeSessions}
         subtitle="Currently running"
         icon={<Layers className="h-5 w-5" />}
       />
       <StatCard
         variant="sandbox"
-        title="Messages Sent"
+        title="Messages sent"
         value={data.messagesSent.toLocaleString()}
         subtitle="Agent interactions"
         icon={<MessageSquare className="h-5 w-5" />}
       />
       <StatCard
         variant="sandbox"
-        title="Estimated Cost"
+        title="Estimated cost"
         value={`$${data.estimatedCost.toFixed(2)}`}
         subtitle="This billing period"
         icon={<DollarSign className="h-5 w-5" />}

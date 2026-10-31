@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Menu, X } from "lucide-react"
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { ShellHeader } from "../workspace/shell-header"
@@ -209,21 +210,7 @@ const SHOW_BELOW_CLASS = {
   lg: "lg:hidden",
 } as const
 
-function MenuIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M3 6h18M3 12h18M3 18h18" />
-    </svg>
-  )
-}
 
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  )
-}
 
 function DefaultLink({
   href,
@@ -508,7 +495,7 @@ function SidebarLayoutInner({
                   aria-haspopup="dialog"
                   className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
                 >
-                  <MenuIcon className="size-5" />
+                  <Menu className="size-5" />
                 </button>
               </SheetTrigger>
               <div className="flex min-w-0 flex-1 items-center">
@@ -628,7 +615,7 @@ function MobileNavDrawer({
               aria-label="Close navigation"
               className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[var(--accent-surface-soft)] hover:text-foreground", MOTION_CONTROL)}
             >
-              <CloseIcon className="size-5" />
+              <X className="size-5" />
             </button>
           </SheetClose>
         </ShellHeader>

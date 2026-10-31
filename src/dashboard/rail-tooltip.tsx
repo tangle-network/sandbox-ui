@@ -10,7 +10,7 @@ import { cn } from "../lib/utils"
  * surface. Centralized so the floating-UI styles can't drift apart.
  */
 export const RAIL_FLOATING_SURFACE =
-  "rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]"
+  "rounded-md border border-[var(--md3-outline-variant)] bg-surface-container-highest shadow-[var(--shadow-dropdown),var(--edge-highlight)]"
 
 export interface RailTooltipProps {
   /** Tooltip text shown to the right of the trigger. */

@@ -74,11 +74,11 @@ const recorded = (text: string): string => {
 }
 
 /** Fold stream rows into transcript entries: text of one turn merges, a tool call becomes a row its result completes. */
+const RECORD_KINDS: Record<string, string> = { text_delta: "text", reasoning_delta: "reasoning", tool_call: "tool-call", tool_result: "tool-result", capture_gap: "notice" } // agent-record kinds as Discovery streams them
 export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly AgentStreamRow[]): AgentTranscriptEntry[] {
   const next = [...entries]
   for (const row of rows) {
-    const at = Date.parse(row.at)
-    const { event } = row
+    const at = Date.parse(row.at), event = { ...row.event, kind: RECORD_KINDS[row.event.kind] ?? row.event.kind }
     const last = next[next.length - 1]
     if (event.kind === "text" && event.text) {
       if (last?.kind === "message" && last.role === "assistant" && !last.sealed) next[next.length - 1] = { ...last, content: last.content + event.text }

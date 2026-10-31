@@ -32,7 +32,8 @@ function protocol(chunks){
     res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-cache'});res.flushHeaders();if(url.searchParams.has('host'))res.write('retry: 20\n\n');clients.add(res);res.on('close',()=>clients.delete(res))
     if(url.pathname==='/workspace'){workspace++;res.write(event('workspace',{sequence:workspace}));if(workspace===1)res.end();else res.end(event('end',{}));return}
     requests.push({path:url.pathname,after:url.searchParams.get('after')})
-    if(url.pathname==='/other')return res.end(event('reset',{generation:'other'})+event('rows',{generation:'other',events:[row(1,'text',{text:'Other agent only'})]})+event('end',{}))
+    // The other agent streams the agent-record vocabulary exactly as Discovery writes it.
+    if(url.pathname==='/other')return res.end(event('reset',{generation:'other'})+event('rows',{generation:'other',events:[row(1,'text_delta',{text:'Other agent only'}),row(2,'tool_call',{toolCallId:'item_1',toolName:'bash',args:{command:'ls'}}),row(3,'tool_result',{toolCallId:'item_1',result:'Recorded listing'})]})+event('end',{}))
     agent++
     if(agent===1){res.write(event('rows',{generation:'old',events:[row(7,'text',{text:'Old generation answer'})]}));first=res;return}
     if(agent===2)return res.end(event('rows',{generation:0,events:[row(1,'text',{text:'New generation answer'})]}))
@@ -60,7 +61,7 @@ for(const [theme,width,transport] of [['light',1512,'native'],['light',390,'nati
     await page.waitForTimeout(1250);assert.equal(wire.requests.length,3,'terminal end must not reconnect')
     await page.getByRole('button',{name:'Change agent',exact:true}).click()
     await page.waitForFunction(()=>{const state=JSON.parse(document.querySelector('[data-state]').textContent);return state.generation==='other'&&!state.alive})
-    const other=JSON.parse(await page.locator('[data-state]').textContent());assert.equal(other.entries.length,1);assert.equal(other.entries[0].content,'Other agent only')
+    const other=JSON.parse(await page.locator('[data-state]').textContent());assert.equal(other.entries.length,2);assert.equal(other.entries[0].content,'Other agent only');assert.equal(other.entries[1].call.output,'Recorded listing')
     assert.deepEqual(wire.requests.at(-1),{path:'/other',after:null});assert.deepEqual(errors,[])
     if(evidence){await page.screenshot({path:`${evidence}/stream-${theme}-${width}-${transport}.png`});await writeFile(`${evidence}/stream-${theme}-${width}-${transport}.json`,JSON.stringify({state,other,requests:wire.requests,workspaceReconnects:wire.workspace()},null,2))}
   }finally{await context.close();await browser.close();wire.close();await new Promise(resolve=>wire.server.close(resolve));await rm(scratch,{recursive:true,force:true})}

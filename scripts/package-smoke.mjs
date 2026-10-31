@@ -288,7 +288,6 @@ ${cssImports.join("\n")}
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { ReasoningLevelPicker } from "@tangle-network/sandbox-ui/chat";
-import { AgentMessagingConnection } from "@tangle-network/sandbox-ui/connections";
 
 document.documentElement.dataset.sandboxUiExportCount = String(
   [${publicEntries}].reduce((count, entry) => count + Object.keys(entry).length, 0),
@@ -298,11 +297,6 @@ createRoot(document.getElementById("root")).render(
     React.createElement(ReasoningLevelPicker, {
       value: "auto",
       onChange() {},
-    }),
-    React.createElement(AgentMessagingConnection, {
-      enrollment: { status: "checking" },
-      route: { status: "checking" },
-      onEnroll() {},
     }),
   ),
 );

@@ -1,3 +1,8 @@
+## 3.1.0
+
+- `JsonView` (`workbench`) reads JSON and JSON Lines as a collapsible, virtualized tree: small documents open whole, larger ones open level by level, long strings wrap, and Expand all / Collapse all and the tree keyboard work at any size.
+- Remove `AgentMessagingConnection` and the `connections` subpath: no application imported them since they shipped on 2026-10-01.
+
 ## 3.0.3
 
 - Share bounded native stream history and canonical timeline items, with scoped tool identity, stable generation reconnects and immediate request isolation.

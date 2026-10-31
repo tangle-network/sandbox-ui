@@ -5,15 +5,13 @@ import { useEventStream, type AgentStreamOpener } from "./event-stream"
 export type { AgentStreamSource, AgentStreamOpener } from "./event-stream"
 import type { ToolCallData, ToolCallType } from "@tangle-network/ui/run"
 
-/** One original producer row; native frames remain opaque until the product's Core projection. */
+/** One normalized stream row; bounded producer pages also carry opaque native frames. */
 export interface AgentStreamRow {
   seq: number
-  at?: string
+  at: string
   stream?: string
   attempt?: number
-  type?: string
-  data?: unknown
-  event?: {
+  event: {
     kind: "text" | "reasoning" | "tool-call" | "tool-result" | "user" | "notice" | (string & {})
     text?: string
     provenance?: string
@@ -30,15 +28,15 @@ export interface AgentStreamRow {
   }
 }
 
-export type AgentTranscriptEntry = { id: string; at: number; scope?: string; attempt?: number; provenance?: string; isError?: boolean } & (
-  | { kind: "message"; role: "assistant" | "user"; content: string; sealed?: boolean }
-  | { kind: "reasoning"; text: string }
-  | { kind: "tool"; call: ToolCallData; name?: string; input?: unknown; costUsd?: number }
-  | { kind: "notice"; text: string }
-)
+export type AgentTranscriptEntry =
+  | { id: string; at: number; scope?: string; attempt?: number; provenance?: string; isError?: boolean; kind: "message"; role: "assistant" | "user"; content: string; sealed?: true }
+  | { id: string; at: number; scope?: string; attempt?: number; provenance?: string; isError?: boolean; kind: "reasoning"; text: string }
+  | { id: string; at: number; scope?: string; attempt?: number; provenance?: string; isError?: boolean; kind: "tool"; call: ToolCallData; name?: string; input?: unknown; costUsd?: number }
+  | { id: string; at: number; scope?: string; attempt?: number; provenance?: string; isError?: boolean; kind: "notice"; text: string }
+type ProducerRow = Partial<AgentStreamRow> & Pick<AgentStreamRow, "seq"> & { type?: string; data?: unknown }
 export interface AgentStreamPage {
   generation?: string | number
-  events: AgentStreamRow[]
+  events: ProducerRow[]
   firstSeq?: number | null
   lastSeq?: number | null
   hasEarlier?: boolean
@@ -50,7 +48,7 @@ export interface AgentStreamPage {
 export interface AgentStreamHistory {
   url: string
   alive: boolean
-  projectRows?: (rows: readonly AgentStreamRow[]) => readonly AgentStreamRow[]
+  projectRows?: (rows: readonly ProducerRow[]) => readonly ProducerRow[]
 }
 export interface AgentStreamState {
   generation?: string | number
@@ -66,7 +64,9 @@ const recorded = (text: string) => { try { const value: unknown = JSON.parse(tex
 const TOOL_TYPES: ReadonlySet<string> = new Set(["bash", "read", "write", "edit", "glob", "grep", "list", "download", "inspect", "audit"])
 
 /** One fold for live entries; attempt/session identity prevents repeated native call IDs from crossing turns. */
-export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly AgentStreamRow[]): AgentTranscriptEntry[] {
+export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly AgentStreamRow[]): AgentTranscriptEntry[]
+export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly ProducerRow[]): AgentTranscriptEntry[]
+export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly ProducerRow[]): AgentTranscriptEntry[] {
   const next = [...entries]
   for (const row of rows) {
     const event = row.event
@@ -77,7 +77,7 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
     if ((kind === "text" || kind === "reasoning") && event.text) {
       if (kind === "text") {
         if (last?.kind === "message" && last.role === "assistant" && !last.sealed && last.scope === scope && !event.sealed) next[next.length - 1] = { ...last, content: last.content + event.text }
-        else next.push({ ...base, kind: "message", role: "assistant", content: event.text, sealed: event.sealed })
+        else next.push({ ...base, kind: "message", role: "assistant", content: event.text, sealed: event.sealed ? true : undefined })
       } else if (last?.kind === "reasoning" && last.scope === scope) next[next.length - 1] = { ...last, text: last.text + event.text }
       else next.push({ ...base, kind: "reasoning", text: event.text })
     } else if (kind === "user" && event.text) next.push({ ...base, kind: "message", role: "user", content: event.text })
@@ -98,7 +98,7 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Ag
 }
 
 type Direction = "tail" | "head" | "after" | "before"
-type Window = { identity?: string; rows: AgentStreamRow[]; generation?: string | number; first: number | null; lastSeq: number; alive: boolean; ended: boolean; loading: boolean; ready: boolean; earlier: boolean; more: boolean; reading: boolean; error?: string }
+type Window = { identity?: string; rows: ProducerRow[]; generation?: string | number; first: number | null; lastSeq: number; alive: boolean; ended: boolean; loading: boolean; ready: boolean; earlier: boolean; more: boolean; reading: boolean; error?: string }
 const empty = (identity: string | undefined, history?: AgentStreamHistory): Window => ({ identity, rows: [], first: null, lastSeq: -1, alive: !!identity && (history?.alive ?? true), ended: false, loading: !!history, ready: !history, earlier: false, more: false, reading: false })
 function receive(prior: Window, page: AgentStreamPage, direction: Direction, fromHead: boolean): Window {
   if (!Array.isArray(page.events)) throw new Error("Invalid agent rows stream")

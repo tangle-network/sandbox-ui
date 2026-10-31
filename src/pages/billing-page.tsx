@@ -42,7 +42,7 @@ interface BillingPageState {
 const defaultBillingData: BillingPageData = {
   subscription: null,
   balance: { available: 0, used: 0 },
-  usage: { period: "This Month", total: 0, byModel: {} },
+  usage: { period: "This month", total: 0, byModel: {} },
   usageHistory: [],
   tiers: [],
 };
@@ -80,7 +80,7 @@ async function fetchBillingDataFromApi(
     subscription,
     balance,
     usage: {
-      period: usageData.period || "This Month",
+      period: usageData.period || "This month",
       total: usageData.total || 0,
       byModel: usageData.byModel || {},
     },

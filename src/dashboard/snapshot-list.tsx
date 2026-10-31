@@ -122,7 +122,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                       <HardDrive className="h-3 w-3" />
                       {formatBytes(s.sizeBytes)}
                     </span>
@@ -156,7 +156,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
                           className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-[var(--accent-text)] hover:bg-primary/20 transition-colors border border-primary/20"
                           title="Save as reusable template"
                         >
-                          Save as Template
+                          Save as template
                         </button>
                       )}
                     </div>

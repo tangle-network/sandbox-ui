@@ -43,7 +43,7 @@ export interface SandboxTableProps {
   onSSH?: (id: string) => void
   /**
    * Resume a stopped / failed / archived sandbox, or wake a hibernating
-   * one. Surfaces an explicit "Resume" (or "Wake Up" for `hibernating`)
+   * one. Surfaces an explicit "Resume" (or "Wake up" for `hibernating`)
    * button in the actions cell and makes the row body clickable for any
    * status this prop covers. Preferred over `onWake` for new code — the
    * two are kept as separate props only so existing consumers that
@@ -208,7 +208,7 @@ export function SandboxTable({
                 const isHibernating = sb.status === "hibernating"
                 const resumeHandler = isResumable(sb.status) ? resolveResumeHandler(sb.status) : undefined
                 const onRowClick = resolveRowClick(sb)
-                const resumeLabel = isHibernating ? "Wake Up" : "Resume"
+                const resumeLabel = isHibernating ? "Wake up" : "Resume"
                 // Action buttons sit inside the clickable row. Without
                 // this, a click on the trash icon would bubble up and
                 // also fire the row-click handler — accidentally
@@ -326,7 +326,7 @@ export function SandboxTable({
                           }
                           if (onMore) overflowSections.push([
                             <DropdownMenuItem key="view-details" onClick={runItem(onMore)}>
-                              <ExternalLink className="mr-2 h-4 w-4" /> View Details
+                              <ExternalLink className="mr-2 h-4 w-4" /> View details
                             </DropdownMenuItem>,
                           ])
 

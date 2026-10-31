@@ -615,7 +615,7 @@ export function SecretsPage({
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Secret?</DialogTitle>
+            <DialogTitle>Delete secret?</DialogTitle>
             <DialogDescription>
               This will permanently delete <span className="font-mono font-semibold text-foreground">{deleteTarget}</span>. {deleteConsequence}
             </DialogDescription>
@@ -681,7 +681,7 @@ export function SecretsPage({
               type="button"
               onClick={openCreate}
               // aria-label distinguishes this empty-state CTA from the
-              // header "New Secret" button for assistive tech (and tests)
+              // header "New secret" button for assistive tech (and tests)
               // while keeping the visible verb consistent across the page.
               aria-label="Create your first secret"
               className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97]"

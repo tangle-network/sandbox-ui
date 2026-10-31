@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useEventStream, type AgentStreamOpener } from "./event-stream"
 export type { AgentStreamSource, AgentStreamOpener } from "./event-stream"
 import type { ToolCallData, ToolCallType } from "@tangle-network/ui/run"
@@ -154,11 +154,12 @@ function useAgentWindow(url: string | undefined, history?: AgentStreamHistory) {
 /** Same named SSE lifecycle for every consumer; the actual history endpoint owns bounded bootstrap/pages. */
 export function useAgentStream(url: string | undefined, openEventSource?: AgentStreamOpener, history?: AgentStreamHistory): AgentStreamState {
   const { state, current, update, beginning, begin, reload, pageReader } = useAgentWindow(url, history)
-  let streamUrl = !url || history && (!state.ready || state.ended || state.reading || beginning || !history.alive) ? undefined : url
-  if (streamUrl && history && state.generation !== undefined) {
-    const target = new URL(streamUrl, location.href); target.searchParams.set("generation", String(state.generation)); streamUrl = target.toString()
-  }
-  useEventStream(streamUrl, { opener: openEventSource, after: () => current.current.lastSeq,
+  const streamUrl = useCallback(() => {
+    const target = new URL(url!, location.href)
+    if (history && current.current.generation !== undefined) target.searchParams.set("generation", String(current.current.generation))
+    return target.toString()
+  }, [url, !!history])
+  useEventStream(!url || history && (!state.ready || state.ended || state.reading || beginning || !history.alive) ? undefined : streamUrl, { opener: openEventSource, after: () => current.current.lastSeq,
     onLiveChange: live => { if (!live && !current.current.ended) update({ ...current.current, error: current.current.error ?? "The agent stream is unreachable; the viewer may be closed." }) },
     events: {
       rows: message => { try { update(receive(current.current, JSON.parse(message.data) as AgentStreamPage, "after", false)) } catch (cause) { update({ ...current.current, error: String(cause) }) } },

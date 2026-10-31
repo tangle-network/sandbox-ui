@@ -189,14 +189,13 @@ export function VirtualList<T>({
   let previous = 0
   return <>
       {indices.map(index => {
-        const item = items[index]!
         const key = keys[index]!
         const space = offsets[index]! - offsets[previous]!
         previous = index + 1
         return (
           <Fragment key={key}>
             {space > 0 && <div style={{ height: space, transitionProperty: 'none' }} aria-hidden="true" />}
-            <div ref={bind(key)} data-virtual-key={key} className="virtual-row" style={{ display: 'flow-root' }}>{render(item, index)}</div>
+            <div ref={bind(key)} data-virtual-key={key} className="virtual-row" style={{ display: 'flow-root' }}>{render(items[index]!, index)}</div>
           </Fragment>
         )
       })}

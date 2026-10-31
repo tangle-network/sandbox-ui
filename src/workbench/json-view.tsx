@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react"
 import { ChevronRight } from "lucide-react"
-import { SYNTAX } from "@tangle-network/ui/code-presentation"
 import { Button } from "@tangle-network/ui/primitives"
 import { revealInScroller } from "../lib/reveal-in-scroller"
 import { cn } from "../lib/utils"
@@ -111,8 +110,8 @@ function Value({ value, open }: { value: Json; open: boolean }): ReactNode {
     <span className="text-muted-foreground">{Array.isArray(value) ? "[ ]" : "{ }"} {size(value)}</span>
     {!open && <span className="ml-2 text-muted-foreground opacity-80">{preview(value)}</span>}
   </>
-  if (typeof value === "string") return <span style={{ color: SYNTAX.string }}>"{value}"</span>
-  return <span style={{ color: typeof value === "number" ? SYNTAX.number : SYNTAX.keyword }}>{String(value)}</span>
+  if (typeof value === "string") return <span className="text-[var(--syntax-string,currentColor)]">"{value}"</span>
+  return <span className={typeof value === "number" ? "text-[var(--syntax-number,currentColor)]" : "text-[var(--syntax-keyword,currentColor)]"}>{String(value)}</span>
 }
 
 /**
@@ -181,7 +180,7 @@ export function JsonView({ text, lines = false, label = lines ? "JSON Lines" : "
           {container && <ChevronRight className={cn("size-3.5 transition-transform duration-fast", expanded && "rotate-90")} />}
         </span>
         <span className={cn("min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:anywhere]", container && !expanded && "truncate whitespace-nowrap")}>
-          {row.key !== null && <><span style={{ color: row.index ? undefined : SYNTAX.function }} className={cn(row.index && "text-muted-foreground")}>{row.index ? row.key : JSON.stringify(row.key)}</span><span className="text-muted-foreground">: </span></>}
+          {row.key !== null && <><span className={row.index ? "text-muted-foreground" : "text-[var(--syntax-function,currentColor)]"}>{row.index ? row.key : JSON.stringify(row.key)}</span><span className="text-muted-foreground">: </span></>}
           <Value value={row.value} open={expanded} />
         </span>
       </div>

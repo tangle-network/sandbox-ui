@@ -246,7 +246,7 @@ export function AgentProfilePicker({
           side={side}
           className={cn(
             "w-[min(320px,calc(100vw-2rem))] overflow-hidden rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
-            "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+            "shadow-[var(--shadow-dropdown),var(--edge-highlight)]",
             popoverClassName,
           )}
           data-testid="agent-profile-popover"
@@ -309,7 +309,7 @@ export function AgentProfilePicker({
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+    <div className="px-2.5 pb-1 pt-2 text-xs font-medium text-[var(--text-dim)]">
       {children}
     </div>
   );
@@ -372,7 +372,7 @@ function ProfileRow({
               type="button"
               onClick={onDelete}
               title="Delete"
-              className="rounded p-1 text-muted-foreground hover:text-[var(--status-error,#ff4d6d)]"
+              className="rounded p-1 text-muted-foreground hover:text-[var(--status-error)]"
             >
               <Trash2 className="h-3 w-3" />
             </button>
@@ -421,7 +421,7 @@ function ProfileForm({
       />
       {capabilities.length > 0 && (
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+          <p className="mb-1.5 text-xs font-medium text-[var(--text-dim)]">
             Tools
           </p>
           <div className="space-y-0.5">

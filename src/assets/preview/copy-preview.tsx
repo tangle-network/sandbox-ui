@@ -44,7 +44,7 @@ export function CopyPreview({ content, className }: CopyPreviewProps) {
       {content.headline && <h3 className="text-xl font-semibold leading-snug tracking-tight">{content.headline}</h3>}
       <p className="text-base leading-7 whitespace-pre-wrap [overflow-wrap:anywhere]">{content.body}</p>
       {content.hashtags && content.hashtags.length > 0 && (
-        <div className="flex flex-wrap gap-x-2 gap-y-1 text-sm text-primary">
+        <div className="flex flex-wrap gap-x-2 gap-y-1 text-sm text-[var(--accent-text)]">
           {content.hashtags.map((tag) => <span key={tag}>#{tag.replace(/^#/, "")}</span>)}
         </div>
       )}

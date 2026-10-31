@@ -290,7 +290,7 @@ export function ArtifactAgentDock({
         <div className="flex min-w-0 items-center gap-2">
           <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
-            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Discussing</div>
+            <div className="text-xs font-medium text-muted-foreground">Discussing</div>
             <div className="truncate text-sm font-semibold text-foreground">{heading}</div>
           </div>
         </div>

@@ -385,7 +385,7 @@ export default function TerminalView({
                 </button>
               </>
             ) : (
-              <p className="text-[13px] text-muted-foreground">Connecting to terminal...</p>
+              <p className="text-[13px] text-muted-foreground">Connecting to terminal…</p>
             )}
           </div>
         </div>

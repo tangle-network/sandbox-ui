@@ -198,7 +198,7 @@ export function ChangesPane({
       {/* Branch / upstream / totals row */}
       <div
         className={cn(
-          "flex min-h-[38px] shrink-0 items-center gap-2 border-b bg-surface-container-low px-3 py-1",
+          "flex min-h-10 shrink-0 items-center gap-2 border-b bg-surface-container-low px-3 py-1",
           BORDER,
         )}
       >

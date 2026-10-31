@@ -251,7 +251,7 @@ function ArtifactTabs({
                 onSelect(next.id);
                 tabRefs.current.get(next.id)?.focus();
               }}
-              className={`flex min-w-0 items-center gap-2 px-3 py-2 text-[12px] uppercase tracking-wider font-medium transition-colors hover:text-foreground ${focusRingInset}`}
+              className={`flex min-w-0 items-center gap-2 px-3 py-2 text-xs font-medium transition-colors hover:text-foreground ${focusRingInset}`}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" />
               <span className="max-w-[14rem] truncate">{artifactTabLabel(artifact)}</span>
@@ -294,21 +294,21 @@ function regionHeader(
       return undefined;
     case "directory":
       return (
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <FolderTree className="h-3.5 w-3.5" />
           Directory
         </div>
       );
     case "artifacts":
       return (
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <LayoutPanelTop className="h-3.5 w-3.5" />
           Artifacts
         </div>
       );
     case "runtime":
       return (
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Bot className="h-3.5 w-3.5" />
           Runtime
         </div>
@@ -422,7 +422,7 @@ export function SandboxWorkbench({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
             {session.eyebrow && (
-              <span className="max-w-[35%] shrink-0 truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="max-w-[35%] shrink-0 truncate text-xs font-medium text-muted-foreground">
                 {session.eyebrow}
               </span>
             )}
@@ -522,8 +522,8 @@ export function SandboxWorkbench({
   const railOnly = regionSections.left.length === 1 && regionSections.left[0]?.key === "rail";
 
   const genericPanelsHeader = (
-    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-      Workspace Panels
+    <span className="text-xs font-medium text-muted-foreground">
+      Workspace panels
     </span>
   );
 

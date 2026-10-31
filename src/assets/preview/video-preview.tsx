@@ -48,7 +48,7 @@ export function VideoPreview({ content, brand, onRenderRequest, isRendering, cla
         <div className="text-xs font-medium text-muted-foreground">Scenes</div>
         {sceneSummary.map((label, i) => (
           <div key={i} className="text-xs text-muted-foreground flex gap-1.5 items-center">
-            <span className="font-mono text-[10px] w-4 text-right opacity-50">{i + 1}</span>
+            <span className="font-mono text-xs w-4 text-right opacity-50">{i + 1}</span>
             <span>{label}</span>
             <span className="opacity-40">{"\xB7"} {content.scenes[i].durationSeconds}s</span>
           </div>

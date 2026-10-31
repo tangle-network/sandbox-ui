@@ -1,6 +1,10 @@
 import { type ReactNode, useState, useMemo } from "react";
+import { ChevronDown } from "lucide-react";
+import { StatusPill, Tag, type StatusTone } from "@tangle-network/ui/primitives";
 import { cn } from "../lib/utils";
 import { focusField } from "@tangle-network/ui/utils";
+
+const RESOLVED_TONE: Record<string, StatusTone> = { approved: "success", rejected: "danger", executed: "violet" };
 
 // ── Types ──
 
@@ -131,9 +135,7 @@ export function ApprovalQueue({
                       {renderTypeBadge ? (
                         renderTypeBadge(s.type)
                       ) : (
-                        <span className="rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                          {s.type}
-                        </span>
+                        <Tag>{s.type}</Tag>
                       )}
                     </div>
                     <div className="flex items-baseline gap-1">
@@ -141,7 +143,7 @@ export function ApprovalQueue({
                         {s.rate}%
                       </span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground tabular-nums">
                       {s.approved}/{s.total} approved
                     </p>
                   </div>
@@ -152,7 +154,7 @@ export function ApprovalQueue({
         {/* Pending */}
         {pending.length > 0 && (
           <section className="mb-8">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+            <h3 className="text-xs font-medium text-muted-foreground mb-3">
               Pending ({pending.length})
             </h3>
             <div className="space-y-3">
@@ -170,9 +172,7 @@ export function ApprovalQueue({
                         {renderTypeBadge ? (
                           renderTypeBadge(item.type)
                         ) : (
-                          <span className="rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] text-muted-foreground">
-                            {item.type}
-                          </span>
+                          <Tag>{item.type}</Tag>
                         )}
                       </div>
                       {item.description && (
@@ -187,7 +187,7 @@ export function ApprovalQueue({
                         <button
                           type="button"
                           onClick={() => onApprove?.(item)}
-                          className="h-8 px-3 rounded-md border border-[var(--md3-outline-variant)] text-xs font-medium text-emerald-500 hover:bg-emerald-500/10 hover:border-emerald-500/30 transition-colors"
+                          className="h-8 px-3 rounded-md border border-[var(--md3-outline-variant)] text-xs font-medium text-[var(--surface-success-text)] hover:bg-[var(--surface-success-bg)] hover:border-[var(--surface-success-border)] transition-colors"
                         >
                           Approve
                         </button>
@@ -235,7 +235,7 @@ export function ApprovalQueue({
                           }}
                           className="h-7 px-3 rounded-md bg-destructive text-destructive-foreground text-xs font-medium"
                         >
-                          Submit Rejection
+                          Submit rejection
                         </button>
                       </div>
                     </div>
@@ -252,22 +252,15 @@ export function ApprovalQueue({
             <button
               type="button"
               onClick={() => setShowResolved(!showResolved)}
-              className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3 hover:text-foreground transition-colors"
             >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+              <ChevronDown
+                aria-hidden="true"
                 className={cn(
-                  "transition-transform",
+                  "size-4 transition-transform",
                   showResolved && "rotate-180",
                 )}
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
+              />
               Resolved ({resolved.length})
             </button>
             {showResolved && (
@@ -282,19 +275,9 @@ export function ApprovalQueue({
                         {item.title}
                       </h4>
                       {renderTypeBadge?.(item.type)}
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-medium",
-                          item.status === "approved" &&
-                            "bg-emerald-500/10 text-emerald-500",
-                          item.status === "rejected" &&
-                            "bg-destructive/10 text-destructive",
-                          item.status === "executed" &&
-                            "bg-primary/10 text-primary",
-                        )}
-                      >
-                        {item.status}
-                      </span>
+                      <StatusPill tone={RESOLVED_TONE[item.status] ?? "neutral"}>
+                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                      </StatusPill>
                     </div>
                     {item.meta?.rejectionReason != null && (
                       <p className="mt-1 text-xs text-destructive">

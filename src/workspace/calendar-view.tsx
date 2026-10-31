@@ -1,4 +1,6 @@
 import { type ReactNode, useState, useMemo } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Tag } from "@tangle-network/ui/primitives";
 import { cn } from "../lib/utils";
 
 // ── Types ──
@@ -167,9 +169,10 @@ export function CalendarView({
             <button
               type="button"
               onClick={prevMonth}
-              className="h-7 w-7 rounded-md hover:bg-surface-container-high flex items-center justify-center text-muted-foreground"
+              aria-label="Previous month"
+              className="h-8 w-8 rounded-md hover:bg-surface-container-high flex items-center justify-center text-muted-foreground"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
+              <ChevronLeft className="size-4" aria-hidden="true" />
             </button>
             <span className="text-sm font-semibold text-foreground min-w-[160px] text-center">
               {monthLabel}
@@ -177,9 +180,10 @@ export function CalendarView({
             <button
               type="button"
               onClick={nextMonth}
-              className="h-7 w-7 rounded-md hover:bg-surface-container-high flex items-center justify-center text-muted-foreground"
+              aria-label="Next month"
+              className="h-8 w-8 rounded-md hover:bg-surface-container-high flex items-center justify-center text-muted-foreground"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+              <ChevronRight className="size-4" aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -200,7 +204,7 @@ export function CalendarView({
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
             <div
               key={d}
-              className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground text-center"
+              className="px-2 py-1.5 text-xs font-medium text-muted-foreground text-center"
             >
               {d}
             </div>
@@ -245,7 +249,7 @@ export function CalendarView({
                     ) : (
                       <div
                         key={evt.id}
-                        className="w-full truncate text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary"
+                        className="w-full truncate text-xs px-1 py-0.5 rounded bg-primary/10 text-[var(--accent-text)]"
                         title={evt.title}
                       >
                         {evt.title}
@@ -253,7 +257,7 @@ export function CalendarView({
                     ),
                   )}
                   {dayEvents.length > 3 && (
-                    <span className="text-[9px] text-muted-foreground px-1">
+                    <span className="text-xs text-muted-foreground px-1">
                       +{dayEvents.length - 3} more
                     </span>
                   )}
@@ -304,9 +308,7 @@ export function CalendarView({
                       {evt.title}
                     </p>
                     {evt.type && (
-                      <span className="mt-1 inline-block rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] text-muted-foreground">
-                        {evt.type}
-                      </span>
+                      <Tag className="mt-1">{evt.type}</Tag>
                     )}
                   </div>
                 ))}

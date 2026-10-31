@@ -74,9 +74,7 @@ export function TerminalPanel({
           <TerminalIcon className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="font-medium">{title}</span>
           {lines.length > 0 && (
-            <span className="rounded-full bg-surface-container-high px-1.5 py-0.5 text-[10px] tabular-nums">
-              {lines.length}
-            </span>
+            <span className="tabular-nums text-[var(--text-dim)]">{lines.length}</span>
           )}
           <span className="flex-1" />
           {isCollapsed ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}

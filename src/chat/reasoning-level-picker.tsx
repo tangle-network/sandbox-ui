@@ -169,7 +169,7 @@ export function ReasoningLevelPicker({
             // Cap to the viewport space on the open side and scroll, so the menu
             // pinned downward (floating composer) never runs off the bottom edge.
             "z-50 w-64 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-1",
-            "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+            "shadow-[var(--shadow-dropdown),var(--edge-highlight)]",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

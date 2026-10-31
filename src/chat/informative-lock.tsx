@@ -100,7 +100,7 @@ export function InformativeLock({
           onMouseLeave={scheduleClose}
           className={cn(
             "w-72 rounded-[var(--radius-md)] border border-[var(--md3-outline-variant)] bg-surface-container-highest p-3",
-            "shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+            "shadow-[var(--shadow-dropdown),var(--edge-highlight)]",
             popoverClassName,
           )}
         >

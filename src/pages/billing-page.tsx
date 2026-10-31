@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ChartLine, CircleAlert } from "lucide-react";
 import {
   type BillingBalance,
   BillingDashboard,
@@ -120,21 +121,9 @@ function BillingPageError({
   return (
     <div className="flex flex-col items-center justify-center space-y-4 rounded-xl border border-destructive/20 bg-destructive/5 p-8 text-center">
       <div className="rounded-full bg-destructive/10 p-3">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-6 w-6 text-destructive"
-        >
+        <CircleAlert className="h-6 w-6 text-destructive">
           <title>Error icon</title>
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" x2="12" y1="8" y2="12" />
-          <line x1="12" x2="12.01" y1="16" y2="16" />
-        </svg>
+        </CircleAlert>
       </div>
       <div className="space-y-2">
         <h3 className="font-semibold text-lg">Failed to load billing data</h3>
@@ -145,7 +134,7 @@ function BillingPageError({
         onClick={onRetry}
         className="rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/90"
       >
-        Try Again
+        Try again
       </button>
     </div>
   );
@@ -268,7 +257,7 @@ export function BillingPage({
         <TabsList className="mb-5 h-auto gap-1 rounded-xl border border-border bg-surface-container p-1.5 [&_[role=tab]]:min-h-11 [&_[role=tab]]:px-4 [&_[role=tab]]:text-sm [&_[role=tab][data-state=active]]:bg-[var(--accent-surface-strong)] [&_[role=tab][data-state=active]]:text-[var(--accent-text)] [&_[role=tab][data-state=active]]:shadow-sm">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="plans">Plans</TabsTrigger>
-          <TabsTrigger value="usage">Usage History</TabsTrigger>
+          <TabsTrigger value="usage">Usage history</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -298,25 +287,14 @@ export function BillingPage({
           {data.usageHistory.length > 0 ? (
             <UsageChart
               data={data.usageHistory}
-              title="Credit Usage History"
+              title="Credit usage history"
               unit="credits"
             />
           ) : (
             <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-surface-container p-8 text-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="mb-4 h-12 w-12 text-muted-foreground"
-              >
+              <ChartLine className="mb-4 h-12 w-12 text-muted-foreground">
                 <title>No usage data icon</title>
-                <path d="M3 3v18h18" />
-                <path d="m19 9-5 5-4-4-3 3" />
-              </svg>
+              </ChartLine>
               <h3 className="font-semibold text-lg">No usage data yet</h3>
             </div>
           )}

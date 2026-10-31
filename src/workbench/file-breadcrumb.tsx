@@ -25,7 +25,7 @@ export function FileBreadcrumb({ path, className }: FileBreadcrumbProps) {
   return (
     <div
       className={cn(
-        "flex min-h-[30px] items-center gap-1 overflow-hidden border-b border-[var(--md3-outline-variant)] bg-surface-container-lowest px-3 text-xs text-muted-foreground",
+        "flex min-h-8 items-center gap-1 overflow-hidden border-b border-[var(--md3-outline-variant)] bg-surface-container-lowest px-3 text-xs text-muted-foreground",
         className,
       )}
     >

@@ -46,7 +46,7 @@ const DEFAULT_DELETE_CONSEQUENCE = "Sandboxes using this secret will lose access
 export interface SecretsPageProps {
   apiClient: SecretsApiClient
   className?: string
-  /** Page title. Defaults to "Environment Secrets". */
+  /** Page title. Defaults to "Environment secrets". */
   title?: string
   /** Text below the title. Defaults to the Sandbox environment-variable description. */
   description?: React.ReactNode
@@ -75,7 +75,7 @@ export function SecretsPage({
   apiClient,
   className,
   teamSecretsHint,
-  title = "Environment Secrets",
+  title = "Environment secrets",
   description = DEFAULT_DESCRIPTION,
   createDescription = DEFAULT_CREATE_DESCRIPTION,
   emptyDescription = DEFAULT_EMPTY_DESCRIPTION,
@@ -322,7 +322,7 @@ export function SecretsPage({
         className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--border-accent,transparent)] bg-[var(--btn-primary-bg)] px-3 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97] sm:gap-2 sm:px-4"
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
-        New Secret
+        New secret
       </button>
     </>
   )
@@ -363,10 +363,10 @@ export function SecretsPage({
       <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) closeCreate() }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{replaceTarget ? "Replace Value" : "Create Secret"}</DialogTitle>
+            <DialogTitle>{replaceTarget ? "Replace value" : "Create secret"}</DialogTitle>
             <DialogDescription>
               {replaceTarget
-                ? <>Save a new value for <span className="font-mono font-bold text-foreground">{replaceTarget}</span>. The current value is overwritten and cannot be recovered.</>
+                ? <>Save a new value for <span className="font-mono font-semibold text-foreground">{replaceTarget}</span>. The current value is overwritten and cannot be recovered.</>
                 : createDescription}
             </DialogDescription>
           </DialogHeader>
@@ -378,7 +378,7 @@ export function SecretsPage({
             className="space-y-4"
           >
             <div>
-              <label htmlFor="secret-name" className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Name</label>
+              <label htmlFor="secret-name" className="block text-xs font-medium text-muted-foreground mb-2">Name</label>
               <input
                 id="secret-name"
                 name="secret-name"
@@ -393,7 +393,7 @@ export function SecretsPage({
               />
             </div>
             <div>
-              <label htmlFor="secret-value" className="block text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Value</label>
+              <label htmlFor="secret-value" className="block text-xs font-medium text-muted-foreground mb-2">Value</label>
               <div className="relative">
                 <input
                   id="secret-value"
@@ -401,7 +401,7 @@ export function SecretsPage({
                   type={showValue ? "text" : "password"}
                   value={newValue}
                   onChange={(e) => setNewValue(e.target.value)}
-                  placeholder="Enter secret value..."
+                  placeholder="Enter secret value…"
                   autoComplete="new-password"
                   autoFocus={replaceTarget !== null}
                   className={`w-full rounded-md border bg-surface-container-low px-3 py-2.5 pr-10 text-sm font-mono text-foreground placeholder:text-muted-foreground ${focusField}`}
@@ -434,9 +434,9 @@ export function SecretsPage({
               type="button"
               onClick={handleCreate}
               disabled={!newName.trim() || !newValue.trim() || isCreating}
-              className="rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 active:scale-[0.97]"
+              className="rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-medium text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 active:scale-[0.97]"
             >
-              {isCreating ? "Saving..." : replaceTarget ? "Replace Value" : "Create Secret"}
+              {isCreating ? "Saving…" : replaceTarget ? "Replace value" : "Create secret"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -446,7 +446,7 @@ export function SecretsPage({
       <Dialog open={isImportOpen} onOpenChange={(open) => { if (!open && !isImportSaving) { setIsImportOpen(false); resetImportState() } }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Import Secrets</DialogTitle>
+            <DialogTitle>Import secrets</DialogTitle>
             <DialogDescription>
               Upload a <span className="font-mono">.env</span> file or paste key-value pairs. Review and edit each row before saving.
             </DialogDescription>
@@ -476,7 +476,7 @@ export function SecretsPage({
                   type="button"
                   onClick={handleParse}
                   disabled={!importText.trim()}
-                  className="rounded-md bg-[var(--btn-primary-bg)] px-3 py-2 text-xs font-bold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50"
+                  className="rounded-md bg-[var(--btn-primary-bg)] px-3 py-2 text-xs font-medium text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50"
                 >
                   Parse
                 </button>
@@ -490,7 +490,7 @@ export function SecretsPage({
                 spellCheck={false}
                 className={`w-full rounded-md border bg-surface-container-low px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground ${focusField}`}
               />
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Lines starting with <span className="font-mono">#</span> are comments. Text after <span className="font-mono">#</span> inside a value is preserved.
               </p>
               {importFileError && (
@@ -501,7 +501,7 @@ export function SecretsPage({
             {/* Parse errors */}
             {importResult && importResult.errors.length > 0 && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3">
-                <p className="mb-1 text-xs font-bold uppercase tracking-widest text-destructive">
+                <p className="mb-1 text-xs font-medium text-destructive">
                   {importResult.errors.length} line{importResult.errors.length !== 1 ? "s" : ""} could not be parsed
                 </p>
                 <ul className="space-y-1">
@@ -518,7 +518,7 @@ export function SecretsPage({
             {importResult && importResult.rows.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {importResult.rows.length} secret{importResult.rows.length !== 1 ? "s" : ""} ready
                   </p>
                   <button
@@ -554,7 +554,7 @@ export function SecretsPage({
                         />
                         <div className="flex w-1/5 flex-col items-end gap-1">
                           {status === "success" && (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--surface-success-text,#047857)]">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--surface-success-text)]">
                               <CheckCircle className="h-3.5 w-3.5" /> Saved
                             </span>
                           )}
@@ -599,10 +599,10 @@ export function SecretsPage({
               type="button"
               onClick={handleImportSave}
               disabled={importSaveDisabled}
-              className="rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 active:scale-[0.97]"
+              className="rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-medium text-[var(--btn-primary-text)] hover:bg-[var(--btn-primary-hover)] transition-colors disabled:opacity-50 active:scale-[0.97]"
             >
               {isImportSaving
-                ? "Importing..."
+                ? "Importing…"
                 : importRows.length > 0
                   ? `Import ${importRows.length} secret${importRows.length === 1 ? "" : "s"}`
                   : "Import secrets"}
@@ -617,7 +617,7 @@ export function SecretsPage({
           <DialogHeader>
             <DialogTitle>Delete Secret?</DialogTitle>
             <DialogDescription>
-              This will permanently delete <span className="font-mono font-bold text-foreground">{deleteTarget}</span>. {deleteConsequence}
+              This will permanently delete <span className="font-mono font-semibold text-foreground">{deleteTarget}</span>. {deleteConsequence}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -632,9 +632,9 @@ export function SecretsPage({
               type="button"
               onClick={() => deleteTarget && handleDelete(deleteTarget)}
               disabled={isDeleting}
-              className="rounded-md bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50 active:scale-[0.97]"
+              className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 transition-colors disabled:opacity-50 active:scale-[0.97]"
             >
-              {isDeleting ? "Deleting..." : "Delete Secret"}
+              {isDeleting ? "Deleting…" : "Delete secret"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -687,7 +687,7 @@ export function SecretsPage({
               className="mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-semibold text-[var(--btn-primary-text)] transition-colors hover:bg-[var(--btn-primary-hover)] active:scale-[0.97]"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              New Secret
+              New secret
             </button>
           </div>
         ) : (

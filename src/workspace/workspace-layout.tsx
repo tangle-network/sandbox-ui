@@ -333,7 +333,7 @@ function MobileDrawer({ side, title, header, onClose, onReturnFocus, theme, dens
             requestAnimationFrame(onReturnFocus);
           }}
           className={cn(
-            "fixed inset-y-0 z-50 flex h-full w-[min(88vw,24rem)] flex-col border-border bg-card shadow-[0_8px_30px_rgba(0,0,0,0.18)] lg:hidden",
+            "fixed inset-y-0 z-50 flex h-full w-[min(88vw,24rem)] flex-col border-border bg-card shadow-[var(--shadow-overlay)] lg:hidden",
             side === "left" ? "left-0 border-r" : "right-0 border-l",
           )}
         >
@@ -702,7 +702,7 @@ export function WorkspaceLayout({
               <div className="flex items-center justify-between gap-2 border-b border-border bg-background px-3 py-1.5 shrink-0">
                 <div className="min-w-0 flex-1">
                   {bottomHeader ?? (
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground">
                       Runtime
                     </span>
                   )}

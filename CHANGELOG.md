@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.2
+
+- VirtualList keeps its target through one `useSettleTarget` hook beside `useMeasuredHeights` and `useViewport`; the component is render-only and its reveal, Home/End and release behavior is unchanged.
+
 ## 3.0.1
 
 - Forward the complete shared utility bindings and adopt shared formatter and hover-card behavior from UI and Charts. Keep mobile graph details reachable and restore the actual opening control, including repeated tool calls and header status chips. Preserve historical stopped actors separately from native Runtime failures; rebuild standalone viewer assets with the same public cohort.

@@ -1,7 +1,7 @@
-## 3.1.0
+## 4.0.0
 
+- Breaking: remove `AgentMessagingConnection`, its types (`AgentMessagingConnectionProps`, `AgentEnrollmentViewState`, `AgentTargetSummary`, `SharedMessagingRouteViewState`) and the `connections` subpath. No application imported them since they shipped on 2026-10-01; only the Discovery viewer and agent-runtime's development pin are on 3.x.
 - `JsonView` (`workbench`) reads JSON and JSON Lines as a collapsible, virtualized tree: small documents open whole, larger ones open level by level, long strings wrap, and Expand all / Collapse all and the tree keyboard work at any size.
-- Remove `AgentMessagingConnection` and the `connections` subpath: no application imported them since they shipped on 2026-10-01.
 
 ## 3.0.3
 

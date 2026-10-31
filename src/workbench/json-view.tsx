@@ -106,10 +106,7 @@ function preview(value: Json[] | { [key: string]: Json }): string {
 }
 
 function Value({ value, open }: { value: Json; open: boolean }): ReactNode {
-  if (isContainer(value)) return <>
-    <span className="text-muted-foreground">{Array.isArray(value) ? "[ ]" : "{ }"} {size(value)}</span>
-    {!open && <span className="ml-2 text-muted-foreground opacity-80">{preview(value)}</span>}
-  </>
+  if (isContainer(value)) return <>{!open && <span className="mr-2 opacity-80">{preview(value)}</span>}<span className="text-muted-foreground">{size(value)}</span></>
   if (typeof value === "string") return <span className="text-[var(--syntax-string,currentColor)]">"{value}"</span>
   return <span className={typeof value === "number" ? "text-[var(--syntax-number,currentColor)]" : "text-[var(--syntax-keyword,currentColor)]"}>{String(value)}</span>
 }
@@ -198,8 +195,9 @@ export function JsonView({ text, lines = false, label = lines ? "JSON Lines" : "
       </div>
       <div
         ref={(element) => {
+          if (!element) return
           treeRef.current = element
-          let parent = element?.parentElement ?? null
+          let parent = element.parentElement
           while (parent && !/auto|scroll/.test(getComputedStyle(parent).overflowY)) parent = parent.parentElement
           scroller.current = parent ?? (document.scrollingElement as HTMLElement | null)
         }}

@@ -118,6 +118,24 @@ function useSettleTarget<T>(scroller: Scroller, { target, align, items, keyOf, o
   }, [scroller, items, keyOf, offsets]) // eslint-disable-line react-hooks/exhaustive-deps
 }
 
+/** Animate a new followed row once; measurements and reader-state updates keep the same arrival identity. */
+function useArrival(scroller: Scroller, rows: Rows, arrival: { identity: unknown; id?: string; key?: string; following: RefObject<boolean> } | undefined) {
+  const identity = arrival?.identity
+  const prior = useRef({ identity, id: arrival?.id })
+  useLayoutEffect(() => {
+    const animate = prior.current.identity === identity && !!prior.current.id && prior.current.id !== arrival?.id
+    prior.current = { identity, id: arrival?.id }
+    if (!animate || !arrival?.key || !arrival.following.current) return
+    const frame = requestAnimationFrame(() => {
+      const element = scroller.current, row = rows.current.get(arrival.key!)
+      if (!element || !row || !arrival.following.current) return
+      const style = getComputedStyle(element), value = style.getPropertyValue('--duration-stream').trim(), duration = parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)
+      if (duration > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) row.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: style.getPropertyValue('--ease-expo').trim() || 'linear' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [identity, arrival?.id])
+}
+
 /**
  * Renders only the rows near the viewport of `scroller`. Row heights are measured as they render; unmeasured
  * rows use `estimate`. Spacers keep the scroll height, so the browser's scroll anchoring holds the reading place.
@@ -134,6 +152,7 @@ export function VirtualList<T>({
   targetAlign = 'start',
   virtualize = true,
   keepMounted,
+  arrival,
 }: {
   items: readonly T[]
   keyOf: (item: T) => string
@@ -151,9 +170,12 @@ export function VirtualList<T>({
   virtualize?: boolean
   /** Keep one roving tab stop mounted when the reader scrolls away from it. */
   keepMounted?: string
+  /** Animate a new followed row using the shared Brand motion tokens. */
+  arrival?: { identity: unknown; id?: string; key?: string; following: RefObject<boolean> }
 }) {
   const { heights, rows, version, bind } = useMeasuredHeights()
   const { viewport, originTop } = useViewport(scroller, origin)
+  useArrival(scroller, rows, arrival)
   const offsets = useMemo(() => {
     const result = new Float64Array(items.length + 1)
     const guess = typeof estimate === 'function' ? estimate : () => estimate

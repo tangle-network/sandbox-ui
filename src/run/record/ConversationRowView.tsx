@@ -25,7 +25,8 @@ export const isLifecycle = (event: RecordEvent) =>
 
 
 export function ToolStep({ item, previous }: { item: Extract<AgentTimelineItem, { kind: 'tool' }>; previous?: AgentTimelineStepKind }) {
-  const part = item.part!, cost = part.state.metadata?.costUsd, time = part.state.time, category = getToolCategory(part.tool)
+  if (!item.part) return <AgentTimelineStep item={item} previous={previous} />
+  const part = item.part, cost = part.state.metadata?.costUsd, time = part.state.time, category = getToolCategory(part.tool)
   const tone = part.state.status === 'error' ? 'var(--surface-danger-text)' : ['command', 'write', 'edit'].includes(category) ? 'var(--tone-teal-icon)' : 'var(--accent-text)'
   return <HoverCard><HoverCardTrigger asChild><div className="record-tool-row [&>[data-timeline-step]]:mx-0 [&_[data-run-row-duration]]:hidden rounded-[var(--radius-control)] border-l-2 border-l-[var(--record-tool-tone)] bg-[color-mix(in_srgb,var(--record-tool-tone)_7%,transparent)] px-1.5 py-0.5 hover:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)] focus-within:bg-[color-mix(in_srgb,var(--record-tool-tone)_14%,transparent)]" style={{ '--record-tool-tone': tone } as CSSProperties} data-tool-category={category} data-tool-status={part.state.status}>
     <AgentTimelineStep item={item} previous={previous} renderToolActions={toolNote} />

@@ -17,7 +17,7 @@ import { build } from "vite";
 import { writeIntegrationsContract } from "./integrations-package-contract.mjs";
 import { validateInterfaceContract } from "./interface-package-contract.mjs";
 import { presentationConsumerSpecs, validatePresentationConsumer } from "./presentation-package-contract.mjs";
-import { validateRecordConversation } from "./record-conversation-package-contract.mjs";
+import { validateRecordConversation } from "../tests/record-conversation-package-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // The real path, not the one `tmpdir()` reports: on macOS `/var` is a symlink
@@ -66,7 +66,7 @@ try {
   execFileSync(join(root, "node_modules/.bin/tsc"), [
     "--ignoreConfig", "--declaration", "--emitDeclarationOnly", "--outDir", join(workdir, "producer-types"), "--strict", "--skipLibCheck", "--target", "ES2022",
     "--jsx", "react-jsx", "--module", "ESNext", "--moduleResolution", "bundler", "--lib", "ES2022,DOM",
-    join(root, "scripts/record-conversation-types.tsx"),
+    join(root, "tests/record-conversation-types.tsx"),
   ], { cwd: root, stdio: "inherit" });
 
   mkdirSync(join(consumerDir, "src"), { recursive: true });

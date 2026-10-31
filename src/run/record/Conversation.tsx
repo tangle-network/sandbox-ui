@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { VirtualList } from './VirtualList.js'
 import { useFollowTail } from '../use-follow-tail.js'
 import { AgentTimelineColumn, agentTimelineStepKind } from '@tangle-network/ui/chat/agent-timeline'
@@ -171,33 +171,11 @@ export function Conversation({
     return spans
   }, [index, actor])
   // The row that shows each event: a poll is drawn inside its collapsed group.
-  const rowOf = useMemo(() => {
-    const map = new Map<string, string>()
-    for (const row of rows)
-      if (row.kind !== 'event') for (const event of row.events) map.set(event.id, row.key)
-      else map.set(row.event.id, row.key)
-    return map
-  }, [rows])
+  const rowOf = useMemo(() => new Map(rows.flatMap(row =>
+    (row.kind === 'event' ? [row.event] : row.events).map(event => [event.id, row.key]))), [rows])
   const retained = (index.byActor.get(actor) ?? []).some(item => !isLifecycle(item) && (item.detail.role || textOf(item) || callsOf(item).length))
+  const tail = rows.at(-1), event = tail?.kind === 'event' ? tail.event : tail?.events.at(-1)
   const { following } = useFollowTail(scroll, { identity: actor, content: rows, follow, target })
-  const arrival = useRef<{ actor: string; id?: string }>({ actor })
-  useLayoutEffect(() => {
-    const tail = rows.at(-1), event = tail?.kind === 'event' ? tail.event : tail?.events.at(-1), entry = tail?.kind === 'event' ? tail.event.id : tail?.events[0]?.id
-    let animate = live && arrival.current.actor === actor && !!arrival.current.id && arrival.current.id !== event?.id
-    arrival.current = { actor, id: event?.id }
-    const element = scroll.current
-    if (!element || !following.current) return
-    const frame = requestAnimationFrame(() => {
-      if (!following.current) return
-      const row = entry && element.querySelector<HTMLElement>(`[data-entry="${CSS.escape(entry)}"]`)
-      if (animate && row) {
-        animate = false
-        const style = getComputedStyle(element), value = style.getPropertyValue('--duration-stream').trim(), duration = parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)
-        if (duration > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) row.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: style.getPropertyValue('--ease-expo').trim() || 'linear' })
-      }
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [rows])
   useEffect(() => {
     if (!selected) return
     const event = index.byEvent.get(selected)
@@ -254,7 +232,6 @@ export function Conversation({
       return turn
     })
   }, [rows])
-  const render = (row: ConversationRow, i: number) => <ConversationRowView row={row} items={itemsOf[i] ?? []} previous={i && itemsOf[i - 1]?.length ? agentTimelineStepKind(itemsOf[i - 1]!.at(-1)!) : undefined} turn={turns[i]} context={context} />
   return (
     <>
       <div
@@ -274,7 +251,7 @@ export function Conversation({
           </p>
         )}
         <AgentTimelineColumn className="ar-chat">
-          <VirtualList items={rows} keyOf={keyOf} render={render} scroller={scroll} target={target ? rowOf.get(target) : undefined} estimate={estimate} />
+          <VirtualList items={rows} keyOf={keyOf} render={(row: ConversationRow, i: number) => <ConversationRowView row={row} items={itemsOf[i] ?? []} previous={i && itemsOf[i - 1]?.length ? agentTimelineStepKind(itemsOf[i - 1]!.at(-1)!) : undefined} turn={turns[i]} context={context} />} scroller={scroll} target={target ? rowOf.get(target) : undefined} estimate={estimate} arrival={live ? { identity: actor, id: event?.id, key: tail?.key, following } : undefined} />
         </AgentTimelineColumn>
       </div>
     </>

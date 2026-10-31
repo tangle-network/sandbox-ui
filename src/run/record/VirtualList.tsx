@@ -138,14 +138,14 @@ export function VirtualList<T>({
   items: readonly T[]
   keyOf: (item: T) => string
   render: (item: T, index: number) => ReactNode
-  scroller: Scroller
+  scroller: RefObject<HTMLElement | null>
   /** Height before a row is measured. */
   estimate?: number | ((item: T) => number)
   overscan?: number
   /** Bring this row to the top of the scroller (and into the page's view) whenever it changes. */
   target?: string
   /** Offset within an outer scroller, such as a file tree below its search header. */
-  origin?: Scroller
+  origin?: RefObject<HTMLElement | null>
   targetAlign?: 'start' | 'nearest'
   /** Preserve row identity as a collection crosses the virtualization threshold. */
   virtualize?: boolean

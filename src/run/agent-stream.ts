@@ -163,9 +163,9 @@ export function useAgentStream(url: string | undefined, openEventSource?: AgentS
   const { state, current, update, beginning, begin, reload, pageReader } = useAgentWindow(url, history)
   const streamUrl = useCallback(() => {
     const target = new URL(url!, location.href)
-    if (history && current.current.generation !== undefined) target.searchParams.set("generation", String(current.current.generation))
+    if (current.current.generation !== undefined) target.searchParams.set("generation", String(current.current.generation))
     return target.toString()
-  }, [url, !!history])
+  }, [url])
   useEventStream(!url || history && (!state.ready || state.ended || state.reading || beginning || !history.alive) ? undefined : streamUrl, { opener: openEventSource, after: () => current.current.lastSeq,
     onLiveChange: live => { if (!live && !current.current.ended) update({ ...current.current, error: current.current.error ?? "The agent stream is unreachable; the viewer may be closed." }) },
     events: {

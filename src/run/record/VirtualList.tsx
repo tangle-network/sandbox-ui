@@ -127,7 +127,7 @@ function useArrival(scroller: Scroller, rows: Rows, arrival: { identity: unknown
     prior.current = { identity, id: arrival?.id }
     if (!animate || !arrival?.key || !arrival.following.current) return
     const frame = requestAnimationFrame(() => {
-      const element = scroller.current, row = rows.current.get(arrival.key!)
+      const element = scroller.current, row = rows.current.get(arrival.key!)?.firstElementChild
       if (!element || !row || !arrival.following.current) return
       const style = getComputedStyle(element), value = style.getPropertyValue('--duration-stream').trim(), duration = parseFloat(value) * (value.endsWith('ms') ? 1 : 1000)
       if (duration > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches) row.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: style.getPropertyValue('--ease-expo').trim() || 'linear' })

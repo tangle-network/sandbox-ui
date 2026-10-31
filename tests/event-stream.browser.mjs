@@ -24,21 +24,21 @@ function openOwned(url,onLive){const target=new URL(url);target.searchParams.set
 }
 
 function protocol(chunks){
-  const requests=[],clients=new Set();let first,workspace=0,agent=0
+  const requests=[],generations=[],clients=new Set();let first,workspace=0,agent=0
   const server=createServer((req,res)=>{
     const url=new URL(req.url,'http://localhost')
     if(url.pathname.startsWith('/assets/')){res.setHeader('content-type','text/javascript');return res.end(chunks.get(url.pathname.slice(8)))}
     if(url.pathname==='/')return res.end('<!doctype html><meta charset="utf-8"><div id="host"></div><script type="module" src="/assets/host.js"></script>')
     res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-cache'});res.flushHeaders();if(url.searchParams.has('host'))res.write('retry: 20\n\n');clients.add(res);res.on('close',()=>clients.delete(res))
     if(url.pathname==='/workspace'){workspace++;res.write(event('workspace',{sequence:workspace}));if(workspace===1)res.end();else res.end(event('end',{}));return}
-    requests.push({path:url.pathname,after:url.searchParams.get('after')})
+    requests.push({path:url.pathname,after:url.searchParams.get('after')});if(url.pathname==='/agent')generations.push(url.searchParams.get('generation'))
     if(url.pathname==='/other')return res.end(event('reset',{generation:'other'})+event('rows',{generation:'other',events:[row(1,'text',{text:'Other agent only'})]})+event('end',{}))
     agent++
     if(agent===1){res.write(event('rows',{generation:'old',events:[row(7,'text',{text:'Old generation answer'})]}));first=res;return}
     if(agent===2)return res.end(event('rows',{generation:0,events:[row(1,'text',{text:'New generation answer'})]}))
     return res.end(event('rows',{generation:0,events:[row(1,'text',{text:'New generation answer'}),row(2,'tool-call',{toolCallId:'read-1',toolName:'read',args:{path:'retained.txt'}}),row(3,'tool-result',{toolCallId:'read-1',result:'Retained bytes'})].filter(item=>item.seq>=Number(url.searchParams.get('after')??0))})+event('end',{}))
   })
-  return {server,requests,continue:()=>first.end(),workspace:()=>workspace,close:()=>{for(const response of clients)response.end()}}
+  return {server,requests,generations,continue:()=>first.end(),workspace:()=>workspace,close:()=>{for(const response of clients)response.end()}}
 }
 
 for(const [theme,width,transport] of [['light',1512,'native'],['light',390,'native'],['dark',1512,'native'],['dark',390,'native'],['light',1512,'host']])test(`packed streams preserve authority and cursor ${theme} ${width} ${transport}`,{timeout:60_000},async()=>{
@@ -56,6 +56,7 @@ for(const [theme,width,transport] of [['light',1512,'native'],['light',390,'nati
     assert.equal(state.entries.filter(item=>item.kind==='message').length,1);assert.equal(state.entries[0].content,'New generation answer')
     assert.equal(state.entries[1].call.output,'Retained bytes');assert.equal(state.entries[1].call.status,'success');assert.equal(state.entries[1].call.duration,1000)
     assert.deepEqual(wire.requests,transport==='host'?[{path:'/agent',after:null},{path:'/agent',after:null},{path:'/agent',after:null}]:[{path:'/agent',after:null},{path:'/agent',after:'7'},{path:'/agent',after:'1'}],'host opener owns native retry/cursor and may synchronously report connection state')
+    if(transport==='native')assert.deepEqual(wire.generations,[null,'old','0'],'a reconnect names the generation its cursor belongs to, so a restarted agent resets instead of resuming a foreign cursor')
     await page.waitForFunction(()=>document.querySelector('[data-workspace]')?.textContent.includes('2'));assert.equal(wire.workspace(),2)
     await page.waitForTimeout(1250);assert.equal(wire.requests.length,3,'terminal end must not reconnect')
     await page.getByRole('button',{name:'Change agent',exact:true}).click()

@@ -324,7 +324,7 @@ function MobileDrawer({ side, title, header, onClose, onReturnFocus, theme, dens
   return (
     <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm lg:hidden" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[var(--scrim-strong)] lg:hidden" />
         <DialogPrimitive.Content
           {...(theme ? { "data-sandbox-ui": "true", "data-sandbox-theme": theme } : {})}
           data-density={density}

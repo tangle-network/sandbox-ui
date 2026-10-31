@@ -101,7 +101,7 @@ export function OutOfCreditsModal({
       role="dialog"
       aria-modal="true"
       aria-label="Out of credits"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--scrim)] p-4"
       onClick={onClose}
     >
       <div

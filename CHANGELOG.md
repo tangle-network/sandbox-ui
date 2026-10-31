@@ -1,3 +1,7 @@
+## 4.0.1
+
+- The live agent stream names its generation on reconnect even without a history reader, so `TraceWorkspace`'s drawer resets when an agent restarts instead of dropping the new generation's rows (#514).
+
 ## 4.0.0
 
 - Breaking: remove `AgentMessagingConnection`, its types (`AgentMessagingConnectionProps`, `AgentEnrollmentViewState`, `AgentTargetSummary`, `SharedMessagingRouteViewState`) and the `connections` subpath. No application imported them since they shipped on 2026-10-01; only the Discovery viewer and agent-runtime's development pin are on 3.x.

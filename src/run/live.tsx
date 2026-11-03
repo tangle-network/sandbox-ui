@@ -6,11 +6,12 @@ import { useEventStream, type AgentStreamOpener } from './event-stream'
 import { type AgentGraphNode } from '../workflows/AgentGraph'
 import { useLiveInspection } from './live-inspection'
 
-// A display-only subset of Runtime's TopSnapshot wire contract. Runtime owns all lifecycle/accounting projection.
+// The TopSnapshot wire contract lives in wire.ts beside its drift guard (a dev-time, bidirectional
+// assignability check against agent-runtime's exported type). Runtime owns all lifecycle/accounting projection.
+import type { Snapshot } from './wire'
 type Spend = { usd: number; usdKnown?: boolean }
-type Worker = { materialization?: { status: string; backend?: string; model?: { status: string; id?: string } }; id: string; parent?: string; label: string; status: string; startedAt?: string; endedAt?: string; runtime?: string; verdict?: string; reason?: string; liveTail?: string[]; lastActivityAt?: number; medianEventGapMs?: number; spend?: Spend; metered?: Spend }
-type Node = { id: string; runId: string; parentId?: string; label?: string; runtime?: string; status?: string; settledAt?: number; timing?: { startedAt: number; settledAt?: number }; model?: string; backend?: string }
-type Snapshot = { pursuit?: { nodes: Node[] }; root: string; generatedAt: number; completeness: string; diagnostics: { source: string; reason: string }[]; supervisors: { id: string; status: string; outcome?: { kind: 'winner' } | { kind: 'no-winner' | 'failed'; reason: string }; lastRoute?: { kind: 'stopped'; reason: string; code?: string } | { kind: 'unrouted'; detail: string }; task?: string; startedAt?: string; completedAt?: string; reason?: string; lastActivityAt?: number; medianEventGapMs?: number; driverSpend?: Spend; totals?: { tokensKnown?: boolean; tokensInput?: number; tokensOutput?: number }; workers: Worker[] }[] }
+type Worker = Snapshot['supervisors'][number]['workers'][number]
+type Node = NonNullable<Snapshot['pursuit']>['nodes'][number]
 const time = (value?: string) => { const ms = value ? Date.parse(value) : Number.NaN; return Number.isFinite(ms) ? ms : undefined }
 const iso = (ms?: number) => ms !== undefined && Number.isFinite(ms) ? new Date(ms).toISOString() : undefined
 // A run with no spawn journal (a retained or observer-only run) has its agents only as pursuit nodes; their spawn and
@@ -74,7 +75,7 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
   const nodeIndex = useMemo(() => { const index = new Map<string, Node>(); for (const node of active?.snapshot.pursuit?.nodes ?? []) if (node.runId === active.run.id) index.set(node.id, node); return index }, [active?.snapshot, active?.run.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const run = useMemo(() => active ? { ...active.run, workers: withNodes(active.run, nodeIndex) } : undefined, [active?.run, nodeIndex]) // eslint-disable-line react-hooks/exhaustive-deps
   const receiptIndex = useMemo(() => new Map((run?.workers ?? []).map((worker) => [worker.id, worker])), [run])
-  const detail = useCallback((id: string) => { const node = nodeIndex.get(id), receipt = receiptIndex.get(id)?.materialization; return [node?.model ?? (receipt?.model?.status === 'known' ? receipt.model.id : undefined), node?.backend ?? receipt?.backend].filter(Boolean).join(' · ') || undefined }, [nodeIndex, receiptIndex])
+  const detail = useCallback((id: string) => { const receipt = receiptIndex.get(id)?.materialization; return [(receipt?.model?.status === 'known' ? receipt.model.id : undefined), receipt?.backend].filter(Boolean).join(' · ') || undefined }, [receiptIndex])
   const outcome = run?.outcome
   const outcomeText = outcome ? outcome.kind === 'winner' ? 'Winner' : `${outcome.kind === 'no-winner' ? 'No winner' : 'Failed'}: ${outcome.reason}` : undefined
   const startedAt = run ? Math.min(...[run.startedAt, ...run.workers.map((worker) => worker.startedAt)].flatMap((value) => value && Number.isFinite(Date.parse(value)) ? [Date.parse(value)] : [])) : undefined
@@ -105,7 +106,7 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
   return { workers, nodes, edges, agentCards }
   }, [run, detail, outcomeText]) // eslint-disable-line react-hooks/exhaustive-deps
   const { workers, nodes, edges, agentCards } = view
-  const inspection = useLiveInspection(active && agent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(agent)}` : undefined, !!run && isOpen(run.status), transport?.fetch)
+  const inspection = useLiveInspection(active && agent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(agent)}` : undefined, !!run && isOpen(run.status), transport?.fetch, run?.workers.find(worker => worker.id === agent)?.lastActivityAt)
   return (
     <main className="ws-live" data-api={api} data-top-sequence={rendered}>
       <header>

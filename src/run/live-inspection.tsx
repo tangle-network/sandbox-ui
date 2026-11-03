@@ -11,15 +11,18 @@ type Inspection = {
   file?: { path: string; content: string; sha256: string; byteLength: number; before?: { content: string; sha256: string; byteLength: number; source: { kind: string; ref: string } } }
 }
 
-/** The graph, conversation and files share one selected agent and one product-owned API. */
-export function useLiveInspection(url: string | undefined, live: boolean, fetcher?: typeof globalThis.fetch) {
-  const inventory = useDocument<Inspection>(url ?? null, live ? 3000 : undefined, false, fetcher)
+/** The graph, conversation and files share one selected agent and one product-owned API. The inspection refetches
+ * when the agent's own activity moves (`activity`, its lastActivityAt from the snapshot) with a slow fallback poll —
+ * not a fixed 3 s tick for an agent that may think for minutes (#525). */
+export function useLiveInspection(url: string | undefined, live: boolean, fetcher?: typeof globalThis.fetch, activity?: number) {
+  const gate = url ? `${url}${url.includes('?') ? '&' : '?'}activity=${activity ?? 'quiet'}` : null
+  const inventory = useDocument<Inspection>(gate, live ? 30_000 : undefined, false, fetcher)
   const [selected, select] = useState<string>()
   const [download, setDownload] = useState<{ key: string; href: string }>()
   const files = inventory.error ? [] : inventory.data?.files?.entries ?? []
   const entry = files.find((file) => file.path === selected) ?? files[0]
   const fileUrl = entry && url ? `${url}/file?path=${encodeURIComponent(entry.path)}` : null
-  const content = useDocument<Inspection>(fileUrl, live ? 3000 : undefined, false, fetcher)
+  const content = useDocument<Inspection>(fileUrl ? `${fileUrl}&activity=${activity ?? 'quiet'}` : null, live ? 30_000 : undefined, false, fetcher)
   const file = content.data?.file
   const valid = !inventory.error && !content.error && file && entry && file.path === entry.path && file.sha256 === entry.sha256 && file.byteLength === entry.byteLength
   const fileKey = valid ? `${entry.path}:${entry.sha256}` : undefined

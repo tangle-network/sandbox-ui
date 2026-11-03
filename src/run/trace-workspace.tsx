@@ -27,11 +27,8 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   events?: TraceEvent[]
   /** The time the reader moved to, in trace ms; null while following live or showing the whole run. */
   onTimeChange?: (t: number | null) => void
-  /**
-   * The code workspace as of the cursor and scoped to the selected agent, usually a WorkspaceFilesPane: the page answers
-   * the as-of query. It spans the full width; this workspace supplies the bounded height virtual panes need. Keep its key on the commit so a scrub
-   * keeps its state.
-   */
+  /** The code workspace as of the cursor and scoped to the selected agent, usually a WorkspaceFilesPane; it spans the full width
+   *  at the bounded height virtual panes need. Keep its key on the commit so a scrub keeps its state. */
   files?: ReactNode
   /** The scoreboard as of the cursor, under the code workspace; omitted when not given. */
   scoreboard?: ReactNode
@@ -40,6 +37,8 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   conversationOpen?: boolean
   /** Called with the agent the reader selected, or undefined when they close its drawer or press Escape. */
   onSelectAgent?: (agentId: string | undefined) => void
+  /** The host's own account of the selected agent beyond its trace facts, such as its profile: its drawer shows it under them. */
+  renderAgentDrawer?: (agentId: string) => ReactNode
   /**
    * What the trace cannot say about a live agent, by agent id: its activity, thinking line, latest events, commits or
    * result. Timed agents follow the trace cursor. Workers without recorded timing retain their live identity and metadata.
@@ -105,15 +104,13 @@ function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, a
   return { nodes, edges }
 }
 
-
-
 /**
  * The run workspace: the agent timeline and span waterfall over one clock, the selected agent's conversation
  * streaming in a right-hand drawer, and the page's code workspace and scoreboard following the time cursor. Scrubbing is time travel:
  * every panel shows what was true at the cursor, and the conversation shows what had been said by then.
  */
 export function TraceWorkspace({
-  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, agentCards, agentGraph, className, ...waterfall
+  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, renderAgentDrawer, agentCards, agentGraph, className, ...waterfall
 }: TraceWorkspaceProps) {
   const byId = useMemo(() => new Map(trace.spans.flatMap((span) => (span.id ? [[span.id, span] as const] : []))), [trace])
   const [ownSelection, setOwnSelection] = useState<string>()
@@ -122,6 +119,7 @@ export function TraceWorkspace({
   const agent = selected ? byId.get(selected) : undefined, card = selected ? agentCards?.[selected] : undefined
   const agentId = agent?.id ?? (card ? selected : undefined), agentName = agent?.name ?? card?.label ?? agentId, agentModel = agent?.detail ?? card?.model
   const showConversation = !!agentId && conversationOpen !== false
+  const detail = showConversation && agentId ? renderAgentDrawer?.(agentId) : undefined
   const { defaultLayout = "tree", ...graphOptions } = agentGraph ?? {}
   const [graphLayout, setGraphLayout] = useState<"tree" | "hub">(defaultLayout)
   const [cursor, setCursor] = useState<number | null>(null)
@@ -187,17 +185,14 @@ export function TraceWorkspace({
               <X aria-hidden className="h-4 w-4" />
             </button>
           </header>
-          {facts.length > 0 && <section aria-label="Recorded agent details" tabIndex={0} className="max-h-[35vh] shrink-0 overflow-y-auto border-b border-border px-3 py-2 text-sm">
-            <dl className="space-y-2">{facts.map((fact, index) => <div key={index}>
+          {(facts.length > 0 || detail) && <section aria-label="Recorded agent details" tabIndex={0} className="max-h-[35vh] shrink-0 overflow-y-auto border-b border-border px-3 py-2 text-sm">
+            {facts.length > 0 && <dl className="space-y-2">{facts.map((fact, index) => <div key={index}>
               <dt className="text-xs text-muted-foreground">{fact.label}</dt>
               <dd className="m-0 whitespace-pre-wrap break-words">{fact.value}</dd>
-            </div>)}</dl>
+            </div>)}</dl>}
+            {detail}
           </section>}
-          <div
-            ref={scroller}
-            data-primary-content=""
-            className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
-          >
+          <div ref={scroller} data-primary-content="" className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
             {streamUrl && (cursor === null || origin !== undefined)
               ? <AgentTimeline items={items} isThinking={live && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
               : <p className="p-4 text-sm text-muted-foreground">Conversation: not time-indexed</p>}

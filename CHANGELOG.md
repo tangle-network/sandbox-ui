@@ -1,3 +1,7 @@
+## 4.1.0
+
+- `TraceWorkspace` takes `renderAgentDrawer(agentId)`: the host's own account of the selected agent, such as its profile, shown in its drawer under the recorded facts.
+
 ## 4.0.1
 
 - The live agent stream names its generation on reconnect even without a history reader, so `TraceWorkspace`'s drawer resets when an agent restarts instead of dropping the new generation's rows (#514).

@@ -59,6 +59,30 @@ export interface AgentStreamState {
   history?: { loading: boolean; earlier: boolean; more: boolean; reading: boolean; beginning: boolean; emptyTail: boolean; older(): void; newer(): void; latest(): void; beginningPage(): void }
 }
 const textOf = (value: unknown): string | undefined => value == null ? undefined : typeof value === "string" ? value : JSON.stringify(value)
+
+/** A native harness row (live-stream evidence and retained captures: `{ type, data }`) as a producer event, so
+ *  non-root agents render: the wall's transcript pages and per-agent streams serve these rows verbatim, and before
+ *  this adapter every one of them was dropped by the fold — a live child agent showed nothing at all. Text and
+ *  reasoning parts (opencode `raw` events and the SDK's `message.part.updated`) become deltas; a `message.updated`
+ *  carrying a user role becomes the user's words. Native tool shapes vary by harness and stay unrendered until a
+ *  captured sample exists to map them honestly. */
+function nativeEventOf(row: ProducerRow): AgentStreamRow["event"] | undefined {
+  const data = row.data as Record<string, unknown> | undefined
+  if (!data || typeof data !== "object") return undefined
+  const wrapped = (data as { event?: { type?: string; part?: { type?: string; text?: unknown } } }).event
+  const source = wrapped && (wrapped.type === "text" || wrapped.type === "reasoning" || wrapped.type === "message") ? wrapped : data
+  const type = (source as { type?: string }).type
+  const part = (source as { part?: { type?: string; text?: unknown } }).part
+  if ((type === "text" || type === "message.part.updated") && part?.type === "text" && typeof part.text === "string") return { kind: "text_delta", text: part.text }
+  if ((type === "reasoning" || type === "message.part.updated") && part?.type === "reasoning" && typeof part.text === "string") return { kind: "reasoning_delta", text: part.text }
+  if (type === "text" && typeof (source as { text?: unknown }).text === "string") return { kind: "text_delta", text: (source as { text: string }).text }
+  const info = ((source as { properties?: { info?: { role?: string; content?: unknown; text?: unknown } } }).properties?.info ?? (source as { info?: { role?: string; content?: unknown; text?: unknown } }).info)
+  if ((type === "message" || type === "message.updated") && info?.role === "user") {
+    const words = typeof info.content === "string" ? info.content : typeof info.text === "string" ? info.text : undefined
+    if (words) return { kind: "user", text: words }
+  }
+  return undefined
+}
 const failed = (value: unknown) => typeof value === "object" && value !== null && ("error" in value || (value as { is_error?: unknown }).is_error === true || (value as { isError?: unknown }).isError === true)
 const recorded = (text: string) => { try { const value: unknown = JSON.parse(text); return value && typeof value === "object" ? `\`\`\`json\n${text}\n\`\`\`` : text } catch { return text } }
 const TOOL_TYPES: ReadonlySet<string> = new Set(["bash", "read", "write", "edit", "glob", "grep", "list", "download", "inspect", "audit"])
@@ -69,7 +93,7 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Pr
 export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly ProducerRow[]): AgentTranscriptEntry[] {
   const next = [...entries]
   for (const row of rows) {
-    const event = row.event
+    const event = row.event ?? nativeEventOf(row)
     if (!event) continue
     const at = Date.parse(row.at ?? ""), scope = JSON.stringify([row.stream ?? null, row.attempt ?? null])
     const base = { id: event.id ?? `${scope}:${row.seq}`, at, scope, attempt: row.attempt, provenance: event.provenance, isError: event.isError }, last = next.at(-1)

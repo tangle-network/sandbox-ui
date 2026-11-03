@@ -34,3 +34,48 @@ describe('foldAgentRows incremental folding', () => {
     if (entries[0]?.kind === 'message') expect(entries[0].content).toBe('first second')
   })
 })
+
+/** Real native rows, captured from a live child agent's transcript on the wall (canary-fork-20261103a:s0): before the
+ *  adapter these were dropped by the fold and the agent rendered nothing. */
+describe('foldAgentRows native rows', () => {
+  const raw = (id: string, data: unknown, at: string) => ({ seq: Number(id), at, attempt: 1, id, type: 'raw', data })
+
+  it('folds an opencode raw text part as an assistant delta', () => {
+    const rows = [raw('376', { type: 'raw', backend: 'opencode', event: { type: 'text', timestamp: 1793687372972, sessionID: 'ses_1', part: { id: 'prt_1', type: 'text', text: '1. **Method**: Sieve of Eratosthenes.' } } }, at(1))]
+    const entries = foldAgentRows([], rows as never)
+    expect(entries).toHaveLength(1)
+    expect(entries[0]?.kind).toBe('message')
+    if (entries[0]?.kind === 'message') expect(entries[0].content).toBe('1. **Method**: Sieve of Eratosthenes.')
+  })
+
+  it('folds the SDK message.part.updated text and reasoning parts', () => {
+    const rows = [
+      raw('10', { type: 'message.part.updated', part: { id: 'p1', type: 'reasoning', text: 'Consider the bound.' } }, at(1)),
+      raw('11', { type: 'message.part.updated', part: { id: 'p2', type: 'text', text: 'The answer is 1229.' } }, at(2)),
+    ]
+    const entries = foldAgentRows([], rows as never)
+    expect(entries.map(entry => entry.kind)).toEqual(['reasoning', 'message'])
+    if (entries[1]?.kind === 'message') expect(entries[1].content).toBe('The answer is 1229.')
+  })
+
+  it('folds a native user message as the commission bubble', () => {
+    const rows = [raw('5', { type: 'message.updated', properties: { info: { id: 'm1', role: 'user', content: 'Count the primes below 10000 and prove the count.' } } }, at(0))]
+    const entries = foldAgentRows([], rows as never)
+    expect(entries).toHaveLength(1)
+    if (entries[0]?.kind === 'message') {
+      expect(entries[0].role).toBe('user')
+      expect(entries[0].content).toContain('primes below 10000')
+    }
+  })
+
+  it('merges consecutive native text parts of one message and ignores harness framing rows', () => {
+    const rows = [
+      raw('376', { type: 'raw', backend: 'opencode', event: { type: 'text', timestamp: 1, part: { id: 'p1', type: 'text', text: 'The sieve ' } } }, at(1)),
+      raw('377', { type: 'status', data: { status: 'running' } }, at(2)),
+      raw('378', { type: 'raw', backend: 'opencode', event: { type: 'text', timestamp: 2, part: { id: 'p1', type: 'text', text: 'terminates.' } } }, at(3)),
+    ]
+    const entries = foldAgentRows([], rows as never)
+    expect(entries).toHaveLength(1)
+    if (entries[0]?.kind === 'message') expect(entries[0].content).toBe('The sieve terminates.')
+  })
+})

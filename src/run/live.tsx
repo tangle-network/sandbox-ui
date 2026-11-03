@@ -1,5 +1,5 @@
 import { isOpen, runStatus } from '@tangle-network/ui/run/status-meta'
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { TraceWorkspace } from './trace-workspace'
 import { useEventStream, type AgentStreamOpener } from './event-stream'
@@ -15,9 +15,9 @@ const time = (value?: string) => { const ms = value ? Date.parse(value) : Number
 const iso = (ms?: number) => ms !== undefined && Number.isFinite(ms) ? new Date(ms).toISOString() : undefined
 // A run with no spawn journal (a retained or observer-only run) has its agents only as pursuit nodes; their spawn and
 // settle clocks fill the times a worker lacks, so no recorded agent loses its card or its waterfall bar.
-const withNodes = (run: Snapshot['supervisors'][number], nodes: Node[]): Worker[] => [
-  ...run.workers.map((worker) => { const node = nodes.find((node) => node.id === worker.id); return { ...worker, startedAt: worker.startedAt ?? iso(node?.timing?.startedAt), endedAt: worker.endedAt ?? iso(node?.timing?.settledAt ?? node?.settledAt) } }),
-  ...nodes.filter((node) => node.id !== run.id && !run.workers.some((worker) => worker.id === node.id)).map((node) => ({ id: node.id, parent: node.parentId, label: node.label ?? node.id, runtime: node.runtime, status: node.status ?? 'unknown', startedAt: iso(node.timing?.startedAt), endedAt: iso(node.timing?.settledAt ?? node.settledAt) })),
+const withNodes = (run: Snapshot['supervisors'][number], nodes: ReadonlyMap<string, Node>): Worker[] => [
+  ...run.workers.map((worker) => { const node = nodes.get(worker.id); return { ...worker, startedAt: worker.startedAt ?? iso(node?.timing?.startedAt), endedAt: worker.endedAt ?? iso(node?.timing?.settledAt ?? node?.settledAt) } }),
+  ...[...nodes.values()].filter((node) => node.id !== run.id && !run.workers.some((worker) => worker.id === node.id)).map((node) => ({ id: node.id, parent: node.parentId, label: node.label ?? node.id, runtime: node.runtime, status: node.status ?? 'unknown', startedAt: iso(node.timing?.startedAt), endedAt: iso(node.timing?.settledAt ?? node.settledAt) })),
 ]
 // A missing or unknown spend is unknown, never zero, and never drops the agent.
 const cost = (...spends: (Spend | undefined)[]) => spends.every((spend) => spend && spend.usdKnown !== false && Number.isFinite(spend.usd) && spend.usd >= 0) ? spends.reduce((sum, spend) => sum + (spend?.usd ?? 0), 0) : undefined
@@ -69,9 +69,12 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
 
   const runs = snapshots.flatMap((snapshot, root) => snapshot.supervisors.map((run) => ({ snapshot, root, run, key: JSON.stringify([snapshot.root, run.id]) })))
   const active = runs.find((run) => run.key === selected) ?? runs[0]
-  const facts = active?.snapshot.pursuit?.nodes.filter((node) => node.runId === active.run.id) ?? []
-  const detail = (id: string) => { const node = facts.find((node) => node.id === id), receipt = active?.run.workers.find((worker) => worker.id === id)?.materialization; return [node?.model ?? (receipt?.model?.status === 'known' ? receipt.model.id : undefined), node?.backend ?? receipt?.backend].filter(Boolean).join(' · ') || undefined }
-  const run = active && { ...active.run, workers: withNodes(active.run, facts) }
+  // One map for node facts and one memoized projection per snapshot: every SSE frame rebuilds the view once, not
+  // cards, edges and lookups per render (the first draft did an O(agents^2) find per worker on every heartbeat).
+  const nodeIndex = useMemo(() => { const index = new Map<string, Node>(); for (const node of active?.snapshot.pursuit?.nodes ?? []) if (node.runId === active.run.id) index.set(node.id, node); return index }, [active?.snapshot, active?.run.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const run = useMemo(() => active ? { ...active.run, workers: withNodes(active.run, nodeIndex) } : undefined, [active?.run, nodeIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+  const receiptIndex = useMemo(() => new Map((run?.workers ?? []).map((worker) => [worker.id, worker])), [run])
+  const detail = useCallback((id: string) => { const node = nodeIndex.get(id), receipt = receiptIndex.get(id)?.materialization; return [node?.model ?? (receipt?.model?.status === 'known' ? receipt.model.id : undefined), node?.backend ?? receipt?.backend].filter(Boolean).join(' · ') || undefined }, [nodeIndex, receiptIndex])
   const outcome = run?.outcome
   const outcomeText = outcome ? outcome.kind === 'winner' ? 'Winner' : `${outcome.kind === 'no-winner' ? 'No winner' : 'Failed'}: ${outcome.reason}` : undefined
   const startedAt = run ? Math.min(...[run.startedAt, ...run.workers.map((worker) => worker.startedAt)].flatMap((value) => value && Number.isFinite(Date.parse(value)) ? [Date.parse(value)] : [])) : undefined
@@ -90,15 +93,19 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
     return { spans, totalMs: Math.max(0, ...spans.map((span) => span.endMs)), ...(totals?.tokensKnown !== false && typeof totals?.tokensInput === 'number' && Number.isFinite(totals.tokensInput) && totals.tokensInput >= 0 ? { promptTokens: totals.tokensInput } : {}), ...(totals?.tokensKnown !== false && typeof totals?.tokensOutput === 'number' && Number.isFinite(totals.tokensOutput) && totals.tokensOutput >= 0 ? { completionTokens: totals.tokensOutput } : {}), errors: spans.filter((span) => span.status === 'failed').length }
   }, [active?.snapshot, active?.run, startedAt])
   // Every recorded worker gets a card, timed or not; the waterfall only places workers with a recorded start.
+  const view = useMemo(() => {
   const workers = run?.workers.filter((worker) => worker.id !== run.id) ?? []
   const nodes: AgentGraphNode[] = run ? [
     { id: run.id, label: 'root', status: runStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), lastActivityAt: run.lastActivityAt, medianEventGapMs: run.medianEventGapMs, result: outcomeText ?? run.reason ?? (runStatus(run.status) === 'failed' ? 'Failure cause not recorded' : undefined) },
     ...workers.map((worker) => ({ id: worker.id, label: worker.label, harness: worker.runtime, model: detail(worker.id), status: runStatus(worker.status), costUsd: cost(worker.spend, worker.metered), startedAt: time(worker.startedAt), lastActivityAt: worker.lastActivityAt, medianEventGapMs: worker.medianEventGapMs, turn: worker.liveTail?.at(-1), events: worker.liveTail?.slice(-3).map((label, index) => ({ id: `${worker.id}:${index}:${label}`, label })), result: worker.reason ?? (runStatus(worker.status) === 'failed' ? 'Failure cause not recorded' : worker.verdict) })),
   ] : []
-  const inspection = useLiveInspection(active && agent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(agent)}` : undefined, !!run && isOpen(run.status), transport?.fetch)
   const known = new Set(nodes.map((node) => node.id))
   const edges = workers.map((worker) => ({ from: worker.parent && worker.parent !== worker.id && known.has(worker.parent) ? worker.parent : run!.id, to: worker.id, kind: 'spawn' as const }))
   const agentCards = Object.fromEntries(nodes.map(({ id, label, harness, model, turn, events, result, status, costUsd, startedAt, lastActivityAt, medianEventGapMs }) => [id, { label, harness, model, turn, events, result, ...(startedAt === undefined ? { status, costUsd, lastActivityAt, medianEventGapMs } : {}) }]))
+  return { workers, nodes, edges, agentCards }
+  }, [run, detail, outcomeText]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { workers, nodes, edges, agentCards } = view
+  const inspection = useLiveInspection(active && agent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(agent)}` : undefined, !!run && isOpen(run.status), transport?.fetch)
   return (
     <main className="ws-live" data-api={api} data-top-sequence={rendered}>
       <header>

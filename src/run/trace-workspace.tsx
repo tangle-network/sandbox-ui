@@ -37,6 +37,10 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   conversationOpen?: boolean
   /** Called with the agent the reader selected, or undefined when they close its drawer or press Escape. */
   onSelectAgent?: (agentId: string | undefined) => void
+  /** Dock the conversation as a resizable pane in the layout instead of a fixed overlay over the right edge. */
+  docked?: boolean
+  /** The words that created the selected agent — its parent's commission — pinned above its conversation. */
+  commission?: { by?: string; text?: string }
   /** The host's own account of the selected agent beyond its trace facts, such as its profile: its drawer shows it under them. */
   renderAgentDrawer?: (agentId: string) => ReactNode
   /**
@@ -110,7 +114,7 @@ function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, a
  * every panel shows what was true at the cursor, and the conversation shows what had been said by then.
  */
 export function TraceWorkspace({
-  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, renderAgentDrawer, agentCards, agentGraph, className, ...waterfall
+  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, renderAgentDrawer, docked, commission, agentCards, agentGraph, className, ...waterfall
 }: TraceWorkspaceProps) {
   const byId = useMemo(() => new Map(trace.spans.flatMap((span) => (span.id ? [[span.id, span] as const] : []))), [trace])
   const [ownSelection, setOwnSelection] = useState<string>()
@@ -142,15 +146,16 @@ export function TraceWorkspace({
   const shown = cursor === null || origin === undefined ? stream.entries : stream.entries.filter((entry) => entry.at - origin <= cursor)
   // Live means the stream is open and producing now: an ended, unreachable or scrubbed stream is not.
   const live = stream.alive && !stream.error && cursor === null
+  // Ended is the producer's word (an end frame): a dropped beat is an error while reconnecting, never an ending.
+  const ended = !stream.alive && !stream.error
   const items = useMemo(() => timelineItems(shown, live), [shown, live])
 
   // Follow the newest output unless the reader scrolled up; then offer a "New output" pill instead of jumping.
   const scroller = useRef<HTMLDivElement>(null)
   const { unseen, jump } = useFollowTail(scroller, { identity: showConversation ? selected : undefined, content: items })
 
-  return (
-    <div className={cn("sandbox-trace-workspace flex min-h-0 flex-col gap-3", className)}>
-      <div className={showConversation ? "min-w-0 lg:mr-[420px]" : "min-w-0"}>
+  const left = (<>
+      <div className={showConversation && !docked ? "min-w-0 lg:mr-[420px]" : "min-w-0"}>
       <TraceWaterfall {...waterfall} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
         onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
@@ -172,10 +177,16 @@ export function TraceWorkspace({
       {scoreboard && (
         <section aria-label="Scoreboard at the cursor" className="overflow-hidden rounded-xl border border-border bg-card">{scoreboard}</section>
       )}
+  </>)
+  return (
+    <div className={cn("sandbox-trace-workspace flex min-h-0 gap-3", docked && showConversation ? "flex-row" : "flex-col", className)}>
+      {docked && showConversation ? <div className="flex min-w-0 flex-1 flex-col gap-3">{left}</div> : left}
       {showConversation && (
-        // A drawer over the right edge: the code workspace keeps its full width underneath.
+        // A drawer over the right edge, or a docked resizable pane: the code workspace keeps its width underneath.
         <aside aria-label={`${agentName} conversation`} onKeyDown={(event) => { if (event.key === "Escape") select(undefined) }}
-          className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[420px] flex-col border-l border-border bg-card shadow-2xl">
+          className={docked
+            ? "flex min-h-0 w-[clamp(320px,32vw,560px)] shrink-0 resize-x flex-col overflow-hidden rounded-xl border border-border bg-card"
+            : "fixed inset-y-0 right-0 z-40 flex w-full max-w-[420px] flex-col border-l border-border bg-card shadow-2xl"}>
           <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
             <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", live ? "bg-[var(--surface-info-text)]" : "bg-muted-foreground")} aria-hidden data-motion={live ? "essential" : undefined} style={live ? ambientStyle : undefined} onAnimationStart={syncAmbient} />
             <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{agentName}</h3>
@@ -192,9 +203,18 @@ export function TraceWorkspace({
             </div>)}</dl>}
             {detail}
           </section>}
+          {commission && (commission.text || commission.by) && (
+            <section aria-label="Commission" className="shrink-0 border-b border-border bg-muted/40 px-3 py-2 text-sm">
+              {commission.by && <p className="m-0 mb-1 text-xs text-muted-foreground">commissioned by {commission.by}</p>}
+              {commission.text && <p className="m-0 line-clamp-6 whitespace-pre-wrap break-words">{commission.text}</p>}
+            </section>
+          )}
           <div ref={scroller} data-primary-content="" className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
             {streamUrl && (cursor === null || origin !== undefined)
-              ? <AgentTimeline items={items} isThinking={live && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
+              ? <AgentTimeline items={items} isThinking={live && items.length === 0} emptyState={
+                  <p className="p-4 text-sm text-muted-foreground" data-stream={stream.error ? "reconnecting" : ended ? "ended" : "empty"}>
+                    {stream.error ? (ended ? stream.error : `Reconnecting… ${stream.error}`) : ended ? "The conversation ended." : "No messages yet."}
+                  </p>} />
               : <p className="p-4 text-sm text-muted-foreground">Conversation: not time-indexed</p>}
           </div>
           {unseen && (

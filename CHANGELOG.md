@@ -1,6 +1,7 @@
 ## 4.1.0
 
 - `TraceWorkspace` takes `renderAgentDrawer(agentId)`: the host's own account of the selected agent, such as its profile, shown in its drawer under the recorded facts.
+- Hold `@pierre/diffs` below 1.6.3: 1.6.3 (published 2026-11-03) declares `catalog:` and `workspace:*` dependencies, so a fresh npm install of this package failed.
 
 ## 4.0.1
 
@@ -72,7 +73,6 @@
 - Keep phone activity in a stable, scrollable row so operator requests and failures remain near the top during updates.
 - Preserve the reader’s zoom when selecting wide teams or resizing a selected graph; explicit zoom controls retain their behavior.
 - Adopt Charts’ complete timeline facts and readable phone names.
-
 
 ## 2.0.5
 
@@ -671,7 +671,6 @@
   Host-supplied starting, ready, and unavailable states govern when the iframe mounts.
   The ready view uses the existing preview URL policy and iframe isolation, with compact refresh and open controls.
   Products can constrain initial app URLs with `allowedOrigins`, show service-observed readiness and enforced access metadata, and place their own actions in the compact header.
-
 
 ## 0.114.0
 

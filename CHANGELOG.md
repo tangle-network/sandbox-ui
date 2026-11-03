@@ -1,6 +1,6 @@
-## 4.1.0
+## 5.0.0
 
-- `TraceWorkspace` takes `renderAgentDrawer(agentId)`: the host's own account of the selected agent, such as its profile, shown in its drawer under the recorded facts.
+- `TraceWorkspace` takes `renderAgentDrawer(agentId)`: the host's own account of the selected agent, such as its profile, shown in its drawer under the recorded facts. Release admission names this a break because `TraceWorkspaceProps` extends `Omit<TraceWaterfallProps, ...>`, whose shape it cannot split; the prop is optional, so 4.x consumers adopt with no code change.
 - Hold `@pierre/diffs` below 1.6.3: 1.6.3 (published 2026-11-03) declares `catalog:` and `workspace:*` dependencies, so a fresh npm install of this package failed.
 
 ## 4.0.1

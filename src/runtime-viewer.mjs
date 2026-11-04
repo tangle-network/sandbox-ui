@@ -1,4 +1,6 @@
 import '@tangle-network/charts/react/flow-waterfall.css'
+import '@tangle-network/charts/react/agent-graph.css'
+import '@tangle-network/charts/react/live.css'
 import { StrictMode, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { LiveRun } from '../dist/run/live.js'

@@ -1,3 +1,12 @@
+## 8.0.0
+
+- Requires `@tangle-network/charts` ^4.0.15, whose `FlowWaterfall` drops `renderAgentDetail` and `agentFill="agent"` and takes `maxHeight="fill"`; `TraceWorkspaceProps` carries those changes, so release admission names this a break. `TraceWorkspace` defaults to `maxHeight="fill"` and no longer measures free space itself: give it a height and the waterfall or graph fills it, including below the fold. Pass a number only for a fixed-height host.
+- Breaking for styles: `@tangle-network/sandbox-ui/styles`, `globals.css` and `tailwind.css` no longer bundle `@tangle-network/charts` CSS (flow-waterfall, agent-graph, live). A stale copy of the 4.0.x waterfall rules kept the removed hatching alive beside charts' own stylesheet. Hosts import the charts stylesheets they render themselves (README, Styles).
+- The agent conversation reads as a conversation: back-to-back tool calls (and the reasoning between them) fold into one row, "Ran 5 tools · Shell, Read ×2, knowledge read +1 more", whose arguments and results open with it; a live agent's newest call stays its own row. A tool outside the kit no longer prints its raw arguments inline, and `mcp__<server>__` prefixes and underscores never reach the row. User messages longer than six lines fold.
+- An agent without a conversation shows its failure, commission and the host's `transcriptNote` sentence at the top, with Details open, instead of a centred sentence in an empty pane.
+- `TraceWorkspace` no longer draws the "Latest activity" feed under the waterfall; the bars already show what ran.
+- The inspector's Details summary draws one chevron even under host styles that add a `summary::before` marker; the phone sheet's Back is the brand ghost `Button`, and the sheet, not Back, takes focus when it opens.
+
 ## 7.0.0
 
 Release admission names this a break, as at 5.0.0: `TraceWorkspaceProps` extends `Omit<TraceWaterfallProps, ...>`, so the added optional `transcriptNote` changes a shape it cannot split. 6.x consumers adopt with no code change.

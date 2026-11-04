@@ -15,7 +15,6 @@
 @import "tailwindcss" source(none);
 @import "./tailwind.css";
 @import "./record.css";
-@import "@tangle-network/charts/react/agent-graph.css";
 
 /* Scan sandbox-ui and forwarded UI component sources so exported components ship their needed utilities. */
 @source "../../src/**/*.tsx";
@@ -74,9 +73,6 @@
 .record-conversation .ar-turn { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 20px 0 8px; padding-top: 12px; border-top: 1px solid hsl(var(--border)); }
 .record-conversation .ar-turn time, .record-conversation .ar-idle-event time { flex: none; color: hsl(var(--muted-foreground)); font: var(--font-size-sm)/1.5 var(--font-sans); }
 .record-conversation .ar-idle-event { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 16px; padding: 4px 0; }
-
-/* The waterfall card fills the workspace's height; its rows scroll inside it (TraceWorkspace measures their room). */
-.sandbox-trace-workspace .fw-root { flex: 1 1 auto; min-height: 0; }
 
 /* Native Runtime standalone shell; TraceWorkspace retains its canonical inner rendering. */
 .ws-live { min-height: 100dvh; padding: 24px; background: hsl(var(--background)); color: hsl(var(--foreground)); font: 14px/1.5 var(--font-sans, sans-serif); }

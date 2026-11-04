@@ -1,4 +1,5 @@
 import { formatCompact as tokenLabel, formatSpanDuration as spanLabel, formatCost } from '@tangle-network/charts'
+import { toolLabel } from '@tangle-network/charts/react/agent-graph'
 import type { CSSProperties, ReactNode } from 'react'
 import { AgentTimelineStep, agentTimelineStepKind, type AgentTimelineItem, type AgentTimelineStepKind } from '@tangle-network/ui/chat/agent-timeline'
 import { SpeakerHeader } from '@tangle-network/ui/chat/speaker'
@@ -11,7 +12,7 @@ import { getToolCategory, getToolDisplayMetadata } from '@tangle-network/ui/util
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@tangle-network/ui/primitives'
 import { Brain, Timer, Settings } from 'lucide-react'
 import type { ConversationEvent as RecordEvent } from './types.js'
-import { callsOf, compact, ms, preview, textOf, toolKey, utcTime } from './model.js'
+import { callsOf, compact, ms, textOf, toolKey, utcTime } from './model.js'
 import type { RecordIndex, ToolCall } from './model.js'
 import { argsLabel, callStatus, foldRows, hollowSummary, idleReply, outputTokens, pollSummary, thinkingMarkers } from './conversation-rows.js'
 import type { CallState, ConversationRow } from './conversation-rows.js'
@@ -75,8 +76,9 @@ function toolItem(id: string, call: ToolCall, output: string | undefined, state:
     metadata: { ...(note ? { note } : {}), ...(cost !== undefined ? { costUsd: cost } : {}) },
   } }
   const known = KIT_TOOLS.has(name.toLowerCase()), meta = getToolDisplayMetadata(part)
-  const detail = argsLabel(call.input) ?? (meta.description || (known ? undefined : preview(call)))
-  return { id, kind: 'tool', part, call: { id, type: TYPES[name.toLowerCase()] ?? 'unknown', label: known ? meta.title : name.replaceAll('_', ' '), status: status === 'error' ? 'error' : status === 'running' ? 'running' : 'success', ...(detail ? { detail } : {}), ...(duration !== undefined ? { duration } : {}) } }
+  // A kit tool's subject (a path, a command) and absent arguments read inline; another tool's arguments wait in its opened row.
+  const detail = argsLabel(call.input) ?? (known && meta.description || undefined)
+  return { id, kind: 'tool', part, call: { id, type: TYPES[name.toLowerCase()] ?? 'unknown', label: known ? meta.title : toolLabel(name), status: status === 'error' ? 'error' : status === 'running' ? 'running' : 'success', ...(detail ? { detail } : {}), ...(duration !== undefined ? { duration } : {}) } }
 }
 
 function toolItems(id: string, call: ToolCall, result: RecordEvent | undefined, state: CallState, durationMs: number | null, live: boolean, opener: ConversationRenderContext['opener']): AgentTimelineItem[] {
@@ -98,19 +100,45 @@ export function timelineItems(entries: readonly AgentTranscriptEntry[], streamin
   const rows = foldRows<AgentTranscriptEntry, string>(entries.map(event => ({ kind: 'event', key: event.id, event })),
     entry => entry.kind === 'message' && entry.role === 'assistant' && entry.provenance !== 'recorded-result' ? idleReply(entry.content) : null,
     (a, b) => a === b, events => ({ kind: 'idle', key: events[0]!.id, events }))
-  return rows.map((row, index): AgentTimelineItem => {
+  return foldTools(rows.map((row, index): AgentTimelineItem => {
     const entry = row.kind === 'event' ? row.event : row.events[0]!
     if (row.kind === 'idle') return idleItem(entry.id, row.events.map(event => ({ id: event.id, at: Number.isFinite(event.at) ? new Date(event.at).toISOString() : undefined, text: (event as Extract<AgentTranscriptEntry, { kind: 'message' }>).content })))
     if (entry.kind === 'message') {
       const body = entry.role === 'user' ? promptText(entry.content) : entry.content
       const short = entry.role === 'user' && opened && !opened.has(`prompt:${entry.id}`) && body.length > 280
-      return { id: entry.id, kind: 'message', role: entry.role, content: short ? `${body.slice(0, 280).trimEnd()}…` : body, isStreaming: streaming && index === rows.length - 1, ...(entry.role === 'user' && Number.isFinite(entry.at) ? { timestamp: new Date(entry.at) } : {}) }
+      return { id: entry.id, kind: 'message', role: entry.role, content: short ? `${body.slice(0, 280).trimEnd()}…` : body, isStreaming: streaming && index === rows.length - 1, ...(entry.role === 'user' ? { ...(opened ? {} : { collapsedLines: 6 }), ...(Number.isFinite(entry.at) ? { timestamp: new Date(entry.at) } : {}) } : {}) }
     }
     if (entry.kind === 'tool') return toolItem(entry.id, { id: entry.id, name: entry.name ?? entry.call.label, input: entry.input === undefined ? entry.call.detail : typeof entry.input === 'string' ? entry.input : JSON.stringify(entry.input) }, entry.call.output, entry.call.status === 'error' ? 'error' : entry.call.status === 'running' ? streaming ? 'pending' : 'missing' : 'returned', entry.call.duration ?? null, streaming, entry.costUsd)
     if (entry.kind === 'notice' && entry.isError) return { id: entry.id, kind: 'status', tone: 'error', label: 'Execution error', detail: entry.text }
     if (entry.kind === 'notice') return { id: entry.id, kind: 'custom', content: <p className="text-xs text-muted-foreground">{entry.text}</p> }
-    return { id: entry.id, kind: 'custom', content: <InlineThinkingItem part={{ type: 'reasoning', text: entry.text }} defaultOpen={false} openWhileActive={false} /> }
-  })
+    return { id: `reasoning:${entry.id}`, kind: 'custom', content: <InlineThinkingItem part={{ type: 'reasoning', text: entry.text }} defaultOpen={false} openWhileActive={false} /> }
+  }), streaming)
+}
+
+/** Back-to-back tool calls (and the reasoning between them) fold into one row that names them, "Ran 6 tools · Read ×3,
+ *  knowledge record"; their arguments and results open with it, so the agent's own words stay the conversation. A live
+ *  agent's newest call stays its own row so the reader sees what is running now. */
+function foldTools(items: AgentTimelineItem[], streaming: boolean): AgentTimelineItem[] {
+  const out: AgentTimelineItem[] = []
+  let run: AgentTimelineItem[] = []
+  const flush = (last: boolean) => {
+    const open = last && streaming ? run.splice(-1) : []
+    const tools = run.filter((item): item is Extract<AgentTimelineItem, { kind: 'tool' }> => item.kind === 'tool')
+    if (tools.length > 1) {
+      const counts = new Map<string, number>()
+      for (const tool of tools) counts.set(tool.call.label, (counts.get(tool.call.label) ?? 0) + 1)
+      const names = [...counts].map(([name, n]) => n > 1 ? `${name} ×${n}` : name), more = names.length - 3
+      out.push({ id: `fold:${run[0]!.id}`, kind: 'fold', items: run, summary: `Ran ${tools.length} tools · ${names.slice(0, 3).join(', ')}${more > 0 ? ` +${more} more` : ''}` })
+    } else out.push(...run)
+    out.push(...open)
+    run = []
+  }
+  for (const item of items) {
+    if (item.kind === 'tool' || item.kind === 'custom' && item.id.startsWith('reasoning:')) run.push(item)
+    else { flush(false); out.push(item) }
+  }
+  flush(true)
+  return out
 }
 
 const toolNote = (part: ToolPart) => {

@@ -177,7 +177,7 @@ export function TraceWorkspace({
       <TraceWaterfall {...waterfall} maxHeight={waterfall.maxHeight ?? "fill"} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
         onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
-        graph={<section className="relative flex min-h-[320px] flex-1 flex-col" aria-label="Agent graph">
+        graph={<section className="relative flex min-h-[320px] flex-1 flex-col" style={typeof waterfall.maxHeight === "number" ? { height: waterfall.maxHeight } : undefined} aria-label="Agent graph">
           <SegmentedControl aria-label="Graph layout" value={graphLayout} onValueChange={setGraphLayout} className="absolute right-2 top-1 z-10"
             options={[{ value: "tree", label: "Tree" }, { value: "hub", label: "Hub" }]} />
           <AgentGraph {...graphOptions} layout={graphLayout} renderEventIcon={event => toolGlyph(event.label)} nodes={graph.nodes} edges={graph.edges}

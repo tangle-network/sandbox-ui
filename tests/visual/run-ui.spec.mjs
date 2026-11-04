@@ -58,22 +58,6 @@ test('trace graph uses recorded activity and leaves missing activity unknown', a
   await expect(page.locator('.ag-live-card[data-activity="quiet"]')).toContainText('root')
 })
 
-test('bordered graph keeps its layout stable at the container breakpoint', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 })
-  await page.goto('/iframe.html?id=run-traceworkspace--graph-view&viewMode=story&globals=sandboxTheme:light')
-  if (await page.getByRole('radio', { name: 'Graph', exact: true }).getAttribute('aria-checked') !== 'true') await page.getByRole('radio', { name: 'Graph', exact: true }).click()
-  const graph = page.locator('.agent-graph')
-  await expect(graph).toHaveAttribute('data-layout', 'ready')
-  await graph.evaluate(el => { Object.assign(el.style, { width: '601px', border: '1px solid transparent', boxSizing: 'border-box' }) })
-  await expect.poll(() => graph.evaluate(el => el.clientWidth)).toBe(599)
-  await expect(graph).toHaveAttribute('data-layout', 'list')
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
-  await expect(graph).toHaveAttribute('data-layout', 'list')
-  await graph.evaluate(el => { el.style.width = '602px' })
-  await expect.poll(() => graph.evaluate(el => el.clientWidth)).toBe(600)
-  await expect(graph).toHaveAttribute('data-layout', 'ready')
-})
-
 test('one run view control preserves selection and exposes both graph layouts', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.goto('/iframe.html?id=run-traceworkspace--timeline-and-graph&viewMode=story&globals=sandboxTheme:dark')

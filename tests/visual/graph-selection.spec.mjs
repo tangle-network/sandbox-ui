@@ -21,7 +21,7 @@ for (const theme of ['dark', 'light']) for (const width of [1280, 390]) {
     const positions = () => page.locator('.react-flow__node-agent, .react-flow__node-liveAgent').evaluateAll(nodes => Object.fromEntries(nodes.map(node => [node.dataset.id, node.style.transform])))
     const before = await positions()
     await page.locator('.react-flow__node-agent, .react-flow__node-liveAgent, .ag-phone-select').filter({ hasText: 'verifier' }).click()
-    await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toBeVisible()
+    await expect(page.getByLabel('verifier conversation', { exact: true })).toBeVisible()
     await page.waitForTimeout(1100)
     await page.waitForFunction(() => {
       const graph = document.querySelector('.ag-graph-viewport')
@@ -60,7 +60,7 @@ for (const theme of ['dark', 'light']) for (const width of [1280, 390]) {
     expect.soft(bounds.within, JSON.stringify(bounds)).toBe(true)
     expect.soft(after, 'A viewport resize must not change graph positions').toEqual(before)
     await assertStoryHealthy(page)
-    await page.getByRole('button', { name: 'Close conversation', exact: true }).click()
+    await page.getByRole('button', { name: width === 390 ? 'Back to the run' : 'Close conversation', exact: true }).click()
     await expect(page.getByRole('radio', { name: 'Steps', exact: true })).toBeVisible()
     await info.attach('conversation-closed', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
   })

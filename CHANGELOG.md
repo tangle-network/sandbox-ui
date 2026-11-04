@@ -1,3 +1,13 @@
+## 7.0.0
+
+Release admission names this a break, as at 5.0.0: `TraceWorkspaceProps` extends `Omit<TraceWaterfallProps, ...>`, so the added optional `transcriptNote` changes a shape it cannot split. 6.x consumers adopt with no code change.
+
+- `TraceWorkspace` fills its parent's height: give it a definite height (`h-full` in a sized column) and the waterfall rows or agent graph grow into the room; `maxHeight` is only the starting height.
+- The selected agent's inspector puts the conversation at the center: a compact header (status, full name, model mark, one line of duration, cost and tokens, a fresh/cached/out token bar, a Live marker while streaming), the failure reason in danger ink, the commission folded to two lines (dropped when the conversation opens with it), then the transcript. Recorded facts and `renderAgentDrawer` move into a closed Details disclosure, without the facts the header states.
+- `docked` is a resizable split: drag the separator or use ArrowLeft/ArrowRight on it; the width (default 40%, at least 360px) is remembered per viewer. Below 768px the inspector is a full-screen sheet with Back, focus moved in, and Escape returning focus.
+- New optional `transcriptNote(agentId)`: the host's reason an agent has no conversation, shown instead of an empty pane; without it the inspector says "No conversation was recorded for this agent."
+- The graph's Tree/Hub layout picker is the brand `SegmentedControl` (`radiogroup` "Graph layout"), replacing the native select.
+
 ## 5.0.0
 
 - `TraceWorkspace` takes `renderAgentDrawer(agentId)`: the host's own account of the selected agent, such as its profile, shown in its drawer under the recorded facts. Release admission names this a break because `TraceWorkspaceProps` extends `Omit<TraceWaterfallProps, ...>`, whose shape it cannot split; the prop is optional, so 4.x consumers adopt with no code change.

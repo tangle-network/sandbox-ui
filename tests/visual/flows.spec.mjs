@@ -22,7 +22,7 @@ const flows = [
       const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent, .ag-phone-select')
       await expect(cards).toHaveCount(5)
       await cards.filter({ hasText: 'verifier' }).click()
-      await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toBeVisible()
+      await expect(page.getByLabel('verifier conversation', { exact: true })).toBeVisible()
     },
   },
   {

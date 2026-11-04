@@ -1,3 +1,8 @@
+## 7.0.2
+
+- Fixed-height TraceWorkspace hosts keep their graph height, so graph nodes remain visible and clickable in LiveRun. Filled hosts continue to use the parent height.
+- Tool spans use a provider logo only when the producer supplies an icon key; tool details such as bash keep the charts tool glyph instead of requesting unrelated CDN logos.
+
 ## 7.0.1
 
 - Requires `@tangle-network/charts` ^4.0.15, whose `FlowWaterfall` drops `renderAgentDetail` and `agentFill="agent"` and takes `maxHeight="fill"`. `TraceWorkspace` defaults to `maxHeight="fill"` and no longer measures free space itself: give it a height and the waterfall or graph fills it, including below the fold. Pass a number only for a fixed-height host.

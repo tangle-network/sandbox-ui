@@ -60,6 +60,14 @@ An app that runs its own Tailwind v4 compile imports the source entry instead, a
 @import "@tangle-network/sandbox-ui/tailwind.css";
 ```
 
+Run views draw `@tangle-network/charts` components (`TraceWorkspace`, `TraceWaterfall`, `AgentGraph`, `LatestEvents`), and charts owns their CSS: sandbox-ui's stylesheets never include it. Import the ones you render, once, beside this package's:
+
+```tsx
+import "@tangle-network/charts/react/flow-waterfall.css";
+import "@tangle-network/charts/react/agent-graph.css";
+import "@tangle-network/charts/react/live.css";
+```
+
 The entry carries Brand's tokens and utility registrations, this package's runtime CSS, and `@source` lines for its own `dist` and the `@tangle-network/ui` peer, so every component utility compiles once, in the app's own layer order.
 Brand defaults live in `theme.brand`, so host refinements in `theme` can override them. Agent apps import `@tangle-network/agent-app/tailwind.css`, which includes this entry.
 

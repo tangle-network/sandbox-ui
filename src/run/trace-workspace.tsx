@@ -3,7 +3,7 @@
 import { type ReactNode, useMemo, useRef, useState } from "react"
 import { toolGlyph } from "@tangle-network/charts/react"
 import type { FlowMarker, FlowSpan, FlowTrace } from "@tangle-network/charts"
-import { AgentTimeline } from "@tangle-network/ui/chat"
+import { AgentTimeline, AgentTimelineColumn } from "@tangle-network/ui/chat"
 import { runStatus } from "@tangle-network/ui/run"
 import { SegmentedControl } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
@@ -12,9 +12,8 @@ import { AgentGraph, type AgentGraphEdge, type AgentGraphNode, type AgentGraphEv
 import { type AgentStreamOpener, useAgentStream } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
 import { timelineItems } from "./record/ConversationRowView"
-import { LatestEvents } from "./latest-events"
 import { useFollowTail } from "./use-follow-tail"
-import { AgentInspector, useFillHeight, usePhone, useSplit } from "./agent-inspector"
+import { AgentInspector, usePhone, useSplit } from "./agent-inspector"
 
 /** A moment on the run's event track: a release, a check verdict, a spawn, a crash or a steer. */
 export interface TraceEvent extends FlowMarker {}
@@ -159,28 +158,26 @@ export function TraceWorkspace({
   // Follow the newest output unless the reader scrolled up; then offer a "New output" pill instead of jumping.
   const scroller = useRef<HTMLDivElement>(null)
   const { unseen, jump } = useFollowTail(scroller, { identity: showConversation ? selected : undefined, content: items })
-  const root = useRef<HTMLDivElement>(null), pane = useRef<HTMLDivElement>(null)
-  const phone = usePhone(), split = useSplit(root), fill = useFillHeight(pane)
+  const root = useRef<HTMLDivElement>(null)
+  const phone = usePhone(), split = useSplit(root)
   const mode = phone ? "sheet" : docked ? "docked" : "overlay"
   const status = live ? "running" : selectedNode?.status ?? runStatus(agent?.status ?? "unknown")
   const failure = facts.find(fact => fact.label === "Failure")?.value ?? (status === "failed" ? selectedNode?.result ?? undefined : undefined)
   // A commission the conversation already opens with is not printed twice.
   const said = (text?: string) => !!text && shown.some(entry => entry.kind === "message" && entry.role === "user" && entry.content.trim() === text.trim())
   const silent = agentId && transcriptNote?.(agentId) || "No conversation was recorded for this agent."
-  const conversation = !streamUrl ? <p className="p-4 text-sm text-muted-foreground">{silent}</p>
-    : cursor !== null && origin === undefined ? <p className="p-4 text-sm text-muted-foreground">This conversation has no timestamps to replay at the cursor.</p>
-    : <AgentTimeline items={items} isThinking={live && items.length === 0} emptyState={
-        <p className="p-4 text-sm text-muted-foreground" data-stream={stream.error ? "reconnecting" : ended ? "ended" : "empty"}>
-          {stream.error ? (ended ? stream.error : `Reconnecting… ${stream.error}`) : ended ? silent : "No messages yet."}
-        </p>} />
+  // Without words to show, one sentence says why, at the top under the failure and commission; never a centred void.
+  const note = !streamUrl ? silent : cursor !== null && origin === undefined ? "This conversation has no timestamps to replay at the cursor."
+    : items.length > 0 || live ? undefined : stream.error ? (ended ? stream.error : `Reconnecting… ${stream.error}`) : ended ? silent : "No messages yet."
+  const conversation = note === undefined ? <AgentTimelineColumn className="max-w-[46rem] p-0"><AgentTimeline items={items} isThinking={live && items.length === 0} /></AgentTimelineColumn>
+    : <p className="m-0 py-1 text-sm text-muted-foreground" data-stream={stream.error ? "reconnecting" : ended ? "ended" : "empty"}>{note}</p>
 
   const left = (<>
-      <div ref={pane} className={cn("flex min-h-[320px] min-w-0 flex-1 flex-col", showConversation && mode === "overlay" && "lg:mr-[420px]")}>
-      <TraceWaterfall {...waterfall} maxHeight={fill ?? waterfall.maxHeight} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
+      <div className={cn("flex min-h-[320px] min-w-0 flex-1 flex-col", showConversation && mode === "overlay" && "lg:mr-[420px]")}>
+      <TraceWaterfall {...waterfall} maxHeight={waterfall.maxHeight ?? "fill"} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
         onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
-        latestEvents={<LatestEvents agents={graph.nodes} now={graphNow} live={cursor === null} selectedId={agentId} onSelect={select} />}
-        graph={<section data-trace-graph="" className="relative flex min-h-[320px] flex-col" style={{ height: fill ?? "max(60vh, 480px)" }} aria-label="Agent graph">
+        graph={<section className="relative flex min-h-[320px] flex-1 flex-col" aria-label="Agent graph">
           <SegmentedControl aria-label="Graph layout" value={graphLayout} onValueChange={setGraphLayout} className="absolute right-2 top-1 z-10"
             options={[{ value: "tree", label: "Tree" }, { value: "hub", label: "Hub" }]} />
           <AgentGraph {...graphOptions} layout={graphLayout} renderEventIcon={event => toolGlyph(event.label)} nodes={graph.nodes} edges={graph.edges}
@@ -205,7 +202,7 @@ export function TraceWorkspace({
           <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-[hsl(var(--ring))] group-focus-visible:w-0.5 group-focus-visible:bg-[hsl(var(--ring))]" />
         </div>}
         <AgentInspector name={agentName ?? agentId} model={agentModel && !/^not recorded$/i.test(agentModel) ? agentModel : undefined} status={status} span={agent} live={live}
-          failure={failure} commission={said(commission?.text) ? { by: commission?.by } : commission} facts={facts} detail={detail} scroller={scroller} unseen={unseen} onJump={() => jump()}
+          failure={failure} silent={note !== undefined && note === silent} commission={said(commission?.text) ? { by: commission?.by } : commission} facts={facts} detail={detail} scroller={scroller} unseen={unseen} onJump={() => jump()}
           onClose={() => select(undefined)} mode={mode} style={mode === "docked" ? { width: split.width } : undefined}>
           {conversation}
         </AgentInspector>

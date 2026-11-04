@@ -5,6 +5,7 @@ import type { FlowSpan } from "@tangle-network/charts"
 import { RunStatusIcon, type RunStatus } from "@tangle-network/ui/run"
 import { formatCost, formatCount, formatSpanDuration } from "@tangle-network/ui/utils"
 import { ArrowLeft, ChevronRight, X } from "lucide-react"
+import { Button } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { ModelBrandStack, modelBrandFor } from "../lib/model-brand"
 
@@ -61,40 +62,6 @@ export function useSplit(root: RefObject<HTMLElement | null>) {
   return { width, separator }
 }
 
-/**
- * The height the waterfall rows or graph may take so the run fills its pane: their own height plus the room left under
- * the chart's last row (toolbar, axis and latest activity keep theirs). FlowWaterfall sizes its virtualized rows by `maxHeight`, so it is measured, not styled.
- */
-export function useFillHeight(pane: RefObject<HTMLElement | null>) {
-  const [height, setHeight] = useState<number>()
-  useEffect(() => {
-    const element = pane.current
-    if (!element) return
-    let frame = 0
-    const measure = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const root = element.querySelector<HTMLElement>(".fw-root")
-        const target = [...element.querySelectorAll<HTMLElement>("[data-trace-graph], .fw-scroller")].find(candidate => candidate.offsetHeight > 0)
-        if (!root || !target) return
-        // The card stretches to the pane, so its slack is the room under its last child: grow the rows or graph into it.
-        const style = getComputedStyle(root), bottom = Math.max(...[...root.children].map(child => child.getBoundingClientRect().bottom))
-        const slack = root.getBoundingClientRect().bottom - parseFloat(style.paddingBottom) - parseFloat(style.borderBottomWidth) - bottom
-        const next = Math.floor(target.offsetHeight + slack)
-        if (next > 160) setHeight(prior => prior !== undefined && Math.abs(prior - next) < 2 ? prior : next)
-      })
-    }
-    const observer = new ResizeObserver(measure)
-    observer.observe(element)
-    const watch = new MutationObserver(() => { const root = element.querySelector(".fw-root"); if (root) observer.observe(root); measure() })
-    watch.observe(element, { childList: true, subtree: true })
-    const root = element.querySelector(".fw-root")
-    if (root) observer.observe(root)
-    return () => { cancelAnimationFrame(frame); observer.disconnect(); watch.disconnect() }
-  }, [pane])
-  return height
-}
-
 /** Text held to a few lines with a control to read the rest; the control appears only when lines are hidden. */
 function Clamped({ text, lines, className }: { text: string; lines: 2 | 3; className?: string }) {
   const [open, setOpen] = useState(false), [over, setOver] = useState(false), ref = useRef<HTMLParagraphElement>(null)
@@ -147,6 +114,8 @@ export interface AgentInspectorProps {
   span?: FlowSpan
   live: boolean
   failure?: string
+  /** The agent left no conversation: Details opens, since its facts are all there is to read. */
+  silent?: boolean
   commission?: { by?: string; text?: string }
   facts: readonly { label: string; value: string }[]
   detail?: ReactNode
@@ -161,32 +130,32 @@ export interface AgentInspectorProps {
 }
 
 /** The selected agent: a compact header, its failure, its commission, then its conversation; recorded facts wait in Details. */
-export function AgentInspector({ name, model, status, span, live, failure, commission, facts, detail, children, scroller, unseen, onJump, onClose, mode, style }: AgentInspectorProps) {
+export function AgentInspector({ name, model, status, span, live, failure, silent, commission, facts, detail, children, scroller, unseen, onJump, onClose, mode, style }: AgentInspectorProps) {
   const brand = model ? modelBrandFor(model) : null, meta = metaOf(span)
   const details = facts.filter(fact => !IN_HEADER.test(fact.label) && fact.value !== failure)
-  const back = useRef<HTMLButtonElement>(null)
+  const sheetRef = useRef<HTMLElement>(null)
   const sheet = mode === "sheet"
   // A sheet takes focus when it opens and hands it back to whatever opened it when it closes.
   useEffect(() => {
     if (!sheet) return
     const opener = document.activeElement as HTMLElement | null, overflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
-    back.current?.focus()
+    // The sheet itself takes focus, so Back is not drawn with a focus ring the reader never asked for.
+    sheetRef.current?.focus()
     return () => { document.body.style.overflow = overflow; if (opener?.isConnected) opener.focus() }
   }, [sheet])
   return (
-    <aside role={sheet ? "dialog" : undefined} aria-modal={sheet || undefined} aria-label={`${name} conversation`} style={style}
+    <aside ref={sheetRef} tabIndex={sheet ? -1 : undefined} role={sheet ? "dialog" : undefined} aria-modal={sheet || undefined} aria-label={`${name} conversation`} style={style}
       onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); onClose() } }}
-      className={cn("relative flex min-h-0 flex-col overflow-hidden bg-card text-foreground",
+      className={cn("relative flex min-h-0 flex-col overflow-hidden bg-card text-foreground outline-none",
         mode === "docked" && "shrink-0 rounded-xl border border-border",
         mode === "overlay" && "fixed inset-y-0 right-0 z-40 w-full max-w-[420px] border-l border-border shadow-2xl",
         sheet && "fixed inset-0 z-[1100] bg-background")}>
       <header className="flex shrink-0 items-start gap-2 border-b border-border px-3 py-2.5">
-        {sheet && <button ref={back} type="button" onClick={onClose} aria-label="Back to the run"
-          className="-ml-1 flex h-9 shrink-0 items-center gap-1 rounded-md px-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-[hsl(var(--ring))]">
+        {sheet && <Button variant="ghost" size="sm" onClick={onClose} aria-label="Back to the run" className="-ml-1.5 shrink-0 gap-1 px-2">
           <ArrowLeft aria-hidden className="h-4 w-4" />Back
-        </button>}
-        <div className={cn("min-w-0 flex-1", sheet && "pt-2")}>
+        </Button>}
+        <div className={cn("min-w-0 flex-1", sheet && "pt-1.5")}>
           <div className="flex min-w-0 items-start gap-2">
             <RunStatusIcon status={status} className="mt-0.5 size-4 shrink-0" />
             <h3 className="m-0 min-w-0 flex-1 break-words text-sm font-semibold leading-5">{name}</h3>
@@ -203,7 +172,7 @@ export function AgentInspector({ name, model, status, span, live, failure, commi
           <X aria-hidden className="h-4 w-4" />
         </button>}
       </header>
-      {failure && <section aria-label="Failure" className="shrink-0 border-b border-border px-3 py-2 text-sm text-[var(--surface-danger-text)]">
+      {failure && <section aria-label="Failure" className="shrink-0 border-b border-border px-3 py-2.5 text-sm font-medium leading-5 text-[var(--surface-danger-text)]">
         <Clamped text={failure} lines={3} />
       </section>}
       {commission && (commission.text || commission.by) && <section aria-label="Commission" className="shrink-0 border-b border-border px-3 py-2 text-sm">
@@ -213,8 +182,8 @@ export function AgentInspector({ name, model, status, span, live, failure, commi
       <div ref={scroller} data-primary-content="" className="min-h-0 flex-1 overflow-y-auto px-3 py-2">{children}</div>
       {unseen && <button type="button" onClick={onJump}
         className="absolute bottom-14 left-1/2 -translate-x-1/2 rounded-full border border-border bg-background px-3 py-1 text-xs shadow-sm">New output</button>}
-      {(details.length > 0 || detail) && <details className="group max-h-[45%] shrink-0 overflow-y-auto border-t border-border text-sm">
-        <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground [&::-webkit-details-marker]:hidden">
+      {(details.length > 0 || detail) && <details open={silent || undefined} className="group max-h-[45%] shrink-0 overflow-y-auto border-t border-border text-sm">
+        <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground before:hidden before:content-none [&::-webkit-details-marker]:hidden">
           <ChevronRight aria-hidden className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />Details
         </summary>
         <section aria-label="Recorded agent details" tabIndex={0} className="px-3 pb-3">

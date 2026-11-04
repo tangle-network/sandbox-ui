@@ -3,8 +3,6 @@ import { waitFor } from "@testing-library/dom";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { FlowSpan, FlowTrace } from "@tangle-network/charts";
 import { TraceWorkspace, type AgentStreamOpener, type TraceWorkspaceProps } from "../../run";
-// The host imports the waterfall's stylesheet once, as the TraceWaterfall docs say.
-import "@tangle-network/charts/react/flow-waterfall.css";
 
 /**
  * The run workspace with its Timeline and Graph views over one trace: a manager that spawned four workers, one still
@@ -98,6 +96,12 @@ const transcripts: Record<string, { rows: Row[]; ends: boolean }> = {
     { kind: "reasoning", text: "Start from the integration test the manager named, then read the failing boundary." },
     ...call("v1", "bash", { command: "cargo test -p sumcheck --test integration" }, "running 14 tests\ntest round_trip ... ok\ntest checkout_boundary ... FAILED\nerror: test failed, exit 101", true),
     ...call("v2", "read", { path: "crates/sumcheck/src/prover.rs" }, "pub fn prove(transcript: &mut Transcript, poly: &MultilinearPoly) -> Proof { … }"),
+    ...call("v3", "mcp__agent-runtime-coordination__knowledge_read", { key: "sumcheck-reference-transcript" }, "Absorb the claimed sum before round 1."),
+    ...call("v4", "grep", { pattern: "absorb", path: "crates/sumcheck" }, "prover.rs:88: transcript.absorb(&round_poly)\nprover.rs:91: transcript.absorb(&claim)"),
+    ...call("v5", "read", { path: "crates/sumcheck/tests/integration.rs" }, "#[test] fn checkout_boundary() { … }"),
+    { kind: "text", text: "The reference absorbs the claim first; ours absorbs it after the first round polynomial. Recording the finding before the budget runs out." },
+    ...call("v6", "mcp__agent-runtime-coordination__knowledge_record", { key: "sumcheck-absorb-order", body: "---FILE: findings/sumcheck.md\nprover.rs:91 absorbs the claim after round 1" }, "recorded"),
+    ...call("v7", "mcp__agent-runtime-coordination__submit_result", { result: { status: "failed", reason: "budget" } }, "accepted"),
     { kind: "text", text: "The checkout boundary test fails: the prover absorbs the claimed sum **after** the first round polynomial, while the reference absorbs it before. I could not finish the fix inside the budget." },
   ] },
   sumcheck: { ends: true, rows: [
@@ -131,7 +135,8 @@ function OpenDrawer(args: TraceWorkspaceProps) {
   const [selected, select] = useState<string | undefined>(args.selectedAgentId);
   return <TraceWorkspace {...args} selectedAgentId={selected} onSelectAgent={select} />;
 }
-const failedTrace = { ...trace, spans: trace.spans.map(span => span.id === "verifier" ? { ...span, facts: [{ label: "Failure", value: fullFailure }, { label: "Tokens", value: "50.0K in" }, { label: "Harness", value: "codex" }] } : span) };
+const failedTrace = { ...trace, spans: trace.spans.map(span => span.id === "verifier" ? { ...span, facts: [{ label: "Failure", value: fullFailure }, { label: "Tokens", value: "50.0K in" }, { label: "Harness", value: "codex" }] }
+  : span.id === "field" ? { ...span, status: "failed" as const, facts: [{ label: "Failure", value: "budget-exhausted: nothing left running could return enough budget for this worker (tokens requested 4000, free 1802)." }, { label: "Harness", value: "codex" }, { label: "Turns", value: "0" }] } : span) };
 const inspector = { render: (args: TraceWorkspaceProps) => <OpenDrawer {...args} />, args: { trace: failedTrace, docked: true, streamUrl: (id: string) => `/agents/${encodeURIComponent(id)}/stream`, openEventSource: replay, defaultView: "agents" as const, live: false,
   renderAgentDrawer: () => <p className="m-0 mt-2 text-xs text-muted-foreground">Profile reader-first-expert-2 · harness codex</p>,
   transcriptNote: (id: string) => id === "field" ? "The codex harness did not capture a transcript for this agent." : undefined } };
@@ -143,5 +148,6 @@ export const AgentDrawerOpen: StoryObj<typeof meta> = { ...inspector, args: { ..
 export const InspectorFinished: StoryObj<typeof meta> = { ...inspector, args: { ...inspector.args, selectedAgentId: "sumcheck", commission: { by: "root", text: "Implement the sumcheck prover for multilinear polynomials and land it with tests." } } };
 /** A running agent: the Live marker, and its open tool call at the end of the conversation. */
 export const InspectorLive: StoryObj<typeof meta> = { ...inspector, args: { ...inspector.args, selectedAgentId: "bench", live: true } };
-/** An agent whose stream ended without a word: one sentence with the host's reason, never an empty pane. */
-export const InspectorNoTranscript: StoryObj<typeof meta> = { ...inspector, args: { ...inspector.args, selectedAgentId: "field" } };
+/** A failed agent whose stream ended without a word: its failure, its commission and the host's reason at the top, Details open. */
+export const InspectorNoTranscript: StoryObj<typeof meta> = { ...inspector, args: { ...inspector.args, selectedAgentId: "field",
+  commission: { by: "root", text: "Write the field kernels for the Goldilocks prime and benchmark them against the reference." } } };

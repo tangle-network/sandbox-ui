@@ -44,7 +44,6 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
 @import "@tangle-network/brand/styles/theme.css";
 @import "@tangle-network/brand/styles/named-themes.css";
 @import "@tangle-network/brand/styles/globals.css";
-@import "@tangle-network/charts/react/agent-graph.css";
 @source "../node_modules/@tangle-network/ui/src/**/*.tsx";
 @source "../node_modules/@tangle-network/ui/src/**/*.ts";
 @source "../node_modules/@tangle-network/sandbox-ui/dist/**/*.js";
@@ -71,6 +70,8 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { PresentationConsumer } from "./consumer";
+// Charts owns the graph's stylesheet; every host imports it beside sandbox-ui's (README, Styles).
+import "@tangle-network/charts/react/agent-graph.css";
 import ${JSON.stringify(lane === "compiled" ? "@tangle-network/sandbox-ui/globals.css" : `./${lane}.css`)};
 createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
 `);

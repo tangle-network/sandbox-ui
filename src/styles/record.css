@@ -1,9 +1,5 @@
 @layer theme, base, ar-base, components, utilities;
 
-@import "@tangle-network/charts/react/live.css";
-
-@import "@tangle-network/charts/react/flow-waterfall.css";
-
 @layer ar-base {
 :where(.agent-record) :where(.ui-button, button:not([class]), select, input[type="search"]) {
   color: var(--ar-fg);

@@ -182,7 +182,7 @@ export function AssetEditor({ spec, previewUrl, isRendering, onSave, onRenderReq
     <div className={cn("grid grid-cols-2 gap-4 h-full min-h-0", className)}>
       <div className="flex flex-col gap-3 overflow-y-auto pr-1">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{draft.format}</span>
+          <span className="text-xs font-medium text-muted-foreground">{draft.format}</span>
           {isDirty && onSave && (
             <Button size="sm" variant="default" onClick={() => onSave(draft)} className="h-7 gap-1.5 text-xs">
               <Save size={12} />

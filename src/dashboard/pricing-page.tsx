@@ -1,5 +1,6 @@
+import { Button } from "@tangle-network/ui/primitives";
+import { Check } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Check, Zap } from "lucide-react";
 
 export interface PricingTier {
   id: string;
@@ -39,6 +40,25 @@ export function formatPrice(cents: number): string {
     : `$${(cents / 100).toFixed(2)}`;
 }
 
+/**
+ * The saving a yearly price gives over twelve months at the monthly price, in
+ * whole percent, from the tiers the caller passed. Null when no paid tier has a
+ * yearly price that saves anything. When the tiers disagree, the largest saving
+ * is returned and `exact` is false.
+ */
+function yearlySaving(tiers: PricingTier[]): { percent: number; exact: boolean } | null {
+  const savings = tiers
+    .filter((tier) => tier.monthlyPriceCents > 0 && tier.yearlyPriceCents !== undefined)
+    .map((tier) => Math.round((1 - (tier.yearlyPriceCents as number) / (tier.monthlyPriceCents * 12)) * 100))
+    .filter((percent) => percent > 0);
+  if (savings.length === 0) return null;
+  const percent = Math.max(...savings);
+  return { percent, exact: savings.every((value) => value === percent) };
+}
+
+const PERIOD_BUTTON =
+  "rounded-lg px-4 py-2 text-sm font-medium transition-colors";
+
 export function PricingPage({
   tiers,
   currentTierId,
@@ -53,19 +73,21 @@ export function PricingPage({
     ...tier,
     recommended: tier.recommended ?? (tiers.length === 3 && i === 1),
   }));
+  const saving = yearlySaving(tiers);
 
   return (
     <div className={cn("w-full space-y-10", className)}>
       {/* Billing Period Toggle */}
       <div className="flex justify-center">
-        <div className="inline-flex items-center rounded-full border border-[var(--md3-outline-variant)] bg-surface-container-low p-1">
+        <div className="inline-flex items-center rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container-low p-1">
           <button
             type="button"
+            aria-pressed={billingPeriod === "monthly"}
             onClick={() => onBillingPeriodChange("monthly")}
             className={cn(
-              "rounded-full px-5 py-2 text-sm font-medium transition-all",
+              PERIOD_BUTTON,
               billingPeriod === "monthly"
-                ? "bg-surface-container-high text-foreground shadow-sm"
+                ? "bg-surface-container-high text-foreground"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -73,24 +95,27 @@ export function PricingPage({
           </button>
           <button
             type="button"
+            aria-pressed={billingPeriod === "yearly"}
             onClick={() => onBillingPeriodChange("yearly")}
             className={cn(
-              "rounded-full px-5 py-2 text-sm font-medium transition-all",
+              PERIOD_BUTTON,
               billingPeriod === "yearly"
-                ? "bg-surface-container-high text-foreground shadow-sm"
+                ? "bg-surface-container-high text-foreground"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
             Yearly
-            <span className="ml-2 rounded-full bg-[var(--surface-success-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--surface-success-text)]">
-              Save 20%
-            </span>
+            {saving && (
+              <span className="ml-2 text-xs font-medium text-[var(--surface-success-text)]">
+                {saving.exact ? "Save" : "Save up to"} {saving.percent}%
+              </span>
+            )}
           </button>
         </div>
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {tiersWithRecommended.map((tier) => {
           const isCurrentTier = tier.id === currentTierId;
           const isRecommended = tier.recommended;
@@ -106,86 +131,62 @@ export function PricingPage({
             <div
               key={tier.id}
               className={cn(
-                "relative flex flex-col rounded-2xl border bg-surface-container transition-all",
+                "flex flex-col rounded-xl border bg-surface-container transition-colors",
                 isRecommended
-                  ? "border-primary shadow-[var(--shadow-glow)] scale-[1.02] z-10"
-                  : "border-[var(--md3-outline-variant)] hover:border-primary/30",
+                  ? "border-primary"
+                  : "border-[var(--md3-outline-variant)] hover:border-foreground/20",
               )}
             >
-              {/* Recommended banner */}
-              {isRecommended && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-primary-foreground shadow-sm">
-                    <Zap className="h-3 w-3" />
-                    Most Popular
-                  </span>
-                </div>
-              )}
-
-              {/* Current plan indicator */}
-              {isCurrentTier && !isRecommended && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center rounded-full bg-surface-container-high border border-[var(--md3-outline-variant)] px-4 py-1.5 text-xs font-bold text-foreground">
-                    Current Plan
-                  </span>
-                </div>
-              )}
-
-              <div className={cn("flex flex-col p-8", isRecommended && "pt-10")}>
+              <div className="flex flex-1 flex-col p-8">
                 {/* Header */}
                 <div className="mb-6">
-                  <h3 className="text-lg font-bold text-foreground">{tier.name}</h3>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h3 className="text-lg font-medium text-foreground">{tier.name}</h3>
+                    {isRecommended && (
+                      <span className="text-xs font-medium text-[var(--accent-text)]">Most popular</span>
+                    )}
+                  </div>
                   <p className="mt-1 text-sm text-muted-foreground">{tier.description}</p>
                 </div>
 
                 {/* Price */}
                 <div className="mb-8">
                   <div className="flex items-baseline gap-1">
-                    <span className={cn("text-5xl font-extrabold tracking-tight", isRecommended ? "text-primary" : "text-foreground")}>
+                    <span className="text-5xl font-medium tracking-tight tabular-nums text-foreground">
                       {isFree ? "Free" : formatPrice(displayPrice)}
                     </span>
                     {!isFree && (
-                      <span className="text-muted-foreground text-sm font-medium">/mo</span>
+                      <span className="text-muted-foreground text-sm">/mo</span>
                     )}
                   </div>
                   {billingPeriod === "yearly" && tier.yearlyPriceCents !== undefined && !isFree && (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 text-xs text-muted-foreground tabular-nums">
                       {formatPrice(tier.yearlyPriceCents)} billed annually
                     </p>
                   )}
                 </div>
 
                 {/* CTA Button */}
-                <button
+                <Button
                   type="button"
+                  size="lg"
+                  variant={isRecommended && !isCurrentTier ? "default" : "outline"}
                   onClick={() => onSelectTier(tier.id)}
                   disabled={isCurrentTier || loading}
-                  className={cn(
-                    "w-full rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50",
-                    isRecommended
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-                      : isCurrentTier
-                        ? "bg-muted text-muted-foreground border border-[var(--md3-outline-variant)] cursor-default"
-                        : "bg-surface-container-high text-foreground border border-[var(--md3-outline-variant)] hover:border-primary/50 hover:bg-surface-container-highest",
-                  )}
+                  className="w-full"
                 >
-                  {isCurrentTier ? "Current Plan" : isFree ? "Get Started" : "Subscribe"}
-                </button>
+                  {isCurrentTier ? "Current plan" : isFree ? "Get started" : "Subscribe"}
+                </Button>
 
                 {/* Divider */}
                 <div className="my-8 border-t border-[var(--md3-outline-variant)]" />
 
                 {/* Features */}
-                <ul className="space-y-3.5 flex-1">
+                <ul className="space-y-3 flex-1">
                   {tier.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-3">
-                      <div className={cn(
-                        "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                        isRecommended ? "bg-primary/10 text-primary" : "bg-surface-container-high text-muted-foreground"
-                      )}>
-                        <Check className="h-3 w-3" />
-                      </div>
-                      <span className="text-sm text-foreground/80">{feature}</span>
+                      <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <span className="text-sm text-[var(--text-secondary)]">{feature}</span>
                     </li>
                   ))}
                 </ul>

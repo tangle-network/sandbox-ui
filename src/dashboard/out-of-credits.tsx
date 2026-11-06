@@ -101,17 +101,17 @@ export function OutOfCreditsModal({
       role="dialog"
       aria-modal="true"
       aria-label="Out of credits"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--scrim)] p-4"
       onClick={onClose}
     >
       <div
         className={cn(
-          "bg-surface-container-highest border border-[var(--md3-outline-variant)] rounded-xl p-6 max-w-md w-full shadow-[0_8px_30px_rgba(0,0,0,0.45)] ring-1 ring-[#ffffff14]",
+          "bg-surface-container-highest border border-[var(--md3-outline-variant)] rounded-xl p-6 max-w-md w-full shadow-[var(--shadow-dropdown),var(--edge-highlight)]",
           className,
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-bold text-foreground mb-1">
+        <h3 className="text-lg font-semibold text-foreground mb-1">
           You're out of credits
         </h3>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">

@@ -18,7 +18,7 @@ import {
 } from "@tangle-network/ui/primitives"
 import { Logo } from "../primitives"
 import { Skeleton, useTheme } from "@tangle-network/ui/primitives"
-import { Check, Monitor, MoreHorizontal, PanelLeft } from "lucide-react"
+import { Check, ChevronRight, LogOut, Monitor, MoreHorizontal, Moon, PanelLeft, Settings, Sun } from "lucide-react"
 import {
   SIDEBAR_PANEL_WIDTH,
   useSidebar,
@@ -84,45 +84,9 @@ function getInitials(name?: string, email?: string): string {
   return "?"
 }
 
-function SettingsIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Settings icon</title>
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  )
-}
 
-function LogOutIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Log out icon</title>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16,17 21,12 16,7" />
-      <line x1="21" x2="9" y1="12" y2="12" />
-    </svg>
-  )
-}
 
-function SunIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Light mode icon</title>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
-    </svg>
-  )
-}
 
-function MoonIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Dark mode icon</title>
-      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-    </svg>
-  )
-}
 
 // ============================================================================
 // RailHeader — three-slot rail header (brand · middle · panel toggle)
@@ -177,7 +141,7 @@ function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: bool
       )}
     >
       {/* Same panel glyph for collapse and expand (the affordance is "toggle the sidebar"). */}
-      <PanelLeft className="h-[18px] w-[18px] shrink-0" />
+      <PanelLeft className="size-4 shrink-0" />
     </button>
   )
 }
@@ -281,7 +245,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
                 {brand}
               </span>
               <span className={cn("pointer-events-none absolute inset-0 flex items-center justify-center text-foreground opacity-0 transition-opacity group-hover/brand:opacity-100", MOTION_CONTROL)}>
-                <PanelLeft className="h-[18px] w-[18px]" />
+                <PanelLeft className="size-4" />
               </span>
             </button>
           </RailTooltip>
@@ -493,7 +457,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
   const tooltipDisabled = showLabel && !description
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
-      <Icon className="h-[17px] w-[17px] shrink-0" />
+      <Icon className="size-4 shrink-0" />
       {badgeDot ? (
         <span aria-hidden="true" data-badge="dot" className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--accent-text)] ring-2 ring-surface-container-low" />
       ) : hasBadge && (
@@ -632,10 +596,10 @@ export function RailFlyout({
         onClick={() => setOpen((v) => !v)}
         className={triggerClasses}
       >
-        <Icon className="h-[17px] w-[17px] shrink-0" />
+        <Icon className="size-4 shrink-0" />
         {showLabel && <span className="text-sm font-medium">{label}</span>}
         {showLabel && (
-          <ChevronRightIcon
+          <ChevronRight
             className={cn(
               "ml-auto h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform",
               MOTION_CONTROL,
@@ -664,7 +628,7 @@ export function RailFlyout({
             RAIL_FLOATING_SURFACE,
           )}
         >
-          <p className="px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+          <p className="px-2 pb-1 pt-1 text-sm font-medium text-[var(--text-dim)] select-none">
             {title ?? label}
           </p>
           {description && <p className="px-2 pb-2 text-xs text-muted-foreground">{description}</p>}
@@ -675,14 +639,6 @@ export function RailFlyout({
   )
 }
 
-function ChevronRightIcon({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <title>Expand</title>
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  )
-}
 
 // ============================================================================
 // RailExpandable — nav item with sub-items (inline accordion / collapsed flyout)
@@ -1001,11 +957,11 @@ export function RailExpandable({
       >
         {href ? (
           <Link href={href} to={href} onClick={onNavigate} aria-label={label} aria-description={description} aria-current={rowCurrent} className={triggerClasses}>
-            <Icon className="h-[17px] w-[17px] shrink-0" />
+            <Icon className="size-4 shrink-0" />
           </Link>
         ) : (
           <button type="button" aria-label={label} aria-description={description} aria-haspopup="menu" aria-expanded={open} className={triggerClasses}>
-            <Icon className="h-[17px] w-[17px] shrink-0" />
+            <Icon className="size-4 shrink-0" />
           </button>
         )}
 
@@ -1025,7 +981,7 @@ export function RailExpandable({
               onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
               className={cn("agent-pop-in z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
             >
-              <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+              <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-medium text-[var(--text-dim)] select-none">
                 {label}
               </p>
               {description && <p className="shrink-0 px-2 pb-2 text-xs text-muted-foreground">{description}</p>}
@@ -1072,8 +1028,8 @@ export function RailExpandable({
           aria-description={description}
           className={`flex h-9 w-12 shrink-0 items-center gap-1 rounded-md pl-2 pr-1 ${focusRing}`}
         >
-          <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden />
-          <ChevronRightIcon
+          <Icon className="size-4 shrink-0" aria-hidden />
+          <ChevronRight
             className={cn(
               "h-3.5 w-3.5 shrink-0 transition-transform",
               MOTION_CONTROL,
@@ -1278,8 +1234,8 @@ export interface ProfileAvatarProps {
 // `onSelect` with `preventDefault()` so the menu stays open and the active
 // check updates live.
 const APPEARANCE_META: Record<ThemeMode, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
-  light: { label: "Light", Icon: SunIcon },
-  dark: { label: "Dark", Icon: MoonIcon },
+  light: { label: "Light", Icon: Sun },
+  dark: { label: "Dark", Icon: Moon },
   system: { label: "System", Icon: Monitor },
 }
 
@@ -1299,7 +1255,7 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
     return () => mq.removeEventListener("change", onChange)
   }, [])
   const resolved = appearance.value === "system" ? (systemDark ? "dark" : "light") : appearance.value
-  const TriggerIcon = resolved === "dark" ? MoonIcon : SunIcon
+  const TriggerIcon = resolved === "dark" ? Moon : Sun
   const caption =
     appearance.value === "system"
       ? `System (${resolved === "dark" ? "Dark" : "Light"})`
@@ -1331,12 +1287,12 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
                 className="gap-3 py-2 text-[14px]"
               >
                 <span aria-hidden="true" className="inline-flex shrink-0">
-                  <Icon className="h-[18px] w-[18px]" />
+                  <Icon className="size-4" />
                 </span>
                 <span className="flex-1">{label}</span>
                 {active && (
                   <span aria-hidden="true" className="inline-flex shrink-0 text-[var(--accent-text)]">
-                    <Check className="h-[18px] w-[18px]" />
+                    <Check className="size-4" />
                   </span>
                 )}
               </DropdownMenuItem>
@@ -1433,13 +1389,13 @@ export function ProfileAvatar({
         {appearance && <AppearanceMenuSection appearance={appearance} divider={Boolean(children)} />}
         {onSettingsClick ? (
           <DropdownMenuItem onClick={onSettingsClick}>
-            <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+            <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
             Settings
           </DropdownMenuItem>
         ) : settingsHref !== null ? (
           <DropdownMenuItem asChild>
             <Link href={settingsHref} to={settingsHref} className="flex items-center">
-              <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+              <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
               Settings
             </Link>
           </DropdownMenuItem>
@@ -1448,7 +1404,7 @@ export function ProfileAvatar({
           <>
             {(children || appearance || onSettingsClick || settingsHref !== null) && <DropdownMenuSeparator />}
             <DropdownMenuItem className="text-[var(--surface-danger-text)]" onClick={onLogout}>
-              <LogOutIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+              <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
               Sign Out
             </DropdownMenuItem>
           </>

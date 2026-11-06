@@ -50,8 +50,8 @@ export function RuntimePane({
         className,
       )}
     >
-      <header className="border-b border-[var(--md3-outline-variant)] bg-surface-container-high bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-4 py-3">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <header className="border-b border-[var(--md3-outline-variant)] bg-surface-container-high px-4 py-3">
+        <div className="mb-1 text-xs font-medium text-muted-foreground">
           Sandbox
         </div>
         <div className="text-sm font-semibold text-foreground">{title}</div>

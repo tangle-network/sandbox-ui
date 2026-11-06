@@ -69,7 +69,7 @@ test('keeps desktop sandbox scope and actions within their cells', async ({ page
   await openStory(page, 'dashboard-sandboxtable--long-names-with-scope', 'light', { width: 1440, height: 900 }, baseURL)
   const row = page.getByRole('region', { name: 'Sandbox list' }).locator('tbody tr').first()
   const scopeCell = row.locator('td').nth(2)
-  const scopeBadge = scopeCell.locator('div[title]').first()
+  const scopeBadge = scopeCell.locator('[title]').first()
   const resourcesCell = row.locator('td').nth(3)
   await expect(scopeBadge).toBeVisible()
   await expect(resourcesCell.getByText('34%', { exact: true }).first()).toBeVisible()

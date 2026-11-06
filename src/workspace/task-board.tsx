@@ -4,6 +4,7 @@ import {
   type ReactNode,
   useMemo,
 } from "react";
+import { Tag } from "@tangle-network/ui/primitives";
 import { cn } from "../lib/utils";
 
 const INTERACTIVE_SELECTOR =
@@ -147,20 +148,13 @@ export function TaskBoard({
                           (renderBadge ? (
                             renderBadge(item.priority, "priority")
                           ) : (
-                            <span className="rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              {item.priority}
-                            </span>
+                            <Tag>{item.priority}</Tag>
                           ))}
                         {item.tags?.map((tag) =>
                           renderBadge ? (
                             <span key={tag}>{renderBadge(tag, "tag")}</span>
                           ) : (
-                            <span
-                              key={tag}
-                              className="rounded-full border border-[var(--md3-outline-variant)] px-2 py-0.5 text-[10px] text-muted-foreground"
-                            >
-                              {tag}
-                            </span>
+                            <Tag key={tag}>{tag}</Tag>
                           ),
                         )}
                       </div>
@@ -194,12 +188,10 @@ export function TaskBoard({
             >
               <div className="flex items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <h3 className="text-xs font-medium text-muted-foreground">
                     {col.label}
                   </h3>
-                  <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-[var(--md3-outline-variant)] px-1.5 text-[10px] font-medium text-muted-foreground">
-                    {colItems.length}
-                  </span>
+                  <span className="text-xs tabular-nums text-muted-foreground">{colItems.length}</span>
                 </div>
                 {renderColumnAction?.(col)}
               </div>

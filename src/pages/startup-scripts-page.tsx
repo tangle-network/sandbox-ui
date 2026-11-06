@@ -11,6 +11,7 @@ import {
   Terminal,
   Clock,
   ChevronDown,
+  ChevronLeft,
   ChevronUp,
   GripVertical,
   Lock,
@@ -27,6 +28,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  StatusPill,
+  Tag,
 } from "@tangle-network/ui/primitives"
 import { focusField } from "@tangle-network/ui/utils"
 
@@ -450,16 +453,16 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
   return (
     <div className={cn("w-full min-w-0 space-y-5", className)}>
       <DashboardPageHeader
-        title="Startup Scripts"
+        title="Startup scripts"
         description="Run scripts when your sandboxes start."
         actions={
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
+            className="inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-medium text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
           >
             <Plus className="h-4 w-4" />
-            New Script
+            New script
           </button>
         }
       />
@@ -489,12 +492,12 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
               )}
             >
               <DialogHeader>
-                <DialogTitle>New Startup Script</DialogTitle>
+                <DialogTitle>New startup script</DialogTitle>
                 <DialogDescription>Start from a template or create a blank script.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Blank Script</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Blank script</p>
                   <div className="flex flex-wrap gap-2">
                     {(Object.entries(SCRIPT_TYPE_META) as [ScriptType, typeof SCRIPT_TYPE_META.bash][]).map(([type, meta]) => (
                       <button
@@ -509,7 +512,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Templates</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Templates</p>
                   <div className="space-y-2">
                     {SCRIPT_TEMPLATES.map((tmpl) => (
                       <button
@@ -520,20 +523,15 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{tmpl.name}</h4>
+                            <h4 className="text-sm font-semibold text-foreground group-hover:text-[var(--accent-text)] transition-colors">{tmpl.name}</h4>
                             <p className="mt-0.5 text-xs text-muted-foreground">{tmpl.description}</p>
                           </div>
-                          <span className="text-[10px] font-mono text-muted-foreground bg-surface-container-high rounded px-1.5 py-0.5">
-                            {SCRIPT_TYPE_META[tmpl.scriptType].label}
-                          </span>
+                          <Tag className="font-mono">{SCRIPT_TYPE_META[tmpl.scriptType].label}</Tag>
                         </div>
                         {tmpl.injectSecrets.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {tmpl.injectSecrets.map((s) => (
-                              <span key={s} className="inline-flex items-center gap-0.5 rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] text-muted-foreground">
-                                <Lock className="h-2.5 w-2.5" />
-                                {s}
-                              </span>
+                              <Tag key={s} icon={<Lock />}>{s}</Tag>
                             ))}
                           </div>
                         )}
@@ -555,7 +553,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
               )}
             >
           <DialogHeader>
-            <DialogTitle>{editingScript ? "Edit Script" : "Create Startup Script"}</DialogTitle>
+            <DialogTitle>{editingScript ? "Edit script" : "Create startup script"}</DialogTitle>
             <DialogDescription>
               {editingScript
                 ? "Modify your startup script configuration."
@@ -566,7 +564,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
           <div className="space-y-5 py-2">
             {/* Name */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Name</label>
+              <label className="text-xs font-medium text-muted-foreground">Name</label>
               <input
                 type="text"
                 value={formData.name}
@@ -579,7 +577,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
 
             {/* Description */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Description</label>
+              <label className="text-xs font-medium text-muted-foreground">Description</label>
               <input
                 type="text"
                 value={formData.description}
@@ -592,7 +590,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
 
             {/* Script Type */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Language</label>
+              <label className="text-xs font-medium text-muted-foreground">Language</label>
               <div className="mt-1.5 flex flex-wrap gap-2">
                 {(Object.entries(SCRIPT_TYPE_META) as [ScriptType, typeof SCRIPT_TYPE_META.bash][]).map(([type, meta]) => (
                   <button
@@ -610,7 +608,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                     className={cn(
                       "rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors",
                       formData.scriptType === type
-                        ? "bg-primary/10 border-primary/30 text-primary"
+                        ? "bg-primary/10 border-primary/30 text-[var(--accent-text)]"
                         : "bg-surface-container-low border-[var(--md3-outline-variant)] text-muted-foreground hover:border-primary/20",
                     )}
                   >
@@ -622,7 +620,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
 
             {/* Script Content */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Script</label>
+              <label className="text-xs font-medium text-muted-foreground">Script</label>
               <textarea
                 value={formData.content}
                 onChange={(e) => setFormData((p) => ({ ...p, content: e.target.value }))}
@@ -631,15 +629,15 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 className={`mt-1.5 w-full rounded-lg border bg-surface-container-low px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted-foreground resize-y ${focusField}`}
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                {SCRIPT_TYPE_META[formData.scriptType].label} script. Injected secrets are available as environment variables (e.g. <code className="text-primary">$GITHUB_TOKEN</code>).
+                {SCRIPT_TYPE_META[formData.scriptType].label} script. Injected secrets are available as environment variables (e.g. <code className="text-[var(--accent-text)]">$GITHUB_TOKEN</code>).
               </p>
             </div>
 
             {/* Secrets Injection */}
             {secrets.length > 0 && (
               <div>
-                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  Inject Secrets
+                <label className="text-xs font-medium text-muted-foreground">
+                  Inject secrets
                 </label>
                 <p className="mt-0.5 text-xs text-muted-foreground">Select secrets to make available as environment variables.</p>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -653,7 +651,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                         className={cn(
                           "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
                           selected
-                            ? "bg-primary/10 border-primary/30 text-primary"
+                            ? "bg-primary/10 border-primary/30 text-[var(--accent-text)]"
                             : "bg-surface-container-low border-[var(--md3-outline-variant)] text-muted-foreground hover:border-primary/20",
                         )}
                       >
@@ -671,17 +669,17 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
               <button
                 type="button"
                 onClick={() => setShowConditions(!showConditions)}
-                className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showConditions ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                Conditions & Execution
+                Conditions & execution
               </button>
 
               {showConditions && (
                 <div className="mt-3 space-y-4 rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container-high p-4">
                   {/* Environments */}
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                       <Layers className="h-3.5 w-3.5" />
                       Environments
                     </label>
@@ -702,7 +700,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                               className={cn(
                                 "rounded-full px-3 py-1 text-xs font-medium border transition-colors",
                                 selected
-                                  ? "bg-primary/10 border-primary/30 text-primary"
+                                  ? "bg-primary/10 border-primary/30 text-[var(--accent-text)]"
                                   : "bg-surface-container-low border-[var(--md3-outline-variant)] text-muted-foreground hover:border-primary/20",
                               )}
                             >
@@ -717,9 +715,9 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                   {/* Resource thresholds */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                         <Cpu className="h-3.5 w-3.5" />
-                        Min CPU Cores
+                        Min CPU cores
                       </label>
                       <input
                         type="number"
@@ -737,7 +735,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                         <MemoryStick className="h-3.5 w-3.5" />
                         Min RAM (GB)
                       </label>
@@ -761,9 +759,9 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                   {/* Execution config */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                         <GripVertical className="h-3.5 w-3.5" />
-                        Run Order
+                        Run order
                       </label>
                       <input
                         type="number"
@@ -776,7 +774,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                       <p className="mt-1 text-xs text-muted-foreground">Lower runs first</p>
                     </div>
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5" />
                         Timeout (seconds)
                       </label>
@@ -856,7 +854,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                   onClick={() => goToStep("picker")}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--md3-outline-variant)] px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-surface-container-high transition-colors"
                 >
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  <ChevronLeft className="h-4 w-4" />
                   Back
                 </button>
               )}
@@ -873,9 +871,9 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving || !formData.name.trim() || !formData.content.trim()}
-                className="rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)] disabled:opacity-50"
+                className="rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-medium text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)] disabled:opacity-50"
               >
-                {isSaving ? "Saving..." : editingScript ? "Save Changes" : "Create Script"}
+                {isSaving ? "Saving…" : editingScript ? "Save changes" : "Create script"}
               </button>
             </div>
           </DialogFooter>
@@ -888,7 +886,7 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Startup Script</DialogTitle>
+            <DialogTitle>Delete startup script</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete &ldquo;{deleteTarget?.name}&rdquo;? This action cannot be undone.
             </DialogDescription>
@@ -905,9 +903,9 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
               type="button"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="rounded-lg bg-destructive px-4 py-2 text-sm font-bold text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow-sm transition-colors hover:bg-destructive/90 disabled:opacity-50"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Deleting…" : "Delete"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -917,8 +915,8 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
       {(loading || hasLoaded) && <div className="overflow-hidden rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-card)]">
         <div className="border-b border-[var(--md3-outline-variant)] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button className="text-xs font-bold uppercase tracking-widest text-foreground">
-              All Scripts
+            <button className="text-xs font-medium text-foreground">
+              All scripts
             </button>
           </div>
           {hasLoaded && <span className="text-xs text-muted-foreground font-mono">{scripts.length} script{scripts.length !== 1 ? "s" : ""}</span>}
@@ -942,10 +940,10 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
               // so assistive tech (and existing tests) can address them
               // independently while the visible verb stays consistent.
               aria-label="Create your first startup script"
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-bold text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--btn-primary-bg)] px-4 py-2.5 text-sm font-medium text-[var(--btn-primary-text)] shadow-sm transition-colors hover:bg-[var(--btn-primary-hover)]"
             >
               <Plus className="h-4 w-4" />
-              New Script
+              New script
             </button>
           </div>
         ) : (
@@ -976,14 +974,10 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-bold text-foreground truncate">{script.name}</h4>
-                    <span className="text-[10px] font-mono text-muted-foreground bg-surface-container-high rounded px-1.5 py-0.5">
-                      {SCRIPT_TYPE_META[script.scriptType ?? "bash"].label}
-                    </span>
+                    <h4 className="text-sm font-semibold text-foreground truncate">{script.name}</h4>
+                    <Tag className="font-mono">{SCRIPT_TYPE_META[script.scriptType ?? "bash"].label}</Tag>
                     {script.runOrder !== 100 && (
-                      <span className="text-[10px] font-mono text-muted-foreground bg-surface-container-high rounded px-1.5 py-0.5">
-                        #{script.runOrder}
-                      </span>
+                      <Tag className="font-mono tabular-nums">#{script.runOrder}</Tag>
                     )}
                   </div>
                   {script.description && (
@@ -991,25 +985,16 @@ export function StartupScriptsPage({ apiClient, className }: StartupScriptsPageP
                   )}
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {script.environments.map((env) => (
-                      <span key={env} className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                        {env}
-                      </span>
+                      <Tag key={env}>{env}</Tag>
                     ))}
                     {script.injectSecrets.map((s) => (
-                      <span key={s} className="rounded-full bg-surface-container-high px-2 py-0.5 text-[10px] font-medium text-muted-foreground flex items-center gap-0.5">
-                        <Lock className="h-2.5 w-2.5" />
-                        {s}
-                      </span>
+                      <Tag key={s} icon={<Lock />}>{s}</Tag>
                     ))}
                     {script.continueOnFailure && (
-                      <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600">
-                        soft fail
-                      </span>
+                      <StatusPill tone="warning">Soft fail</StatusPill>
                     )}
                     {script.runAsRoot && (
-                      <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
-                        root
-                      </span>
+                      <StatusPill tone="danger">Root</StatusPill>
                     )}
                   </div>
                 </div>

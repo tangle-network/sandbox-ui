@@ -95,6 +95,36 @@ test('desktop keeps its rail and account menu', async ({ page, baseURL }) => {
   await expect(page.getByRole('dialog', { name: 'Navigation', exact: true })).toHaveCount(0)
 })
 
+for (const theme of ['light', 'dark']) {
+  for (const [header, args] of [
+    ['brand', ''],
+    ['content', 'logo:!null;railHeaderContent:Workspace'],
+    ['empty', 'logo:!null;railHeaderContent:!null'],
+  ]) {
+    for (const collapsed of [false, true]) {
+      test(`rail toggle retains keyboard focus ${header} ${theme} initially ${collapsed ? 'collapsed' : 'expanded'}`, async ({ page, baseURL }, info) => {
+        await openStory(page, 'dashboard-sidebarlayout--desktop', theme, { width: 1440, height: 900 }, baseURL)
+        const url = new URL(page.url())
+        url.searchParams.set('args', [args, `defaultRailCollapsed:${collapsed}`].filter(Boolean).join(';'))
+        await page.goto(url.href)
+        const before = page.getByRole('button', { name: collapsed ? 'Expand sidebar' : 'Collapse sidebar', exact: true })
+        const after = page.getByRole('button', { name: collapsed ? 'Collapse sidebar' : 'Expand sidebar', exact: true })
+        await before.focus()
+        await page.keyboard.press('Enter')
+        await expect(after).toBeFocused()
+        await expect(after).toHaveAttribute('aria-pressed', String(!collapsed))
+        await page.screenshot({ path: info.outputPath(`toggle-${header}-${theme}-${!collapsed}.png`), animations: 'disabled' })
+        await page.keyboard.press('Space')
+        await expect(before).toBeFocused()
+        await expect(before).toHaveAttribute('aria-pressed', String(collapsed))
+        await page.screenshot({ path: info.outputPath(`toggle-${header}-${theme}-${collapsed}.png`), animations: 'disabled' })
+        await page.keyboard.press('Tab')
+        await expect(before).not.toBeFocused()
+      })
+    }
+  }
+}
+
 for (const [breakpoint, width] of [['md', 768], ['lg', 1024]]) {
   test(`open navigation releases the page at ${breakpoint}`, async ({ page, baseURL }) => {
     await openStory(page, 'dashboard-sidebarlayout--desktop', 'light', { width: 390, height: 844 }, baseURL)

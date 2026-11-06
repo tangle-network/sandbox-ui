@@ -1,6 +1,7 @@
 ## 7.0.3
 
 - Below `lg`, `DashboardLayout` sets the document's `scroll-padding-top` to its fixed 3rem mobile bar, so `#anchor` jumps and `scrollIntoView({ block: "start" })` land below the bar. Apps can drop their own reservation for it.
+- `SessionSidebar` with `groupBy="status"` labels its catch-all group "Idle" instead of "Done": it holds idle sessions and sessions with no status, neither of which is known to have finished.
 
 ## 7.0.2
 

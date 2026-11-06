@@ -1,3 +1,7 @@
+## 7.0.3
+
+- Sidebar Collapse and Expand keep keyboard focus in both directions, including headers with a brand, custom content or no mark.
+
 ## 7.0.2
 
 - Fixed-height TraceWorkspace hosts keep their graph height, so graph nodes remain visible and clickable in LiveRun. Filled hosts continue to use the parent height.

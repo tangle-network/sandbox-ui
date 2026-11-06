@@ -1,3 +1,7 @@
+## 7.0.3
+
+- Below `lg`, `DashboardLayout` sets the document's `scroll-padding-top` to its fixed 3rem mobile bar, so `#anchor` jumps and `scrollIntoView({ block: "start" })` land below the bar. Apps can drop their own reservation for it.
+
 ## 7.0.2
 
 - Fixed-height TraceWorkspace hosts keep their graph height, so graph nodes remain visible and clickable in LiveRun. Filled hosts continue to use the parent height.

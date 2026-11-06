@@ -136,6 +136,9 @@ for (const theme of themes) {
         expect(bounds.x + bounds.width).toBe(viewport.width)
       }
       await test.info().attach('header geometry', { body: await page.screenshot(), contentType: 'image/png' })
+      // Anchor and scrollIntoView targets must land below the fixed mobile bar.
+      const scrollPadding = viewportName === 'desktop' ? 'auto' : `${(await header.boundingBox())?.height}px`
+      await expect(page.locator('html')).toHaveCSS('scroll-padding-top', scrollPadding)
       if (viewportName === 'desktop') {
         await expect(header).toBeHidden()
         const before = await main.boundingBox()

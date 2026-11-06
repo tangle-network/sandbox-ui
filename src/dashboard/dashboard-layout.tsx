@@ -478,7 +478,7 @@ function DashboardLayoutInner({
   const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true, false, true), [buildSidebarContent])
 
   return (
-    <div className={cn("min-h-screen bg-surface text-foreground", className)}>
+    <div className={cn("min-h-screen bg-surface text-foreground max-lg:[html:has(&)]:scroll-pt-12", className)}>
       <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <nav aria-label="Mobile navigation" className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-4 lg:hidden">
           <Link href={logoHref} to={logoHref} aria-label="Home" className={cn("rounded-md p-1", focusRing)}><Logo variant={variant} size="sm" iconOnly /></Link>

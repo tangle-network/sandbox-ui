@@ -120,7 +120,7 @@ export interface SessionSidebarProps {
   variant?: SessionSidebarVariant;
   /**
    * `status` partitions the list into "Needs input" (`attention-needed`),
-   * "Failed" (`error`), "Working" (`running`), and "Done" (everything else),
+   * "Failed" (`error`), "Working" (`running`), and "Idle" (everything else),
    * in that order. Group labels render only while more than one group has
    * items. Within a group the sort is unchanged: pinned first, then activity.
    * Status comes from the active-sessions store record when one exists for the
@@ -146,13 +146,13 @@ const NO_CONTROLLER: SessionOptimisticController = {
   reset: () => {},
 };
 
-type SessionGroupKey = "attention" | "failed" | "working" | "done";
+type SessionGroupKey = "attention" | "failed" | "working" | "idle";
 
 const STATUS_GROUPS: ReadonlyArray<{ key: SessionGroupKey; label: string }> = [
   { key: "attention", label: "Needs input" },
   { key: "failed", label: "Failed" },
   { key: "working", label: "Working" },
-  { key: "done", label: "Done" },
+  { key: "idle", label: "Idle" },
 ];
 
 function groupKeyForStatus(status?: ActiveSessionStatus): SessionGroupKey {
@@ -164,7 +164,7 @@ function groupKeyForStatus(status?: ActiveSessionStatus): SessionGroupKey {
     case "running":
       return "working";
     default:
-      return "done";
+      return "idle";
   }
 }
 

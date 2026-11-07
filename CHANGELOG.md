@@ -1,3 +1,7 @@
+## 7.0.6
+
+- Test the viewer wire contract against Runtime 7 and refresh first-party Interface, Brand, Charts and UI resolutions while preserving published peer compatibility.
+
 ## 7.0.5
 
 - `AgentWorkspace` (`@tangle-network/sandbox-ui/run`): one agent's workspace behind a Files | Trace | Terminal control. The host reads everything through an `AgentWorkspaceSource` (`list`, `read`, `stream`, `terminal`): the files as a `WorkspaceFilesPane` that names where they came from (live box, git mirror), each file read-only in `CodeView` with a Diff view when the host gives a baseline, the conversation as of the run cursor, and a `TerminalView` once the host mints a grant; a gone box says so instead of an empty pane. `view` and `path` are controlled when the host carries them in a route. Back and Escape return to the run.

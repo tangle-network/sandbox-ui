@@ -1,3 +1,7 @@
+## 7.0.5
+
+- Test the viewer wire contract against Runtime 7 and refresh first-party dependency resolutions, including the current Interface, Charts and UI releases. Published peer compatibility is preserved.
+
 ## 7.0.4
 
 - Below `lg`, `DashboardLayout` sets the document's `scroll-padding-top` to its fixed 3rem mobile bar, so `#anchor` jumps and `scrollIntoView({ block: "start" })` land below the bar. Apps can drop their own reservation for it.

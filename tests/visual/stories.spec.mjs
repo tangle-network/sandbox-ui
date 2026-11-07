@@ -33,8 +33,6 @@ test('catalog contains stories and critical states', () => {
   }
 })
 
-// A story that pins `globals.sandboxTheme` is named for its theme (CatalogLight, DarkTheme): it renders in that
-// theme whatever the URL asks, so it is captured only there.
 const pinnedTheme = (id) => id.match(/--(?:[a-z0-9-]*-)?(light|dark)(?:-theme)?$/)?.[1]
 
 for (const story of stories) {
@@ -43,7 +41,7 @@ for (const story of stories) {
   const pinned = pinnedTheme(story.id)
   for (const theme of pinned ? [pinned] : themes) {
     for (const [viewportName, viewport] of Object.entries(storyViewports)) {
-      test(`${story.id} ${theme} ${viewportName}`, async ({ page, baseURL }) => {
+      test(`${story.id} ${theme} ${viewportName}`, async ({ page, baseURL }, testInfo) => {
         await openStory(page, story.id, theme, viewport, baseURL)
         if (/^workbench-previewview--(local-app|verified-response|failed-check)$/.test(story.id) ||
           /^workbench-embeddedappview--(ready|verified-metadata)$/.test(story.id)) {
@@ -65,7 +63,6 @@ for (const story of stories) {
         if (story.id === 'workbench-diffreadability--unbroken-text') {
           await waitForDiffRender(page, 'END_OF_LINE')
         }
-        // The hub layout draws its own SVG, not React Flow.
         if (story.id.startsWith('workflows-agentgraph-hub--')) await expect(page.locator('.ag-root .ag-canvas-wrap')).toBeVisible()
         else if (story.id.startsWith('workflows-agentgraph--')) {
           const graph = page.locator('.agent-graph')
@@ -84,6 +81,9 @@ for (const story of stories) {
           if (story.id === 'workflows-framing-candidates--narrow-host') {
             await expect(page.locator('.react-flow__node[data-id="trigger"]')).toHaveCount(2)
           }
+        }
+        if (/^workflows-agentgraph-hub--(live|call-lifecycle)$/.test(story.id)) {
+          await page.screenshot({ path: testInfo.outputPath(`${story.id}-${theme}-${viewportName}-frame.png`), animations: 'disabled', caret: 'hide' })
         }
         await expect(page).toHaveScreenshot(`${story.id}-${theme}-${viewportName}.png`, {
           fullPage: critical || story.id === 'workflows-framing-candidates--narrow-host',

@@ -1,4 +1,5 @@
 import { waitFor } from "@testing-library/dom";
+import userEvent from "@testing-library/user-event";
 import type { Meta, StoryObj } from "@storybook/react";
 import { otlpFlowTrace, type OtlpSpan, type FlowSpan, type FlowTrace } from "@tangle-network/charts";
 import { FlowWaterfall, TimelineView } from "@tangle-network/charts/react";
@@ -29,10 +30,9 @@ export const OutcomeIdentity: Story = { args: { agentFill: "outcome" } };
 export const FamilyFolded: Story = { args: { defaultCollapsed: true } };
 export const SearchMatch: Story = { args: { query: "Echo" } };
 export const LongNames: Story = { args: { trace: { ...trace, spans: trace.spans.map(span => ({ ...span, name: `${span.name} validating-the-very-long-release-proposal-and-signed-artifacts` })) } } };
-// SpanCard is exercised through its public owner. A click pins it; Escape returns to the row.
 const pinCard: Story["play"] = async ({ canvasElement }) => {
-  const bar = await waitFor(() => { const bar = canvasElement.querySelector<HTMLElement>('.fw-row:not([data-span-id^="family:"]) .fw-bar'); if (!bar) throw new Error("Waiting for trace bar"); return bar; });
-  bar.click();
+  const bar = await waitFor(() => { const bar = canvasElement.querySelector<HTMLElement>('.fw-row:not([data-span-id^="family:"]) .fw-bar'); if (!bar) throw new Error("Waiting for trace bar"); return bar; }), rect = bar.getBoundingClientRect();
+  await userEvent.pointer({ target: bar, keys: "[MouseLeft]", coords: { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 } });
   await waitFor(() => { if (!canvasElement.querySelector(".fw-card")) throw new Error("Span card did not open"); });
 };
 export const SpanCardFailed: Story = { args: { trace: failureHeavy }, play: pinCard };

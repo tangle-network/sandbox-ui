@@ -19,6 +19,10 @@ import '@fontsource/manrope/latin-500.css'
 import '@fontsource/manrope/latin-600.css'
 import '@fontsource/manrope/latin-700.css'
 import '../src/styles/globals.css'
+// Charts owns its stylesheets; a host imports them beside this package's, as here.
+import '@tangle-network/charts/react/flow-waterfall.css'
+import '@tangle-network/charts/react/agent-graph.css'
+import '@tangle-network/charts/react/live.css'
 import { PROVIDER_LOGO_URLS, PROVIDER_VECTOR_LOGOS } from '../src/integrations/provider-logo'
 import { providerLogos } from '../src/stories/integrations/fixtures/provider-logos'
 

@@ -16,9 +16,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@tangle-network/ui/primitives"
-import { Logo } from "../primitives"
-import { Skeleton, useTheme } from "@tangle-network/ui/primitives"
-import { Check, ChevronRight, LogOut, Monitor, MoreHorizontal, Moon, PanelLeft, Settings, Sun } from "lucide-react"
+import { Skeleton } from "@tangle-network/ui/primitives"
+import { Check, ChevronRight as ChevronRightIcon, LogOut as LogOutIcon, Monitor, Moon as MoonIcon, MoreHorizontal, PanelLeft, Settings as SettingsIcon, Sun as SunIcon } from "lucide-react"
 import {
   SIDEBAR_PANEL_WIDTH,
   useSidebar,
@@ -27,10 +26,6 @@ import { RailTooltip, RAIL_FLOATING_SURFACE } from "./rail-tooltip"
 import { focusRing } from "@tangle-network/ui/utils"
 import { ShellHeader } from "../workspace/shell-header"
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface SidebarUser {
   email: string
   name?: string
@@ -38,25 +33,13 @@ export interface SidebarUser {
   avatarUrl?: string
 }
 
-/** Theme modes offered by the account menu's Appearance section. */
 export type ThemeMode = "light" | "dark" | "system"
 
-/**
- * Host-supplied controller for the account-menu Appearance section. The rail is
- * theme-engine-agnostic: each app wires this to its own theme hook (gtm-agent
- * uses the shared `useTheme`; the sandbox app uses its `vault`-aware
- * `useThemeMode`). Provide it to {@link ProfileAvatar} to render Light/Dark/System.
- */
 export interface AppearanceController {
   value: ThemeMode
   onChange: (mode: ThemeMode) => void
-  /** Which modes to offer, in order. Defaults to all three. */
   modes?: ThemeMode[]
 }
-
-// ============================================================================
-// Helpers
-// ============================================================================
 
 function DefaultLink({
   href,
@@ -71,11 +54,7 @@ function DefaultLink({
   children: React.ReactNode
   [key: string]: unknown
 }) {
-  return (
-    <a href={href ?? to} className={className} {...rest}>
-      {children}
-    </a>
-  )
+  return <a href={href ?? to} className={className} {...rest}>{children}</a>
 }
 
 function getInitials(name?: string, email?: string): string {
@@ -84,89 +63,19 @@ function getInitials(name?: string, email?: string): string {
   return "?"
 }
 
-
-
-
-
-// ============================================================================
-// RailHeader — three-slot rail header (brand · middle · panel toggle)
-// ============================================================================
-
 export interface RailHeaderProps {
-  /** Brand mark shown on the left, e.g. `<Logo iconOnly />`. */
   brand?: React.ReactNode
-  /** Destination for the brand link. When set with `LinkComponent`, the brand is a link. */
   brandHref?: string
-  /**
-   * Optional middle content (e.g. a project/workspace switcher).
-   *
-   * When `brand` is set, this is expanded-only — the collapsed rail has room
-   * for the mark alone. When `brand` is NOT set this content owns the rail top
-   * in BOTH states, so it is also rendered collapsed; read `useSidebar()` to
-   * swap in a compact mark there.
-   */
   children?: React.ReactNode
-  /** Whether the rail is collapsed (icon-only). */
   collapsed: boolean
-  /** Collapse/expand the rail. */
   onToggle: () => void
-  /**
-   * Whether the rail can collapse/expand. When `false`, no panel toggle is
-   * rendered and the collapsed header shows the brand without the hover-morph.
-   * Defaults to `true`.
-   */
   collapsible?: boolean
   // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
   LinkComponent?: React.ComponentType<any>
   className?: string
 }
 
-// Panel-icon toggle for the expanded header's right slot. Uses the panel
-// glyph (not chevrons) so the affordance reads as "show/hide the sidebar".
-function PanelToggleButton({ collapsed, onToggle, className }: { collapsed: boolean; onToggle: () => void; className?: string }) {
-  const label = collapsed ? "Expand sidebar" : "Collapse sidebar"
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label={label}
-      aria-pressed={collapsed}
-      title={label}
-      className={cn(
-        "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
-        MOTION_CONTROL,
-        "hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-        focusRing,
-        className,
-      )}
-    >
-      {/* Same panel glyph for collapse and expand (the affordance is "toggle the sidebar"). */}
-      <PanelLeft className="size-4 shrink-0" />
-    </button>
-  )
-}
-
-/**
- * The redesigned rail header. Expanded: brand (left) · optional middle · panel
- * toggle (right). Collapsed: only the brand mark, which morphs into the
- * expand button on hover (brand fades out, panel glyph fades in over the same
- * box) so the collapse affordance is discoverable without spending rail width.
- * With no `brand` but `children`, the collapsed rail falls back to `children` —
- * the consumer's header content is then the only mark it has.
- * Renders a bordered `ShellHeader` row, so its divider is the line every main-pane
- * header meets — drop it in at the top of {@link SidebarRail}.
- */
-/**
- * React renders nothing for `null`, `undefined`, booleans, empty (or
- * all-empty) arrays and fragments whose children are all of those, so a
- * caller's `logo={cond && <Logo />}`, `logo={maybeLogo}`, `logo={items.map(...)}`
- * or `logo={<>{cond && <Logo />}</>}` can arrive here as a node that paints
- * nothing. Those must count as "no brand": a strict `undefined` check would
- * drop `railHeaderContent` from the collapsed rail for exactly them.
- * `Children.toArray` applies React's own rule (drops the empties, flattens
- * nested arrays) but keeps a fragment as one opaque child, so fragments are
- * recursed into by hand to stay aligned with what actually renders.
- */
+// Empty React nodes and fragments do not reserve the brand slot.
 function isRenderable(node: React.ReactNode): boolean {
   return React.Children.toArray(node).some((child) =>
     React.isValidElement<{ children?: React.ReactNode }>(child) && child.type === React.Fragment
@@ -179,20 +88,11 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
   const Link = LinkComponent ?? DefaultLink
   const hasBrand = isRenderable(brand)
   const hasChildren = isRenderable(children)
-
-  const brandNode =
-    brandHref !== undefined ? (
-      <Link
-        href={brandHref}
-        to={brandHref}
-        aria-label="Home"
-        className={cn("flex items-center justify-center rounded-md p-1 transition-colors hover:bg-[var(--accent-surface-soft)]", MOTION_CONTROL)}
-      >
-        {brand}
-      </Link>
-    ) : (
-      <span className="flex items-center justify-center p-1">{brand}</span>
-    )
+  const overlay = collapsed && !hasBrand && hasChildren
+  const label = collapsed ? "Expand sidebar" : "Collapse sidebar"
+  const brandNode = brandHref !== undefined
+    ? <Link href={brandHref} to={brandHref} aria-label="Home" className={cn("flex items-center justify-center rounded-md p-1 transition-colors hover:bg-[var(--accent-surface-soft)]", MOTION_CONTROL)}>{brand}</Link>
+    : <span className="flex items-center justify-center p-1">{brand}</span>
 
   return (
     <ShellHeader
@@ -203,69 +103,37 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
         className,
       )}
     >
-      {collapsed ? (
-        !hasBrand && hasChildren ? (
-          // No brand mark: `children` (SidebarLayout's `railHeaderContent`) is
-          // the only rail-top content the consumer gave us, so render it here
-          // too. Dropping it left an EMPTY header — the collapsed rail showed
-          // nothing at all where the product's mark belongs. With neither a
-          // brand nor children, the plain expand button below still owns the
-          // rail top so the rail stays expandable.
-          //
-          // Rendered outside the expand button on purpose: content that owns
-          // the rail top is routinely interactive itself (a mark that expands
-          // the rail on click), and a <button> inside a <button> is invalid
-          // HTML that React refuses to hydrate.
-          //
-          // The explicit "Expand sidebar" control stays in the tree for
-          // keyboard and assistive-tech users (the content may be a passive
-          // switcher, and the empty-rail click fallback is mouse-only). It sits
-          // over the content, invisible and non-interactive until it receives
-          // keyboard focus, so it costs no rail width.
-          <div className="relative flex min-w-0 items-center justify-center">
-            {children}
-            {collapsible && (
-              <PanelToggleButton
-                collapsed={collapsed}
-                onToggle={onToggle}
-                className="pointer-events-none absolute inset-0 m-auto bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100"
-              />
-            )}
-          </div>
-        ) : collapsible ? (
-          <RailTooltip label="Expand sidebar">
+      {hasBrand && !collapsed && brandNode}
+      <div className={collapsed ? "relative flex min-w-0 items-center justify-center" : "contents"}>
+        {(!collapsed || !hasBrand) && <div className={collapsed ? undefined : "min-w-0 flex-1"}>{children}</div>}
+        {/* One mounted button retains focus across collapse and expand. */}
+        {collapsible ? (
+          <RailTooltip label={label} disabled={!collapsed || overlay} className={overlay ? "pointer-events-none absolute inset-0 m-auto items-center justify-center" : undefined}>
             <button
               type="button"
               onClick={onToggle}
-              aria-label="Expand sidebar"
-              aria-pressed={true}
-              className={cn("group/brand relative flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)]", focusRing, MOTION_CONTROL)}
+              aria-label={label}
+              aria-pressed={collapsed}
+              title={collapsed ? undefined : label}
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)]",
+                MOTION_CONTROL,
+                focusRing,
+                collapsed && hasBrand ? "group/brand relative h-9 w-9" : "h-8 w-8 text-muted-foreground hover:text-foreground",
+                overlay && "pointer-events-none bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
+              )}
             >
-              <span className={cn("flex items-center justify-center transition-opacity group-hover/brand:opacity-0", MOTION_CONTROL)}>
-                {brand}
-              </span>
-              <span className={cn("pointer-events-none absolute inset-0 flex items-center justify-center text-foreground opacity-0 transition-opacity group-hover/brand:opacity-100", MOTION_CONTROL)}>
-                <PanelLeft className="size-4" />
+              {collapsed && hasBrand && <span className={cn("flex items-center justify-center transition-opacity group-hover/brand:opacity-0 group-focus-visible/brand:opacity-0", MOTION_CONTROL)}>{brand}</span>}
+              <span className={collapsed && hasBrand ? cn("pointer-events-none absolute inset-0 flex items-center justify-center text-foreground opacity-0 transition-opacity group-hover/brand:opacity-100 group-focus-visible/brand:opacity-100", MOTION_CONTROL) : undefined}>
+                <PanelLeft className="h-[18px] w-[18px] shrink-0" />
               </span>
             </button>
           </RailTooltip>
-        ) : (
-          brandNode
-        )
-      ) : (
-        <>
-          {hasBrand && brandNode}
-          <div className="min-w-0 flex-1">{children}</div>
-          {collapsible && <PanelToggleButton collapsed={collapsed} onToggle={onToggle} />}
-        </>
-      )}
+        ) : collapsed && hasBrand ? brandNode : null}
+      </div>
     </ShellHeader>
   )
 }
-
-// ============================================================================
-// Sidebar — root container (Rail + Panel)
-// ============================================================================
 
 export interface SidebarProps {
   children: React.ReactNode
@@ -276,78 +144,32 @@ export interface SidebarProps {
 export function Sidebar({ children, className, style }: SidebarProps) {
   const { panelOpen, hidden, hasPanels, railWidth } = useSidebar()
 
-  return (
-    <div
-      data-sidebar="true"
-      className={cn(
-        "fixed inset-y-0 left-0 z-40 flex bg-surface-container-low transition-none border-r border-[var(--md3-outline-variant)]",
-        hidden && "-translate-x-full",
-        className,
-      )}
-      style={{ width: (panelOpen && hasPanels) ? railWidth + SIDEBAR_PANEL_WIDTH : railWidth, ...style }}
-    >
-      {children}
-    </div>
-  )
+  return <div data-sidebar="true" className={cn(
+    "fixed inset-y-0 left-0 z-40 flex bg-surface-container-low transition-none border-r border-[var(--md3-outline-variant)]",
+    hidden && "-translate-x-full", className,
+  )} style={{ width: (panelOpen && hasPanels) ? railWidth + SIDEBAR_PANEL_WIDTH : railWidth, ...style }}>{children}</div>
 }
-
-// ============================================================================
-// SidebarRail — the always-visible icon strip (64px)
-// ============================================================================
 
 export interface SidebarRailProps {
   children: React.ReactNode
   className?: string
-  /**
-   * Render the rail at the wider mobile-drawer width so labels fit
-   * beside the icons. Defaults to the 64px icon-only rail used on
-   * desktop.
-   */
   wide?: boolean
 }
 
 export function SidebarRail({ children, className, wide = false }: SidebarRailProps) {
   const { railWidth } = useSidebar()
-  return (
-    <div
-      className={cn(
-        "flex flex-col h-full shrink-0 bg-transparent",
-        wide && "w-full",
-        className,
-      )}
-      style={wide ? undefined : { width: railWidth }}
-    >
-      {children}
-    </div>
-  )
+  return <div className={cn("flex flex-col h-full shrink-0 bg-transparent", wide && "w-full", className)} style={wide ? undefined : { width: railWidth }}>{children}</div>
 }
-
-// ============================================================================
-// SidebarRailNav — scrollable nav section (takes remaining vertical space)
-// ============================================================================
 
 export interface SidebarRailNavProps {
   children: React.ReactNode
   className?: string
-  /**
-   * Click handler on the `<nav>` itself. Layouts use it (with a
-   * `target === currentTarget` guard) so clicking the empty body of a collapsed
-   * rail expands it, without intercepting clicks on the nav items.
-   */
   onClick?: React.MouseEventHandler<HTMLElement>
 }
 
 export function SidebarRailNav({ children, className, onClick }: SidebarRailNavProps) {
-  return (
-    <nav onClick={onClick} className={cn("flex flex-col items-center gap-1 py-3 flex-1 min-h-0 overflow-y-auto", className)}>
-      {children}
-    </nav>
-  )
+  return <nav onClick={onClick} className={cn("flex flex-col items-center gap-1 py-3 flex-1 min-h-0 overflow-y-auto", className)}>{children}</nav>
 }
-
-// ============================================================================
-// SidebarRailFooter — bottom section of the rail
-// ============================================================================
 
 export interface SidebarRailFooterProps {
   children: React.ReactNode
@@ -355,16 +177,8 @@ export interface SidebarRailFooterProps {
 }
 
 export function SidebarRailFooter({ children, className }: SidebarRailFooterProps) {
-  return (
-    <div className={cn("flex flex-col items-center gap-1 pb-3 shrink-0", className)}>
-      {children}
-    </div>
-  )
+  return <div className={cn("flex flex-col items-center gap-1 pb-3 shrink-0", className)}>{children}</div>
 }
-
-// ============================================================================
-// RailSeparator — horizontal divider in the rail
-// ============================================================================
 
 export interface RailSeparatorProps {
   className?: string
@@ -374,51 +188,19 @@ export function RailSeparator({ className }: RailSeparatorProps) {
   return <div className={cn("my-2 h-px w-10 bg-[var(--md3-outline-variant)]", className)} />
 }
 
-// ============================================================================
-// RailButton — icon button with tooltip and optional badge
-// ============================================================================
-
 export interface RailButtonProps {
   icon: React.ComponentType<{ className?: string }>
   label: string
   isActive?: boolean
   badge?: number
-  /**
-   * Describes the badge count to assistive tech and in the icon-only rail's
-   * tooltip, e.g. `(n) => \`${n} running\``. Defaults to `"<n> new"`.
-   */
   badgeLabel?: (count: number) => string
   onClick?: () => void
   className?: string
-  /** Show label text next to icon (for mobile drawer) */
   showLabel?: boolean
-  /**
-   * One line saying what the destination is for, e.g. "Every past agent run".
-   * Shown in the hover tooltip under the label (the labeled rail shows the
-   * tooltip only when a description exists) and announced as the link's
-   * accessible description, so an unfamiliar nav item explains itself.
-   */
   description?: string
-  /**
-   * Render the rail-button styling onto a single child element (e.g. a router
-   * `<Link>`) instead of an inner `<button>`. The child receives the button
-   * classes, `title`, and the icon/label/badge as its content — so navigation
-   * items stay real anchors (keyboard, cmd-click, prefetch) without copying the
-   * class recipe or nesting `<a><button>`.
-   */
   asChild?: boolean
   children?: React.ReactNode
-  /**
-   * `"primary"` gives the item a distinct emphasized pill (accent fill + accent
-   * border) so it stands out from the rest of the nav, e.g. a "New" action.
-   * Defaults to `"normal"`.
-   */
   variant?: "normal" | "primary"
-  /**
-   * Inline style for the rendered row. Layouts use it to set `--stagger-index`
-   * so a rail of nav items arrives as a sequence rather than a flash; the
-   * variable has to land on the animated element itself, which is this one.
-   */
   style?: React.CSSProperties
 }
 
@@ -429,35 +211,21 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
     "relative flex shrink-0 items-center justify-center rounded-md transition-colors",
     MOTION_CONTROL,
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
-    // Quiet press feedback via color only — no scale on the full-width row.
     focusRing,
-    // The active item (route matches) and any explicit primary share one
-    // emphasized look — a filled accent pill with an accent ring — so the
-    // current destination clearly stands out from the default rows.
     variant === "primary" || isActive
       ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
       : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
     className,
   )
-
-  // Badge anchored to the icon (not the row) so it stays on the icon corner in
-  // both icon-only and labeled modes, and through the collapse transition. The
-  // numeric pill grows leftward over the icon, never rightward into the row's
-  // label. A two-digit pill would cover most of the icon, so the icon-only rail
-  // draws 10 or more as a dot centered on the icon's top-right corner. The full
-  // count reaches assistive tech through the accessible description and sighted
-  // users through the tooltip.
   const hasBadge = badge !== undefined && badge > 0
   const badgeDot = hasBadge && !showLabel && badge > 9
   const badgeDescription = hasBadge ? badgeLabel(badge) : undefined
   const tooltipLabel = hasBadge ? `${label} · ${badgeDescription}` : label
   const accessibleDescription = [badgeDescription, description].filter(Boolean).join(". ") || undefined
-  // The labeled rail already shows the label inline, so its tooltip exists only
-  // to carry the description.
   const tooltipDisabled = showLabel && !description
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
-      <Icon className="size-4 shrink-0" />
+      <Icon className="h-[17px] w-[17px] shrink-0" />
       {badgeDot ? (
         <span aria-hidden="true" data-badge="dot" className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--accent-text)] ring-2 ring-surface-container-low" />
       ) : hasBadge && (
@@ -475,84 +243,42 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
     </>
   )
 
+  let trigger = <button type="button" onClick={onClick} aria-label={label} aria-description={accessibleDescription} className={classes} style={style}>{content}</button>
   if (asChild && React.isValidElement(children)) {
     // biome-ignore lint/suspicious/noExplicitAny: merge onto an unknown child element (Link/anchor)
     const child = children as React.ReactElement<any>
-    const merged = React.cloneElement(
+    trigger = React.cloneElement(
       child,
       {
         className: cn(classes, child.props.className),
         "aria-label": child.props["aria-label"] ?? label,
         "aria-description": child.props["aria-description"] ?? accessibleDescription,
-        // The active destination is the current page. Brand's selected state
-        // (`aria-[current=page]`) keys off this attribute, and assistive tech
-        // announces it; the class recipe above only paints the pill.
         "aria-current": child.props["aria-current"] ?? (isActive ? "page" : undefined),
-        // The layout's `style` wins the merge, not the child's. It is where
-        // `--stagger-index` arrives, and a child that happened to carry a
-        // `style` of its own would otherwise drop the variable silently and
-        // collapse the whole rail's entrance to one flash — a defect with no
-        // error and no visible cause.
         style: { ...child.props.style, ...style },
       },
       content,
     )
-    return (
-      <RailTooltip label={tooltipLabel} description={description} disabled={tooltipDisabled} className={showLabel ? "w-full" : undefined}>
-        {merged}
-      </RailTooltip>
-    )
   }
-
   return (
     <RailTooltip label={tooltipLabel} description={description} disabled={tooltipDisabled} className={showLabel ? "w-full" : undefined}>
-      <button type="button" onClick={onClick} aria-label={label} aria-description={accessibleDescription} className={classes} style={style}>
-        {content}
-      </button>
+      {trigger}
     </RailTooltip>
   )
 }
 
-// ============================================================================
-// RailFlyout — a rail item whose children open in a panel to the RIGHT of the rail
-// ============================================================================
-
 export interface RailFlyoutProps {
   icon: React.ComponentType<{ className?: string }>
   label: string
-  /** Explains this destination in accessible text and its tooltip or open flyout. */
   description?: string
-  /** Highlight the trigger (e.g. when a child route is active). */
   isActive?: boolean
-  /** Show the label text beside the icon (labeled rail) vs. icon-only. */
   showLabel?: boolean
-  /** Heading rendered at the top of the open flyout. Defaults to `label`. */
   title?: string
-  /** Flyout body — the sub-surfaces revealed when the item is opened. */
   children: React.ReactNode
   className?: string
-  /** @see {@link RailButtonProps.style} — carries `--stagger-index` in a rail. */
   style?: React.CSSProperties
 }
 
-/**
- * A rail entry that reveals its sub-surfaces in a small panel anchored to the
- * RIGHT of the rail item, rather than pushing the rail open with an inline
- * accordion. Opens on click, closes on outside-click, Escape, or selecting an
- * item inside it. Use for a single "door" (e.g. Studio) that fronts several
- * related destinations without permanently spending rail height on them.
- */
-export function RailFlyout({
-  icon: Icon,
-  label,
-  description,
-  isActive,
-  showLabel,
-  title,
-  children,
-  className,
-  style,
-}: RailFlyoutProps) {
+export function RailFlyout({ icon: Icon, label, description, isActive, showLabel, title, children, className, style }: RailFlyoutProps) {
   const [open, setOpen] = React.useState(false)
   const ref = React.useRef<HTMLDivElement>(null)
 
@@ -596,10 +322,10 @@ export function RailFlyout({
         onClick={() => setOpen((v) => !v)}
         className={triggerClasses}
       >
-        <Icon className="size-4 shrink-0" />
+        <Icon className="h-[17px] w-[17px] shrink-0" />
         {showLabel && <span className="text-sm font-medium">{label}</span>}
         {showLabel && (
-          <ChevronRight
+          <ChevronRightIcon
             className={cn(
               "ml-auto h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform",
               MOTION_CONTROL,
@@ -611,9 +337,6 @@ export function RailFlyout({
       </RailTooltip>
 
       {open && (
-        // Anchored to the right edge of the rail item; full-height-independent
-        // floating card. `onClickCapture` closes after a child link/button fires
-        // so selecting a sub-surface dismisses the flyout.
         <div
           role="menu"
           onClickCapture={(e) => {
@@ -622,13 +345,11 @@ export function RailFlyout({
           }}
           className={cn(
             "absolute left-full top-0 z-50 ml-2 min-w-[12rem] p-1.5",
-            // A flyout appears in place beside its trigger; it did not travel
-            // from anywhere, so it scales up rather than sliding.
             "agent-pop-in",
             RAIL_FLOATING_SURFACE,
           )}
         >
-          <p className="px-2 pb-1 pt-1 text-sm font-medium text-[var(--text-dim)] select-none">
+          <p className="px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
             {title ?? label}
           </p>
           {description && <p className="px-2 pb-2 text-xs text-muted-foreground">{description}</p>}
@@ -639,73 +360,44 @@ export function RailFlyout({
   )
 }
 
-
-// ============================================================================
-// RailExpandable — nav item with sub-items (inline accordion / collapsed flyout)
-// ============================================================================
-
-/** A single entry in a sub-item's hover actions menu (kebab). */
 export interface RailSubItemAction {
   id: string
   label: string
   icon?: React.ComponentType<{ className?: string }>
-  /** Style the item as a destructive action (e.g. delete). */
   destructive?: boolean
   onSelect: () => void
 }
 
-/** A sub-destination revealed by a {@link RailExpandable} item. */
 export interface RailExpandableSubItem {
   id: string
   label: string
   icon?: React.ComponentType<{ className?: string }>
   href: string
   prefetch?: "none" | "intent" | "render" | "viewport"
-  /** Show a live working indicator on the row while the item is busy. */
   isLoading?: boolean
-  /** Render the row emphasized (bold + accent) so it stands out — e.g. a
-   *  trailing "view all" action below a capped list. */
   emphasis?: boolean
-  /** Mark the row as unread — bold label + a leading dot. Suppressed while
-   *  `isLoading` so a responding row shows only the working indicator. */
   unread?: boolean
-  /** Hover-revealed kebab actions (e.g. rename/delete). Rendered on the
-   *  labeled rail only; ignored in the collapsed-rail flyout. */
   actions?: RailSubItemAction[]
 }
 
 export interface RailExpandableProps {
   icon: React.ComponentType<{ className?: string }>
   label: string
-  /** Explains this destination in accessible text and its tooltip or open flyout. */
   description?: string
-  /** Destination for the row itself. Clicking the label navigates here. */
   href?: string
-  /** Highlight the row (e.g. its own route or a child route is active). */
   isActive?: boolean
-  /** Labeled (expanded) rail vs. icon-only (collapsed) rail. */
   showLabel?: boolean
-  /** Fixed sub-items. Mutually exclusive with `loadSubItems`. */
   subItems?: RailExpandableSubItem[]
-  /** Lazy sub-items — called once on first open; the result is cached. */
   loadSubItems?: () => Promise<RailExpandableSubItem[]>
-  /** Start expanded on mount (labeled rail). Defaults to collapsed. */
   defaultOpen?: boolean
-  /** Ids of sub-items whose route is active (drives sub-item highlight). */
   activeSubIds?: string[]
-  /** Shown when the resolved sub-item list is empty. */
   emptyLabel?: string
-  /** Called when the row or a sub-item navigates (e.g. to close a mobile drawer). */
   onNavigate?: () => void
   // biome-ignore lint/suspicious/noExplicitAny: support various router Link components
   LinkComponent?: React.ComponentType<any>
   className?: string
-  /** @see {@link RailButtonProps.style} — carries `--stagger-index` in a rail. */
   style?: React.CSSProperties
 }
-
-// Shared lazy-load: fixed `subItems` resolve immediately; `loadSubItems` fires
-// once on first open and caches. A failed load resets so the next open retries.
 function useExpandableItems(
   subItems?: RailExpandableSubItem[],
   loadSubItems?: () => Promise<RailExpandableSubItem[]>,
@@ -713,8 +405,6 @@ function useExpandableItems(
   const [items, setItems] = React.useState<RailExpandableSubItem[] | null>(subItems ?? null)
   const [loading, setLoading] = React.useState(false)
   const loadedRef = React.useRef(subItems !== undefined)
-
-  // Keep fixed items in sync if the prop identity changes.
   React.useEffect(() => {
     if (subItems !== undefined) {
       setItems(subItems)
@@ -746,64 +436,26 @@ function SubItemsSkeleton() {
   )
 }
 
-/**
- * A nav item that reveals sub-items. On the labeled rail it expands inline as an
- * accordion: the leading icon and chevron remain visible, their shared button
- * toggles the list, and clicking the label navigates (`href`). On the
- * icon-only rail it shows the sub-items in a right-anchored flyout on hover.
- * Sub-items can be fixed (`subItems`) or lazy (`loadSubItems`, with a loading
- * skeleton). Used for e.g. a "History" entry fronting recent sessions.
- */
 export function RailExpandable({
-  icon: Icon,
-  label,
-  description,
-  href,
-  isActive,
-  showLabel,
-  subItems,
-  loadSubItems,
-  activeSubIds,
-  emptyLabel = "Nothing here yet",
-  defaultOpen,
-  onNavigate,
-  LinkComponent,
-  className,
-  style,
+  icon: Icon, label, description, href, isActive, showLabel, subItems, loadSubItems,
+  activeSubIds, emptyLabel = "Nothing here yet", defaultOpen, onNavigate, LinkComponent, className, style,
 }: RailExpandableProps) {
   const Link = LinkComponent ?? DefaultLink
   const [open, setOpen] = React.useState(defaultOpen ?? false)
   const { items, loading, ensureLoaded } = useExpandableItems(subItems, loadSubItems)
-  // Start-open consumers still need lazy sub-items loaded without a manual toggle.
   React.useEffect(() => { if (defaultOpen) ensureLoaded() }, [defaultOpen, ensureLoaded])
-  // The accordion's disclosure animates its real height (grid-template-rows
-  // 0fr -> 1fr), which needs its content MOUNTED to collapse against — a list
-  // that unmounts on close snaps shut, and a max-height guess is either a clip
-  // or an ease toward a number an unknown number of sessions never reaches. So
-  // the content mounts on first open and stays. Two consequences handled below:
-  // it must not exist before that first open (a rail that ships every session's
-  // link in the DOM on page load is a different component), and while closed it
-  // must be `inert` — clipped links are still tabbable and still announced.
   const [everOpened, setEverOpened] = React.useState(defaultOpen ?? false)
   const discloseRef = React.useRef<HTMLDivElement>(null)
   const discloseId = React.useId()
   React.useEffect(() => {
     const el = discloseRef.current
     if (!el) return
-    // Set through the DOM rather than as a JSX prop: React 18 treats `inert` as
-    // an unknown string attribute and React 19 as a boolean one, so there is no
-    // single prop value that is correct in both, and this package supports both.
+    // React 18 and 19 disagree on the inert prop; set the DOM attribute.
     if (open) el.removeAttribute("inert")
     else el.setAttribute("inert", "")
   }, [open])
   const activeSet = React.useMemo(() => new Set(activeSubIds ?? []), [activeSubIds])
-  // One link names the current page. When a sub-item is the page (an open
-  // session), the row is highlighted as its parent but does not also claim
-  // `aria-current="page"`.
   const rowCurrent = isActive && activeSet.size === 0 ? "page" : undefined
-  // Collapsed-rail flyout is portaled to <body> (it must escape the rail's
-  // scroll-overflow clipping), so it's positioned from the trigger's rect and
-  // kept open across the trigger→flyout gap by a small close delay.
   const triggerRef = React.useRef<HTMLDivElement>(null)
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [coords, setCoords] = React.useState<{ left: number; top?: number; bottom?: number; maxHeight: number } | null>(null)
@@ -823,9 +475,6 @@ export function RailExpandable({
         className={cn(
           "flex h-8 min-w-0 items-center gap-2 rounded-md px-2.5 text-sm transition-colors",
           MOTION_CONTROL,
-          // A direct child of the vertical disclosure must keep its row height.
-          // `flex-1` gives it a zero basis there, so the grid can shrink it to
-          // one line; only the actions wrapper needs horizontal flex growth.
           showLabel && item.actions?.length ? "flex-1" : "w-full flex-none",
           active
             ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
@@ -858,10 +507,6 @@ export function RailExpandable({
         )}
       </Link>
     )
-
-    // Kebab actions are an expanded-rail affordance only — the collapsed-rail
-    // hover flyout stays plain links (a portaled dropdown inside the
-    // mouse-leave-closed flyout would fight its own dismissal).
     if (!showLabel || !item.actions?.length) return link
 
     return (
@@ -905,8 +550,6 @@ export function RailExpandable({
     : items && items.length > 0
       ? items.map(subLink)
       : <p className="px-2.5 py-1.5 text-sm text-muted-foreground">{emptyLabel}</p>
-
-  // ---- Collapsed (icon-only) rail: hover-triggered right flyout (portaled) ----
   if (!showLabel) {
     const triggerClasses = cn(
       "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
@@ -926,10 +569,6 @@ export function RailExpandable({
         const left = r.right + m
         const spaceBelow = window.innerHeight - r.top - m
         const spaceAbove = r.bottom - m
-        // Anchor downward from the trigger top when there's room; otherwise (e.g.
-        // a History item near the bottom) anchor the flyout's bottom to the
-        // trigger and let it grow upward. Either way it's capped to the available
-        // space and scrolls internally so it never runs off the screen.
         setCoords(
           spaceBelow >= spaceAbove
             ? { left, top: r.top, maxHeight: spaceBelow }
@@ -957,11 +596,11 @@ export function RailExpandable({
       >
         {href ? (
           <Link href={href} to={href} onClick={onNavigate} aria-label={label} aria-description={description} aria-current={rowCurrent} className={triggerClasses}>
-            <Icon className="size-4 shrink-0" />
+            <Icon className="h-[17px] w-[17px] shrink-0" />
           </Link>
         ) : (
           <button type="button" aria-label={label} aria-description={description} aria-haspopup="menu" aria-expanded={open} className={triggerClasses}>
-            <Icon className="size-4 shrink-0" />
+            <Icon className="h-[17px] w-[17px] shrink-0" />
           </button>
         )}
 
@@ -981,7 +620,7 @@ export function RailExpandable({
               onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
               className={cn("agent-pop-in z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
             >
-              <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-medium text-[var(--text-dim)] select-none">
+              <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
                 {label}
               </p>
               {description && <p className="shrink-0 px-2 pb-2 text-xs text-muted-foreground">{description}</p>}
@@ -992,8 +631,6 @@ export function RailExpandable({
       </div>
     )
   }
-
-  // ---- Labeled (expanded) rail: inline accordion ----
   const toggle = () => {
     setOpen((v) => {
       const next = !v
@@ -1017,8 +654,6 @@ export function RailExpandable({
             : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
         )}
       >
-        {/* The icon identifies the destination; the visible chevron shows that
-            this control expands its child list even before hover. */}
         <button
           type="button"
           onClick={toggle}
@@ -1028,8 +663,8 @@ export function RailExpandable({
           aria-description={description}
           className={`flex h-9 w-12 shrink-0 items-center gap-1 rounded-md pl-2 pr-1 ${focusRing}`}
         >
-          <Icon className="size-4 shrink-0" aria-hidden />
-          <ChevronRight
+          <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden />
+          <ChevronRightIcon
             className={cn(
               "h-3.5 w-3.5 shrink-0 transition-transform",
               MOTION_CONTROL,
@@ -1038,34 +673,13 @@ export function RailExpandable({
             aria-hidden
           />
         </button>
-
-        {/* Label: navigates when `href` is set, otherwise toggles the list. */}
-        {href ? (
-          <Link
-            href={href}
-            to={href}
-            onClick={onNavigate}
-            aria-current={rowCurrent}
-            aria-description={description}
-            className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-sm font-medium"
-          >
-            <span className="truncate">{label}</span>
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={toggle}
-            aria-description={description}
-            className="flex h-9 min-w-0 flex-1 items-center pr-2.5 text-left text-sm font-medium"
-          >
-            <span className="truncate">{label}</span>
-          </button>
-        )}
+        {React.createElement(href ? Link : "button", {
+          ...(href ? { href, to: href, onClick: onNavigate, "aria-current": rowCurrent } : { type: "button", onClick: toggle }),
+          "aria-description": description,
+          className: cn("flex h-9 min-w-0 flex-1 items-center pr-2.5 text-sm font-medium", !href && "text-left"),
+        }, <span className="truncate">{label}</span>)}
       </div>
       </RailTooltip>
-
-      {/* Snap layout while preserving lazy content and the closed inert region.
-          The clipped child carries no padding; spacing belongs inside it. */}
       <div ref={discloseRef} id={discloseId} className="grid transition-none" style={{ gridTemplateRows: open ? "1fr" : "0fr" }} data-open={open ? "true" : "false"}>
         <div className="min-h-0 overflow-hidden">
           <div className="flex flex-col gap-0.5 pl-3 pt-0.5">{everOpened ? list : null}</div>
@@ -1075,21 +689,14 @@ export function RailExpandable({
   )
 }
 
-// ============================================================================
-// RailModeButton — RailButton wired to sidebar mode switching
-// ============================================================================
-
 export interface RailModeButtonProps {
   mode: string
   icon: React.ComponentType<{ className?: string }>
   label: string
   badge?: number
-  /** @see {@link RailButtonProps.badgeLabel} */
   badgeLabel?: (count: number) => string
   className?: string
-  /** Show label text next to icon (for mobile drawer) */
   showLabel?: boolean
-  /** @see {@link RailButtonProps.style} — carries `--stagger-index` in a rail. */
   style?: React.CSSProperties
 }
 
@@ -1110,10 +717,6 @@ export function RailModeButton({ mode, icon, label, badge, badgeLabel, className
   )
 }
 
-// ============================================================================
-// SidebarPanel — slide-out content area (260px)
-// ============================================================================
-
 export interface SidebarPanelProps {
   children: React.ReactNode
   className?: string
@@ -1122,25 +725,11 @@ export interface SidebarPanelProps {
 export function SidebarPanel({ children, className }: SidebarPanelProps) {
   const { panelOpen } = useSidebar()
 
-  return (
-    <div
-      className={cn(
-        "transition-[opacity] h-full overflow-hidden border-l border-[var(--md3-outline-variant)] bg-surface-container-low",
-        MOTION_SURFACE,
-        panelOpen ? "w-[268px] opacity-100" : "w-0 opacity-0 pointer-events-none",
-        className,
-      )}
-    >
-      <div className="flex flex-col h-full w-[268px]">
-        {children}
-      </div>
-    </div>
-  )
+  return <div className={cn(
+    "transition-[opacity] h-full overflow-hidden border-l border-[var(--md3-outline-variant)] bg-surface-container-low",
+    MOTION_SURFACE, panelOpen ? "w-[268px] opacity-100" : "w-0 opacity-0 pointer-events-none", className,
+  )}><div className="flex flex-col h-full w-[268px]">{children}</div></div>
 }
-
-// ============================================================================
-// SidebarPanelHeader — panel title bar
-// ============================================================================
 
 export interface SidebarPanelHeaderProps {
   children?: React.ReactNode
@@ -1149,18 +738,10 @@ export interface SidebarPanelHeaderProps {
 }
 
 export function SidebarPanelHeader({ children, title, className }: SidebarPanelHeaderProps) {
-  return (
-    <ShellHeader divider={false} className={cn("border-b border-[var(--md3-outline-variant)] bg-transparent px-4", className)}>
-      {children ?? (
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-      )}
-    </ShellHeader>
-  )
+  return <ShellHeader divider={false} className={cn("border-b border-[var(--md3-outline-variant)] bg-transparent px-4", className)}>
+    {children ?? <h2 className="text-sm font-semibold text-foreground">{title}</h2>}
+  </ShellHeader>
 }
-
-// ============================================================================
-// SidebarPanelContent — scrollable content area
-// ============================================================================
 
 export interface SidebarPanelContentProps {
   children: React.ReactNode
@@ -1168,16 +749,8 @@ export interface SidebarPanelContentProps {
 }
 
 export function SidebarPanelContent({ children, className }: SidebarPanelContentProps) {
-  return (
-    <div className={cn("flex-1 overflow-y-auto px-2 py-2", className)}>
-      {children}
-    </div>
-  )
+  return <div className={cn("flex-1 overflow-y-auto px-2 py-2", className)}>{children}</div>
 }
-
-// ============================================================================
-// SidebarContent — main content area that responds to sidebar width
-// ============================================================================
 
 export interface SidebarContentProps {
   children: React.ReactNode
@@ -1186,65 +759,30 @@ export interface SidebarContentProps {
 
 export function SidebarContent({ children, className }: SidebarContentProps) {
   const { contentMargin } = useSidebar()
-
-  // Single responsive <main> landmark. Margin-left only applies at lg+ where
-  // the desktop sidebar is visible as a rail; on mobile the drawer is an
-  // overlay so content starts at the viewport edge.
-  return (
-    <main
-      className={cn(
-        "min-h-screen transition-none lg:ml-[var(--sb-content-margin,0px)]",
-        className,
-      )}
-      style={{ "--sb-content-margin": `${contentMargin}px` } as React.CSSProperties}
-    >
-      {children}
-    </main>
-  )
+  return <main className={cn("min-h-screen transition-none lg:ml-[var(--sb-content-margin,0px)]", className)} style={{ "--sb-content-margin": `${contentMargin}px` } as React.CSSProperties}>{children}</main>
 }
-
-// ============================================================================
-// ProfileAvatar — avatar button with dropdown (for rail footer)
-// ============================================================================
 
 export interface ProfileAvatarProps {
   user?: SidebarUser | null
   isLoading?: boolean
   onLogout?: () => void
   onSettingsClick?: () => void
-  /** Pass null when the host has no settings destination. */
   settingsHref?: string | null
-  /** Extra dropdown items rendered before settings/logout */
   children?: React.ReactNode
   className?: string
-  /** Show name/email beside the avatar (for a labeled rail) instead of an icon-only avatar button. */
   showDetails?: boolean
-  /**
-   * When provided, the menu renders an Appearance section (Light/Dark/System)
-   * driven by this host-supplied controller. Omit to hide it.
-   */
   appearance?: AppearanceController
   // biome-ignore lint/suspicious/noExplicitAny: Support various router Link components
   LinkComponent?: React.ComponentType<any>
 }
-
-// Appearance (theme) picker rendered inside the profile dropdown. A single
-// "Appearance" row shows the current theme; hovering it opens a submenu with
-// Light / Dark / System (à la Claude / ChatGPT). Selecting a mode calls
-// `onSelect` with `preventDefault()` so the menu stays open and the active
-// check updates live.
 const APPEARANCE_META: Record<ThemeMode, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
-  light: { label: "Light", Icon: Sun },
-  dark: { label: "Dark", Icon: Moon },
+  light: { label: "Light", Icon: SunIcon },
+  dark: { label: "Dark", Icon: MoonIcon },
   system: { label: "System", Icon: Monitor },
 }
 
 function AppearanceMenuSection({ appearance, divider = true }: { appearance: AppearanceController; divider?: boolean }) {
   const modes = appearance.modes ?? ["light", "dark", "system"]
-  // Resolve "system" → light/dark from the OS, but only after mount and via
-  // state (not a bare `matchMedia()` call in render): the server/first-client
-  // render is deterministic (`systemDark` starts false → no hydration mismatch
-  // for the caption), then it updates after mount and tracks live OS changes.
   const [systemDark, setSystemDark] = React.useState(false)
   React.useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return
@@ -1255,7 +793,7 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
     return () => mq.removeEventListener("change", onChange)
   }, [])
   const resolved = appearance.value === "system" ? (systemDark ? "dark" : "light") : appearance.value
-  const TriggerIcon = resolved === "dark" ? Moon : Sun
+  const TriggerIcon = resolved === "dark" ? MoonIcon : SunIcon
   const caption =
     appearance.value === "system"
       ? `System (${resolved === "dark" ? "Dark" : "Light"})`
@@ -1266,8 +804,6 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
       {divider && <DropdownMenuSeparator />}
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
-          {/* Icons are decorative — the text labels carry the meaning, so they're
-              hidden from the a11y tree (also keeps menu-item names clean). */}
           <span aria-hidden="true" className="mr-2 inline-flex shrink-0">
             <TriggerIcon className="h-4 w-4" />
           </span>
@@ -1287,12 +823,12 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
                 className="gap-3 py-2 text-[14px]"
               >
                 <span aria-hidden="true" className="inline-flex shrink-0">
-                  <Icon className="size-4" />
+                  <Icon className="h-[18px] w-[18px]" />
                 </span>
                 <span className="flex-1">{label}</span>
                 {active && (
                   <span aria-hidden="true" className="inline-flex shrink-0 text-[var(--accent-text)]">
-                    <Check className="size-4" />
+                    <Check className="h-[18px] w-[18px]" />
                   </span>
                 )}
               </DropdownMenuItem>
@@ -1304,18 +840,7 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
   )
 }
 
-export function ProfileAvatar({
-  user,
-  isLoading = false,
-  onLogout,
-  onSettingsClick,
-  settingsHref = "/dashboard/settings",
-  children,
-  className,
-  showDetails = false,
-  appearance,
-  LinkComponent,
-}: ProfileAvatarProps) {
+export function ProfileAvatar({ user, isLoading = false, onLogout, onSettingsClick, settingsHref = "/dashboard/settings", children, className, showDetails = false, appearance, LinkComponent }: ProfileAvatarProps) {
   const Link = LinkComponent ?? DefaultLink
 
   return (
@@ -1389,13 +914,13 @@ export function ProfileAvatar({
         {appearance && <AppearanceMenuSection appearance={appearance} divider={Boolean(children)} />}
         {onSettingsClick ? (
           <DropdownMenuItem onClick={onSettingsClick}>
-            <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
+            <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
             Settings
           </DropdownMenuItem>
         ) : settingsHref !== null ? (
           <DropdownMenuItem asChild>
             <Link href={settingsHref} to={settingsHref} className="flex items-center">
-              <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
+              <SettingsIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               Settings
             </Link>
           </DropdownMenuItem>
@@ -1404,7 +929,7 @@ export function ProfileAvatar({
           <>
             {(children || appearance || onSettingsClick || settingsHref !== null) && <DropdownMenuSeparator />}
             <DropdownMenuItem className="text-[var(--surface-danger-text)]" onClick={onLogout}>
-              <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
+              <LogOutIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               Sign Out
             </DropdownMenuItem>
           </>

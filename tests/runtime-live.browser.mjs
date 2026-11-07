@@ -40,7 +40,7 @@ try {
       await card.waitFor()
       assert.equal(await page.getByRole('radio', { name: 'Graph', exact: true }).count(), 1)
       await card.click()
-      const conversation = page.getByRole('complementary', { name: 'Research conversation' })
+      const conversationRole = width === 390 ? 'dialog' : 'complementary', conversation = page.getByRole(conversationRole, { name: 'Research conversation', exact: true })
       await conversation.getByText('Inspecting the native recorded work', { exact: true }).waitFor()
       const written = Date.now()
       await appendFile(join(workflow, 'agent-one.jsonl'), message('A new native journal event reaches the selected conversation'))
@@ -55,8 +55,8 @@ try {
       await page.getByRole('combobox', { name: 'Run', exact: true }).selectOption({ label: 'root' })
       await page.getByText('Recorded supervisor', { exact: true }).waitFor()
       assert.equal(await conversation.count(), 0, 'Changing roots closes the previously selected agent stream')
-      await page.getByRole('button', { name: /^root, Done,/ }).click()
-      await page.getByRole('complementary', { name: 'root conversation' }).getByText('recorded.txt', { exact: false }).first().waitFor()
+      await page.getByRole('button', { name: 'root, Done', exact: true }).click()
+      await page.getByRole(conversationRole, { name: 'root conversation', exact: true }).getByText('recorded.txt', { exact: false }).first().waitFor()
       await page.screenshot({ path: `${output}/native-supervisor-${width}-${theme}.png`, fullPage: true })
       await page.getByRole('combobox', { name: 'Run', exact: true }).selectOption({ label: 'workflow' })
       await appendFile(join(workflow, 'journal.jsonl'), '{"type":"result","agentId":"one","result":"Complete"}\n')
@@ -70,7 +70,7 @@ try {
       checks.push({ theme, width, visibleAfterMs, result: 'PASS', transport: 'Runtime serveTopWeb over native files' })
     } catch (error) {
       await page.screenshot({ path: `${output}/failure-${width}-${theme}.png`, fullPage: true })
-      await writeFile(`${output}/failure-${width}-${theme}.json`, JSON.stringify({ error: String(error), text: await page.locator('body').innerText(), errors, responses }, null, 2))
+      await writeFile(`${output}/failure-${width}-${theme}.json`, JSON.stringify({ error: String(error), text: await page.locator('body').innerText(), buttons: await page.getByRole('button').evaluateAll(nodes => nodes.map(node => ({ name: node.getAttribute('aria-label'), text: node.textContent, status: node.getAttribute('data-status') }))), snapshot: await fetch(`${web.url}api/top`).then(response => response.json()), errors, responses }, null, 2))
       throw error
     } finally { await web.close(); await context.close(); await rm(root, { recursive: true, force: true }) }
   }

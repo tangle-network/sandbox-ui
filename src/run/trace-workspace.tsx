@@ -1,19 +1,20 @@
 "use client"
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useMemo, useRef, useState } from "react"
 import { toolGlyph } from "@tangle-network/charts/react"
 import type { FlowMarker, FlowSpan, FlowTrace } from "@tangle-network/charts"
-import { AgentTimeline } from "@tangle-network/ui/chat"
 import { runStatus } from "@tangle-network/ui/run"
-import { X } from "lucide-react"
+import { SegmentedControl } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
-import { activityTiming, ambientStyle, syncAmbient } from "../workflows/run-ui-state"
+import { activityTiming } from "../workflows/run-ui-state"
 import { AgentGraph, type AgentGraphEdge, type AgentGraphNode, type AgentGraphEvent, type AgentGraphProps } from "../workflows/AgentGraph"
-import { type AgentStreamOpener, useAgentStream } from "./agent-stream"
+import type { AgentStreamOpener } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
-import { timelineItems } from "./record/ConversationRowView"
-import { LatestEvents } from "./latest-events"
 import { useFollowTail } from "./use-follow-tail"
+import { AgentConversationView, useAgentConversation } from "./agent-conversation"
+import { AgentInspector, usePhone, useSplit } from "./agent-inspector"
+
+type GraphLayout = NonNullable<AgentGraphProps["layout"]>
 
 /** A moment on the run's event track: a release, a check verdict, a spawn, a crash or a steer. */
 export interface TraceEvent extends FlowMarker {}
@@ -27,11 +28,8 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   events?: TraceEvent[]
   /** The time the reader moved to, in trace ms; null while following live or showing the whole run. */
   onTimeChange?: (t: number | null) => void
-  /**
-   * The code workspace as of the cursor and scoped to the selected agent, usually a WorkspaceFilesPane: the page answers
-   * the as-of query. It spans the full width; this workspace supplies the bounded height virtual panes need. Keep its key on the commit so a scrub
-   * keeps its state.
-   */
+  /** The code workspace as of the cursor and scoped to the selected agent, usually a WorkspaceFilesPane; it spans the full width
+   *  at the bounded height virtual panes need. Keep its key on the commit so a scrub keeps its state. */
   files?: ReactNode
   /** The scoreboard as of the cursor, under the code workspace; omitted when not given. */
   scoreboard?: ReactNode
@@ -40,6 +38,17 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   conversationOpen?: boolean
   /** Called with the agent the reader selected, or undefined when they close its drawer or press Escape. */
   onSelectAgent?: (agentId: string | undefined) => void
+  /** Dock the inspector as a resizable split (drag or arrow keys; the width is remembered per viewer) instead of a fixed
+   *  overlay over the right edge. Below 768px the inspector is always a full-screen sheet. */
+  docked?: boolean
+  /** Why the selected agent has no conversation, when the host knows (no transcript captured, harness without a stream).
+   *  Shown in place of an empty transcript; without it the inspector says no conversation was recorded. */
+  transcriptNote?: (agentId: string) => string | undefined
+  /** The words that created the selected agent — its parent's commission — collapsed above its conversation. */
+  commission?: { by?: string; text?: string }
+  /** The host's own account of the selected agent beyond its trace facts, such as its profile: shown in the inspector's
+   *  closed-by-default Details, after the conversation. */
+  renderAgentDrawer?: (agentId: string) => ReactNode
   /**
    * What the trace cannot say about a live agent, by agent id: its activity, thinking line, latest events, commits or
    * result. Timed agents follow the trace cursor. Workers without recorded timing retain their live identity and metadata.
@@ -105,15 +114,13 @@ function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, a
   return { nodes, edges }
 }
 
-
-
 /**
- * The run workspace: the agent timeline and span waterfall over one clock, the selected agent's conversation
- * streaming in a right-hand drawer, and the page's code workspace and scoreboard following the time cursor. Scrubbing is time travel:
+ * The run workspace: the agent timeline and span waterfall over one clock, filling its parent's height, with the selected
+ * agent's conversation at the center of its inspector, and the page's code workspace and scoreboard following the time cursor. Scrubbing is time travel:
  * every panel shows what was true at the cursor, and the conversation shows what had been said by then.
  */
 export function TraceWorkspace({
-  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, agentCards, agentGraph, className, ...waterfall
+  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, renderAgentDrawer, transcriptNote, docked, commission, agentCards, agentGraph, className, ...waterfall
 }: TraceWorkspaceProps) {
   const byId = useMemo(() => new Map(trace.spans.flatMap((span) => (span.id ? [[span.id, span] as const] : []))), [trace])
   const [ownSelection, setOwnSelection] = useState<string>()
@@ -122,18 +129,14 @@ export function TraceWorkspace({
   const agent = selected ? byId.get(selected) : undefined, card = selected ? agentCards?.[selected] : undefined
   const agentId = agent?.id ?? (card ? selected : undefined), agentName = agent?.name ?? card?.label ?? agentId, agentModel = agent?.detail ?? card?.model
   const showConversation = !!agentId && conversationOpen !== false
+  const detail = showConversation && agentId ? renderAgentDrawer?.(agentId) : undefined
   const { defaultLayout = "tree", ...graphOptions } = agentGraph ?? {}
-  const [graphLayout, setGraphLayout] = useState<"tree" | "hub">(defaultLayout)
+  const [graphLayout, setGraphLayout] = useState<GraphLayout>(defaultLayout)
   const [cursor, setCursor] = useState<number | null>(null)
-  const stream = useAgentStream(selected && streamUrl ? streamUrl(selected) : undefined, openEventSource)
-
   // As of the cursor: entries that began by then, measured on the trace clock (trace ms from the run's first span).
-  // The run's epoch comes from the page (`startedAt`); without it, the agent's first message anchors its own start.
-  const origin = useMemo(() => {
-    if (waterfall.startedAt !== undefined) return waterfall.startedAt
-    const first = stream.entries[0]?.at
-    return agent && first !== undefined ? first - agent.startMs : undefined
-  }, [waterfall.startedAt, agent, stream.entries])
+  const conversation = useAgentConversation(selected && streamUrl ? streamUrl(selected) : undefined, openEventSource,
+    { cursor, startedAt: waterfall.startedAt, agentStartMs: agent?.startMs, silent: agentId ? transcriptNote?.(agentId) : undefined })
+  const { shown, items, live, note, silent } = conversation
   const graph = useMemo(() => agentGraphAt(trace.spans, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges), [trace, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges])
   const selectedNode = graph.nodes.find(node => node.id === agentId)
   const facts = cursor === null || agent && agent.endMs <= cursor ? [...(agent?.facts ?? [])] : []
@@ -141,26 +144,26 @@ export function TraceWorkspace({
     if (value && !facts.some(fact => fact.value === value)) facts.push({ label, value })
   }
   const graphNow = cursor !== null && waterfall.startedAt !== undefined ? waterfall.startedAt + cursor : undefined
-  const shown = cursor === null || origin === undefined ? stream.entries : stream.entries.filter((entry) => entry.at - origin <= cursor)
-  // Live means the stream is open and producing now: an ended, unreachable or scrubbed stream is not.
-  const live = stream.alive && !stream.error && cursor === null
-  const items = useMemo(() => timelineItems(shown, live), [shown, live])
 
   // Follow the newest output unless the reader scrolled up; then offer a "New output" pill instead of jumping.
   const scroller = useRef<HTMLDivElement>(null)
   const { unseen, jump } = useFollowTail(scroller, { identity: showConversation ? selected : undefined, content: items })
+  const root = useRef<HTMLDivElement>(null)
+  const phone = usePhone(), split = useSplit(root)
+  const mode = phone ? "sheet" : docked ? "docked" : "overlay"
+  const status = live ? "running" : selectedNode?.status ?? runStatus(agent?.status ?? "unknown")
+  const failure = facts.find(fact => fact.label === "Failure")?.value ?? (status === "failed" ? selectedNode?.result ?? undefined : undefined)
+  // A commission the conversation already opens with is not printed twice.
+  const said = (text?: string) => !!text && shown.some(entry => entry.kind === "message" && entry.role === "user" && entry.content.trim() === text.trim())
 
-  return (
-    <div className={cn("sandbox-trace-workspace flex min-h-0 flex-col gap-3", className)}>
-      <div className={showConversation ? "min-w-0 lg:mr-[420px]" : "min-w-0"}>
-      <TraceWaterfall {...waterfall} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
+  const left = (<>
+      <div className={cn("flex min-h-[320px] min-w-0 flex-1 flex-col", showConversation && mode === "overlay" && "lg:mr-[420px]")}>
+      <TraceWaterfall {...waterfall} maxHeight={waterfall.maxHeight ?? "fill"} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
         onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
-        latestEvents={<LatestEvents agents={graph.nodes} now={graphNow} live={cursor === null} selectedId={agentId} onSelect={select} />}
-        graph={<section className="flex h-[60vh] min-h-[480px] flex-col" aria-label="Agent graph">
-          <label className="flex h-8 shrink-0 items-center justify-end gap-2 px-3 text-xs text-muted-foreground">Layout
-            <select aria-label="Graph layout" value={graphLayout} onChange={event => setGraphLayout(event.currentTarget.value as "tree" | "hub")} className="rounded-[var(--radius-control)] border border-border bg-card px-2 py-1 text-foreground"><option value="tree">Tree</option><option value="hub">Hub</option></select>
-          </label>
+        graph={<section className="relative flex min-h-[320px] flex-1 flex-col" style={typeof waterfall.maxHeight === "number" ? { height: waterfall.maxHeight } : undefined} aria-label="Agent graph">
+          <SegmentedControl aria-label="Graph layout" value={graphLayout} onValueChange={setGraphLayout} className="absolute right-2 top-1 z-10"
+            options={[{ value: "grid", label: "Grid" }, { value: "tree", label: "Tree" }, { value: "hub", label: "Hub" }]} />
           <AgentGraph {...graphOptions} layout={graphLayout} renderEventIcon={event => toolGlyph(event.label)} nodes={graph.nodes} edges={graph.edges}
             selectedId={agentId ?? null} onSelect={select} showLatestEvents={false} now={graphNow}
             live={cursor === null && graph.nodes.some(node => ["running", "waiting", "needs-you", "failed"].includes(node.status))}
@@ -169,47 +172,25 @@ export function TraceWorkspace({
       </div>
       {/* Without files the run has no code to follow, so no empty 70vh panel is reserved for it. */}
       {files && (
-        <section aria-label="Code at the cursor" className="flex h-[70vh] min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card">{files}</section>
+        <section aria-label="Code at the cursor" className="flex h-[70vh] min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-border bg-card">{files}</section>
       )}
       {scoreboard && (
-        <section aria-label="Scoreboard at the cursor" className="overflow-hidden rounded-xl border border-border bg-card">{scoreboard}</section>
+        <section aria-label="Scoreboard at the cursor" className="shrink-0 overflow-hidden rounded-xl border border-border bg-card">{scoreboard}</section>
       )}
-      {showConversation && (
-        // A drawer over the right edge: the code workspace keeps its full width underneath.
-        <aside aria-label={`${agentName} conversation`} onKeyDown={(event) => { if (event.key === "Escape") select(undefined) }}
-          className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[420px] flex-col border-l border-border bg-card shadow-2xl">
-          <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", live ? "bg-[var(--surface-info-text)]" : "bg-muted-foreground")} aria-hidden data-motion={live ? "essential" : undefined} style={live ? ambientStyle : undefined} onAnimationStart={syncAmbient} />
-            <h3 className="min-w-0 flex-1 truncate text-sm font-semibold">{agentName}</h3>
-            {agentModel && <span className="truncate text-xs text-muted-foreground">{agentModel}</span>}
-            <button type="button" aria-label="Close conversation" title="Close (Esc)" onClick={() => select(undefined)}
-              className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
-              <X aria-hidden className="h-4 w-4" />
-            </button>
-          </header>
-          {facts.length > 0 && <section aria-label="Recorded agent details" tabIndex={0} className="max-h-[35vh] shrink-0 overflow-y-auto border-b border-border px-3 py-2 text-sm">
-            <dl className="space-y-2">{facts.map((fact, index) => <div key={index}>
-              <dt className="text-xs text-muted-foreground">{fact.label}</dt>
-              <dd className="m-0 whitespace-pre-wrap break-words">{fact.value}</dd>
-            </div>)}</dl>
-          </section>}
-          <div
-            ref={scroller}
-            data-primary-content=""
-            className="min-h-0 flex-1 overflow-y-auto px-3 py-2"
-          >
-            {streamUrl && (cursor === null || origin !== undefined)
-              ? <AgentTimeline items={items} isThinking={live && items.length === 0} emptyState={<p className="p-4 text-sm text-muted-foreground">{stream.error ?? "No messages yet."}</p>} />
-              : <p className="p-4 text-sm text-muted-foreground">Conversation: not time-indexed</p>}
-          </div>
-          {unseen && (
-            <button type="button" onClick={() => jump()}
-              className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-border bg-background px-3 py-1 text-xs shadow-sm">
-              New output
-            </button>
-          )}
-        </aside>
-      )}
+  </>)
+  return (
+    <div ref={root} className={cn("sandbox-trace-workspace flex h-full min-h-0 flex-row", className)}>
+      <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col gap-3", (files || scoreboard) && "overflow-y-auto")}>{left}</div>
+      {showConversation && agentId && <>
+        {mode === "docked" && <div {...split.separator} className="group relative w-3 shrink-0 cursor-col-resize touch-none outline-none">
+          <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-[hsl(var(--ring))] group-focus-visible:w-0.5 group-focus-visible:bg-[hsl(var(--ring))]" />
+        </div>}
+        <AgentInspector name={agentName ?? agentId} model={agentModel && !/^not recorded$/i.test(agentModel) ? agentModel : undefined} status={status} span={agent} live={live}
+          failure={failure} silent={note !== undefined && note === silent} commission={said(commission?.text) ? { by: commission?.by } : commission} facts={facts} detail={detail} scroller={scroller} unseen={unseen} onJump={() => jump()}
+          onClose={() => select(undefined)} mode={mode} style={mode === "docked" ? { width: split.width } : undefined}>
+          <AgentConversationView conversation={conversation} />
+        </AgentInspector>
+      </>}
     </div>
   )
 }

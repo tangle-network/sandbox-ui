@@ -57,6 +57,7 @@ export async function openStory(page, id, theme, viewport, baseURL, { reducedMot
     globals: `sandboxTheme:${theme}`,
   })
   if (/^workflows-agentgraph--(live-run-cards|burst)$/.test(id)) params.set('args', 'at:0')
+  if (/^workflows-agentgraph-hub--(live|call-lifecycle)$/.test(id)) params.set('args', `at:${id.endsWith('--live') ? 6.9 : 3.8};loop:0`)
   await page.goto(`/iframe.html?${params}`, { waitUntil: 'load' })
 
   // Walk until the first visible element; the selector engine would inspect every cell in large tables.
@@ -80,7 +81,6 @@ export async function openStory(page, id, theme, viewport, baseURL, { reducedMot
   }, null, { timeout: 30_000, polling: 100 })
   await expect(page.locator('.sb-errordisplay')).not.toBeVisible()
   await expect(page.locator('html')).toHaveAttribute('data-sandbox-ui', 'true')
-  // A dark toolbar/body alone is not proof that components resolved dark tokens.
   await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
   await expect(page.locator('html')).toHaveClass(new RegExp(`(?:^|\\s)${theme}(?:\\s|$)`))
   await expect(page.locator('html')).not.toHaveClass(new RegExp(`(?:^|\\s)${theme === 'dark' ? 'light' : 'dark'}(?:\\s|$)`))

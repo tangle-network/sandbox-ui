@@ -1,3 +1,56 @@
+## 7.0.7
+
+- Refresh the development wire-contract dependency to Runtime 8. Public UI APIs and peer floors remain unchanged.
+
+## 7.0.6
+
+- Test the viewer wire contract against Runtime 7 and refresh first-party Interface, Brand, Charts and UI resolutions. Require UI ^11.51.17 and Brand ^1.31.4 so the packed CSS is proved against its declared peer floors. Forward UI’s ExpandablePanel and phone hooks, reusing the canonical phone hook in run workspaces.
+
+## 7.0.5
+
+- `AgentWorkspace` (`@tangle-network/sandbox-ui/run`): one agent's workspace behind a Files | Trace | Terminal control. The host reads everything through an `AgentWorkspaceSource` (`list`, `read`, `stream`, `terminal`): the files as a `WorkspaceFilesPane` that names where they came from (live box, git mirror), each file read-only in `CodeView` with a Diff view when the host gives a baseline, the conversation as of the run cursor, and a `TerminalView` once the host mints a grant; a gone box says so instead of an empty pane. `view` and `path` are controlled when the host carries them in a route. Back and Escape return to the run.
+- `TraceWorkspace`'s Graph view offers Grid beside Tree and Hub (charts 4.0.21 `layout="grid"`: every agent's card at once, root first, in reading order), and `agentGraph.defaultLayout` accepts it. The inspector's conversation and the workspace's Trace share one `useAgentConversation`.
+- Requires `@tangle-network/charts` ^4.0.21.
+- `tests/visual/content-share.mjs` carries the content-share rule for every app's proof (one bar of at most 48 px, the open panel at least 85 % of the viewport, the first chart, table, grid, code or conversation within 112 px of its top), moved from the Lab viewer; the Grid, Files and Trace stories are measured at 1440×900.
+
+## 7.0.4
+
+- Below `lg`, `DashboardLayout` sets the document's `scroll-padding-top` to its fixed 3rem mobile bar, so `#anchor` jumps and `scrollIntoView({ block: "start" })` land below the bar. Apps can drop their own reservation for it.
+- `SessionSidebar` with `groupBy="status"` labels its catch-all group "Idle" instead of "Done": it holds idle sessions and sessions with no status, neither of which is known to have finished.
+
+## 7.0.3
+
+- Sidebar Collapse and Expand keep keyboard focus in both directions, including headers with a brand, custom content or no mark.
+
+## 7.0.2
+
+- Fixed-height TraceWorkspace hosts keep their graph height, so graph nodes remain visible and clickable in LiveRun. Filled hosts continue to use the parent height.
+- Tool spans use a provider logo only when the producer supplies an icon key; tool details such as bash keep the charts tool glyph instead of requesting unrelated CDN logos.
+
+## 7.0.1
+
+- Requires `@tangle-network/charts` ^4.0.15, whose `FlowWaterfall` drops `renderAgentDetail` and `agentFill="agent"` and takes `maxHeight="fill"`. `TraceWorkspace` defaults to `maxHeight="fill"` and no longer measures free space itself: give it a height and the waterfall or graph fills it, including below the fold. Pass a number only for a fixed-height host.
+- Hosts must now import charts CSS: `@tangle-network/sandbox-ui/styles`, `globals.css` and `tailwind.css` no longer bundle `@tangle-network/charts` CSS (flow-waterfall, agent-graph, live). A stale copy of the 4.0.x waterfall rules kept the removed hatching alive beside charts' own stylesheet. Hosts import the charts stylesheets they render themselves (README, Styles).
+- The agent conversation reads as a conversation: back-to-back tool calls (and the reasoning between them) fold into one row, "Ran 5 tools · Shell, Read ×2, knowledge read +1 more", whose arguments and results open with it; a live agent's newest call stays its own row. A tool outside the kit no longer prints its raw arguments inline, and `mcp__<server>__` prefixes and underscores never reach the row. User messages longer than six lines fold.
+- An agent without a conversation shows its failure, commission and the host's `transcriptNote` sentence at the top, with Details open, instead of a centred sentence in an empty pane.
+- `TraceWorkspace` no longer draws the "Latest activity" feed under the waterfall; the bars already show what ran.
+- The inspector's Details summary draws one chevron even under host styles that add a `summary::before` marker; the phone sheet's Back is the brand ghost `Button`, and the sheet, not Back, takes focus when it opens.
+
+## 7.0.0
+
+Release admission names this a break, as at 5.0.0: `TraceWorkspaceProps` extends `Omit<TraceWaterfallProps, ...>`, so the added optional `transcriptNote` changes a shape it cannot split. 6.x consumers adopt with no code change.
+
+- `TraceWorkspace` fills its parent's height: give it a definite height (`h-full` in a sized column) and the waterfall rows or agent graph grow into the room; `maxHeight` is only the starting height.
+- The selected agent's inspector puts the conversation at the center: a compact header (status, full name, model mark, one line of duration, cost and tokens, a fresh/cached/out token bar, a Live marker while streaming), the failure reason in danger ink, the commission folded to two lines (dropped when the conversation opens with it), then the transcript. Recorded facts and `renderAgentDrawer` move into a closed Details disclosure, without the facts the header states.
+- `docked` is a resizable split: drag the separator or use ArrowLeft/ArrowRight on it; the width (default 40%, at least 360px) is remembered per viewer. Below 768px the inspector is a full-screen sheet with Back, focus moved in, and Escape returning focus.
+- New optional `transcriptNote(agentId)`: the host's reason an agent has no conversation, shown instead of an empty pane; without it the inspector says "No conversation was recorded for this agent."
+- The graph's Tree/Hub layout picker is the brand `SegmentedControl` (`radiogroup` "Graph layout"), replacing the native select.
+
+## 5.0.0
+
+- `TraceWorkspace` takes `renderAgentDrawer(agentId)`: the host's own account of the selected agent, such as its profile, shown in its drawer under the recorded facts. Release admission names this a break because `TraceWorkspaceProps` extends `Omit<TraceWaterfallProps, ...>`, whose shape it cannot split; the prop is optional, so 4.x consumers adopt with no code change.
+- Hold `@pierre/diffs` below 1.6.3: 1.6.3 (published 2026-11-03) declares `catalog:` and `workspace:*` dependencies, so a fresh npm install of this package failed.
+
 ## 4.0.1
 
 - The live agent stream names its generation on reconnect even without a history reader, so `TraceWorkspace`'s drawer resets when an agent restarts instead of dropping the new generation's rows (#514).
@@ -68,7 +121,6 @@
 - Keep phone activity in a stable, scrollable row so operator requests and failures remain near the top during updates.
 - Preserve the reader’s zoom when selecting wide teams or resizing a selected graph; explicit zoom controls retain their behavior.
 - Adopt Charts’ complete timeline facts and readable phone names.
-
 
 ## 2.0.5
 
@@ -667,7 +719,6 @@
   Host-supplied starting, ready, and unavailable states govern when the iframe mounts.
   The ready view uses the existing preview URL policy and iframe isolation, with compact refresh and open controls.
   Products can constrain initial app URLs with `allowedOrigins`, show service-observed readiness and enforced access metadata, and place their own actions in the compact header.
-
 
 ## 0.114.0
 

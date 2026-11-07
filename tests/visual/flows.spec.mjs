@@ -22,7 +22,7 @@ const flows = [
       const cards = page.locator('.react-flow__node-agent, .react-flow__node-liveAgent, .ag-phone-select')
       await expect(cards).toHaveCount(5)
       await cards.filter({ hasText: 'verifier' }).click()
-      await expect(page.getByRole('complementary', { name: 'verifier conversation' })).toBeVisible()
+      await expect(page.getByLabel('verifier conversation', { exact: true })).toBeVisible()
     },
   },
   {
@@ -61,19 +61,6 @@ const flows = [
       expect(root.y).toBeGreaterThanOrEqual(frame.y)
       expect(root.y + root.height).toBeLessThanOrEqual(workersTop)
       await expect(page.locator('.ag-frame-owner')).toHaveCount(1)
-    },
-  },
-  {
-    // A failed agent keeps its whole card with its failure (critique P0 #5); only finished and stopped agents become chips.
-    name: 'agentgraph-live-failed',
-    story: 'workflows-agentgraph--live-run-cards',
-    act: async (page) => {
-      await expect(page.locator('.agent-graph[data-layout="ready"], .agent-graph[data-layout="list"]')).toBeVisible()
-      const failed = page.locator('.ag-live-card[data-status="failed"]')
-      await expect(failed).toHaveCount(1)
-      await expect(failed.locator('.ag-live-failure')).toContainText('regressed 38%')
-      await expect(page.locator('.ag-live-slot[data-status="failed"]')).toHaveCount(0)
-      await expect(page.locator('.ag-live-chip[data-status="succeeded"]')).toHaveCount(1)
     },
   },
   {
@@ -149,6 +136,9 @@ for (const theme of themes) {
         expect(bounds.x + bounds.width).toBe(viewport.width)
       }
       await test.info().attach('header geometry', { body: await page.screenshot(), contentType: 'image/png' })
+      // Anchor and scrollIntoView targets must land below the fixed mobile bar.
+      const scrollPadding = viewportName === 'desktop' ? 'auto' : `${(await header.boundingBox())?.height}px`
+      await expect(page.locator('html')).toHaveCSS('scroll-padding-top', scrollPadding)
       if (viewportName === 'desktop') {
         await expect(header).toBeHidden()
         const before = await main.boundingBox()

@@ -59,6 +59,30 @@ export interface AgentStreamState {
   history?: { loading: boolean; earlier: boolean; more: boolean; reading: boolean; beginning: boolean; emptyTail: boolean; older(): void; newer(): void; latest(): void; beginningPage(): void }
 }
 const textOf = (value: unknown): string | undefined => value == null ? undefined : typeof value === "string" ? value : JSON.stringify(value)
+
+/** A native harness row (live-stream evidence and retained captures: `{ type, data }`) as a producer event, so
+ *  non-root agents render: the wall's transcript pages and per-agent streams serve these rows verbatim, and before
+ *  this adapter every one of them was dropped by the fold — a live child agent showed nothing at all. Text and
+ *  reasoning parts (opencode `raw` events and the SDK's `message.part.updated`) become deltas; a `message.updated`
+ *  carrying a user role becomes the user's words. Native tool shapes vary by harness and stay unrendered until a
+ *  captured sample exists to map them honestly. */
+function nativeEventOf(row: ProducerRow): AgentStreamRow["event"] | undefined {
+  const data = row.data as Record<string, unknown> | undefined
+  if (!data || typeof data !== "object") return undefined
+  const wrapped = (data as { event?: { type?: string; part?: { type?: string; text?: unknown } } }).event
+  const source = wrapped && (wrapped.type === "text" || wrapped.type === "reasoning" || wrapped.type === "message") ? wrapped : data
+  const type = (source as { type?: string }).type
+  const part = (source as { part?: { type?: string; text?: unknown } }).part
+  if ((type === "text" || type === "message.part.updated") && part?.type === "text" && typeof part.text === "string") return { kind: "text_delta", text: part.text }
+  if ((type === "reasoning" || type === "message.part.updated") && part?.type === "reasoning" && typeof part.text === "string") return { kind: "reasoning_delta", text: part.text }
+  if (type === "text" && typeof (source as { text?: unknown }).text === "string") return { kind: "text_delta", text: (source as { text: string }).text }
+  const info = ((source as { properties?: { info?: { role?: string; content?: unknown; text?: unknown } } }).properties?.info ?? (source as { info?: { role?: string; content?: unknown; text?: unknown } }).info)
+  if ((type === "message" || type === "message.updated") && info?.role === "user") {
+    const words = typeof info.content === "string" ? info.content : typeof info.text === "string" ? info.text : undefined
+    if (words) return { kind: "user", text: words }
+  }
+  return undefined
+}
 const failed = (value: unknown) => typeof value === "object" && value !== null && ("error" in value || (value as { is_error?: unknown }).is_error === true || (value as { isError?: unknown }).isError === true)
 const recorded = (text: string) => { try { const value: unknown = JSON.parse(text); return value && typeof value === "object" ? `\`\`\`json\n${text}\n\`\`\`` : text } catch { return text } }
 const TOOL_TYPES: ReadonlySet<string> = new Set(["bash", "read", "write", "edit", "glob", "grep", "list", "download", "inspect", "audit"])
@@ -69,7 +93,7 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Pr
 export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly ProducerRow[]): AgentTranscriptEntry[] {
   const next = [...entries]
   for (const row of rows) {
-    const event = row.event
+    const event = row.event ?? nativeEventOf(row)
     if (!event) continue
     const at = Date.parse(row.at ?? ""), scope = JSON.stringify([row.stream ?? null, row.attempt ?? null])
     const base = { id: event.id ?? `${scope}:${row.seq}`, at, scope, attempt: row.attempt, provenance: event.provenance, isError: event.isError }, last = next.at(-1)
@@ -98,8 +122,8 @@ export function foldAgentRows(entries: AgentTranscriptEntry[], rows: readonly Pr
 }
 
 type Direction = "tail" | "head" | "after" | "before"
-type Window = { identity?: string; rows: ProducerRow[]; generation?: string | number; first: number | null; lastSeq: number; alive: boolean; ended: boolean; loading: boolean; ready: boolean; earlier: boolean; more: boolean; reading: boolean; error?: string }
-const empty = (identity: string | undefined, history?: AgentStreamHistory): Window => ({ identity, rows: [], first: null, lastSeq: -1, alive: !!identity && (history?.alive ?? true), ended: false, loading: !!history, ready: !history, earlier: false, more: false, reading: false })
+type Window = { identity?: string; rows: ProducerRow[]; entries: AgentTranscriptEntry[]; generation?: string | number; first: number | null; lastSeq: number; alive: boolean; ended: boolean; loading: boolean; ready: boolean; earlier: boolean; more: boolean; reading: boolean; error?: string }
+const empty = (identity: string | undefined, history?: AgentStreamHistory): Window => ({ identity, rows: [], entries: [], first: null, lastSeq: -1, alive: !!identity && (history?.alive ?? true), ended: false, loading: !!history, ready: !history, earlier: false, more: false, reading: false })
 function receive(prior: Window, page: AgentStreamPage, direction: Direction, fromHead: boolean): Window {
   if (!Array.isArray(page.events)) throw new Error("Invalid agent rows stream")
   const fresh = direction === "tail" || direction === "head" || page.reset || page.generation !== undefined && page.generation !== prior.generation
@@ -109,7 +133,11 @@ function receive(prior: Window, page: AgentStreamPage, direction: Direction, fro
   if (trimmed) rows = prior.reading ? rows.slice(0, 2000) : rows.slice(-2000)
   const first = fresh ? page.firstSeq ?? rows[0]?.seq ?? null : direction === "before" ? page.firstSeq ?? prior.first : trimmed && !prior.reading ? rows[0]?.seq ?? prior.first : prior.first
   const lastSeq = fresh ? page.lastSeq ?? rows.at(-1)?.seq ?? -1 : direction === "before" ? prior.lastSeq : page.lastSeq ?? rows.at(-1)?.seq ?? prior.lastSeq
-  return { ...prior, rows, first, lastSeq, generation: page.generation ?? prior.generation, alive: page.alive ?? prior.alive, ended: page.alive === false, loading: false, ready: true, error: undefined,
+  // The fold is incremental by construction: an appending page folds only its new rows onto the entries already
+  // folded, so a long streaming turn costs its deltas, not a re-fold of the whole window on every frame. A backward
+  // page (earlier history prepended) re-folds the merged window once — rare, and the only correct merged order.
+  const entries = fresh ? foldAgentRows([], rows) : direction === "after" ? foldAgentRows(prior.entries, page.events) : foldAgentRows([], rows)
+  return { ...prior, rows, entries, first, lastSeq, generation: page.generation ?? prior.generation, alive: page.alive ?? prior.alive, ended: page.alive === false, loading: false, ready: true, error: undefined,
     earlier: trimmed && direction !== "before" || (direction !== "after" || fresh ? page.hasEarlier ?? (first !== null && first > 0) : prior.earlier), more: direction === "before" ? prior.more : fromHead && !!page.hasMore }
 }
 
@@ -175,8 +203,10 @@ export function useAgentStream(url: string | undefined, openEventSource?: AgentS
       unavailable: () => update({ ...current.current, error: "Live updates are temporarily unavailable" }),
     },
   })
-  let entries: AgentTranscriptEntry[] = [], error = state.error
-  try { entries = foldAgentRows([], history?.projectRows?.(state.rows) ?? state.rows) } catch (cause) { error = cause instanceof Error ? cause.message : String(cause) }
+  // A host projection rewrites rows before they fold, so it re-folds on change; the native window's entries are
+  // already folded incrementally in receive and return as-is — no per-render fold of a long turn.
+  let entries: AgentTranscriptEntry[] = state.entries, error = state.error
+  if (history?.projectRows) { try { entries = foldAgentRows([], history.projectRows(state.rows) ?? state.rows) } catch (cause) { error = cause instanceof Error ? cause.message : String(cause) } }
   return { generation: state.generation, entries, lastSeq: state.lastSeq, alive: state.alive, error,
     ...(history ? { history: { loading: state.loading, earlier: state.earlier, more: state.more, reading: state.reading, beginning, emptyTail: state.ended && !state.rows.length && state.first === null && state.lastSeq < 0,
       older: () => { if (current.current.identity === state.identity) pageReader.current("before") }, newer: () => { if (current.current.identity === state.identity) pageReader.current("after") }, latest: () => { begin(undefined); reload(value => value + 1) }, beginningPage: () => begin(state.identity) } } : {}) }

@@ -47,7 +47,7 @@ jobs:
         run: |
           pnpm typecheck
           pnpm build
-          pnpm test
+          pnpm test && pnpm test:bridge
 
       - name: Pack release artifact
         id: package
@@ -56,8 +56,8 @@ jobs:
           TARBALL_PATH=$(./scripts/pack-package.sh "$PACK_DIR")
           echo "path=$TARBALL_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Install Chromium for packed consumer proof
-        run: pnpm exec playwright install chromium
+      - name: Install Chromium and qualify Storybook visuals
+        run: pnpm exec playwright install chromium && pnpm test:visual
 
       - name: Test packed artifact
         env:
@@ -103,6 +103,17 @@ jobs:
           path: ${{ runner.temp }}/release
           retention-days: 1
           if-no-files-found: error
+
+      - name: Retain failed visual diagnostics
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: sandbox-ui-visual-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/
+            test-results-stream/
+          retention-days: 1
+          if-no-files-found: warn
 
   github-release:
     if: github.repository == 'tangle-network/sandbox-ui' && github.ref == 'refs/heads/main' && inputs.phase == 'github-release'

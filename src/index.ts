@@ -112,7 +112,7 @@ export {
   useRunGroups,
   type UseRunGroupsOptions,
   useRunCollapseState,
-  useLiveTime, useRunNow,
+  useLiveTime, useRunNow, usePhone, PHONE_MEDIA,
   usePtySession,
   type UsePtySessionOptions,
   type UsePtySessionReturn,

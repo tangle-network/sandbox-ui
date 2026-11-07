@@ -8,7 +8,9 @@
 
 # @tangle-network/sandbox-ui
 
-React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a shadcn-style primitive layer plus higher-order sandbox surfaces for agent chat, files, runtime state, artifacts, and dashboard views.
+React components for [Tangle Sandbox](https://sandbox.tangle.tools)'s technical surfaces: transcripts, files, terminal, code changes, runtime state, artifacts, and dashboard views.
+Generic controls come from `@tangle-network/ui`; the composed agent shell, composer and pickers come from `@tangle-network/agent-app`; products own routes, data and policy.
+[Canonical ownership](./UI-DIRECTION.md#canonical-ownership) says which layer owns a component.
 
 [Browse the live Storybook](https://sandbox-ui-storybook.pages.dev/) to inspect component states in dark and light themes at desktop and mobile widths.
 
@@ -18,12 +20,8 @@ React component library for [Tangle Sandbox](https://sandbox.tangle.tools) — a
 npm install @tangle-network/sandbox-ui
 ```
 
-**Required peers:** `react` and `react-dom` 18 or 19, `@tangle-network/agent-interface ^1.0.0 || ^2.0.0 || ^3.0.0 || ^5.2.0`, `@tangle-network/brand ^1.26.0`, and `@tangle-network/ui ^11.40.1`.
-
-The Interface compatibility check exercises the exact supported floors 1.0.0,
-2.0.0, 3.0.0, and 5.2.0, including source checks and a packed consumer's public
-declarations. Interface 4.x, 5.0.x, and 5.1.x are not admitted. New majors require
-qualification before the peer range is extended.
+Required peers and their supported ranges are in [package.json](./package.json) `peerDependencies`.
+The Interface compatibility check exercises each supported floor through source checks and a packed consumer's public declarations; a new major is qualified before its range is added.
 Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which. `/files` needs `pdfjs-dist` only for `PdfViewer`, which `FilePreview` uses for PDFs; without it the viewer says so and falls back to the browser's own PDF viewer. The `ui` README covers its worker and asset setup through `configurePdfViewer`.
 
 ### Retained reports
@@ -59,6 +57,16 @@ An app that runs its own Tailwind v4 compile imports the source entry instead, a
 @import "tailwindcss";
 @import "@tangle-network/sandbox-ui/tailwind.css";
 ```
+
+Run views draw `@tangle-network/charts` components (`TraceWorkspace`, `TraceWaterfall`, `AgentGraph`, `LatestEvents`), and charts owns their CSS: sandbox-ui's stylesheets never include it. Import the ones you render, once, beside this package's:
+
+```tsx
+import "@tangle-network/charts/react/flow-waterfall.css";
+import "@tangle-network/charts/react/agent-graph.css";
+import "@tangle-network/charts/react/live.css";
+```
+
+`AgentWorkspace` (also under `run`) is one agent's workspace behind a Files | Trace | Terminal control: the host supplies an `AgentWorkspaceSource` (`list`, `read`, an optional conversation `stream` and an optional `terminal` grant) and the workspace draws the files pane naming their origin, the read-only code and diff, the conversation as of the run cursor, and the terminal; it reports what it is waiting for or could not read instead of an empty pane.
 
 The entry carries Brand's tokens and utility registrations, this package's runtime CSS, and `@source` lines for its own `dist` and the `@tangle-network/ui` peer, so every component utility compiles once, in the app's own layer order.
 Brand defaults live in `theme.brand`, so host refinements in `theme` can override them. Agent apps import `@tangle-network/agent-app/tailwind.css`, which includes this entry.
@@ -377,7 +385,7 @@ If you are not using `SandboxWorkbench`, you can set the same attributes yoursel
 
 ### 2. Override Semantic Tokens
 
-The shared visual contract lives in [src/styles/tokens.css](./src/styles/tokens.css). The important tokens are:
+Brand owns the shared visual contract (`@tangle-network/brand/styles/tokens.css`). The important tokens are:
 
 - surfaces: `--bg-root`, `--bg-card`, `--bg-elevated`, `--bg-section`, `--bg-input`
 - text: `--text-primary`, `--text-secondary`, `--text-muted`
@@ -424,7 +432,7 @@ Wrap or compose on lower-level exports when you want:
 - a different artifact tab model
 - app-specific empty states and actions
 
-The higher-order dashboard/billing surfaces are now accent-token driven rather than hardcoded to the default Tangle look. The main seams are:
+The dashboard and billing surfaces read the accent tokens. Their class seams are:
 
 - `DashboardLayout.className`, `sidebarClassName`, `contentClassName`
 - `BillingDashboard.className`, `cardClassName`
@@ -437,10 +445,6 @@ For that, compose directly from:
 - `/chat`
 - `/run`
 - `/files`
-
-### Current Reality
-
-Retheming is absolutely supported, but the documentation was thinner than it should be. The token layer is strong; the higher-level surfaces are themeable, but more opinionated. For a radically different product look, prefer keeping the token contract and wrapping the higher-level workbench/chat surfaces rather than fighting every internal class.
 
 `DiffView` from `/workbench` defaults to a dark code theme. If the host app offers a light/dark switch, pass its selected theme as `themeType`. The diff renderer updates when that value changes.
 
@@ -487,7 +491,7 @@ Retheming is absolutely supported, but the documentation was thinner than it sho
 
 ## License
 
-Apache-2.0
+MIT
 
 The native Runtime viewer is `LiveRun` from `@tangle-network/sandbox-ui/run/live`. It composes the same trace workspace, selected-agent conversation, retained files and capture coverage. Hosts may supply the existing fetch/EventSource transport for their authenticated session; an API or authenticated transport change clears the previous view, while frames within one stable transport preserve selection and the camera. Keep the transport object stable for that account. `@tangle-network/sandbox-ui/workspace-viewer.js` is the self-contained browser entry for Runtime's existing asset-directory contract, with `styles.css` beside it. `useDocument` owns same-origin ETag reads. `useEventStream` from `/run` owns native reconnect, terminal end and stale callback cleanup; `useAgentStream` resumes retained rows by generation and sequence. Authenticated openers keep their session and reconnect policy. Producers own validation and accounting.
 

@@ -10,7 +10,7 @@ export function traceSpanMark(span: FlowSpan): ReactNode {
     const identity = span.detail ? modelBrandFor(span.detail) : null;
     return identity ? <ModelBrandStack identity={identity} size="sm" /> : undefined;
   }
-  const provider = span.icon ?? (span.kind === "tool" ? span.detail : undefined);
+  const provider = span.icon;
   return provider ? <ProviderIcon id={provider} displayName={provider} size={14} className="rounded-[3px]" /> : undefined;
 }
 

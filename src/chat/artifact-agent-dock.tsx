@@ -3,6 +3,8 @@
 import * as React from "react";
 import { Sparkles, Send, Square, X } from "lucide-react";
 import { ChatMessage, type MessageRole } from "@tangle-network/ui/chat";
+import { usePhone } from "@tangle-network/ui/hooks";
+import { Sheet, SheetContent, SheetTitle } from "@tangle-network/ui/primitives";
 import { cn } from "../lib/utils";
 import { focusField } from "@tangle-network/ui/utils";
 
@@ -109,23 +111,7 @@ function createDockMessageId(): string {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-/**
- * ArtifactAgentDock — slide-in right-rail chat scoped to a single artifact.
- *
- * Renders a persistent, per-artifact conversation surface that streams via a
- * consumer-supplied transport. Mount alongside any artifact view (file editor,
- * sequence editor, asset preview) to give every artifact its own dedicated
- * agent conversation without forking the chat UI per app.
- *
- * Behavior:
- * - On open, calls `transport.ensureThread(scope)` to get the canonical thread
- *   id and `transport.loadMessages(threadId)` to populate prior turns.
- * - On submit, calls `transport.sendStream(...)` and concatenates delta events
- *   into a single streaming assistant message; renders inline.
- * - Composer: Enter sends, Shift+Enter newline, Cancel during stream supported.
- * - Accessibility: scope `aria-label` on the panel, `aria-pressed` is the
- *   consumer's job on whatever button toggles `open`.
- */
+/** A persistent per-artifact conversation using the consumer's transport. */
 export function ArtifactAgentDock({
   scope,
   open,
@@ -135,6 +121,7 @@ export function ArtifactAgentDock({
   onError,
   className,
 }: ArtifactAgentDockProps) {
+  const phone = usePhone();
   const [threadId, setThreadId] = React.useState<string | null>(null);
   const [messages, setMessages] = React.useState<ArtifactDockMessage[]>([]);
   const [composer, setComposer] = React.useState(defaultPrompt ?? "");
@@ -277,11 +264,13 @@ export function ArtifactAgentDock({
   if (!open) return null;
 
   const heading = defaultScopeLabel(scope);
+  const Title = phone ? SheetTitle : "div";
 
-  return (
+  const panel = (
     <aside
       className={cn(
         "flex h-full w-[420px] min-w-[360px] max-w-[480px] flex-col border-l border-[var(--md3-outline-variant)] bg-surface-container shadow-[var(--shadow-dropdown)]",
+        phone && "w-full min-w-0 max-w-none",
         className,
       )}
       aria-label={`Agent chat about ${heading}`}
@@ -291,7 +280,7 @@ export function ArtifactAgentDock({
           <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
             <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Discussing</div>
-            <div className="truncate text-sm font-semibold text-foreground">{heading}</div>
+            <Title className="truncate text-sm font-semibold text-foreground">{heading}</Title>
           </div>
         </div>
         <button
@@ -343,7 +332,7 @@ export function ArtifactAgentDock({
             placeholder={`Ask about ${heading}…`}
             rows={2}
             disabled={!threadId}
-            className={`min-h-[44px] flex-1 resize-none rounded-[20px] border bg-surface-dim px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground disabled:opacity-50 ${focusField}`}
+            className={`min-h-[44px] min-w-0 flex-1 resize-none rounded-[20px] border bg-surface-dim px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground disabled:opacity-50 ${focusField}`}
           />
           {sending ? (
             <button
@@ -368,4 +357,7 @@ export function ArtifactAgentDock({
       </form>
     </aside>
   );
+  return phone ? <Sheet open={open} onOpenChange={onOpenChange}>
+    <SheetContent hideCloseButton aria-describedby={undefined} className="inset-0 h-dvh w-full gap-0 p-0 sm:max-w-none">{panel}</SheetContent>
+  </Sheet> : panel;
 }

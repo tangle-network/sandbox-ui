@@ -2,7 +2,8 @@ import { useState } from "react";
 import { waitFor } from "@testing-library/dom";
 import type { Meta, StoryObj } from "@storybook/react";
 import type { FlowSpan, FlowTrace } from "@tangle-network/charts";
-import { TraceWorkspace, type AgentStreamOpener, type TraceWorkspaceProps } from "../../run";
+import { TraceWorkspace, type TraceWorkspaceProps } from "../../run";
+import { call, replayOpener, type ReplayRow } from "./fixtures/replay";
 
 /**
  * The run workspace with its Timeline and Graph views over one trace: a manager that spawned four workers, one still
@@ -76,6 +77,9 @@ export const GraphView: StoryObj<typeof meta> = {
   },
 };
 
+/** The Graph view's grid layout: every agent's card at once, root first, in reading order, with no edges or camera. */
+export const GridView: StoryObj<typeof meta> = { ...GraphView, args: { ...GraphView.args, agentGraph: { defaultLayout: "grid" } } };
+
 /** Producer timestamps reach the internal Graph without an agentCards clock adapter. */
 export const RecordedActivity: StoryObj<typeof meta> = {
   ...GraphView,
@@ -85,12 +89,8 @@ export const RecordedActivity: StoryObj<typeof meta> = {
 /** Synthetic long failure metadata; the conversation is intentionally not its source. */
 const fullFailure = "Checkout tests failed. " + "The retained compiler diagnostic identifies the affected integration boundary and the original exit status. ".repeat(10) + "Final retained diagnostic.";
 const epoch = Date.parse("2026-11-04T10:00:00Z");
-type Row = { kind: string; text?: string; toolName?: string; toolCallId?: string; args?: unknown; result?: unknown; isError?: boolean };
-const call = (id: string, toolName: string, args: unknown, result: unknown, isError?: boolean): Row[] => [
-  { kind: "tool-call", toolCallId: id, toolName, args }, { kind: "tool-result", toolCallId: id, toolName, result, isError },
-];
 /** What each agent said and ran, as its producer streams it: commission, reasoning, tool calls and results, its answer. */
-const transcripts: Record<string, { rows: Row[]; ends: boolean }> = {
+const transcripts: Record<string, { rows: ReplayRow[]; ends: boolean }> = {
   verifier: { ends: true, rows: [
     { kind: "user", text: "Verify the sumcheck prover against the reference transcript and report any mismatch with its exact location." },
     { kind: "reasoning", text: "Start from the integration test the manager named, then read the failing boundary." },
@@ -119,18 +119,7 @@ const transcripts: Record<string, { rows: Row[]; ends: boolean }> = {
   ] },
   field: { ends: true, rows: [] },
 };
-/** A host transport that replays each agent's recorded rows, then ends finished agents and keeps a running one open. */
-const replay: AgentStreamOpener = url => {
-  const id = decodeURIComponent(url.split("/").at(-2) ?? ""), recorded = transcripts[id] ?? { rows: [], ends: true }
-  const start = epoch + (trace.spans.find(span => span.id === id)?.startMs ?? 0)
-  const listeners = new Map<string, ((event: MessageEvent<string>) => void)[]>()
-  const timer = setTimeout(() => {
-    const events = recorded.rows.map((event, seq) => ({ seq, at: new Date(start + seq * 20_000).toISOString(), event }))
-    for (const listener of listeners.get("rows") ?? []) listener(new MessageEvent("rows", { data: JSON.stringify({ events, lastSeq: events.length - 1 }) }))
-    if (recorded.ends) for (const listener of listeners.get("end") ?? []) listener(new MessageEvent("end", { data: "{}" }))
-  }, 50)
-  return { addEventListener: (type, listener) => listeners.set(type, [...(listeners.get(type) ?? []), listener]), close: () => clearTimeout(timer) }
-};
+const replay = replayOpener(transcripts, id => epoch + (trace.spans.find(span => span.id === id)?.startMs ?? 0));
 function OpenDrawer(args: TraceWorkspaceProps) {
   const [selected, select] = useState<string | undefined>(args.selectedAgentId);
   return <TraceWorkspace {...args} selectedAgentId={selected} onSelectAgent={select} />;

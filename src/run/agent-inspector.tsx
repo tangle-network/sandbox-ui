@@ -1,6 +1,6 @@
 "use client"
 
-import { type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react"
+import { type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { FlowSpan } from "@tangle-network/charts"
 import { RunStatusIcon, type RunStatus } from "@tangle-network/ui/run"
 import { formatCost, formatCount, formatSpanDuration } from "@tangle-network/ui/utils"
@@ -9,15 +9,7 @@ import { Button } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { ModelBrandStack, modelBrandFor } from "../lib/model-brand"
 
-/** Below the tablet breakpoint the inspector is a full-screen sheet over the run, never a squeezed side pane. */
-const PHONE = "(max-width: 767px)"
-export function usePhone() {
-  return useSyncExternalStore(
-    notify => { const query = matchMedia(PHONE); query.addEventListener("change", notify); return () => query.removeEventListener("change", notify) },
-    () => matchMedia(PHONE).matches,
-    () => false,
-  )
-}
+export { usePhone } from "@tangle-network/ui/hooks"
 
 const WIDTH_KEY = "sandbox-ui:trace-inspector-width", MIN_PX = 360, MIN_LEFT_PX = 320, STEP = 0.02
 const readWidth = () => { try { const value = Number(localStorage.getItem(WIDTH_KEY)); return value > 0 && value < 1 ? value : 0.4 } catch { return 0.4 } }

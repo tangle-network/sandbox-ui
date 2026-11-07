@@ -1,6 +1,13 @@
+## 7.0.6
+
+- Test the viewer wire contract against Runtime 7 and refresh first-party Interface, Brand, Charts and UI resolutions while preserving published peer compatibility.
+
 ## 7.0.5
 
-- Test the viewer wire contract against Runtime 7 and refresh first-party dependency resolutions, including the current Interface, Charts and UI releases. Published peer compatibility is preserved; trace graph layout state follows the Charts layout contract.
+- `AgentWorkspace` (`@tangle-network/sandbox-ui/run`): one agent's workspace behind a Files | Trace | Terminal control. The host reads everything through an `AgentWorkspaceSource` (`list`, `read`, `stream`, `terminal`): the files as a `WorkspaceFilesPane` that names where they came from (live box, git mirror), each file read-only in `CodeView` with a Diff view when the host gives a baseline, the conversation as of the run cursor, and a `TerminalView` once the host mints a grant; a gone box says so instead of an empty pane. `view` and `path` are controlled when the host carries them in a route. Back and Escape return to the run.
+- `TraceWorkspace`'s Graph view offers Grid beside Tree and Hub (charts 4.0.21 `layout="grid"`: every agent's card at once, root first, in reading order), and `agentGraph.defaultLayout` accepts it. The inspector's conversation and the workspace's Trace share one `useAgentConversation`.
+- Requires `@tangle-network/charts` ^4.0.21.
+- `tests/visual/content-share.mjs` carries the content-share rule for every app's proof (one bar of at most 48 px, the open panel at least 85 % of the viewport, the first chart, table, grid, code or conversation within 112 px of its top), moved from the Lab viewer; the Grid, Files and Trace stories are measured at 1440×900.
 
 ## 7.0.4
 

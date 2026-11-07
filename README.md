@@ -66,6 +66,8 @@ import "@tangle-network/charts/react/agent-graph.css";
 import "@tangle-network/charts/react/live.css";
 ```
 
+`AgentWorkspace` (also under `run`) is one agent's workspace behind a Files | Trace | Terminal control: the host supplies an `AgentWorkspaceSource` (`list`, `read`, an optional conversation `stream` and an optional `terminal` grant) and the workspace draws the files pane naming their origin, the read-only code and diff, the conversation as of the run cursor, and the terminal; it reports what it is waiting for or could not read instead of an empty pane.
+
 The entry carries Brand's tokens and utility registrations, this package's runtime CSS, and `@source` lines for its own `dist` and the `@tangle-network/ui` peer, so every component utility compiles once, in the app's own layer order.
 Brand defaults live in `theme.brand`, so host refinements in `theme` can override them. Agent apps import `@tangle-network/agent-app/tailwind.css`, which includes this entry.
 

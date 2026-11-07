@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { ArtifactAgentDock, type ArtifactAgentDockTransport } from '../../chat/artifact-agent-dock'
 
 type StreamEvent = 'sent' | 'delta' | 'cancelled' | 'completed'

@@ -1,6 +1,6 @@
 ## 7.0.5
 
-- Test the viewer wire contract against Runtime 7 and refresh first-party dependency resolutions, including the current Interface, Charts and UI releases. Published peer compatibility is preserved.
+- Test the viewer wire contract against Runtime 7 and refresh first-party dependency resolutions, including the current Interface, Charts and UI releases. Published peer compatibility is preserved; trace graph layout state follows the Charts layout contract.
 
 ## 7.0.4
 

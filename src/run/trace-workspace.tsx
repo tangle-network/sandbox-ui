@@ -130,7 +130,7 @@ export function TraceWorkspace({
   const showConversation = !!agentId && conversationOpen !== false
   const detail = showConversation && agentId ? renderAgentDrawer?.(agentId) : undefined
   const { defaultLayout = "tree", ...graphOptions } = agentGraph ?? {}
-  const [graphLayout, setGraphLayout] = useState<"tree" | "hub">(defaultLayout)
+  const [graphLayout, setGraphLayout] = useState(defaultLayout)
   const [cursor, setCursor] = useState<number | null>(null)
   const stream = useAgentStream(selected && streamUrl ? streamUrl(selected) : undefined, openEventSource)
 

@@ -55,7 +55,7 @@ try {
       await page.getByRole('combobox', { name: 'Run', exact: true }).selectOption({ label: 'root' })
       await page.getByText('Recorded supervisor', { exact: true }).waitFor()
       assert.equal(await conversation.count(), 0, 'Changing roots closes the previously selected agent stream')
-      await page.getByRole('button', { name: /^root, Done,/ }).click()
+      await page.getByRole('button', { name: 'root, Done', exact: true }).click()
       await page.getByRole('complementary', { name: 'root conversation' }).getByText('recorded.txt', { exact: false }).first().waitFor()
       await page.screenshot({ path: `${output}/native-supervisor-${width}-${theme}.png`, fullPage: true })
       await page.getByRole('combobox', { name: 'Run', exact: true }).selectOption({ label: 'workflow' })

@@ -1,4 +1,5 @@
 import { RecordConversationConsumer, VirtualListConsumer, RecordTopologyConsumer } from "./record-conversation-consumer";
+import { ArtifactDockFixture } from "./artifact-dock-fixture";
 import React, { createRef, useLayoutEffect, useState, type ReactNode } from "react";
 import {
   Heading, PageHeader, PageShell, SectionTitle, Card, CardHeader, CardContent,
@@ -109,6 +110,7 @@ export function PresentationConsumer(): ReactNode {
     <RecordConversationConsumer />
     <VirtualListConsumer />
     <RecordTopologyConsumer />
+    <ArtifactDockFixture initiallyOpen={false} />
     </>
   );
 }

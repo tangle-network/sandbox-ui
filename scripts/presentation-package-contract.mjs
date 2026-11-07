@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { build, preview } from "vite";
 import tailwindcss from "@tailwindcss/postcss";
@@ -35,6 +35,10 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
   mkdirSync(fixture);
   copyFileSync(join(root, "scripts/presentation-consumer.tsx"), join(fixture, "consumer.tsx"));
   copyFileSync(join(root, "scripts/record-conversation-consumer.tsx"), join(fixture, "record-conversation-consumer.tsx"));
+  const dockFixture = readFileSync(join(root, "src/stories/chat/artifact-dock-fixture.tsx"), "utf8");
+  const dockSource = "../../chat/artifact-agent-dock";
+  assert.equal(dockFixture.split(dockSource).length, 2, "the shared dock fixture must have one component import");
+  writeFileSync(join(fixture, "artifact-dock-fixture.tsx"), dockFixture.replace(dockSource, "@tangle-network/sandbox-ui/chat"));
   copyFileSync(join(root, "src/run/record/__fixtures__/live-conversation.json"), join(fixture, "record-conversation.json"));
   execFileSync(join(root, "node_modules/.bin/tsc"), [
     "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2022", "--jsx", "react-jsx",
@@ -52,13 +56,13 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
 @source "../node_modules/@tangle-network/ui/src/**/*.ts";
 @source "../node_modules/@tangle-network/sandbox-ui/dist/**/*.js";
 @source "../node_modules/@tangle-network/charts/dist/**/*.js";
+@source "./artifact-dock-fixture.tsx";
 `);
-  // The published Tailwind source entry, written exactly as a consumer writes
-  // it: no node_modules paths. Its own `@source` lines must reach this
-  // package's dist and the installed ui peer.
+  // The public entry must reach installed sandbox-ui/UI sources without host node_modules paths.
   writeFileSync(join(fixture, "entry.css"), `
 @import "tailwindcss" source(none);
 @import "@tangle-network/sandbox-ui/tailwind.css";
+@source "./artifact-dock-fixture.tsx";
 @layer theme {
   .light { --hsl-foreground: 0 0% 20%; }
   .dark { --hsl-foreground: 0 0% 80%; }
@@ -101,6 +105,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
             const mediaDir = mediaRoot && lane === "compiled" ? join(mediaRoot, `${manifest.version}-interface-${agentInterfaceVersion}-${width}-${mode}`) : undefined;
             const started = performance.now();
             let passed = false;
+            let artifactDock;
             const page = await browser.newPage({
               viewport: { width, height: 900 }, reducedMotion: "reduce",
               recordVideo: mediaDir ? { dir: mediaDir, size: { width, height: 900 } } : undefined,
@@ -273,18 +278,29 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               }));
               assert.notEqual(cardStyle.background, "rgba(0, 0, 0, 0)", "each public style entry carries authored graph surfaces");
               assert(cardStyle.radius > 0, "each public style entry carries graph geometry");
-              states.push({ lane, width, mode, topology: cardStyle, ...measured });
+              artifactDock = await proveArtifactDock(page, { width, mediaDir });
+              assert.deepEqual(errors, [], "packed artifact dock consumer must not throw");
+              states.push({ lane, width, mode, topology: cardStyle, artifactDock, ...measured });
               if (mediaDir) await page.screenshot({ path: join(mediaDir, "completed.png") });
               passed = true;
             } finally {
               await page.close();
-              if (mediaDir) writeFileSync(join(mediaDir, "provenance.json"), JSON.stringify({
-                scope: "Installed library consumer with fixture data; not production-app rollout",
-                package: `${manifest.name}@${manifest.version}`, archiveSha256, cssSha256, versions,
-                sourceSha,
-                agentInterfaceVersion, lane, width, mode, passed, elapsedMs: Math.round(performance.now() - started),
-                video: basename(await page.video().path()),
-              }, null, 2));
+              if (mediaDir) {
+                writeFileSync(join(mediaDir, "provenance.json"), JSON.stringify({
+                  scope: "Installed library consumer with fixture data; not production-app rollout",
+                  package: `${manifest.name}@${manifest.version}`, archiveSha256, cssSha256, versions,
+                  sourceSha,
+                  agentInterfaceVersion, lane, width, mode, passed, artifactDock, elapsedMs: Math.round(performance.now() - started),
+                  video: basename(await page.video().path()),
+                }, null, 2));
+                if (!passed) {
+                  const name = basename(mediaDir);
+                  assert.match(name, /^[A-Za-z0-9][A-Za-z0-9._-]*$/, "consumer media directory must have a safe basename");
+                  const retained = join(root, "test-results", "consumer-media");
+                  mkdirSync(retained, { recursive: true });
+                  cpSync(mediaDir, join(retained, name), { recursive: true });
+                }
+              }
             }
           }
         }
@@ -302,6 +318,83 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
     assert.notEqual(light.cardBackground, dark.cardBackground, `${lane}: card surface did not follow the theme`);
   }
   console.log(JSON.stringify({ check: "packed-presentation", versions, cssSha256, states }, null, 2));
+}
+
+async function proveArtifactDock(page, { width, mediaDir }) {
+  const viewport = page.viewportSize();
+  assert(viewport);
+  const fixture = page.locator("[data-artifact-dock-fixture]");
+  const opener = fixture.getByRole("button", { name: "Ask about this file", exact: true });
+  const waitForOpenerFocus = async () => {
+    await page.waitForFunction(() => document.querySelector("[data-artifact-dock-fixture] button") === document.activeElement);
+    assert(await opener.evaluate(element => element === document.activeElement));
+  };
+  const dock = page.getByRole("complementary", { name: "Agent chat about retry-policy.ts", exact: true });
+  const close = dock.getByRole("button", { name: "Close artifact chat", exact: true });
+  const send = dock.getByRole("button", { name: "Send", exact: true });
+  const composer = dock.getByPlaceholder("Ask about retry-policy.ts…");
+  await fixture.scrollIntoViewIfNeeded();
+  await opener.click();
+  await dock.waitFor();
+  const dialog = page.getByRole("dialog", { name: "retry-policy.ts", exact: true });
+  if (width === 390) await dialog.waitFor();
+  else {
+    assert.equal(await dialog.count(), 0, "desktop dock remains inline");
+    assert(await dock.evaluate(element => Boolean(element.closest("[data-artifact-dock-fixture]"))));
+  }
+  const layout = await (width === 390 ? dialog : dock).evaluate(element => {
+    const { x, y, width, height } = element.getBoundingClientRect();
+    return { x, y, width, height, position: getComputedStyle(element).position, display: getComputedStyle(element).display };
+  });
+  if (width === 390) {
+    assert(Math.abs(layout.x) <= 1 && Math.abs(layout.y) <= 1 && Math.abs(layout.width - viewport.width) <= 1 && Math.abs(layout.height - viewport.height) <= 1,
+      "the phone conversation occupies one full viewport pane");
+  }
+  const draft = "Retain this draft through dismissal";
+  await composer.fill(draft);
+  const controls = {};
+  for (const [name, control] of [["Close", close], ["Send", send]]) {
+    controls[name] = await control.evaluate(element => {
+      const { x, y, width, height } = element.getBoundingClientRect();
+      return { x, y, width, height, hit: element.contains(document.elementFromPoint(x + width / 2, y + height / 2)) };
+    });
+    const box = controls[name];
+    assert(box.width > 0 && box.height > 0 && box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1 && box.hit,
+      `${name} must be visible and reachable inside the viewport`);
+  }
+  for (const dismissal of width === 390 ? ["close", "escape"] : ["close"]) {
+    if (dismissal === "escape") await page.keyboard.press("Escape");
+    else await close.click();
+    await dock.waitFor({ state: "hidden" });
+    if (width === 390) await waitForOpenerFocus();
+    await opener.click();
+    await dock.waitFor();
+    assert.equal(await composer.inputValue(), draft, "reopening preserves the typed draft");
+  }
+  const prompt = "Show the retry change";
+  await composer.fill(prompt);
+  await send.click();
+  await page.locator('[data-artifact-dock-fixture][data-stream-completed="1"]').waitFor();
+  await dock.getByText(`For this artifact, I would review: ${prompt.toLowerCase()}`, { exact: true }).waitFor();
+  const completeWords = Number(await fixture.getAttribute("data-stream-delta"));
+  const cancelledPrompt = ("Cancel before the fixture finishes " + "continuation ".repeat(40)).trim();
+  await composer.fill(cancelledPrompt);
+  await send.click();
+  await dock.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.locator('[data-artifact-dock-fixture][data-stream-cancelled="1"]').waitFor();
+  const streams = await fixture.evaluate(element => ({
+    sent: Number(element.dataset.streamSent), completed: Number(element.dataset.streamCompleted),
+    cancelled: Number(element.dataset.streamCancelled), delta: Number(element.dataset.streamDelta),
+  }));
+  assert.deepEqual([streams.sent, streams.completed, streams.cancelled], [2, 1, 1]);
+  assert(streams.delta > completeWords && streams.delta < completeWords + `For this artifact, I would review: ${cancelledPrompt}`.split(" ").length,
+    "Cancel aborts a started fixture stream before all chunks are emitted");
+  await dock.getByRole("button", { name: "Cancel", exact: true }).waitFor({ state: "hidden" });
+  if (mediaDir) await page.screenshot({ path: join(mediaDir, "artifact-dock.png") });
+  await close.click();
+  await dock.waitFor({ state: "hidden" });
+  if (width === 390) await waitForOpenerFocus();
+  return { phone: width === 390, layout, controls, dismissals: width === 390 ? ["close", "escape"] : ["close"], draftPreserved: true, streams };
 }
 
 /**

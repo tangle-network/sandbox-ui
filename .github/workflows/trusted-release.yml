@@ -47,7 +47,7 @@ jobs:
         run: |
           pnpm typecheck
           pnpm build
-          pnpm test
+          pnpm test && pnpm test:bridge
 
       - name: Pack release artifact
         id: package
@@ -56,8 +56,8 @@ jobs:
           TARBALL_PATH=$(./scripts/pack-package.sh "$PACK_DIR")
           echo "path=$TARBALL_PATH" >> "$GITHUB_OUTPUT"
 
-      - name: Install Chromium for packed consumer proof
-        run: pnpm exec playwright install chromium
+      - name: Install Chromium and qualify Storybook visuals
+        run: pnpm exec playwright install chromium && pnpm test:visual
 
       - name: Test packed artifact
         env:

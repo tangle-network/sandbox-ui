@@ -261,8 +261,8 @@ importers:
         specifier: ^1.31.3
         version: 1.31.3(react@19.3.1)
       '@tangle-network/charts':
-        specifier: ^4.0.15
-        version: 4.0.15(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.12(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^4.0.21
+        version: 4.0.21(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.12(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -2027,8 +2027,8 @@ packages:
       react-dom:
         optional: true
 
-  '@tangle-network/charts@4.0.2':
-    resolution: {integrity: sha512-pB4P3X0P18XIBWcoIb2H8Q4X9/KK069MtSfr/oDcEnHHaeJQpG2cS0rwEvLpZLUK7bitCh4D4j8Ky+ZP8pCtug==}
+  '@tangle-network/charts@4.0.21':
+    resolution: {integrity: sha512-D/QVKnd7It+qtFCeI++atPkY3Rrv579xAUsiyTiB1W/C2dtqN0j3TV6hnLsVWOcahEst11ektLNR85/+8T0i7g==}
     peerDependencies:
       '@tangle-network/brand': ^1.31.3
       '@tangle-network/ui': ^11.51.9
@@ -4667,9 +4667,9 @@ snapshots:
 
   '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz(a42a0aca35d65c87cb85aab74f48e0e3)':
     dependencies:
-      '@tangle-network/charts': 4.0.2(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.12(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@tangle-network/charts': 4.0.15(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.12(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/harness-sessions': 0.1.7
-      '@tangle-network/sandbox-ui': 3.0.0(570170f309ec07673aaa1bd0fdd82450)
+      '@tangle-network/sandbox-ui': 3.0.0(3c204f80fc8ca0092ea1ca6badfe3ae5)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       zod: 4.6.6
@@ -5968,7 +5968,7 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@tangle-network/charts@4.0.2(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.12(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@tangle-network/charts@4.0.21(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.12(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     optionalDependencies:
       '@tangle-network/brand': 1.31.3(react@19.3.1)
       '@tangle-network/ui': 11.51.12(d56e3d7864cba854d7eacd97c62b4344)
@@ -5988,7 +5988,7 @@ snapshots:
     transitivePeerDependencies:
       - '@modelcontextprotocol/sdk'
 
-  '@tangle-network/sandbox-ui@3.0.0(570170f309ec07673aaa1bd0fdd82450)':
+  '@tangle-network/sandbox-ui@3.0.0(3c204f80fc8ca0092ea1ca6badfe3ae5)':
     dependencies:
       '@lobehub/icons-static-svg': 1.98.0
       '@pierre/diffs': 1.6.1(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -6015,7 +6015,7 @@ snapshots:
       '@drewstone/agent-record': https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz(a42a0aca35d65c87cb85aab74f48e0e3)
       '@hocuspocus/provider': 4.7.1(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33)
       '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.3.1)
-      '@tangle-network/charts': 4.0.2(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.12(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@tangle-network/charts': 4.0.15(@tangle-network/brand@1.31.3(react@19.3.1))(@tangle-network/ui@11.51.12(d56e3d7864cba854d7eacd97c62b4344))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query': 5.104.5(@types/react@19.3.0)(react@19.3.1)
       '@tiptap/core': 3.32.0(@tiptap/pm@3.32.0)
       '@tiptap/extension-collaboration': 3.32.0(@tiptap/core@3.32.0(@tiptap/pm@3.32.0))(@tiptap/pm@3.32.0)(@tiptap/y-tiptap@3.0.10(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.8)(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33))(yjs@13.6.33)

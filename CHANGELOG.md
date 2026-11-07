@@ -1,3 +1,10 @@
+## 7.0.5
+
+- `AgentWorkspace` (`@tangle-network/sandbox-ui/run`): one agent's workspace behind a Files | Trace | Terminal control. The host reads everything through an `AgentWorkspaceSource` (`list`, `read`, `stream`, `terminal`): the files as a `WorkspaceFilesPane` that names where they came from (live box, git mirror), each file read-only in `CodeView` with a Diff view when the host gives a baseline, the conversation as of the run cursor, and a `TerminalView` once the host mints a grant; a gone box says so instead of an empty pane. `view` and `path` are controlled when the host carries them in a route. Back and Escape return to the run.
+- `TraceWorkspace`'s Graph view offers Grid beside Tree and Hub (charts 4.0.21 `layout="grid"`: every agent's card at once, root first, in reading order), and `agentGraph.defaultLayout` accepts it. The inspector's conversation and the workspace's Trace share one `useAgentConversation`.
+- Requires `@tangle-network/charts` ^4.0.21.
+- `tests/visual/content-share.mjs` carries the content-share rule for every app's proof (one bar of at most 48 px, the open panel at least 85 % of the viewport, the first chart, table, grid, code or conversation within 112 px of its top), moved from the Lab viewer; the Grid, Files and Trace stories are measured at 1440×900.
+
 ## 7.0.4
 
 - Below `lg`, `DashboardLayout` sets the document's `scroll-padding-top` to its fixed 3rem mobile bar, so `#anchor` jumps and `scrollIntoView({ block: "start" })` land below the bar. Apps can drop their own reservation for it.

@@ -3,17 +3,18 @@
 import { type ReactNode, useMemo, useRef, useState } from "react"
 import { toolGlyph } from "@tangle-network/charts/react"
 import type { FlowMarker, FlowSpan, FlowTrace } from "@tangle-network/charts"
-import { AgentTimeline, AgentTimelineColumn } from "@tangle-network/ui/chat"
 import { runStatus } from "@tangle-network/ui/run"
 import { SegmentedControl } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { activityTiming } from "../workflows/run-ui-state"
 import { AgentGraph, type AgentGraphEdge, type AgentGraphNode, type AgentGraphEvent, type AgentGraphProps } from "../workflows/AgentGraph"
-import { type AgentStreamOpener, useAgentStream } from "./agent-stream"
+import type { AgentStreamOpener } from "./agent-stream"
 import { TraceWaterfall, type TraceWaterfallProps } from "./trace-waterfall"
-import { timelineItems } from "./record/ConversationRowView"
 import { useFollowTail } from "./use-follow-tail"
+import { AgentConversationView, useAgentConversation } from "./agent-conversation"
 import { AgentInspector, usePhone, useSplit } from "./agent-inspector"
+
+type GraphLayout = NonNullable<AgentGraphProps["layout"]>
 
 /** A moment on the run's event track: a release, a check verdict, a spawn, a crash or a steer. */
 export interface TraceEvent extends FlowMarker {}
@@ -130,17 +131,12 @@ export function TraceWorkspace({
   const showConversation = !!agentId && conversationOpen !== false
   const detail = showConversation && agentId ? renderAgentDrawer?.(agentId) : undefined
   const { defaultLayout = "tree", ...graphOptions } = agentGraph ?? {}
-  const [graphLayout, setGraphLayout] = useState<"tree" | "hub">(defaultLayout)
+  const [graphLayout, setGraphLayout] = useState<GraphLayout>(defaultLayout)
   const [cursor, setCursor] = useState<number | null>(null)
-  const stream = useAgentStream(selected && streamUrl ? streamUrl(selected) : undefined, openEventSource)
-
   // As of the cursor: entries that began by then, measured on the trace clock (trace ms from the run's first span).
-  // The run's epoch comes from the page (`startedAt`); without it, the agent's first message anchors its own start.
-  const origin = useMemo(() => {
-    if (waterfall.startedAt !== undefined) return waterfall.startedAt
-    const first = stream.entries[0]?.at
-    return agent && first !== undefined ? first - agent.startMs : undefined
-  }, [waterfall.startedAt, agent, stream.entries])
+  const conversation = useAgentConversation(selected && streamUrl ? streamUrl(selected) : undefined, openEventSource,
+    { cursor, startedAt: waterfall.startedAt, agentStartMs: agent?.startMs, silent: agentId ? transcriptNote?.(agentId) : undefined })
+  const { shown, items, live, note, silent } = conversation
   const graph = useMemo(() => agentGraphAt(trace.spans, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges), [trace, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges])
   const selectedNode = graph.nodes.find(node => node.id === agentId)
   const facts = cursor === null || agent && agent.endMs <= cursor ? [...(agent?.facts ?? [])] : []
@@ -148,12 +144,6 @@ export function TraceWorkspace({
     if (value && !facts.some(fact => fact.value === value)) facts.push({ label, value })
   }
   const graphNow = cursor !== null && waterfall.startedAt !== undefined ? waterfall.startedAt + cursor : undefined
-  const shown = cursor === null || origin === undefined ? stream.entries : stream.entries.filter((entry) => entry.at - origin <= cursor)
-  // Live means the stream is open and producing now: an ended, unreachable or scrubbed stream is not.
-  const live = stream.alive && !stream.error && cursor === null
-  // Ended is the producer's word (an end frame): a dropped beat is an error while reconnecting, never an ending.
-  const ended = !stream.alive && !stream.error
-  const items = useMemo(() => timelineItems(shown, live), [shown, live])
 
   // Follow the newest output unless the reader scrolled up; then offer a "New output" pill instead of jumping.
   const scroller = useRef<HTMLDivElement>(null)
@@ -165,12 +155,6 @@ export function TraceWorkspace({
   const failure = facts.find(fact => fact.label === "Failure")?.value ?? (status === "failed" ? selectedNode?.result ?? undefined : undefined)
   // A commission the conversation already opens with is not printed twice.
   const said = (text?: string) => !!text && shown.some(entry => entry.kind === "message" && entry.role === "user" && entry.content.trim() === text.trim())
-  const silent = agentId && transcriptNote?.(agentId) || "No conversation was recorded for this agent."
-  // Without words to show, one sentence says why, at the top under the failure and commission; never a centred void.
-  const note = !streamUrl ? silent : cursor !== null && origin === undefined ? "This conversation has no timestamps to replay at the cursor."
-    : items.length > 0 || live ? undefined : stream.error ? (ended ? stream.error : `Reconnecting… ${stream.error}`) : ended ? silent : "No messages yet."
-  const conversation = note === undefined ? <AgentTimelineColumn className="max-w-[46rem] p-0"><AgentTimeline items={items} isThinking={live && items.length === 0} /></AgentTimelineColumn>
-    : <p className="m-0 py-1 text-sm text-muted-foreground" data-stream={stream.error ? "reconnecting" : ended ? "ended" : "empty"}>{note}</p>
 
   const left = (<>
       <div className={cn("flex min-h-[320px] min-w-0 flex-1 flex-col", showConversation && mode === "overlay" && "lg:mr-[420px]")}>
@@ -179,7 +163,7 @@ export function TraceWorkspace({
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
         graph={<section className="relative flex min-h-[320px] flex-1 flex-col" style={typeof waterfall.maxHeight === "number" ? { height: waterfall.maxHeight } : undefined} aria-label="Agent graph">
           <SegmentedControl aria-label="Graph layout" value={graphLayout} onValueChange={setGraphLayout} className="absolute right-2 top-1 z-10"
-            options={[{ value: "tree", label: "Tree" }, { value: "hub", label: "Hub" }]} />
+            options={[{ value: "grid", label: "Grid" }, { value: "tree", label: "Tree" }, { value: "hub", label: "Hub" }]} />
           <AgentGraph {...graphOptions} layout={graphLayout} renderEventIcon={event => toolGlyph(event.label)} nodes={graph.nodes} edges={graph.edges}
             selectedId={agentId ?? null} onSelect={select} showLatestEvents={false} now={graphNow}
             live={cursor === null && graph.nodes.some(node => ["running", "waiting", "needs-you", "failed"].includes(node.status))}
@@ -204,7 +188,7 @@ export function TraceWorkspace({
         <AgentInspector name={agentName ?? agentId} model={agentModel && !/^not recorded$/i.test(agentModel) ? agentModel : undefined} status={status} span={agent} live={live}
           failure={failure} silent={note !== undefined && note === silent} commission={said(commission?.text) ? { by: commission?.by } : commission} facts={facts} detail={detail} scroller={scroller} unseen={unseen} onJump={() => jump()}
           onClose={() => select(undefined)} mode={mode} style={mode === "docked" ? { width: split.width } : undefined}>
-          {conversation}
+          <AgentConversationView conversation={conversation} />
         </AgentInspector>
       </>}
     </div>

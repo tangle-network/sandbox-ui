@@ -1,6 +1,6 @@
 ## 7.0.6
 
-- Test the viewer wire contract against Runtime 7 and refresh first-party Interface, Brand, Charts and UI resolutions. Require UI ^11.51.17 and Brand ^1.31.4 so the packed CSS is proved against its declared peer floors.
+- Test the viewer wire contract against Runtime 7 and refresh first-party Interface, Brand, Charts and UI resolutions. Require UI ^11.51.17 and Brand ^1.31.4 so the packed CSS is proved against its declared peer floors. Forward UI’s ExpandablePanel and phone hooks, reusing the canonical phone hook in run workspaces.
 
 ## 7.0.5
 

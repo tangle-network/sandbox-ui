@@ -70,7 +70,7 @@ try {
       checks.push({ theme, width, visibleAfterMs, result: 'PASS', transport: 'Runtime serveTopWeb over native files' })
     } catch (error) {
       await page.screenshot({ path: `${output}/failure-${width}-${theme}.png`, fullPage: true })
-      await writeFile(`${output}/failure-${width}-${theme}.json`, JSON.stringify({ error: String(error), text: await page.locator('body').innerText(), errors, responses }, null, 2))
+      await writeFile(`${output}/failure-${width}-${theme}.json`, JSON.stringify({ error: String(error), text: await page.locator('body').innerText(), buttons: await page.getByRole('button').evaluateAll(nodes => nodes.map(node => ({ name: node.getAttribute('aria-label'), text: node.textContent, status: node.getAttribute('data-status') }))), snapshot: await fetch(`${web.url}api/top`).then(response => response.json()), errors, responses }, null, 2))
       throw error
     } finally { await web.close(); await context.close(); await rm(root, { recursive: true, force: true }) }
   }

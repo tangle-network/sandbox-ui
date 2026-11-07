@@ -1,6 +1,14 @@
-## 7.0.6
+## 7.0.8
 
 - `AgentWorkspace` opens its Terminal the first time the reader switches to it: the terminal grant was read only when the agent changed, so a workspace opened on Files waited on "Opening a terminal into the agent's box…" for good. A read now also runs when it first appears for its key.
+
+## 7.0.7
+
+- Refresh the development wire-contract dependency to Runtime 8. Public UI APIs and peer floors remain unchanged.
+
+## 7.0.6
+
+- Test the viewer wire contract against Runtime 7 and refresh first-party Interface, Brand, Charts and UI resolutions. Require UI ^11.51.17 and Brand ^1.31.4 so the packed CSS is proved against its declared peer floors. Forward UI’s ExpandablePanel and phone hooks, reusing the canonical phone hook in run workspaces.
 
 ## 7.0.5
 

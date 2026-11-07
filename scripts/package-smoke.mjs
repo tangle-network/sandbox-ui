@@ -359,7 +359,7 @@ createRoot(document.getElementById("root")).render(
   // The omitted-peer pass retains all its existing coverage. Reuse the full
   // install once for the presentation browser/type/CSS contract.
   if (omittedOptionalPeers.length === 0) {
-    await validatePresentationConsumer({ root, consumerDir, manifest });
+    await validatePresentationConsumer({ root, consumerDir, manifest, tarballPath, agentInterfaceVersion: expectedAgentInterfaceVersion });
   }
 
   const omissionNote =

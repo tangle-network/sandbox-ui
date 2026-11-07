@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { build, preview } from "vite";
 import tailwindcss from "@tailwindcss/postcss";
 import { chromium } from "playwright";
@@ -20,7 +20,11 @@ export function presentationConsumerSpecs(manifest) {
 }
 
 /** Reuse package-smoke's real tarball install; no source aliases or second install. */
-export async function validatePresentationConsumer({ root, consumerDir, manifest }) {
+export async function validatePresentationConsumer({ root, consumerDir, manifest, tarballPath, agentInterfaceVersion }) {
+  const mediaRoot = process.env.SANDBOX_UI_CONSUMER_VIDEO_DIR ??
+    (process.env.GITHUB_ACTIONS === "true" && process.env.RUNNER_TEMP ? join(process.env.RUNNER_TEMP, "release", "consumer-media") : undefined);
+  const archiveSha256 = mediaRoot ? createHash("sha256").update(readFileSync(tarballPath)).digest("hex") : undefined;
+  const sourceSha = mediaRoot ? execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim() : undefined;
   const versions = {};
   for (const name of ["@tangle-network/ui", "@tangle-network/brand"]) {
     const installed = JSON.parse(readFileSync(join(consumerDir, "node_modules", name, "package.json"), "utf8"));
@@ -94,7 +98,13 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
         assert(address && typeof address === "object", "preview must bind a local TCP port");
         for (const width of [390, 1280]) {
           for (const mode of ["light", "dark"]) {
-            const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
+            const mediaDir = mediaRoot && lane === "compiled" ? join(mediaRoot, `${manifest.version}-interface-${agentInterfaceVersion}-${width}-${mode}`) : undefined;
+            const started = performance.now();
+            let passed = false;
+            const page = await browser.newPage({
+              viewport: { width, height: 900 }, reducedMotion: "reduce",
+              recordVideo: mediaDir ? { dir: mediaDir, size: { width, height: 900 } } : undefined,
+            });
             const errors = [];
             page.on("pageerror", (error) => errors.push(error.message));
             try {
@@ -113,6 +123,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
                   .map((animation) => animation.finished.catch(() => undefined)));
                 await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
               });
+              if (mediaDir) await page.screenshot({ path: join(mediaDir, "initial.png") });
               const measured = await page.evaluate(() => {
                 const required = (selector) => {
                   const element = document.querySelector(selector);
@@ -263,8 +274,17 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               assert.notEqual(cardStyle.background, "rgba(0, 0, 0, 0)", "each public style entry carries authored graph surfaces");
               assert(cardStyle.radius > 0, "each public style entry carries graph geometry");
               states.push({ lane, width, mode, topology: cardStyle, ...measured });
+              if (mediaDir) await page.screenshot({ path: join(mediaDir, "completed.png") });
+              passed = true;
             } finally {
               await page.close();
+              if (mediaDir) writeFileSync(join(mediaDir, "provenance.json"), JSON.stringify({
+                scope: "Installed library consumer with fixture data; not production-app rollout",
+                package: `${manifest.name}@${manifest.version}`, archiveSha256, cssSha256, versions,
+                sourceSha,
+                agentInterfaceVersion, lane, width, mode, passed, elapsedMs: Math.round(performance.now() - started),
+                video: basename(await page.video().path()),
+              }, null, 2));
             }
           }
         }

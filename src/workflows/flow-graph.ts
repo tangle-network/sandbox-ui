@@ -51,8 +51,8 @@ export interface WfFlowEdgeData extends Record<string, unknown> {
    */
   route?: {
     points: readonly { x: number; y: number }[];
-    /** Where the layout reserved room for the edge's chips. */
-    label?: { x: number; y: number };
+    /** Where the layout reserved room for the edge's chips, and the axis across their run. */
+    label?: { x: number; y: number; across?: WfDirection };
     from: { x: number; y: number };
     to: { x: number; y: number };
   };

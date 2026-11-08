@@ -176,18 +176,18 @@ const nodeBoxesOf = (nodes: readonly Node<WfNodeData>[]): NodeBox[] =>
 
 /** What the camera frames: the nodes, the parallel frames drawn around them
  *  (whose captions sit above the first lane), and the routed edges with their
- *  chips where the renderer places them, since a loop's return runs outside
- *  the layers. */
+ *  chips where the renderer places them, as a loop's return runs outside. */
 export function graphBounds(graph: FlowGraph): Rect {
   const boxes: Rect[] = [layoutBounds(graph.nodes), ...(graph.groups ?? [])];
   const cards = nodeBoxesOf(graph.nodes);
-  const isLR = graph.direction !== "TB";
   for (const { data } of graph.edges) {
     for (const p of data?.route?.points ?? []) boxes.push({ ...p, width: 0, height: 0 });
     const at = data?.route?.label;
     if (!at || !(data.whenLabel || data.backEdge)) continue;
+    const across = at.across ?? graph.direction ?? "LR";
     const half = CLUSTER_HALF_SIZE[data.backEdge ? "loop" : "guard"];
-    const shift = data.whenLabel ? (clearOfNodeBoxes(at, cards, graph.direction ?? "LR", half) ?? 0) : 0;
+    const shift = data.whenLabel ? (clearOfNodeBoxes(at, cards, across, half) ?? 0) : 0;
+    const isLR = across === "LR";
     boxes.push({ x: at.x - 80 + (isLR ? 0 : shift), y: at.y - 32 + (isLR ? shift : 0), width: 160, height: 64 });
   }
   const x0 = Math.min(...boxes.map((b) => b.x));
@@ -1573,19 +1573,19 @@ export function WfEdgeRenderer({
   // drawing a button that does nothing.
   const offersInsert = data?.insertable === true && insertStep !== null;
   const nodeBoxes = useContext(NodeBoxesContext);
+  // The cluster moves ACROSS the run it sits on, so it stays beside its own edge;
+  // an unrouted edge runs along the flow, across which the layers stack.
   const direction = useContext(DirectionContext);
+  const across = (onRoute ? route.label?.across : undefined) ?? direction;
   // A cluster is moved off a card when anything in it would hide or swallow that
   // card: the insert control or a problem chip takes its clicks, and a guard chip
-  // covers its text. A cycle chip alone keeps its place. In "TB" a chip's width
-  // is what has to clear the cards, so the cluster is sized by what it carries.
-  const clusterHalf = whenLabel
-    ? CLUSTER_HALF_SIZE[backEdge ? "loop" : "guard"]
-    : problemSeverity
-      ? CLUSTER_HALF_SIZE.chip
-      : CLUSTER_HALF_SIZE.control;
+  // covers its text. A cycle chip alone keeps its place. Across a vertical run a
+  // chip's width is what has to clear, so the cluster is sized by what it carries.
+  const clusterHalf =
+    CLUSTER_HALF_SIZE[whenLabel ? (backEdge ? "loop" : "guard") : problemSeverity ? "chip" : "control"];
   const cleared =
     offersInsert || problemSeverity || whenLabel
-      ? clearOfNodeBoxes({ x: labelX, y: labelY }, nodeBoxes, direction, clusterHalf)
+      ? clearOfNodeBoxes({ x: labelX, y: labelY }, nodeBoxes, across, clusterHalf)
       : 0;
   const clearance = cleared ?? 0;
   // Nowhere to move it to. It stays on the card, where the raised label layer
@@ -1594,8 +1594,7 @@ export function WfEdgeRenderer({
   // node's clicks land on. Losing one edge's tooltip or "+" costs less than
   // losing a step.
   const stealsPointer = cleared === null;
-  // The clearance runs along the CROSS axis — the one the layers stack on.
-  const isLR = direction === "LR";
+  const isLR = across === "LR";
   const clusterX = labelX + (isLR ? 0 : clearance);
   const clusterY = labelY + (isLR ? clearance : 0);
   return (

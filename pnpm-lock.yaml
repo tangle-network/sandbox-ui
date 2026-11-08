@@ -219,8 +219,8 @@ importers:
         version: 2.9.1
     devDependencies:
       '@drewstone/agent-record':
-        specifier: https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz
-        version: https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz(0dc2aab2f5258a40ff4a35c07468d75d)
+        specifier: file:vendor/drewstone-agent-record-3.0.3.tgz
+        version: file:vendor/drewstone-agent-record-3.0.3.tgz(0dc2aab2f5258a40ff4a35c07468d75d)
       '@fontsource/geist':
         specifier: 5.3.0
         version: 5.3.0
@@ -496,8 +496,8 @@ packages:
     resolution: {integrity: sha512-OoKoR0f76dCY666JlcbhmVTs2drYj1GUXZTYTcbUgJjh9Nv41aFfZ21bPQTERm5+L5cBDo466NltB2lplS5GBw==}
     engines: {node: '>=20.19.0'}
 
-  '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz':
-    resolution: {integrity: sha512-cQ682TTmAIMEYN4IqVZL/ngoqX0OsPCv988WI2j8IT9I6/m4dMdmjIB5TpR+rCSKYCEmg0GbuXQ1ZCd1Vq2Q3g==, tarball: https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz}
+  '@drewstone/agent-record@file:vendor/drewstone-agent-record-3.0.3.tgz':
+    resolution: {integrity: sha512-cQ682TTmAIMEYN4IqVZL/ngoqX0OsPCv988WI2j8IT9I6/m4dMdmjIB5TpR+rCSKYCEmg0GbuXQ1ZCd1Vq2Q3g==, tarball: file:vendor/drewstone-agent-record-3.0.3.tgz}
     version: 3.0.3
     hasBin: true
     peerDependencies:
@@ -4636,11 +4636,11 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.2': {}
 
-  '@drewstone/agent-record@https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz(0dc2aab2f5258a40ff4a35c07468d75d)':
+  '@drewstone/agent-record@file:vendor/drewstone-agent-record-3.0.3.tgz(0dc2aab2f5258a40ff4a35c07468d75d)':
     dependencies:
       '@tangle-network/charts': 4.0.21(@tangle-network/brand@1.31.4(react@19.3.1))(@tangle-network/ui@11.51.17(30b6f370e2137c03317c6c55faaf655b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/harness-sessions': 0.1.7
-      '@tangle-network/sandbox-ui': 3.0.0(ae5fe619df8677e07c84942de57a271c)
+      '@tangle-network/sandbox-ui': 3.0.0(a1905ba39c4208f582bf4327ad66cecb)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       zod: 4.6.6
@@ -5938,7 +5938,7 @@ snapshots:
     transitivePeerDependencies:
       - '@modelcontextprotocol/sdk'
 
-  '@tangle-network/sandbox-ui@3.0.0(ae5fe619df8677e07c84942de57a271c)':
+  '@tangle-network/sandbox-ui@3.0.0(a1905ba39c4208f582bf4327ad66cecb)':
     dependencies:
       '@lobehub/icons-static-svg': 1.98.0
       '@pierre/diffs': 1.6.1(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -5962,7 +5962,7 @@ snapshots:
       tailwindcss-animate: 1.0.7(tailwindcss@4.3.3)
       yaml: 2.9.1
     optionalDependencies:
-      '@drewstone/agent-record': https://github.com/drewstone/agent-record/releases/download/v3.0.3/drewstone-agent-record-3.0.3.tgz(0dc2aab2f5258a40ff4a35c07468d75d)
+      '@drewstone/agent-record': file:vendor/drewstone-agent-record-3.0.3.tgz(0dc2aab2f5258a40ff4a35c07468d75d)
       '@hocuspocus/provider': 4.7.1(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33)
       '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.3.1)
       '@tangle-network/charts': 4.0.21(@tangle-network/brand@1.31.4(react@19.3.1))(@tangle-network/ui@11.51.17(30b6f370e2137c03317c6c55faaf655b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)

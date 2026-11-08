@@ -2,13 +2,16 @@ import type { Meta, StoryObj } from "@storybook/react"
 import { useState } from "react"
 import {
   CheckCircle,
+  ChevronsUpDown,
   CirclePlus,
   FolderOpen,
   History,
   LayoutGrid,
   Plug,
   Terminal,
+  Wallet,
 } from "lucide-react"
+import { RailButton } from "../../dashboard/app-sidebar"
 import { SidebarLayout, type SidebarLayoutNavItem } from "../../dashboard/sidebar-layout"
 import { ShellHeader } from "../../workspace/shell-header"
 import { WorkspaceLayout } from "../../workspace/workspace-layout"
@@ -16,6 +19,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "../../primitives"
 
@@ -77,9 +82,27 @@ const base = {
   children: <Body />,
 } satisfies Partial<React.ComponentProps<typeof SidebarLayout>>
 
-/** Desktop: the labeled rail, unchanged by the mobile work. */
+/**
+ * Desktop: the labeled rail. Its footer row is a `RailButton` menu trigger whose
+ * `trailing` holds a value and a chevron, so a picker reads as one more rail row.
+ */
 export const Desktop: Story = {
-  args: base,
+  args: {
+    ...base,
+    railFooter: (
+      <DropdownMenu modal={false}>
+        <RailButton icon={Wallet} label="Northwind Research Collective" showLabel trailing={<>$11.36<ChevronsUpDown className="size-4" /></>} asChild>
+          <DropdownMenuTrigger />
+        </RailButton>
+        <DropdownMenuContent side="top" align="start">
+          <DropdownMenuRadioGroup value="team">
+            <DropdownMenuRadioItem value="personal">Personal</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="team">Northwind Research Collective</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ),
+  },
   parameters: { viewport: { defaultViewport: "responsive" } },
 }
 

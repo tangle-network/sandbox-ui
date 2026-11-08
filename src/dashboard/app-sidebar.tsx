@@ -202,11 +202,13 @@ export interface RailButtonProps {
   children?: React.ReactNode
   variant?: "normal" | "primary"
   style?: React.CSSProperties
+  /** Labeled rail only: content at the row's end, such as a value and a disclosure chevron; the label truncates before it. */
+  trailing?: React.ReactNode
 }
 
 const defaultBadgeLabel = (count: number) => `${count} new`
 
-export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = defaultBadgeLabel, onClick, className, showLabel, description, asChild, children, variant = "normal", style }: RailButtonProps) {
+export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = defaultBadgeLabel, onClick, className, showLabel, description, asChild, children, variant = "normal", style, trailing }: RailButtonProps) {
   const classes = cn(
     "relative flex shrink-0 items-center justify-center rounded-md transition-colors",
     MOTION_CONTROL,
@@ -239,7 +241,8 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
   const content = (
     <>
       {iconWithBadge}
-      {showLabel && <span className="text-sm font-medium">{label}</span>}
+      {showLabel && <span className="min-w-0 truncate text-sm font-medium">{label}</span>}
+      {showLabel && trailing != null && <span className="ml-auto flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">{trailing}</span>}
     </>
   )
 
@@ -849,10 +852,10 @@ export function ProfileAvatar({ user, isLoading = false, onLogout, onSettingsCli
         <button
           type="button"
           className={cn(
-            "flex items-center rounded-lg transition-colors hover:bg-[var(--accent-surface-soft)]",
+            "flex items-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)]",
             MOTION_CONTROL,
             focusRing,
-            showDetails ? "w-full gap-2.5 px-3 py-2 text-left" : "justify-center w-12 h-12",
+            showDetails ? "w-full gap-2.5 px-2.5 py-2 text-left" : "justify-center w-12 h-12",
             className,
           )}
           aria-label="User menu"

@@ -1,3 +1,8 @@
+## 8.0.2
+
+- `RailButton` takes `trailing`: on a labeled rail, content at the row's end, such as a value and a disclosure chevron. The label truncates before it, so a long name stays on one 36 px row. A menu trigger such as a wallet or workspace picker can now be a rail row instead of a bordered form control.
+- The labeled `ProfileAvatar` row pads 10 px and rounds 6 px, like every rail row, so the avatar's left edge lines up with the nav icons above it (was 12 px, 2 px to their right) and its hover matches theirs.
+
 ## 8.0.1
 
 - A guard chip no longer covers the card beside its edge: a cluster carrying a guard is moved off node boxes, as an insert control or problem chip already was, and the canvas frames it where it lands. A routed edge's cluster now moves across the straight run it sits on, so it stays beside its own edge. On the platform's Ralph loop the `VERDICT: revise` guard and its `↺ ≤12` chip sat over the Reviewer's model line; they now sit beside the return run, clear of the card.

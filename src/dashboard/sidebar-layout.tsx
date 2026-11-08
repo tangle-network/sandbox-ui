@@ -274,9 +274,6 @@ function SidebarLayoutInner({
       ? (e: React.MouseEvent<HTMLElement>) => { if (e.target === e.currentTarget) toggleRail() }
       : undefined
   const hasProfile = user !== undefined || onLogout !== undefined || onSettingsClick !== undefined
-  // The rail shows labels only when it is label-capable AND the user has not
-  // collapsed it. Collapsing a labeled rail returns the icon-only look (with
-  // hover tooltips via each RailButton's `title`).
   const showLabels = railLabels && !railCollapsed
 
   // The mobile drawer's own open state. Local rather than context: the rail's

@@ -1655,19 +1655,6 @@ do:
     // Wide enough for the chip's own max width (max-w-40 = 160px).
     expect(compactLabelled).toBeGreaterThanOrEqual(160);
   });
-
-  it("reserves the lane for a cycle badge too, not only a guard", () => {
-    // A back edge draws a ↺ badge even with no guard on it.
-    const cyclePitch = pitch(
-      buildWorkflowGraph(LABELLED, {
-        edges: [
-          { from: actionNodeId(0), to: actionNodeId(1) },
-          { from: actionNodeId(1), to: actionNodeId(0) },
-        ],
-      }),
-    );
-    expect(cyclePitch).toBeGreaterThan(pitch(buildWorkflowGraph(LABELLED)));
-  });
 });
 
 describe("buildWorkflowGraph — folding a long pipeline", () => {

@@ -170,21 +170,20 @@ export function layoutBounds(nodes: readonly Node<WfNodeData>[]): Rect {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
-/** What the camera frames: the nodes, and the parallel frames drawn around
- *  them, whose captions sit above the first lane. */
+/** What the camera frames: the nodes, the parallel frames drawn around them
+ *  (whose captions sit above the first lane), and the routed edges with their
+ *  chips, since a loop's return runs outside the layers. */
 export function graphBounds(graph: FlowGraph): Rect {
-  const nodes = layoutBounds(graph.nodes);
-  if (!graph.groups || graph.groups.length === 0) return nodes;
-  const x0 = Math.min(nodes.x, ...graph.groups.map((g) => g.x));
-  const y0 = Math.min(nodes.y, ...graph.groups.map((g) => g.y));
-  const x1 = Math.max(
-    nodes.x + nodes.width,
-    ...graph.groups.map((g) => g.x + g.width),
-  );
-  const y1 = Math.max(
-    nodes.y + nodes.height,
-    ...graph.groups.map((g) => g.y + g.height),
-  );
+  const boxes: Rect[] = [layoutBounds(graph.nodes), ...(graph.groups ?? [])];
+  for (const { data } of graph.edges) {
+    for (const p of data?.route?.points ?? []) boxes.push({ ...p, width: 0, height: 0 });
+    const at = data?.route?.label;
+    if (at && (data.whenLabel || data.backEdge)) boxes.push({ x: at.x - 80, y: at.y - 32, width: 160, height: 64 });
+  }
+  const x0 = Math.min(...boxes.map((b) => b.x));
+  const y0 = Math.min(...boxes.map((b) => b.y));
+  const x1 = Math.max(...boxes.map((b) => b.x + b.width));
+  const y1 = Math.max(...boxes.map((b) => b.y + b.height));
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
 }
 

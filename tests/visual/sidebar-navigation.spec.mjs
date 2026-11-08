@@ -103,10 +103,11 @@ for (const theme of ['light', 'dark']) {
       const box = (node) => node.getBoundingClientRect()
       const center = (node) => box(node).left + box(node).width / 2
       const nav = rail.querySelector('nav a')
+      const label = [...nav.querySelectorAll('span')].find((node) => !node.querySelector('svg') && node.textContent.trim())
       const profile = rail.querySelector('button[aria-label="User menu"]')
       return {
         navIcon: center(nav.querySelector('svg')),
-        navLabel: box([...nav.querySelectorAll('span')].find((node) => !node.querySelector('svg') && node.textContent.trim())).left,
+        navLabel: label && box(label).left,
         avatar: center(profile.querySelector('span')),
         name: profile.querySelector('p') && box(profile.querySelector('p')).left,
         profileHeight: box(profile).height,

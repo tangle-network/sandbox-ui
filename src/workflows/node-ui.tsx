@@ -281,7 +281,7 @@ export function ProblemMarker({
     <span
       data-testid="wf-node-problem"
       data-severity={severity}
-      className={`flex shrink-0 items-center gap-0.5 rounded-full border px-1 py-[1px] font-medium text-[10px] leading-none ${className}`}
+      className={`flex shrink-0 items-center gap-0.5 rounded-full border px-1 py-[1px] font-medium text-[11px] leading-none ${className}`}
       style={problemSurface(severity)}
     >
       {/* The tooltip hangs on the VISIBLE part, which is hidden from the
@@ -383,7 +383,7 @@ export function StatusFooter({
           }}
         />
       </div>
-      <div className="flex items-center justify-between gap-2 px-3.5 py-1 text-[10px] text-muted-foreground leading-[15px]">
+      <div className="flex items-center justify-between gap-2 px-3.5 py-1 text-[11px] text-muted-foreground leading-[15px]">
         {/* Both spans always render (even empty) and the line box is pinned, so a
             node with nothing to caption keeps the same footer height as one with
             rounds AND elapsed — the band the layout reserved. */}

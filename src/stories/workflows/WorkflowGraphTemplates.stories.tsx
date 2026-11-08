@@ -138,6 +138,36 @@ export const FeatureDevRalph: Story = {
   render: () => <TemplateCanvas id="feature-dev-ralph" />,
 };
 
+/** Fifteen agent steps in one line, the longest chain the panel has to hold. */
+const CHAIN_15 = `on:\n  webhook: {}\ndo:\n${Array.from(
+  { length: 15 },
+  (_, i) => `  - agent.run:\n      profile: { name: step-${i + 1} }\n      prompt: Do step ${i + 1}.\n`,
+).join("")}`;
+
+/** The platform's workflow detail panel (702px wide, run overlay on, canvas
+ *  sized to the graph): a loop with a guarded back edge, a fan-out, and a long
+ *  chain. */
+export const PlatformPanel: Story = {
+  render: () => (
+    <div className="flex w-[702px] max-w-full flex-col gap-4">
+      {[TEMPLATES["ralph-loop"], TEMPLATES["fanout-review"], { yaml: CHAIN_15, edges: undefined, maxNodeVisits: undefined }].map((t) => (
+        <WorkflowGraphLazy
+          key={t.yaml}
+          yaml={t.yaml}
+          edges={t.edges}
+          maxNodeVisits={t.maxNodeVisits}
+          variant="full"
+          defaultCompact
+          wrap
+          nodeState={{}}
+          fitHeight={640}
+          className="w-full rounded-lg border border-border bg-background"
+        />
+      ))}
+    </div>
+  ),
+};
+
 export const SoftwareFactoryPhone: Story = {
   parameters: { viewport: { defaultViewport: "mobile1" } },
   render: () => (

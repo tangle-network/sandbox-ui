@@ -129,7 +129,7 @@ export interface BuildFlowGraphOptions {
   compact?: boolean;
   /** Fold a long single-file pipeline into rows rather than one unbounded line.
    *  Passed straight through to `buildWorkflowGraph`. Defaults to `false`. */
-  wrap?: boolean;
+  wrap?: boolean | number;
   /** Declared topology, replacing the inferred positional spine. Passed
    *  straight through to `buildWorkflowGraph` — see {@link WfEdgeSpec}. */
   edges?: readonly WfEdgeSpec[];
@@ -227,7 +227,7 @@ export function buildFlowGraph(
     reserveRunState: nodeState !== undefined,
     direction,
     compact,
-    ...(options.wrap ? { wrap: true } : {}),
+    ...(options.wrap ? { wrap: options.wrap } : {}),
     ...(options.edges ? { edges: options.edges } : {}),
     ...(options.reserveEdgeInsert ? { reserveEdgeInsert: true } : {}),
     ...(options.itemCounts ? { itemCounts: options.itemCounts } : {}),

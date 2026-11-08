@@ -64,7 +64,7 @@ export function WorkspaceArtifactView({ artifact, hideTitleBlock }: WorkspaceArt
       return (
         <ArtifactPane
           hideTitleBlock={hideTitleBlock} className="bg-transparent"
-          eyebrow={artifact.eyebrow ?? "Structured Artifact"}
+          eyebrow={artifact.eyebrow ?? "Structured artifact"}
           title={artifact.title}
           subtitle={artifact.subtitle}
           meta={artifact.meta}

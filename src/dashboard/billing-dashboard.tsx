@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@tangle-network/ui/primitives";
 import { Progress } from "@tangle-network/ui/primitives";
+import { ChartLine, Coins, CreditCard } from "lucide-react";
 
 export interface BillingSubscription {
   status: string;
@@ -37,15 +38,6 @@ export interface BillingDashboardProps {
   className?: string;
   cardClassName?: string;
 }
-
-const variantColors = {
-  sandbox: {
-    accent: "text-[var(--accent-text)]",
-    accentBg: "bg-[var(--accent-surface-soft)]",
-    border: "border-[var(--border-accent)]",
-    progress: "bg-[image:var(--accent-gradient-strong)]",
-  },
-};
 
 function formatCredits(value: number): string {
   if (value >= 1000000) {
@@ -83,64 +75,8 @@ function getStatusBadgeVariant(
   }
 }
 
-function CreditCardIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={cn("h-5 w-5", className)}
-    >
-      <title>Credit card icon</title>
-      <rect width="20" height="14" x="2" y="5" rx="2" />
-      <line x1="2" x2="22" y1="10" y2="10" />
-    </svg>
-  );
-}
 
-function CoinsIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={cn("h-5 w-5", className)}
-    >
-      <title>Coins icon</title>
-      <circle cx="8" cy="8" r="6" />
-      <path d="M18.09 10.37A6 6 0 1 1 10.34 18" />
-      <path d="M7 6h1v4" />
-      <path d="m16.71 13.88.7.71-2.82 2.82" />
-    </svg>
-  );
-}
 
-function ChartIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={cn("h-5 w-5", className)}
-    >
-      <title>Chart icon</title>
-      <path d="M3 3v18h18" />
-      <path d="m19 9-5 5-4-4-3 3" />
-    </svg>
-  );
-}
 
 export function BillingDashboard({
   subscription,
@@ -152,7 +88,6 @@ export function BillingDashboard({
   className,
   cardClassName,
 }: BillingDashboardProps) {
-  const colors = variantColors[variant];
   const totalCredits = balance.available + balance.used;
   const usagePercent =
     totalCredits > 0 ? (balance.used / totalCredits) * 100 : 0;
@@ -167,8 +102,8 @@ export function BillingDashboard({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCardIcon className={colors.accent} />
-              Current Plan
+              <CreditCard className="size-5 text-muted-foreground" />
+              Current plan
             </CardTitle>
             {subscription && (
               <Badge variant={getStatusBadgeVariant(subscription.status)}>
@@ -181,7 +116,7 @@ export function BillingDashboard({
           {subscription ? (
             <>
               <div>
-                <p className={cn("font-bold text-2xl", colors.accent)}>
+                <p className="font-medium text-2xl">
                   {subscription.tierName}
                 </p>
                 <p className="text-muted-foreground text-sm">
@@ -193,14 +128,14 @@ export function BillingDashboard({
                 className="w-full"
                 onClick={onManageSubscription}
               >
-                Manage Subscription
+                Manage subscription
               </Button>
             </>
           ) : (
             <>
               <div>
-                <p className="font-bold text-2xl text-muted-foreground">
-                  No Active Plan
+                <p className="font-medium text-2xl text-muted-foreground">
+                  No active plan
                 </p>
                 <p className="text-muted-foreground text-sm">
                   Subscribe to get started
@@ -211,7 +146,7 @@ export function BillingDashboard({
                 className="w-full"
                 onClick={onManageSubscription}
               >
-                View Plans
+                View plans
               </Button>
             </>
           )}
@@ -222,8 +157,8 @@ export function BillingDashboard({
       <Card variant={variant} className={cn("lg:col-span-1", cardClassName)}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <CoinsIcon className={colors.accent} />
-            Credit Balance
+            <Coins className="size-5 text-muted-foreground" />
+            Credit balance
           </CardTitle>
           <CardDescription>
             {formatCredits(balance.available)} credits remaining
@@ -233,18 +168,18 @@ export function BillingDashboard({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Used</span>
-              <span className="font-medium">{formatCredits(balance.used)}</span>
+              <span className="font-medium tabular-nums">{formatCredits(balance.used)}</span>
             </div>
             <Progress value={usagePercent} variant={variant} className="h-3" />
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Available</span>
-              <span className={cn("font-medium", colors.accent)}>
+              <span className="font-medium tabular-nums">
                 {formatCredits(balance.available)}
               </span>
             </div>
           </div>
           <Button variant={variant} className="w-full" onClick={onAddCredits}>
-            Add Credits
+            Add credits
           </Button>
         </CardContent>
       </Card>
@@ -253,23 +188,23 @@ export function BillingDashboard({
       <Card variant={variant} className={cn("lg:col-span-1", cardClassName)}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <ChartIcon className={colors.accent} />
-            Usage Breakdown
+            <ChartLine className="size-5 text-muted-foreground" />
+            Usage breakdown
           </CardTitle>
           <CardDescription>{usage.period}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-muted-foreground text-sm">Total Usage</span>
-            <span className={cn("font-bold text-2xl", colors.accent)}>
+            <span className="text-muted-foreground text-sm">Total usage</span>
+            <span className="font-medium text-2xl tabular-nums">
               {formatCredits(usage.total)}
             </span>
           </div>
 
           {/* Model Breakdown */}
           <div className="space-y-3">
-            <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
-              By Model
+            <p className="font-medium text-muted-foreground text-xs">
+              By model
             </p>
             <div className="space-y-2">
               {sortedModels.slice(0, 5).map(([model, credits]) => {
@@ -281,16 +216,13 @@ export function BillingDashboard({
                       <span className="truncate text-muted-foreground">
                         {model}
                       </span>
-                      <span className="ml-2 font-medium">
+                      <span className="ml-2 font-medium tabular-nums">
                         {formatCredits(credits)}
                       </span>
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className={cn(
-                          "h-full rounded-full transition-all",
-                          variant === "sandbox" && colors.progress,
-                        )}
+                        className="h-full rounded-full bg-primary"
                         style={{ width: `${modelPercent}%` }}
                       />
                     </div>

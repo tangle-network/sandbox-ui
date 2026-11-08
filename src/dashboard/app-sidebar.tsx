@@ -125,7 +125,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
             >
               {collapsed && hasBrand && <span className={cn("flex items-center justify-center transition-opacity group-hover/brand:opacity-0 group-focus-visible/brand:opacity-0", MOTION_CONTROL)}>{brand}</span>}
               <span className={collapsed && hasBrand ? cn("pointer-events-none absolute inset-0 flex items-center justify-center text-foreground opacity-0 transition-opacity group-hover/brand:opacity-100 group-focus-visible/brand:opacity-100", MOTION_CONTROL) : undefined}>
-                <PanelLeft className="h-[18px] w-[18px] shrink-0" />
+                <PanelLeft className="size-4 shrink-0" />
               </span>
             </button>
           </RailTooltip>
@@ -225,7 +225,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
   const tooltipDisabled = showLabel && !description
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
-      <Icon className="h-[17px] w-[17px] shrink-0" />
+      <Icon className="size-4 shrink-0" />
       {badgeDot ? (
         <span aria-hidden="true" data-badge="dot" className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--accent-text)] ring-2 ring-surface-container-low" />
       ) : hasBadge && (
@@ -322,7 +322,7 @@ export function RailFlyout({ icon: Icon, label, description, isActive, showLabel
         onClick={() => setOpen((v) => !v)}
         className={triggerClasses}
       >
-        <Icon className="h-[17px] w-[17px] shrink-0" />
+        <Icon className="size-4 shrink-0" />
         {showLabel && <span className="text-sm font-medium">{label}</span>}
         {showLabel && (
           <ChevronRightIcon
@@ -349,7 +349,7 @@ export function RailFlyout({ icon: Icon, label, description, isActive, showLabel
             RAIL_FLOATING_SURFACE,
           )}
         >
-          <p className="px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+          <p className="px-2 pb-1 pt-1 text-sm font-medium text-[var(--text-dim)] select-none">
             {title ?? label}
           </p>
           {description && <p className="px-2 pb-2 text-xs text-muted-foreground">{description}</p>}
@@ -596,11 +596,11 @@ export function RailExpandable({
       >
         {href ? (
           <Link href={href} to={href} onClick={onNavigate} aria-label={label} aria-description={description} aria-current={rowCurrent} className={triggerClasses}>
-            <Icon className="h-[17px] w-[17px] shrink-0" />
+            <Icon className="size-4 shrink-0" />
           </Link>
         ) : (
           <button type="button" aria-label={label} aria-description={description} aria-haspopup="menu" aria-expanded={open} className={triggerClasses}>
-            <Icon className="h-[17px] w-[17px] shrink-0" />
+            <Icon className="size-4 shrink-0" />
           </button>
         )}
 
@@ -620,7 +620,7 @@ export function RailExpandable({
               onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
               className={cn("agent-pop-in z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
             >
-              <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground/70 select-none">
+              <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-medium text-[var(--text-dim)] select-none">
                 {label}
               </p>
               {description && <p className="shrink-0 px-2 pb-2 text-xs text-muted-foreground">{description}</p>}
@@ -663,7 +663,7 @@ export function RailExpandable({
           aria-description={description}
           className={`flex h-9 w-12 shrink-0 items-center gap-1 rounded-md pl-2 pr-1 ${focusRing}`}
         >
-          <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden />
+          <Icon className="size-4 shrink-0" aria-hidden />
           <ChevronRightIcon
             className={cn(
               "h-3.5 w-3.5 shrink-0 transition-transform",
@@ -823,12 +823,12 @@ function AppearanceMenuSection({ appearance, divider = true }: { appearance: App
                 className="gap-3 py-2 text-[14px]"
               >
                 <span aria-hidden="true" className="inline-flex shrink-0">
-                  <Icon className="h-[18px] w-[18px]" />
+                  <Icon className="size-4" />
                 </span>
                 <span className="flex-1">{label}</span>
                 {active && (
                   <span aria-hidden="true" className="inline-flex shrink-0 text-[var(--accent-text)]">
-                    <Check className="h-[18px] w-[18px]" />
+                    <Check className="size-4" />
                   </span>
                 )}
               </DropdownMenuItem>

@@ -26,7 +26,7 @@ const BANNER_STYLES: Record<
   BannerType,
   { bg: string; border: string; text: string; icon: typeof Loader2 }
 > = {
-  provisioning: { bg: "bg-primary/5", border: "border-primary/20", text: "text-primary", icon: Loader2 },
+  provisioning: { bg: "bg-primary/5", border: "border-primary/20", text: "text-[var(--accent-text)]", icon: Loader2 },
   connecting: { bg: "bg-[var(--code-number)]/5", border: "border-[var(--code-number)]/20", text: "text-[var(--code-number)]", icon: Wifi },
   error: {
     bg: "bg-[var(--surface-danger-bg)]",

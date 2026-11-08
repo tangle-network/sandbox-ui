@@ -185,7 +185,7 @@ export function IntegrationsCatalog({
     compact && reserveConnectionContext && "w-full min-h-[136px]");
   const headerClass = cn("flex w-full min-w-0 gap-2", compact ? "flex-col items-center" : "items-start gap-3");
   // One fixed-height line for the status pill, so a skeleton tile measures the tile it becomes.
-  const statusClass = cn("flex h-[22px] w-full min-w-0 items-center", compact ? "justify-center" : "justify-start");
+  const statusClass = cn("flex h-6 w-full min-w-0 items-center", compact ? "justify-center" : "justify-start");
   const clearFilters = () => { onQueryChange(""); onCategoryFilterChange?.(""); };
 
   return (
@@ -198,7 +198,7 @@ export function IntegrationsCatalog({
         <div className={cn("flex min-w-0 flex-1 items-center gap-2 rounded-lg border bg-card px-3 py-2", focusFieldWithin)}>
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input type="text" value={query} onChange={(event) => onQueryChange(event.target.value)}
-            aria-label="Search integrations" placeholder="Search integrations..." autoFocus={compact}
+            aria-label="Search integrations" placeholder="Search integrations…" autoFocus={compact}
             data-testid="integration-search" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
         </div>
         {onCategoryFilterChange ? (
@@ -236,7 +236,7 @@ export function IntegrationsCatalog({
               <div className="shrink-0 rounded-2xl bg-muted" style={{ width: 48, height: 48 }} />
               <div className="flex h-8 w-full items-center justify-center"><div className="h-2.5 w-3/4 rounded bg-muted" /></div>
             </div>
-            <div className={statusClass}><div className="h-[22px] w-20 rounded-full bg-muted" /></div>
+            <div className={statusClass}><div className="h-6 w-20 rounded-full bg-muted" /></div>
             {!compact ? <div className="mt-auto h-9 border-t border-border" /> : null}
           </Card>
         )) : state === "error" ? (
@@ -280,7 +280,7 @@ export function IntegrationsCatalog({
               <div className="flex h-8 w-full min-w-0 flex-col justify-center leading-4">
                 {row.to ? <a href={row.to} className={cn("relative z-20 truncate text-sm font-medium hover:underline", focusRing)}>{row.title}</a> :
                   <span className={cn("w-full font-medium text-foreground", compact ? "text-xs" : "text-sm", connection?.accountDisplay ? "truncate" : "line-clamp-2")}>{row.title}</span>}
-                {connection?.accountDisplay ? <span className="w-full truncate text-[11px] leading-4 text-muted-foreground" data-testid={`account-${row.providerId}`}>{connection.accountDisplay}</span> : null}
+                {connection?.accountDisplay ? <span className="w-full truncate text-xs leading-4 text-muted-foreground" data-testid={`account-${row.providerId}`}>{connection.accountDisplay}</span> : null}
               </div>
             </div>
           );
@@ -306,7 +306,7 @@ export function IntegrationsCatalog({
                     onChange={(id) => onSelectConnection(row.providerId, id)} label={`Account for ${row.title}`} />
                 </div>
               ) : null}
-              {connection?.detail ? <span className="w-full truncate text-[11px] leading-4 text-muted-foreground" title={connection.detail}>{connection.detail}</span> : null}
+              {connection?.detail ? <span className="w-full truncate text-xs leading-4 text-muted-foreground" title={connection.detail}>{connection.detail}</span> : null}
               {pill}
               {!compact ? <div className="mt-auto flex min-h-9 items-center gap-2 border-t border-border pt-3">
                 {row.kind === "app" ? <a href={row.to} className={cn("text-sm font-medium hover:underline", focusRing)}>{row.installedCount ? "Manage" : "Set up"}</a> :

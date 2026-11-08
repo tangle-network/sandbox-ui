@@ -104,10 +104,10 @@ function Thumbnail({ spec }: { spec: AssetSpec }) {
             <div className="font-medium">{vc.scenes.length} scenes</div>
           </div>
         )}
-        <span className="pointer-events-none absolute top-1/2 left-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white">
+        <span className="pointer-events-none absolute top-1/2 left-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--scrim)] text-[var(--on-media)]">
           <Play size={18} className="translate-x-px" aria-hidden />
         </span>
-        <span className="pointer-events-none absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white tabular-nums">
+        <span className="pointer-events-none absolute right-2 bottom-2 rounded bg-[var(--scrim-strong)] px-1.5 py-0.5 text-xs text-[var(--on-media)] tabular-nums">
           {formatDuration(vc.durationSeconds)}
         </span>
       </div>

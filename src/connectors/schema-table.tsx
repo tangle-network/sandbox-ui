@@ -136,14 +136,14 @@ export function SchemaTable({ schema, label }: SchemaTableProps) {
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between">
-        <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+        <span className="font-medium text-muted-foreground text-xs">
           {label}
         </span>
         {rows !== null && rows.length > 0 && (
           <button
             type="button"
             onClick={() => setShowRaw((v) => !v)}
-            className="text-primary text-xs transition-colors hover:underline"
+            className="text-[var(--accent-text)] text-xs transition-colors hover:underline"
           >
             {showRaw ? "Field view" : "Raw JSON"}
           </button>

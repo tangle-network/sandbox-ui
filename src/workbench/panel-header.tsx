@@ -2,39 +2,31 @@
 
 import * as React from "react"
 import { Check, Copy } from "lucide-react"
+import { StatusPill, type StatusTone } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import type { RichFileTreeGitStatus } from "../files"
 import type { DiffStats } from "./diff-utils"
 
-const GIT_STATUS_META: Record<RichFileTreeGitStatus, { label: string; className: string }> = {
-  added: { label: "Added", className: "bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]" },
-  modified: { label: "Modified", className: "bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]" },
-  deleted: { label: "Deleted", className: "bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]" },
-  renamed: { label: "Renamed", className: "bg-[var(--surface-info-bg)] text-[var(--surface-info-text)]" },
-  untracked: { label: "Untracked", className: "bg-surface-container-high text-muted-foreground" },
-  ignored: { label: "Ignored", className: "bg-surface-container-high text-muted-foreground" },
+const GIT_STATUS_META: Record<RichFileTreeGitStatus, { label: string; tone: StatusTone }> = {
+  added: { label: "Added", tone: "success" },
+  modified: { label: "Modified", tone: "warning" },
+  deleted: { label: "Deleted", tone: "danger" },
+  renamed: { label: "Renamed", tone: "info" },
+  untracked: { label: "Untracked", tone: "neutral" },
+  ignored: { label: "Ignored", tone: "neutral" },
 }
 
 export function GitStatusBadge({ status }: { status: RichFileTreeGitStatus }) {
   const meta = GIT_STATUS_META[status]
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-        meta.className,
-      )}
-    >
-      {meta.label}
-    </span>
-  )
+  return <StatusPill tone={meta.tone}>{meta.label}</StatusPill>
 }
 
 /** `+added −removed` line counts in mono; the same pair the Changes list prints per file. */
 export function DiffStatsBadge({ stats, className }: { stats: DiffStats; className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-1.5 font-mono text-xs", className)}>
-      <span className="text-[var(--code-success,#10B981)]">+{stats.added}</span>
-      <span className="text-[var(--code-error,#FF4D6D)]">-{stats.removed}</span>
+      <span className="text-[var(--code-success)]">+{stats.added}</span>
+      <span className="text-[var(--code-error)]">-{stats.removed}</span>
     </span>
   )
 }
@@ -77,7 +69,7 @@ export function PanelHeader({ filename, gitStatus, stats, copyText, children, cl
   return (
     <div
       className={cn(
-        "flex min-h-[38px] items-center gap-2 border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-1",
+        "flex min-h-10 items-center gap-2 border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-1",
         className,
       )}
     >

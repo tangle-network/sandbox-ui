@@ -1,5 +1,6 @@
 "use client"
 
+import { ArrowRight } from "lucide-react"
 import * as React from "react"
 import { cn } from "../lib/utils"
 
@@ -25,22 +26,22 @@ export function PromoBanner({
   className,
 }: PromoBannerProps) {
   const buttonClasses = cn(
-    "mt-6 inline-flex items-center gap-2 rounded-md border border-white/20 bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-medium text-[var(--btn-primary-text)] transition-colors",
+    "mt-6 inline-flex items-center gap-2 rounded-md bg-[var(--btn-primary-bg)] px-4 py-2 text-sm font-medium text-[var(--btn-primary-text)] transition-colors",
     disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--btn-primary-hover)]",
   )
 
   const buttonContent = (
     <>
       {buttonLabel}
-      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+      <ArrowRight aria-hidden="true" className="size-4" />
     </>
   )
 
   return (
-    <div className={cn("relative overflow-hidden rounded-xl bg-[var(--brand-strong)] p-8 md:flex md:items-center md:justify-between", className)}>
-      <div className="relative z-10">
-        <h3 className="text-xl font-bold text-[var(--brand-strong-text)]">{title}</h3>
-        <p className="mt-2 max-w-md text-sm text-[var(--brand-strong-text-muted)]">{description}</p>
+    <div className={cn("rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container p-8 md:flex md:items-center md:justify-between", className)}>
+      <div>
+        <h3 className="text-xl font-medium text-foreground">{title}</h3>
+        <p className="mt-2 max-w-md text-sm text-muted-foreground">{description}</p>
         {href && !disabled ? (
           <a href={href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={buttonClasses}>
             {buttonContent}
@@ -52,13 +53,12 @@ export function PromoBanner({
         )}
       </div>
       {icon && (
-        <div className="relative z-10 mt-6 flex items-center md:mt-0">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/10">
+        <div className="mt-6 flex items-center md:mt-0">
+          <div className="flex size-16 items-center justify-center rounded-xl border border-[var(--md3-outline-variant)] bg-surface-container-high text-muted-foreground">
             {icon}
           </div>
         </div>
       )}
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-white/5 to-transparent" />
     </div>
   )
 }

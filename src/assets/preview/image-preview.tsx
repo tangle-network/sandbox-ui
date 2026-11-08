@@ -118,7 +118,7 @@ export function ImagePreview({ content, brand, format = "feed", className }: Ima
         {isMulti && activeIndex > 0 && (
           <button
             onClick={() => setActiveIndex((i) => i - 1)}
-            className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full p-1 bg-black/40 text-white hover:bg-black/60"
+            className="absolute left-1 top-1/2 -translate-y-1/2 rounded-full p-1 bg-[var(--scrim)] text-[var(--on-media)] hover:bg-[var(--scrim-strong)]"
           >
             <ChevronLeft size={16} />
           </button>
@@ -126,7 +126,7 @@ export function ImagePreview({ content, brand, format = "feed", className }: Ima
         {isMulti && activeIndex < slides.length - 1 && (
           <button
             onClick={() => setActiveIndex((i) => i + 1)}
-            className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-1 bg-black/40 text-white hover:bg-black/60"
+            className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-1 bg-[var(--scrim)] text-[var(--on-media)] hover:bg-[var(--scrim-strong)]"
           >
             <ChevronRight size={16} />
           </button>

@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Activity, Plus, Skull, Terminal } from "lucide-react"
 import { cn } from "../lib/utils"
+import { StatusPill } from "@tangle-network/ui/primitives"
 import { focusField, focusRing } from "@tangle-network/ui/utils"
 
 export interface ProcessInfo {
@@ -63,7 +64,7 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
       {loading ? (
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
           <Activity className="mx-auto h-6 w-6 text-muted-foreground animate-spin mb-2" data-motion="essential" />
-          <p className="text-sm text-muted-foreground">Loading processes...</p>
+          <p className="text-sm text-muted-foreground">Loading processes…</p>
         </div>
       ) : processes.length > 0 ? (
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
@@ -76,14 +77,9 @@ export function ProcessList({ processes, onSpawn, onKill, loading = false, class
                     <code className="block break-all font-mono text-xs leading-5 text-foreground">{p.command}</code>
                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span className="font-mono tabular-nums">PID {p.pid}</span>
-                      <span className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                        p.running
-                          ? "bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]"
-                          : "bg-surface-container-high text-muted-foreground"
-                      )}>
-                        {p.running ? "running" : `exited (${p.exitCode ?? "?"})`}
-                      </span>
+                      <StatusPill tone={p.running ? "success" : "neutral"}>
+                        {p.running ? "Running" : `Exited (${p.exitCode ?? "?"})`}
+                      </StatusPill>
                       {age !== "-" && (
                         <span className="font-mono tabular-nums">{p.running ? `Uptime ${age}` : `Started ${age} ago`}</span>
                       )}

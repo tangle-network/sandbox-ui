@@ -3,7 +3,7 @@ import { ArrowLeft, FolderTree, GripVertical, MessageSquareText, PanelLeftClose,
 import { cn } from "../lib/utils";
 import { MOTION_CONTROL } from "../lib/motion";
 import { formatRelativeAge } from "../lib/format-relative-age";
-import { Badge } from "@tangle-network/ui/primitives";
+import { StatusPill, type StatusTone } from "@tangle-network/ui/primitives";
 import { useNavbarSessions, type ActiveSessionRecord, type ActiveSessionStatus, type SessionProjectKey } from "@tangle-network/ui/stores";
 import {
   useOptimisticSessionItems,
@@ -238,20 +238,13 @@ function sortItems(
   });
 }
 
-function badgeTone(tone: SessionSidebarBadge["tone"] = "neutral") {
-  switch (tone) {
-    case "accent":
-      return "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary";
-    case "success":
-      return "border-[var(--surface-success-border)] bg-[var(--surface-success-bg)] text-[var(--surface-success-text)]";
-    case "warning":
-      return "border-[var(--surface-warning-border)] bg-[var(--surface-warning-bg)] text-[var(--surface-warning-text)]";
-    case "danger":
-      return "border-[var(--surface-danger-border)] bg-[var(--surface-danger-bg)] text-[var(--surface-danger-text)]";
-    default:
-      return "border-[var(--md3-outline-variant)] bg-surface-container-high text-muted-foreground";
-  }
-}
+const BADGE_TONE = {
+  neutral: "neutral",
+  accent: "violet",
+  success: "success",
+  warning: "warning",
+  danger: "danger",
+} as const satisfies Record<NonNullable<SessionSidebarBadge["tone"]>, StatusTone>;
 
 function navigateToHref(href?: string) {
   if (!href || typeof window === "undefined") return;
@@ -292,7 +285,7 @@ export function SessionSidebar({
   projectId = null,
   items,
   currentItemId,
-  createLabel = "New Session",
+  createLabel = "New session",
   onCreate,
   onSelectItem,
   onSelectLink,
@@ -483,15 +476,9 @@ export function SessionSidebar({
 
           <div className="flex shrink-0 items-center gap-1">
             {visibleBadges.length > 0 && visibleBadges.slice(0, 1).map((badge) => (
-              <span
-                key={badge.id}
-                className={cn(
-                  "rounded-full border px-1.5 py-px text-[8px] font-semibold uppercase",
-                  badgeTone(badge.tone),
-                )}
-              >
+              <StatusPill key={badge.id} bare tone={BADGE_TONE[badge.tone ?? "neutral"]}>
                 {badge.label}
-              </span>
+              </StatusPill>
             ))}
             {session?.isForeground && (
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--status-running)]" title="Live" />
@@ -553,7 +540,7 @@ export function SessionSidebar({
         <ShellHeader>
           <div className="flex w-full items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]">
                 <MessageSquareText className="h-3.5 w-3.5" />
               </div>
               <div className="min-w-0">
@@ -565,7 +552,7 @@ export function SessionSidebar({
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               {runningCount > 0 && (
-                <span className="rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-1.5 py-px text-xs font-medium text-primary">
+                <span className="rounded-full border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-1.5 py-px text-xs font-medium text-[var(--accent-text)]">
                   {runningCount}
                 </span>
               )}
@@ -623,12 +610,12 @@ export function SessionSidebar({
                       "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
                       MOTION_CONTROL,
                       isSelected
-                        ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-primary"
+                        ? "border-[var(--border-accent)] bg-[var(--accent-surface-soft)] text-[var(--accent-text)]"
                         : "border-[var(--md3-outline-variant)] text-muted-foreground hover:text-foreground",
                     )}
                   >
                     <span>{filter.label}</span>
-                    <span className="text-[11px] opacity-60">{filterCounts[filter.id] ?? 0}</span>
+                    <span className="text-xs opacity-60">{filterCounts[filter.id] ?? 0}</span>
                   </button>
                 );
               })}
@@ -649,7 +636,7 @@ export function SessionSidebar({
             <section key={group.key} aria-label={group.label ?? undefined}>
               <div
                 className={cn(
-                  "px-2 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground",
+                  "px-2 pb-1 text-xs font-medium text-muted-foreground",
                   groupIndex === 0 ? "pt-1" : "pt-3",
                 )}
               >

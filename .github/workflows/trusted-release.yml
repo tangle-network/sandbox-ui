@@ -56,7 +56,7 @@ jobs:
           echo "path=$TARBALL_PATH" >> "$GITHUB_OUTPUT"
 
       - name: Install Chromium and qualify Storybook visuals
-        run: pnpm exec playwright install chromium && pnpm test:visual
+        run: pnpm exec playwright install chromium && bwrap --dev-bind / / --unshare-net pnpm test:visual
 
       - name: Test packed artifact
         env:

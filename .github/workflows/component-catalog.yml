@@ -23,7 +23,7 @@ jobs:
   deploy-storybook:
     needs: build
     if: github.ref == 'refs/heads/main'
-    uses: tangle-network/sandbox-ui/.github/workflows/deploy-catalog.yml@ab33b2e0a64c06c11feae6a04a450366b537f9f4
+    uses: tangle-network/sandbox-ui/.github/workflows/deploy-catalog.yml@e07a5d4b551d6993420d20e4f0452a7a192261ac
     permissions:
       contents: read
       deployments: write

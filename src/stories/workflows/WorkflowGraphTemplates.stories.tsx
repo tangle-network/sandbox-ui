@@ -144,8 +144,9 @@ const CHAIN_15 = `on:\n  webhook: {}\ndo:\n${Array.from(
   (_, i) => `  - agent.run:\n      profile: { name: step-${i + 1} }\n      prompt: Do step ${i + 1}.\n`,
 ).join("")}`;
 
-/** The platform's workflow detail panel (702px wide, run overlay on): a loop
- *  with a guarded back edge, a fan-out, and a long chain. */
+/** The platform's workflow detail panel (702px wide, run overlay on, canvas
+ *  sized to the graph): a loop with a guarded back edge, a fan-out, and a long
+ *  chain. */
 export const PlatformPanel: Story = {
   render: () => (
     <div className="flex w-[702px] max-w-full flex-col gap-4">
@@ -159,7 +160,8 @@ export const PlatformPanel: Story = {
           defaultCompact
           wrap
           nodeState={{}}
-          className="h-[30rem] w-full rounded-lg border border-border bg-background"
+          fitHeight={640}
+          className="w-full rounded-lg border border-border bg-background"
         />
       ))}
     </div>

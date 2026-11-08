@@ -352,19 +352,14 @@ const CROSS_SEP = 24;
 // render a band taller sees that band CLIPPED within its fixed box — never a
 // squeezed line of text, and never a reflow of the graph.
 /**
- * The layer gap a graph uses once its edges carry labels (a guard summary, a
- * cycle badge). An edge label sits in the corridor BETWEEN two layers, so the
- * corridor has to be wide enough to hold one — at the ordinary separations (72
- * expanded, 20 compact) a chip is several times the gap it sits in and spills
- * across the nodes either side.
- *
- * Reserved for the same reason node heights are: the layout renders the label,
- * so the layout owes it room. Sized to the chip's own max width (`max-w-40`,
- * 160px — the chips stack rather than sit side by side, so the widest possible
- * group is one chip) plus breathing space. Applied only to graphs that actually
- * have labelled edges, so nothing else spreads out.
+ * The layer gap a graph uses once a FORWARD edge carries a guard chip. That chip
+ * sits in the corridor between two layers, so the corridor has to hold it: in
+ * "LR" the chip's own max width (`max-w-40`, 160px) plus air; in "TB" its height,
+ * three wrapped 11px lines plus air. A loop's return edge is routed around the
+ * outside of the layers and its chips ride that run, so a back edge needs no
+ * corridor. Applied only to graphs that need it, so nothing else spreads out.
  */
-const EDGE_LABEL_LANE = 180;
+const EDGE_LABEL_LANE = { LR: 180, TB: 64 } as const;
 /** The corridor an edge needs when the canvas draws an INSERT control at its
  *  midpoint: the button plus clearance from the cards either side, so the "+"
  *  never sits on a node. Only widens a gap — a labelled graph's lane is already
@@ -619,9 +614,11 @@ export interface BuildWorkflowGraphOptions {
    * Fold a long single-file pipeline into rows instead of one unbounded line,
    * so it occupies both axes of the panel rather than running off one edge.
    * Only a straight chain folds — a graph with any fan-out keeps its layered
-   * flow, whose branches need the cross axis. "LR" only. Defaults to `false`.
+   * flow, whose branches need the cross axis. "LR" only. A number is the
+   * width/height shape to fold toward instead of the default panel's. Defaults
+   * to `false`.
    */
-  wrap?: boolean;
+  wrap?: boolean | number;
   /**
    * The graph's DECLARED topology. Omit — the default — and edges are inferred
    * from `do`-list order: a linear spine, which is exactly right for a workflow
@@ -1269,8 +1266,8 @@ const WRAP_ASPECT_TRIGGER = 4.2;
  *  reads as a turn rather than a collision. */
 const WRAP_ROW_GAP = 28;
 
-/** How many columns fold `count` equal cells closest to {@link
- *  WRAP_TARGET_ASPECT}. Compared in LOG space so being twice too wide and half
+/** How many columns fold `count` equal cells closest to the `target`
+ *  width/height. Compared in LOG space so being twice too wide and half
  *  too wide are penalised the same — a linear error would always prefer the
  *  wide side. */
 function foldColumns(
@@ -1279,6 +1276,7 @@ function foldColumns(
   cellH: number,
   colSep: number,
   rowSep: number,
+  target: number,
 ): number {
   let best = count;
   let bestError = Number.POSITIVE_INFINITY;
@@ -1286,7 +1284,7 @@ function foldColumns(
     const rows = Math.ceil(count / cols);
     const width = cols * cellW + (cols - 1) * colSep;
     const height = rows * cellH + (rows - 1) * rowSep;
-    const error = Math.abs(Math.log(width / height / WRAP_TARGET_ASPECT));
+    const error = Math.abs(Math.log(width / height / target));
     if (error < bestError) {
       bestError = error;
       best = cols;
@@ -1319,6 +1317,7 @@ function layoutSerpentine(
   edges: readonly WfEdge[],
   colSep: number,
   laneSep: number,
+  target: number,
 ): WfNode[] | null {
   const rowSep = Math.max(laneSep, WRAP_ROW_GAP);
   const byRank = new Map<number, LayoutNode[]>();
@@ -1349,7 +1348,7 @@ function layoutSerpentine(
   const lineAspect = (count * cellW + (count - 1) * colSep) / cellH;
   if (lineAspect <= WRAP_TARGET_ASPECT * WRAP_ASPECT_TRIGGER) return null;
 
-  const cols = foldColumns(count, cellW, cellH, colSep, rowSep);
+  const cols = foldColumns(count, cellW, cellH, colSep, rowSep, target);
   // Already the best shape available — leave it as the straight line it is.
   if (cols >= count) return null;
 
@@ -1768,23 +1767,21 @@ export function buildWorkflowGraph(
     }
   }
 
-  // A labelled edge needs a corridor it fits in — see EDGE_LABEL_LANE. Decided
-  // here, after classification, because a back edge is only known by then and
-  // it is one of the two things that puts a chip on the canvas.
-  const labelled = edges.some(
-    (e) => e.whenLabel !== undefined || e.backEdge === true,
-  );
+  // A forward guard needs a corridor it fits in — see EDGE_LABEL_LANE. Decided
+  // here, after classification, because only then is a back edge known.
+  const labelled = edges.some((e) => e.whenLabel !== undefined && !e.backEdge);
   const rankSep = labelled
-    ? Math.max(geo.rankSep, EDGE_LABEL_LANE)
+    ? Math.max(geo.rankSep, EDGE_LABEL_LANE[direction])
     : options?.reserveEdgeInsert
       ? Math.max(geo.rankSep, EDGE_INSERT_LANE)
       : geo.rankSep;
 
   // A folded layout turns corners, and a guard chip sits ON the corridor a
   // straight run reserves for it — so a labelled graph keeps its single file.
+  const wrap = options?.wrap;
   const folded =
-    options?.wrap && direction === "LR" && !labelled
-      ? layoutSerpentine(logical, edges, rankSep, geo.crossSep)
+    wrap && direction === "LR" && !labelled
+      ? layoutSerpentine(logical, edges, rankSep, geo.crossSep, wrap === true ? WRAP_TARGET_ASPECT : wrap)
       : null;
 
   return {

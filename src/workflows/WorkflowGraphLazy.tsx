@@ -16,13 +16,7 @@ export { GraphErrorBoundary, retryImport } from "@tangle-network/charts/react/ag
  * via a Vite `vite:preloadError` reload guard.
  */
 
-import {
-  type ComponentType,
-  lazy,
-  Suspense,
-  useMemo,
-  useState,
-} from "react";
+import { type ComponentType, lazy, Suspense, useState } from "react";
 import type { WorkflowGraphProps } from "./WorkflowGraph";
 
 function lazyWorkflowGraph(): ComponentType<WorkflowGraphProps> {
@@ -32,16 +26,23 @@ function lazyWorkflowGraph(): ComponentType<WorkflowGraphProps> {
     ),
   );
 }
+// One lazy component for every mount: it resolves once, so a remount renders at
+// once instead of suspending into "Loading graph…". A manual retry replaces it,
+// because React.lazy caches a rejected import too.
+let Impl = lazyWorkflowGraph();
+
 /** Graceful degradation when the graph can't render: the workflow is still
  *  fully legible as YAML, with a retry for a recoverable load failure. */
 function GraphFallback({
   yaml,
   className,
+  fitHeight,
   onRetry,
 }: WorkflowGraphProps & { onRetry: () => void }) {
   return (
     <div
       className={`overflow-auto rounded-lg border border-border bg-background p-2 ${className ?? ""}`}
+      style={fitHeight ? { maxHeight: fitHeight } : undefined}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs">
@@ -63,13 +64,8 @@ function GraphFallback({
 }
 
 export function WorkflowGraph(props: WorkflowGraphProps) {
-  // A manual retry bumps `attempt`, which both recreates the lazy component
-  // (React.lazy permanently caches a rejected import, so a fresh one is needed
-  // to re-run it) and re-keys the boundary to clear its error state.
+  // A manual retry re-keys the boundary to clear its error state.
   const [attempt, setAttempt] = useState(0);
-  // A fresh lazy() per attempt is intentional: it re-runs the import after a
-  // failure (React.lazy caches a rejected import, so the prior one can't recover).
-  const Impl = useMemo(() => lazyWorkflowGraph(), [attempt]);
 
   return (
     // Key the boundary by the workflow AND the attempt so a different/edited
@@ -79,13 +75,20 @@ export function WorkflowGraph(props: WorkflowGraphProps) {
     <GraphErrorBoundary
       key={`${props.yaml}::${attempt}`}
       fallback={
-        <GraphFallback {...props} onRetry={() => setAttempt((a) => a + 1)} />
+        <GraphFallback
+          {...props}
+          onRetry={() => {
+            Impl = lazyWorkflowGraph();
+            setAttempt((a) => a + 1);
+          }}
+        />
       }
     >
       <Suspense
         fallback={
           <div
             className={`flex items-center justify-center rounded-lg border border-border border-dashed text-text-muted text-xs ${props.className ?? ""}`}
+            style={props.fitHeight ? { height: props.fitHeight } : undefined}
           >
             Loading graph…
           </div>

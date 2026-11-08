@@ -2251,7 +2251,7 @@ export function WorkflowGraph({
       setDisplayCompact(shownCompact);
       return;
     }
-    const endViewport = openingViewport(structural, frame.width, frame.height, shownCompact, shownDirection, fitHeight);
+    const endViewport = openingViewport(structural, frame.width, frame.height, shownCompact, shownDirection, fullscreenRef.current ? undefined : fitHeight);
     // This relayout IS the frame for the new structure — the effect below must
     // not also claim it once the canvas is measured.
     framedRef.current = true;

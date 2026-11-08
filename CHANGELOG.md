@@ -1,3 +1,10 @@
+## 8.0.4
+
+- `RailTooltip` closes on a press and stays closed while its trigger's menu is open (`aria-expanded="true"`). On a collapsed rail, a footer picker's tooltip no longer floats beside the picker it opened, repeating its label and value.
+- `RailButton`'s `trailing` content takes the row's colour instead of always being muted, so it darkens on hover with the label and follows a caller's emphasis class.
+- The labeled `ProfileAvatar` row is a 36 px rail row: a 24 px avatar centred on the nav icon column and the name on the nav label column (both were 6 and 12 px to the right), in the muted row colour, so the account row is quieter than the rows above it. In the phone drawer it keeps a 44 px target.
+- The phone drawer closes when a router link inside it navigates in place, including a link in a menu opened from the drawer, such as a Billing item in a footer picker or Settings in the account menu. Before, only nav items closed it, and the new page opened behind the drawer.
+
 ## 8.0.3
 
 - The `ProfileAvatar` menu wraps keyboard focus: ArrowUp on its first item moves to Sign Out, ArrowDown on the last returns to the first, as the platform's own account menu did before it adopted this one.

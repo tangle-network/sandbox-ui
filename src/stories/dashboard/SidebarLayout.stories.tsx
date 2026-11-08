@@ -12,6 +12,7 @@ import {
   Wallet,
 } from "lucide-react"
 import { RailButton } from "../../dashboard/app-sidebar"
+import { useSidebar } from "../../dashboard/sidebar-context"
 import { SidebarLayout, type SidebarLayoutNavItem } from "../../dashboard/sidebar-layout"
 import { ShellHeader } from "../../workspace/shell-header"
 import { WorkspaceLayout } from "../../workspace/workspace-layout"
@@ -82,27 +83,34 @@ const base = {
   children: <Body />,
 } satisfies Partial<React.ComponentProps<typeof SidebarLayout>>
 
+/** A footer picker row; collapsed, it is an icon whose tooltip carries the label. */
+function FooterPicker() {
+  const { railCollapsed } = useSidebar()
+  return (
+    <DropdownMenu modal={false}>
+      <RailButton icon={Wallet} label="Northwind Research Collective" description={railCollapsed ? "$11.36" : undefined} showLabel={!railCollapsed} trailing={<>$11.36<ChevronsUpDown className="size-4" /></>} asChild>
+        <DropdownMenuTrigger />
+      </RailButton>
+      <DropdownMenuContent side="top" align="start">
+        <DropdownMenuRadioGroup value="team">
+          <DropdownMenuRadioItem value="personal">Personal</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="team">Northwind Research Collective</DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        {/* A router link: it navigates in place, so it prevents the document navigation. */}
+        <DropdownMenuItem asChild>
+          <a href="#billing" onClick={(event) => event.preventDefault()}>Billing</a>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 /**
  * Desktop: the labeled rail. Its footer row is a `RailButton` menu trigger whose
  * `trailing` holds a value and a chevron, so a picker reads as one more rail row.
  */
 export const Desktop: Story = {
-  args: {
-    ...base,
-    railFooter: (
-      <DropdownMenu modal={false}>
-        <RailButton icon={Wallet} label="Northwind Research Collective" showLabel trailing={<>$11.36<ChevronsUpDown className="size-4" /></>} asChild>
-          <DropdownMenuTrigger />
-        </RailButton>
-        <DropdownMenuContent side="top" align="start">
-          <DropdownMenuRadioGroup value="team">
-            <DropdownMenuRadioItem value="personal">Personal</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="team">Northwind Research Collective</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
-  },
+  args: { ...base, railFooter: <FooterPicker /> },
   parameters: { viewport: { defaultViewport: "responsive" } },
 }
 

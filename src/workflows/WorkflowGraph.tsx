@@ -1321,7 +1321,6 @@ function useCanvasAspect(
   fitHeight?: number,
 ): [number | null, number | null, (el: HTMLDivElement | null) => void] {
   const [aspect, setAspect] = useState<number | null>(null);
-  // Tracked only for a fitHeight canvas, whose height is the graph's.
   const [width, setWidth] = useState<number | null>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
   const attach = useCallback((el: HTMLDivElement | null) => {
@@ -1960,7 +1959,7 @@ export function WorkflowGraph({
   defaultCompact,
   onCompactChange,
   className,
-  fitHeight,
+  fitHeight: fitHeightProp,
   wrap = false,
   nodeState,
   edges: declaredEdges,
@@ -2014,8 +2013,9 @@ export function WorkflowGraph({
   // The canvas taken over the whole window, for a graph too big to read in
   // the panel it lives in. Escape or the same button gives it back.
   const [fullscreen, setFullscreen] = useState(false);
-  const fullscreenRef = useRef(fullscreen);
-  fullscreenRef.current = fullscreen;
+  const fitHeight = fullscreen ? undefined : fitHeightProp; // full screen is the window's size
+  const fitRef = useRef(fitHeight);
+  fitRef.current = fitHeight;
   const compact = isPreview || userCompact;
   // What the nodes RENDER (content + handle anchors). Inside a layout tween it
   // TRAILS `compact` — the target density drives the layout and the camera at
@@ -2085,7 +2085,7 @@ export function WorkflowGraph({
     if (fitHeight && canvasWidth) {
       const zoom = (d: WfDirection) =>
         contentZoom(graphBounds(buildFlowGraph(yaml, { ...layoutOptions, direction: d })), canvasWidth, fitHeight);
-      return zoom("TB") > zoom("LR") ? "TB" : "LR";
+      return zoom("TB") > zoom("LR") * 1.05 ? "TB" : "LR"; // margin: a scrollbar must not flip it
     }
     return canvasAspect !== null && canvasAspect < 0.9 ? "TB" : "LR";
   }, [directionProp, fitHeight, canvasWidth, yaml, layoutOptions, canvasAspect]);
@@ -2103,8 +2103,7 @@ export function WorkflowGraph({
     // author can select, delete or carry a problem on.
     !editable,
   );
-  // A fitHeight canvas stays hidden until its width has chosen the layout.
-  const laidOut = elkReady && (!fitHeight || canvasWidth !== null);
+  const laidOut = elkReady && (!fitHeight || canvasWidth !== null); // fitHeight: width picks the layout
   // What is ON SCREEN, which trails the props while ELK works: the node
   // content, the handle anchors and the camera must match the drawn layout,
   // not the one being computed.
@@ -2251,7 +2250,7 @@ export function WorkflowGraph({
       setDisplayCompact(shownCompact);
       return;
     }
-    const endViewport = openingViewport(structural, frame.width, frame.height, shownCompact, shownDirection, fullscreenRef.current ? undefined : fitHeight);
+    const endViewport = openingViewport(structural, frame.width, frame.height, shownCompact, shownDirection, fitHeight);
     // This relayout IS the frame for the new structure — the effect below must
     // not also claim it once the canvas is measured.
     framedRef.current = true;
@@ -2339,10 +2338,10 @@ export function WorkflowGraph({
       if (!inst || !frame || frame.width === 0 || frame.height === 0) return;
       const graph = structuralRef.current;
       inst.setViewport(
-        openingViewport(graph, frame.width, frame.height, compactRef.current, directionRef.current, fullscreenRef.current ? undefined : fitHeight),
+        openingViewport(graph, frame.width, frame.height, compactRef.current, directionRef.current, fitRef.current),
       );
     });
-  }, [fitHeight]);
+  }, []);
 
   /**
    * Own the INITIAL frame once the instance and canvas have a size. React
@@ -2513,7 +2512,7 @@ export function WorkflowGraph({
             ? "!fixed !inset-3 !z-40 !h-auto !w-auto overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
             : (className ?? "")
         }`}
-        style={fitHeight && !fullscreen ? { height: canvasHeight } : undefined}
+        style={fitHeight ? { height: canvasHeight } : undefined}
         data-layout={laidOut ? "ready" : "pending"}
       >
       <ReactFlow

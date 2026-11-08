@@ -1767,9 +1767,9 @@ export function buildWorkflowGraph(
     }
   }
 
-  // A forward guard needs a corridor it fits in — see EDGE_LABEL_LANE. Decided
-  // here, after classification, because only then is a back edge known.
-  const labelled = edges.some((e) => e.whenLabel !== undefined && !e.backEdge);
+  // A forward guard needs a corridor (EDGE_LABEL_LANE), as does a loop in a
+  // graph too small for ELK, which draws it between the layers.
+  const labelled = edges.some((e) => (e.backEdge ? logical.length < 3 : e.whenLabel !== undefined));
   const rankSep = labelled
     ? Math.max(geo.rankSep, EDGE_LABEL_LANE[direction])
     : options?.reserveEdgeInsert

@@ -10,3 +10,4 @@ audit-results/
 thoughts/
 playwright-report/
 test-results*/
+!vendor/*.tgz

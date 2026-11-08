@@ -1,4 +1,8 @@
-## 7.0.10
+## 8.0.0
+
+- Publishes the 7.0.10 changes below, which release admission refused as a minor: the exported `BuildWorkflowGraphOptions` gained `wrap?`, a change of export shape. No other change.
+
+## 7.0.10 (not published)
 
 - `WorkflowGraph` takes `fitHeight={px}`: the canvas sizes its height to the laid-out graph, drawn whole at the largest zoom its width and that cap allow (never past 1), running top to bottom when that draws it larger. A graph that would shrink past its fit floor gets the full cap and frames as a fixed canvas. Hosts that set a height are unchanged. On the platform's 702 px panel the Ralph loop now opens at zoom 1 instead of 0.56.
 - Graph text is at least 11 px: compact run metrics, badges, the run footer, problem marks, parallel captions and edge chips (were 9-10 px). A guard chip wraps to three lines within its 160 px corridor with the full text on `title`, instead of truncating.

@@ -96,6 +96,56 @@ test('desktop keeps its rail and account menu', async ({ page, baseURL }) => {
 })
 
 for (const theme of ['light', 'dark']) {
+  test(`footer rows share the nav columns and a menu silences its tooltip ${theme}`, async ({ page, baseURL }, info) => {
+    await openStory(page, 'dashboard-sidebarlayout--desktop', theme, { width: 1440, height: 900 }, baseURL)
+    const columns = () => page.evaluate(() => {
+      const rail = document.querySelector('[data-sidebar=true]')
+      const box = (node) => node.getBoundingClientRect()
+      const center = (node) => box(node).left + box(node).width / 2
+      const nav = rail.querySelector('nav a')
+      const label = [...nav.querySelectorAll('span')].find((node) => !node.querySelector('svg') && node.textContent.trim())
+      const profile = rail.querySelector('button[aria-label="User menu"]')
+      return {
+        navIcon: center(nav.querySelector('svg')),
+        navLabel: label && box(label).left,
+        avatar: center(profile.querySelector('span')),
+        name: profile.querySelector('p') && box(profile.querySelector('p')).left,
+        profileHeight: box(profile).height,
+      }
+    })
+    const open = await columns()
+    expect(Math.abs(open.avatar - open.navIcon), 'avatar centred on the icon column').toBeLessThanOrEqual(0.5)
+    expect(Math.abs(open.name - open.navLabel), 'name on the label column').toBeLessThanOrEqual(0.5)
+    expect(open.profileHeight).toBe(36)
+    await page.screenshot({ path: info.outputPath(`footer-expanded-${theme}.png`), animations: 'disabled' })
+
+    await page.getByRole('button', { name: 'Collapse sidebar', exact: true }).click()
+    const shut = await columns()
+    expect(Math.abs(shut.avatar - shut.navIcon), 'collapsed avatar centred on the icon column').toBeLessThanOrEqual(0.5)
+    const picker = page.getByRole('button', { name: 'Northwind Research Collective', exact: true }).filter({ visible: true })
+    const tooltip = page.locator('[role=tooltip]')
+    await picker.hover()
+    await expect(tooltip).toContainText('$11.36')
+    await picker.click()
+    await expect(page.getByRole('menu')).toBeVisible()
+    await expect(tooltip).toHaveCount(0)
+    await page.mouse.move(700, 450)
+    await picker.hover()
+    await page.waitForTimeout(400)
+    await expect(tooltip, 'the open menu already answers the tooltip').toHaveCount(0)
+    await page.screenshot({ path: info.outputPath(`footer-collapsed-menu-${theme}.png`), animations: 'disabled' })
+  })
+
+  test(`a router link in a drawer menu closes the drawer ${theme}`, async ({ page, baseURL }) => {
+    await openStory(page, 'dashboard-sidebarlayout--desktop', theme, { width: 390, height: 844 }, baseURL)
+    await page.getByRole('button', { name: 'Open navigation', exact: true }).click()
+    const drawer = page.getByRole('dialog', { name: 'Navigation', exact: true })
+    expect((await drawer.getByRole('button', { name: 'User menu', exact: true }).boundingBox()).height).toBeGreaterThanOrEqual(44)
+    await drawer.getByRole('button', { name: 'Northwind Research Collective', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Billing', exact: true }).click()
+    await expect(drawer).toHaveCount(0)
+  })
+
   for (const [header, args] of [
     ['brand', ''],
     ['content', 'logo:!null;railHeaderContent:Workspace'],

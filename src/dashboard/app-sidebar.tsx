@@ -224,7 +224,6 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
   const badgeDescription = hasBadge ? badgeLabel(badge) : undefined
   const tooltipLabel = hasBadge ? `${label} · ${badgeDescription}` : label
   const accessibleDescription = [badgeDescription, description].filter(Boolean).join(". ") || undefined
-  const tooltipDisabled = showLabel && !description
   const iconWithBadge = (
     <span className="relative flex shrink-0 items-center justify-center">
       <Icon className="size-4 shrink-0" />
@@ -242,7 +241,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
     <>
       {iconWithBadge}
       {showLabel && <span className="min-w-0 truncate text-sm font-medium">{label}</span>}
-      {showLabel && trailing != null && <span className="ml-auto flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">{trailing}</span>}
+      {showLabel && trailing != null && <span className="ml-auto flex shrink-0 items-center gap-1.5 text-sm">{trailing}</span>}
     </>
   )
 
@@ -263,7 +262,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
     )
   }
   return (
-    <RailTooltip label={tooltipLabel} description={description} disabled={tooltipDisabled} className={showLabel ? "w-full" : undefined}>
+    <RailTooltip label={tooltipLabel} description={description} disabled={showLabel && !description} className={showLabel ? "w-full" : undefined}>
       {trigger}
     </RailTooltip>
   )
@@ -852,20 +851,20 @@ export function ProfileAvatar({ user, isLoading = false, onLogout, onSettingsCli
         <button
           type="button"
           className={cn(
-            "flex items-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)]",
+            "group/profile flex items-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)]",
             MOTION_CONTROL,
             focusRing,
-            showDetails ? "w-full gap-2.5 px-2.5 py-2 text-left" : "justify-center w-12 h-12",
+            showDetails ? "w-full gap-1.5 py-1.5 pl-1.5 pr-2.5 text-left" : "justify-center w-12 h-12",
             className,
           )}
           aria-label="User menu"
         >
           {isLoading ? (
-            <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+            <Skeleton className="size-6 shrink-0 rounded-full" />
           ) : (
-            <Avatar className="h-7 w-7 shrink-0">
+            <Avatar className="size-6 shrink-0">
               {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt="" />}
-              <AvatarFallback className="text-sm font-medium bg-[var(--accent-surface-strong)] text-[var(--accent-text)]">
+              <AvatarFallback className="text-xs font-medium bg-[var(--accent-surface-strong)] text-[var(--accent-text)]">
                 {getInitials(user?.name, user?.email)}
               </AvatarFallback>
             </Avatar>
@@ -875,7 +874,7 @@ export function ProfileAvatar({ user, isLoading = false, onLogout, onSettingsCli
               {isLoading ? (
                 <Skeleton className="h-3.5 w-24" />
               ) : (
-                <p className="truncate text-sm font-medium text-foreground">
+                <p className="truncate text-sm text-muted-foreground group-hover/profile:text-foreground">
                   {user?.name ?? user?.email ?? "Not signed in"}
                 </p>
               )}

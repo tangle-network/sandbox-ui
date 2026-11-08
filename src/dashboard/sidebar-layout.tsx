@@ -210,8 +210,6 @@ const SHOW_BELOW_CLASS = {
   lg: "lg:hidden",
 } as const
 
-
-
 function DefaultLink({
   href,
   to,
@@ -417,7 +415,8 @@ function SidebarLayoutInner({
 
   return (
     <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-      <div className={cn("min-h-screen bg-surface text-foreground", className)}>
+      {/* The open drawer is modal, so a router link that navigated in place came from it or a menu it opened. */}
+      <div className={cn("min-h-screen bg-surface text-foreground", className)} onClick={(event) => { if (mobileNavOpen && event.defaultPrevented && (event.target as Element).closest("a[href]")) closeMobileNav() }}>
         {/* Wrap the fixed sidebar so the responsive-hide class lands on an
             element with no competing `display` utility. The rail itself carries
             `flex`; once the consumer's Tailwind redefines `.flex` (its stylesheet
@@ -539,6 +538,7 @@ function SidebarLayoutInner({
                       onSettingsClick={onSettingsClick}
                       settingsHref={settingsHref}
                       showDetails
+                      className="min-h-11"
                       appearance={appearance}
                       LinkComponent={Link}
                     >

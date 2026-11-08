@@ -30,9 +30,9 @@ export interface RailTooltipProps {
  * vertical scroll container (`overflow-y-auto`), which the CSS spec forces to
  * also clip horizontally — an in-flow tooltip would be cut off at the rail's
  * edge. Positioned via `getBoundingClientRect` on hover/focus, shown after a
- * short delay, and `pointer-events-none` so it never interferes with the
- * trigger. Hidden from the a11y tree (`aria-hidden`) since the trigger already
- * carries an accessible name.
+ * short delay, closed by a press and kept closed while the trigger's menu is
+ * open (`aria-expanded`), and `pointer-events-none` so it never interferes with
+ * the trigger. Hidden from the a11y tree since the trigger carries the name.
  *
  * `disabled` suppresses the tooltip but NOT the wrapper. Returning a fragment
  * instead changes the rendered element type, and React reconciles by type: the
@@ -77,7 +77,7 @@ export function RailTooltip({ label, description, children, disabled, className 
   }, [disabled])
 
   const open = () => {
-    if (disabled) return
+    if (disabled || ref.current?.querySelector('[aria-expanded="true"]')) return
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => {
       const el = ref.current
@@ -102,6 +102,7 @@ export function RailTooltip({ label, description, children, disabled, className 
       onMouseLeave={close}
       onFocusCapture={open}
       onBlurCapture={close}
+      onPointerDownCapture={close}
     >
       {children}
       {!disabled && coords !== null && typeof document !== "undefined" &&

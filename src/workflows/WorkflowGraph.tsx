@@ -170,15 +170,25 @@ export function layoutBounds(nodes: readonly Node<WfNodeData>[]): Rect {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
+/** Each node's laid-out box, which a decorated edge's cluster keeps clear of. */
+const nodeBoxesOf = (nodes: readonly Node<WfNodeData>[]): NodeBox[] =>
+  nodes.map((n) => ({ ...n.position, width: n.width ?? 0, height: n.height ?? 0 }));
+
 /** What the camera frames: the nodes, the parallel frames drawn around them
  *  (whose captions sit above the first lane), and the routed edges with their
- *  chips, since a loop's return runs outside the layers. */
+ *  chips where the renderer places them, as a loop's return runs outside. */
 export function graphBounds(graph: FlowGraph): Rect {
   const boxes: Rect[] = [layoutBounds(graph.nodes), ...(graph.groups ?? [])];
+  const cards = nodeBoxesOf(graph.nodes);
   for (const { data } of graph.edges) {
     for (const p of data?.route?.points ?? []) boxes.push({ ...p, width: 0, height: 0 });
     const at = data?.route?.label;
-    if (at && (data.whenLabel || data.backEdge)) boxes.push({ x: at.x - 80, y: at.y - 32, width: 160, height: 64 });
+    if (!at || !(data.whenLabel || data.backEdge)) continue;
+    const across = at.across ?? graph.direction ?? "LR";
+    const half = CLUSTER_HALF_SIZE[data.backEdge ? "loop" : "guard"];
+    const shift = data.whenLabel ? (clearOfNodeBoxes(at, cards, across, half) ?? 0) : 0;
+    const isLR = across === "LR";
+    boxes.push({ x: at.x - 80 + (isLR ? 0 : shift), y: at.y - 32 + (isLR ? shift : 0), width: 160, height: 64 });
   }
   const x0 = Math.min(...boxes.map((b) => b.x));
   const y0 = Math.min(...boxes.map((b) => b.y));
@@ -1563,24 +1573,19 @@ export function WfEdgeRenderer({
   // drawing a button that does nothing.
   const offersInsert = data?.insertable === true && insertStep !== null;
   const nodeBoxes = useContext(NodeBoxesContext);
+  // The cluster moves ACROSS the run it sits on, so it stays beside its own edge;
+  // an unrouted edge runs along the flow, across which the layers stack.
   const direction = useContext(DirectionContext);
-  // A cluster is moved off a card when something in it TAKES THE POINTER — the
-  // insert control, or a problem chip, whose tooltip is why it does. Over a
-  // card, either one swallows clicks meant for the node beneath it. A guard or
-  // cycle chip is pointer-transparent and reads fine over a card, so a cluster
-  // carrying only those keeps its place rather than scattering a dense graph's
-  // annotations off their own edges.
+  const across = (onRoute ? route.label?.across : undefined) ?? direction;
+  // A cluster is moved off a card when anything in it would hide or swallow that
+  // card: the insert control or a problem chip takes its clicks, and a guard chip
+  // covers its text. A cycle chip alone keeps its place. Across a vertical run a
+  // chip's width is what has to clear, so the cluster is sized by what it carries.
+  const clusterHalf =
+    CLUSTER_HALF_SIZE[whenLabel ? (backEdge ? "loop" : "guard") : problemSeverity ? "chip" : "control"];
   const cleared =
-    offersInsert || problemSeverity
-      ? clearOfNodeBoxes(
-          { x: labelX, y: labelY },
-          nodeBoxes,
-          direction,
-          // A chip is far wider than the control, and in "TB" that width is what
-          // has to clear the cards — so the cluster is measured by what it
-          // actually carries rather than by its tallest member.
-          problemSeverity ? CLUSTER_HALF_SIZE.chip : CLUSTER_HALF_SIZE.control,
-        )
+    offersInsert || problemSeverity || whenLabel
+      ? clearOfNodeBoxes({ x: labelX, y: labelY }, nodeBoxes, across, clusterHalf)
       : 0;
   const clearance = cleared ?? 0;
   // Nowhere to move it to. It stays on the card, where the raised label layer
@@ -1589,8 +1594,7 @@ export function WfEdgeRenderer({
   // node's clicks land on. Losing one edge's tooltip or "+" costs less than
   // losing a step.
   const stealsPointer = cleared === null;
-  // The clearance runs along the CROSS axis — the one the layers stack on.
-  const isLR = direction === "LR";
+  const isLR = across === "LR";
   const clusterX = labelX + (isLR ? 0 : clearance);
   const clusterY = labelY + (isLR ? clearance : 0);
   return (
@@ -2121,16 +2125,7 @@ export function WorkflowGraph({
   // The boxes a decorated edge's cluster must keep clear of. Derived from the
   // layout, so it is recomputed exactly when the layout moves and never carries
   // a position from a previous one.
-  const nodeBoxes = useMemo<NodeBox[]>(
-    () =>
-      structural.nodes.map((node) => ({
-        x: node.position.x,
-        y: node.position.y,
-        width: node.width ?? 0,
-        height: node.height ?? 0,
-      })),
-    [structural],
-  );
+  const nodeBoxes = useMemo(() => nodeBoxesOf(structural.nodes), [structural]);
 
   // The problems, indexed by what they are anchored to. Keyed on the array's
   // identity (the documented contract), so a host that rebuilds the list only

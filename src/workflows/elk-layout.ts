@@ -330,19 +330,16 @@ export function toElkGraph(
 /** The middle of a polyline's longest straight run: the one place on a routed
  *  edge with room for a chip, and distinct per edge even when several leave
  *  the same node together. */
-export function longestRunMidpoint(points: readonly ElkPoint[]): {
-  x: number;
-  y: number;
-} {
+export function longestRunMidpoint(points: readonly ElkPoint[]): { x: number; y: number; across: WfDirection } {
   let best = 0;
-  let at = { x: points[0].x, y: points[0].y };
+  let at = { x: points[0].x, y: points[0].y, across: "LR" as WfDirection };
   for (let i = 1; i < points.length; i += 1) {
     const a = points[i - 1];
     const b = points[i];
     const len = Math.hypot(b.x - a.x, b.y - a.y);
     if (len > best) {
       best = len;
-      at = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      at = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, across: a.y === b.y ? "LR" : "TB" };
     }
   }
   return at;

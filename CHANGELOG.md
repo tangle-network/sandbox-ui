@@ -1,3 +1,7 @@
+## 8.0.1
+
+- A guard chip no longer covers the card beside its edge: a cluster carrying a guard is moved off node boxes, as an insert control or problem chip already was, and the canvas frames it where it lands. A routed edge's cluster now moves across the straight run it sits on, so it stays beside its own edge. On the platform's Ralph loop the `VERDICT: revise` guard and its `↺ ≤12` chip sat over the Reviewer's model line; they now sit beside the return run, clear of the card.
+
 ## 8.0.0
 
 - Publishes the 7.0.10 changes below, which release admission refused as a minor: the exported `BuildWorkflowGraphOptions` gained `wrap?`, a change of export shape. No other change.

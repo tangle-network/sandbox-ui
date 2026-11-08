@@ -51,8 +51,8 @@ export interface WfFlowEdgeData extends Record<string, unknown> {
    */
   route?: {
     points: readonly { x: number; y: number }[];
-    /** Where the layout reserved room for the edge's chips. */
-    label?: { x: number; y: number };
+    /** Where the layout reserved room for the edge's chips, and the axis across their run. */
+    label?: { x: number; y: number; across?: WfDirection };
     from: { x: number; y: number };
     to: { x: number; y: number };
   };
@@ -411,6 +411,10 @@ export const CLUSTER_HALF_SIZE = {
    * bound that understates is a bound that lets the cluster lap over a card.
    */
   chip: { width: 80, height: 20 },
+  /** A guard chip at its three-line cap (45.25 units); fits a "TB" 64-unit corridor. */
+  guard: { width: 80, height: 23 },
+  /** A guarded loop: that chip with the cycle chip under it (65 units). */
+  loop: { width: 80, height: 33 },
 } as const;
 
 /** Half a cluster's extent along each axis. */

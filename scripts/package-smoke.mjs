@@ -153,7 +153,7 @@ try {
     .map((name) => {
       const requested = manifest.devDependencies?.[name] ?? manifest.peerDependencies?.[name];
       const installed = join(root, "node_modules", name, "package.json");
-      const version = requested && /^[~^<>=*0-9]/.test(requested) && existsSync(installed) ? JSON.parse(readFileSync(installed, "utf8")).version : requested;
+      const version = requested?.startsWith("file:") ? `file:${join(root, requested.slice(5))}` : requested && /^[~^<>=*0-9]/.test(requested) && existsSync(installed) ? JSON.parse(readFileSync(installed, "utf8")).version : requested;
       return version ? `${name}@${version}` : name;
     });
 

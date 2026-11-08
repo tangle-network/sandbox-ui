@@ -1,3 +1,7 @@
+## 7.0.9
+
+- Carries the 7.0.8 fix, which was not published: its release stopped at six Storybook visual references (the Usage summary on a phone and the Files view of `AgentWorkspace`) that the sentence-case pass had left behind. The references now match the components; no component changed.
+
 ## 7.0.8
 
 - `AgentWorkspace` opens its Terminal the first time the reader switches to it: the terminal grant was read only when the agent changed, so a workspace opened on Files waited on "Opening a terminal into the agent's box…" for good. A read now also runs when it first appears for its key.
@@ -476,7 +480,7 @@ Release admission names this a break, as at 5.0.0: `TraceWorkspaceProps` extends
 ## 0.127.4
 
 - The icon-only rail's badge dot (shown for counts of 10 or more) is filled with the accent text colour instead of the primary colour, and has a 2px ring in the rail's background colour that separates it from the icon. The dot has no digits, so its fill alone has to stand out: primary measured 2.09:1 against the dark rail, below the 3:1 minimum for graphics.
-- `RailButton` and `RailModeButton` accept an optional `badgeLabel(count)`, and the `SidebarLayout` and `DashboardLayout` nav items pass it through wherever they pass `badge`. It words the count for assistive tech and the tooltip, such as `(n) => \`${n} running\``. It defaults to "<n> new".
+- `RailButton` and `RailModeButton` accept an optional `badgeLabel(count)`, and the `SidebarLayout` and `DashboardLayout` nav items pass it through wherever they pass `badge`. It words the count for assistive tech and the tooltip, such as `(n) => `${n} running``. It defaults to "<n> new".
 
 ## 0.127.3
 

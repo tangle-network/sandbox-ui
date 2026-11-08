@@ -1,3 +1,10 @@
+## 7.0.10
+
+- `WorkflowGraph` takes `fitHeight={px}`: the canvas sizes its height to the laid-out graph, drawn whole at the largest zoom its width and that cap allow (never past 1), running top to bottom when that draws it larger. A graph that would shrink past its fit floor gets the full cap and frames as a fixed canvas. Hosts that set a height are unchanged. On the platform's 702 px panel the Ralph loop now opens at zoom 1 instead of 0.56.
+- Graph text is at least 11 px: compact run metrics, badges, the run footer, problem marks, parallel captions and edge chips (were 9-10 px). A guard chip wraps to three lines within its 160 px corridor with the full text on `title`, instead of truncating.
+- A loop's return edge no longer widens every layer gap to 180 px: it is routed around the layers and its chips ride that run. A forward guard keeps the corridor, 64 px between top-to-bottom layers. Framing covers routed edges and their chips, so a return run below the graph is not cut off.
+- `WorkflowGraphLazy` creates its lazy component once per module, so a remount renders at once instead of flashing "Loading graph…"; a manual retry still re-imports.
+
 ## 7.0.9
 
 - Carries the 7.0.8 fix, which was not published: its release stopped at six Storybook visual references (the Usage summary on a phone and the Files view of `AgentWorkspace`) that the sentence-case pass had left behind. The references now match the components; no component changed.

@@ -1,3 +1,7 @@
+## 7.0.8
+
+- `AgentWorkspace` opens its Terminal the first time the reader switches to it: the terminal grant was read only when the agent changed, so a workspace opened on Files waited on "Opening a terminal into the agent's box…" for good. A read now also runs when it first appears for its key.
+
 ## 7.0.7
 
 - Refresh the development wire-contract dependency to Runtime 8. Public UI APIs and peer floors remain unchanged.

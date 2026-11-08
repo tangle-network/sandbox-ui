@@ -65,9 +65,10 @@ export interface AgentWorkspaceProps {
 
 type Read<T> = { state: "reading" } | { state: "read"; value: T } | { state: "failed"; why: string }
 
-/** One host read, keyed so a stale answer never lands on a newer selection. */
+/** One host read, keyed so a stale answer never lands on a newer selection; it runs when the key changes or the read first appears. */
 function useRead<T>(read: (() => Promise<T>) | undefined, key: string): Read<T> | undefined {
   const [result, setResult] = useState<{ key: string; read: Read<T> }>()
+  const asked = read !== undefined
   useEffect(() => {
     if (!read) return
     let stale = false
@@ -77,7 +78,7 @@ function useRead<T>(read: (() => Promise<T>) | undefined, key: string): Read<T> 
       (why: unknown) => { if (!stale) setResult({ key, read: { state: "failed", why: why instanceof Error ? why.message : String(why) } }) },
     )
     return () => { stale = true }
-  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key, asked]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!read) return undefined
   return result?.key === key ? result.read : { state: "reading" }
 }

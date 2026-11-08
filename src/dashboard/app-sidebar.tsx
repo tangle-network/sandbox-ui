@@ -883,7 +883,7 @@ export function ProfileAvatar({ user, isLoading = false, onLogout, onSettingsCli
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-72">
+      <DropdownMenuContent loop side="top" align="start" sideOffset={8} className="w-72">
         <DropdownMenuLabel className="p-0 font-normal">
           <div className="flex items-center gap-3 px-2 py-3">
             <Avatar className="h-12 w-12 shrink-0">

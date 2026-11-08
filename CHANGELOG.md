@@ -1,3 +1,7 @@
+## 8.0.3
+
+- The `ProfileAvatar` menu wraps keyboard focus: ArrowUp on its first item moves to Sign Out, ArrowDown on the last returns to the first, as the platform's own account menu did before it adopted this one.
+
 ## 8.0.2
 
 - `RailButton` takes `trailing`: on a labeled rail, content at the row's end, such as a value and a disclosure chevron. The label truncates before it, so a long name stays on one 36 px row. A menu trigger such as a wallet or workspace picker can now be a rail row instead of a bordered form control.

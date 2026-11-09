@@ -1,8 +1,8 @@
-## 8.0.6
+## 8.0.7
 
-- Publishes the 8.0.5 changes below, which release admission refused as a major because `HarnessLogoProps.size` widened. `HarnessLogo` keeps `size?: number`; `SeatMark` sizes its harness mark with CSS.
+- A rail session row's title ends in "…" before its actions button while the button shows (hover, keyboard focus or open menu) instead of running under it. The Codex `HarnessLogo` is the single-colour Codex mark in the foreground colour, as the composer draws it, not the colour tile whose cloud shrank to a blue blob at 15 px.
 
-## 8.0.5 (not published)
+## 8.0.6 publishes these 8.0.5 changes (admission refused 8.0.5 as a major for a widened `HarnessLogoProps.size`)
 
 - `SeatMark` (from `@tangle-network/sandbox-ui/dashboard` and the package root) shows a chat seat as one row: harness logo, model brand mark, model name and effort in the UI sans, with both marks at 1.25em and a 1.25 line height so every child shares one centre line, standalone or inside a pill. `title` reads "harness · model · effort".
 - A `variant: "primary"` rail item (such as "New session") is the brand primary `Button`, even on its own route, so it no longer has the same fill as the current row. `RailButton`, `RailFlyout` and `RailExpandable` rows use Brand's list row (`ixRow` + `ixSelected`): the hover wash, and when active the selected tint with a 1 px inset ring (`--ix-sel-bg`, `--ix-sel-ring`), marked by `aria-current="page"` or `data-state="active"`.

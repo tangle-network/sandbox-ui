@@ -477,7 +477,7 @@ export function RailExpandable({
         className={cn(
           "flex h-8 min-w-0 items-center gap-2 rounded-md px-2.5 text-sm transition-colors",
           MOTION_CONTROL,
-          showLabel && item.actions?.length ? "flex-1" : "w-full flex-none",
+          showLabel && item.actions?.length ? "flex-1 group-hover/sub:pr-8 group-has-[button:focus-visible,[data-state=open]]/sub:pr-8" : "w-full flex-none",
           active
             ? "bg-[var(--accent-surface-strong)] font-medium text-[var(--accent-text)]"
             : item.emphasis

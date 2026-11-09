@@ -1,7 +1,10 @@
-## 8.0.5
+## 8.0.6
+
+- Publishes the 8.0.5 changes below, which release admission refused as a major because `HarnessLogoProps.size` widened. `HarnessLogo` keeps `size?: number`; `SeatMark` sizes its harness mark with CSS.
+
+## 8.0.5 (not published)
 
 - `SeatMark` (from `@tangle-network/sandbox-ui/dashboard` and the package root) shows a chat seat as one row: harness logo, model brand mark, model name and effort in the UI sans, with both marks at 1.25em and a 1.25 line height so every child shares one centre line, standalone or inside a pill. `title` reads "harness · model · effort".
-- `HarnessLogo` `size` also takes a CSS length such as `"1.25em"`.
 - A `variant: "primary"` rail item (such as "New session") is the brand primary `Button`, even on its own route, so it no longer has the same fill as the current row. `RailButton`, `RailFlyout` and `RailExpandable` rows use Brand's list row (`ixRow` + `ixSelected`): the hover wash, and when active the selected tint with a 1 px inset ring (`--ix-sel-bg`, `--ix-sel-ring`), marked by `aria-current="page"` or `data-state="active"`.
 
 ## 8.0.4

@@ -30,7 +30,7 @@ export function SeatMark({ harness, model, effort, size = "sm", className }: Sea
         className,
       )}
     >
-      <HarnessLogo type={harness} size="1.25em" />
+      <HarnessLogo type={harness} className="h-[1.25em]! w-[1.25em]!" />
       {brand && <BrandLogo brand={brand} size={size === "sm" ? "xs" : "sm"} className="h-[1.25em] w-[1.25em]" />}
       <span className="min-w-0 truncate font-medium text-foreground">{model}</span>
       {effort && <span className="shrink-0 text-muted-foreground">{effort}</span>}

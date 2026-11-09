@@ -46,8 +46,8 @@ export interface HarnessLogoProps {
   type: string;
   /** Recorded model shown with the harness name on hover. */
   model?: string;
-  /** Chip edge length: px, or a CSS length such as "1.25em". Default 16 (matches the model pill glyph). */
-  size?: number | string;
+  /** Chip edge length in px. Default 16 (matches the model pill glyph). */
+  size?: number;
   className?: string;
 }
 

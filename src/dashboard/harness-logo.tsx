@@ -6,7 +6,7 @@ import { cn } from "../lib/utils";
 import type { HarnessType } from "./harness-picker";
 import ampLogo from "@lobehub/icons-static-svg/icons/amp.svg";
 import claudeCodeLogo from "@lobehub/icons-static-svg/icons/claudecode-color.svg";
-import codexLogo from "@lobehub/icons-static-svg/icons/codex-color.svg";
+import codexLogo from "@lobehub/icons-static-svg/icons/codex.svg";
 import hermesLogo from "@lobehub/icons-static-svg/icons/hermesagent.svg";
 import kimiLogo from "@lobehub/icons-static-svg/icons/kimi-color.svg";
 import zaiLogo from "@lobehub/icons-static-svg/icons/zai.svg";
@@ -28,7 +28,7 @@ export interface HarnessBrand {
 export const HARNESS_BRAND: Partial<Record<HarnessType | "glm" | "kimi" | "grok", HarnessBrand>> = {
   opencode: { label: "OpenCode", logoUrl: opencodeLogo, color: "var(--tone-teal-icon)" },
   "claude-code": { label: "Claude Code", logoUrl: claudeCodeLogo, fullColor: true },
-  codex: { label: "Codex", logoUrl: codexLogo, fullColor: true },
+  codex: { label: "Codex", logoUrl: codexLogo, color: "hsl(var(--foreground))" },
   amp: { label: "AMP", logoUrl: ampLogo },
   "kimi-code": { label: "Kimi Code", logoUrl: kimiLogo, fullColor: true },
   openclaw: { label: "OpenClaw", logoUrl: openclawLogo },

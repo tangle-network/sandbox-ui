@@ -105,6 +105,7 @@ export {
   type HarnessBrand,
   type HarnessLogoProps,
 } from "./harness-logo";
+export { SeatMark, type SeatMarkProps } from "./seat-mark";
 export {
   canonicalModelId,
   type ModelInfo,

@@ -4,7 +4,7 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { cn } from "../lib/utils"
 import { MOTION_CONTROL, MOTION_SURFACE } from "../lib/motion"
-import { Avatar, AvatarFallback, AvatarImage } from "@tangle-network/ui/primitives"
+import { Avatar, AvatarFallback, AvatarImage, buttonVariants } from "@tangle-network/ui/primitives"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +23,7 @@ import {
   useSidebar,
 } from "./sidebar-context"
 import { RailTooltip, RAIL_FLOATING_SURFACE } from "./rail-tooltip"
-import { focusRing } from "@tangle-network/ui/utils"
+import { focusRing, ixControl, ixRow, ixSelected } from "@tangle-network/ui/utils"
 import { ShellHeader } from "../workspace/shell-header"
 
 export interface SidebarUser {
@@ -207,16 +207,17 @@ export interface RailButtonProps {
 }
 
 const defaultBadgeLabel = (count: number) => `${count} new`
+/** Brand's list row: hover wash, and the selected tint with its inset ring on `aria-current="page"` or `data-state="active"`. */
+const RAIL_ROW = cn("text-muted-foreground hover:text-foreground", ixRow, ixSelected)
 
 export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = defaultBadgeLabel, onClick, className, showLabel, description, asChild, children, variant = "normal", style, trailing }: RailButtonProps) {
   const classes = cn(
+    // A primary action is the brand primary Button even on its own route, never the selected row.
+    variant === "primary" ? cn(buttonVariants({ variant: "default" }), ixControl) : RAIL_ROW,
     "relative flex shrink-0 items-center justify-center rounded-md transition-colors",
     MOTION_CONTROL,
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
     focusRing,
-    variant === "primary" || isActive
-      ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
-      : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
     className,
   )
   const hasBadge = badge !== undefined && badge > 0
@@ -245,7 +246,7 @@ export function RailButton({ icon: Icon, label, isActive, badge, badgeLabel = de
     </>
   )
 
-  let trigger = <button type="button" onClick={onClick} aria-label={label} aria-description={accessibleDescription} className={classes} style={style}>{content}</button>
+  let trigger = <button type="button" onClick={onClick} aria-label={label} aria-description={accessibleDescription} data-state={isActive ? "active" : undefined} className={classes} style={style}>{content}</button>
   if (asChild && React.isValidElement(children)) {
     // biome-ignore lint/suspicious/noExplicitAny: merge onto an unknown child element (Link/anchor)
     const child = children as React.ReactElement<any>
@@ -302,13 +303,11 @@ export function RailFlyout({ icon: Icon, label, description, isActive, showLabel
 
   const active = isActive || open
   const triggerClasses = cn(
+    RAIL_ROW,
     "relative flex shrink-0 items-center rounded-md transition-colors",
     MOTION_CONTROL,
     showLabel ? "w-full justify-start px-2.5 h-9 gap-2.5" : "w-9 h-9 justify-center",
     focusRing,
-    active
-      ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)]"
-      : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
     className,
   )
 
@@ -322,6 +321,7 @@ export function RailFlyout({ icon: Icon, label, description, isActive, showLabel
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
+        data-state={active ? "active" : undefined}
         className={triggerClasses}
       >
         <Icon className="size-4 shrink-0" />
@@ -553,14 +553,8 @@ export function RailExpandable({
       ? items.map(subLink)
       : <p className="px-2.5 py-1.5 text-sm text-muted-foreground">{emptyLabel}</p>
   if (!showLabel) {
-    const triggerClasses = cn(
-      "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors",
-      MOTION_CONTROL,
-      focusRing,
-      isActive || open
-        ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
-        : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-    )
+    const triggerClasses = cn(RAIL_ROW, "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors", MOTION_CONTROL, focusRing)
+    const triggerState = isActive || open ? "active" : undefined
     const openFlyout = () => {
       if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
       ensureLoaded()
@@ -597,11 +591,11 @@ export function RailExpandable({
         onBlurCapture={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) scheduleClose() }}
       >
         {href ? (
-          <Link href={href} to={href} onClick={onNavigate} aria-label={label} aria-description={description} aria-current={rowCurrent} className={triggerClasses}>
+          <Link href={href} to={href} onClick={onNavigate} aria-label={label} aria-description={description} aria-current={rowCurrent} data-state={triggerState} className={triggerClasses}>
             <Icon className="size-4 shrink-0" />
           </Link>
         ) : (
-          <button type="button" aria-label={label} aria-description={description} aria-haspopup="menu" aria-expanded={open} className={triggerClasses}>
+          <button type="button" aria-label={label} aria-description={description} aria-haspopup="menu" aria-expanded={open} data-state={triggerState} className={triggerClasses}>
             <Icon className="size-4 shrink-0" />
           </button>
         )}
@@ -647,15 +641,7 @@ export function RailExpandable({
   return (
     <div className={cn("w-full", className)} style={style}>
       <RailTooltip label={label} description={description} disabled={!description} className="w-full">
-      <div
-        className={cn(
-          "group/exp relative flex h-9 w-full items-center rounded-md transition-colors",
-          MOTION_CONTROL,
-          isActive
-            ? "bg-[var(--accent-surface-strong)] text-[var(--accent-text)] font-medium ring-1 ring-inset ring-[var(--border-accent)]"
-            : "text-muted-foreground hover:bg-[var(--accent-surface-soft)] hover:text-foreground",
-        )}
-      >
+      <div data-state={isActive ? "active" : undefined} className={cn(RAIL_ROW, "group/exp relative flex h-9 w-full items-center rounded-md transition-colors", MOTION_CONTROL)}>
         <button
           type="button"
           onClick={toggle}

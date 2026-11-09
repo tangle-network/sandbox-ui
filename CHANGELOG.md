@@ -1,4 +1,4 @@
-## 8.1.0
+## 8.0.5
 
 - `SeatMark` (from `@tangle-network/sandbox-ui/dashboard` and the package root) shows a chat seat as one row: harness logo, model brand mark, model name and effort in the UI sans, with both marks at 1.25em and a 1.25 line height so every child shares one centre line, standalone or inside a pill. `title` reads "harness · model · effort".
 - `HarnessLogo` `size` also takes a CSS length such as `"1.25em"`.

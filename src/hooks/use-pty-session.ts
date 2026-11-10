@@ -552,21 +552,8 @@ export function usePtySession({
       ws.onmessage = (ev) => {
         if (!mountedRef.current || !isCurrentSocket()) return;
         const data = ev.data;
-        let text: string;
-        if (typeof data === 'string') {
-          text = data;
-        } else if (data instanceof ArrayBuffer) {
-          text = new TextDecoder().decode(data);
-        } else if (ArrayBuffer.isView(data)) {
-          text = new TextDecoder().decode(data);
-        } else {
-          // Blob (older runtimes that didn't honor binaryType). Defer to
-          // a microtask read; xterm tolerates the small extra delay.
-          (data as Blob).text().then((t) => {
-            if (mountedRef.current && isCurrentSocket()) onDataRef.current(t);
-          }).catch(() => {});
-          return;
-        }
+        // binaryType is 'arraybuffer', so a frame is a string or bytes.
+        let text = typeof data === 'string' ? data : new TextDecoder().decode(data);
         if (typeof data === 'string') {
           try {
             const event: unknown = JSON.parse(text);
@@ -578,6 +565,7 @@ export function usePtySession({
               const controlFrame = event as {
                 type?: unknown;
                 message?: unknown;
+                data?: unknown;
               };
 
               switch (controlFrame.type) {
@@ -606,10 +594,18 @@ export function usePtySession({
                   transportReadyRef.current = false;
                   setIsConnected(false);
                   return;
+                case 'output':
+                  // An exact interactive attach sends its sequenced PTY
+                  // output as base64 UTF-8 instead of binary frames.
+                  text = new TextDecoder().decode(
+                    Uint8Array.from(atob(String(controlFrame.data)), (c) => c.charCodeAt(0)),
+                  );
+                  break;
+                case 'renewed':
                 case 'rec':
                 case 'rec.done':
-                  // Recording tee frames belong to the platform capture
-                  // consumer, not the terminal renderer.
+                  // Token renewals and recording tee frames belong to the
+                  // platform, not the terminal renderer.
                   return;
                 default: {
                   const frameType = typeof controlFrame.type === 'string'

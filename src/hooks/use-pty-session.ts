@@ -595,11 +595,10 @@ export function usePtySession({
                   setIsConnected(false);
                   return;
                 case 'output':
-                  // An exact interactive attach sends its sequenced PTY
-                  // output as base64 UTF-8 instead of binary frames.
-                  text = new TextDecoder().decode(
-                    Uint8Array.from(atob(String(controlFrame.data)), (c) => c.charCodeAt(0)),
-                  );
+                  // An exact interactive attach sends sequenced PTY output as base64 UTF-8.
+                  try {
+                    text = new TextDecoder().decode(Uint8Array.from(atob(String(controlFrame.data)), (c) => c.charCodeAt(0)));
+                  } catch { return failProtocol('Terminal output frame is not valid base64'); }
                   break;
                 case 'renewed':
                 case 'rec':

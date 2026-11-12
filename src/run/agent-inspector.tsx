@@ -2,6 +2,7 @@
 
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { FlowSpan } from "@tangle-network/charts"
+import { AgentFacts } from "@tangle-network/charts/react"
 import { RunStatusIcon, type RunStatus } from "@tangle-network/ui/run"
 import { formatCost, formatCount, formatSpanDuration } from "@tangle-network/ui/utils"
 import { ArrowLeft, ChevronRight, X } from "lucide-react"
@@ -179,10 +180,7 @@ export function AgentInspector({ name, model, status, span, live, failure, silen
           <ChevronRight aria-hidden className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />Details
         </summary>
         <section aria-label="Recorded agent details" tabIndex={0} className="px-3 pb-3">
-          {details.length > 0 && <dl className="m-0 grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3 gap-y-1">{details.map((fact, index) => <div key={index} className="contents">
-            <dt className="text-xs text-muted-foreground">{fact.label}</dt>
-            <dd className="m-0 whitespace-pre-wrap break-words text-xs">{fact.value}</dd>
-          </div>)}</dl>}
+          <AgentFacts facts={details} className="m-0 grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3 gap-y-1 [&_dt]:text-sm [&_dt]:text-muted-foreground [&_dd]:m-0 [&_dd]:whitespace-pre-wrap [&_dd]:break-words [&_dd]:text-sm" />
           {detail}
         </section>
       </details>}

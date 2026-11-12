@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   prepare:
-    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@23d725d9b530d4a0c0f2f8d04c12536319dd334a
+    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@da508b209c219a8c572ba35d78f927934a3d0581
     # GitHub checks every job in the called file against this ceiling, including github-release, which this phase
     # skips; a read-only ceiling fails the whole run at startup. The prepare job keeps the file's contents: read token.
     permissions:
@@ -63,7 +63,7 @@ jobs:
   github-release:
     needs: [prepare, release]
     if: always() && needs.prepare.result == 'success' && (needs.release.result == 'success' || needs.prepare.outputs.npm-pending == 'false')
-    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@23d725d9b530d4a0c0f2f8d04c12536319dd334a
+    uses: tangle-network/sandbox-ui/.github/workflows/trusted-release.yml@da508b209c219a8c572ba35d78f927934a3d0581
     permissions:
       contents: write
       packages: write

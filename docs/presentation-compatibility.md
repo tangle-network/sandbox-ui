@@ -90,7 +90,7 @@ After dependency/lock coordination, use the maintained commands:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm exec vitest run scripts/validate-built-css.test.mjs src/primitives/heading.test.tsx src/__tests__/ui-export-parity.test.ts
+pnpm exec vitest run scripts/validate-built-css.test.mjs src/primitives/heading.test.tsx
 pnpm typecheck
 pnpm test:bridge
 pnpm test:package

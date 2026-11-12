@@ -261,8 +261,8 @@ importers:
         specifier: ^1.31.4
         version: 1.31.4(react@19.3.1)
       '@tangle-network/charts':
-        specifier: ^4.0.21
-        version: 4.0.21(@tangle-network/brand@1.31.4(react@19.3.1))(@tangle-network/ui@11.51.17(30b6f370e2137c03317c6c55faaf655b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^4.0.22
+        version: 4.0.22(@tangle-network/brand@1.31.4(react@19.3.1))(@tangle-network/ui@11.51.17(30b6f370e2137c03317c6c55faaf655b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -2021,6 +2021,29 @@ packages:
       react-dom:
         optional: true
 
+  '@tangle-network/charts@4.0.22':
+    resolution: {integrity: sha512-QRGglaAgX0xO/TmxQdYKz88Gi13gJI4VPhDZVCyg6NedQxXccbT6hMPa8uzJY5MjS14OV+KXhHInpRZ1cpDbNA==}
+    peerDependencies:
+      '@tangle-network/brand': ^1.31.3
+      '@tangle-network/ui': ^11.51.9
+      '@xyflow/react': ^12.0.0
+      elkjs: ^0.12.0
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18 || ^19
+    peerDependenciesMeta:
+      '@tangle-network/brand':
+        optional: true
+      '@tangle-network/ui':
+        optional: true
+      '@xyflow/react':
+        optional: true
+      elkjs:
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
   '@tangle-network/harness-sessions@0.1.7':
     resolution: {integrity: sha512-EiNt+lmCnYX+HxLBRXKg2DrYeQQ0o334qlxNmp9L301s3EfcGNE7VIl7BH5hQJojGpb9dxHHi7rzh4PqodvAjw==}
     engines: {node: '>=22.13.0'}
@@ -2374,6 +2397,7 @@ packages:
 
   '@tiptap/y-tiptap@3.0.10':
     resolution: {integrity: sha512-vJtwYVoBBk+e8KyUVoH9WSsfUfKTXf1Uh+tk2UNTlD8wim9j7XVTuc7sakWUYuznB7DkXThT9w5uQTGH2SN0Kg==}
+    deprecated: Persistent position migrations can cause excessive collaborative document growth. Upgrade all collaborating clients to 3.1.0 or later.
     peerDependencies:
       prosemirror-model: ^1.7.1
       prosemirror-state: ^1.2.3
@@ -5919,6 +5943,15 @@ snapshots:
       react: 19.3.1
 
   '@tangle-network/charts@4.0.21(@tangle-network/brand@1.31.4(react@19.3.1))(@tangle-network/ui@11.51.17(30b6f370e2137c03317c6c55faaf655b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    optionalDependencies:
+      '@tangle-network/brand': 1.31.4(react@19.3.1)
+      '@tangle-network/ui': 11.51.17(30b6f370e2137c03317c6c55faaf655b)
+      '@xyflow/react': 12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      elkjs: 0.12.0
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+
+  '@tangle-network/charts@4.0.22(@tangle-network/brand@1.31.4(react@19.3.1))(@tangle-network/ui@11.51.17(30b6f370e2137c03317c6c55faaf655b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     optionalDependencies:
       '@tangle-network/brand': 1.31.4(react@19.3.1)
       '@tangle-network/ui': 11.51.17(30b6f370e2137c03317c6c55faaf655b)

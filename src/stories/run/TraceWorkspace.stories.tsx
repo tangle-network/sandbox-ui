@@ -124,7 +124,7 @@ function OpenDrawer(args: TraceWorkspaceProps) {
   const [selected, select] = useState<string | undefined>(args.selectedAgentId);
   return <TraceWorkspace {...args} selectedAgentId={selected} onSelectAgent={select} />;
 }
-const failedTrace = { ...trace, spans: trace.spans.map(span => span.id === "verifier" ? { ...span, facts: [{ label: "Failure", value: fullFailure }, { label: "Tokens", value: "50.0K in" }, { label: "Harness", value: "codex" }] }
+const failedTrace = { ...trace, spans: trace.spans.map(span => span.id === "verifier" ? { ...span, tools: Array.from({ length: 7 }, (_, i) => ({ name: `recorded_tool_${i}`, calls: 7 - i, failures: i === 6 ? 1 : 0, detail: "2 ms / 3 ms / 4 ms p50/p90/p99" })), facts: [{ label: "Failure", value: fullFailure }, { label: "Tokens", value: "50.0K in" }, { label: "Harness", value: "codex" }] }
   : span.id === "field" ? { ...span, status: "failed" as const, facts: [{ label: "Failure", value: "budget-exhausted: nothing left running could return enough budget for this worker (tokens requested 4000, free 1802)." }, { label: "Harness", value: "codex" }, { label: "Turns", value: "0" }] } : span) };
 const inspector = { render: (args: TraceWorkspaceProps) => <OpenDrawer {...args} />, args: { trace: failedTrace, docked: true, streamUrl: (id: string) => `/agents/${encodeURIComponent(id)}/stream`, openEventSource: replay, defaultView: "agents" as const, live: false,
   renderAgentDrawer: () => <p className="m-0 mt-2 text-xs text-muted-foreground">Profile reader-first-expert-2 · harness codex</p>,

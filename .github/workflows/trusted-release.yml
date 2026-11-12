@@ -19,7 +19,7 @@ jobs:
     runs-on:
       group: public-app-production
       labels: [self-hosted, ci-deploy]
-    timeout-minutes: 30
+    timeout-minutes: 60
     outputs:
       npm-pending: ${{ steps.npm.outputs.pending }}
     steps:

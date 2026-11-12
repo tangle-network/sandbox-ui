@@ -55,7 +55,7 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
    */
   agentCards?: Readonly<Record<string, Partial<AgentGraphNode>>>
   /** Existing graph layouts and recorded edges/tools; node identity and clock stay with this workspace. */
-  agentGraph?: Partial<Pick<AgentGraphProps, "edges" | "tools" | "calls" | "you" | "direction" | "title" | "className">> & { defaultLayout?: AgentGraphProps["layout"] }
+  agentGraph?: Partial<Pick<AgentGraphProps, "edges" | "tools" | "calls" | "you" | "direction" | "title" | "className" | "wholeClaims">> & { defaultLayout?: AgentGraphProps["layout"] }
   className?: string
 }
 

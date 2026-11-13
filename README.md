@@ -34,6 +34,8 @@ The Charts and UI peers in [package.json](./package.json) provide the shared clo
 
 `Conversation`, `AgentTree`, `indexRecord` and `withPrompts` from `@tangle-network/sandbox-ui/run/record` show retained conversations and their recorded hierarchy. `AgentTree` takes `index`, selected `actor`, recorded-time `cutoff` and `select(id)`. Load the shared stylesheet and pass validated presentation data. Original source IDs, reconstructed prompts, pending tool receipts, collapsed idle polls, source callbacks and assessment flags remain available.
 
+Generic `VirtualList`, `VirtualCommand` and `collectionTarget` at that entry forward their exact UI primitive bindings. UI owns measurement, navigation and menu behavior; the existing Sandbox paths remain supported. See UI's command stylesheet and source-scanning setup when rendering VirtualCommand.
+
 ## Usage
 
 ```tsx

@@ -1,5 +1,6 @@
 import { RecordConversationConsumer, VirtualListConsumer, RecordTopologyConsumer } from "./record-conversation-consumer";
 import { ArtifactDockFixture } from "./artifact-dock-fixture";
+import { VirtualList, VirtualCommand, collectionTarget } from "@tangle-network/sandbox-ui/run/record";
 import React, { createRef, useLayoutEffect, useState, type ReactNode } from "react";
 import {
   Heading, PageHeader, PageShell, SectionTitle, Card, CardHeader, CardContent,
@@ -12,10 +13,12 @@ import {
   Heading as RootHeading, PageHeader as RootHeader, PageShell as RootShell,
   CardTitle as RootCardTitle, Table as RootTable,
   type HeadingProps as RootHeadingProps,
+  VirtualList as RootVirtualList, VirtualCommand as RootVirtualCommand, collectionTarget as rootCollectionTarget,
 } from "@tangle-network/sandbox-ui";
 import {
   Heading as CanonicalHeading, PageHeader as CanonicalHeader, PageShell as CanonicalShell,
   CardTitle as CanonicalCardTitle, Table as CanonicalTable,
+  VirtualList as CanonicalVirtualList, VirtualCommand as CanonicalVirtualCommand, collectionTarget as canonicalCollectionTarget,
 } from "@tangle-network/ui/primitives";
 
 // These imports resolve exclusively from the installed tarball and its peers.
@@ -25,6 +28,9 @@ for (const [name, bridge, root, canonical] of [
   ["PageShell", PageShell, RootShell, CanonicalShell],
   ["CardTitle", CardTitle, RootCardTitle, CanonicalCardTitle],
   ["Table", Table, RootTable, CanonicalTable],
+  ["VirtualList", VirtualList, RootVirtualList, CanonicalVirtualList],
+  ["VirtualCommand", VirtualCommand, RootVirtualCommand, CanonicalVirtualCommand],
+  ["collectionTarget", collectionTarget, rootCollectionTarget, canonicalCollectionTarget],
 ] as const) {
   if (bridge !== canonical || root !== canonical) throw new Error(`${name}: not the canonical binding`);
 }

@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Conversation, VirtualList, VirtualCommand, indexRecord, withPrompts, type ConversationRecord } from "@tangle-network/sandbox-ui/run/record";
 import { Button } from "@tangle-network/ui/primitives";
-import "@tangle-network/ui/styles/command.css";
 import retained from "./record-conversation.json";
 import { HarnessLogo } from "@tangle-network/sandbox-ui/dashboard";
 import { AgentGraph } from "@tangle-network/sandbox-ui/workflows";

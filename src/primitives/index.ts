@@ -31,6 +31,7 @@ export {
   BreadcrumbSeparator, BreadcrumbEllipsis, IconTile, initialsOf, CATEGORY_TONES, TONE_CLASSES,
   toneFor, MetricStrip, Metric, SeriesSparkline, MetricChart, normalizeSeries, periodDelta,
   seriesAreaPath, seriesExtent, seriesLinePath, seriesMean, seriesScale, Toolbar, FilterField, ExpandablePanel,
+  Command, defaultFilter, VirtualList, collectionTarget, VirtualCommand,
 } from "@tangle-network/ui/primitives";
 export type {
   ButtonProps, CardTitleProps, InputProps, TextareaProps, HelpTextProps, CalendarDate, CalendarProps,
@@ -44,7 +45,7 @@ export type {
   ComplianceStatus, TagProps, ChipProps, WizardProps, WizardStepProps, IconTileProps, CategoryTone,
   Tone, ToneClasses, MetricStripProps, MetricProps, SeriesSparklineProps, ChartReferenceLine,
   MetricChartProps, PeriodDelta, SeriesExtent, SeriesPoint, SeriesPointInput, SeriesScale,
-  ToolbarProps, FilterFieldProps, ExpandablePanelProps,
+  ToolbarProps, FilterFieldProps, ExpandablePanelProps, VirtualListProps, VirtualCommandItem, VirtualCommandProps,
 } from "@tangle-network/ui/primitives";
 
 export { Logo, TangleKnot, type LogoProps } from "./logo";

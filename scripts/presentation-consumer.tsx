@@ -5,19 +5,20 @@ import React, { createRef, useLayoutEffect, useState, type ReactNode } from "rea
 import {
   Heading, PageHeader, PageShell, SectionTitle, Card, CardHeader, CardContent,
   CardFooter, CardTitle, CardDescription, Table, TableHeader, TableBody, TableRow,
-  TableHead, TableCell, TableCaption,
+  TableHead, TableCell, TableCaption, Command, defaultFilter,
+  VirtualList as PrimitiveVirtualList, VirtualCommand as PrimitiveVirtualCommand, collectionTarget as primitiveCollectionTarget,
   type HeadingProps, type HeadingVariant, type PageHeaderProps, type PageShellProps,
   type SectionTitleProps, type CardTitleProps, type TableProps,
 } from "@tangle-network/sandbox-ui/primitives";
 import {
   Heading as RootHeading, PageHeader as RootHeader, PageShell as RootShell,
   CardTitle as RootCardTitle, Table as RootTable,
-  type HeadingProps as RootHeadingProps,
+  type HeadingProps as RootHeadingProps, Command as RootCommand, defaultFilter as rootFilter,
   VirtualList as RootVirtualList, VirtualCommand as RootVirtualCommand, collectionTarget as rootCollectionTarget,
 } from "@tangle-network/sandbox-ui";
 import {
   Heading as CanonicalHeading, PageHeader as CanonicalHeader, PageShell as CanonicalShell,
-  CardTitle as CanonicalCardTitle, Table as CanonicalTable,
+  CardTitle as CanonicalCardTitle, Table as CanonicalTable, Command as CanonicalCommand, defaultFilter as canonicalFilter,
   VirtualList as CanonicalVirtualList, VirtualCommand as CanonicalVirtualCommand, collectionTarget as canonicalCollectionTarget,
 } from "@tangle-network/ui/primitives";
 
@@ -31,6 +32,11 @@ for (const [name, bridge, root, canonical] of [
   ["VirtualList", VirtualList, RootVirtualList, CanonicalVirtualList],
   ["VirtualCommand", VirtualCommand, RootVirtualCommand, CanonicalVirtualCommand],
   ["collectionTarget", collectionTarget, rootCollectionTarget, canonicalCollectionTarget],
+  ["primitives.VirtualList", PrimitiveVirtualList, RootVirtualList, CanonicalVirtualList],
+  ["primitives.VirtualCommand", PrimitiveVirtualCommand, RootVirtualCommand, CanonicalVirtualCommand],
+  ["primitives.collectionTarget", primitiveCollectionTarget, rootCollectionTarget, canonicalCollectionTarget],
+  ["Command", Command, RootCommand, CanonicalCommand],
+  ["defaultFilter", defaultFilter, rootFilter, canonicalFilter],
 ] as const) {
   if (bridge !== canonical || root !== canonical) throw new Error(`${name}: not the canonical binding`);
 }

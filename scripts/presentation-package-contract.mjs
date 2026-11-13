@@ -34,6 +34,7 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
   const fixture = join(consumerDir, "presentation");
   mkdirSync(fixture);
   copyFileSync(join(root, "scripts/presentation-consumer.tsx"), join(fixture, "consumer.tsx"));
+  copyFileSync(join(root, "tests/integration/motion-consumer.tsx"), join(fixture, "motion-consumer.tsx"));
   copyFileSync(join(root, "scripts/record-conversation-consumer.tsx"), join(fixture, "record-conversation-consumer.tsx"));
   const dockFixture = readFileSync(join(root, "src/stories/chat/artifact-dock-fixture.tsx"), "utf8");
   const dockSource = "../../chat/artifact-agent-dock";
@@ -100,7 +101,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
       try {
         const address = server.httpServer.address();
         assert(address && typeof address === "object", "preview must bind a local TCP port");
-        for (const width of [390, 1280]) {
+        for (const width of [390, 1512]) {
           for (const mode of ["light", "dark"]) {
             const mediaDir = mediaRoot && lane === "compiled" ? join(mediaRoot, `${manifest.version}-interface-${agentInterfaceVersion}-${width}-${mode}`) : undefined;
             const started = performance.now();
@@ -116,18 +117,6 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" });
               await page.waitForFunction(() => document.documentElement.dataset.presentationReady === "true");
               await page.evaluate((value) => { document.documentElement.className = value; }, mode);
-              // Even with reduced motion, body colors transition for 1 ms, and two
-              // frames do not guarantee that transition has run on a loaded host:
-              // a read can still return the previous theme's colour (the entry
-              // lane on the gate, the compiled lane on a rerun, same build). Wait
-              // for every CSS transition the switch started to finish, then paint.
-              await page.evaluate(async () => {
-                getComputedStyle(document.body).color;
-                await Promise.all(document.getAnimations()
-                  .filter((animation) => animation instanceof CSSTransition)
-                  .map((animation) => animation.finished.catch(() => undefined)));
-                await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-              });
               if (mediaDir) await page.screenshot({ path: join(mediaDir, "initial.png") });
               const measured = await page.evaluate(() => {
                 const required = (selector) => {
@@ -280,7 +269,9 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               assert(cardStyle.radius > 0, "each public style entry carries graph geometry");
               artifactDock = await proveArtifactDock(page, { width, mediaDir });
               assert.deepEqual(errors, [], "packed artifact dock consumer must not throw");
-              states.push({ lane, width, mode, topology: cardStyle, artifactDock, ...measured });
+              const motion = lane === "host" ? undefined : await (await import("../tests/integration/record-tools.browser.mjs"))
+                .proveMotionPolicy(page, { lane, width, mode, mediaDir });
+              states.push({ lane, width, mode, topology: cardStyle, artifactDock, motion, ...measured });
               if (mediaDir) await page.screenshot({ path: join(mediaDir, "completed.png") });
               passed = true;
             } finally {

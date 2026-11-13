@@ -1,3 +1,4 @@
+import { MotionConsumer } from "./motion-consumer";
 import { RecordConversationConsumer, VirtualListConsumer, RecordTopologyConsumer } from "./record-conversation-consumer";
 import { ArtifactDockFixture } from "./artifact-dock-fixture";
 import { VirtualList, VirtualCommand, collectionTarget } from "@tangle-network/sandbox-ui/run/record";
@@ -123,6 +124,7 @@ export function PresentationConsumer(): ReactNode {
     <VirtualListConsumer />
     <RecordTopologyConsumer />
     <ArtifactDockFixture initiallyOpen={false} />
+    <MotionConsumer />
     </>
   );
 }

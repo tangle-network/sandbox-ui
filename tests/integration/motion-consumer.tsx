@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useState } from "react";
 
 export function MotionConsumer() {
   const [generation, setGeneration] = useState(0);
-  const sample = { opacity: generation % 2 ? 0.35 : 1, transition: "opacity 200ms linear" };
+  const sample = { opacity: 1 - generation * 0.2, transition: "opacity 200ms linear" };
   useLayoutEffect(() => {
     if (!generation) return;
     const before = getComputedStyle(document.body).scrollbarColor;

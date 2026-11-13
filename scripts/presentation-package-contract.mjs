@@ -12,7 +12,8 @@ import { proveVirtualCommand } from "../tests/virtual-command.browser.mjs";
 export function presentationConsumerSpecs(manifest) {
   return [
     ...["@tangle-network/ui", "@tangle-network/brand"].map((name) =>
-      `${name}@${peerFloor(manifest.peerDependencies[name])}`,
+      name === "@tangle-network/ui" && process.env.SANDBOX_UI_PEER_TARBALL
+        ? process.env.SANDBOX_UI_PEER_TARBALL : `${name}@${peerFloor(manifest.peerDependencies[name])}`,
     ),
     `tailwindcss@${peerFloor(manifest.devDependencies.tailwindcss)}`,
     `@types/react@${manifest.devDependencies["@types/react"]}`,

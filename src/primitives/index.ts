@@ -1,4 +1,51 @@
-// Static upstream bridge; explicit local exports keep their intentional names.
-export * from "@tangle-network/ui/primitives";
+// Compatibility bridge. Named exports keep the published API inspectable.
+export {
+  Button, buttonVariants, Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent,
+  Dialog, DialogPortal, DialogOverlay, DialogClose, DialogTrigger, DialogContent, DialogHeader,
+  DialogFooter, DialogTitle, DialogDescription, AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger, Collapsible,
+  CollapsibleContent, CollapsibleTrigger, ContextMenu, ContextMenuCheckboxItem, ContextMenuContent,
+  ContextMenuGroup, ContextMenuItem, ContextMenuLabel, ContextMenuPortal, ContextMenuRadioGroup,
+  ContextMenuRadioItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub,
+  ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger, Popover, PopoverAnchor,
+  PopoverClose, PopoverContent, PopoverTrigger, Slider, Input, Textarea, HelpText, Calendar,
+  formatCalendarDate, localToday, parseCalendarDate, DatePicker, TimeSelect, Badge, badgeVariants,
+  Avatar, AvatarImage, AvatarFallback, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuCheckboxItem, DropdownMenuRadioItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuGroup, DropdownMenuPortal, DropdownMenuSub,
+  DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuRadioGroup, Select, SelectContent,
+  SelectGroup, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator,
+  SelectTrigger, SelectValue, Table, TableHeader, TableBody, TableFooter, TableHead, TableRow,
+  TableCell, TableCaption, Tabs, TabsList, TabsTrigger, TabsContent, SegmentedControl, Progress,
+  Switch, Checkbox, RadioGroup, RadioGroupItem, Separator, Sheet, SheetClose, SheetContent,
+  SheetDescription, SheetFooter, SheetHeader, SheetOverlay, SheetPortal, SheetTitle, SheetTrigger,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Skeleton, SkeletonCard, SkeletonTable,
+  TextShimmer, ToastContainer, ToastProvider, useToast, Label, EmptyState, StatCard, TerminalDisplay,
+  TerminalLine, TerminalInput, TerminalCursor, DropZone, UploadProgress, SidebarDropZone,
+  ArtifactPane, CodeBlock, CopyButton, InlineCode, ThemeToggle, createThemeController, useTheme, Heading, PageShell, Field,
+  fieldMessageId, SettingsList, SettingsListItem, SettingsNote, SettingsRow, SettingsSection, PageHeader, Alert,
+  AlertDescription, AlertTitle, Pagination, StatusPill, ComplianceBadge, Tag, Chip, Wizard,
+  WizardStep, HoverCard, HoverCardTrigger, HoverCardContent, HoverCardHeader, HoverCardTitle,
+  HoverCardDescription, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage,
+  BreadcrumbSeparator, BreadcrumbEllipsis, IconTile, initialsOf, CATEGORY_TONES, TONE_CLASSES,
+  toneFor, MetricStrip, Metric, SeriesSparkline, MetricChart, normalizeSeries, periodDelta,
+  seriesAreaPath, seriesExtent, seriesLinePath, seriesMean, seriesScale, Toolbar, FilterField, ExpandablePanel,
+} from "@tangle-network/ui/primitives";
+export type {
+  ButtonProps, CardTitleProps, InputProps, TextareaProps, HelpTextProps, CalendarDate, CalendarProps,
+  DatePickerProps, TimeSelectProps, BadgeProps, AvatarProps, TableProps, TableHeadProps, ThemeControllerOptions, SegmentedControlOption,
+  SegmentedControlProps, TextShimmerProps, Toast, EmptyStateProps, StatCardProps, DropZoneProps,
+  UploadProgressProps, UploadFile, SidebarDropZoneProps, ArtifactPaneProps, CodeBlockProps,
+  InlineCodeProps, HeadingVariant, PageShellProps, FieldProps, SettingsListAction,
+  SettingsListColumns, SettingsListItemProps, SettingsListMenuItem, SettingsListProps,
+  SettingsNoteProps, SettingsRowLayout, SettingsRowProps, SettingsSectionProps, PageHeaderProps, AlertProps, AlertTone,
+  PaginationProps, StatusPillProps, StatusTone, ComplianceBadgeProps, ComplianceProduct,
+  ComplianceStatus, TagProps, ChipProps, WizardProps, WizardStepProps, IconTileProps, CategoryTone,
+  Tone, ToneClasses, MetricStripProps, MetricProps, SeriesSparklineProps, ChartReferenceLine,
+  MetricChartProps, PeriodDelta, SeriesExtent, SeriesPoint, SeriesPointInput, SeriesScale,
+  ToolbarProps, FilterFieldProps, ExpandablePanelProps,
+} from "@tangle-network/ui/primitives";
+
 export { Logo, TangleKnot, type LogoProps } from "./logo";
 export { type HeadingProps, SectionTitle, type SectionTitleProps } from "./heading";

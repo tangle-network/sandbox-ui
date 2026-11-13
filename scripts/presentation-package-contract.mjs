@@ -7,44 +7,16 @@ import { build, preview } from "vite";
 import tailwindcss from "@tailwindcss/postcss";
 import { chromium } from "playwright";
 import { assertBuiltAgainstPeerFloor, peerFloor } from "./validate-built-css.mjs";
-import { proveVirtualCommand } from "../tests/virtual-command.browser.mjs";
 
 export function presentationConsumerSpecs(manifest) {
   return [
     ...["@tangle-network/ui", "@tangle-network/brand"].map((name) =>
-      name === "@tangle-network/ui" && process.env.SANDBOX_UI_PEER_TARBALL
-        ? process.env.SANDBOX_UI_PEER_TARBALL : `${name}@${peerFloor(manifest.peerDependencies[name])}`,
+      `${name}@${peerFloor(manifest.peerDependencies[name])}`,
     ),
     `tailwindcss@${peerFloor(manifest.devDependencies.tailwindcss)}`,
     `@types/react@${manifest.devDependencies["@types/react"]}`,
     `@types/react-dom@${manifest.devDependencies["@types/react-dom"]}`,
   ];
-}
-
-/** The two public Tailwind entry contracts used by the installed consumer. */
-function writePresentationStyles(fixture) {
-  writeFileSync(join(fixture, "host.css"), `
-@import "tailwindcss" source(none);
-@import "@tangle-network/brand/styles/tokens.css";
-@import "@tangle-network/brand/styles/theme.css";
-@import "@tangle-network/brand/styles/named-themes.css";
-@import "@tangle-network/brand/styles/globals.css";
-@source "../node_modules/@tangle-network/ui/src/**/*.tsx";
-@source "../node_modules/@tangle-network/ui/src/**/*.ts";
-@source "../node_modules/@tangle-network/sandbox-ui/dist/**/*.js";
-@source "../node_modules/@tangle-network/charts/dist/**/*.js";
-@source "./artifact-dock-fixture.tsx";
-`);
-  // The public entry must reach installed sandbox-ui/UI sources without host node_modules paths.
-  writeFileSync(join(fixture, "entry.css"), `
-@import "tailwindcss" source(none);
-@import "@tangle-network/sandbox-ui/tailwind.css";
-@source "./artifact-dock-fixture.tsx";
-@layer theme {
-  .light { --hsl-foreground: 0 0% 20%; }
-  .dark { --hsl-foreground: 0 0% 80%; }
-}
-`);
 }
 
 /** Reuse package-smoke's real tarball install; no source aliases or second install. */
@@ -74,7 +46,28 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
     join(fixture, "consumer.tsx"),
   ], { cwd: consumerDir, stdio: "inherit" });
 
-  writePresentationStyles(fixture);
+  writeFileSync(join(fixture, "host.css"), `
+@import "tailwindcss" source(none);
+@import "@tangle-network/brand/styles/tokens.css";
+@import "@tangle-network/brand/styles/theme.css";
+@import "@tangle-network/brand/styles/named-themes.css";
+@import "@tangle-network/brand/styles/globals.css";
+@source "../node_modules/@tangle-network/ui/src/**/*.tsx";
+@source "../node_modules/@tangle-network/ui/src/**/*.ts";
+@source "../node_modules/@tangle-network/sandbox-ui/dist/**/*.js";
+@source "../node_modules/@tangle-network/charts/dist/**/*.js";
+@source "./artifact-dock-fixture.tsx";
+`);
+  // The public entry must reach installed sandbox-ui/UI sources without host node_modules paths.
+  writeFileSync(join(fixture, "entry.css"), `
+@import "tailwindcss" source(none);
+@import "@tangle-network/sandbox-ui/tailwind.css";
+@source "./artifact-dock-fixture.tsx";
+@layer theme {
+  .light { --hsl-foreground: 0 0% 20%; }
+  .dark { --hsl-foreground: 0 0% 80%; }
+}
+`);
   const cssPath = join(consumerDir, "node_modules/@tangle-network/sandbox-ui/dist/globals.css");
   const cssSha256 = createHash("sha256").update(readFileSync(cssPath)).digest("hex");
   const browser = await chromium.launch({ headless: true });
@@ -87,7 +80,6 @@ import { createRoot } from "react-dom/client";
 import { PresentationConsumer } from "./consumer";
 // Charts owns the graph's stylesheet; every host imports it beside sandbox-ui's (README, Styles).
 import "@tangle-network/charts/react/agent-graph.css";
-import "@tangle-network/ui/styles/command.css";
 import ${JSON.stringify(lane === "compiled" ? "@tangle-network/sandbox-ui/globals.css" : `./${lane}.css`)};
 createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
 `);
@@ -108,7 +100,6 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
       try {
         const address = server.httpServer.address();
         assert(address && typeof address === "object", "preview must bind a local TCP port");
-        if (lane === "compiled") await proveVirtualCommand(browser, { url: `http://127.0.0.1:${address.port}`, sourceSha, archiveSha256, output: join(mediaRoot ?? join(root, "test-results"), "virtual-command") });
         for (const width of [390, 1280]) {
           for (const mode of ["light", "dark"]) {
             const mediaDir = mediaRoot && lane === "compiled" ? join(mediaRoot, `${manifest.version}-interface-${agentInterfaceVersion}-${width}-${mode}`) : undefined;

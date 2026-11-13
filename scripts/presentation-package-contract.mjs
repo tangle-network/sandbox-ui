@@ -100,7 +100,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
       try {
         const address = server.httpServer.address();
         assert(address && typeof address === "object", "preview must bind a local TCP port");
-        for (const width of [390, 1280]) {
+        for (const width of [390, 1512]) {
           for (const mode of ["light", "dark"]) {
             const mediaDir = mediaRoot && lane === "compiled" ? join(mediaRoot, `${manifest.version}-interface-${agentInterfaceVersion}-${width}-${mode}`) : undefined;
             const started = performance.now();
@@ -280,7 +280,8 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               assert(cardStyle.radius > 0, "each public style entry carries graph geometry");
               artifactDock = await proveArtifactDock(page, { width, mediaDir });
               assert.deepEqual(errors, [], "packed artifact dock consumer must not throw");
-              states.push({ lane, width, mode, topology: cardStyle, artifactDock, ...measured });
+              const motion = lane === "host" ? undefined : await proveMotionPolicy(page, { lane, width, mode, mediaDir });
+              states.push({ lane, width, mode, topology: cardStyle, artifactDock, motion, ...measured });
               if (mediaDir) await page.screenshot({ path: join(mediaDir, "completed.png") });
               passed = true;
             } finally {
@@ -318,6 +319,29 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
     assert.notEqual(light.cardBackground, dark.cardBackground, `${lane}: card surface did not follow the theme`);
   }
   console.log(JSON.stringify({ check: "packed-presentation", versions, cssSha256, states }, null, 2));
+}
+
+async function proveMotionPolicy(page, { lane, width, mode, mediaDir }) {
+  const control = page.getByRole("button", { name: "Change consumer theme", exact: true }), samples = [];
+  for (const preference of ["no-preference", "reduce"]) {
+    await page.emulateMedia({ reducedMotion: preference });
+    await control.click();
+    const observed = await page.evaluate(() => JSON.parse(document.documentElement.dataset.motionObservation));
+    samples.push({ preference, ...observed });
+    console.log(JSON.stringify({ check: "packed-motion-atomic", lane, width, mode, ...samples.at(-1) }));
+    assert.equal(observed.reduced, preference === "reduce");
+    const ordinary = observed.transitions.filter(item => !item.essential);
+    if (observed.reduced) assert.deepEqual(ordinary, [], "reduced motion starts no nonessential transition, including document scrollbars");
+    else assert(ordinary.some(item => item.sample === "ordinary" && item.duration === 200), "the same ordinary transition runs normally");
+    for (const name of ["essential", "descendant"]) assert(observed.transitions.some(item => item.sample === name && item.essential && item.duration === 200), "essential elements and descendants retain caller motion");
+    await control.hover();
+    const before = await page.evaluate(() => scrollY);
+    await page.mouse.wheel(0, -160);
+    await page.waitForFunction(top => scrollY < top, before);
+    if (mediaDir) await page.screenshot({ path: join(mediaDir, `motion-${preference}.png`) });
+  }
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  return samples;
 }
 
 async function proveArtifactDock(page, { width, mediaDir }) {

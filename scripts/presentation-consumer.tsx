@@ -1,4 +1,4 @@
-import { RecordConversationConsumer, VirtualListConsumer, RecordTopologyConsumer } from "./record-conversation-consumer";
+import { RecordConversationConsumer, VirtualListConsumer, RecordTopologyConsumer, VirtualCommandConsumer } from "./record-conversation-consumer";
 import { ArtifactDockFixture } from "./artifact-dock-fixture";
 import React, { createRef, useLayoutEffect, useState, type ReactNode } from "react";
 import {
@@ -110,6 +110,7 @@ export function PresentationConsumer(): ReactNode {
     <RecordConversationConsumer />
     <VirtualListConsumer />
     <RecordTopologyConsumer />
+    <VirtualCommandConsumer />
     <ArtifactDockFixture initiallyOpen={false} />
     </>
   );

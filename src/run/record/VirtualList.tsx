@@ -3,6 +3,17 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type R
 type Scroller = RefObject<HTMLElement | null>
 type Rows = { current: Map<string, HTMLDivElement> }
 
+/** Move through the logical collection, including rows outside the rendered viewport. */
+export function collectionTarget<T>(
+  items: readonly T[], keyOf: (item: T) => string, current: string | undefined, move: 'first' | 'last' | -1 | 1,
+): string | undefined {
+  if (!items.length) return undefined
+  const at = items.findIndex(item => keyOf(item) === current)
+  const next = move === 'first' ? 0 : move === 'last' ? items.length - 1
+    : at < 0 ? (move === 1 ? 0 : items.length - 1) : Math.max(0, Math.min(items.length - 1, at + move))
+  return keyOf(items[next]!)
+}
+
 /** Row heights measured as rows render through `bind`; `version` changes when a measured height changes. */
 function useMeasuredHeights() {
   const heights = useRef(new Map<string, number>())
@@ -109,7 +120,8 @@ function useSettleTarget<T>(scroller: Scroller, { target, align, items, keyOf, o
     // The reader's own scroll ends the settling.
     const release = (event: Event) => {
       const key = event instanceof KeyboardEvent && event.target === element && !event.defaultPrevented ? event.key : ''
-      pending.current = items.length && (key === 'Home' || key === 'End') ? goal(keyOf(items[key === 'Home' ? 0 : items.length - 1]!)) : null
+      const target = key === 'Home' || key === 'End' ? collectionTarget(items, keyOf, undefined, key === 'Home' ? 'first' : 'last') : undefined
+      pending.current = target ? goal(target) : null
       if (pending.current) { event.preventDefault(); settle() }
     }
     const events = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
@@ -153,6 +165,7 @@ export function VirtualList<T>({
   virtualize = true,
   keepMounted,
   arrival,
+  groups,
 }: {
   items: readonly T[]
   keyOf: (item: T) => string
@@ -172,6 +185,8 @@ export function VirtualList<T>({
   keepMounted?: string
   /** Animate a new followed row using the shared Brand motion tokens. */
   arrival?: { identity: unknown; id?: string; key?: string; following: RefObject<boolean> }
+  /** Layout-neutral semantic wrappers; headings must be measured items, not extra wrapper content. */
+  groups?: { keyOf: (item: T) => string; render: (key: string, children: ReactNode) => ReactNode }
 }) {
   const { heights, rows, version, bind } = useMeasuredHeights()
   const { viewport, originTop } = useViewport(scroller, origin)
@@ -197,19 +212,26 @@ export function VirtualList<T>({
   if (kept >= 0 && kept < start) indices.unshift(kept)
   else if (kept >= end) indices.push(kept)
   let previous = 0
+  const rendered = indices.map(index => {
+    const item = items[index]!
+    const key = keyOf(item)
+    const space = offsets[index]! - offsets[previous]!
+    previous = index + 1
+    return (
+      <Fragment key={key}>
+        {space > 0 && <div style={{ height: space, transitionProperty: 'none' }} aria-hidden="true" />}
+        <div ref={bind(key)} data-virtual-key={key} className="virtual-row" style={{ display: 'flow-root' }}>{render(item, index)}</div>
+      </Fragment>
+    )
+  })
+  const blocks: { key: string; children: ReactNode[] }[] = []
+  if (groups) indices.forEach((index, at) => {
+    const key = groups.keyOf(items[index]!)
+    if (blocks.at(-1)?.key !== key) blocks.push({ key, children: [] })
+    blocks.at(-1)!.children.push(rendered[at])
+  })
   return <>
-      {indices.map(index => {
-        const item = items[index]!
-        const key = keyOf(item)
-        const space = offsets[index]! - offsets[previous]!
-        previous = index + 1
-        return (
-          <Fragment key={key}>
-            {space > 0 && <div style={{ height: space, transitionProperty: 'none' }} aria-hidden="true" />}
-            <div ref={bind(key)} data-virtual-key={key} className="virtual-row" style={{ display: 'flow-root' }}>{render(item, index)}</div>
-          </Fragment>
-        )
-      })}
+      {groups ? blocks.map(block => <Fragment key={block.key}>{groups.render(block.key, block.children)}</Fragment>) : rendered}
       <div style={{ height: offsets[items.length]! - offsets[previous]!, transitionProperty: 'none' }} aria-hidden="true" />
     </>
 }

@@ -7,6 +7,7 @@ import { build, preview } from "vite";
 import tailwindcss from "@tailwindcss/postcss";
 import { chromium } from "playwright";
 import { assertBuiltAgainstPeerFloor, peerFloor } from "./validate-built-css.mjs";
+import { proveVirtualCommand } from "../tests/virtual-command.browser.mjs";
 
 export function presentationConsumerSpecs(manifest) {
   return [
@@ -100,6 +101,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
       try {
         const address = server.httpServer.address();
         assert(address && typeof address === "object", "preview must bind a local TCP port");
+        if (lane === "compiled") await proveVirtualCommand(browser, { url: `http://127.0.0.1:${address.port}`, sourceSha, archiveSha256, output: join(mediaRoot ?? join(root, "test-results"), "virtual-command") });
         for (const width of [390, 1280]) {
           for (const mode of ["light", "dark"]) {
             const mediaDir = mediaRoot && lane === "compiled" ? join(mediaRoot, `${manifest.version}-interface-${agentInterfaceVersion}-${width}-${mode}`) : undefined;

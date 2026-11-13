@@ -65,7 +65,7 @@ export async function proveMotionPolicy(page, { lane, width, mode, mediaDir }) {
     const before = await page.evaluate(() => scrollY);
     await page.mouse.wheel(0, -160);
     await page.waitForFunction(top => scrollY < top, before);
-    if (mediaDir) await page.screenshot({ path: join(mediaDir, `motion-${preference}.png`) });
+    if (mediaDir) await page.screenshot({ path: `${mediaDir}/motion-${preference}.png` });
   }
   await page.emulateMedia({ reducedMotion: "reduce" });
   return samples;

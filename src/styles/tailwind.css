@@ -719,9 +719,9 @@
   opacity: 1;
 }
 
-/* Brand reduces its motion tokens, including scoped themes. Keep the existing
- * floor for legacy components that do not consume those roles. Its per-element
- * essential-motion exclusion is unchanged; new Sidebar pending state is static. */
+/* Brand reduces motion tokens, including scoped themes. Legacy nonessential
+ * animations keep their floor; transitions do not run. The per-element
+ * essential-motion exclusion remains unchanged. */
 @media (prefers-reduced-motion: reduce) {
 
   /* `::before` and `::after` are listed because `*` matches elements only, and
@@ -736,7 +736,7 @@
   *:where(:not([data-motion="essential"], [data-motion="essential"] *))::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
+    transition: none !important;
   }
 
   html {

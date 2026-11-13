@@ -2,6 +2,7 @@
 
 import { type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { FlowSpan } from "@tangle-network/charts"
+import { AgentFacts } from "@tangle-network/charts/react"
 import { RunStatusIcon, type RunStatus } from "@tangle-network/ui/run"
 import { formatCost, formatCount, formatSpanDuration } from "@tangle-network/ui/utils"
 import { ArrowLeft, ChevronRight, X } from "lucide-react"
@@ -110,6 +111,7 @@ export interface AgentInspectorProps {
   silent?: boolean
   commission?: { by?: string; text?: string }
   facts: readonly { label: string; value: string }[]
+  tools?: FlowSpan["tools"]
   detail?: ReactNode
   /** The conversation, which fills every row the header, failure and commission leave. */
   children: ReactNode
@@ -122,7 +124,7 @@ export interface AgentInspectorProps {
 }
 
 /** The selected agent: a compact header, its failure, its commission, then its conversation; recorded facts wait in Details. */
-export function AgentInspector({ name, model, status, span, live, failure, silent, commission, facts, detail, children, scroller, unseen, onJump, onClose, mode, style }: AgentInspectorProps) {
+export function AgentInspector({ name, model, status, span, live, failure, silent, commission, facts, tools, detail, children, scroller, unseen, onJump, onClose, mode, style }: AgentInspectorProps) {
   const brand = model ? modelBrandFor(model) : null, meta = metaOf(span)
   const details = facts.filter(fact => !IN_HEADER.test(fact.label) && fact.value !== failure)
   const sheetRef = useRef<HTMLElement>(null)
@@ -174,15 +176,12 @@ export function AgentInspector({ name, model, status, span, live, failure, silen
       <div ref={scroller} data-primary-content="" className="min-h-0 flex-1 overflow-y-auto px-3 py-2">{children}</div>
       {unseen && <button type="button" onClick={onJump}
         className="absolute bottom-14 left-1/2 -translate-x-1/2 rounded-full border border-border bg-background px-3 py-1 text-xs shadow-sm">New output</button>}
-      {(details.length > 0 || detail) && <details open={silent || undefined} className="group max-h-[45%] shrink-0 overflow-y-auto border-t border-border text-sm">
+      {(details.length > 0 || tools?.length || detail) && <details open={silent || undefined} className="group max-h-[45%] shrink-0 overflow-y-auto border-t border-border text-sm">
         <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground before:hidden before:content-none [&::-webkit-details-marker]:hidden">
           <ChevronRight aria-hidden className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />Details
         </summary>
         <section aria-label="Recorded agent details" tabIndex={0} className="px-3 pb-3">
-          {details.length > 0 && <dl className="m-0 grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3 gap-y-1">{details.map((fact, index) => <div key={index} className="contents">
-            <dt className="text-xs text-muted-foreground">{fact.label}</dt>
-            <dd className="m-0 whitespace-pre-wrap break-words text-xs">{fact.value}</dd>
-          </div>)}</dl>}
+          <AgentFacts facts={details} tools={tools} className="m-0 grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-3 gap-y-1 [&_dt]:text-sm [&_dt]:text-muted-foreground [&_dd]:m-0 [&_dd]:whitespace-pre-wrap [&_dd]:break-words [&_dd]:text-sm" />
           {detail}
         </section>
       </details>}

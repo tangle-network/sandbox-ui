@@ -23,7 +23,7 @@ export {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, Skeleton, SkeletonCard, SkeletonTable,
   TextShimmer, ToastContainer, ToastProvider, useToast, Label, EmptyState, StatCard, TerminalDisplay,
   TerminalLine, TerminalInput, TerminalCursor, DropZone, UploadProgress, SidebarDropZone,
-  ArtifactPane, CodeBlock, CopyButton, InlineCode, ThemeToggle, useTheme, Heading, PageShell, Field,
+  ArtifactPane, CodeBlock, CopyButton, InlineCode, ThemeToggle, createThemeController, useTheme, Heading, PageShell, Field,
   fieldMessageId, SettingsList, SettingsListItem, SettingsNote, SettingsRow, SettingsSection, PageHeader, Alert,
   AlertDescription, AlertTitle, Pagination, StatusPill, ComplianceBadge, Tag, Chip, Wizard,
   WizardStep, HoverCard, HoverCardTrigger, HoverCardContent, HoverCardHeader, HoverCardTitle,
@@ -34,7 +34,7 @@ export {
 } from "@tangle-network/ui/primitives";
 export type {
   ButtonProps, CardTitleProps, InputProps, TextareaProps, HelpTextProps, CalendarDate, CalendarProps,
-  DatePickerProps, TimeSelectProps, BadgeProps, AvatarProps, TableProps, SegmentedControlOption,
+  DatePickerProps, TimeSelectProps, BadgeProps, AvatarProps, TableProps, TableHeadProps, ThemeControllerOptions, SegmentedControlOption,
   SegmentedControlProps, TextShimmerProps, Toast, EmptyStateProps, StatCardProps, DropZoneProps,
   UploadProgressProps, UploadFile, SidebarDropZoneProps, ArtifactPaneProps, CodeBlockProps,
   InlineCodeProps, HeadingVariant, PageShellProps, FieldProps, SettingsListAction,

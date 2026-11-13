@@ -139,7 +139,8 @@ export function TraceWorkspace({
   const { shown, items, live, note, silent } = conversation
   const graph = useMemo(() => agentGraphAt(trace.spans, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges), [trace, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges])
   const selectedNode = graph.nodes.find(node => node.id === agentId)
-  const facts = cursor === null || agent && agent.endMs <= cursor ? [...(agent?.facts ?? [])] : []
+  const complete = cursor === null || Boolean(agent && agent.endMs <= cursor)
+  const facts = complete ? [...(agent?.facts ?? [])] : []
   for (const [label, value] of [["Recorded result", selectedNode?.result], ["Activity", selectedNode?.turn]] as const) {
     if (value && !facts.some(fact => fact.value === value)) facts.push({ label, value })
   }
@@ -186,7 +187,7 @@ export function TraceWorkspace({
           <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-[hsl(var(--ring))] group-focus-visible:w-0.5 group-focus-visible:bg-[hsl(var(--ring))]" />
         </div>}
         <AgentInspector name={agentName ?? agentId} model={agentModel && !/^not recorded$/i.test(agentModel) ? agentModel : undefined} status={status} span={agent} live={live}
-          failure={failure} silent={note !== undefined && note === silent} commission={said(commission?.text) ? { by: commission?.by } : commission} facts={facts} detail={detail} scroller={scroller} unseen={unseen} onJump={() => jump()}
+          failure={failure} silent={note !== undefined && note === silent} commission={said(commission?.text) ? { by: commission?.by } : commission} facts={facts} tools={complete ? agent?.tools : undefined} detail={detail} scroller={scroller} unseen={unseen} onJump={() => jump()}
           onClose={() => select(undefined)} mode={mode} style={mode === "docked" ? { width: split.width } : undefined}>
           <AgentConversationView conversation={conversation} />
         </AgentInspector>

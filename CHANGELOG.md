@@ -1,3 +1,8 @@
+## 9.0.1
+
+- Render recorded inspector facts and tool aggregates through the shared Charts view, with one tool cap and overflow details. Whole-run aggregates stay hidden before the selected agent’s end while scrubbing.
+- Require the published shared UI hover policy and Charts fact renderer.
+
 ## 8.0.7
 
 - A rail session row's title ends in "…" before its actions button while the button shows (hover, keyboard focus or open menu) instead of running under it. The Codex `HarnessLogo` is the single-colour Codex mark in the foreground colour, as the composer draws it, not the colour tile whose cloud shrank to a blue blob at 15 px.

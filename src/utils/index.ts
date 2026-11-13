@@ -7,5 +7,5 @@ export {
   getToolCategory, getToolDisplayMetadata, getToolErrorText,
   ixControl, ixControlAfter, ixControlSoft, ixField,
   ixRow, ixSelected, ixTabUnderline,
-  plainTextFromMarkdown, timeAgo, truncateText,
+  plainTextFromMarkdown, timeAgo, tokenMilliseconds, truncateText,
 } from "@tangle-network/ui/utils";

@@ -1,3 +1,8 @@
+## 10.0.0
+
+- Forward VirtualList's root, run and record entries to the canonical UI binding, preserving existing call inputs and paths. Release admission classifies this declaration migration as a major; the attempted9.0.2 was not published.
+- Share UI's bounded VirtualCommand and collection navigation/grouping capability. Primitive, root and record aliases forward exact supported bindings, including Command/defaultFilter; the required UI floor is declared in package.json.
+
 ## 9.0.1
 
 - Render recorded inspector facts and tool aggregates through the shared Charts view, with one tool cap and overflow details. Whole-run aggregates stay hidden before the selected agent’s end while scrubbing.

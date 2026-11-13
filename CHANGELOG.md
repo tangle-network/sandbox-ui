@@ -1,3 +1,7 @@
+## 10.0.1
+
+- Do not start nonessential CSS transitions under reduced motion, including document scrollbar colours. Keep ordinary motion, essential-motion opt-outs, and the existing animation floor.
+
 ## 10.0.0
 
 - Forward VirtualList's root, run and record entries to the canonical UI binding, preserving existing call inputs and paths. Release admission classifies this declaration migration as a major; the attempted9.0.2 was not published.

@@ -85,7 +85,7 @@ createRoot(document.getElementById('host')).render(React.createElement(AgentReco
       await page.locator('button.rv-step-head').first().click()
       const opened = page.locator('.rv-step.open')
       await opened.waitFor()
-      assert.match(await opened.locator('.rv-detail').innerText(), /Output[\s\S]*called \d\d:\d\d:\d\d UTC/)
+      assert.match(await opened.locator('.rv-detail').innerText(), /^(Command|Input|Output)[\s\S]*called \d\d:\d\d:\d\d UTC/)
       assert.ok((await page.evaluate(() => window.selected?.eventId)), 'opening a step selects its event')
       const full = await view.innerText()
       for (const banned of BANNED) assert.equal(full.includes(banned), false, `${theme} ${width}: the opened view prints "${banned}"`)

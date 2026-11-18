@@ -86,7 +86,6 @@ export function EpisodeList({ story, episodes, multi, opened, setOpened, onStep 
       </button>
       {open && <div className="rv-episode-body">
         {episode.errors > 0 && !episode.errorTextPublished && <p className="rv-note">Error text is not published in this record.</p>}
-        {episode.notCaptured && <p className="rv-note">The runtime kept no steps for this attempt.</p>}
         <ol className="rv-items">{episode.items.map((item, i) => <li key={itemKey(item, i)}><Item item={item} story={story} multi={multi} opened={opened} toggle={toggleStep} /></li>)}</ol>
       </div>}
     </li>

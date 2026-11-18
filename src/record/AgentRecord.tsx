@@ -62,11 +62,19 @@ function RecordView({ record, eventId, onChange }: { record: RunRecord; eventId?
   const emitted = useRef<string | undefined>(undefined)
   const root = useRef<HTMLDivElement>(null)
 
-  const reveal = useCallback((episodeId: string | undefined, stepId?: string, scroll = true) => {
+  const select = useCallback((stepId: string) => {
+    const step = story.steps.find(item => item.id === stepId)
+    if (!step) return
+    emitted.current = step.callEventId
+    onChange({ runId: record.runId, eventId: step.callEventId, at: new Date(step.at).toISOString() })
+  }, [story, record.runId, onChange])
+  // Opening a step from the claim, a pin or a turning point selects it too, so the host's link names it.
+  const reveal = useCallback((episodeId: string | undefined, stepId?: string, emit = true) => {
     if (!episodeId) return
     setOpened(prev => ({ episodes: new Set(prev.episodes).add(episodeId), steps: stepId ? new Set(prev.steps).add(stepId) : prev.steps }))
-    if (scroll) setFocus({ id: episodeId, ...(stepId ? { step: stepId } : {}), at: Date.now() })
-  }, [])
+    setFocus({ id: episodeId, ...(stepId ? { step: stepId } : {}), at: Date.now() })
+    if (stepId && emit) select(stepId)
+  }, [select])
   // Scroll only after the opened episode has rendered.
   useEffect(() => {
     if (!focus) return
@@ -77,17 +85,11 @@ function RecordView({ record, eventId, onChange }: { record: RunRecord; eventId?
   // A link to an event (?event=) opens its episode and step once; the view's own selections do not scroll again.
   useEffect(() => {
     if (!eventId || eventId === emitted.current) return
+    emitted.current = eventId
     const step = story.steps.find(item => item.callEventId === eventId || item.resultEventId === eventId)
     const episode = story.episodes.find(item => step ? item.steps.includes(step) : item.items.some(entry => 'id' in entry && entry.id === eventId))
-    if (episode) { setAgent(undefined); setRange(undefined); reveal(episode.id, step?.published ? step.id : undefined) }
+    if (episode) { setAgent(undefined); setRange(undefined); reveal(episode.id, step?.published ? step.id : undefined, false) }
   }, [eventId, story, reveal])
-
-  const select = useCallback((stepId: string) => {
-    const step = story.steps.find(item => item.id === stepId)
-    if (!step) return
-    emitted.current = step.callEventId
-    onChange({ runId: record.runId, eventId: step.callEventId, at: new Date(step.at).toISOString() })
-  }, [story, record.runId, onChange])
 
   const inWindow = (start: number, end = start) => !range || (end >= range[0] && start <= range[1])
   const points = story.turningPoints.filter(point => (!agent || point.node === agent) && inWindow(point.at, point.end))
@@ -153,7 +155,7 @@ function Footer({ record, story }: { record: RunRecord; story: RecordStory }) {
   const { summary } = story
   return <footer className="rv-foot">
     {summary.leavesOut.length > 0 && <section aria-labelledby="rv-leaves"><h3 id="rv-leaves">What this record leaves out</h3>
-      <ul>{summary.leavesOut.map(line => <li key={line}>{line}</li>)}</ul></section>}
+      <p className="rv-leaves">{summary.leavesOut.join(' ')}</p></section>}
     <div className="rv-foot-actions">
       <button type="button" className="rv-button" onClick={() => download(json, `${record.runId}.json`, 'application/json')}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10" /></svg>Download the record <span className="rv-quiet">{size(bytes)}</span></button>

@@ -35,6 +35,8 @@
   color-scheme: dark;
 }
 .agent-record.rv *, .agent-record.rv *::before, .agent-record.rv *::after { box-sizing: border-box; }
+/* A digest, path or address with no break point wraps inside its box instead of widening the page. */
+.agent-record.rv { overflow-wrap: break-word; }
 .rv :is(ul, ol) { list-style: none; margin: 0; padding: 0; }
 .rv li { margin: 0; padding: 0; }
 .rv li::before, .rv li::marker { content: none; }

@@ -102,6 +102,9 @@ function RecordView({ record, eventId, onChange }: { record: RunRecord; eventId?
   const toggleAll = () => setOpened((prev) => allOpen ? { ...prev, episodes: new Set(), folds: new Set() }
     : { ...prev, episodes: new Set(episodes.map((item) => item.id)), folds: new Set(episodes.map((item) => `fold-${item.id}`)) })
   const claim = summary.claim
+  // A turning point's excerpt that the cast or the result already shows is not printed twice.
+  const shown = [...(summary.agents.length > 1 ? summary.agents.map((item) => item.did) : []), claim?.text].filter((text): text is string => Boolean(text))
+  const fresh = (excerpt?: string) => Boolean(excerpt) && !shown.some((text) => text.startsWith(excerpt!.replace(/…$/, '')))
 
   return <div className="rv-view" ref={root}>
     <Header summary={summary} openClaim={claim?.episode ? () => reveal(claim.episode, claim.eventId ? { item: claim.eventId } : undefined) : undefined} />
@@ -116,7 +119,7 @@ function RecordView({ record, eventId, onChange }: { record: RunRecord; eventId?
       <ol className="rv-moments">{points.map((point) => <li key={point.n}>
         <button type="button" className="rv-moment" onClick={() => openPoint(point)} disabled={!point.episode}>
           <time>{utc(point.at, 'minute')}</time><PointNumber point={point} />
-          <span><Inline text={point.title} />{point.excerpt && <small>{SEP}<Inline text={point.excerpt} /></small>}</span>
+          <span><Inline text={point.title} />{fresh(point.excerpt) && <small>{SEP}<Inline text={point.excerpt!} /></small>}</span>
         </button>
       </li>)}</ol>
     </section>}

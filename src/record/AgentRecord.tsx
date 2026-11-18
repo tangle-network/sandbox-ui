@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { RecordSelection, RunRecord } from '@drewstone/agent-record/record'
 import { clockUtc, firstSentence, formatSpan, recordStory, type RecordStory, type RecordSummary, type RecordTurningPoint } from '@drewstone/agent-record/story'
-import { RecordSpine, PointGlyph, type TimeWindow } from './RecordSpine.js'
+import { RecordSpine, PointGlyph, SEP, type TimeWindow } from './RecordSpine.js'
 import { EpisodeList, type Opened } from './RecordEpisodes.js'
 import { useDownload } from './useDownload.js'
 
@@ -107,7 +107,7 @@ function RecordView({ record, eventId, onChange }: { record: RunRecord; eventId?
         <button type="button" onClick={() => openPoint(point)}>
           <PointGlyph point={point} />
           <time>{clockUtc(point.at, true)}</time>
-          <span><b>{point.title}</b>{multi && !point.title.toLowerCase().includes((summary.agents.find(item => item.id === point.node)?.label ?? '').toLowerCase()) && <span className="rv-quiet"> · {summary.agents.find(item => item.id === point.node)?.label}</span>}
+          <span><b>{point.title}</b>{multi && !point.title.toLowerCase().includes((summary.agents.find(item => item.id === point.node)?.label ?? '').toLowerCase()) && <span className="rv-quiet">{SEP}{summary.agents.find(item => item.id === point.node)?.label}</span>}
             {point.excerpt && <span className="rv-excerpt">{point.excerpt}</span>}</span>
         </button>
       </li>)}</ol>

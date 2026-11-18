@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type Dispatch, type ReactNode, type SetSta
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { clockUtc, formatSpan, inputName, type EpisodeItem, type RecordEpisode, type RecordPage, type RecordStep, type RecordStory, type StepKind, type StepOutcome } from '@drewstone/agent-record/story'
-import { KINDS } from './RecordSpine.js'
+import { KINDS, SEP } from './RecordSpine.js'
 
 /** Which episodes and steps the reader has opened. */
 export interface Opened { episodes: Set<string>; steps: Set<string> }
@@ -74,7 +74,7 @@ export function EpisodeList({ story, episodes, multi, opened, setOpened, onStep 
       <button type="button" className="rv-episode-head" aria-expanded={open} onClick={() => toggle(episode.id)}>
         <span className="rv-num">{episode.n}</span>
         <span className="rv-episode-time">{clockUtc(episode.start)}–{clockUtc(episode.end)}</span>
-        <span className="rv-episode-title"><b>{episode.title}</b>{multi && <span className="rv-quiet"> · {label(episode.node)}</span>}
+        <span className="rv-episode-title"><b>{episode.title}</b>{multi && <span className="rv-quiet">{SEP}{label(episode.node)}</span>}
           {episode.quote && <q>{episode.quote}</q>}</span>
         <span className="rv-episode-stats">
           {episode.steps.length > 0 && <span>{count(episode.steps.length, 'step')}</span>}
@@ -104,7 +104,7 @@ function Item({ item, story, multi, opened, toggle }: { item: EpisodeItem; story
       const first = item.steps[0]!, last = item.steps[item.steps.length - 1]!
       return <div className={`rv-step static${item.outcome === 'error' ? ' error' : ''}`}><div className="rv-step-row"><KindIcon kind={item.kind} />
         <span className="rv-step-main"><span className="rv-step-action">{item.action} ×{item.steps.length}, {clockUtc(first.at, true)}–{clockUtc(last.at, true)}</span></span>
-        <span className="rv-step-meta"><span className="rv-tool">{first.tool}{first.server && <span className="rv-server"> · {first.server}</span>}</span><Mark outcome={item.outcome} /></span></div></div>
+        <span className="rv-step-meta"><span className="rv-tool">{first.tool}{first.server && <span className="rv-server">{SEP}{first.server}</span>}</span><Mark outcome={item.outcome} /></span></div></div>
     }
     case 'step': return <StepRow step={item.step} open={opened.steps.has(item.step.id)} toggle={toggle} agent={multi ? label(item.step.node) : undefined} />
   }
@@ -133,7 +133,7 @@ function StepRow({ step, open, toggle, agent }: { step: RecordStep; open: boolea
       {out && <span className="rv-step-out">{out}</span>}
     </span>
     <span className="rv-step-meta">
-      <span className="rv-tool">{step.tool}{step.server && <span className="rv-server"> · {step.server}</span>}</span>
+      <span className="rv-tool">{step.tool}{step.server && <span className="rv-server">{SEP}{step.server}</span>}</span>
       {step.durationMs !== undefined && <span className="rv-duration">{formatSpan(step.durationMs)}</span>}
       <Mark outcome={step.outcome} />
       <time>{clockUtc(step.at, true)}</time>
@@ -163,6 +163,6 @@ function StepDetail({ step, agent }: { step: RecordStep; agent?: string }) {
     {step.input !== undefined && <section><h5>{step.inputJson ? 'Input, JSON' : 'Input'}</h5><Clip><pre className="rv-code">{step.input}</pre></Clip></section>}
     <section><h5>Output</h5>{step.output ? <>{step.outputNote && <p className="rv-italic">{step.outputNote}</p>}<Clip><pre className="rv-code">{step.output}</pre></Clip></>
       : <p className="rv-note">The output is not published in this record.</p>}</section>
-    <p className="rv-detail-facts">{facts.join(' · ')}</p>
+    <p className="rv-detail-facts">{facts.join(SEP)}</p>
   </div>
 }

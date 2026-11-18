@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { clockUtc, formatSpan, type RecordAgent, type RecordStep, type RecordStory, type RecordTurningPoint, type StepKind } from '@drewstone/agent-record/story'
 
+/** A separator that stays at the end of a wrapped line, never at the start of the next. */
+export const SEP = '\u00a0· '
+
 /** A selected stretch of the run, in epoch milliseconds. */
 export type TimeWindow = [number, number]
 
@@ -158,6 +161,16 @@ export function RecordSpine({ story, agent, onAgent, window, onWindow, openEpiso
   const kinds = KINDS.filter(kind => steps.some(step => step.kind === kind))
   const label = `Timeline of ${summary.agents.length === 1 ? 'one agent' : `${summary.agents.length} agents`}, ${episodes.length} episodes and ${turningPoints.length} turning points. Drag across it to look at a stretch.`
 
+  // A gap's length is printed only where it clears "UTC", the clock ticks and the gap labels already placed.
+  const utcAt: [number, number] = narrow ? [0, textWidth('UTC')] : [axis.x0 - 10 - textWidth('UTC'), axis.x0 - 10]
+  const taken = [utcAt, ...layout.ticks.map(tick => [tick.x - textWidth(clockUtc(tick.t)) / 2, tick.x + textWidth(clockUtc(tick.t)) / 2] as [number, number])]
+  const gapText = new Map<number, string>()
+  for (const s of axis.segments.filter(item => item.gap)) {
+    const text = formatSpan(s.t1 - s.t0).replace(/ \d+ s$/, ''), cx = (s.x0 + s.x1) / 2, half = textWidth(text) / 2
+    if (half * 2 >= 60 || taken.some(([a, b]) => cx + half + 6 > a && cx - half - 6 < b)) continue
+    taken.push([cx - half, cx + half]); gapText.set(s.t0, text)
+  }
+
   return <section className="rv-card rv-spine-card" aria-label="Timeline">
     <div className="rv-spine" ref={ref} style={{ height: H }}>
       <svg width={W} height={H} role="img" aria-label={label}>
@@ -168,9 +181,9 @@ export function RecordSpine({ story, agent, onAgent, window, onWindow, openEpiso
           const cx = (s.x0 + s.x1) / 2
           let zig = ''
           for (let yy = AX; yy < H; yy += 8) zig += `${zig ? 'L' : 'M'}${cx - 3} ${yy}L${cx + 3} ${yy + 4}`
-          const text = formatSpan(s.t1 - s.t0).replace(/ \d+ s$/, '')
+          const text = gapText.get(s.t0)
           return <g key={s.t0} className="rv-break"><rect x={s.x0 + 2} y={AX} width={Math.max(0, s.x1 - s.x0 - 4)} height={H - AX} /><path d={zig} />
-            {textWidth(text) < 60 && <text className="rv-ax-label" x={cx} y={14} textAnchor="middle">{text}</text>}</g>
+            {text && <text className="rv-ax-label" x={cx} y={14} textAnchor="middle">{text}</text>}</g>
         })}
         <rect className="rv-brush-area" x={axis.x0} y={AX} width={Math.max(0, axis.x1 - axis.x0)} height={H - AX} onPointerDown={brushStart} onPointerMove={brushMove} onPointerUp={brushEnd} onPointerCancel={() => setDrag(undefined)} />
         {rows.map((row, i) => <Lane key={row.agent.id} row={row} first={i === 0} axis={axis} story={story} width={W} selected={agent === row.agent.id} openEpisode={openEpisode} />)}
@@ -184,7 +197,7 @@ export function RecordSpine({ story, agent, onAgent, window, onWindow, openEpiso
         style={narrow ? { top: row.y } : { top: row.y + 6, width: layout.labelW - 8, paddingLeft: row.agent.depth * 12 }}
         onClick={() => onAgent(agent === row.agent.id ? undefined : row.agent.id)}>
         <b>{row.agent.label}</b>
-        <span>{row.agent.status}{row.agent.steps ? ` · ${row.agent.steps.toLocaleString('en-US')} ${row.agent.steps === 1 ? 'step' : 'steps'}` : ''}{row.agent.errors ? <> · <span className="rv-error">{row.agent.errors} failed</span></> : ''}</span>
+        <span>{row.agent.status}{row.agent.steps ? `${SEP}${row.agent.steps.toLocaleString('en-US')} ${row.agent.steps === 1 ? 'step' : 'steps'}` : ''}{row.agent.errors ? <>{SEP}<span className="rv-error">{row.agent.errors} failed</span></> : ''}</span>
       </button>)}
     </div>
     <ul className="rv-legend">
@@ -258,7 +271,7 @@ function Focus({ story, window, width, onClear, openStep }: { story: RecordStory
   return <div className="rv-focus">
     <div className="rv-focus-head">
       <b>{clockUtc(b0, true)}–{clockUtc(b1, true)} UTC</b>
-      <span>{formatSpan(b1 - b0)} · {inside.length.toLocaleString('en-US')} {inside.length === 1 ? 'step' : 'steps'}{errors ? <> · <span className="rv-error">{errors} failed</span></> : ''}</span>
+      <span>{formatSpan(b1 - b0)}{SEP}{inside.length.toLocaleString('en-US')} {inside.length === 1 ? 'step' : 'steps'}{errors ? <>{SEP}<span className="rv-error">{errors} failed</span></> : ''}</span>
       <button type="button" className="rv-button rv-small" onClick={onClear}>Whole run</button>
     </div>
     {drawn.length > 0 && <div className="rv-spine" style={{ height: H }}>

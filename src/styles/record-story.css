@@ -104,7 +104,7 @@
 .rv-lane-label b { display: block; font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
 .rv-lane-label > span { display: block; font-size: 12px; color: var(--rv-muted); }
 .rv-lane-label[aria-pressed="true"] b { color: var(--rv-accent); }
-.rv-lane-label.narrow { right: 0; display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
+.rv-lane-label.narrow { right: 0; display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; background: var(--rv-bg); }
 .rv-lane-label.narrow b { display: inline; }
 .rv-lane-label.narrow > span { display: inline; }
 .rv-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--rv-line-2); list-style: none; font-size: 12px; color: var(--rv-muted); }

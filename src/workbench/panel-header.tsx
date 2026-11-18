@@ -52,7 +52,7 @@ export function PanelHeader({ filename, gitStatus, stats, copyText, children, cl
   return (
     <div
       className={cn(
-        "flex min-h-10 items-center gap-2 border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-1",
+        "flex min-h-10 items-center gap-2 border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-3 py-0.5",
         className,
       )}
     >

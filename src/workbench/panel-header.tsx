@@ -56,13 +56,15 @@ export function PanelHeader({ filename, gitStatus, stats, copyText, children, cl
         className,
       )}
     >
-      <span className="truncate font-mono text-xs text-foreground">{filename}</span>
+      <span dir="rtl" title={filename} className="min-w-0 truncate text-left font-mono text-xs text-foreground">
+        <bdi>{filename}</bdi>
+      </span>
       {gitStatus && <GitStatusBadge status={gitStatus} />}
-      <div className="relative ml-auto flex items-center gap-3">
+      <div className="relative ml-auto flex shrink-0 items-center gap-3">
         {stats && <DiffStatsBadge stats={stats} />}
         {children}
         {copyText != null && (
-          <CopyButton text={copyText} label="Copy" aria-label="Copy to clipboard" />
+          <CopyButton text={copyText} label="Copy" aria-label="Copy to clipboard" className="whitespace-nowrap" />
         )}
       </div>
     </div>

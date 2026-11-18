@@ -3,7 +3,7 @@
 import { type RefObject, useMemo } from "react"
 import { AgentTimeline, AgentTimelineColumn } from "@tangle-network/ui/chat"
 import { type AgentStreamOpener, type AgentStreamState, type AgentTranscriptEntry, useAgentStream } from "./agent-stream"
-import { timelineItems } from "./record/ConversationRowView"
+import { timelineItems } from "./record/timeline-items"
 
 export const NO_CONVERSATION = "No conversation was recorded for this agent."
 

@@ -32,7 +32,7 @@ The Charts and UI peers in [package.json](./package.json) provide the shared clo
 
 ### Retained conversations
 
-`Conversation`, `AgentTree`, `indexRecord` and `withPrompts` from `@tangle-network/sandbox-ui/run/record` show retained conversations and their recorded hierarchy. `AgentTree` takes `index`, selected `actor`, recorded-time `cutoff` and `select(id)`. Load the shared stylesheet and pass validated presentation data. Original source IDs, reconstructed prompts, pending tool receipts, collapsed idle polls, source callbacks and assessment flags remain available.
+`@tangle-network/sandbox-ui/run/record` holds the live transcript pieces: `timelineItems`, `ToolStep` and `PromptMore` turn an agent's stream into the kit's timeline rows, `withPrompts` restores the prompts a record withholds, and `VirtualList`, `collectionTarget` and `VirtualCommand` window long lists. A retained record is read through `AgentRecord` from `/record`.
 
 Generic `VirtualList`, `VirtualCommand` and `collectionTarget` at that entry forward their exact UI primitive bindings. UI owns measurement, navigation and menu behavior; the existing Sandbox paths remain supported. See UI's command stylesheet and source-scanning setup when rendering VirtualCommand.
 
@@ -499,7 +499,7 @@ The native Runtime viewer is `LiveRun` from `@tangle-network/sandbox-ui/run/live
 
 ## Retained records and reports
 
-`@tangle-network/sandbox-ui/record` owns `AgentRecord`, `ResearchReport` and `RecordWorkGraph`. Install the optional `@drewstone/agent-record` peer for this feature; its public `/record` and `/report` entries own validation, models, provenance relationships and report exports. The generic `/run/record` transcript remains usable without that parser package.
+`@tangle-network/sandbox-ui/record` owns `AgentRecord`, `ResearchReport` and `RecordWorkGraph`. Install the optional `@drewstone/agent-record` peer for this feature; its public `/record` and `/report` entries own validation, models, provenance relationships and report exports. The `/run/record` transcript pieces need no parser package.
 
 ```tsx
 import { parseRecord } from '@drewstone/agent-record/record'

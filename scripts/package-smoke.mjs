@@ -17,7 +17,6 @@ import { build } from "vite";
 import { writeIntegrationsContract } from "./integrations-package-contract.mjs";
 import { validateInterfaceContract } from "./interface-package-contract.mjs";
 import { presentationConsumerSpecs, validatePresentationConsumer } from "./presentation-package-contract.mjs";
-import { validateRecordConversation } from "../tests/record-conversation-package-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // The real path, not the one `tmpdir()` reports: on macOS `/var` is a symlink
@@ -66,7 +65,6 @@ try {
   execFileSync(join(root, "node_modules/.bin/tsc"), [
     "--ignoreConfig", "--declaration", "--emitDeclarationOnly", "--outDir", join(workdir, "producer-types"), "--strict", "--skipLibCheck", "--target", "ES2022",
     "--jsx", "react-jsx", "--module", "ESNext", "--moduleResolution", "bundler", "--lib", "ES2022,DOM",
-    join(root, "tests/record-conversation-types.tsx"),
   ], { cwd: root, stdio: "inherit" });
 
   mkdirSync(join(consumerDir, "src"), { recursive: true });
@@ -353,8 +351,6 @@ createRoot(document.getElementById("root")).render(
         "and update stubMarker() in this file.",
     );
   }
-
-  await validateRecordConversation({ root, consumerDir });
 
   // The omitted-peer pass retains all its existing coverage. Reuse the full
   // install once for the presentation browser/type/CSS contract.

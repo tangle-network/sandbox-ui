@@ -35,12 +35,11 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
   mkdirSync(fixture);
   copyFileSync(join(root, "scripts/presentation-consumer.tsx"), join(fixture, "consumer.tsx"));
   copyFileSync(join(root, "tests/integration/motion-consumer.tsx"), join(fixture, "motion-consumer.tsx"));
-  copyFileSync(join(root, "scripts/record-conversation-consumer.tsx"), join(fixture, "record-conversation-consumer.tsx"));
+  copyFileSync(join(root, "scripts/record-consumers.tsx"), join(fixture, "record-consumers.tsx"));
   const dockFixture = readFileSync(join(root, "src/stories/chat/artifact-dock-fixture.tsx"), "utf8");
   const dockSource = "../../chat/artifact-agent-dock";
   assert.equal(dockFixture.split(dockSource).length, 2, "the shared dock fixture must have one component import");
   writeFileSync(join(fixture, "artifact-dock-fixture.tsx"), dockFixture.replace(dockSource, "@tangle-network/sandbox-ui/chat"));
-  copyFileSync(join(root, "src/run/record/__fixtures__/live-conversation.json"), join(fixture, "record-conversation.json"));
   execFileSync(join(root, "node_modules/.bin/tsc"), [
     "--noEmit", "--strict", "--skipLibCheck", "--target", "ES2022", "--jsx", "react-jsx",
     "--resolveJsonModule", "--module", "ESNext", "--moduleResolution", "bundler", "--lib", "ES2022,DOM",
@@ -218,19 +217,6 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
               assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Resource usage");
               await page.keyboard.press("ArrowRight");
               await page.waitForFunction(() => document.querySelector('[role="region"]').scrollLeft > 0);
-              const transcript = page.locator("[data-record-conversation]");
-              assert.equal(await transcript.getAttribute("data-initial-prompts"), "1");
-              assert.equal(await transcript.getAttribute("data-steering-prompts"), "1");
-              for (const [sha, event] of [["a".repeat(64), "68c9a9f9ef0f:18"], ["b".repeat(64), "standalone-result"]]) {
-                await transcript.locator(`[data-load-full="${sha}"]`).click();
-                await page.waitForFunction(value => document.querySelector("[data-source-open]")?.getAttribute("data-source-open") === value, `${sha}:${event}`);
-              }
-              assert.match(await transcript.innerText(), /4,000,001 bytes, middle omitted/);
-              assert.match(await transcript.innerText(), /5,000,001 bytes, middle omitted/);
-              await (await import("../tests/integration/record-tools.browser.mjs")).default(page, transcript, { lane, width, mode });
-              await transcript.getByRole("button", { name: "Filter retained prompts" }).click();
-              await transcript.getByText("Retained follow-up", { exact: true }).waitFor();
-              assert(!await transcript.getByText("Reconstructed duplicate must not appear", { exact: true }).count());
               const windowed = page.locator("[data-virtual-list-consumer]");
               await windowed.getByText("Source entry 0", { exact: true }).waitFor();
               assert(await windowed.locator("[data-source-entry]").count() < 100, "500 entries must use a bounded DOM window");

@@ -50,34 +50,43 @@ createRoot(document.getElementById('host')).render(React.createElement(AgentReco
       await page.locator('.rv-title').waitFor({ timeout: 15_000 })
       const view = page.locator('.agent-record')
       const text = await view.innerText()
-      assert.match(text, /Result accepted on attempt 2; finished 19:35 UTC\./)
-      assert.match(text, /\$25\.89 at list price, not billed/)
-      assert.match(text, /138 steps, no errors/)
+      assert.match(text, /The run ended at 19:35 UTC: winner\./)
+      assert.match(text, /\$25\.89 at list price, not confirmed by a bill/)
+      assert.match(text, /138 steps, none failed/)
+      assert.match(text, /151,407 output tokens/)
       assert.match(text, /Download the record\s+JSON, \d+ KB/)
       for (const banned of BANNED) assert.equal(text.includes(banned), false, `${theme} ${width}: the view prints "${banned}"`)
-      const frame = await page.evaluate(() => {
-        const small = [...document.querySelectorAll('.agent-record *')].filter(element => [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()) && parseFloat(getComputedStyle(element).fontSize) < 12 && !element.closest('svg'))
-        const clamped = [...document.querySelectorAll('.agent-record *')].filter(element => { const style = getComputedStyle(element); return (style.textOverflow === 'ellipsis' || style.webkitLineClamp !== 'none') && !element.closest('.rv-command-wrap') })
-        return { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: small.map(element => element.className), clamped: clamped.map(element => element.className) }
-      })
+      // One line of an excerpt, an output's first line, a lane name and the foot's preview may end in an ellipsis: each
+      // opens to its whole text. Nothing else is cut, and no text is under 12 px.
+      const ONE_LINE = ['rv-ep-sub', 'rv-step-line', 'rv-lane-label', 'rv-leaves']
+      const frame = await page.evaluate((allowed) => {
+        const all = [...document.querySelectorAll('.agent-record *')]
+        const small = all.filter(element => [...element.childNodes].some(node => node.nodeType === 3 && node.textContent.trim()) && parseFloat(getComputedStyle(element).fontSize) < 12 && !element.closest('svg'))
+        const clamped = all.filter(element => { const style = getComputedStyle(element); return (style.textOverflow === 'ellipsis' || style.webkitLineClamp !== 'none') && !allowed.some(name => element.closest(`.${name}`)) })
+        const marks = [...document.querySelectorAll('.rv-marker circle')].map(circle => circle.getBoundingClientRect())
+        const overlaps = marks.filter((box, i) => marks.some((other, j) => j !== i && box.left < other.right - 0.5 && other.left < box.right - 0.5 && box.top < other.bottom - 0.5 && other.top < box.bottom - 0.5)).length
+        return { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: small.map(element => element.className), clamped: clamped.map(element => element.className), overlaps, height: document.querySelector('.agent-record').getBoundingClientRect().height }
+      }, ONE_LINE)
       assert.equal(frame.overflow, 0, `${theme} ${width}: no horizontal scroll`)
       assert.deepEqual(frame.small, [], `${theme} ${width}: no text under 12 px`)
-      assert.deepEqual(frame.clamped, [], `${theme} ${width}: only commands clamp`)
-      const claim = page.locator('.rv-claim .rv-link')
-      await claim.hover()
-      assert.equal(await claim.evaluate(element => getComputedStyle(element).textDecorationLine), 'none', 'links never underline on hover')
+      assert.deepEqual(frame.clamped, [], `${theme} ${width}: only one-line excerpts clamp`)
+      assert.equal(frame.overlaps, 0, `${theme} ${width}: turning-point markers never overlap`)
+      if (width === 1440) assert.ok(frame.height <= 1800, `the three-hour record's default view is ${Math.round(frame.height)} px tall at 1440`)
+      const all = page.getByRole('button', { name: 'Open every episode', exact: true })
+      await all.hover()
+      assert.equal(await all.evaluate(element => getComputedStyle(element).textDecorationLine), 'none', 'buttons never underline on hover')
+      assert.equal(await all.evaluate(element => getComputedStyle(element).transform), 'none', 'nothing zooms on hover')
       if (evidence) await page.screenshot({ path: `${evidence}/record-${theme}-${width}.png`, fullPage: true })
-      // The claim opens the episode holding the page and the page's step.
-      await claim.click()
+      // Every episode opens; a published step opens to its output and selects its event.
+      await all.click()
+      const heads = page.locator('.rv-ep-head')
+      assert.ok(await heads.count() >= 6)
+      assert.equal(await page.locator('.rv-ep-head[aria-expanded="false"]').count(), 0)
+      await page.locator('button.rv-step-head').first().click()
       const opened = page.locator('.rv-step.open')
       await opened.waitFor()
-      assert.match(await opened.locator('.rv-step-detail').innerText(), /FINAL\.md|returned without error/)
+      assert.match(await opened.locator('.rv-detail').innerText(), /Output[\s\S]*called \d\d:\d\d:\d\d UTC/)
       assert.ok((await page.evaluate(() => window.selected?.eventId)), 'opening a step selects its event')
-      // Every episode opens; every turning point names an episode that exists.
-      await page.getByRole('button', { name: 'Open every episode', exact: true }).click()
-      const heads = page.locator('.rv-episode-head')
-      assert.ok(await heads.count() >= 8)
-      assert.equal(await page.locator('.rv-episode-head[aria-expanded="false"]').count(), 0)
       const full = await view.innerText()
       for (const banned of BANNED) assert.equal(full.includes(banned), false, `${theme} ${width}: the opened view prints "${banned}"`)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, `${theme} ${width}: opened episodes keep the page width`)

@@ -5,7 +5,7 @@ import { AgentRecord } from './AgentRecord.js'
 import { parseReportOptions, reportToLatex, type EvidenceReference, type QuestionCoverage, type ResearchMetric, type ResearchPlay, type ResearchReportData, type ResearchDocument, type ResearchRule, type ResearchRun, type ResearchTable, type ResearchUnknown } from '@drewstone/agent-record/report'
 import type { RecordSelection } from '@drewstone/agent-record/record'
 import { OutcomeBar, OutcomeLegend } from './OutcomeBar.js'
-import { utcTime } from '../run/record/model.js'
+import { formatUtcTime as utcTime } from '@tangle-network/charts'
 import { useDownload } from './useDownload.js'
 import type { ResearchDocumentSelection, ResearchView } from './selection.js'
 

@@ -1,5 +1,5 @@
 import { MotionConsumer } from "./motion-consumer";
-import { RecordConversationConsumer, VirtualListConsumer, RecordTopologyConsumer } from "./record-conversation-consumer";
+import { VirtualListConsumer, RecordTopologyConsumer } from "./record-consumers";
 import { ArtifactDockFixture } from "./artifact-dock-fixture";
 import { VirtualList, VirtualCommand, collectionTarget } from "@tangle-network/sandbox-ui/run/record";
 import React, { createRef, useLayoutEffect, useState, type ReactNode } from "react";
@@ -120,7 +120,6 @@ export function PresentationConsumer(): ReactNode {
         </Card>
       </PageShell>
     </main>
-    <RecordConversationConsumer />
     <VirtualListConsumer />
     <RecordTopologyConsumer />
     <ArtifactDockFixture initiallyOpen={false} />

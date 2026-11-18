@@ -1,3 +1,10 @@
+## 11.0.0
+
+- Removes `Conversation`, `AgentTree`, `indexRecord`, `recordModel`, `RecordIndex` and `ToolCall` from `/run/record`; a retained record is read through `AgentRecord`, whose every value comes from `@drewstone/agent-record` 4.0.0's story. The idle fold of a live transcript omits a missing time instead of printing a placeholder.
+- `AgentRecord` is redesigned from zero as a story view: what was asked (the full brief folded away), the result quoted from the run's own words with a link to where it landed, the ending in order, and one facts line; a cast list with one line per agent that filters the view to it; one slim time spine with a lane per agent, steps marked by kind, failed steps as red ticks, quiet stretches compressed, numbered turning-point markers that never overlap, and drag to zoom; the turning points; episodes titled by someone's own sentence with a one-line excerpt, steps with their command, input, output and outcome, and runs of quiet episodes folded in long lists; what the record leaves out and the download at the foot. It replaces the waterfall, tabs, agent and event selects, usage view and capture-coverage JSON. Its values come from `@drewstone/agent-record/story`; the view computes none.
+- Removes `recordModel.recordFlowTrace` from `/run/record`; no maintained host draws the record through the waterfall.
+- `/run/record` tool rows no longer open a hover card, and print a duration only when one was measured and a result only when it is a note, an error or still running. Record links no longer underline on hover.
+
 ## 10.0.1
 
 - Do not start nonessential CSS transitions under reduced motion, including document scrollbar colours. Keep ordinary motion, essential-motion opt-outs, and the existing animation floor.

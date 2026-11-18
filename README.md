@@ -32,7 +32,7 @@ The Charts and UI peers in [package.json](./package.json) provide the shared clo
 
 ### Retained conversations
 
-`Conversation`, `AgentTree`, `indexRecord` and `withPrompts` from `@tangle-network/sandbox-ui/run/record` show retained conversations and their recorded hierarchy. `AgentTree` takes `index`, selected `actor`, recorded-time `cutoff` and `select(id)`. Load the shared stylesheet and pass validated presentation data. Original source IDs, reconstructed prompts, pending tool receipts, collapsed idle polls, source callbacks and assessment flags remain available.
+`@tangle-network/sandbox-ui/run/record` holds the live transcript pieces: `timelineItems`, `ToolStep` and `PromptMore` turn an agent's stream into the kit's timeline rows, `withPrompts` restores the prompts a record withholds, and `VirtualList`, `collectionTarget` and `VirtualCommand` window long lists. A retained record is read through `AgentRecord` from `/record`.
 
 Generic `VirtualList`, `VirtualCommand` and `collectionTarget` at that entry forward their exact UI primitive bindings. UI owns measurement, navigation and menu behavior; the existing Sandbox paths remain supported. See UI's command stylesheet and source-scanning setup when rendering VirtualCommand.
 
@@ -499,7 +499,7 @@ The native Runtime viewer is `LiveRun` from `@tangle-network/sandbox-ui/run/live
 
 ## Retained records and reports
 
-`@tangle-network/sandbox-ui/record` owns `AgentRecord`, `ResearchReport` and `RecordWorkGraph`. Install the optional `@drewstone/agent-record` peer for this feature; its public `/record` and `/report` entries own validation, models, provenance relationships and report exports. The generic `/run/record` transcript remains usable without that parser package.
+`@tangle-network/sandbox-ui/record` owns `AgentRecord`, `ResearchReport` and `RecordWorkGraph`. Install the optional `@drewstone/agent-record` peer for this feature; its public `/record` and `/report` entries own validation, models, provenance relationships and report exports. The `/run/record` transcript pieces need no parser package.
 
 ```tsx
 import { parseRecord } from '@drewstone/agent-record/record'
@@ -510,6 +510,6 @@ const record = parseRecord(input)
 <AgentRecord records={[record]} />
 ```
 
-Selection keeps original run, actor and event IDs, a recorded timestamp, and Messages, Event details or Usage. Charts owns the waterfall clock, playback and zoom. Usage distinguishes missing counters from zero and metered windows from individual responses. Capture gaps and original source references stay visible. The evidence graph keeps recorded entity kinds and relationships and uses the maintained graph camera.
+`AgentRecord` reads a record as a story: what was asked and the result, the last published page's claim, one facts line, a time spine of every agent (gaps over 3 min compressed, uncaptured attempts hatched, numbered turning points, a brush that zooms to the steps), the turning points, then the work in episodes with their steps, pages and outputs, and a footer of what the record leaves out. Every sentence and number comes from `@drewstone/agent-record/story` (4.0.0 or later), so hosts print the same values; a missing value is left out, never shown as 0, a dash or "Unknown". Selection keeps the original run and event IDs and a recorded timestamp; an `eventId` opens its episode and step. The evidence graph keeps recorded entity kinds and relationships and uses the maintained graph camera.
 
 Research reports retain source documents, exact citations, Markdown/math, print and JSON/LaTeX exports. Optional source search accepts only a same-origin path and displays only the selected play's retained bytes. `agent-record-report` continues to write a single offline HTML file using this package's report viewer and stylesheet.

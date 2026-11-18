@@ -50,7 +50,7 @@ createRoot(document.getElementById('host')).render(React.createElement(AgentReco
       await page.locator('.rv-title').waitFor({ timeout: 15_000 })
       const view = page.locator('.agent-record')
       const text = await view.innerText()
-      assert.match(text, /The run ended at 19:35 UTC: winner\./)
+      assert.match(text, /The run ended at 19:35 UTC with an accepted result\./)
       assert.match(text, /\$25\.89 at list price, not confirmed by a bill/)
       assert.match(text, /138 steps, none failed/)
       assert.match(text, /151,407 output tokens/)

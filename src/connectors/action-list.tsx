@@ -1,8 +1,8 @@
 "use client";
 
-import { Badge, Button, Input } from "@tangle-network/ui/primitives";
-import { Check, ChevronDown, ChevronRight, Copy, Search } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Badge, Button, CopyButton, Input } from "@tangle-network/ui/primitives";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { cn } from "../lib/utils";
 import { integrationStepYaml } from "./integration-step-yaml";
 import { SchemaTable } from "./schema-table";
@@ -23,56 +23,6 @@ const RISK_BADGES: Record<
 function RiskBadge({ risk }: { risk?: ConnectorAction["risk"] }) {
   const badge = RISK_BADGES[risk ?? "unknown"] ?? RISK_BADGES.unknown;
   return <Badge variant={badge.variant}>{badge.label}</Badge>;
-}
-
-/** Copy-to-clipboard button with a transient confirmation. `navigator.clipboard`
- *  is unavailable in insecure contexts (and can reject on a permission denial),
- *  so a failure surfaces a visible "Copy failed" state rather than reverting
- *  silently — the user learns the copy didn't happen and can select the text
- *  manually. */
-function CopyButton({
-  text,
-  label,
-  title,
-}: {
-  text: string;
-  label: string;
-  title?: string;
-}) {
-  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    [],
-  );
-
-  const copy = async () => {
-    let next: "copied" | "failed";
-    try {
-      await navigator.clipboard.writeText(text);
-      next = "copied";
-    } catch (err) {
-      console.warn("Clipboard write failed:", err);
-      next = "failed";
-    }
-    setState(next);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setState("idle"), 2000);
-  };
-
-  return (
-    <Button type="button" variant="outline" size="sm" onClick={copy} title={title}>
-      {state === "copied" ? (
-        <Check className="h-3.5 w-3.5 text-[var(--surface-success-text)]" />
-      ) : (
-        <Copy className="h-3.5 w-3.5" />
-      )}
-      {state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : label}
-    </Button>
-  );
 }
 
 /** Many catalog action titles repeat the provider ("GitHub: Issues Create");
@@ -143,7 +93,7 @@ function ActionRow({
             </p>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex flex-wrap items-center gap-2">
             <code className="rounded bg-surface-container-high px-2 py-1 font-mono text-sm">
               {action.path}
             </code>
@@ -167,7 +117,7 @@ function ActionRow({
             </details>
           )}
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex flex-wrap items-center gap-2">
             <CopyButton
               text={integrationStepYaml(action.path, action.inputSchema)}
               label="Copy step YAML"

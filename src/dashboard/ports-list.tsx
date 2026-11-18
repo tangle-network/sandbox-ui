@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Copy, Check, Globe, Plus, Trash2 } from "lucide-react"
+import { Globe, Plus, Trash2 } from "lucide-react"
 import { cn } from "../lib/utils"
-import { StatusPill } from "@tangle-network/ui/primitives"
+import { CopyButton, StatusPill } from "@tangle-network/ui/primitives"
 import { focusField, focusRing } from "@tangle-network/ui/utils"
 
 export interface ExposedPort {
@@ -22,9 +22,7 @@ export interface PortsListProps {
 
 export function PortsList({ ports, onExposePort, onRemovePort, isExposing = false, className }: PortsListProps) {
   const [newPort, setNewPort] = React.useState("")
-  const [copiedPort, setCopiedPort] = React.useState<number | null>(null)
   const [statusMessage, setStatusMessage] = React.useState("")
-  const copyTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingRemovalRef = React.useRef<{ removed: number; next: number | null; restoreFocus: boolean } | null>(null)
   const removeButtonsRef = React.useRef(new Map<number, HTMLButtonElement>())
   const portInputRef = React.useRef<HTMLInputElement>(null)
@@ -38,10 +36,6 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
     : duplicatePort ? `Port ${portNumber} is already exposed.` : null
 
   React.useEffect(() => {
-    return () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current) }
-  }, [])
-
-  React.useEffect(() => {
     const pending = pendingRemovalRef.current
     if (!pending || ports.some((port) => port.port === pending.removed)) return
     setStatusMessage(`Port ${pending.removed} removed.`)
@@ -52,17 +46,6 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
     }
     pendingRemovalRef.current = null
   }, [ports])
-
-  const handleCopy = async (url: string, port: number) => {
-    try {
-      await navigator.clipboard.writeText(url)
-      setCopiedPort(port)
-      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
-      copyTimerRef.current = setTimeout(() => setCopiedPort(null), 2000)
-    } catch (err) {
-      console.warn("Clipboard write failed:", err)
-    }
-  }
 
   const handleExpose = () => {
     if (validPort && !duplicatePort && !isExposing) {
@@ -83,23 +66,17 @@ export function PortsList({ ports, onExposePort, onRemovePort, isExposing = fals
           </div>
           <ul className="divide-y divide-border">
             {ports.map((p, index) => (
-              <li key={p.port} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 sm:grid-cols-[4rem_minmax(0,1fr)_5.5rem_3rem] sm:py-1">
+              <li key={p.port} className="relative grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 sm:grid-cols-[4rem_minmax(0,1fr)_5.5rem_3rem] sm:py-1">
                 <span className="col-start-1 row-start-1 font-mono text-xs text-foreground">
                   <span className="sr-only">Port </span>{p.port}
                 </span>
-                <button
-                  type="button"
-                  aria-label={copiedPort === p.port ? `Copied public URL for port ${p.port}` : `Copy public URL for port ${p.port}: ${p.url}`}
-                  onClick={() => handleCopy(p.url, p.port)}
-                  className={`col-span-2 row-start-3 flex min-h-10 min-w-0 items-center gap-2 rounded text-left font-mono text-xs text-[var(--accent-text)] hover:underline sm:col-span-1 sm:col-start-2 sm:row-start-1 ${focusRing}`}
-                >
-                  <span aria-hidden="true" className="min-w-0 flex-1 break-all sm:truncate">{p.url}</span>
-                  {copiedPort === p.port ? (
-                    <Check className="h-4 w-4 shrink-0 text-[var(--surface-success-text)]" aria-hidden="true" />
-                  ) : (
-                    <Copy className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  )}
-                </button>
+                <CopyButton
+                  text={p.url}
+                  label={p.url}
+                  copiedLabel={p.url}
+                  aria-label={`Copy public URL for port ${p.port}: ${p.url}`}
+                  className="col-span-2 row-start-3 min-h-10 min-w-0 flex-row-reverse justify-between border-0 bg-transparent px-0 text-left font-mono text-xs text-[var(--accent-text)] hover:underline sm:col-span-1 sm:col-start-2 sm:row-start-1 [&>span]:min-w-0 [&>span]:break-all sm:[&>span]:truncate [&>svg]:shrink-0"
+                />
                 <StatusPill
                   tone={p.status === "active" ? "success" : "warning"}
                   className="col-start-1 row-start-2 justify-self-start sm:col-start-3 sm:row-start-1"

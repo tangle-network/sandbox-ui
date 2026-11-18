@@ -92,14 +92,12 @@ After dependency/lock coordination, use the maintained commands:
 pnpm install --frozen-lockfile
 pnpm exec vitest run scripts/validate-built-css.test.mjs src/primitives/heading.test.tsx
 pnpm typecheck
-pnpm test:bridge
+pnpm build
 pnpm test:package
-pnpm build-storybook
 CI=1 pnpm test:visual
 ```
 
-`test:bridge` performs the package/CSS build; do not rebuild it again without an
-input change. `test:package` packs through the existing maintained path, installs
+`test:bridge` builds and checks the public bindings. Signoff runs the same assertions on the installed archive through `test:package`. The package check installs
 that artifact into a fresh consumer, and retains the optional-peer omission
 checks. The full-peer pass adds strict public compatibility type checking and
 runs the same real consumer with two styling lanes: published `globals.css`

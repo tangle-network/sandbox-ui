@@ -33,6 +33,7 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
   }
   const fixture = join(consumerDir, "presentation");
   mkdirSync(fixture);
+  copyFileSync(join(root, "scripts/bridge-consumer.mjs"), join(fixture, "bridge-consumer.mjs"));
   copyFileSync(join(root, "scripts/presentation-consumer.tsx"), join(fixture, "consumer.tsx"));
   copyFileSync(join(root, "tests/integration/motion-consumer.tsx"), join(fixture, "motion-consumer.tsx"));
   copyFileSync(join(root, "scripts/record-consumers.tsx"), join(fixture, "record-consumers.tsx"));
@@ -78,6 +79,7 @@ export async function validatePresentationConsumer({ root, consumerDir, manifest
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { PresentationConsumer } from "./consumer";
+${lane === "compiled" ? 'import "./bridge-consumer.mjs";' : ""}
 // Charts owns the graph's stylesheet; every host imports it beside sandbox-ui's (README, Styles).
 import "@tangle-network/charts/react/agent-graph.css";
 import ${JSON.stringify(lane === "compiled" ? "@tangle-network/sandbox-ui/globals.css" : `./${lane}.css`)};

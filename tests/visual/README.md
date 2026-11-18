@@ -1,10 +1,6 @@
 # Storybook visual checks
 
-`pnpm test:visual` builds Storybook, then compares it with the committed baselines.
-It is the last step of `pnpm signoff`, the local merge gate.
-The suite compares every built story in dark and light themes at desktop and mobile sizes.
-Five critical modules also run at tablet size.
-Four component interactions have separate screenshots.
+`pnpm test:visual` builds Storybook and compares its stories on phones and desktops. Critical surfaces also run on tablets. Workflow graph screenshots wait for every canvas to finish layout and render nodes. Single-graph stories compare the graph viewport. Galleries and editors capture the whole composition.
 
 Run the checks on Linux with the project's Playwright Chromium version:
 

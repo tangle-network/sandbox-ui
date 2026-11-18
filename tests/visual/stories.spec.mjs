@@ -63,6 +63,7 @@ for (const story of stories) {
         if (story.id === 'workbench-diffreadability--unbroken-text') {
           await waitForDiffRender(page, 'END_OF_LINE')
         }
+        const screenshotName = `${story.id}-${theme}-${viewportName}.png`
         if (story.id.startsWith('workflows-agentgraph-hub--')) await expect(page.locator('.ag-root .ag-canvas-wrap')).toBeVisible()
         else if (story.id.startsWith('workflows-agentgraph--')) {
           const graph = page.locator('.agent-graph')
@@ -78,6 +79,18 @@ for (const story of stories) {
             expect(hostScheme).toBe('light')
           }
           await expect(page.getByText('Loading graph…')).toHaveCount(0)
+          if (story.id.startsWith('workflows-workflowgraph--')) {
+            const graphs = page.locator('.wf-graph')
+            await expect(graphs.first()).toBeVisible()
+            for (const graph of await graphs.all()) {
+              await expect(graph).toHaveAttribute('data-layout', 'ready')
+              await expect(graph.locator('.react-flow__node').first()).toBeVisible()
+            }
+            // Keep the complete composition when the story compares several canvases.
+            const subject = await graphs.count() === 1 ? graphs : page.locator('#storybook-root')
+            await expect(subject).toHaveScreenshot(screenshotName)
+            return
+          }
           if (story.id === 'workflows-framing-candidates--narrow-host') {
             await expect(page.locator('.react-flow__node[data-id="trigger"]')).toHaveCount(2)
           }
@@ -85,7 +98,7 @@ for (const story of stories) {
         if (/^workflows-agentgraph-hub--(live|call-lifecycle)$/.test(story.id)) {
           await page.screenshot({ path: testInfo.outputPath(`${story.id}-${theme}-${viewportName}-frame.png`), animations: 'disabled', caret: 'hide' })
         }
-        await expect(page).toHaveScreenshot(`${story.id}-${theme}-${viewportName}.png`, {
+        await expect(page).toHaveScreenshot(screenshotName, {
           fullPage: critical || story.id === 'workflows-framing-candidates--narrow-host',
         })
       })

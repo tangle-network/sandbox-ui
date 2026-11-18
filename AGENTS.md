@@ -8,7 +8,7 @@ For consumption and theming, read [README](README.md).
 ## Export contracts
 
 Bridged subpaths must forward the exact upstream bindings.
-Run `pnpm test:bridge` when changing a bridge; it builds before checking identity through package imports.
+Run `pnpm test:bridge` for a bridge change. It builds and compares the public bindings. The full-peer packed consumer repeats that comparison in a browser.
 Source-only tests cannot prove the packaged re-export contract.
 Preserve intentional named exports and aliases in `src/index.ts` to avoid collisions between editor, hook, and terminal types.
 
@@ -32,7 +32,7 @@ Keep generic event adaptation in that owner instead of duplicating it here.
 
 Read [package scripts](package.json) for local checks.
 Local merge gate (frozen install, typecheck, and packed-consumer integration): `beelink-gate auto https://github.com/tangle-network/sandbox-ui.git <full-sha> -- bash -lc 'pnpm typecheck && pnpm build && pnpm test:package'`.
-For code or export changes, run `pnpm signoff` on a Linux host (gtr or a Beelink): typecheck, build, unit tests, the packed-consumer and bridge checks, then the Storybook visual suite.
+For code or export changes, run `pnpm signoff` on a Linux host (gtr or a Beelink): typecheck, build, unit tests, the packed-consumer checks, including bridge identity, then the Storybook visual suite.
 The visual suite takes about three minutes on gtr; its baselines are Linux renders, so do not run it on macOS.
 A screenshot timeout under heavy host load is a host problem; rerun with fewer workers (`--workers=8`) before reading it as a regression.
 When a change is meant to look different, update only the affected baselines and review every changed PNG before committing ([visual checks](tests/visual/README.md)).

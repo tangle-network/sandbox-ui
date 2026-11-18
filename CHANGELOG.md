@@ -1,3 +1,7 @@
+## 11.0.1
+
+- Connector actions, file panels and exposed port URLs share the clipboard control. Keyboard and touch users get the same pending, copied and failure feedback in each view.
+
 ## 11.0.0
 
 - Removes `Conversation`, `AgentTree`, `indexRecord`, `recordModel`, `RecordIndex` and `ToolCall` from `/run/record`; a retained record is read through `AgentRecord`, whose every value comes from `@drewstone/agent-record` 4.0.0's story. The idle fold of a live transcript omits a missing time instead of printing a placeholder.

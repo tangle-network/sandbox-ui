@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import * as React from "react"
 import { CopyButton, StatusPill, type StatusTone } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import type { RichFileTreeGitStatus } from "../files"
@@ -38,7 +38,7 @@ export interface PanelHeaderProps {
   /** Enables the copy-to-clipboard action when set. */
   copyText?: string
   /** Extra content rendered at the right edge, before the copy button. */
-  children?: ReactNode
+  children?: React.ReactNode
   className?: string
 }
 

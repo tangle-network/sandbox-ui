@@ -1,14 +1,8 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import type { RecordEvent, RecordSelection, RunRecord } from '@drewstone/agent-record/record'
-import { runStatus, statusMeta } from '@tangle-network/ui/run/status-meta'
-import { FlowWaterfall } from '@tangle-network/charts/react'
-import type { FlowSpan } from '@tangle-network/charts'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@tangle-network/ui/primitives'
-import { AgentTree } from '../run/record/AgentTree.js'
-import { Conversation } from '../run/record/Conversation.js'
-import { eventMatches, eventSource, indexRecord, modelIdentity, ms, recordFlowTrace, roleOf, textOf, utcTime, type RecordIndex } from '../run/record/model.js'
-import { StructuredContent } from './StructuredContent.js'
-import { categories, RecordUsage, type Axis, type Metric } from './RecordUsage.js'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import type { RecordSelection, RunRecord } from '@drewstone/agent-record/record'
+import { clockUtc, firstSentence, formatSpan, recordStory, type RecordStory, type RecordSummary, type RecordTurningPoint } from '@drewstone/agent-record/story'
+import { RecordSpine, PointGlyph, type TimeWindow } from './RecordSpine.js'
+import { EpisodeList, type Opened } from './RecordEpisodes.js'
 import { useDownload } from './useDownload.js'
 
 export interface BehaviorVerdict {
@@ -26,14 +20,15 @@ export interface AgentRecordProps {
   onSelectionChange?: (selection: RecordSelection) => void
   theme?: 'light' | 'dark' | 'auto'
   className?: string
+  /** Accepted for hosts that pass behavior reports; the record view does not draw them. */
   behaviors?: readonly BehaviorReport[]
 }
-function Select({ label, value, onChange, children, field }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode; field: string }) {
-  return <label className="ui-field ar-select"><span className="ui-label">{label}</span>
-    <select value={value} onChange={event => onChange(event.target.value)} {...{ [`data-${field}`]: '' }}>{children}</select></label>
-}
-/** Normalized retained data only. Producers retain parsing and publication authority. */
-export function AgentRecord({ records, selection, defaultSelection, onSelectionChange, theme = 'auto', className = '', behaviors }: AgentRecordProps) {
+
+/**
+ * A retained record read as a story: what was asked and what happened, one time spine of every agent, the turning
+ * points, then the work in episodes. Every value comes from `@drewstone/agent-record/story`; the view computes none.
+ */
+export function AgentRecord({ records, selection, defaultSelection, onSelectionChange, theme = 'auto', className = '' }: AgentRecordProps) {
   const [own, setOwn] = useState(defaultSelection)
   const chosen = selection ?? own
   const record = records.find(item => item.runId === chosen?.runId) ?? records[0]
@@ -41,119 +36,129 @@ export function AgentRecord({ records, selection, defaultSelection, onSelectionC
     if (selection === undefined) setOwn(next)
     onSelectionChange?.(next)
   }, [selection, onSelectionChange])
-  return <div className={`agent-record ${className}`} data-theme={theme === 'auto' ? undefined : theme}>
-    {record ? <RecordView key={record.runId} records={records} record={record} selection={chosen?.runId === record.runId ? chosen : { runId: record.runId }} onChange={change} behaviors={behaviors} />
-      : <p className="chat-empty">No records supplied.</p>}
+  return <div className={`agent-record rv ${className}`} data-theme={theme === 'auto' ? undefined : theme}>
+    {records.length > 1 && <div className="rv-switch" role="group" aria-label="Record">
+      {records.map(item => <button key={item.runId} type="button" aria-pressed={item.runId === record?.runId} onClick={() => change({ runId: item.runId })}>{item.title}</button>)}
+    </div>}
+    {record ? <RecordView key={record.runId} record={record} eventId={chosen?.runId === record.runId ? chosen.eventId : undefined} onChange={change} />
+      : <p className="rv-empty">No records supplied.</p>}
   </div>
 }
-/** One retained record keeps its selection across timeline, transcript, source and measured usage. */
-function RecordView({ records, record, selection, onChange, behaviors }: { records: readonly RunRecord[]; record: RunRecord; selection: RecordSelection; onChange: (selection: RecordSelection) => void; behaviors?: readonly BehaviorReport[] }) {
-  const index = useMemo(() => indexRecord(record), [record])
-  const trace = useMemo(() => recordFlowTrace(record), [record])
-  const [category, setCategory] = useState('all'), [search, setSearch] = useState('')
-  const [metric, setMetric] = useState<Metric>('cumulative'), [axis, setAxis] = useState<Axis>('time')
-  const download = useDownload()
-  const explicit = selection.eventId ? index.byEvent.get(selection.eventId) : undefined
-  const requested = selection.nodeId ? index.canonical(selection.nodeId) : undefined
-  const actor = explicit ? index.canonical(explicit.node) : requested && index.nodes.has(requested) ? requested : index.actors[0]?.id ?? ''
-  const event = explicit ?? index.byActor.get(actor)?.[0], node = index.nodes.get(actor)
-  const selectedAt = selection.at ? ms(selection.at) : index.end
-  const cutoff = Number.isFinite(selectedAt) ? Math.max(index.start, Math.min(index.end, selectedAt)) : index.end
-  const query = search.trim().toLowerCase(), view = selection.view ?? 'chat'
-  const visible = useMemo(() => index.events.filter(item => eventMatches(item, index, query, category)), [index, query, category])
-  const options = [...new Set([...categories, ...record.events.map(item => item.category)])].filter(item => item !== 'all' && item !== 'findings')
-  const marks = (behaviors?.find(item => item.runId === record.runId)?.verdicts ?? []).filter(item => item.verdict === 'yes').flatMap(item =>
-    (item.evidence ?? []).flatMap(evidence => { const event = index.byEvent.get(evidence.eventId); return event ? [{ ...item, event, quote: evidence.quote }] : [] }))
-  const update = useCallback((patch: Partial<RecordSelection>) => onChange({ ...selection, runId: record.runId, nodeId: actor, eventId: event?.id, ...patch }), [selection, record.runId, actor, event?.id, onChange])
-  const inspect = (item: RecordEvent, source = false) => onChange({ runId: record.runId, nodeId: index.canonical(item.node), eventId: item.id, at: item.at, view: source ? 'source' : 'chat' })
-  const selectActor = (id: string) => {
-    const first = index.byActor.get(id)?.find(item => item.detail.role || item.detail.publicText || item.detail.publicToolCalls?.length) ?? index.byActor.get(id)?.[0]
-    onChange({ runId: record.runId, nodeId: id, eventId: first?.id, view: 'chat', at: first && ms(first.at) > cutoff ? first.at : selection.at })
-  }
-  const selectSpan = (span: FlowSpan) => {
-    const item = index.byEvent.get(typeof span.meta?.eventId === 'string' ? span.meta.eventId : span.id ?? '')
-    if (item) inspect(item)
-    else if (span.id !== undefined && index.nodes.has(span.id)) selectActor(span.id)
-  }
-  const navigate = (direction: number) => {
-    if (!visible.length) return
-    const at = visible.findIndex(item => item.id === event?.id)
-    inspect(visible[at < 0 ? direction > 0 ? 0 : visible.length - 1 : (at + direction + visible.length) % visible.length]!)
-  }
-  const position = visible.findIndex(item => item.id === event?.id)
-  return <div className="ar-view">
-    <div className="controls">
-      {records.length > 1 && <Select label="Run" field="run" value={record.runId} onChange={runId => onChange({ runId })}>{records.map(item => <option key={item.runId} value={item.runId}>{item.title}</option>)}</Select>}
-      <Select label="Activity type" field="category" value={category} onChange={setCategory}><option value="all">All activity</option><option value="findings">Recorded findings</option>{options.map(item => <option key={item} value={item}>{item}</option>)}</Select>
-      <label className="ui-field"><span className="ui-label">Search all agents</span><input data-search type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Message, tool, agent…" /></label>
-    </div>
-    <details className="activity-replay" open><summary>Timeline and replay</summary>
-      <FlowWaterfall trace={trace} live={false} label="Recorded activity" defaultView="agents" selectedId={actor}
-        position={selection.at ? cutoff - index.start : null} onTimeChange={time => {
-          const at = time === null ? undefined : new Date(index.start + time).toISOString()
-          if (at !== selection.at) update({ at })
-        }} onSelect={selectSpan} query={search} onQueryChange={setSearch}
-        matchSpan={span => { const item = index.byEvent.get(typeof span.meta?.eventId === 'string' ? span.meta.eventId : span.id ?? ''); return item ? eventMatches(item, index, query, category) : !query && category === 'all' }}
-        markers={marks.map(mark => ({ at: ms(mark.event.at) - index.start, label: `${mark.behavior} · ${Math.round(mark.confidence * 100)}%` }))} />
-      {marks.length > 0 && <ul aria-label="Recorded behavior verdicts">{marks.map((mark, i) => <li key={i}><button type="button" onClick={() => inspect(mark.event, true)}>{mark.behavior} · {Math.round(mark.confidence * 100)}%{mark.quote ? ` · ${mark.quote}` : ''}</button></li>)}</ul>}
-    </details>
-    {query && <section className="activity-search-results" aria-label="Matching activity"><p role="status">{visible.length} matching events</p>
-      {visible.slice(0, 100).map(item => <button key={item.id} onClick={() => { setSearch(''); inspect(item) }}><span>{index.nodes.get(index.canonical(item.node))?.label ?? item.node}</span><time>{utcTime(item.at)}</time><strong>{item.label}</strong><small>{(textOf(item) || item.detail.publicToolCalls?.map(call => `${call.name} ${call.input}`).join(' ') || 'Recorded event').replace(/\s+/g, ' ').slice(0, 240)}</small></button>)}
-      {visible.length > 100 && <p className="small">Showing the first 100 matches. Narrow the search to find a particular event.</p>}
-      {!visible.length && <p className="chat-empty">No retained activity matches. Missing captures are not searched.</p>}
+
+const DATE: Intl.DateTimeFormatOptions = { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' }
+const day = (ms: number, year = true) => new Date(ms).toLocaleDateString('en-US', year ? DATE : { ...DATE, year: undefined })
+const count = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`
+/** "JSON, 592 KB" */
+const size = (bytes: number) => bytes >= 1_048_576 ? `JSON, ${(bytes / 1_048_576).toFixed(1)} MB` : `JSON, ${Math.max(1, Math.round(bytes / 1024))} KB`
+
+function RecordView({ record, eventId, onChange }: { record: RunRecord; eventId?: string; onChange: (selection: RecordSelection) => void }) {
+  const story = useMemo(() => recordStory(record), [record])
+  const { summary } = story
+  const multi = summary.agents.length > 1
+  const [agent, setAgent] = useState<string>()
+  const [range, setRange] = useState<TimeWindow>()
+  const [opened, setOpened] = useState<Opened>({ episodes: new Set(), steps: new Set() })
+  const [focus, setFocus] = useState<{ id: string; step?: string; at: number }>()
+  const emitted = useRef<string | undefined>(undefined)
+  const root = useRef<HTMLDivElement>(null)
+
+  const reveal = useCallback((episodeId: string | undefined, stepId?: string, scroll = true) => {
+    if (!episodeId) return
+    setOpened(prev => ({ episodes: new Set(prev.episodes).add(episodeId), steps: stepId ? new Set(prev.steps).add(stepId) : prev.steps }))
+    if (scroll) setFocus({ id: episodeId, ...(stepId ? { step: stepId } : {}), at: Date.now() })
+  }, [])
+  // Scroll only after the opened episode has rendered.
+  useEffect(() => {
+    if (!focus) return
+    const target = root.current?.querySelector(focus.step ? `[data-step="${CSS.escape(focus.step)}"]` : `[data-episode="${CSS.escape(focus.id)}"]`)
+    target?.scrollIntoView({ block: focus.step ? 'center' : 'start', behavior: 'smooth' })
+  }, [focus])
+
+  // A link to an event (?event=) opens its episode and step once; the view's own selections do not scroll again.
+  useEffect(() => {
+    if (!eventId || eventId === emitted.current) return
+    const step = story.steps.find(item => item.callEventId === eventId || item.resultEventId === eventId)
+    const episode = story.episodes.find(item => step ? item.steps.includes(step) : item.items.some(entry => 'id' in entry && entry.id === eventId))
+    if (episode) { setAgent(undefined); setRange(undefined); reveal(episode.id, step?.published ? step.id : undefined) }
+  }, [eventId, story, reveal])
+
+  const select = useCallback((stepId: string) => {
+    const step = story.steps.find(item => item.id === stepId)
+    if (!step) return
+    emitted.current = step.callEventId
+    onChange({ runId: record.runId, eventId: step.callEventId, at: new Date(step.at).toISOString() })
+  }, [story, record.runId, onChange])
+
+  const inWindow = (start: number, end = start) => !range || (end >= range[0] && start <= range[1])
+  const points = story.turningPoints.filter(point => (!agent || point.node === agent) && inWindow(point.at, point.end))
+  const episodes = story.episodes.filter(episode => (!agent || episode.node === agent) && inWindow(episode.start, episode.end))
+  const chosen = agent ? summary.agents.find(item => item.id === agent) : undefined
+  const openPoint = (point: RecordTurningPoint) => reveal(point.episode, point.stepId)
+
+  return <div className="rv-view" ref={root}>
+    <Header summary={summary} multi={multi} openClaim={() => summary.claim && reveal(summary.claim.episode, summary.claim.stepId)} />
+    <RecordSpine story={story} agent={agent} onAgent={setAgent} window={range} onWindow={setRange}
+      openEpisode={id => reveal(id)} openStep={(episode, step) => reveal(episode, step)} openPoint={openPoint} />
+    {points.length > 0 && <section className="rv-section" aria-labelledby="rv-points">
+      <h3 id="rv-points">Turning points</h3>
+      <ol className="rv-points">{points.map(point => <li key={point.n}>
+        <button type="button" onClick={() => openPoint(point)}>
+          <PointGlyph point={point} />
+          <time>{clockUtc(point.at, true)}</time>
+          <span><b>{point.title}</b>{multi && !point.title.toLowerCase().includes((summary.agents.find(item => item.id === point.node)?.label ?? '').toLowerCase()) && <span className="rv-quiet"> · {summary.agents.find(item => item.id === point.node)?.label}</span>}
+            {point.excerpt && <span className="rv-excerpt">{point.excerpt}</span>}</span>
+        </button>
+      </li>)}</ol>
     </section>}
-    <div className="workspace flat-activity" hidden={!!query}>
-      <details className="topology"><summary>Agents <span data-agent-count>{index.actors.filter(item => item.kind !== 'finding').length}</span></summary>
-        {record.nodes.some(item => item.kind === 'session' && !item.agentId) && <p className="small" data-graph-caption>Not linked to an agent: {record.nodes.filter(item => item.kind === 'session' && !item.agentId).map(item => item.label).join(', ')}</p>}
-        <AgentTree index={index} actor={actor} cutoff={cutoff} select={selectActor} />
-      </details>
-      <section className="conversation-panel" aria-label="Agent record details">
-        <div className="conversation-head"><div className="agent-identity"><span className="agent-avatar" data-agent-avatar aria-hidden>{roleOf(node).slice(0, 1).toUpperCase()}</span><div><h3 data-agent-title>{node?.label ?? 'Messages'}</h3><p data-agent-role>{[roleOf(node), modelIdentity(node, record), statusMeta(runStatus(node?.status ?? 'unknown')).label].filter(Boolean).join(' · ')}</p></div></div>
-          <Select label="Agent" field="agent" value={actor} onChange={selectActor}>{index.actors.map(item => <option key={item.id} value={item.id}>{item.label} · {roleOf(item)}</option>)}</Select>
-        </div>
-        <Capture record={record} index={index} actor={actor} />
-        <Tabs value={view} onValueChange={view => update({ view: view as RecordSelection['view'] })}>
-          <TabsList aria-label="Agent evidence">{(['chat', 'source', 'usage'] as const).map(tab => <TabsTrigger key={tab} value={tab} data-view={tab}>{tab === 'chat' ? 'Messages' : tab === 'source' ? 'Event details' : 'Usage'}</TabsTrigger>)}</TabsList>
-          <TabsContent value="chat" forceMount hidden={view !== 'chat'} data-panel="chat"><Conversation index={index} actor={actor} cutoff={cutoff} query={query} category={category} selected={event?.id} /></TabsContent>
-          <TabsContent value="source" forceMount hidden={view !== 'source'} data-panel="source"><EventDetails event={event} record={record} index={index} cutoff={cutoff} /></TabsContent>
-          <TabsContent value="usage" forceMount hidden={view !== 'usage'} data-panel="usage">
-            <div className="metric-controls"><Select label="Measure" field="metric" value={metric} onChange={value => setMetric(value as Metric)}><option value="cumulative">Cumulative tokens</option><option value="response">Tokens per response</option><option value="tool-time">Tool return time</option></Select>
-              <Select label="Horizontal axis" field="axis" value={axis} onChange={value => setAxis(value as Axis)}><option value="time">Elapsed time</option><option value="order">Recorded order</option></Select></div>
-            <RecordUsage index={index} cutoff={cutoff} actor={actor} metric={metric} axis={axis} inspect={inspect} navigate={navigate} />
-          </TabsContent>
-        </Tabs>
-      </section>
-    </div>
-    <div className="navigation"><Select label="Jump to a moment" field="moment" value={event?.id ?? ''} onChange={id => { const item = index.byEvent.get(id); if (item) inspect(item) }}>
-      {!visible.some(item => item.id === event?.id) && <option value={event?.id ?? ''}>{event ? 'Selected event is outside this filter' : 'Select an event'}</option>}
-      {visible.map(item => <option key={item.id} value={item.id}>{utcTime(item.at)} · {item.label}</option>)}
-    </Select><button className="ui-button" data-prev disabled={!visible.length} onClick={() => navigate(-1)}>Previous</button><button className="ui-button" data-next disabled={!visible.length} onClick={() => navigate(1)}>Next</button><span data-position>{position >= 0 ? position + 1 : '—'} / {visible.length}</span>
-      <button className="download-record" data-download onClick={() => download(JSON.stringify(record, null, 2), record.runId + '.json', 'application/json')}>Download record</button>
-    </div>
-    <details className="assignment"><summary>Original assignment</summary><dl data-assignment>{Object.entries(record.assignment).filter(([key]) => key !== 'source').map(([key, value]) => <div key={key}><dt>{key.replace(/([a-z])([A-Z])/g, '$1 $2')}</dt><dd>{typeof value === 'string' ? value : JSON.stringify(value, null, 2)}</dd></div>)}</dl>
-      {record.assignment.source && <details className="assignment-source"><summary>Provenance</summary><pre>{JSON.stringify(record.assignment.source, null, 2)}</pre></details>}
-    </details>
-    <details className="coverage"><summary>Sources, redactions &amp; capture gaps</summary><div data-coverage>
-      {record.coverage.publicContent && <p>{record.coverage.publicContent}</p>}{record.coverage.categoryMethod && <p>{record.coverage.categoryMethod}</p>}{record.coverage.cost && record.coverage.cost !== 'Not recorded' && <p>Cost: {record.coverage.cost}</p>}
-      {record.terminal && <p>Recorded terminal: {record.terminal.kind ?? 'unknown'}{record.terminal.reason ? ` · ${record.terminal.reason}` : ''}</p>}
-      <pre>{JSON.stringify({ coverage: record.coverage, sources: record.sources }, null, 2)}</pre>
-    </div></details>
+    <section className="rv-section" aria-labelledby="rv-episodes">
+      <div className="rv-section-head"><h3 id="rv-episodes">Episodes</h3>
+        {episodes.length > 1 && <button type="button" className="rv-text-button" onClick={() => setOpened(prev => ({ ...prev, episodes: episodes.every(item => prev.episodes.has(item.id)) ? new Set() : new Set(episodes.map(item => item.id)) }))}>
+          {episodes.every(item => opened.episodes.has(item.id)) ? 'Close every episode' : 'Open every episode'}</button>}
+      </div>
+      {chosen && <p className="rv-filter">{chosen.label}{chosen.assignment || chosen.role ? `: ${firstSentence(chosen.assignment ?? chosen.role ?? '')}` : ''} <button type="button" className="rv-text-button" onClick={() => setAgent(undefined)}>All agents</button></p>}
+      <EpisodeList story={story} episodes={episodes} multi={multi} opened={opened} setOpened={setOpened} onStep={select} />
+      {!episodes.length && <p className="rv-empty">{story.episodes.length ? 'No episode falls in this stretch.' : 'This record keeps no steps.'}</p>}
+    </section>
+    <Footer record={record} story={story} />
   </div>
 }
-function Capture({ record, index, actor }: { record: RunRecord; index: RecordIndex<RunRecord>; actor: string }) {
-  const node = index.nodes.get(actor), capture = node?.metadata && typeof node.metadata === 'object' ? node.metadata as Record<string, unknown> : undefined
-  const retained = index.byActor.get(actor)?.length ?? 0
-  const note = typeof node?.captureNote === 'string' ? node.captureNote : typeof capture?.captureReason === 'string' ? capture.captureReason : node?.capture && node.capture.status !== 'complete' ? (record.coverage?.gaps ?? []).filter(gap => gap.nodeId === actor).map(gap => gap.detail).join(' ') : null
-  const label = capture?.captureStatus === 'retained-partial' || node?.capture?.status === 'lossy' ? 'Partial capture' : capture?.captureStatus === 'missing-source' || node?.capture?.status === 'absent' || !retained ? 'Conversation unavailable' : capture?.captureStatus === 'retained' ? 'Retained capture' : null
-  return (label || note || node?.assignment) ? <div className="agent-capture-summary" role="status">{label}{note && <details><summary>Capture details</summary><p>{note}</p></details>}{node?.assignment && <details><summary>What this agent did</summary><p>{node.assignment}</p></details>}</div> : null
+
+function Header({ summary, multi, openClaim }: { summary: RecordSummary; multi: boolean; openClaim: () => void }) {
+  const timed = Number.isFinite(summary.start) && Number.isFinite(summary.end)
+  const sameDay = timed && day(summary.start) === day(summary.end)
+  const facts: Array<{ key: string; node: ReactNode }> = []
+  if (timed) facts.push({ key: 'span', node: sameDay ? `${day(summary.start)}, ${clockUtc(summary.start)}–${clockUtc(summary.end)} UTC` : `${day(summary.start, false)} ${clockUtc(summary.start)} UTC to ${day(summary.end)} ${clockUtc(summary.end)} UTC` })
+  if (timed && summary.durationMs > 0) facts.push({ key: 'duration', node: formatSpan(summary.durationMs) })
+  if (multi) facts.push({ key: 'agents', node: `${count(summary.agents.length, 'agent')}${summary.neverStarted ? `, ${summary.neverStarted} never started` : ''}` })
+  if (summary.models.length) facts.push({ key: 'model', node: summary.models.join(', ') })
+  if (summary.steps) facts.push({ key: 'steps', node: <>{count(summary.steps, 'step')}, {summary.errors ? <span className="rv-error">{summary.errors.toLocaleString('en-US')} failed</span> : 'no errors'}</> })
+  if (summary.outputTokens !== undefined) facts.push({ key: 'tokens', node: `${summary.outputTokens.toLocaleString('en-US')} output tokens` })
+  facts.push({ key: 'cost', node: summary.costUsd !== undefined ? `$${summary.costUsd.toFixed(2)} at list price, not billed` : 'cost not recorded' })
+  return <header className="rv-head">
+    <h3 className="rv-title">{summary.title}</h3>
+    {summary.asked && <p className="rv-asked">{summary.asked}</p>}
+    {summary.result.length > 0 && <p className="rv-result">{summary.result.join(' ')}</p>}
+    {summary.claim && <figure className="rv-claim">
+      <blockquote>{summary.claim.text}</blockquote>
+      <figcaption>{summary.claim.by}{summary.claim.episode && <> · <button type="button" className="rv-link" onClick={openClaim}>{summary.claim.stepId ? 'Open the page' : 'Open the input'}</button></>}</figcaption>
+    </figure>}
+    {facts.length > 0 && <ul className="rv-facts">{facts.map(fact => <li key={fact.key}>{fact.node}</li>)}</ul>}
+  </header>
 }
-function EventDetails({ event, record, index, cutoff }: { event?: RecordEvent; record: RunRecord; index: RecordIndex<RunRecord>; cutoff: number }) {
-  if (!event) return <p className="chat-empty">No source event selected.</p>
-  return <><h4 data-event-title>{event.label}</h4><p className="small" data-event-meta>{utcTime(event.at, true)} · {index.nodes.get(index.canonical(event.node))?.label ?? event.node}</p>
-    {ms(event.at) > cutoff ? <p>This event occurs after the selected time. Advance the timeline to read it.</p> : <>
-      {textOf(event) && <StructuredContent text={textOf(event)} />}{event.detail.publicToolCalls?.map(call => <section className="event-tool" key={call.id}><h4>{call.name}</h4>{call.input === undefined ? <p className="publication-note">Args not captured.</p> : <StructuredContent text={call.input} rawLabel="Raw input" />}</section>)}
-      {!textOf(event) && !event.detail.publicToolCalls?.length && <p>{event.detail.contentOmitted ?? event.detail.publicationNote ?? 'No visible message or tool payload was retained for this event.'}</p>}
-      <details className="raw-data"><summary>Raw event and source</summary><pre data-event-detail>{JSON.stringify(event.detail, null, 2)}</pre><pre data-event-source>{JSON.stringify(eventSource(event, record, index), null, 2)}</pre></details>
-    </>}
-  </>
+
+function Footer({ record, story }: { record: RunRecord; story: RecordStory }) {
+  const download = useDownload()
+  const json = useMemo(() => JSON.stringify(record, null, 2), [record])
+  const bytes = useMemo(() => new TextEncoder().encode(json).length, [json])
+  const { summary } = story
+  return <footer className="rv-foot">
+    {summary.leavesOut.length > 0 && <section aria-labelledby="rv-leaves"><h3 id="rv-leaves">What this record leaves out</h3>
+      <ul>{summary.leavesOut.map(line => <li key={line}>{line}</li>)}</ul></section>}
+    <div className="rv-foot-actions">
+      <button type="button" className="rv-button" onClick={() => download(json, `${record.runId}.json`, 'application/json')}>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8M4.5 7.5L8 11l3.5-3.5M3 13.5h10" /></svg>Download the record <span className="rv-quiet">{size(bytes)}</span></button>
+    </div>
+    {summary.brief.length > 0 && <details className="rv-brief"><summary>Full assignment</summary>
+      <dl>{summary.brief.map(item => <div key={item.label}><dt>{item.label}</dt><dd>{item.text}</dd></div>)}</dl></details>}
+  </footer>
 }

@@ -1,3 +1,9 @@
+## 11.0.0
+
+- `AgentRecord` is redesigned from zero as a story view: header with the result and claim, one facts line, a time spine of every agent with compressed gaps, turning points, collapsible episodes with step rows, pages, commands and outputs, and a footer with the record's true download size. It replaces the waterfall, tabs, agent and event selects, usage view and capture-coverage JSON. Its values come from `@drewstone/agent-record/story`, so the optional peer is now `@drewstone/agent-record` ^3.1.0.
+- Removes `recordModel.recordFlowTrace` from `/run/record`; no maintained host draws the record through the waterfall.
+- `/run/record` tool rows no longer open a hover card, and print a duration only when one was measured and a result only when it is a note, an error or still running. Record links no longer underline on hover.
+
 ## 10.0.1
 
 - Do not start nonessential CSS transitions under reduced motion, including document scrollbar colours. Keep ordinary motion, essential-motion opt-outs, and the existing animation floor.

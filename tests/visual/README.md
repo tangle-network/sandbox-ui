@@ -2,12 +2,12 @@
 
 `pnpm test:visual` builds Storybook and compares its stories on phones and desktops. Critical surfaces also run on tablets. Workflow graph screenshots wait for every canvas to finish layout and render nodes. Single-graph stories compare the graph viewport. Galleries and editors capture the whole composition.
 
-Run the checks on Linux with the project's Playwright Chromium version:
+To reproduce the release check on Linux, install Chromium first, then run the suite on an isolated loopback network:
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm exec playwright install chromium
-pnpm test:visual
+bwrap --dev-bind / / --unshare-net pnpm test:visual
 ```
 
 To accept an intentional visual change, run `pnpm exec playwright test -g '<story-or-flow>' --update-snapshots=changed` after `pnpm build-storybook`.

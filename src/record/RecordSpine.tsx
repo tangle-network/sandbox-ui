@@ -89,11 +89,11 @@ function LegendMark({ kind }: { kind: StepKind }) {
   </svg>
 }
 
+/** The width of whichever element currently holds the ref: the empty placeholder first, then the drawn spine. */
 function useWidth(fallback: number) {
-  const ref = useRef<HTMLDivElement>(null)
+  const [element, ref] = useState<HTMLDivElement | null>(null)
   const [width, setWidth] = useState(fallback)
   useEffect(() => {
-    const element = ref.current
     if (!element) return
     const read = () => { const w = Math.floor(element.getBoundingClientRect().width); if (w > 0) setWidth(w) }
     read()
@@ -101,7 +101,7 @@ function useWidth(fallback: number) {
     const observer = new ResizeObserver(read)
     observer.observe(element)
     return () => observer.disconnect()
-  }, [])
+  }, [element])
   return [ref, width] as const
 }
 
@@ -178,7 +178,7 @@ export function RecordSpine({ story, points, colorOf, agent, onAgent, window, on
   const X = axis.X
   const inside = (a: number, b = a) => b >= t0 && a <= t1
 
-  const at = (event: PointerEvent<SVGSVGElement>) => Math.max(x0, Math.min(x1, event.clientX - event.currentTarget.getBoundingClientRect().left))
+  const at = (event: PointerEvent<SVGSVGElement>) => { const box = event.currentTarget.getBoundingClientRect(); return Math.max(x0, Math.min(x1, (event.clientX - box.left) * W / (box.width || W))) }
   const down = (event: PointerEvent<SVGSVGElement>) => {
     if (event.button !== 0) return
     dragged.current = false
@@ -236,7 +236,7 @@ export function RecordSpine({ story, points, colorOf, agent, onAgent, window, on
         : <span>{utc(t0, 'minute')}–{utc(t1, 'minute')} UTC{SEP}drag across the lanes to zoom</span>}
     </div>
     <div className="rv-spine" ref={ref} style={{ height: geo.H }}>
-      <svg width={W} height={geo.H} role="img" aria-label={label} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { press.current = undefined; setDrag(undefined) }}>
+      <svg viewBox={`0 0 ${W} ${geo.H}`} width="100%" role="img" aria-label={label} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={() => { press.current = undefined; setDrag(undefined) }}>
         <defs><pattern id="rv-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" className="rv-hatch-line" /></pattern></defs>
         <rect className="rv-hit" x={x0} y={geo.top - 4} width={Math.max(0, x1 - x0)} height={geo.axisY - geo.top + 4} />
         {lanes}

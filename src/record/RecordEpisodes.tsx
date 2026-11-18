@@ -46,7 +46,8 @@ function Clip({ children, limit = 380 }: { children: ReactNode; limit?: number }
   </>
 }
 
-/** A list this long folds each run of two or more quiet episodes (no turning point, no failure) into one row. */
+/** A list this long folds each run of two or more quiet episodes (no turning point) into one row that keeps their
+ *  failures in its count. */
 const FOLD_FROM = 9
 type Row = { type: 'episode'; episode: RecordEpisode } | { type: 'fold'; id: string; episodes: RecordEpisode[] }
 function rowsOf(episodes: RecordEpisode[], opened: Opened): Row[] {
@@ -60,7 +61,7 @@ function rowsOf(episodes: RecordEpisode[], opened: Opened): Row[] {
     run = []
   }
   for (const episode of episodes) {
-    if (!episode.turningPoints.length && !episode.errors && !episode.notCaptured && !opened.episodes.has(episode.id)) run.push(episode)
+    if (!episode.turningPoints.length && !episode.notCaptured && !opened.episodes.has(episode.id)) run.push(episode)
     else { flush(); out.push({ type: 'episode', episode }) }
   }
   flush()
@@ -88,14 +89,14 @@ export function EpisodeList({ story, episodes, colorOf, opened, setOpened, onSte
   return <ol className="rv-eps">{rowsOf(episodes, opened).map((row) => {
     if (row.type === 'fold') {
       const first = row.episodes[0]!, last = row.episodes[row.episodes.length - 1]!
-      const steps = row.episodes.reduce((sum, episode) => sum + episode.steps.length, 0)
+      const steps = row.episodes.reduce((sum, episode) => sum + episode.steps.length, 0), errors = row.episodes.reduce((sum, episode) => sum + episode.errors, 0)
       return <li key={row.id} className="rv-ep fold">
         <button type="button" className="rv-ep-head" aria-expanded={false} onClick={() => setOpened((prev) => ({ ...prev, folds: new Set(prev.folds).add(row.id) }))}>
           <time className="rv-ep-time">{utc(first.start, 'minute')}</time>
           <span className="rv-ep-rail"><span className="rv-dot hollow" /></span>
-          <span className="rv-ep-main"><span className="rv-ep-title quiet">{count(row.episodes.length, 'quieter episode')}</span>
+          <span className="rv-ep-main"><span className="rv-ep-title quiet">{count(row.episodes.length, errors ? 'more episode' : 'quieter episode')}</span>
             <span className="rv-ep-sub">{row.episodes.map((episode) => readable(episode.title)).join(SEP)}</span></span>
-          <span className="rv-ep-facts">{[steps ? count(steps, 'step') : '', span(last.end - first.start) ?? ''].filter(Boolean).join(SEP)}<Chevron /></span>
+          <span className="rv-ep-facts">{[steps ? count(steps, 'step') : '', span(last.end - first.start) ?? ''].filter(Boolean).join(SEP)}{errors > 0 && <>{SEP}<span className="rv-bad">{errors} failed</span></>}<Chevron /></span>
         </button>
       </li>
     }

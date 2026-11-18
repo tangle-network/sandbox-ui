@@ -87,8 +87,15 @@ createRoot(document.getElementById('host')).render(React.createElement(AgentReco
       await opened.waitFor()
       assert.match(await opened.locator('.rv-detail').innerText(), /^(Command|Input|Output)[\s\S]*called \d\d:\d\d:\d\d UTC/)
       assert.ok((await page.evaluate(() => window.selected?.eventId)), 'opening a step selects its event')
-      const full = await view.innerText()
-      for (const banned of BANNED) assert.equal(full.includes(banned), false, `${theme} ${width}: the opened view prints "${banned}"`)
+      // Opened episodes add the agents' own words, which may use any punctuation; the viewer's words around them stay clean.
+      const own = await view.evaluate((root, quoted) => {
+        const hidden = [...root.querySelectorAll(quoted)], was = hidden.map(element => element.style.display)
+        hidden.forEach(element => { element.style.display = 'none' })
+        const text = root.innerText
+        hidden.forEach((element, i) => { element.style.display = was[i] })
+        return text
+      }, '.rv-prose, .rv-footnote, .rv-ep-title, .rv-ep-sub, .rv-step-line.mono, .rv-step-title > span, .rv-step-title > code, pre')
+      for (const banned of BANNED) assert.equal(own.includes(banned), false, `${theme} ${width}: the opened view prints "${banned}"`)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, `${theme} ${width}: opened episodes keep the page width`)
       if (evidence) await page.screenshot({ path: `${evidence}/record-open-${theme}-${width}.png`, fullPage: true })
       assert.deepEqual(errors, [])

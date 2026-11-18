@@ -497,7 +497,7 @@ packages:
     engines: {node: '>=20.19.0'}
 
   '@drewstone/agent-record@file:vendor/drewstone-agent-record-3.2.0.tgz':
-    resolution: {integrity: sha512-Yli/9D+PE94W9AP8cETWjK1nwGz2BXjB0F3RGbIebCIQzJ/RbowI9+oV0/CI5orjgbCAS8VpL8fks4VtSDO1DA==, tarball: file:vendor/drewstone-agent-record-3.2.0.tgz}
+    resolution: {integrity: sha512-B7QuD/xijkwmUW/uyzRr5zUZ8cMQNN4vOennV57y2sYekPXXw9O9pHYEefNynMF9WAPulBtIxvm3erj/BrLTsw==, tarball: file:vendor/drewstone-agent-record-3.2.0.tgz}
     version: 3.2.0
     hasBin: true
     peerDependencies:

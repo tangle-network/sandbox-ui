@@ -87,9 +87,9 @@ export interface UseSessionStreamResult {
   /** Connection or stream error, if any. */
   error: string | null;
   /** Structured API or stream error code, when available. */
-  errorCode: string | null;
+  errorCode?: string | null;
   /** The stream disconnected and an automatic retry is pending or in progress. */
-  reconnecting: boolean;
+  reconnecting?: boolean;
   /** Whether the SSE connection is active. */
   connected: boolean;
   /**

@@ -5,8 +5,7 @@ import { BrandLogo, modelBrandFor } from "../lib/model-brand";
 import { HarnessLogo } from "./harness-logo";
 
 export interface SeatMarkProps {
-  /** Omit when the harness is shown separately. */
-  harness?: string;
+  harness: string;
   model: string;
   effort?: string;
   /** sm = 12px text, md = 14px text. Default sm. */
@@ -14,12 +13,17 @@ export interface SeatMarkProps {
   className?: string;
 }
 
+type ModelSeatMarkProps = Omit<SeatMarkProps, "harness"> & { harness?: string };
+
 /**
  * Harness logo, model brand mark, model name and effort on one centre line.
  * Icons are 1.25em and the line height is 1.25, so every child is the same box
  * and the row scales with its font size, standalone or inside a pill.
  */
-export function SeatMark({ harness, model, effort, size = "sm", className }: SeatMarkProps) {
+export function SeatMark(props: SeatMarkProps): import("react").JSX.Element;
+/** Omit the harness when it already has its own column. */
+export function SeatMark(props: ModelSeatMarkProps): import("react").JSX.Element;
+export function SeatMark({ harness, model, effort, size = "sm", className }: ModelSeatMarkProps) {
   const identity = modelBrandFor(model);
   const brand = identity && (identity.lab.logoUrl || identity.lab.logo ? identity.lab : identity.host);
   return (

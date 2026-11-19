@@ -24,10 +24,7 @@ At each width, Enter on the Apps disclosure changed `aria-expanded` to `false`.
 Space reopened it and changed `aria-expanded` to `true`.
 The app child retained its active surface and the parent retained its active ring.
 
-Screenshots: [1440px light](../screenshots/sidebar-expandable-density/1440-light.png),
-[390px light](../screenshots/sidebar-expandable-density/390-light.png),
-[320px light](../screenshots/sidebar-expandable-density/320-light.png), and
-[390px dark](../screenshots/sidebar-expandable-density/390-dark.png).
+The 320 px and 390 px light captures were retired because they displayed identifying account details. The [1440 px light detail](../screenshots/sidebar-expandable-density/1440-light.png) and [390 px dark view](../screenshots/sidebar-expandable-density/390-dark.png) remain available.
 
 This is shared-component evidence.
 The consuming product must verify the package in its own CSS and navigation.

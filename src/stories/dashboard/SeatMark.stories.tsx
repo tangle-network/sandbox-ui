@@ -16,6 +16,7 @@ export const StandaloneAndInPill: Story = {
     <div className="flex flex-col items-start gap-3 rounded-lg border border-border bg-card p-4">
       <SeatMark {...args} />
       <SeatMark harness="claude-code" model="anthropic/claude-sonnet-4-5" size="md" />
+      <div className="w-28"><SeatMark model="openai/gpt-6.1" effort="ultracode" /></div>
       <span className="inline-flex rounded-full border border-border bg-background py-1"><SeatMark {...args} /></span>
     </div>
   ),

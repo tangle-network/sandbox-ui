@@ -5,7 +5,8 @@ import { BrandLogo, modelBrandFor } from "../lib/model-brand";
 import { HarnessLogo } from "./harness-logo";
 
 export interface SeatMarkProps {
-  harness: string;
+  /** Omit when the harness is shown separately. */
+  harness?: string;
   model: string;
   effort?: string;
   /** sm = 12px text, md = 14px text. Default sm. */
@@ -25,15 +26,16 @@ export function SeatMark({ harness, model, effort, size = "sm", className }: Sea
     <span
       title={[harness, model, effort].filter(Boolean).join(" · ")}
       className={cn(
-        "inline-flex min-w-0 items-center gap-[0.375em] px-[0.375em] font-sans leading-[1.25]",
+        "inline-flex max-w-full min-w-0 items-center gap-[0.375em] font-sans leading-[1.25]",
+        harness && "px-[0.375em]",
         size === "sm" ? "text-xs" : "text-sm",
         className,
       )}
     >
-      <HarnessLogo type={harness} className="h-[1.25em]! w-[1.25em]!" />
-      {brand && <BrandLogo brand={brand} size={size === "sm" ? "xs" : "sm"} className="h-[1.25em] w-[1.25em]" />}
+      {harness && <HarnessLogo type={harness} className="h-[1.25em]! w-[1.25em]! shrink-0" />}
+      {brand && <BrandLogo brand={brand} size={size === "sm" ? "xs" : "sm"} className="h-[1.25em] w-[1.25em] shrink-0" />}
       <span className="min-w-0 truncate font-medium text-foreground">{model}</span>
-      {effort && <span className="shrink-0 text-muted-foreground">{effort}</span>}
+      {effort && <span className="min-w-0 truncate text-muted-foreground">{effort}</span>}
     </span>
   );
 }

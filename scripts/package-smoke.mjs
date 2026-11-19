@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "vite";
 import { writeIntegrationsContract } from "./integrations-package-contract.mjs";
 import { validateInterfaceContract } from "./interface-package-contract.mjs";
+import { verifySessionReconnect } from './session-reconnect-contract.mjs';
 import { presentationConsumerSpecs, validatePresentationConsumer } from "./presentation-package-contract.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -355,6 +356,7 @@ createRoot(document.getElementById("root")).render(
   // The omitted-peer pass retains all its existing coverage. Reuse the full
   // install once for the presentation browser/type/CSS contract.
   if (omittedOptionalPeers.length === 0) {
+    await verifySessionReconnect(consumerDir);
     await validatePresentationConsumer({ root, consumerDir, manifest, tarballPath, agentInterfaceVersion: expectedAgentInterfaceVersion });
   }
 

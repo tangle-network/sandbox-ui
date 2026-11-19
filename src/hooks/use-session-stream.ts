@@ -1,3 +1,4 @@
+import { errorStatus, SessionStreamError, useSessionStatus } from './session-stream-status';
 import type { ReasoningEffort } from '@tangle-network/agent-interface';
 import { createParser } from 'eventsource-parser';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -85,6 +86,10 @@ export interface UseSessionStreamResult {
   refetch: () => Promise<void>;
   /** Connection or stream error, if any. */
   error: string | null;
+  /** Structured API or stream error code, when available. */
+  errorCode: string | null;
+  /** The stream disconnected and an automatic retry is pending or in progress. */
+  reconnecting: boolean;
   /** Whether the SSE connection is active. */
   connected: boolean;
   /**
@@ -104,18 +109,7 @@ export interface UseSessionStreamResult {
   degradation: SessionDegradation | null;
 }
 
-export class SessionStreamError extends Error {
-  readonly code: string;
-  readonly status?: number;
-
-  constructor(code: string, message: string, status?: number) {
-    super(message);
-    this.name = 'SessionStreamError';
-    this.code = code;
-    this.status = status;
-  }
-}
-
+export { SessionStreamError } from './session-stream-status';
 export const SESSION_STREAM_RECONNECT_DELAY_MS = 1000;
 
 // ---------------------------------------------------------------------------
@@ -355,9 +349,8 @@ export function useSessionStream({
     sourceIds: {},
   });
   const partMap = partsState.values;
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [status, updateStatus] = useSessionStatus(sessionId);
+  const connected = status.connection === 'connected';
   // Keyed by session, not a single slot. Two sessions on the same container can
   // both be degraded — one slot would erase the first while its toolbelt is
   // still empty — and reading by key rather than clearing in an effect avoids
@@ -460,8 +453,7 @@ export function useSessionStream({
         sourceIds: {},
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch messages';
-      setError(msg);
+      updateStatus(errorStatus(err, 'Failed to fetch messages'));
     }
   }, [apiUrl, token, sessionId]);
 
@@ -552,8 +544,8 @@ export function useSessionStream({
       });
 
       if (!res.ok) throw await responseError(res, 'Live response connection failed');
-      setConnected(true);
-      setError(null);
+      if (controller.signal.aborted) return;
+      updateStatus({ connection: 'connected', error: null, errorCode: null });
 
       // Re-read the durable degradation on every attach, not once on mount.
       // The bus is live-only, so a credential rejected while the stream was
@@ -610,18 +602,11 @@ export function useSessionStream({
         'The live response stream closed before the session ended. Reconnecting…',
       );
     } catch (err) {
-      if ((err as Error).name === 'AbortError') return;
-      const msg = err instanceof Error ? err.message : 'SSE connection error';
-      setError(msg);
-      setConnected(false);
+      if (controller.signal.aborted || (err as Error).name === 'AbortError') return;
+      updateStatus({ connection: 'reconnecting', ...errorStatus(err, 'SSE connection error') });
 
       // Auto-reconnect
-      if (!controller.signal.aborted) {
-        reconnectTimerRef.current = setTimeout(
-          () => connectSSE(),
-          SESSION_STREAM_RECONNECT_DELAY_MS,
-        );
-      }
+      reconnectTimerRef.current = setTimeout(connectSSE, SESSION_STREAM_RECONNECT_DELAY_MS);
     }
   }, [apiUrl, token, sessionId, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -695,7 +680,7 @@ export function useSessionStream({
         associatePendingEcho(id);
         if (!completedExecutionIdsRef.current.has(id)) {
           activeAssistantMessageIdsRef.current.add(id);
-          setIsStreaming(true);
+          updateStatus({ isStreaming: true });
         }
       }
     } else if (type === 'message.part.updated') {
@@ -715,7 +700,7 @@ export function useSessionStream({
       associatePendingEcho(msgId);
       if (!completedExecutionIdsRef.current.has(msgId)) {
         activeAssistantMessageIdsRef.current.add(msgId);
-        setIsStreaming(true);
+        updateStatus({ isStreaming: true });
       }
       setMessages((prev) => {
         if (prev.some((message) => message.id === msgId)) return prev;
@@ -793,7 +778,7 @@ export function useSessionStream({
         ?? (props.executionID as string)
         ?? '';
       const stillStreaming = retireExecution(executionId);
-      setIsStreaming(stillStreaming);
+      updateStatus({ isStreaming: stillStreaming });
       // The turn is over, so its messages are in the backend's history now:
       // retire the echoes so the refetch below installs the canonical copies.
       // Retiring before the refetch keeps an echo created while it is in
@@ -851,8 +836,9 @@ export function useSessionStream({
         ?? (props.executionID as string)
         ?? '';
       const stillStreaming = retireExecution(executionId);
-      setIsStreaming(stillStreaming);
-      setError(formatError(readErrorDetails(props), 'Agent response failed'));
+      updateStatus({ isStreaming: stillStreaming });
+      const details = readErrorDetails(props);
+      updateStatus({ error: formatError(details, 'Agent response failed'), errorCode: details.code ?? null });
       if (!stillStreaming) refetch();
     }
   // The `hub.*` branches take their session from the FRAME, never from props,
@@ -860,7 +846,7 @@ export function useSessionStream({
   // stream it lands on. The turn-lifecycle branches are the opposite and always
   // were: `refetch` and `seedDegradation` both act on the session being viewed,
   // which is the session a filtered `session.idle` can only have come from.
-  }, [refetch, seedDegradation]);
+  }, [refetch, seedDegradation, updateStatus]);
 
   handleSSEEventRef.current = handleSSEEvent;
 
@@ -883,7 +869,7 @@ export function useSessionStream({
         'CHAT_NOT_READY',
         'Chat is not ready yet. Wait for the session connection and try again.',
       );
-      setError(admissionError.message);
+      updateStatus({ error: admissionError.message, errorCode: admissionError.code });
       throw admissionError;
     }
     if (!connected) {
@@ -891,7 +877,7 @@ export function useSessionStream({
         'CHAT_DISCONNECTED',
         'Chat is reconnecting. Your message was not sent.',
       );
-      setError(admissionError.message);
+      updateStatus({ error: admissionError.message, errorCode: admissionError.code });
       throw admissionError;
     }
     if (
@@ -902,10 +888,10 @@ export function useSessionStream({
         'CHAT_BUSY',
         'The agent is still responding. Wait for this turn to finish before sending another message.',
       );
-      setError(admissionError.message);
+      updateStatus({ error: admissionError.message, errorCode: admissionError.code });
       throw admissionError;
     }
-    setError(null);
+    updateStatus({ error: null, errorCode: null });
 
     const echoId = `local-echo-${echoCounterRef.current++}`;
     const echo: PendingEcho = {
@@ -925,7 +911,7 @@ export function useSessionStream({
     }));
     // The turn is in flight from the user's point of view the moment they hit
     // send; composers gate their submit on this.
-    setIsStreaming(true);
+    updateStatus({ isStreaming: true });
 
     try {
       const url = `${apiUrl}/agents/sessions/${encodeURIComponent(sessionId)}/messages`;
@@ -977,10 +963,9 @@ export function useSessionStream({
         pendingEchoesRef.current.size === 0
         && activeAssistantMessageIdsRef.current.size === 0
       ) {
-        setIsStreaming(false);
+        updateStatus({ isStreaming: false });
       }
-      const msg = err instanceof Error ? err.message : 'Failed to send message';
-      setError(msg);
+      updateStatus(errorStatus(err, 'Failed to send message'));
       throw err;
     }
   }, [apiUrl, connected, enabled, token, sessionId]);
@@ -993,8 +978,7 @@ export function useSessionStream({
       const url = `${apiUrl}/agents/sessions/${encodeURIComponent(sessionId)}/abort`;
       await fetchJson<unknown>(url, token, { method: 'POST' });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to abort';
-      setError(msg);
+      updateStatus(errorStatus(err, 'Failed to abort'));
     }
   }, [apiUrl, token, sessionId]);
 
@@ -1007,18 +991,20 @@ export function useSessionStream({
     return () => {
       abortRef.current?.abort();
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      setConnected(false);
+      updateStatus({ connection: 'disconnected' });
     };
-  }, [enabled, token, sessionId, refetch, connectSSE]);
+  }, [enabled, token, sessionId, refetch, connectSSE, updateStatus]);
 
   return {
     messages,
     partMap,
-    isStreaming,
+    isStreaming: status.isStreaming,
     send,
     abort,
     refetch,
-    error,
+    error: status.error,
+    errorCode: status.errorCode,
+    reconnecting: status.connection === 'reconnecting',
     connected,
     degradation,
   };

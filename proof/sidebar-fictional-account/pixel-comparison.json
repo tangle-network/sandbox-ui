@@ -1,0 +1,300 @@
+[
+  {
+    "file": "dashboard-sidebarlayout--controlled-header-menu-story-dark-desktop-linux.png",
+    "changedPixels": 666,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--controlled-header-menu-story-dark-mobile-linux.png",
+    "changedPixels": 140,
+    "oldDriftPixels": 3331,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--controlled-header-menu-story-light-desktop-linux.png",
+    "changedPixels": 661,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--controlled-header-menu-story-light-mobile-linux.png",
+    "changedPixels": 137,
+    "oldDriftPixels": 2771,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--desktop-dark-desktop-linux.png",
+    "changedPixels": 666,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--desktop-dark-mobile-linux.png",
+    "changedPixels": 140,
+    "oldDriftPixels": 348,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--desktop-light-desktop-linux.png",
+    "changedPixels": 661,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--desktop-light-mobile-linux.png",
+    "changedPixels": 137,
+    "oldDriftPixels": 297,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--expandable-groups-dark-desktop-linux.png",
+    "changedPixels": 666,
+    "oldDriftPixels": 15029,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--expandable-groups-dark-mobile-linux.png",
+    "changedPixels": 140,
+    "oldDriftPixels": 3228,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--expandable-groups-light-desktop-linux.png",
+    "changedPixels": 661,
+    "oldDriftPixels": 8747,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--expandable-groups-light-mobile-linux.png",
+    "changedPixels": 137,
+    "oldDriftPixels": 3362,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--mobile-dark-desktop-linux.png",
+    "changedPixels": 666,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--mobile-dark-mobile-linux.png",
+    "changedPixels": 140,
+    "oldDriftPixels": 3228,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--mobile-light-desktop-linux.png",
+    "changedPixels": 661,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--mobile-light-mobile-linux.png",
+    "changedPixels": 137,
+    "oldDriftPixels": 3396,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--mobile-with-panel-dark-desktop-linux.png",
+    "changedPixels": 666,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--mobile-with-panel-dark-mobile-linux.png",
+    "changedPixels": 140,
+    "oldDriftPixels": 3228,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--mobile-with-panel-light-desktop-linux.png",
+    "changedPixels": 661,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--mobile-with-panel-light-mobile-linux.png",
+    "changedPixels": 137,
+    "oldDriftPixels": 3396,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--shell-header-alignment-dark-desktop-linux.png",
+    "changedPixels": 666,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--shell-header-alignment-dark-mobile-linux.png",
+    "changedPixels": 0,
+    "oldDriftPixels": 2795,
+    "beforeAfterBox": null
+  },
+  {
+    "file": "dashboard-sidebarlayout--shell-header-alignment-light-desktop-linux.png",
+    "changedPixels": 661,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--shell-header-alignment-light-mobile-linux.png",
+    "changedPixels": 0,
+    "oldDriftPixels": 35907,
+    "beforeAfterBox": null
+  },
+  {
+    "file": "dashboard-sidebarlayout--shell-header-alignment-page-dark-desktop-linux.png",
+    "changedPixels": 666,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--shell-header-alignment-page-dark-mobile-linux.png",
+    "changedPixels": 140,
+    "oldDriftPixels": 4084,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--shell-header-alignment-page-light-desktop-linux.png",
+    "changedPixels": 661,
+    "oldDriftPixels": 0,
+    "beforeAfterBox": [
+      17,
+      864,
+      120,
+      876
+    ]
+  },
+  {
+    "file": "dashboard-sidebarlayout--shell-header-alignment-page-light-mobile-linux.png",
+    "changedPixels": 137,
+    "oldDriftPixels": 3102,
+    "beforeAfterBox": [
+      349,
+      23,
+      367,
+      33
+    ]
+  }
+]

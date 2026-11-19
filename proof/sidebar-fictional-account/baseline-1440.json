@@ -1,0 +1,10 @@
+{
+  "stage": "baseline",
+  "width": 1440,
+  "engine": "chromium",
+  "priorNameVisible": true,
+  "priorEmailVisible": true,
+  "demoNameVisible": false,
+  "demoEmailVisible": false,
+  "menuDismissed": true
+}

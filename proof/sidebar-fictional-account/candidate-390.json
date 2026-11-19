@@ -1,0 +1,11 @@
+{
+  "stage": "candidate",
+  "width": 390,
+  "engine": "webkit",
+  "priorNameVisible": false,
+  "priorEmailVisible": false,
+  "demoNameVisible": true,
+  "demoEmailVisible": true,
+  "menuDismissed": true,
+  "drawerDismissed": true
+}

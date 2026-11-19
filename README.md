@@ -1,515 +1,56 @@
-![Tangle Network Banner](https://raw.githubusercontent.com/tangle-network/tangle/refs/heads/main/assets/Tangle%20%20Banner.png)
+# Sandbox UI
 
-<p align="center">
-  <a href="https://www.npmjs.com/package/@tangle-network/sandbox-ui"><img src="https://img.shields.io/npm/v/@tangle-network/sandbox-ui?color=8E59FF&label=npm" alt="npm" /></a>
-  <a href="https://github.com/tangle-network/sandbox-ui/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/@tangle-network/sandbox-ui?color=6888F9" alt="license" /></a>
-  <a href="https://github.com/tangle-network/sandbox-ui"><img src="https://img.shields.io/github/stars/tangle-network/sandbox-ui?style=flat&color=8E59FF" alt="stars" /></a>
-</p>
+Build a React workspace for a coding agent. Show what the agent ran, open the files it changed, and review its patch. You supply the sandbox data and decide who can access it.
 
-# @tangle-network/sandbox-ui
+[Explore the Storybook](https://sandbox-ui-storybook.pages.dev/) · [Integration guide](https://github.com/tangle-network/sandbox-ui/blob/main/docs/integration.md) · [npm package](https://www.npmjs.com/package/@tangle-network/sandbox-ui)
 
-React components for [Tangle Sandbox](https://sandbox.tangle.tools)'s technical surfaces: transcripts, files, terminal, code changes, runtime state, artifacts, and dashboard views.
-Generic controls come from `@tangle-network/ui`; the composed agent shell, composer and pickers come from `@tangle-network/agent-app`; products own routes, data and policy.
-[Canonical ownership](./UI-DIRECTION.md#canonical-ownership) says which layer owns a component.
+## Show a file change
 
-[Browse the live Storybook](https://sandbox-ui-storybook.pages.dev/) to inspect component states in dark and light themes at desktop and mobile widths.
+In a React app, install the package.
 
-## Install
-
-```bash
+```sh
 npm install @tangle-network/sandbox-ui
 ```
 
-Required peers and their supported ranges are in [package.json](./package.json) `peerDependencies`.
-The Interface compatibility check exercises each supported floor through source checks and a packed consumer's public declarations; a new major is qualified before its range is added.
-Optional peers are required only by the subpaths that use them; see [package.json](./package.json). `/editor` needs its tiptap, `yjs` and `@hocuspocus/provider` peers only when it renders an editor, and the `@tangle-network/ui` README holds the table of which surface needs which. `/files` needs `pdfjs-dist` only for `PdfViewer`, which `FilePreview` uses for PDFs; without it the viewer says so and falls back to the browser's own PDF viewer. The `ui` README covers its worker and asset setup through `configurePdfViewer`.
-
-### Retained reports
-
-Import `ResearchReport` from `@tangle-network/sandbox-ui/record/ResearchReport` for report-only server rendering. It needs the Core report/data peer and React; it avoids the optional WorkGraph feature and chat session stores. `record` retains the complete record/report/WorkGraph surface for hosts that use those features. Load the shared stylesheet for both.
-
-The Charts and UI peers in [package.json](./package.json) provide the shared clock and canonical run statuses; graph producers send `done` for completed work. Standalone report assets bundle the same UTC timestamp implementation during release.
-
-### Retained conversations
-
-`@tangle-network/sandbox-ui/run/record` holds the live transcript pieces: `timelineItems`, `ToolStep` and `PromptMore` turn an agent's stream into the kit's timeline rows, `withPrompts` restores the prompts a record withholds, and `VirtualList`, `collectionTarget` and `VirtualCommand` window long lists. A retained record is read through `AgentRecord` from `/record`.
-
-Generic `VirtualList`, `VirtualCommand` and `collectionTarget` at that entry forward their exact UI primitive bindings. UI owns measurement, navigation and menu behavior; the existing Sandbox paths remain supported. See UI's command stylesheet and source-scanning setup when rendering VirtualCommand.
-
-## Usage
+This component shows a one-line fix. Pass the original and updated file contents to display your own patch.
 
 ```tsx
-import {
-  SandboxWorkbench,
-  type FileNode,
-  type SessionMessage,
-  type SessionPart,
-} from "@tangle-network/sandbox-ui";
-```
-
-Import styles in your app root:
-
-```tsx
+import { DiffView } from "@tangle-network/sandbox-ui/workbench/diff";
 import "@tangle-network/sandbox-ui/styles";
-```
 
-An app that runs its own Tailwind v4 compile imports the source entry instead, and lists no `node_modules` paths:
-
-```css
-@import "tailwindcss";
-@import "@tangle-network/sandbox-ui/tailwind.css";
-```
-
-Run views draw `@tangle-network/charts` components (`TraceWorkspace`, `TraceWaterfall`, `AgentGraph`, `LatestEvents`), and charts owns their CSS: sandbox-ui's stylesheets never include it. Import the ones you render, once, beside this package's:
-
-```tsx
-import "@tangle-network/charts/react/flow-waterfall.css";
-import "@tangle-network/charts/react/agent-graph.css";
-import "@tangle-network/charts/react/live.css";
-```
-
-`AgentWorkspace` (also under `run`) is one agent's workspace behind a Files | Trace | Terminal control: the host supplies an `AgentWorkspaceSource` (`list`, `read`, an optional conversation `stream` and an optional `terminal` grant) and the workspace draws the files pane naming their origin, the read-only code and diff, the conversation as of the run cursor, and the terminal; it reports what it is waiting for or could not read instead of an empty pane.
-
-The entry carries Brand's tokens and utility registrations, this package's runtime CSS, and `@source` lines for its own `dist` and the `@tangle-network/ui` peer, so every component utility compiles once, in the app's own layer order.
-Brand defaults live in `theme.brand`, so host refinements in `theme` can override them. Agent apps import `@tangle-network/agent-app/tailwind.css`, which includes this entry.
-
-### Dashboard page spacing
-
-For apps whose pages already provide their own gutters, pass `contentClassName="px-0 pb-0 lg:px-0"` to `DashboardLayout`. New Sandbox is at the top of the sidebar; notifications sit above the account menu. Set `notificationsEnabled={false}` when the app has no notification feed. The desktop has no top bar; the mobile menu opens a focus-managed drawer.
-
-Use `sidebarLeading={({ collapsed }) => <WorkspaceSwitcher compact={collapsed} />}` for workspace controls; the mobile drawer supplies `collapsed: false`. A static node opens in a Workspace menu on the collapsed rail. `topBarLeading` remains a relocated legacy alias, and `topNavLinks` render as sidebar links. `collapseEmptyTopBar` is retained as a no-op. `DashboardPageHeader` keeps title, description and actions aligned without adding a card.
-
-### Workspace integration access
-
-Use `IntegrationsPanel` from `/integrations` for the provider catalog, logos, search, connection status, and account actions.
-Do not render a second connection catalog above it.
-Supply `getConnectionContext` for a short access label on each connected card.
-Supply `getConnectionActions` for authorized workspace actions in that card's menu.
-Each action has an `id`, `label`, optional `disabled` flag, and `onSelect` callback.
-The panel waits for asynchronous actions and surfaces failures.
-Keep workspace authorization and binding persistence in the consuming application's server.
-When a provider has multiple accounts, include distinct account labels and identities in its workspace actions.
-
-### Embed a sandbox app
-
-Use `EmbeddedAppView` when a workspace presents a running web app beside an agent conversation.
-Render it in a container with a defined height.
-
-```tsx
-import { EmbeddedAppView } from "@tangle-network/sandbox-ui/workbench/embedded-app"
-
-<main className="h-full min-h-0">
-  <EmbeddedAppView
-    app={{
-      id: selectedApp.id,
-      name: selectedApp.name,
-      status: selectedApp.previewStatus,
-      previewUrl: selectedApp.previewUrl,
-      statusMessage: selectedApp.previewError,
-    }}
-    allowedOrigins={workspace.previewOrigins}
-    readiness={selectedApp.httpReadiness}
-    access={workspace.enforcedPreviewAccess}
-    toolbarActions={<AppActions app={selectedApp} />}
-    onRetry={() => recheckPreview(selectedApp.id)}
-  />
-</main>
-```
-
-The host supplies the app list, stable identity, persistence, authorization, and readiness result.
-Set `status: "ready"` only after an app-level HTTP probe succeeds.
-A preview route becoming available does not prove app health.
-Supply a resolved, credential-free HTTPS URL, or HTTP loopback for local development.
-Pass `allowedOrigins` from product policy or the enforcing service, independent of the URL.
-The host must authorize access before it returns the URL.
-The component shows starting and unavailable states without mounting a frame.
-Its ready view uses the same URL validation and iframe isolation as `PreviewView`.
-The compact header uses the shared 56px workspace pane row and provides Reload and Open in new tab.
-Place product actions in `toolbarActions` to share that header without a second toolbar.
-Pass service-observed `readiness` and enforced `access` to show their status inside the pane.
-Show process and port state beside the pane if your runtime exposes those separately.
-Do not infer either state from the preview URL or iframe load.
-
-### Fonts
-
-sandbox-ui references the following font families in its design tokens but does **not** bundle them — consumer apps must load the fonts themselves. This is deliberate: a URL `@import` inside a library CSS bundle breaks when downstream apps chain-import the stylesheet (see CHANGELOG 0.10.9 for the full reasoning).
-
-| Family       | Role                                | Used as CSS variable |
-| ------------ | ----------------------------------- | -------------------- |
-| Geist        | UI body text                        | `--font-sans`        |
-| Geist Mono   | Code, terminal                      | `--font-mono`        |
-| Outfit       | Display / headings (default theme)  | `--font-display`     |
-| Manrope      | Display / headings (vault theme)    | `--font-display`     |
-| Inter        | UI body (vault theme)               | `--font-sans`        |
-
-Pick one loading strategy that fits your app:
-
-**1. Self-hosted via `@fontsource/*`** (recommended — no external network request):
-
-```bash
-npm install @fontsource/geist-sans @fontsource/geist-mono @fontsource/outfit @fontsource/manrope @fontsource/inter
-```
-
-```tsx
-// app entry
-import "@fontsource/geist-sans/400.css";
-import "@fontsource/geist-sans/500.css";
-import "@fontsource/geist-sans/600.css";
-import "@fontsource/geist-sans/700.css";
-import "@fontsource/geist-mono/400.css";
-import "@fontsource/geist-mono/500.css";
-import "@fontsource/outfit/500.css";
-import "@fontsource/outfit/700.css";
-import "@fontsource/manrope/500.css";
-import "@fontsource/manrope/700.css";
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/600.css";
-```
-
-**2. Google Fonts via HTML `<link>`:**
-
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" />
-```
-
-Any family you omit falls back per the `--font-*` token chain (e.g. `--font-sans` falls back to `"DM Sans", ui-sans-serif, system-ui, sans-serif`).
-
-If you are building on the sandbox SDK directly, use `useSdkSession` to turn raw SDK/session-gateway events into the `messages + partMap` model that `ChatContainer` and `SandboxWorkbench` expect:
-
-```tsx
-import {
-  SandboxWorkbench,
-} from "@tangle-network/sandbox-ui";
-import { useSdkSession } from "@tangle-network/sandbox-ui/sdk-hooks";
-
-function App() {
-  const {
-    messages,
-    partMap,
-    isStreaming,
-    appendUserMessage,
-    beginAssistantMessage,
-    applySdkEvent,
-    completeAssistantMessage,
-    failAssistantMessage,
-  } = useSdkSession();
-
-  async function runTurn(text: string) {
-    appendUserMessage({ content: text });
-    const assistantMessageId = beginAssistantMessage();
-
-    try {
-      for await (const event of sdk.streamPrompt(text)) {
-        applySdkEvent(event, { messageId: assistantMessageId });
-      }
-      completeAssistantMessage({ messageId: assistantMessageId });
-    } catch (error) {
-      failAssistantMessage(
-        error instanceof Error ? error.message : "Agent run failed",
-        { messageId: assistantMessageId },
-      );
-    }
-  }
-
+export default function ReviewChange() {
   return (
-    <SandboxWorkbench
-      session={{
-        messages,
-        partMap,
-        isStreaming,
-        onSend: runTurn,
-      }}
+    <DiffView
+      filename="greet.ts"
+      baseline={'export const greet = (name: string) => "Hello, name";'}
+      current={'export const greet = (name: string) => `Hello, ${name}`;'}
+      themeType="light"
     />
   );
 }
 ```
 
-### Compact workspace files
+## Build a workspace
 
-New agent products compose their application shell with `AgentWorkspaceCompanion` from `@tangle-network/agent-app/workspace-react`.
-Use `WorkspaceFilesPane` for its Files content and `WorkspaceArtifactView` for technical artifact rendering.
-Both are exported from `@tangle-network/sandbox-ui/workspace`.
+| What you want to show | Where to start |
+| --- | --- |
+| A conversation alongside files, a diff, and a terminal | [SandboxWorkbench](https://github.com/tangle-network/sandbox-ui/blob/main/docs/integration.md#existing-sandbox-workbench) |
+| A live run with a trace and the selected agent's output | [LiveRun](https://github.com/tangle-network/sandbox-ui/blob/main/docs/integration.md#live-run-viewer) |
+| An app running inside a sandbox | [EmbeddedAppView](https://github.com/tangle-network/sandbox-ui/blob/main/docs/integration.md#embed-a-sandbox-app) |
+| A saved run or research report | [AgentRecord and ResearchReport](https://github.com/tangle-network/sandbox-ui/blob/main/docs/integration.md#retained-records-and-reports) |
+| A dashboard with workspace and account navigation | [Sidebar components](https://github.com/tangle-network/sandbox-ui/blob/main/docs/sidebar.md) |
 
-```tsx
-<WorkspaceFilesPane
-  paths={workspacePaths}
-  selectedPath={selectedPath}
-  onSelect={openFile}
-  onBack={closePreview}
-  preview={selectedArtifact ? {
-    path: selectedArtifact.path,
-    content: <WorkspaceArtifactView artifact={selectedArtifact} hideTitleBlock />,
-    actions: <DownloadFile artifact={selectedArtifact} />,
-  } : undefined}
-/>
+Import the subpath for the feature you use. The [integration guide](https://github.com/tangle-network/sandbox-ui/blob/main/docs/integration.md) covers optional dependencies, CSS imports, fonts, and theming. For the composed agent shell, composer, and pickers, see [component ownership](https://github.com/tangle-network/sandbox-ui/blob/main/UI-DIRECTION.md#canonical-ownership).
+
+## Run the examples locally
+
+```sh
+git clone https://github.com/tangle-network/sandbox-ui.git
+cd sandbox-ui
+pnpm install --frozen-lockfile
+pnpm storybook
 ```
 
-Pass either a recursive `root: FileNode` or canonical `paths`, including trailing slashes for empty folders.
-A root input returns its original node as the second `onSelect` argument; flat paths have no node metadata.
-The pane uses the shared searchable file tree and retains it while a preview is open.
-Returning to files preserves expansion, selection, and scroll.
-Native search ends when a result is selected.
-Adapters own loading, permissions, errors, file reads, and actions; `emptyState` customizes an empty workspace.
-One card frames the tree and the open file; pass `surface="plain"` inside a pane that already frames them.
-The search field and the open-file tabs share one header row, and `--files-inset` sets every inset.
-The preview header exposes Back to files, the selected path, and supplied actions without a second title frame.
-Set `hideTitleBlock` on the nested artifact renderer when the containing pane already identifies the file.
-Download, format, toolbar, and content controls remain available; standalone rendering keeps its existing title defaults.
+Open <http://localhost:6006>. Each story shows a component with sample data. The [visual test guide](https://github.com/tangle-network/sandbox-ui/blob/main/tests/visual/README.md) covers running the browser suite and reviewing snapshot changes.
 
-### Existing sandbox workbench
-
-Compose sandbox applications around `SandboxWorkbench` when you want the library’s default operating model:
-
-```tsx
-const root: FileNode = {
-  name: "agent",
-  path: "/home/agent",
-  type: "directory",
-  children: [],
-};
-
-const messages: SessionMessage[] = [];
-const partMap: Record<string, SessionPart[]> = {};
-
-<SandboxWorkbench
-  title="Tax filing workspace"
-  directory={{
-    root,
-    visibility: {
-      hiddenPathPrefixes: ["/home/agent/tax_toolkit"],
-    },
-  }}
-  session={{
-    messages,
-    partMap,
-    isStreaming: false,
-    presentation: "timeline",
-    onSend: console.log,
-  }}
-  runtime={{
-    title: "Runtime",
-  }}
-/>;
-```
-
-`FileTreeVisibilityOptions` is a UI-layer policy only. Sensitive paths still need to be hidden and denied by the app/backend layer.
-
-### The three-pane shell
-
-For a chats rail · transcript + composer · artifacts layout, hand `SandboxWorkbench` a `SessionSidebar` as its `rail` and your composer as `composer`.
-The default places the session title and status in the transcript pane header without a second shell row.
-Use `centerHeader={null}` when the transcript should have no pane frame either.
-`WorkspaceLayout` leaves its center row out until a caller supplies `centerHeader`.
-Closed panes get compact edge controls with reserved space beside the transcript.
-`surface="inset"` raises the center and right panes as one surface inside an even gutter on the recessed backdrop.
-Its center always has a 48px header: closed-pane controls sit flat in its top-right corner, and an open right pane shares that header height and a divider.
-`rightOpenLabel`, `rightCloseLabel`, and `rightControlHint` name the right-pane controls and their tooltip.
-It owns pane sizes and, when you pass `layout.leftOpen` / `layout.onLeftOpenChange`, the open state too.
-
-```tsx
-const [chatsOpen, setChatsOpen] = useState(true);
-
-<SandboxWorkbench
-  centerHeader={null}
-  rail={
-    <SessionSidebar
-      variant="quiet"
-      groupBy="status"
-      showUpdatedAt
-      fill
-      className="border-r-0"
-      title="Chats"
-      createLabel="New chat"
-      items={threads}
-      currentItemId={threadId}
-      onSelectItem={(item) => navigate(item.href)}
-      onCreate={createThread}
-      onCollapse={() => setChatsOpen(false)}
-    />
-  }
-  session={{ messages, partMap, isStreaming }}
-  composer={<ChatComposer onSend={runTurn} />}
-  artifacts={[
-    { id: "changes", kind: "custom", title: "Changes", icon: GitCompare, pinned: true, content: <ChangesPanel /> },
-    ...openFiles,
-  ]}
-  layout={{
-    leftOpen: chatsOpen,
-    onLeftOpenChange: setChatsOpen,
-    keyboardShortcuts: true,
-    leftCollapsedControl: (
-      <button type="button" aria-label="Show chats" onClick={() => setChatsOpen(true)}>
-        <PanelLeftOpen className="h-4 w-4" />
-      </button>
-    ),
-  }}
-/>;
-```
-
-Each `SessionSidebarItem` can carry an `icon` (rendered in a 16×20 slot, with the status dot as a corner badge) and a `meta` line; `formatRelativeAge` from `/workspace` formats the age for that line.
-
-## Theming And Retheming
-
-There is a built-in Tangle default theme, but consumers can restyle the library in three layers:
-
-1. Pick a built-in surface theme
-2. Override semantic tokens
-3. Wrap higher-level components when you want a different product composition
-
-### 1. Pick a Built-in Theme
-
-`WorkspaceLayout` and `SandboxWorkbench` support:
-
-- `theme="vault"` — light theme with solid surfaces
-- No theme prop — default dark theme
-
-They also support `density="comfortable"` and `density="compact"`.
-
-```tsx
-<SandboxWorkbench
-  layout={{
-    theme: "vault",
-    density: "comfortable",
-  }}
-  session={{ ... }}
-/>
-```
-
-If you are not using `SandboxWorkbench`, you can set the same attributes yourself:
-
-```tsx
-<div data-sandbox-ui data-sandbox-theme="vault" data-density="compact">
-  <YourSandboxApp />
-</div>
-```
-
-### 2. Override Semantic Tokens
-
-Brand owns the shared visual contract (`@tangle-network/brand/styles/tokens.css`). The important tokens are:
-
-- surfaces: `--bg-root`, `--bg-card`, `--bg-elevated`, `--bg-section`, `--bg-input`
-- text: `--text-primary`, `--text-secondary`, `--text-muted`
-- brand: `--brand-cool`, `--brand-glow`, `--brand-purple`
-- accent surfaces: `--accent-gradient-strong`, `--accent-surface-soft`, `--accent-surface-strong`, `--accent-text`
-- borders: `--border-subtle`, `--border-default`, `--border-accent`
-- radii/shadows: `--radius-*`, `--shadow-card`, `--shadow-dropdown`, `--shadow-accent`
-
-Markdown prose uses `--foreground` and `--muted-foreground` as HSL channel values.
-Set them on the nearest product wrapper when its colors differ from the brand theme.
-
-App-level overrides can be scoped to a wrapper:
-
-```css
-.tax-theme {
-  --brand-cool: hsl(187 75% 54%);
-  --brand-glow: hsl(164 74% 56%);
-  --bg-root: hsl(222 18% 9%);
-  --bg-card: hsl(223 20% 12%);
-  --border-accent: hsl(187 75% 48% / 0.35);
-  --font-sans: "Satoshi", ui-sans-serif, system-ui, sans-serif;
-}
-```
-
-```tsx
-<div className="tax-theme">
-  <SandboxWorkbench ... />
-</div>
-```
-
-### 3. Know When To Wrap Instead Of Override
-
-Token overrides are the right tool when you want:
-
-- a different brand color system
-- different typography
-- tighter or roomier density
-- a more consumer-facing or operator-facing tone
-
-Wrap or compose on lower-level exports when you want:
-
-- a different page shell
-- different header chrome
-- a different artifact tab model
-- app-specific empty states and actions
-
-The dashboard and billing surfaces read the accent tokens. Their class seams are:
-
-- `DashboardLayout.className`, `sidebarClassName`, `contentClassName`
-- `BillingDashboard.className`, `cardClassName`
-- `PricingCards.className`, `cardClassName`
-- `UsageChart.className`
-
-For that, compose directly from:
-
-- `/workspace`
-- `/chat`
-- `/run`
-- `/files`
-
-`DiffView` from `/workbench` defaults to a dark code theme. If the host app offers a light/dark switch, pass its selected theme as `themeType`. The diff renderer updates when that value changes.
-
-## Docs
-
-| Guide | Description |
-|-------|-------------|
-| [Sidebar](./docs/sidebar.md) | Composable Rail + Panel sidebar system (architecture, components, full API) |
-
-## Subpath Exports
-
-| Subpath | Description |
-|---------|-------------|
-| `/primitives` | Deprecated compatibility re-export of `@tangle-network/ui/primitives` (Button, Card, Dialog, Select, Table, Tabs, Toast, ...), plus Sandbox's own `Logo`, `TangleKnot` and `SectionTitle`. New code imports `@tangle-network/ui/primitives`. |
-| `/chat` | ChatContainer, ChatInput, ChatMessage, AgentTimeline, ThinkingIndicator |
-| `/run` | ToolCallFeed, RunGroup, InlineToolItem, ExpandedToolDetail |
-| `/workspace` | WorkspaceFilesPane, WorkspaceArtifactView, SandboxWorkbench, WorkspaceLayout, DirectoryPane, RuntimePane, StatusBar |
-| `/workbench` | DiffView, ChangesPane, CodeView, artifact and preview components |
-| `/openui` | OpenUIArtifactRenderer and schema types for structured artifact rendering |
-| `/files` | FileTree, FilePreview, FileTabs, FileArtifactPane, PdfViewer, FileCard, FileList |
-| `/workbench/embedded-app` | EmbeddedAppView and preview status types without terminal or editor modules |
-| `/dashboard` | [Sidebar](./docs/sidebar.md), DashboardLayout, BillingDashboard, UsageChart |
-| `/editor` | TipTap collaborative editor (requires optional peers) |
-| `/terminal` | xterm.js terminal view (requires optional peers) |
-| `/markdown` | Markdown renderer with GFM, code blocks, copy button |
-| `/auth` | AuthHeader, GitHubLoginButton, UserMenu |
-| `/pages` | Pre-built billing, pricing, profiles pages |
-| `/hooks` | useSSEStream, useAuth, usePtySession, useRunGroups, etc. |
-| `/sdk-hooks` | Lightweight session/stream hooks without the React Query CRUD hook bundle |
-| `/stores` | Session and chat nanostores |
-| `/types` | TypeScript types for messages, parts, runs, sessions |
-| `/utils` | cn, formatDuration, timeAgo, tool display helpers |
-| `/styles` | Compiled CSS bundle |
-| `/tailwind.css` | Tailwind v4 source entry: tokens, runtime CSS, and the `@source` lines for this package and `@tangle-network/ui` |
-
-## Stack
-
-- [Radix UI](https://www.radix-ui.com/) primitives
-- [Tailwind CSS](https://tailwindcss.com/) v4
-- [Lucide](https://lucide.dev/) icons
-- [CVA](https://cva.style/) for variant management
-- Shared semantic tokens for default dark and `vault` light sandbox themes
-- ESM-only, tree-shakeable, fully typed
-
-## License
-
-MIT
-
-The native Runtime viewer is `LiveRun` from `@tangle-network/sandbox-ui/run/live`. It composes the same trace workspace, selected-agent conversation, retained files and capture coverage. Hosts may supply the existing fetch/EventSource transport for their authenticated session; an API or authenticated transport change clears the previous view, while frames within one stable transport preserve selection and the camera. Keep the transport object stable for that account. `@tangle-network/sandbox-ui/workspace-viewer.js` is the self-contained browser entry for Runtime's existing asset-directory contract, with `styles.css` beside it. `useDocument` owns same-origin ETag reads. `useEventStream` from `/run` owns native reconnect, terminal end and stale callback cleanup; `useAgentStream` resumes retained rows by generation and sequence. Authenticated openers keep their session and reconnect policy. Producers own validation and accounting.
-
-## Retained records and reports
-
-`@tangle-network/sandbox-ui/record` owns `AgentRecord`, `ResearchReport` and `RecordWorkGraph`. Install the optional `@drewstone/agent-record` peer for this feature; its public `/record` and `/report` entries own validation, models, provenance relationships and report exports. The `/run/record` transcript pieces need no parser package.
-
-```tsx
-import { parseRecord } from '@drewstone/agent-record/record'
-import { AgentRecord } from '@tangle-network/sandbox-ui/record'
-import '@tangle-network/sandbox-ui/styles'
-
-const record = parseRecord(input)
-<AgentRecord records={[record]} />
-```
-
-`AgentRecord` reads a record as a story: what was asked and the result, the last published page's claim, one facts line, a time spine of every agent (gaps over 3 min compressed, uncaptured attempts hatched, numbered turning points, a brush that zooms to the steps), the turning points, then the work in episodes with their steps, pages and outputs, and a footer of what the record leaves out. Every sentence and number comes from `@drewstone/agent-record/story` (4.0.0 or later), so hosts print the same values; a missing value is left out, never shown as 0, a dash or "Unknown". Selection keeps the original run and event IDs and a recorded timestamp; an `eventId` opens its episode and step. The evidence graph keeps recorded entity kinds and relationships and uses the maintained graph camera.
-
-Research reports retain source documents, exact citations, Markdown/math, print and JSON/LaTeX exports. Optional source search accepts only a same-origin path and displays only the selected play's retained bytes. `agent-record-report` continues to write a single offline HTML file using this package's report viewer and stylesheet.
+[MIT license](https://github.com/tangle-network/sandbox-ui/blob/main/LICENSE)

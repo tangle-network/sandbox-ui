@@ -1,9 +1,6 @@
 {
   "qualified_source": "ff19782804abb199f5377bdb4421761e98ad9c8a",
-  "gate_id": "beelink1-f36ef98df229eba2067a405ff36eee48",
-  "gate_mode": "normal,defaultfrozeninstall/normaladmission",
   "gate_exit": 0,
-  "waited_s": 60,
   "ran_s": 279,
   "node": "v22.23.3",
   "navigation": {

@@ -2,7 +2,7 @@
 
 The source branch starts from Sandbox UI `main` at `3b77b01` and prepares package 0.118.0.
 The before images are the checked-in `main` Storybook snapshots at that revision.
-The after images were captured from this branch's rebuilt Storybook in Chromium on GTR.
+The after images were captured from this branch's rebuilt Storybook in Chromium.
 Storybook loaded bundled fonts, and every tested story was checked for runtime errors and document overflow.
 
 | Surface and state | Before | After |

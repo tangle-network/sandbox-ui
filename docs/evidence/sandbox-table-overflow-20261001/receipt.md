@@ -1,7 +1,7 @@
 # Sandbox table overflow browser receipt
 
 Source: `58661534d64ec32e5c8c243e1bb66732d471fdb3` (`@tangle-network/sandbox-ui` 0.116.5).
-Target: Storybook 10.6 on drew-GTR-Pro, Chromium from Playwright 1.63.
+Target: Storybook 10.6, Chromium from Playwright 1.63.
 The 50-row fixtures use long unbroken sandbox, node, team, image, and provisioning labels.
 The five-column and six-column stories are `dashboard-sandboxtable--long-names` and `dashboard-sandboxtable--long-names-with-scope`.
 

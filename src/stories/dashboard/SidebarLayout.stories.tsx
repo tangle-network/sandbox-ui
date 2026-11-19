@@ -76,7 +76,7 @@ const base = {
   hideBelow: "lg",
   logo: <span className="text-sm font-semibold text-foreground">Agent</span>,
   logoHref: "/",
-  user: { name: "Drew Stone", email: "drew@tangle.tools" },
+  user: { name: "Demo User", email: "demo@example.com" },
   onLogout: () => {},
   appearance: { value: "system", onChange: () => {} },
   contentClassName: "flex h-screen flex-col overflow-hidden",

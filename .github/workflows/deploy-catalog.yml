@@ -87,19 +87,21 @@ jobs:
         if: steps.credentials.outputs.present == 'true'
         with:
           name: storybook-static-${{ github.sha }}
-          path: storybook-static
+          path: ${{ runner.temp }}/catalog-deploy/storybook-static
       - uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4.1.3
         if: steps.credentials.outputs.present == 'true'
         id: deploy
-        env:
-          pnpm_config_store_dir: ${{ runner.temp }}/pnpm-store
         with:
+          workingDirectory: ${{ runner.temp }}/catalog-deploy
+          packageManager: npm
+          wranglerVersion: "4.164.0"
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy storybook-static --project-name=sandbox-ui-storybook --branch=${{ env.CATALOG_BRANCH }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
       - name: Verify the immutable deployment serves this exact catalog
         if: steps.credentials.outputs.present == 'true'
+        working-directory: ${{ runner.temp }}/catalog-deploy
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |

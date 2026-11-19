@@ -1,33 +1,15 @@
-# Sidebar motion proof — #10197 / #429
+# Sidebar navigation and motion
 
-Capture source: `b860006f27b155bf4018ef0b5d4f54b2c7335a01`.
-The frozen install, typecheck, build, 88 export identity checks, and Storybook build passed.
+The original screenshots and recordings were retired because they displayed identifying account details. The following results describe those runs.
 
-The uninstrumented navigation suite passed21/21, workers2, retries0, no flakes/skips. The static update run completed28/28 captures and proposed exactly14 dark PNG changes; all14 light hashes stayed unchanged. Both reviewers opened all14 before/after pairs. **The update run is not a frozen-baseline comparison.** The final commit adds only reviewed goldens and these proof files; the final binary/proof head and its normal non-update comparison receipt are recorded in [PR#429](https://github.com/tangle-network/sandbox-ui/pull/429).
+At revision `b860006f`, all 21 navigation tests passed. A snapshot update rendered 28 images. The 14 dark-theme images changed and the 14 light-theme images retained their previous hashes. The update run measured which baselines changed.
 
-These eight original, uncut recordings cover light/dark × normal/reduced × phone/desktop. Phone stories exercise open, repeated Escape/Enter dismissal reversals, changing reduced-motion preference, close, reopen, focus restoration and unlocked page. Desktop stories exercise inert group collapse/expand, rail collapse/expand without layout transitions, and a static Responding status under reduced motion. `manifest.json` records exact dimensions, durations, encoded metadata and hashes. Frame sampling at6fps and the passed DOM assertions informed coding-agent review; this is not a real-time playback, physical frame cadence, latency percentile, manual screen-reader/touch, human craft or production proof. The recordings retain initial fixture loading.
+At revision `ff197828`, all 21 navigation tests and all 28 comparisons against the saved images passed without retries. The phone checks covered opening and dismissing the menu, restoring focus, and changing the reduced-motion preference. The desktop checks covered expanding and collapsing navigation groups and the rail. The attempted check of the preceding header implementation at `97911207` ended before a browser ran.
 
-| Case | Uncut video | Full still |
-| --- | --- | --- |
-| phone dismissal reversal and preference changes light no-preference | [phone-light-normal.webm](phone-light-normal.webm) | [phone-light-normal.png](phone-light-normal.png) |
-| desktop layout stays quiet and disclosure stays inert light no-preference | [desktop-light-normal.webm](desktop-light-normal.webm) | [desktop-light-normal.png](desktop-light-normal.png) |
-| phone dismissal reversal and preference changes light reduce | [phone-light-reduced.webm](phone-light-reduced.webm) | [phone-light-reduced.png](phone-light-reduced.png) |
-| desktop layout stays quiet and disclosure stays inert light reduce | [desktop-light-reduced.webm](desktop-light-reduced.webm) | [desktop-light-reduced.png](desktop-light-reduced.png) |
-| phone dismissal reversal and preference changes dark no-preference | [phone-dark-normal.webm](phone-dark-normal.webm) | [phone-dark-normal.png](phone-dark-normal.png) |
-| desktop layout stays quiet and disclosure stays inert dark no-preference | [desktop-dark-normal.webm](desktop-dark-normal.webm) | [desktop-dark-normal.png](desktop-dark-normal.png) |
-| phone dismissal reversal and preference changes dark reduce | [phone-dark-reduced.webm](phone-dark-reduced.webm) | [phone-dark-reduced.png](phone-dark-reduced.png) |
-| desktop layout stays quiet and disclosure stays inert dark reduce | [desktop-dark-reduced.webm](desktop-dark-reduced.webm) | [desktop-dark-reduced.png](desktop-dark-reduced.png) |
+To check the current sidebar, build Storybook and run the navigation and SidebarLayout visual tests on Linux. The stories use a fictional account.
 
-The ten Brand principle evidence rows and remaining acceptance limits are maintained in the PR description; no token values or policy are duplicated here.
-
-## Header retirement fix qualification
-
-The preceding section retains the original feature proof at `b860006`; those eight recordings remain unchanged. The additional header-presence fix is qualified at `ff19782804abb199f5377bdb4421761e98ad9c8a`: frozen install, typecheck, build and Storybook passed, followed by **21/21 navigation cases and 28/28 frozen static comparisons**, workers2/retries0, with no failures, flakes, skips or snapshot updates. The tracked tree stayed clean.
-
-Both normal-motion phone themes recorded the actual closed-but-mounted drawer with **one ReCenter header inside, one globally, and two running animations**. The original regression head `9791120` did not execute: its single development gate was canceled unadmitted after300s of CPU/checkout capacity waits. RED remains UNCHECKED; no before-failure observation is claimed.
-
-- Light: [uncut video](header-retirement/light.webm), [open controlled menu still](header-retirement/open-menu-light.png).
-- Dark: [uncut video](header-retirement/dark.webm), [open controlled menu still](header-retirement/open-menu-dark.png).
-- [Actual closed-DOM samples](header-retirement/samples.json) and [source, gate, dimensions, durations and hashes](header-retirement/manifest.json).
-
-Both unmodified original recordings retain fixture loading and were inspected through6fps filmstrips with the passed browser outcomes. This is package fixture qualification; no real-time playback, physical cadence, latency percentile, manual accessibility, human craft or production claim is made. A later proof-only commit can reuse this gate because executable inputs remain unchanged.
+```sh
+pnpm build-storybook
+pnpm exec playwright test tests/visual/sidebar-navigation.spec.mjs
+pnpm exec playwright test tests/visual/stories.spec.mjs --grep dashboard-sidebarlayout
+```

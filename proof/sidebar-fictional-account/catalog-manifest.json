@@ -1,0 +1,731 @@
+{
+  "schemaVersion": 1,
+  "repository": "tangle-network/sandbox-ui",
+  "sourceSha": "6031893087cfb8b7805c6550991f10a17f64f150",
+  "package": {
+    "name": "@tangle-network/sandbox-ui",
+    "version": "11.0.1"
+  },
+  "indexSha256": "79406d46338c97fb54f259e99d49e8c2f18ded989f42cf735cd94e257036e7ce",
+  "builtStoryCount": 386,
+  "critical": [
+    {
+      "component": "SandboxTable",
+      "source": "src/dashboard/sandbox-table.tsx",
+      "storyFile": "src/stories/dashboard/SandboxTable.stories.tsx",
+      "task": "Find and manage a sandbox",
+      "states": [
+        {
+          "id": "dashboard-sandboxtable--mixed-statuses",
+          "title": "Dashboard/SandboxTable",
+          "name": "Mixed Statuses"
+        },
+        {
+          "id": "dashboard-sandboxtable--empty",
+          "title": "Dashboard/SandboxTable",
+          "name": "Empty"
+        },
+        {
+          "id": "dashboard-sandboxtable--long-names",
+          "title": "Dashboard/SandboxTable",
+          "name": "Long Names"
+        },
+        {
+          "id": "dashboard-sandboxtable--long-names-with-scope",
+          "title": "Dashboard/SandboxTable",
+          "name": "Long Names With Scope"
+        },
+        {
+          "id": "dashboard-sandboxtable--status-contrast",
+          "title": "Dashboard/SandboxTable",
+          "name": "Status Contrast"
+        }
+      ]
+    },
+    {
+      "component": "ChangesPane",
+      "source": "src/workbench/changes-pane.tsx",
+      "storyFile": "src/stories/workbench/changes-pane.stories.tsx",
+      "task": "Review changed files",
+      "states": [
+        {
+          "id": "workbench-changespane--default",
+          "title": "Workbench/ChangesPane",
+          "name": "Default"
+        },
+        {
+          "id": "workbench-changespane--interactive",
+          "title": "Workbench/ChangesPane",
+          "name": "Interactive (select, commit, push)"
+        },
+        {
+          "id": "workbench-changespane--many-files",
+          "title": "Workbench/ChangesPane",
+          "name": "Many files (list scrolls, diff stays)"
+        },
+        {
+          "id": "workbench-changespane--resolving-contents",
+          "title": "Workbench/ChangesPane",
+          "name": "Resolving contents"
+        },
+        {
+          "id": "workbench-changespane--commit-failed",
+          "title": "Workbench/ChangesPane",
+          "name": "Commit rejected"
+        },
+        {
+          "id": "workbench-changespane--committing",
+          "title": "Workbench/ChangesPane",
+          "name": "Commit in flight"
+        },
+        {
+          "id": "workbench-changespane--loading",
+          "title": "Workbench/ChangesPane",
+          "name": "Loading"
+        },
+        {
+          "id": "workbench-changespane--empty",
+          "title": "Workbench/ChangesPane",
+          "name": "Clean tree"
+        },
+        {
+          "id": "workbench-changespane--no-commits-yet",
+          "title": "Workbench/ChangesPane",
+          "name": "No commits yet"
+        },
+        {
+          "id": "workbench-changespane--failed",
+          "title": "Workbench/ChangesPane",
+          "name": "Status failed"
+        }
+      ]
+    },
+    {
+      "component": "DiffView",
+      "source": "src/workbench/diff-view.tsx",
+      "storyFile": "src/stories/workbench/DiffView.stories.tsx",
+      "task": "Read complete changed lines",
+      "states": [
+        {
+          "id": "workbench-diffview--changed-line",
+          "title": "Workbench/DiffView",
+          "name": "Changed Line"
+        },
+        {
+          "id": "workbench-diffview--dark-theme",
+          "title": "Workbench/DiffView",
+          "name": "Dark Theme"
+        },
+        {
+          "id": "workbench-diffview--light-theme",
+          "title": "Workbench/DiffView",
+          "name": "Light Theme"
+        },
+        {
+          "id": "workbench-diffview--no-changes",
+          "title": "Workbench/DiffView",
+          "name": "No Changes"
+        }
+      ]
+    },
+    {
+      "component": "PreviewView",
+      "source": "src/workbench/preview-view.tsx",
+      "storyFile": "src/stories/workbench/PreviewView.stories.tsx",
+      "task": "Inspect application preview state",
+      "states": [
+        {
+          "id": "workbench-previewview--local-app",
+          "title": "Workbench/PreviewView",
+          "name": "Local App"
+        },
+        {
+          "id": "workbench-previewview--verified-response",
+          "title": "Workbench/PreviewView",
+          "name": "Verified Response"
+        },
+        {
+          "id": "workbench-previewview--failed-check",
+          "title": "Workbench/PreviewView",
+          "name": "Failed Check"
+        },
+        {
+          "id": "workbench-previewview--unsafe-address",
+          "title": "Workbench/PreviewView",
+          "name": "Unsafe Address"
+        }
+      ]
+    },
+    {
+      "component": "TerminalView",
+      "source": "src/terminal/terminal-view.tsx",
+      "storyFile": "src/stories/terminal/TerminalView.stories.tsx",
+      "task": "Read command output and connection state",
+      "states": [
+        {
+          "id": "terminal-terminalview--connected-pty",
+          "title": "Terminal/TerminalView",
+          "name": "Connected Pty"
+        }
+      ]
+    },
+    {
+      "component": "AgentGraph",
+      "source": "src/workflows/AgentGraph.tsx",
+      "storyFile": "src/stories/workflows/AgentGraph.stories.tsx",
+      "task": "Find needs-you, failed and quiet agents at phone and desktop widths",
+      "states": [
+        {
+          "id": "workflows-agentgraph--seventeen-agents",
+          "title": "workflows/AgentGraph",
+          "name": "Seventeen Agents"
+        },
+        {
+          "id": "workflows-agentgraph--workspace-pane",
+          "title": "workflows/AgentGraph",
+          "name": "Workspace Pane"
+        },
+        {
+          "id": "workflows-agentgraph--nested-teams",
+          "title": "workflows/AgentGraph",
+          "name": "Nested Teams"
+        },
+        {
+          "id": "workflows-agentgraph--nested-teams-left-to-right",
+          "title": "workflows/AgentGraph",
+          "name": "Nested Teams Left To Right"
+        },
+        {
+          "id": "workflows-agentgraph--live-run-cards",
+          "title": "workflows/AgentGraph",
+          "name": "Live Run Cards"
+        },
+        {
+          "id": "workflows-agentgraph--seventeen-live",
+          "title": "workflows/AgentGraph",
+          "name": "Seventeen Live"
+        },
+        {
+          "id": "workflows-agentgraph--live-needs-you",
+          "title": "workflows/AgentGraph",
+          "name": "Live Needs You"
+        },
+        {
+          "id": "workflows-agentgraph--live-failed",
+          "title": "workflows/AgentGraph",
+          "name": "Live Failed"
+        },
+        {
+          "id": "workflows-agentgraph--live-quiet",
+          "title": "workflows/AgentGraph",
+          "name": "Live Quiet"
+        },
+        {
+          "id": "workflows-agentgraph--no-events",
+          "title": "workflows/AgentGraph",
+          "name": "No Events"
+        },
+        {
+          "id": "workflows-agentgraph--one-event",
+          "title": "workflows/AgentGraph",
+          "name": "One Event"
+        },
+        {
+          "id": "workflows-agentgraph--phone-390",
+          "title": "workflows/AgentGraph",
+          "name": "Phone 390"
+        },
+        {
+          "id": "workflows-agentgraph--light-theme",
+          "title": "workflows/AgentGraph",
+          "name": "Light Theme"
+        },
+        {
+          "id": "workflows-agentgraph--reduced-motion",
+          "title": "workflows/AgentGraph",
+          "name": "Reduced Motion"
+        },
+        {
+          "id": "workflows-agentgraph--burst",
+          "title": "workflows/AgentGraph",
+          "name": "Burst"
+        },
+        {
+          "id": "workflows-agentgraph--live-failed-long",
+          "title": "workflows/AgentGraph",
+          "name": "Live Failed Long"
+        },
+        {
+          "id": "workflows-agentgraph--hundred-workers",
+          "title": "workflows/AgentGraph",
+          "name": "Hundred Workers"
+        }
+      ]
+    },
+    {
+      "component": "AgentGraphHub",
+      "source": "src/workflows/AgentGraph.tsx",
+      "storyFile": "src/stories/workflows/AgentGraphHub.stories.tsx",
+      "task": "Inspect live agent and tool calls",
+      "states": [
+        {
+          "id": "workflows-agentgraph-hub--live",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Live"
+        },
+        {
+          "id": "workflows-agentgraph-hub--working",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Working"
+        },
+        {
+          "id": "workflows-agentgraph-hub--needs-you",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Needs You"
+        },
+        {
+          "id": "workflows-agentgraph-hub--failed",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Failed"
+        },
+        {
+          "id": "workflows-agentgraph-hub--tool-popover",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Tool Popover"
+        },
+        {
+          "id": "workflows-agentgraph-hub--settled",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Settled"
+        },
+        {
+          "id": "workflows-agentgraph-hub--large-run",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Large Run"
+        },
+        {
+          "id": "workflows-agentgraph-hub--light",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Light"
+        },
+        {
+          "id": "workflows-agentgraph-hub--phone-390",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Phone 390"
+        },
+        {
+          "id": "workflows-agentgraph-hub--reduced-motion",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Reduced Motion"
+        },
+        {
+          "id": "workflows-agentgraph-hub--no-calls",
+          "title": "workflows/AgentGraph Hub",
+          "name": "No Calls"
+        },
+        {
+          "id": "workflows-agentgraph-hub--call-lifecycle",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Call Lifecycle"
+        },
+        {
+          "id": "workflows-agentgraph-hub--failed-call",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Failed Call"
+        },
+        {
+          "id": "workflows-agentgraph-hub--quiet",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Quiet"
+        },
+        {
+          "id": "workflows-agentgraph-hub--unreported-history",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Unreported History"
+        },
+        {
+          "id": "workflows-agentgraph-hub--empty-history",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Empty History"
+        },
+        {
+          "id": "workflows-agentgraph-hub--bounded-attention",
+          "title": "workflows/AgentGraph Hub",
+          "name": "Bounded Attention"
+        }
+      ]
+    },
+    {
+      "component": "FlowWaterfall",
+      "source": "src/run/trace-waterfall.tsx",
+      "storyFile": "src/stories/run/FlowWaterfall.stories.tsx",
+      "task": "Locate failed and quiet work in time",
+      "states": [
+        {
+          "id": "run-flowwaterfall--agents-settled",
+          "title": "Run/FlowWaterfall",
+          "name": "Agents Settled"
+        },
+        {
+          "id": "run-flowwaterfall--steps-view",
+          "title": "Run/FlowWaterfall",
+          "name": "Steps View"
+        },
+        {
+          "id": "run-flowwaterfall--live-waterfall",
+          "title": "Run/FlowWaterfall",
+          "name": "Live Waterfall"
+        },
+        {
+          "id": "run-flowwaterfall--needs-you",
+          "title": "Run/FlowWaterfall",
+          "name": "Needs You"
+        },
+        {
+          "id": "run-flowwaterfall--failure-heavy",
+          "title": "Run/FlowWaterfall",
+          "name": "Failure Heavy"
+        },
+        {
+          "id": "run-flowwaterfall--phone-390",
+          "title": "Run/FlowWaterfall",
+          "name": "Phone 390"
+        },
+        {
+          "id": "run-flowwaterfall--reduced-motion",
+          "title": "Run/FlowWaterfall",
+          "name": "Reduced Motion"
+        },
+        {
+          "id": "run-flowwaterfall--empty",
+          "title": "Run/FlowWaterfall",
+          "name": "Empty"
+        },
+        {
+          "id": "run-flowwaterfall--single-agent",
+          "title": "Run/FlowWaterfall",
+          "name": "Single Agent"
+        },
+        {
+          "id": "run-flowwaterfall--two-hundred-agents",
+          "title": "Run/FlowWaterfall",
+          "name": "Two Hundred Agents"
+        },
+        {
+          "id": "run-flowwaterfall--muted-identity",
+          "title": "Run/FlowWaterfall",
+          "name": "Muted Identity"
+        },
+        {
+          "id": "run-flowwaterfall--outcome-identity",
+          "title": "Run/FlowWaterfall",
+          "name": "Outcome Identity"
+        },
+        {
+          "id": "run-flowwaterfall--family-folded",
+          "title": "Run/FlowWaterfall",
+          "name": "Family Folded"
+        },
+        {
+          "id": "run-flowwaterfall--search-match",
+          "title": "Run/FlowWaterfall",
+          "name": "Search Match"
+        },
+        {
+          "id": "run-flowwaterfall--long-names",
+          "title": "Run/FlowWaterfall",
+          "name": "Long Names"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-failed",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Failed"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-failed-full",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Failed Full"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-done",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Done"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-running",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Running"
+        },
+        {
+          "id": "run-flowwaterfall--timeline-folded",
+          "title": "Run/FlowWaterfall",
+          "name": "Timeline Folded"
+        },
+        {
+          "id": "run-flowwaterfall--control-session",
+          "title": "Run/FlowWaterfall",
+          "name": "Control Session"
+        },
+        {
+          "id": "run-flowwaterfall--discovery-21-c",
+          "title": "Run/FlowWaterfall",
+          "name": "Discovery 21 C"
+        },
+        {
+          "id": "run-flowwaterfall--light-theme",
+          "title": "Run/FlowWaterfall",
+          "name": "Light Theme"
+        }
+      ]
+    },
+    {
+      "component": "TimelineView",
+      "source": "src/stories/run/FlowWaterfall.stories.tsx",
+      "storyFile": "src/stories/run/FlowWaterfall.stories.tsx",
+      "task": "Inspect a folded trace family",
+      "owner": "@tangle-network/charts",
+      "states": [
+        {
+          "id": "run-flowwaterfall--agents-settled",
+          "title": "Run/FlowWaterfall",
+          "name": "Agents Settled"
+        },
+        {
+          "id": "run-flowwaterfall--steps-view",
+          "title": "Run/FlowWaterfall",
+          "name": "Steps View"
+        },
+        {
+          "id": "run-flowwaterfall--live-waterfall",
+          "title": "Run/FlowWaterfall",
+          "name": "Live Waterfall"
+        },
+        {
+          "id": "run-flowwaterfall--needs-you",
+          "title": "Run/FlowWaterfall",
+          "name": "Needs You"
+        },
+        {
+          "id": "run-flowwaterfall--failure-heavy",
+          "title": "Run/FlowWaterfall",
+          "name": "Failure Heavy"
+        },
+        {
+          "id": "run-flowwaterfall--phone-390",
+          "title": "Run/FlowWaterfall",
+          "name": "Phone 390"
+        },
+        {
+          "id": "run-flowwaterfall--reduced-motion",
+          "title": "Run/FlowWaterfall",
+          "name": "Reduced Motion"
+        },
+        {
+          "id": "run-flowwaterfall--empty",
+          "title": "Run/FlowWaterfall",
+          "name": "Empty"
+        },
+        {
+          "id": "run-flowwaterfall--single-agent",
+          "title": "Run/FlowWaterfall",
+          "name": "Single Agent"
+        },
+        {
+          "id": "run-flowwaterfall--two-hundred-agents",
+          "title": "Run/FlowWaterfall",
+          "name": "Two Hundred Agents"
+        },
+        {
+          "id": "run-flowwaterfall--muted-identity",
+          "title": "Run/FlowWaterfall",
+          "name": "Muted Identity"
+        },
+        {
+          "id": "run-flowwaterfall--outcome-identity",
+          "title": "Run/FlowWaterfall",
+          "name": "Outcome Identity"
+        },
+        {
+          "id": "run-flowwaterfall--family-folded",
+          "title": "Run/FlowWaterfall",
+          "name": "Family Folded"
+        },
+        {
+          "id": "run-flowwaterfall--search-match",
+          "title": "Run/FlowWaterfall",
+          "name": "Search Match"
+        },
+        {
+          "id": "run-flowwaterfall--long-names",
+          "title": "Run/FlowWaterfall",
+          "name": "Long Names"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-failed",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Failed"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-failed-full",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Failed Full"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-done",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Done"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-running",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Running"
+        },
+        {
+          "id": "run-flowwaterfall--timeline-folded",
+          "title": "Run/FlowWaterfall",
+          "name": "Timeline Folded"
+        },
+        {
+          "id": "run-flowwaterfall--control-session",
+          "title": "Run/FlowWaterfall",
+          "name": "Control Session"
+        },
+        {
+          "id": "run-flowwaterfall--discovery-21-c",
+          "title": "Run/FlowWaterfall",
+          "name": "Discovery 21 C"
+        },
+        {
+          "id": "run-flowwaterfall--light-theme",
+          "title": "Run/FlowWaterfall",
+          "name": "Light Theme"
+        }
+      ]
+    },
+    {
+      "component": "SpanCard",
+      "source": "src/stories/run/FlowWaterfall.stories.tsx",
+      "storyFile": "src/stories/run/FlowWaterfall.stories.tsx",
+      "task": "Inspect the evidence for a trace span",
+      "owner": "@tangle-network/charts",
+      "states": [
+        {
+          "id": "run-flowwaterfall--agents-settled",
+          "title": "Run/FlowWaterfall",
+          "name": "Agents Settled"
+        },
+        {
+          "id": "run-flowwaterfall--steps-view",
+          "title": "Run/FlowWaterfall",
+          "name": "Steps View"
+        },
+        {
+          "id": "run-flowwaterfall--live-waterfall",
+          "title": "Run/FlowWaterfall",
+          "name": "Live Waterfall"
+        },
+        {
+          "id": "run-flowwaterfall--needs-you",
+          "title": "Run/FlowWaterfall",
+          "name": "Needs You"
+        },
+        {
+          "id": "run-flowwaterfall--failure-heavy",
+          "title": "Run/FlowWaterfall",
+          "name": "Failure Heavy"
+        },
+        {
+          "id": "run-flowwaterfall--phone-390",
+          "title": "Run/FlowWaterfall",
+          "name": "Phone 390"
+        },
+        {
+          "id": "run-flowwaterfall--reduced-motion",
+          "title": "Run/FlowWaterfall",
+          "name": "Reduced Motion"
+        },
+        {
+          "id": "run-flowwaterfall--empty",
+          "title": "Run/FlowWaterfall",
+          "name": "Empty"
+        },
+        {
+          "id": "run-flowwaterfall--single-agent",
+          "title": "Run/FlowWaterfall",
+          "name": "Single Agent"
+        },
+        {
+          "id": "run-flowwaterfall--two-hundred-agents",
+          "title": "Run/FlowWaterfall",
+          "name": "Two Hundred Agents"
+        },
+        {
+          "id": "run-flowwaterfall--muted-identity",
+          "title": "Run/FlowWaterfall",
+          "name": "Muted Identity"
+        },
+        {
+          "id": "run-flowwaterfall--outcome-identity",
+          "title": "Run/FlowWaterfall",
+          "name": "Outcome Identity"
+        },
+        {
+          "id": "run-flowwaterfall--family-folded",
+          "title": "Run/FlowWaterfall",
+          "name": "Family Folded"
+        },
+        {
+          "id": "run-flowwaterfall--search-match",
+          "title": "Run/FlowWaterfall",
+          "name": "Search Match"
+        },
+        {
+          "id": "run-flowwaterfall--long-names",
+          "title": "Run/FlowWaterfall",
+          "name": "Long Names"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-failed",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Failed"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-failed-full",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Failed Full"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-done",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Done"
+        },
+        {
+          "id": "run-flowwaterfall--span-card-running",
+          "title": "Run/FlowWaterfall",
+          "name": "Span Card Running"
+        },
+        {
+          "id": "run-flowwaterfall--timeline-folded",
+          "title": "Run/FlowWaterfall",
+          "name": "Timeline Folded"
+        },
+        {
+          "id": "run-flowwaterfall--control-session",
+          "title": "Run/FlowWaterfall",
+          "name": "Control Session"
+        },
+        {
+          "id": "run-flowwaterfall--discovery-21-c",
+          "title": "Run/FlowWaterfall",
+          "name": "Discovery 21 C"
+        },
+        {
+          "id": "run-flowwaterfall--light-theme",
+          "title": "Run/FlowWaterfall",
+          "name": "Light Theme"
+        }
+      ]
+    }
+  ],
+  "scope": "Built component fixtures. Not product-flow, deployment, approval, or WCAG conformance evidence."
+}

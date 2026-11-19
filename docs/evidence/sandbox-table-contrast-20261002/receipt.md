@@ -4,7 +4,7 @@
 
 - Before source: `a23be8d63dfdaf10aa512d7a22f3ca524f6e55ec`, after the Status width correction and before this contrast fix.
 - After source: `095b15cefa146ec8196169046a0dde5ac6e59a61`, including the seven-status story and rendered contrast guard.
-- Target: locally served static Storybook at `http://127.0.0.1:6954`, built on GTR from the after source.
+- Target: static Storybook built from the after source.
 - Viewports: desktop `1440×900`, phone `390×844`; both light and dark themes.
 - Data: Storybook fixtures, with no authenticated consumer or backend request.
 

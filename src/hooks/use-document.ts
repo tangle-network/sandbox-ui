@@ -30,7 +30,7 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
     let timer = 0
     let stale = false
     let retries = 0
-    // A request that never reached the server (GTR Chromium under load: ERR_NETWORK_CHANGED) is retried soon, not at the next poll.
+    // Retry a request interrupted by a network change before the next scheduled poll.
     let dropped = 0
     let lost = false
     const controller = new AbortController()

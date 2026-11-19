@@ -2,7 +2,7 @@
 
 The baseline is Sandbox UI `cab92a32e1a645cd59ff6535ef8ecb5490f2bb15` (`0.116.0`).
 The candidate is the `fix/workspace-header-density-20261001` branch based on that commit.
-Both screenshots use the SandboxWorkbench Default Storybook fixture in Chromium on `drew-gtr-pro`.
+Both screenshots use the SandboxWorkbench Default Storybook fixture in Chromium.
 The mobile baseline screenshot closes both drawers before capture.
 
 | View | Before | After |

@@ -1,9 +1,6 @@
 {
   "capture_source": "b860006f27b155bf4018ef0b5d4f54b2c7335a01",
-  "gate_id": "beelink1-2a58111e4a9fbff6e801a7de0b4fe81a",
-  "mode": "normal pinned beelink1, default frozen install and admission",
   "exit": 0,
-  "waited_s": 69,
   "ran_s": 177,
   "node": "v22.23.3",
   "lock_sha256": "bc390fed3fcb62b3042c9989344c6abd066fa0384178893bbfd037b71b76e556",

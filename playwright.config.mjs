@@ -2,9 +2,7 @@ import { defineConfig, devices } from 'playwright/test'
 
 // Serve the static build on its own port and never reuse a running server: a
 // Storybook dev server, or another checkout's build, would render a different tree.
-// A random free-range port unless one is given: concurrent gates on one Beelink all
-// claimed 6106 and the second one's server never started. Set on process.env so the
-// workers Playwright spawns after loading this config read the same port.
+// Workers share this port so concurrent suites can run on the same host.
 process.env.STORYBOOK_PORT ??= String(20000 + Math.floor(Math.random() * 20000))
 const storybookPort = Number(process.env.STORYBOOK_PORT)
 
@@ -14,8 +12,7 @@ export default defineConfig({
   forbidOnly: true,
   updateSnapshots: 'none',
   reporter: process.env.CI ? 'dot' : 'list',
-  // A Beelink runs several gates at once; one worker per two cores starves story
-  // readiness past 30 s. CI and every other host use the same 4.
+  // Bound concurrency to keep Storybook responsive during visual comparisons.
   workers: 4,
   // One retry absorbs readiness timeouts on a saturated shared host. Pixel
   // comparisons are deterministic, so a real visual change still fails twice;

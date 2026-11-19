@@ -1,7 +1,7 @@
 # Sidebar motion proof — #10197 / #429
 
 Capture source: `b860006f27b155bf4018ef0b5d4f54b2c7335a01`.
-Normal maintained Beelink gate `beelink1-2a58111e4a9fbff6e801a7de0b4fe81a` exited0: frozen install, typecheck, build,88 built-export identity checks and Storybook passed. Managed Node22.23.3; admission wait69s, run177s, no starvation/timeout/override.
+The frozen install, typecheck, build, 88 export identity checks, and Storybook build passed.
 
 The uninstrumented navigation suite passed21/21, workers2, retries0, no flakes/skips. The static update run completed28/28 captures and proposed exactly14 dark PNG changes; all14 light hashes stayed unchanged. Both reviewers opened all14 before/after pairs. **The update run is not a frozen-baseline comparison.** The final commit adds only reviewed goldens and these proof files; the final binary/proof head and its normal non-update comparison receipt are recorded in [PR#429](https://github.com/tangle-network/sandbox-ui/pull/429).
 
@@ -22,7 +22,7 @@ The ten Brand principle evidence rows and remaining acceptance limits are mainta
 
 ## Header retirement fix qualification
 
-The preceding section retains the original feature proof at `b860006`; those eight recordings remain unchanged. The additional header-presence fix is qualified at `ff19782804abb199f5377bdb4421761e98ad9c8a` by normal gate `beelink1-f36ef98df229eba2067a405ff36eee48`: frozen install, typecheck, build and Storybook passed, followed by **21/21 navigation cases and 28/28 frozen static comparisons**, workers2/retries0, with no failures, flakes, skips or snapshot updates. The tracked tree stayed clean.
+The preceding section retains the original feature proof at `b860006`; those eight recordings remain unchanged. The additional header-presence fix is qualified at `ff19782804abb199f5377bdb4421761e98ad9c8a`: frozen install, typecheck, build and Storybook passed, followed by **21/21 navigation cases and 28/28 frozen static comparisons**, workers2/retries0, with no failures, flakes, skips or snapshot updates. The tracked tree stayed clean.
 
 Both normal-motion phone themes recorded the actual closed-but-mounted drawer with **one ReCenter header inside, one globally, and two running animations**. The original regression head `9791120` did not execute: its single development gate was canceled unadmitted after300s of CPU/checkout capacity waits. RED remains UNCHECKED; no before-failure observation is claimed.
 

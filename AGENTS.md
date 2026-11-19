@@ -31,10 +31,8 @@ Keep generic event adaptation in that owner instead of duplicating it here.
 ## Checks and releases
 
 Read [package scripts](package.json) for local checks.
-Local merge gate (frozen install, typecheck, and packed-consumer integration): `beelink-gate auto https://github.com/tangle-network/sandbox-ui.git <full-sha> -- bash -lc 'pnpm typecheck && pnpm build && pnpm test:package'`.
-For code or export changes, run `pnpm signoff` on a Linux host (gtr or a Beelink): typecheck, build, unit tests, the packed-consumer checks, including bridge identity, then the Storybook visual suite.
-The visual suite takes about three minutes on gtr; its baselines are Linux renders, so do not run it on macOS.
-A screenshot timeout under heavy host load is a host problem; rerun with fewer workers (`--workers=8`) before reading it as a regression.
+For code or export changes, run `pnpm signoff` on Linux. This checks types, builds the package, tests a packed consumer, and compares the Storybook render against Linux baselines.
+Use repository-relative paths and fictional accounts in examples. Keep machine-specific runbooks and scratch captures outside the public repository.
 When a change is meant to look different, update only the affected baselines and review every changed PNG before committing ([visual checks](tests/visual/README.md)).
 
 Read [the release workflow](.github/workflows/release.yml) before releasing.

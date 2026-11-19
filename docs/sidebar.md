@@ -24,7 +24,7 @@ function App() {
         { mode: "batches", title: "Batches", content: <BatchList /> },
       ]}
       activeNavId="home"
-      user={{ email: "drew@tangle.tools", name: "Drew", tier: "pro" }}
+      user={{ email: "alex@example.com", name: "Alex", tier: "pro" }}
       onLogout={() => signOut()}
     >
       <h1>Dashboard</h1>
@@ -81,7 +81,7 @@ function App() {
             <RailButton icon={Sun} label="Theme" onClick={toggleTheme} />
             <RailSeparator />
             <ProfileAvatar
-              user={{ email: "drew@tangle.tools", name: "Drew", tier: "pro" }}
+              user={{ email: "alex@example.com", name: "Alex", tier: "pro" }}
               onLogout={signOut}
             />
           </SidebarRailFooter>

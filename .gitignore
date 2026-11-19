@@ -11,3 +11,4 @@ thoughts/
 playwright-report/
 test-results*/
 !vendor/*.tgz
+.evolve/

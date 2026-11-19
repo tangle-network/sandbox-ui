@@ -22,13 +22,14 @@ export default function ReviewChange() {
   return (
     <DiffView
       filename="greet.ts"
-      baseline={'export const greet = (name: string) => "Hello, name";'}
-      current={'export const greet = (name: string) => `Hello, ${name}`;'}
-      themeType="light"
+      baseline={'export const greet = (name: string) => "Hello, name";\n'}
+      current={'export const greet = (name: string) => `Hello, ${name}`;\n'}
     />
   );
 }
 ```
+
+![A diff for greet.ts shows the literal name removed and the function argument inserted.](https://raw.githubusercontent.com/tangle-network/sandbox-ui/main/docs/images/review-change.png)
 
 ## Build a workspace
 

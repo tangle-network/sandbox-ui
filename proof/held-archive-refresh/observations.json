@@ -1,0 +1,138 @@
+{
+  "method": "Independent fixtures served actual HTTP including ETags to visible Chromium tabs with regular polling disabled. Both studies used wall-clock timers. The controlled server made the corrected report available after the sixth stale 304. The Disco release record separately documents the original production observation.",
+  "cases": {
+    "baseline": {
+      "variant": "baseline",
+      "expected": "baseline",
+      "poll": false,
+      "wallClock": true,
+      "recoverySeconds": 53.483,
+      "observedSeconds": 87.616,
+      "shown": "Version 2 shows no outside review.",
+      "requests": [
+        {
+          "seconds": 0,
+          "prior": null,
+          "etag": "\"old\"",
+          "http": 200,
+          "stale": true
+        },
+        {
+          "seconds": 2.512,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 6.265,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 11.895,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 20.335,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 32.993,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 51.983,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        }
+      ],
+      "videoSeconds": 89.083333,
+      "videoSha256": "be40ec7fc571ef577cef7e183ab3e28bb8e0e446ef3cf58ffcd89a47f8aab1de",
+      "code": "Published @tangle-network/sandbox-ui 11.0.2; the downloaded package matched its npm SHA-512 integrity."
+    },
+    "candidate": {
+      "variant": "candidate",
+      "expected": "recovered",
+      "poll": false,
+      "wallClock": true,
+      "recoverySeconds": 53.477,
+      "observedSeconds": 80.957,
+      "shown": "Version 2 has four source objections and links to its original review.",
+      "requests": [
+        {
+          "seconds": 0,
+          "prior": null,
+          "etag": "\"old\"",
+          "http": 200,
+          "stale": true
+        },
+        {
+          "seconds": 2.508,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 6.26,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 11.889,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 20.328,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 32.987,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 51.975,
+          "prior": "\"old\"",
+          "etag": "\"old\"",
+          "http": 304,
+          "stale": true
+        },
+        {
+          "seconds": 80.456,
+          "prior": "\"old\"",
+          "etag": "\"new\"",
+          "http": 200,
+          "stale": false
+        }
+      ],
+      "videoSeconds": 82.0,
+      "videoSha256": "47ab8c7d5b631cc0ac1ebca59a544682f678391b5233d161211a2b1918b106d9",
+      "code": "Hook source from sandbox-ui 033d0ef20182c94a481f681c8914778d5496d47f."
+    }
+  }
+}

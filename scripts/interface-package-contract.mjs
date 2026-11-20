@@ -11,6 +11,10 @@ import { modelProvider as canonicalProvider, snapHarnessToModel as canonicalSnap
 import { modelProvider, snapHarnessToModel } from '@tangle-network/sandbox-ui/chat';
 import type { ReasoningLevel, ReasoningLevelPickerProps } from '@tangle-network/sandbox-ui/chat';
 import type { HarnessPickerProps } from '@tangle-network/sandbox-ui/dashboard';
+// A wrapper around the existing combined row still receives a required harness.
+type SeatProps = import('react').ComponentProps<typeof import('@tangle-network/sandbox-ui/dashboard').SeatMark>;
+export const seatHarness = (props: SeatProps): string => props.harness;
+export const modelRow: SeatProps = { harness: 'codex', model: 'gpt', marks: 'model' };
 import type { SendMessageOptions, UsePtySessionOptions } from '@tangle-network/sandbox-ui/hooks';
 import type { TerminalViewProps } from '@tangle-network/sandbox-ui/terminal';
 

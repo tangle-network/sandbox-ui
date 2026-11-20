@@ -1,7 +1,7 @@
 ## 11.0.2
 
 - `useSessionStream` reports whether it is reconnecting and returns the error code when the server provides one. Switching chats clears the previous chat’s connection, error and streaming state.
-- `SeatMark` accepts a model and optional effort on their own. Long values fit narrow rows, and existing harness-and-model rows retain both marks.
+- Pass `marks="model"` to `SeatMark` when the harness has its own column. Long values fit narrow rows, and existing harness-and-model rows retain both marks.
 - The React quick start shows the rendered output of its file-diff example.
 
 ## 11.0.1

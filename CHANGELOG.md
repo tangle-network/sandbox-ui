@@ -1,3 +1,7 @@
+## 11.0.3
+
+- An open `useDocument` view now refreshes when a stale archive finishes rebuilding, even when regular polling is disabled. The last readable report stays on screen while the server prepares its replacement.
+
 ## 11.0.2
 
 - `useSessionStream` reports whether it is reconnecting and returns the error code when the server provides one. Switching chats clears the previous chat’s connection, error and streaming state.

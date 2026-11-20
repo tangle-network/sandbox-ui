@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
-/** How soon a document the server marked stale (X-Workspace-Stale) is fetched again, backing off by half each time:
- * about a minute in all, the longest a plays index takes to recompose on a loaded host. */
+/** Initial delay for a document marked stale (X-Workspace-Stale), growing by half up to a one-minute ceiling. */
 const STALE_RETRY_MS = 2_500
-const STALE_RETRIES = 6
+const STALE_RETRY_MAX_MS = 60_000
 const NETWORK_RETRIES = 4
 
 /**
@@ -27,15 +26,16 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
     }
     if (!url) return
     let alive = true
-    let timer = 0
-    let stale = false
-    let retries = 0
-    // Retry a request interrupted by a network change before the next scheduled poll.
+    let timer: number | undefined
+    let inFlight = false
+    let revalidateOnShow = false
+    let staleDelay = STALE_RETRY_MS
     let dropped = 0
-    let lost = false
     const controller = new AbortController()
     const load = async () => {
-      lost = false
+      if (!alive || inFlight) return
+      inFlight = true
+      let nextDelay = poll
       try {
         const response = await fetcher(url, {
           credentials: 'same-origin',
@@ -44,16 +44,22 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
           headers: etag.current ? { 'If-None-Match': etag.current } : {},
         })
         if (!alive) return
-        dropped = 0
-        stale = response.headers.get('X-Workspace-Stale') === '1'
+        const stale = response.headers.get('X-Workspace-Stale') === '1'
         const failing = response.headers.get('X-Workspace-Compose-Error') ?? undefined
-        // Only a fresh 200 or 304 ends a stale episode and restores its quick retries; an error answer is not fresh (root, #180).
-        if (!stale && (response.ok || response.status === 304)) retries = 0
+        revalidateOnShow = stale && (response.ok || response.status === 304)
+        if (revalidateOnShow) {
+          nextDelay = poll ? Math.min(poll, staleDelay) : staleDelay
+          staleDelay = Math.min(STALE_RETRY_MAX_MS, staleDelay * 1.5)
+        } else if (response.ok || response.status === 304) {
+          staleDelay = STALE_RETRY_MS
+        }
         if (response.status === 304) {
+          dropped = 0
           setState((current) => (!current.error && current.stale === stale && current.failing === failing ? current : { ...current, loading: false, error: undefined, status: 304, stale, failing }))
           return
         }
         if (!response.ok) {
+          dropped = 0
           let reason = `HTTP ${response.status}`
           try {
             const body = await response.json()
@@ -67,30 +73,39 @@ export function useDocument<T>(url: string | null, poll?: number, keepPrevious =
           setState((current) => ({ ...(refused ? { url, fetcher } : current), loading: false, error: reason, status: response.status }))
           return
         }
-        etag.current = response.headers.get('ETag')
         const data = (await response.json()) as T
-        if (alive) setState({ url, fetcher, data, loading: false, status: response.status, stale, failing })
+        if (!alive) return
+        dropped = 0
+        etag.current = response.headers.get('ETag')
+        setState({ url, fetcher, data, loading: false, status: response.status, stale, failing })
       } catch (error) {
-        if (alive && !controller.signal.aborted && dropped < NETWORK_RETRIES) lost = true
-        else if (alive && !controller.signal.aborted)
-          setState((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Request failed' }))
-      } finally {
-        // A document served as last composed while the server recomposes it is asked for again soon, a few times at most,
-        // before the page's own poll: a polled page waited a whole interval and /today showed a 2 h old copy (REVIEW-7 #2).
-        if (alive && lost) {
-          timer = window.setTimeout(load, 1000 * 2 ** dropped)
+        if (!alive) return
+        revalidateOnShow = false
+        if (dropped < NETWORK_RETRIES) {
+          nextDelay = 1000 * 2 ** dropped
           dropped += 1
-        } else if (alive && stale && retries < STALE_RETRIES) {
-          timer = window.setTimeout(load, STALE_RETRY_MS * 1.5 ** retries)
-          retries += 1
-        } else if (alive && poll) timer = window.setTimeout(load, poll)
+        } else {
+          setState((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Request failed' }))
+        }
+      } finally {
+        inFlight = false
+        if (alive && nextDelay && !(revalidateOnShow && document.hidden)) {
+          timer = window.setTimeout(load, nextDelay)
+        }
       }
     }
+    const onVisibility = () => {
+      if (!revalidateOnShow) return
+      window.clearTimeout(timer)
+      if (!document.hidden) void load()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
     void load()
     return () => {
       alive = false
       controller.abort()
       window.clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [url, poll, fetcher]) // eslint-disable-line react-hooks/exhaustive-deps
   return state.fetcher === fetcher && (keepPrevious || state.url === url) ? state : { url, fetcher, loading: !!url }

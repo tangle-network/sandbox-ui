@@ -1,0 +1,209 @@
+{
+  "package": {
+    "name": "@tangle-network/sandbox-ui",
+    "version": "11.0.3",
+    "npmShasum": "06d1f335bb1c1bae84e2f96dbfd64b9f88a0fbca",
+    "npmIntegrity": "sha512-qMWVo9L+klxrPBiMq12vDtq/OODj2bwg9XFp3+y5xU3fqj1O/jhpZTcMPmkXk5bw0kDA84kdrTUiK4PlzX+BBQ==",
+    "sha256": "5800d5a870200b214d5c8cc1bb022587f49eec8cfb4960c1ae96e9eb660111e8",
+    "bytes": 4035285,
+    "releaseWorkflow": "https://github.com/tangle-network/sandbox-ui/actions/runs/44660391967",
+    "testedSource": "a95ed77cf62a1beed2dfaf9f17c6d2dcc317c34c",
+    "releaseTag": "https://github.com/tangle-network/sandbox-ui/releases/tag/v11.0.3",
+    "workflowResult": "success",
+    "workflowArtifactDigest": "sha256:a7ceea1ad5f54a364a7951c9800760d4d98bb8682a2e4722dc04d0d8e888f3dc",
+    "matchedWorkflowPackageSha256": "5800d5a870200b214d5c8cc1bb022587f49eec8cfb4960c1ae96e9eb660111e8",
+    "githubPackages": "success"
+  },
+  "directGitHubPackageDownload": {
+    "package": "@tangle-network/sandbox-ui",
+    "version": "11.0.3",
+    "bytes": 4035285,
+    "sha256": "5800d5a870200b214d5c8cc1bb022587f49eec8cfb4960c1ae96e9eb660111e8",
+    "at": "2026-11-20T03:32:51.334Z"
+  },
+  "streamFrameQualification": {
+    "workload": "17 streamed agents, 3 events per second for 60 seconds. The idle control ran for 15 seconds.",
+    "previousRelease": "https://github.com/tangle-network/sandbox-ui/actions/runs/44642603860",
+    "candidateRelease": "https://github.com/tangle-network/sandbox-ui/actions/runs/44660391967",
+    "sourceAndThresholdUnchanged": true,
+    "comparisons": {
+      "precedingRelease": {
+        "idleP95FrameMs": 16.67,
+        "streamP95FrameMs": 16.67,
+        "streamFrameCount": 3601,
+        "longTaskCount": 0,
+        "maxLongTaskMs": 0
+      },
+      "sameReleaseDuringTwoBrowserSuites": {
+        "idleP95FrameMs": 50,
+        "streamP95FrameMs": 149.995,
+        "streamFrameCount": 982,
+        "longTaskCount": 99,
+        "maxLongTaskMs": 245
+      },
+      "sameMachineAfterTheOtherSuite": {
+        "idleP95FrameMs": 33.335,
+        "streamP95FrameMs": 33.335,
+        "streamFrameCount": 3166,
+        "longTaskCount": 1,
+        "maxLongTaskMs": 54
+      },
+      "officialReleasedCommit": {
+        "idleP95FrameMs": 16.67,
+        "streamP95FrameMs": 16.67,
+        "streamFrameCount": 3585,
+        "longTaskCount": 0,
+        "maxLongTaskMs": 0
+      }
+    }
+  },
+  "openTab": {
+    "variant": "published",
+    "expected": "recovered",
+    "poll": false,
+    "wallClock": true,
+    "recoverySeconds": 53.48,
+    "observedSeconds": 80.875,
+    "shown": "Version 2 has four source objections and links to its original review.",
+    "requests": [
+      {
+        "seconds": 0,
+        "prior": null,
+        "etag": "\"old\"",
+        "http": 200,
+        "stale": true
+      },
+      {
+        "seconds": 2.511,
+        "prior": "\"old\"",
+        "etag": "\"old\"",
+        "http": 304,
+        "stale": true
+      },
+      {
+        "seconds": 6.265,
+        "prior": "\"old\"",
+        "etag": "\"old\"",
+        "http": 304,
+        "stale": true
+      },
+      {
+        "seconds": 11.893,
+        "prior": "\"old\"",
+        "etag": "\"old\"",
+        "http": 304,
+        "stale": true
+      },
+      {
+        "seconds": 20.333,
+        "prior": "\"old\"",
+        "etag": "\"old\"",
+        "http": 304,
+        "stale": true
+      },
+      {
+        "seconds": 32.993,
+        "prior": "\"old\"",
+        "etag": "\"old\"",
+        "http": 304,
+        "stale": true
+      },
+      {
+        "seconds": 51.979,
+        "prior": "\"old\"",
+        "etag": "\"old\"",
+        "http": 304,
+        "stale": true
+      },
+      {
+        "seconds": 80.459,
+        "prior": "\"old\"",
+        "etag": "\"new\"",
+        "http": 200,
+        "stale": false
+      }
+    ]
+  },
+  "tabSwitch": {
+    "method": "Two tabs in an isolated Chromium process changed the real document visibility while retaining their browsing context.",
+    "old": {
+      "variant": "baseline",
+      "mode": "headless",
+      "events": [
+        "hidden",
+        "visible"
+      ],
+      "hiddenDurationMs": 6200,
+      "requestsWhileHidden": 1,
+      "requests": [
+        {
+          "http": 200,
+          "etag": "\"last\"",
+          "old": null,
+          "elapsedMs": 0
+        },
+        {
+          "http": 304,
+          "etag": "\"last\"",
+          "old": "\"last\"",
+          "elapsedMs": 3177
+        },
+        {
+          "http": 200,
+          "etag": "\"fresh\"",
+          "old": "\"last\"",
+          "elapsedMs": 6933
+        }
+      ]
+    },
+    "published": {
+      "variant": "published",
+      "mode": "headless",
+      "events": [
+        "hidden",
+        "visible"
+      ],
+      "hiddenDurationMs": 6200,
+      "requestsWhileHidden": 0,
+      "requests": [
+        {
+          "http": 200,
+          "etag": "\"last\"",
+          "old": null,
+          "elapsedMs": 0
+        },
+        {
+          "http": 200,
+          "etag": "\"fresh\"",
+          "old": "\"last\"",
+          "elapsedMs": 6658
+        }
+      ]
+    }
+  },
+  "cappedBackoff": {
+    "variant": "published",
+    "method": "The public hook in Chromium received real HTTP ETags. A passive browser timer observer recorded its intervals. The browser clock advanced between requests.",
+    "delaysMs": [
+      2500,
+      3750,
+      5625,
+      8437.5,
+      12656.25,
+      18984.375,
+      28476.5625,
+      42714.84375,
+      60000,
+      60000,
+      60000,
+      60000
+    ],
+    "requests": 13,
+    "quietAfterFreshMs": 600000
+  },
+  "video": {
+    "file": "published.mp4",
+    "seconds": 82.25,
+    "sha256": "c9be25dcb84619944f6221810289d863e20f390f7d2010a22bcb40e0b66a7d24"
+  }
+}

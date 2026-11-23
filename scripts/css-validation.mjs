@@ -1,4 +1,4 @@
-import { parse } from "css-tree"
+import { parse, walk } from "css-tree"
 
 // A combinator starts a new compound. A class on an ancestor cannot qualify
 // the element whose descendants :has() inspects.
@@ -12,9 +12,15 @@ function compounds(selector) {
 }
 
 function argumentsOf(pseudo) {
-  return pseudo.children?.first?.type === "SelectorList"
-    ? pseudo.children.first.children.toArray()
-    : []
+  const selectors = []
+  walk(pseudo, {
+    visit: "Selector",
+    enter(selector) {
+      selectors.push(selector)
+      return walk.skip
+    },
+  })
+  return selectors
 }
 
 function subject(parts) {
@@ -41,7 +47,7 @@ function hasUnscopedSubject(selector, inherited = "unscoped") {
     // A logical pseudo-class tests the same element as its rightmost compound.
     if (index === groups.length - 1 && (scope === "unscoped" || inherited === "root")) scope = inherited
     return parts.some((part) => {
-      if (part.type !== "PseudoClassSelector") return false
+      if (part.type !== "PseudoClassSelector" && part.type !== "PseudoElementSelector") return false
       const name = part.name.toLowerCase()
       if (name === "has" && scope !== "scoped") return true
       const sameElement = ["is", "where", "not"].includes(name)

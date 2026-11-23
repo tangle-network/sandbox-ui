@@ -1,3 +1,7 @@
+## 11.0.4
+
+- Dashboard anchors clear the fixed mobile navigation bar. Pages that import Sandbox styles can update their content without rechecking the whole document for a dashboard.
+
 ## 11.0.3
 
 - An open `useDocument` view now refreshes when a stale archive finishes rebuilding, even when regular polling is disabled. The last readable report stays on screen while the server prepares its replacement.

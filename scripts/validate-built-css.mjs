@@ -175,7 +175,7 @@ export function validateBuiltCss(css, options = {}) {
   // cannot trigger a false positive.
   const stripped = css.replace(BLOCK_COMMENT, "")
 
-  assertScopedHasSelectors(postcss.parse(css))
+  assertScopedHasSelectors(postcss.parse(css, { from: options.from }))
 
   const match = stripped.match(URL_IMPORT)
   if (match) {

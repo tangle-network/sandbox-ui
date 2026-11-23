@@ -364,7 +364,7 @@ createRoot(document.getElementById("root")).render(
     assertScopedHasSelectors(postcss.parse(readFileSync(cssFile, "utf8"), { from: cssFile }));
     for (const selector of [":has(.badge)", ".card > p:has(.badge)", "html:has(.badge)", "body:has(.badge)", ".card:nth-child(2 of :has(> .badge))"]) {
       const broken = postcss.parse(`@media (width < 64rem) { ${selector} { color: red } }`, { from: cssFile });
-      assert.throws(() => assertScopedHasSelectors(broken), /Unscoped :has/);
+      assert.throws(() => assertScopedHasSelectors(broken), (error) => error.file === cssFile && /Unscoped :has/.test(error.reason));
     }
     await verifyDocumentRefresh(consumerDir);
     await verifySessionReconnect(consumerDir);

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import postcss from "postcss"
+import { assertScopedHasSelectors } from "./css-validation.mjs"
 
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g
 const URL_IMPORT = /@import\s+url\s*\([^)]*\)\s*;?/i
@@ -174,9 +175,7 @@ export function validateBuiltCss(css, options = {}) {
   // cannot trigger a false positive.
   const stripped = css.replace(BLOCK_COMMENT, "")
 
-  postcss.parse(css).walkRules(/(?:^|[\s,(>+~])(?:html|body|:root):has\(/i, (rule) => {
-    throw new Error(`dist/globals.css: ${rule.selector} makes unrelated DOM changes restyle the page. Apply its state directly to the root.`)
-  })
+  assertScopedHasSelectors(postcss.parse(css))
 
   const match = stripped.match(URL_IMPORT)
   if (match) {

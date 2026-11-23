@@ -1,6 +1,7 @@
 ## 11.0.4
 
 - Dashboard anchors clear the fixed mobile navigation bar. Pages that import Sandbox styles can update their content without rechecking the whole document for a dashboard.
+- Build tools can check a compiled PostCSS root with `assertScopedHasSelectors` from `@tangle-network/sandbox-ui/css-validation`. The check reports the stylesheet and selector when a relational selector has a broad subject.
 
 ## 11.0.3
 

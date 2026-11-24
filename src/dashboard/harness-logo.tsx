@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bot, Plug, Terminal } from "lucide-react";
+import { Bot, Terminal } from "lucide-react";
 import { cn } from "../lib/utils";
 import type { HarnessType } from "./harness-picker";
 import ampLogo from "@lobehub/icons-static-svg/icons/amp.svg";
@@ -13,6 +13,14 @@ import zaiLogo from "@lobehub/icons-static-svg/icons/zai.svg";
 import grokLogo from "@lobehub/icons-static-svg/icons/grok.svg";
 import openclawLogo from "@lobehub/icons-static-svg/icons/openclaw.svg";
 import opencodeLogo from "@lobehub/icons-static-svg/icons/opencode.svg";
+import cursorLogo from "@lobehub/icons-static-svg/icons/cursor.svg";
+import geminiCliLogo from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
+import exoLogo from "./harness-marks/exo.svg";
+import factoryLogo from "./harness-marks/factory.svg";
+import nanoClawLogo from "./harness-marks/nanoclaw.png";
+import nanoCodeLogo from "./harness-marks/nanocode.svg";
+import piLogo from "./harness-marks/pi.svg";
+import primeLogo from "./harness-marks/prime.png";
 
 /** Shared real harness marks; full-color SVGs retain their original fills. */
 export interface HarnessBrand {
@@ -25,7 +33,7 @@ export interface HarnessBrand {
 
 // Presentation only — a Partial over the canonical HarnessType: the UI provides brand marks for the
 // harnesses it surfaces, and any other canonical harness falls back to its name + a generic glyph.
-export const HARNESS_BRAND: Partial<Record<HarnessType | "glm" | "kimi" | "grok", HarnessBrand>> = {
+export const HARNESS_BRAND: Partial<Record<HarnessType | "glm" | "kimi" | "grok" | "nanocode" | "exo", HarnessBrand>> = {
   opencode: { label: "OpenCode", logoUrl: opencodeLogo, color: "var(--tone-teal-icon)" },
   "claude-code": { label: "Claude Code", logoUrl: claudeCodeLogo, fullColor: true },
   codex: { label: "Codex", logoUrl: codexLogo, color: "hsl(var(--foreground))" },
@@ -36,9 +44,14 @@ export const HARNESS_BRAND: Partial<Record<HarnessType | "glm" | "kimi" | "grok"
   glm: { label: "GLM", logoUrl: zaiLogo },
   kimi: { label: "Kimi", logoUrl: kimiLogo, fullColor: true },
   grok: { label: "Grok", logoUrl: grokLogo },
-  // No published brand mark — honest lucide glyphs.
-  "factory-droids": { label: "Factory Droids", icon: Bot },
-  nanoclaw: { label: "NanoClaw", icon: Plug },
+  cursor: { label: "Cursor", logoUrl: cursorLogo },
+  gemini: { label: "Gemini CLI", logoUrl: geminiCliLogo, fullColor: true },
+  "factory-droids": { label: "Factory Droids", logoUrl: factoryLogo, fullColor: true },
+  nanoclaw: { label: "NanoClaw", logoUrl: nanoClawLogo, fullColor: true },
+  nanocode: { label: "NanoCode", logoUrl: nanoCodeLogo, fullColor: true },
+  exo: { label: "Exo", logoUrl: exoLogo, fullColor: true },
+  pi: { label: "Pi", logoUrl: piLogo, fullColor: true },
+  prime: { label: "Prime Agent", logoUrl: primeLogo, fullColor: true },
   "cli-base": { label: "CLI base", icon: Terminal },
 };
 

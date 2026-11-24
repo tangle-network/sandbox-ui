@@ -1,3 +1,7 @@
+## 11.0.5
+
+- Harness pickers and session headers show the product marks for Factory Droids, NanoClaw, NanoCode, Exo, Pi, Prime Agent, Cursor and Gemini CLI. These marks ship inside the package and render offline.
+
 ## 11.0.4
 
 - Dashboard anchors clear the fixed mobile navigation bar. Pages that import Sandbox styles can update their content without rechecking the whole document for a dashboard.

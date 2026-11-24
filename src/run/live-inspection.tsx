@@ -5,7 +5,7 @@ import { DiffView } from '../workbench/diff-view'
 import { useDocument } from '../hooks/use-document'
 
 type Inspection = {
-  context?: { at: string; event: { text?: string } }[]
+  context?: { at: string; event: { text?: string; provenance?: string } }[]
   coverage: { status: 'complete' | 'partial' | 'missing'; source: string; reason?: string }
   files?: { scope: 'workspace' | 'none'; complete: boolean; reason?: string; entries: { path: string; sha256: string; byteLength: number }[] }
   file?: { path: string; content: string; sha256: string; byteLength: number; before?: { content: string; sha256: string; byteLength: number; source: { kind: string; ref: string } } }
@@ -32,15 +32,21 @@ export function useLiveInspection(url: string | undefined, live: boolean, fetche
     setDownload({ key: fileKey, href })
     return () => URL.revokeObjectURL(href)
   }, [fileKey, file?.content])
-  const coverage = inventory.data?.coverage
-  const scoreboard = inventory.error ? <p className="ws-status" role="alert">Conversation inspection unavailable: {inventory.error}</p> : coverage ? (
-    <details className="ws-status" open={coverage.status !== 'complete'} data-capture-status={coverage.status}>
-      <summary>{coverage.status === 'complete' ? 'Conversation retained' : 'Conversation incomplete'}</summary>
-      <p>{coverage.reason ?? coverage.source}</p>{!!inventory.data?.context?.length && <details><summary>Recorded context</summary>{inventory.data.context.map((row, index) => <pre className="ws-code" key={`${row.at}:${index}`}>{row.event.text}</pre>)}</details>}{inventory.data?.files?.scope === 'none' && <p>{inventory.data.files.reason ?? 'No workspace inventory was captured.'}</p>}
-    </details>
-  ) : undefined
+  const metadata = inventory.error ? undefined : inventory.data
+  const partial = metadata?.coverage?.status === 'partial'
+  const context = metadata?.context?.filter(row => row.event.text?.trim()) ?? []
+  const partialFiles = metadata?.files?.scope === 'workspace' && !metadata.files.complete
   return {
-    scoreboard: <>{scoreboard}{inventory.data?.files && !inventory.data.files.complete && <p className="ws-status" role="alert">Workspace inventory incomplete: {inventory.data.files.reason ?? 'Some files could not be retained.'}</p>}</>,
+    status: inventory.error ? <p className="px-3 py-2 text-sm text-muted-foreground" role="alert">Conversation inspection unavailable: {inventory.error}</p>
+      : partialFiles ? <p className="px-3 py-2 text-sm text-muted-foreground" role="status">Some workspace files could not be captured.</p> : undefined,
+    transcriptNote: metadata?.coverage?.status === 'missing' ? 'This worker did not record a transcript.' : undefined,
+    context: partial || context.length > 0 ? <div className="space-y-3 py-2 text-sm">
+      {partial && <p className="m-0 text-muted-foreground">Only part of this conversation was recorded.</p>}
+      {context.map((row, index) => <section key={`${row.at}:${index}`}>
+        <h4 className="mb-1 text-xs font-medium text-muted-foreground">{row.event.provenance === 'system-instructions' ? 'System instructions' : row.event.provenance === 'delegated-input' ? 'Task instructions' : 'Recorded context'}</h4>
+        <p className="m-0 whitespace-pre-wrap break-words">{row.event.text}</p>
+      </section>)}
+    </div> : undefined,
     files: entry ? (
       <section aria-label="Retained files" className="flex min-h-0 flex-1 flex-col" data-file-scope={inventory.data?.files?.scope} data-file-complete={inventory.data?.files?.complete} data-file={entry.path} data-file-hash={entry.sha256}>
         {valid ? <>

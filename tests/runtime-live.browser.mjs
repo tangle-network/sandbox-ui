@@ -42,6 +42,27 @@ try {
       await card.click()
       const conversationRole = width === 390 ? 'dialog' : 'complementary', conversation = page.getByRole(conversationRole, { name: 'Research conversation', exact: true })
       await conversation.getByText('Inspecting the native recorded work', { exact: true }).waitFor()
+      const divider = page.getByRole('separator', { name: 'Resize agent inspector' })
+      let resizedWidth
+      if (width > 768) {
+        const box = await divider.boundingBox()
+        assert.ok(box, 'The live viewer exposes the docked inspector divider')
+        const before = (await conversation.boundingBox()).width
+        const x = box.x + box.width / 2, y = box.y + box.height / 2
+        await page.mouse.move(x, y)
+        await page.mouse.down()
+        await page.mouse.move(x - 120, y, { steps: 8 })
+        await page.mouse.up()
+        const dragged = (await conversation.boundingBox()).width
+        assert.ok(dragged >= before + 110, 'Dragging left widens the conversation')
+        await divider.focus()
+        await page.keyboard.press('ArrowRight')
+        resizedWidth = (await conversation.boundingBox()).width
+        assert.ok(resizedWidth < dragged, 'The arrow key narrows the conversation')
+      } else {
+        assert.equal(await divider.count(), 0)
+      }
+      assert.equal(await page.getByRole('region', { name: 'Scoreboard at the cursor' }).count(), 0, 'No empty capture panel under the graph')
       const written = Date.now()
       await appendFile(join(workflow, 'agent-one.jsonl'), message('A new native journal event reaches the selected conversation'))
       await conversation.getByText('Inspecting the native recorded workA new native journal event reaches the selected conversation', { exact: true }).waitFor()
@@ -52,6 +73,7 @@ try {
       await card.waitFor()
       await card.click()
       await conversation.getByText('Inspecting the native recorded workA new native journal event reaches the selected conversation', { exact: true }).waitFor()
+      if (resizedWidth !== undefined) assert.equal((await conversation.boundingBox()).width, resizedWidth, 'The width survives a reload')
       await page.getByRole('combobox', { name: 'Run', exact: true }).selectOption({ label: 'root' })
       await page.getByText('Recorded supervisor', { exact: true }).waitFor()
       assert.equal(await conversation.count(), 0, 'Changing roots closes the previously selected agent stream')

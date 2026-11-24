@@ -8,6 +8,17 @@ import tailwindcss from "@tailwindcss/postcss";
 import { chromium } from "playwright";
 import { assertBuiltAgainstPeerFloor, peerFloor } from "./validate-built-css.mjs";
 
+async function openLocalPreview(page, port) {
+  const navigate = () => page.goto(`http://127.0.0.1:${port}`, { waitUntil: "networkidle" });
+  try {
+    await navigate();
+  } catch (error) {
+    if (!error.message.includes("net::ERR_NETWORK_CHANGED")) throw error;
+    console.warn("Chromium reported a network change while opening the local preview. Retrying the same URL once.");
+    await navigate();
+  }
+}
+
 export function presentationConsumerSpecs(manifest) {
   return [
     ...["@tangle-network/ui", "@tangle-network/brand"].map((name) =>
@@ -115,7 +126,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
             const errors = [];
             page.on("pageerror", (error) => errors.push(error.message));
             try {
-              await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" });
+              await openLocalPreview(page, address.port);
               await page.waitForFunction(() => document.documentElement.dataset.presentationReady === "true");
               await page.evaluate((value) => { document.documentElement.className = value; }, mode);
               if (mediaDir) await page.screenshot({ path: join(mediaDir, "initial.png") });

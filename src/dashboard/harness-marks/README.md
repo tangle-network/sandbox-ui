@@ -4,6 +4,7 @@ These marks identify the named products in harness pickers and session headers. 
 
 | File | Source |
 | --- | --- |
+| acp.png | [Agent Client Protocol favicon](https://github.com/agentclientprotocol/agent-client-protocol/blob/840484ff59b3deb1314d1a74e351cd16ef052b30/docs/logo/fav-light.png) |
 | exo.svg | [Exo favicon](https://github.com/exoharness/exo/blob/e1e56696a5755ddd9f043418936a3780efb200c6/website/public/favicon.svg) |
 | factory.svg | [Factory favicon](https://factory.ai/favicon.svg) |
 | nanoclaw.png | [NanoClaw favicon](https://nanoclaw.dev/favicon-48x48.png) |

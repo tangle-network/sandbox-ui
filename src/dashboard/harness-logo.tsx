@@ -15,6 +15,7 @@ import openclawLogo from "@lobehub/icons-static-svg/icons/openclaw.svg";
 import opencodeLogo from "@lobehub/icons-static-svg/icons/opencode.svg";
 import cursorLogo from "@lobehub/icons-static-svg/icons/cursor.svg";
 import geminiCliLogo from "@lobehub/icons-static-svg/icons/geminicli-color.svg";
+import acpLogo from "./harness-marks/acp.png";
 import exoLogo from "./harness-marks/exo.svg";
 import factoryLogo from "./harness-marks/factory.svg";
 import nanoClawLogo from "./harness-marks/nanoclaw.png";
@@ -52,6 +53,7 @@ export const HARNESS_BRAND: Partial<Record<HarnessType | "glm" | "kimi" | "grok"
   exo: { label: "Exo", logoUrl: exoLogo, fullColor: true },
   pi: { label: "Pi", logoUrl: piLogo, fullColor: true },
   prime: { label: "Prime Agent", logoUrl: primeLogo, fullColor: true },
+  acp: { label: "ACP", logoUrl: acpLogo },
   "cli-base": { label: "CLI base", icon: Terminal },
 };
 

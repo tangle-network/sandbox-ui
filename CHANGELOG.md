@@ -1,6 +1,6 @@
 ## 11.0.5
 
-- Harness pickers and session headers show the product marks for Factory Droids, NanoClaw, NanoCode, Exo, Pi, Prime Agent, Cursor and Gemini CLI. These marks ship inside the package and render offline.
+- Harness pickers and session headers show the product marks for Factory Droids, NanoClaw, NanoCode, Exo, Pi, Prime Agent, Cursor, Gemini CLI and the Agent Client Protocol. These marks ship inside the package and render offline.
 
 ## 11.0.4
 

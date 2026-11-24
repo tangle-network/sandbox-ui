@@ -64,9 +64,9 @@ export interface AgentStreamState {
 export function liveActivity(lines: readonly string[] = []) {
   return lines.flatMap((raw, index) => {
     const line = raw.trim()
-    let label = line, at: number | undefined, id = line
-    if (/^[{[]/.test(line)) {
-      let row
+    let label = line, at: number | undefined, id = JSON.stringify([index, line])
+    if (line.startsWith("{") || /^\[\s*[{["]/.test(line)) {
+      let row: ProducerRow
       try { row = JSON.parse(line) } catch { return [] }
       if (!row || typeof row !== "object" || Array.isArray(row)) return []
       if (row.event && (typeof row.event.kind !== "string" ||
@@ -78,12 +78,12 @@ export function liveActivity(lines: readonly string[] = []) {
         const action = entry.call.status === "success" ? "Finished" : entry.call.status === "error" ? "Failed" : "Called"
         label = `${action} ${entry.name ?? row.event?.toolName ?? "tool"}`
       } else label = entry.kind === "message" ? entry.content : entry.text
-      if (Number.isFinite(entry.at)) at = entry.at
+      if (row.event?.atBasis !== "carried" && Number.isFinite(entry.at)) at = entry.at
       id = JSON.stringify([row.stream, row.attempt, row.seq ?? index, row.at])
     }
     label = label.replace(/\s+/g, " ").trim()
     if (!label) return []
-    if (/^(?:```|[{[])/.test(label)) label = "Recorded output"
+    if (label.startsWith("```") || label.startsWith("{") || /^\[\s*[{["]/.test(label)) label = "Recorded output"
     if (label.length > 180) label = label.slice(0, 179).trimEnd() + "…"
     return [{ id, label, at }]
   })

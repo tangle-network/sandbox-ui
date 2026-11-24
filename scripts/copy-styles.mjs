@@ -57,6 +57,7 @@ for (const packageName of ["@tangle-network/ui", "@tangle-network/brand"]) {
   })
 }
 validateBuiltCss(result.css, {
+  from: join(distDir, "globals.css"),
   requiredUtilities: collectForwardedTokenUtilities(uiSrcDir),
 })
 assertTextRamp(result.css)

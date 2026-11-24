@@ -184,6 +184,9 @@ importers:
       '@tangle-network/ui':
         specifier: ^11.51.36
         version: 11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b)
+      css-tree:
+        specifier: ^3.2.1
+        version: 3.2.1
       diff:
         specifier: ^9.0.0
         version: 9.0.0

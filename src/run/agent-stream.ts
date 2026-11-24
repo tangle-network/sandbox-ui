@@ -58,6 +58,37 @@ export interface AgentStreamState {
   error?: string
   history?: { loading: boolean; earlier: boolean; more: boolean; reading: boolean; beginning: boolean; emptyTail: boolean; older(): void; newer(): void; latest(): void; beginningPage(): void }
 }
+/** The top snapshot carries bounded, serialized transcript rows, or plain progress lines from older producers.
+ * Project each at its own time so replay never shows a tool result before it arrived. Full arguments and
+ * output stay in the transcript opened by selecting the worker. */
+export function liveActivity(lines: readonly string[] = []) {
+  return lines.flatMap((raw, index) => {
+    const line = raw.trim()
+    let label = line, at: number | undefined, id = line
+    if (/^[{[]/.test(line)) {
+      let row
+      try { row = JSON.parse(line) } catch { return [] }
+      if (!row || typeof row !== "object" || Array.isArray(row)) return []
+      if (row.event && (typeof row.event.kind !== "string" ||
+        (row.event.text != null && typeof row.event.text !== "string") ||
+        (row.event.toolName != null && typeof row.event.toolName !== "string"))) return []
+      const [entry] = foldAgentRows([], [{ ...row, seq: row.seq ?? index }])
+      if (!entry || entry.kind === "reasoning") return []
+      if (entry.kind === "tool") {
+        const action = entry.call.status === "success" ? "Finished" : entry.call.status === "error" ? "Failed" : "Called"
+        label = `${action} ${entry.name ?? row.event?.toolName ?? "tool"}`
+      } else label = entry.kind === "message" ? entry.content : entry.text
+      if (Number.isFinite(entry.at)) at = entry.at
+      id = JSON.stringify([row.stream, row.attempt, row.seq ?? index, row.at])
+    }
+    label = label.replace(/\s+/g, " ").trim()
+    if (!label) return []
+    if (/^(?:```|[{[])/.test(label)) label = "Recorded output"
+    if (label.length > 180) label = label.slice(0, 179).trimEnd() + "…"
+    return [{ id, label, at }]
+  })
+}
+
 const textOf = (value: unknown): string | undefined => value == null ? undefined : typeof value === "string" ? value : JSON.stringify(value)
 
 /** A native harness row (live-stream evidence and retained captures: `{ type, data }`) as a producer event, so

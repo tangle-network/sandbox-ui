@@ -1,6 +1,6 @@
 {
   "name": "@tangle-network/sandbox-ui",
-  "version": "11.0.3",
+  "version": "11.0.5",
   "license": "MIT",
   "packageManager": "pnpm@12.6.0",
   "description": "Unified UI component library for Tangle Sandbox \u2014 primitives, chat, dashboard, terminal, editor, and workspace components",
@@ -124,6 +124,7 @@
       "import": "./dist/assets.js",
       "types": "./dist/assets.d.ts"
     },
+    "./css-validation": "./scripts/css-validation.mjs",
     "./styles": "./dist/styles.css",
     "./globals.css": "./dist/globals.css",
     "./tokens.css": "./dist/tokens.css",
@@ -152,6 +153,7 @@
   "files": [
     "dist",
     "tailwind.config.cjs",
+    "scripts/css-validation.mjs",
     "tests/visual/content-share.mjs"
   ],
   "scripts": {
@@ -256,6 +258,7 @@
     "@radix-ui/react-dropdown-menu": "^2.2.1",
     "@radix-ui/react-select": "^2.4.1",
     "@tangle-network/ui": "^11.51.36",
+    "css-tree": "^3.2.1",
     "diff": "^9.0.0",
     "eventsource-parser": "4.1.2",
     "katex": "^0.19.0",

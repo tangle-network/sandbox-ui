@@ -225,6 +225,10 @@ function SidebarLeading({ content, legacy, collapsed }: {
 // Inner layout (consumes sidebar context)
 // ============================================================================
 
+// More than one dashboard can share a document during a route transition.
+const dashboardScrollRoots = new WeakMap<HTMLElement, number>()
+const mobileScrollPadding = "max-lg:scroll-pt-12"
+
 function DashboardLayoutInner({
   children,
   variant = "sandbox",
@@ -258,6 +262,26 @@ function DashboardLayoutInner({
   // Keep light/dark tokens switching correctly under brand 0.6 regardless of which
   // control toggled the theme (see useBrandThemeSync).
   useBrandThemeSync()
+  const shellRef = React.useRef<HTMLDivElement>(null)
+  React.useLayoutEffect(() => {
+    const root = shellRef.current?.ownerDocument.documentElement
+    if (!root) return
+    const mounted = dashboardScrollRoots.get(root) ?? 0
+    // Preserve padding already supplied by the host application.
+    if (mounted === 0 && root.classList.contains(mobileScrollPadding)) return
+    dashboardScrollRoots.set(root, mounted + 1)
+    root.classList.add(mobileScrollPadding)
+    return () => {
+      const remaining = (dashboardScrollRoots.get(root) ?? 1) - 1
+      if (remaining > 0) {
+        dashboardScrollRoots.set(root, remaining)
+      } else {
+        dashboardScrollRoots.delete(root)
+        root.classList.remove(mobileScrollPadding)
+      }
+    }
+  }, [])
+
   const Link = LinkComponent
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
   React.useEffect(() => {
@@ -459,7 +483,7 @@ function DashboardLayoutInner({
   const mobileSidebarContent = React.useMemo(() => buildSidebarContent(true, false, true), [buildSidebarContent])
 
   return (
-    <div className={cn("min-h-screen bg-surface text-foreground max-lg:[html:has(&)]:scroll-pt-12", className)}>
+    <div ref={shellRef} className={cn("min-h-screen bg-surface text-foreground", className)}>
       <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <nav aria-label="Mobile navigation" className="fixed inset-x-0 top-0 z-40 flex h-12 items-center justify-between border-b border-[var(--md3-outline-variant)] bg-surface-container-low px-4 lg:hidden">
           <Link href={logoHref} to={logoHref} aria-label="Home" className={cn("rounded-md p-1", focusRing)}><Logo variant={variant} size="sm" iconOnly /></Link>

@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+import postcss from "postcss";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import {
@@ -357,6 +359,13 @@ createRoot(document.getElementById("root")).render(
   // The omitted-peer pass retains all its existing coverage. Reuse the full
   // install once for the presentation browser/type/CSS contract.
   if (omittedOptionalPeers.length === 0) {
+    const { assertScopedHasSelectors } = await import(pathToFileURL(consumerRequire.resolve(`${manifest.name}/css-validation`)).href);
+    const cssFile = consumerRequire.resolve(`${manifest.name}/styles`);
+    assertScopedHasSelectors(postcss.parse(readFileSync(cssFile, "utf8"), { from: cssFile }));
+    for (const selector of [":has(.badge)", ".card > p:has(.badge)", "html:has(.badge)", "body:has(.badge)", ".card:nth-child(2 of :has(> .badge))"]) {
+      const broken = postcss.parse(`@media (width < 64rem) { ${selector} { color: red } }`, { from: cssFile });
+      assert.throws(() => assertScopedHasSelectors(broken), (error) => error.file === cssFile && /Unscoped :has/.test(error.reason));
+    }
     await verifyDocumentRefresh(consumerDir);
     await verifySessionReconnect(consumerDir);
     await validatePresentationConsumer({ root, consumerDir, manifest, tarballPath, agentInterfaceVersion: expectedAgentInterfaceVersion });

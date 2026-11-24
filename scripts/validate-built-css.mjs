@@ -1,5 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
+import postcss from "postcss"
+import { assertScopedHasSelectors } from "./css-validation.mjs"
 
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g
 const URL_IMPORT = /@import\s+url\s*\([^)]*\)\s*;?/i
@@ -172,6 +174,8 @@ export function validateBuiltCss(css, options = {}) {
   // Strip block comments so `@import url(...)` text inside a comment
   // cannot trigger a false positive.
   const stripped = css.replace(BLOCK_COMMENT, "")
+
+  assertScopedHasSelectors(postcss.parse(css, { from: options.from }))
 
   const match = stripped.match(URL_IMPORT)
   if (match) {

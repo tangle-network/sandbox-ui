@@ -48,7 +48,7 @@ export default defineConfig({
       /^@xterm\/addon-unicode-graphemes$/,
     ],
   },
-  loader: { ".svg": "dataurl" },
+  loader: { ".svg": "dataurl", ".png": "dataurl" },
   onSuccess: "node scripts/copy-styles.mjs && node scripts/build-runtime-viewer.mjs",
   // Bundling drops per-file "use client" directives, as tsup did before.
   // Consumers mark their own client boundaries.

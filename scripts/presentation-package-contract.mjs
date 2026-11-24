@@ -8,6 +8,42 @@ import tailwindcss from "@tailwindcss/postcss";
 import { chromium } from "playwright";
 import { assertBuiltAgainstPeerFloor, peerFloor } from "./validate-built-css.mjs";
 
+async function loadPreviewStyles(page, port, emittedStyles) {
+  const origin = `http://127.0.0.1:${port}`;
+  const requests = new Map();
+  const recordStyle = (request) => {
+    if (request.resourceType() === "stylesheet") requests.set(request.url(), request);
+  };
+  async function navigate() {
+    requests.clear();
+    await page.goto(origin, { waitUntil: "networkidle" });
+    assert(requests.size > 0, "the consumer requested no stylesheets");
+    const sources = [];
+    for (const [href, request] of requests) {
+      const url = new URL(href);
+      const expected = emittedStyles.get(url.pathname);
+      assert(url.origin === origin && expected, `stylesheet is outside this fixture build: ${href}`);
+      const response = await request.response();
+      const failure = request.failure();
+      assert(response?.ok() && !failure, `stylesheet ${href}: ${failure?.errorText ?? response?.status()}`);
+      const body = await response.body();
+      assert(body.equals(expected), `stylesheet response differs from build: ${href}`);
+      sources.push(body.toString("utf8"));
+    }
+    return sources;
+  }
+  page.on("request", recordStyle);
+  try {
+    return await navigate();
+  } catch (error) {
+    if (!error.message.includes("net::ERR_NETWORK_CHANGED")) throw error;
+    console.warn("Chromium reported a network change while loading the local preview. Retrying the same URL once.");
+    return await navigate();
+  } finally {
+    page.off("request", recordStyle);
+  }
+}
+
 export function presentationConsumerSpecs(manifest) {
   return [
     ...["@tangle-network/ui", "@tangle-network/brand"].map((name) =>
@@ -85,7 +121,7 @@ import "@tangle-network/charts/react/agent-graph.css";
 import ${JSON.stringify(lane === "compiled" ? "@tangle-network/sandbox-ui/globals.css" : `./${lane}.css`)};
 createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
 `);
-      writeFileSync(join(fixture, "index.html"), '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module" src="/main.tsx"></script></body></html>');
+      writeFileSync(join(fixture, "index.html"), '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module" src="/main.tsx"></script></body></html>');
       const outDir = join(fixture, `dist-${lane}`);
       await build({
         root: fixture, logLevel: "error",
@@ -94,7 +130,10 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
         css: { postcss: { plugins: lane === "compiled" ? [] : [tailwindcss()] } },
         build: { outDir, emptyOutDir: true },
       });
-      if (lane === "entry") assertEntryUtilities({ consumerDir, outDir });
+      const assetsDir = join(outDir, "assets");
+      const emittedStyles = new Map(readdirSync(assetsDir).filter((name) => name.endsWith(".css"))
+        .map((name) => [`/assets/${name}`, readFileSync(join(assetsDir, name))]));
+      if (lane === "entry") assertEntryUtilities({ consumerDir, css: [...emittedStyles.values()].join("\n") });
       const server = await preview({
         root: fixture, logLevel: "error", build: { outDir },
         preview: { host: "127.0.0.1", port: 0, strictPort: true },
@@ -115,11 +154,11 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
             const errors = [];
             page.on("pageerror", (error) => errors.push(error.message));
             try {
-              await page.goto(`http://127.0.0.1:${address.port}`, { waitUntil: "networkidle" });
+              const styles = await loadPreviewStyles(page, address.port, emittedStyles);
               await page.waitForFunction(() => document.documentElement.dataset.presentationReady === "true");
               await page.evaluate((value) => { document.documentElement.className = value; }, mode);
               if (mediaDir) await page.screenshot({ path: join(mediaDir, "initial.png") });
-              const measured = await page.evaluate(() => {
+              const measured = await page.evaluate((styles) => {
                 const required = (selector) => {
                   const element = document.querySelector(selector);
                   if (!(element instanceof HTMLElement)) throw new Error(`Missing ${selector}`);
@@ -132,7 +171,11 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
                     if ("cssRules" in rule) visit(rule.cssRules);
                   }
                 };
-                for (const sheet of document.styleSheets) visit(sheet.cssRules);
+                for (const css of styles) {
+                  const sheet = new CSSStyleSheet();
+                  sheet.replaceSync(css);
+                  visit(sheet.cssRules);
+                }
                 const classes = new Set([...document.querySelectorAll("[data-presentation] [class]")].flatMap((element) => [...element.classList]));
                 const missing = [...classes].filter((name) => {
                   const marker = `.${CSS.escape(name)}`;
@@ -183,7 +226,7 @@ createRoot(document.getElementById("root")!).render(<PresentationConsumer />);
                   bodyBackground: getComputedStyle(document.body).backgroundColor,
                   cardBackground: getComputedStyle(card).backgroundColor,
                 };
-              });
+              }, styles);
               if (lane === "entry") assert.equal(measured.bodyColor,
                 mode === "light" ? "rgb(51, 51, 51)" : "rgb(204, 204, 204)",
                 "host theme refinements must override imported Brand defaults");
@@ -383,10 +426,7 @@ async function proveArtifactDock(page, { width, mediaDir }) {
  * here before the emitted CSS is, so a marker that stops being unique fails
  * loudly instead of passing for the wrong reason.
  */
-function assertEntryUtilities({ consumerDir, outDir }) {
-  const assetsDir = join(outDir, "assets");
-  const css = readdirSync(assetsDir).filter((name) => name.endsWith(".css"))
-    .map((name) => readFileSync(join(assetsDir, name), "utf8")).join("\n");
+function assertEntryUtilities({ consumerDir, css }) {
   const shippedJs = (pkg) => readdirSync(join(consumerDir, "node_modules", pkg, "dist"), { recursive: true })
     .filter((name) => name.endsWith(".js"))
     .map((name) => readFileSync(join(consumerDir, "node_modules", pkg, "dist", name), "utf8")).join("\n");

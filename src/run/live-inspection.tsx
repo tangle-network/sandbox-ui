@@ -40,7 +40,7 @@ export function useLiveInspection(url: string | undefined, live: boolean, fetche
     status: inventory.error ? <p className="px-3 py-2 text-sm text-muted-foreground" role="alert">Conversation inspection unavailable: {inventory.error}</p>
       : partialFiles ? <p className="px-3 py-2 text-sm text-muted-foreground" role="status">Some workspace files could not be captured.</p> : undefined,
     transcriptNote: metadata?.coverage?.status === 'missing' ? 'This worker did not record a transcript.' : undefined,
-    detail: partial || context.length > 0 ? <div className="space-y-3 py-2 text-sm">
+    context: partial || context.length > 0 ? <div className="space-y-3 py-2 text-sm">
       {partial && <p className="m-0 text-muted-foreground">Only part of this conversation was recorded.</p>}
       {context.map((row, index) => <section key={`${row.at}:${index}`}>
         <h4 className="mb-1 text-xs font-medium text-muted-foreground">{row.event.provenance === 'system-instructions' ? 'System instructions' : row.event.provenance === 'delegated-input' ? 'Task instructions' : 'Recorded context'}</h4>

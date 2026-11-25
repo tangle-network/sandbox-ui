@@ -49,6 +49,8 @@ export interface TraceWorkspaceProps extends Omit<TraceWaterfallProps, "trace" |
   /** The host's own account of the selected agent beyond its trace facts, such as its profile: shown in the inspector's
    *  closed-by-default Details, after the conversation. */
   renderAgentDrawer?: (agentId: string) => ReactNode
+  /** Recorded instructions share the primary pane when the selected conversation has no transcript. */
+  conversationContext?: ReactNode
   /**
    * What the trace cannot say about a live agent, by agent id: its activity, thinking line, latest events, commits or
    * result. Timed agents follow the trace cursor. Workers without recorded timing retain their live identity and metadata.
@@ -120,7 +122,7 @@ function agentGraphAt(spans: readonly FlowSpan[], byId: Map<string, FlowSpan>, a
  * every panel shows what was true at the cursor, and the conversation shows what had been said by then.
  */
 export function TraceWorkspace({
-  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, renderAgentDrawer, transcriptNote, docked, commission, agentCards, agentGraph, className, ...waterfall
+  trace, streamUrl, openEventSource, events, onTimeChange, files, scoreboard, selectedAgentId, conversationOpen, onSelectAgent, renderAgentDrawer, conversationContext, transcriptNote, docked, commission, agentCards, agentGraph, className, ...waterfall
 }: TraceWorkspaceProps) {
   const byId = useMemo(() => new Map(trace.spans.flatMap((span) => (span.id ? [[span.id, span] as const] : []))), [trace])
   const [ownSelection, setOwnSelection] = useState<string>()
@@ -137,6 +139,7 @@ export function TraceWorkspace({
   const conversation = useAgentConversation(selected && streamUrl ? streamUrl(selected) : undefined, openEventSource,
     { cursor, startedAt: waterfall.startedAt, agentStartMs: agent?.startMs, silent: agentId ? transcriptNote?.(agentId) : undefined })
   const { shown, items, live, note, silent } = conversation
+  const showContextInConversation = note !== undefined && note === silent
   const graph = useMemo(() => agentGraphAt(trace.spans, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges), [trace, byId, cursor, waterfall.startedAt, agentCards, agentGraph?.edges])
   const selectedNode = graph.nodes.find(node => node.id === agentId)
   const complete = cursor === null || Boolean(agent && agent.endMs <= cursor)
@@ -162,7 +165,7 @@ export function TraceWorkspace({
       <TraceWaterfall {...waterfall} maxHeight={waterfall.maxHeight ?? "fill"} trace={trace} markers={events} selectedId={agentId} onDeselect={() => select(undefined)}
         onSelect={span => { const owner = agentOf(span, byId); if (owner?.id) select(owner.id) }}
         onTimeChange={time => { setCursor(time); onTimeChange?.(time) }}
-        graph={<section className="relative flex min-h-[320px] flex-1 flex-col" style={typeof waterfall.maxHeight === "number" ? { height: waterfall.maxHeight } : undefined} aria-label="Agent graph">
+        graph={<section className="relative flex min-h-[320px] flex-1 flex-col" style={graphLayout !== "hub" && typeof waterfall.maxHeight === "number" ? { height: waterfall.maxHeight } : undefined} aria-label="Agent graph">
           <SegmentedControl aria-label="Graph layout" value={graphLayout} onValueChange={setGraphLayout} className="absolute right-2 top-1 z-10"
             options={[{ value: "grid", label: "Grid" }, { value: "tree", label: "Tree" }, { value: "hub", label: "Hub" }]} />
           <AgentGraph {...graphOptions} layout={graphLayout} renderEventIcon={event => toolGlyph(event.label)} nodes={graph.nodes} edges={graph.edges}
@@ -185,10 +188,12 @@ export function TraceWorkspace({
       {showConversation && agentId && <>
         {mode === "docked" && <div {...split.separator} className="group relative w-3 shrink-0 cursor-col-resize touch-none outline-none">
           <span aria-hidden className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border transition-colors group-hover:bg-[hsl(var(--ring))] group-focus-visible:w-0.5 group-focus-visible:bg-[hsl(var(--ring))]" />
+          <span aria-hidden className="absolute left-1/2 top-1/2 h-8 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-foreground/50 group-hover:bg-primary group-focus-visible:bg-primary" />
         </div>}
         <AgentInspector name={agentName ?? agentId} model={agentModel && !/^not recorded$/i.test(agentModel) ? agentModel : undefined} status={status} span={agent} live={live}
-          failure={failure} silent={note !== undefined && note === silent} commission={said(commission?.text) ? { by: commission?.by } : commission} facts={facts} tools={complete ? agent?.tools : undefined} detail={detail} scroller={scroller} unseen={unseen} onJump={() => jump()}
+          failure={failure} silent={note !== undefined && note === silent} commission={said(commission?.text) ? { by: commission?.by } : commission} facts={facts} tools={complete ? agent?.tools : undefined} detail={conversationContext && !showContextInConversation ? <>{detail}{conversationContext}</> : detail} scroller={scroller} unseen={unseen} onJump={() => jump()}
           onClose={() => select(undefined)} mode={mode} style={mode === "docked" ? { width: split.width } : undefined}>
+          {showContextInConversation && conversationContext}
           <AgentConversationView conversation={conversation} />
         </AgentInspector>
       </>}

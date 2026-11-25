@@ -4,6 +4,7 @@ import type { FlowSpan, FlowTrace } from '@tangle-network/charts'
 import { TraceWorkspace } from './trace-workspace'
 import { useEventStream, type AgentStreamOpener } from './event-stream'
 import { type AgentGraphNode } from '../workflows/AgentGraph'
+import { liveActivity } from './agent-stream'
 import { useLiveInspection } from './live-inspection'
 
 // The TopSnapshot wire contract lives in wire.ts beside its drift guard (a dev-time, bidirectional
@@ -75,6 +76,7 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
   const nodeIndex = useMemo(() => { const index = new Map<string, Node>(); for (const node of active?.snapshot.pursuit?.nodes ?? []) if (node.runId === active.run.id) index.set(node.id, node); return index }, [active?.snapshot, active?.run.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const run = useMemo(() => active ? { ...active.run, workers: withNodes(active.run, nodeIndex) } : undefined, [active?.run, nodeIndex]) // eslint-disable-line react-hooks/exhaustive-deps
   const receiptIndex = useMemo(() => new Map((run?.workers ?? []).map((worker) => [worker.id, worker])), [run])
+  const activity = useMemo(() => new Map(run?.workers.map(worker => [worker.id, liveActivity(worker.liveTail)])), [run])
   const detail = useCallback((id: string) => { const receipt = receiptIndex.get(id)?.materialization; return [(receipt?.model?.status === 'known' ? receipt.model.id : undefined), receipt?.backend].filter(Boolean).join(' · ') || undefined }, [receiptIndex])
   const outcome = run?.outcome
   const outcomeText = outcome ? outcome.kind === 'winner' ? 'Winner' : `${outcome.kind === 'no-winner' ? 'No winner' : 'Failed'}: ${outcome.reason}` : undefined
@@ -87,24 +89,26 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
       const start = Math.max(0, Date.parse(worker.startedAt) - first)
       const end = time(worker.endedAt) ?? (isOpen(worker.status) ? at : Date.parse(worker.startedAt))
       const costUsd = cost(worker.spend, worker.metered)
-      return [{ id: worker.id, parentId: worker.parent && worker.parent !== worker.id ? worker.parent : run!.id, name: worker.label, kind: 'pipeline', startMs: start, endMs: Math.max(start, end - first), status: runStatus(worker.status), ...(costUsd !== undefined ? { costUsd } : {}), ...(worker.lastActivityAt !== undefined ? { activityAt: [worker.lastActivityAt - first], medianEventGapMs: worker.medianEventGapMs } : {}), ...(detail(worker.id) ? { detail: detail(worker.id) } : {}), ...(runStatus(worker.status) === 'failed' && worker.reason ? { facts: [{ label: 'Failure', value: worker.reason }] } : {}) }]
+      const events = activity.get(worker.id) ?? []
+      const marks = events.flatMap(event => event.at !== undefined && event.at >= first + start && event.at <= end ? [{ at: event.at - first, label: event.label }] : [])
+      return [{ id: worker.id, parentId: worker.parent && worker.parent !== worker.id ? worker.parent : run!.id, name: worker.label, kind: 'pipeline', marks, startMs: start, endMs: Math.max(start, end - first), status: runStatus(worker.status), ...(costUsd !== undefined ? { costUsd } : {}), ...(worker.lastActivityAt !== undefined ? { activityAt: [worker.lastActivityAt - first], medianEventGapMs: worker.medianEventGapMs } : {}), ...(detail(worker.id) ? { detail: detail(worker.id) } : {}), ...(runStatus(worker.status) === 'failed' && worker.reason ? { facts: [{ label: 'Failure', value: worker.reason }] } : {}) }]
     })
-    if (run?.startedAt && run.status !== 'unobserved' && !spans.some((span) => span.id === run.id)) spans.unshift({ id: run.id, name: 'root', kind: 'pipeline', detail: detail(run.id), startMs: Math.max(0, Date.parse(run.startedAt) - first), endMs: Math.max(0, Date.parse(run.completedAt ?? new Date(at).toISOString()) - first), status: runStatus(run.status), ...(runStatus(run.status) === 'failed' && run.reason ? { facts: [{ label: 'Failure', value: run.reason }] } : {}), ...(run.lastActivityAt !== undefined ? { activityAt: [run.lastActivityAt - first], medianEventGapMs: run.medianEventGapMs } : {}), ...(cost(run.driverSpend) !== undefined ? { costUsd: cost(run.driverSpend) } : {}) })
+    if (run?.startedAt && run.status !== 'unobserved' && !spans.some((span) => span.id === run.id)) spans.unshift({ id: run.id, name: 'root', kind: 'pipeline', detail: detail(run.id), startMs: Math.max(0, Date.parse(run.startedAt) - first), endMs: Math.max(0, Date.parse(run.completedAt ?? new Date(at).toISOString()) - first), status: runStatus(run.status), facts: [...(runStatus(run.status) === 'failed' && run.reason ? [{ label: 'Failure', value: run.reason }] : []), ...(run.totals?.usdKnown === false && cost(run.driverSpend) === undefined ? [{ label: 'Cost', value: 'Unreported' }] : [])], ...(run.lastActivityAt !== undefined ? { activityAt: [run.lastActivityAt - first], medianEventGapMs: run.medianEventGapMs } : {}), ...(cost(run.driverSpend) !== undefined ? { costUsd: cost(run.driverSpend) } : {}) })
     const totals = run?.totals
-    return { spans, totalMs: Math.max(0, ...spans.map((span) => span.endMs)), ...(totals?.tokensKnown !== false && typeof totals?.tokensInput === 'number' && Number.isFinite(totals.tokensInput) && totals.tokensInput >= 0 ? { promptTokens: totals.tokensInput } : {}), ...(totals?.tokensKnown !== false && typeof totals?.tokensOutput === 'number' && Number.isFinite(totals.tokensOutput) && totals.tokensOutput >= 0 ? { completionTokens: totals.tokensOutput } : {}), errors: spans.filter((span) => span.status === 'failed').length }
-  }, [active?.snapshot, active?.run, startedAt])
+    return { spans, ...(totals?.usdKnown === true && typeof totals.usd === 'number' && Number.isFinite(totals.usd) && totals.usd >= 0 ? { costUsd: totals.usd } : {}), totalMs: Math.max(0, ...spans.map((span) => span.endMs)), ...(totals?.tokensKnown !== false && typeof totals?.tokensInput === 'number' && Number.isFinite(totals.tokensInput) && totals.tokensInput >= 0 ? { promptTokens: totals.tokensInput } : {}), ...(totals?.tokensKnown !== false && typeof totals?.tokensOutput === 'number' && Number.isFinite(totals.tokensOutput) && totals.tokensOutput >= 0 ? { completionTokens: totals.tokensOutput } : {}), errors: spans.filter((span) => span.status === 'failed').length }
+  }, [active?.snapshot, run, activity, detail, startedAt])
   // Every recorded worker gets a card, timed or not; the waterfall only places workers with a recorded start.
   const view = useMemo(() => {
   const workers = run?.workers.filter((worker) => worker.id !== run.id) ?? []
   const nodes: AgentGraphNode[] = run ? [
     { id: run.id, label: 'root', status: runStatus(run.status), model: detail(run.id), costUsd: cost(run.driverSpend), startedAt: time(run.startedAt), lastActivityAt: run.lastActivityAt, medianEventGapMs: run.medianEventGapMs, result: outcomeText ?? run.reason ?? (runStatus(run.status) === 'failed' ? 'Failure cause not recorded' : undefined) },
-    ...workers.map((worker) => ({ id: worker.id, label: worker.label, harness: worker.runtime, model: detail(worker.id), status: runStatus(worker.status), costUsd: cost(worker.spend, worker.metered), startedAt: time(worker.startedAt), lastActivityAt: worker.lastActivityAt, medianEventGapMs: worker.medianEventGapMs, turn: worker.liveTail?.at(-1), events: worker.liveTail?.slice(-3).map((label, index) => ({ id: `${worker.id}:${index}:${label}`, label })), result: worker.reason ?? (runStatus(worker.status) === 'failed' ? 'Failure cause not recorded' : worker.verdict) })),
+    ...workers.map((worker) => ({ id: worker.id, label: worker.label, harness: worker.runtime, model: detail(worker.id), status: runStatus(worker.status), costUsd: cost(worker.spend, worker.metered), startedAt: time(worker.startedAt), lastActivityAt: worker.lastActivityAt, medianEventGapMs: worker.medianEventGapMs, turn: activity.get(worker.id)?.at(-1)?.label, events: activity.get(worker.id), result: worker.reason ?? (runStatus(worker.status) === 'failed' ? 'Failure cause not recorded' : worker.verdict) })),
   ] : []
   const known = new Set(nodes.map((node) => node.id))
   const edges = workers.map((worker) => ({ from: worker.parent && worker.parent !== worker.id && known.has(worker.parent) ? worker.parent : run!.id, to: worker.id, kind: 'spawn' as const }))
   const agentCards = Object.fromEntries(nodes.map(({ id, label, harness, model, turn, events, result, status, costUsd, startedAt, lastActivityAt, medianEventGapMs }) => [id, { label, harness, model, turn, events, result, ...(startedAt === undefined ? { status, costUsd, lastActivityAt, medianEventGapMs } : {}) }]))
   return { workers, nodes, edges, agentCards }
-  }, [run, detail, outcomeText]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [run, activity, detail, outcomeText]) // eslint-disable-line react-hooks/exhaustive-deps
   const { workers, nodes, edges, agentCards } = view
   const inspection = useLiveInspection(active && agent ? `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(agent)}` : undefined, !!run && isOpen(run.status), transport?.fetch, run?.workers.find(worker => worker.id === agent)?.lastActivityAt)
   return (
@@ -120,7 +124,7 @@ function LiveRunView({ api, transport }: { api: string; transport?: LiveRunTrans
       {/* With no run to show, every root's diagnostics say why; an unreadable root is never "no agents". */}
       {(active ? [active.snapshot] : snapshots).filter((snapshot) => snapshot.completeness === 'partial').map((snapshot) => <p key={snapshot.root} role="alert">Partial capture: {snapshot.diagnostics.map((diagnostic) => `${diagnostic.source}: ${diagnostic.reason}`).join(' · ')}</p>)}
       {active ? (
-        <TraceWorkspace key={active.key} trace={trace} label="Run" selectedAgentId={agent} conversationOpen={conversationOpen} openEventSource={transport?.openEventSource} onSelectAgent={(id) => { if (id) setAgent(id); setConversationOpen(id !== undefined) }} live={isOpen(active.run.status) || run!.workers.some((worker) => isOpen(worker.status))} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} agentGraph={{ defaultLayout: 'tree', edges }} defaultView="graph" maxHeight={650} files={inspection.files} scoreboard={inspection.scoreboard} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
+        <TraceWorkspace key={active.key} docked trace={trace} label="Run" selectedAgentId={agent} conversationOpen={conversationOpen} openEventSource={transport?.openEventSource} onSelectAgent={(id) => { if (id) setAgent(id); setConversationOpen(id !== undefined) }} live={isOpen(active.run.status) || run!.workers.some((worker) => isOpen(worker.status))} startedAt={Number.isFinite(startedAt) ? startedAt : undefined} agentCards={agentCards} agentGraph={{ defaultLayout: 'tree', edges }} defaultView="graph" maxHeight={650} files={inspection.files} scoreboard={inspection.status} transcriptNote={() => inspection.transcriptNote} conversationContext={inspection.context} streamUrl={(id) => `${api}/agents/${active.root}/${encodeURIComponent(active.run.id)}/${encodeURIComponent(id)}/stream`} />
       ) : connected && !snapshots.some((snapshot) => snapshot.completeness === 'partial') && <p role="status">No recorded agents in these roots.</p>}
     </main>
   )

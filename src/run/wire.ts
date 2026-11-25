@@ -23,7 +23,7 @@ export type Snapshot = {
     lastActivityAt?: number
     medianEventGapMs?: number
     driverSpend?: { usd: number; usdKnown?: boolean }
-    totals?: { tokensKnown?: boolean; tokensInput?: number; tokensOutput?: number }
+    totals?: { usd?: number; usdKnown?: boolean; tokensKnown?: boolean; tokensInput?: number; tokensOutput?: number }
     workers: {
       materialization?: { status: string; backend?: string; model?: { status: string; id?: string } }
       id: string

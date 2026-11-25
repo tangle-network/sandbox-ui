@@ -175,6 +175,56 @@ for (const theme of ['light', 'dark']) {
   }
 }
 
+// A product that passes header content and no brand (Casework's workspace
+// switcher): the collapsed rail's header is the expand button, painted and
+// reachable by a mouse. It used to sit at opacity 0 under pointer-events none,
+// so only a keyboard could reopen the rail.
+for (const theme of ['light', 'dark']) {
+  test(`collapsed rail with header content and no brand expands by mouse ${theme}`, async ({ page, baseURL }, info) => {
+    await openStory(page, 'dashboard-sidebarlayout--desktop', theme, { width: 1440, height: 900 }, baseURL)
+    const url = new URL(page.url())
+    url.searchParams.set('args', 'logo:!null;railHeaderContent:Workspace;defaultRailCollapsed:true')
+    await page.goto(url.href)
+    const rail = page.locator('[data-sidebar=true]')
+    const expand = rail.getByRole('button', { name: 'Expand sidebar', exact: true })
+    await expect(expand).toBeVisible()
+    expect(await expand.evaluate(node => Number(getComputedStyle(node).opacity))).toBe(1)
+    expect(await expand.evaluate(node => getComputedStyle(node).pointerEvents)).not.toBe('none')
+    // The content is the labelled rail's; collapsed, the header holds the control alone.
+    await expect(rail.getByText('Workspace', { exact: true })).toHaveCount(0)
+    await expand.hover()
+    await expect(page.locator('[role=tooltip]')).toContainText('Expand sidebar')
+    await page.screenshot({ path: info.outputPath(`collapsed-content-${theme}.png`), animations: 'disabled' })
+    await expand.click()
+    await expect(rail.getByRole('button', { name: 'Collapse sidebar', exact: true })).toBeVisible()
+    await expect(rail.getByText('Workspace', { exact: true })).toBeVisible()
+  })
+
+  // History is open in the labelled rail (`defaultOpen`) and Vault is current.
+  // Collapsed, only Vault is lit; History lights while its flyout shows, then goes out.
+  test(`a collapsed group lights only while current or showing its flyout ${theme}`, async ({ page, baseURL }, info) => {
+    await openStory(page, 'dashboard-sidebarlayout--desktop', theme, { width: 1440, height: 900 }, baseURL)
+    const rail = page.locator('[data-sidebar=true]')
+    await rail.getByRole('button', { name: 'Collapse sidebar', exact: true }).click()
+    const history = rail.getByRole('link', { name: 'History', exact: true })
+    const board = rail.getByRole('link', { name: 'Board', exact: true })
+    const vault = rail.getByRole('link', { name: 'Vault', exact: true })
+    const fill = locator => locator.evaluate(node => getComputedStyle(node).backgroundColor)
+    await page.mouse.move(900, 450)
+    await expect(history).not.toHaveAttribute('data-state', 'active')
+    await expect.poll(() => fill(history)).toBe(await fill(board))
+    expect(await fill(vault)).not.toBe(await fill(board))
+    await page.screenshot({ path: info.outputPath(`collapsed-group-${theme}.png`), animations: 'disabled' })
+    await history.hover()
+    await expect(page.getByRole('menu')).toContainText('Q3 competitor teardown')
+    await expect(history).toHaveAttribute('data-state', 'active')
+    await page.mouse.move(900, 450)
+    await expect(page.getByRole('menu')).toHaveCount(0)
+    await expect(history).not.toHaveAttribute('data-state', 'active')
+    await expect.poll(() => fill(history)).toBe(await fill(board))
+  })
+}
+
 for (const [breakpoint, width] of [['md', 768], ['lg', 1024]]) {
   test(`open navigation releases the page at ${breakpoint}`, async ({ page, baseURL }) => {
     await openStory(page, 'dashboard-sidebarlayout--desktop', 'light', { width: 390, height: 844 }, baseURL)

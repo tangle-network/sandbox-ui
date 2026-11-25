@@ -87,8 +87,6 @@ function isRenderable(node: React.ReactNode): boolean {
 export function RailHeader({ brand, brandHref, children, collapsed, onToggle, collapsible = true, LinkComponent, className }: RailHeaderProps) {
   const Link = LinkComponent ?? DefaultLink
   const hasBrand = isRenderable(brand)
-  const hasChildren = isRenderable(children)
-  const overlay = collapsed && !hasBrand && hasChildren
   const label = collapsed ? "Expand sidebar" : "Collapse sidebar"
   const brandNode = brandHref !== undefined
     ? <Link href={brandHref} to={brandHref} aria-label="Home" className={cn("flex items-center justify-center rounded-md p-1 transition-colors hover:bg-[var(--accent-surface-soft)]", MOTION_CONTROL)}>{brand}</Link>
@@ -105,10 +103,13 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
     >
       {hasBrand && !collapsed && brandNode}
       <div className={collapsed ? "relative flex min-w-0 items-center justify-center" : "contents"}>
-        {(!collapsed || !hasBrand) && <div className={collapsed ? undefined : "min-w-0 flex-1"}>{children}</div>}
+        {/* The product's header content is for the labelled rail. Collapsed, the
+            header is the expand control itself, wearing the brand when there is
+            one: a product opts into a collapsed face by passing `brand`. */}
+        {!collapsed && <div className="min-w-0 flex-1">{children}</div>}
         {/* One mounted button retains focus across collapse and expand. */}
         {collapsible ? (
-          <RailTooltip label={label} disabled={!collapsed || overlay} className={overlay ? "pointer-events-none absolute inset-0 m-auto items-center justify-center" : undefined}>
+          <RailTooltip label={label} disabled={!collapsed}>
             <button
               type="button"
               onClick={onToggle}
@@ -119,8 +120,7 @@ export function RailHeader({ brand, brandHref, children, collapsed, onToggle, co
                 "flex shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[var(--accent-surface-soft)]",
                 MOTION_CONTROL,
                 focusRing,
-                collapsed && hasBrand ? "group/brand relative h-9 w-9" : "h-8 w-8 text-muted-foreground hover:text-foreground",
-                overlay && "pointer-events-none bg-background opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100",
+                collapsed && hasBrand ? "group/brand relative h-9 w-9" : cn(collapsed ? "h-9 w-9" : "h-8 w-8", "text-muted-foreground hover:text-foreground"),
               )}
             >
               {collapsed && hasBrand && <span className={cn("flex items-center justify-center transition-opacity group-hover/brand:opacity-0 group-focus-visible/brand:opacity-0", MOTION_CONTROL)}>{brand}</span>}
@@ -461,6 +461,9 @@ export function RailExpandable({
   const triggerRef = React.useRef<HTMLDivElement>(null)
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const [coords, setCoords] = React.useState<{ left: number; top?: number; bottom?: number; maxHeight: number } | null>(null)
+  // The collapsed rail's flyout has its own state, so the labelled rail's open
+  // group neither lights the collapsed icon nor reports it expanded.
+  const [flyout, setFlyout] = React.useState(false)
   React.useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current) }, [])
 
   const subLink = (item: RailExpandableSubItem) => {
@@ -554,7 +557,9 @@ export function RailExpandable({
       : <p className="px-2.5 py-1.5 text-sm text-muted-foreground">{emptyLabel}</p>
   if (!showLabel) {
     const triggerClasses = cn(RAIL_ROW, "relative flex h-9 w-9 items-center justify-center rounded-md transition-colors", MOTION_CONTROL, focusRing)
-    const triggerState = isActive || open ? "active" : undefined
+    // Lit while it is the current destination or while its flyout is showing.
+    // The labelled rail's disclosure (`open`) is not shown here, so it lights nothing.
+    const triggerState = isActive || flyout ? "active" : undefined
     const openFlyout = () => {
       if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
       ensureLoaded()
@@ -571,11 +576,11 @@ export function RailExpandable({
             : { left, bottom: window.innerHeight - r.bottom, maxHeight: spaceAbove },
         )
       }
-      setOpen(true)
+      setFlyout(true)
     }
     const scheduleClose = () => {
       if (closeTimer.current) clearTimeout(closeTimer.current)
-      closeTimer.current = setTimeout(() => setOpen(false), 140)
+      closeTimer.current = setTimeout(() => setFlyout(false), 140)
     }
     const cancelClose = () => {
       if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
@@ -595,12 +600,12 @@ export function RailExpandable({
             <Icon className="size-4 shrink-0" />
           </Link>
         ) : (
-          <button type="button" aria-label={label} aria-description={description} aria-haspopup="menu" aria-expanded={open} data-state={triggerState} className={triggerClasses}>
+          <button type="button" aria-label={label} aria-description={description} aria-haspopup="menu" aria-expanded={flyout} data-state={triggerState} className={triggerClasses}>
             <Icon className="size-4 shrink-0" />
           </button>
         )}
 
-        {open && coords !== null && typeof document !== "undefined" &&
+        {flyout && coords !== null && typeof document !== "undefined" &&
           createPortal(
             <div
               role="menu"
@@ -613,7 +618,7 @@ export function RailExpandable({
               }}
               onMouseEnter={cancelClose}
               onMouseLeave={scheduleClose}
-              onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setOpen(false) }}
+              onClickCapture={(e) => { if ((e.target as HTMLElement).closest("a")) setFlyout(false) }}
               className={cn("agent-pop-in z-[70] flex w-60 flex-col overflow-hidden p-1.5", RAIL_FLOATING_SURFACE)}
             >
               <p className="shrink-0 px-2 pb-1 pt-1 text-sm font-medium text-[var(--text-dim)] select-none">

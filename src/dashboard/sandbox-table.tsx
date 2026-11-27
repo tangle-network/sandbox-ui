@@ -218,8 +218,7 @@ export function SandboxTable({
                   // Keep native table semantics; keyboard users use the real buttons.
                   <tr
                     key={sb.id}
-                    className="group relative h-[72px]"
-                    data-clickable={onRowClick ? "" : undefined}
+                    className={cn("group relative h-[72px]", onRowClick && "cursor-pointer")}
                     onClick={onRowClick}
                   >
                     <td className="hidden align-middle md:table-cell">

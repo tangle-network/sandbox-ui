@@ -6,6 +6,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import type { ResearchDocument } from '@drewstone/agent-record/report'
 import { useDownload } from './useDownload.js'
+import { DataTableFrame } from '@tangle-network/ui/primitives'
 
 export interface DocumentSelection { path: string; line?: number; anchor?: string }
 
@@ -164,7 +165,7 @@ const ResearchMarkdown = memo(function ResearchMarkdown({ document, documents, o
         return <span title={href ? `Source not included: ${href}` : undefined}>{children}</span>
       },
       img: ({ alt, src }) => <span className="rr-media-reference">{alt || 'Image'}{src ? ` (${src})` : ''}</span>,
-      table: ({ children }) => <div className="rr-table-scroll"><table>{children}</table></div>,
+      table: ({ children }) => <DataTableFrame label="Table" density="compact">{children}</DataTableFrame>,
     }}
   >{document.content}</Markdown></div>
 })

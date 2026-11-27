@@ -7,6 +7,7 @@ import type { RecordSelection } from '@drewstone/agent-record/record'
 import { OutcomeBar, OutcomeLegend } from './OutcomeBar.js'
 import { formatUtcTime as utcTime } from '@tangle-network/charts'
 import { useDownload } from './useDownload.js'
+import { DataTableFrame } from '@tangle-network/ui/primitives'
 import type { ResearchDocumentSelection, ResearchView } from './selection.js'
 
 export interface ResearchReportProps {
@@ -281,20 +282,17 @@ function Fact({ metric, inspect, printOnly }: { metric: ResearchMetric; inspect:
 function Table({ table, inspect, printOnly }: { table: ResearchTable; inspect: (eventId: string) => void; printOnly: boolean }) {
   const marked = table.rows.some(row => row.some(cell => cell.comparable === false))
   return (
-    <figure className="rr-data-table" data-table={table.id}>
-      <figcaption>{table.title}{marked && <span className="small"> · * not comparable with the bar</span>}</figcaption>
-      <div className="rr-table-scroll">
-        <table>
+    <div className="rr-data-table" data-table={table.id}>
+      <DataTableFrame label={table.title} title={table.title} meta={marked ? '* not comparable with the bar' : undefined}>
           <thead><tr>{table.columns.map(column => <th key={column} scope="col">{column}</th>)}</tr></thead>
           <tbody>{table.rows.map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j} className={cell.text === null ? 'rr-unknown' : undefined} title={cell.note}>
             {cell.text === null ? 'unknown' : cell.href ? <a href={cell.href}>{cell.text}</a> : cell.text}
             {cell.comparable === false && <span className="rr-comparable" data-comparable="false">*</span>}
             {cell.note && <small>{cell.note}</small>}
           </td>)}</tr>)}</tbody>
-        </table>
-      </div>
+      </DataTableFrame>
       {table.source && <Sources sources={[table.source]} inspect={inspect} printOnly={printOnly} inline />}
-    </figure>
+    </div>
   )
 }
 

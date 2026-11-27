@@ -11,6 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DataTableFrame,
 } from "@tangle-network/ui/primitives"
 import { parseEnvText, type EnvImportResult } from "./env-importer"
 import { focusField } from "@tangle-network/ui/utils"
@@ -691,24 +692,24 @@ export function SecretsPage({
             </button>
           </div>
         ) : (
-          <table className="w-full border-collapse text-left">
-            <caption className="sr-only">{secrets.length} secret{secrets.length !== 1 ? "s" : ""}</caption>
-            <thead className={cn(pane && "sticky top-0 z-10 bg-background")}>
-              <tr className="border-b border-[var(--md3-outline-variant)]">
-                <th scope="col" className="px-4 py-2.5 text-xs font-medium text-muted-foreground sm:px-6">
+          // The section is the card (or the pane), so the table draws no second surface.
+          <DataTableFrame label={`${secrets.length} secret${secrets.length !== 1 ? "s" : ""}`} surface="none" className={cn(pane && "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-10 [&_thead_th]:bg-background")}>
+            <thead>
+              <tr>
+                <th scope="col" className="sm:px-6">
                   Name <span className="ml-1 font-mono tabular-nums">{secrets.length}</span>
                 </th>
-                <th scope="col" className="hidden px-4 py-2.5 text-xs font-medium text-muted-foreground md:table-cell">Value</th>
-                <th scope="col" className="hidden px-4 py-2.5 text-right text-xs font-medium text-muted-foreground sm:table-cell">Updated</th>
-                <th scope="col" className="w-px px-4 py-2.5 sm:pr-6"><span className="sr-only">Actions</span></th>
+                <th scope="col" className="hidden md:table-cell">Value</th>
+                <th scope="col" data-align="end" className="hidden sm:table-cell">Updated</th>
+                <th scope="col" className="w-px sm:pr-6"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {secrets.map((secret) => {
                 const changedAt = formatDate(secret.updatedAt ?? secret.createdAt)
                 return (
-                  <tr key={secret.name} className="transition-colors hover:bg-surface-container-high">
-                    <td className="py-3 pl-4 pr-1 sm:px-6">
+                  <tr key={secret.name}>
+                    <td className="sm:px-6">
                       <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
                         <Key className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                         <div className="min-w-0">
@@ -717,11 +718,11 @@ export function SecretsPage({
                         </div>
                       </div>
                     </td>
-                    <td className="hidden px-4 py-3 md:table-cell">
+                    <td className="hidden md:table-cell">
                       <span className="font-mono text-xs tracking-widest text-muted-foreground" aria-label="Value hidden">••••••••••••</span>
                     </td>
-                    <td className="hidden whitespace-nowrap px-4 py-3 text-right text-xs text-muted-foreground sm:table-cell">{changedAt}</td>
-                    <td className="whitespace-nowrap py-3 pl-1 pr-3 sm:px-4 sm:pr-6">
+                    <td data-align="end" className="hidden whitespace-nowrap text-xs text-muted-foreground sm:table-cell">{changedAt}</td>
+                    <td className="whitespace-nowrap sm:pr-6">
                       <div className="flex items-center justify-end gap-1">
                         {canReplace && (
                           <button
@@ -747,7 +748,7 @@ export function SecretsPage({
                 )
               })}
             </tbody>
-          </table>
+          </DataTableFrame>
         )}
       </section>
     </div>

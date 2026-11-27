@@ -26,6 +26,11 @@
  * rather than reaching into brand for a second stylesheet. */
 @import "@tangle-network/brand/styles/named-themes.css" layer(theme.brand);
 
+/* ui's framework-neutral presentation contract, for its data table above all: the card, header, rules, hover, status,
+ * bar and money cells a component writes as plain class names. It sits in the components layer, so a utility on a
+ * cell (a width, a hidden breakpoint, a wider gutter) still wins. */
+@import "@tangle-network/ui/styles/presentation.css" layer(components);
+
 /* Canonical font, radius and semantic-color utility registrations, imported as
  * DEFAULT theme values. A default registration still emits every Brand utility,
  * and it still outranks Tailwind's own defaults (it is declared later), but a

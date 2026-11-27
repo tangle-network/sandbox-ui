@@ -24,12 +24,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DataTableFrame,
   DropdownMenuTrigger,
   Tag,
 } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { canAdminSandbox, type SandboxCardData, type SandboxStatus } from "./sandbox-card"
-import { focusRing, focusRingInset } from "@tangle-network/ui/utils"
+import { focusRing } from "@tangle-network/ui/utils"
 import { SandboxStatusPill } from "./sandbox-status"
 
 export interface SandboxTableProps {
@@ -190,19 +191,18 @@ export function SandboxTable({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="w-full bg-surface-container rounded-xl overflow-hidden border border-[var(--md3-outline-variant)]">
-        <div className={cn("max-h-[min(60vh,35rem)] overflow-x-hidden overflow-y-auto", focusRingInset)} role="region" aria-label="Sandbox list" tabIndex={0}>
-          <table className="w-full table-fixed border-collapse text-left">
-            <thead className="sticky top-0 z-10">
-              <tr className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
-                <th scope="col" className="hidden w-36 px-4 py-3 text-xs font-medium text-muted-foreground md:table-cell">Status</th>
-                <th scope="col" className="px-4 py-3 text-xs font-medium text-muted-foreground">Sandbox</th>
-                {hasTeamSandboxes && <th scope="col" className="hidden w-40 px-4 py-3 text-xs font-medium text-muted-foreground xl:table-cell">Scope</th>}
-                {hasResources && <th scope="col" className="hidden w-52 px-4 py-3 text-xs font-medium text-muted-foreground lg:table-cell">Resources</th>}
-                <th scope="col" className="w-44 px-3 py-3 text-right text-xs font-medium text-muted-foreground sm:w-48 sm:px-4">Actions</th>
+      {/* The card, header, rules and hover are ui's data table; the list scrolls inside its region under a sticky header. */}
+      <DataTableFrame label="Sandbox list" className="sandbox-table" tableProps={{ className: "table-fixed" }}>
+            <thead>
+              <tr>
+                <th scope="col" className="hidden w-36 md:table-cell">Status</th>
+                <th scope="col">Sandbox</th>
+                {hasTeamSandboxes && <th scope="col" className="hidden w-40 xl:table-cell">Scope</th>}
+                {hasResources && <th scope="col" className="hidden w-52 lg:table-cell">Resources</th>}
+                <th scope="col" data-align="end" className="w-44 sm:w-48">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {sandboxes.map((sb) => {
                 const isActive = sb.status === "running"
                 const isHibernating = sb.status === "hibernating"
@@ -218,16 +218,14 @@ export function SandboxTable({
                   // Keep native table semantics; keyboard users use the real buttons.
                   <tr
                     key={sb.id}
-                    className={cn(
-                      "group relative h-[72px] transition-colors",
-                      onRowClick ? "cursor-pointer hover:bg-surface-container-high" : "hover:bg-surface-container-high",
-                    )}
+                    className="group relative h-[72px]"
+                    data-clickable={onRowClick ? "" : undefined}
                     onClick={onRowClick}
                   >
-                    <td className="hidden px-4 py-3 align-middle md:table-cell">
+                    <td className="hidden align-middle md:table-cell">
                       <StatusIndicator status={sb.status} />
                     </td>
-                    <td className="min-w-0 px-4 py-3 align-middle">
+                    <td className="min-w-0 align-middle">
                       <div className="min-w-0 space-y-1">
                         <span className="block truncate text-sm font-semibold text-foreground" title={sb.name} aria-label={sb.name}>{sb.name}</span>
                         <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
@@ -238,7 +236,7 @@ export function SandboxTable({
                       </div>
                     </td>
                     {hasTeamSandboxes && (
-                      <td className="hidden px-4 py-3 align-middle xl:table-cell">
+                      <td className="hidden align-middle xl:table-cell">
                         {sb.team ? (
                           <Tag
                             icon={<Users />}
@@ -254,8 +252,8 @@ export function SandboxTable({
                         )}
                       </td>
                     )}
-                    {hasResources && <td className="hidden px-4 py-3 align-middle lg:table-cell"><SandboxResources sandbox={sb} /></td>}
-                    <td className="w-44 px-3 py-3 text-right align-middle sm:w-48 sm:px-4">
+                    {hasResources && <td className="hidden align-middle lg:table-cell"><SandboxResources sandbox={sb} /></td>}
+                    <td data-align="end" className="w-44 align-middle sm:w-48">
                       <div className="flex min-w-0 items-center justify-end gap-2">
                         {isActive && onOpenIDE && (
                           <button type="button" onClick={(e) => { stopRowClick(e); onOpenIDE(sb.id) }} className={cn("inline-flex min-h-11 shrink-0 whitespace-nowrap items-center justify-center gap-2 rounded-lg border border-[var(--border-accent)] bg-[var(--accent-surface-soft)] px-3 text-sm font-semibold text-[var(--accent-text)] shadow-sm transition-colors hover:bg-[var(--accent-surface-strong)]", focusRing)} aria-label="Open IDE" title="Open IDE">
@@ -365,9 +363,7 @@ export function SandboxTable({
                 )
               })}
             </tbody>
-          </table>
-        </div>
-      </div>
+      </DataTableFrame>
 
       {/* Pagination */}
       {totalPages > 1 && (

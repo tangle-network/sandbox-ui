@@ -1,3 +1,8 @@
+## 11.0.6
+
+- Every Sandbox table sits on `@tangle-network/ui`'s data table: the sandbox list, snapshots, secrets, connector schema fields, research report tables, and Markdown tables in records and documents share one card, header, row rules, hover, end-aligned numbers and phone stacking in light and dark. The package stylesheet now includes ui's `styles/presentation.css` in the components layer, so a utility on a cell still wins.
+- Requires `@tangle-network/ui` 11.51.61 and `@tangle-network/brand` 1.31.14 or later.
+
 ## 11.0.5
 
 - Harness pickers and session headers show the product marks for Factory Droids, NanoClaw, NanoCode, Exo, Pi, Prime Agent, Cursor, Gemini CLI and the Agent Client Protocol. These marks ship inside the package and render offline.

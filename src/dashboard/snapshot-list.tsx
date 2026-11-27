@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Camera, Clock, HardDrive, Plus, RotateCcw } from "lucide-react"
-import { Tag } from "@tangle-network/ui/primitives"
+import { DataTableFrame, Tag } from "@tangle-network/ui/primitives"
 import { cn } from "../lib/utils"
 import { focusField } from "@tangle-network/ui/utils"
 
@@ -100,34 +100,33 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
           <p className="text-sm text-muted-foreground">Loading snapshots…</p>
         </div>
       ) : snapshots.length > 0 ? (
-        <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-container-high border-b border-[var(--md3-outline-variant)]">
+        <DataTableFrame label="Snapshots">
+            <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">ID</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Created</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Size</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Tags</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground w-24" />
+                <th scope="col">ID</th>
+                <th scope="col">Created</th>
+                <th scope="col">Size</th>
+                <th scope="col">Tags</th>
+                <th scope="col" className="w-24"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {snapshots.map((s) => (
                 <tr key={s.id}>
-                  <td className="px-4 py-3 font-mono text-xs text-foreground">{s.id.slice(0, 12)}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                  <td className="font-mono text-xs text-foreground">{s.id.slice(0, 12)}</td>
+                  <td className="text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
                       <Clock className="h-3 w-3" />
                       {formatDate(s.createdAt)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                  <td className="text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                       <HardDrive className="h-3 w-3" />
                       {formatBytes(s.sizeBytes)}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     {s.tags?.length ? (
                       <div className="flex items-center gap-1 flex-wrap">
                         {s.tags.map((tag) => (
@@ -138,7 +137,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td data-align="end">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
@@ -164,8 +163,7 @@ export function SnapshotList({ snapshots, onCreate, onRestore, onSaveAsTemplate,
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+        </DataTableFrame>
       ) : (
         <div className="rounded-lg border border-[var(--md3-outline-variant)] bg-surface-container p-6 text-center">
           <Camera className="mx-auto h-8 w-8 text-muted-foreground mb-2" />

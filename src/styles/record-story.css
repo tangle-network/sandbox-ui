@@ -196,10 +196,6 @@
 .rv-prose pre { margin: .4em 0 .8em; padding: 10px 12px; background: var(--rv-surface); border-radius: 8px; font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .rv-prose pre code { background: none; padding: 0; }
 .rv-prose blockquote { margin: 0 0 .6em; padding-left: 12px; border-left: 2px solid var(--rv-line-strong); color: var(--rv-muted); }
-.rv-table-scroll { overflow-x: auto; margin: .4em 0 .9em; }
-.rv-table-scroll table { width: max-content; min-width: 100%; border-collapse: collapse; font-family: inherit; font-size: 13px; line-height: 1.45; }
-.rv-table-scroll :is(th, td) { padding: 4px 12px 4px 0; border-bottom: 1px solid var(--rv-line); text-align: left; vertical-align: top; }
-.rv-table-scroll th { color: var(--rv-muted); font-weight: 600; white-space: nowrap; }
 
 /* Steps */
 .rv-step { border-radius: 8px; }
@@ -272,3 +268,5 @@ button.rv-step-head:hover, .rv-step.open > .rv-step-head { background: var(--rv-
   .rv-beat { padding-left: 2px; }
 }
 @media (prefers-reduced-motion: reduce) { .rv * { transition: none !important; scroll-behavior: auto !important; } }
+/* A table in agent prose sits on ui's data table card, spaced like a paragraph. */
+.rv-table { margin: .4em 0 .9em; }

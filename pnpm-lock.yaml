@@ -182,8 +182,8 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/ui':
-        specifier: ^11.51.36
-        version: 11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b)
+        specifier: ^11.51.61
+        version: 11.51.61(5fe91564c4249e8135953303a614a12b)
       css-tree:
         specifier: ^3.2.1
         version: 3.2.1
@@ -223,7 +223,7 @@ importers:
     devDependencies:
       '@drewstone/agent-record':
         specifier: file:vendor/drewstone-agent-record-4.0.0.tgz
-        version: file:vendor/drewstone-agent-record-4.0.0.tgz(ad152d5b28f9cb0e7709ed90dd54d1e6)
+        version: file:vendor/drewstone-agent-record-4.0.0.tgz(7697915f2535efb5fbf6229043944787)
       '@fontsource/geist':
         specifier: 5.3.0
         version: 5.3.0
@@ -261,11 +261,11 @@ importers:
         specifier: ^8.0.0
         version: 8.0.0(@tangle-network/agent-eval@1.0.17)(@tangle-network/agent-interface@5.10.20)(@tangle-network/sandbox@1.0.264)
       '@tangle-network/brand':
-        specifier: ^1.31.12
-        version: 1.31.12(react@19.3.1)
+        specifier: ^1.31.14
+        version: 1.31.14(react@19.3.1)
       '@tangle-network/charts':
         specifier: ^4.0.23
-        version: 4.0.23(@tangle-network/brand@1.31.12(react@19.3.1))(@tangle-network/ui@11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 4.0.23(@tangle-network/brand@1.31.14(react@19.3.1))(@tangle-network/ui@11.51.61(5fe91564c4249e8135953303a614a12b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query':
         specifier: ^5.104.5
         version: 5.104.5(@types/react@19.3.0)(react@19.3.1)
@@ -1992,8 +1992,8 @@ packages:
   '@tangle-network/agent-trace-contract@2.2.2':
     resolution: {integrity: sha512-46CGFTHw1E+Fvykjdf3tS0ysQugv+DdM9TptHjALVeFzO+Z4Baiw6XWJLYiP3fx/UEk3QCIiITD1qoPi8XfgkA==}
 
-  '@tangle-network/brand@1.31.12':
-    resolution: {integrity: sha512-g3+fyt34iZYpFzfcLHiTZPeWMfFLzzuv3y+s5E++mi56sJoVjr3XdjddsWK16ZfyD43Ee1ExRkiWBjnJHpTG2Q==}
+  '@tangle-network/brand@1.31.14':
+    resolution: {integrity: sha512-C60GIgHfVY4NnL1YvWk06K2HjNs4cbjiwJUcPH7386jxNqDvO7Uk1rKLsBpe1e3b8gpey3m+0wPvIhTTq6ooSg==}
     hasBin: true
     peerDependencies:
       react: '>=18'
@@ -2118,17 +2118,18 @@ packages:
       viem:
         optional: true
 
-  '@tangle-network/ui@11.51.36':
-    resolution: {integrity: sha512-Zo1oeO2+RRYhhBudSRed9Pg+gWNCqVTupqcMCOjcaUwXILXGrUNvpVX6r4raNNdsIO1OAnDQcbdCt7eystzpOQ==}
+  '@tangle-network/ui@11.51.61':
+    resolution: {integrity: sha512-mA+JmSTJU+HCCsQEIF35bYykEoLphM/Gy3ffXdJ4BBawE9BGjXxB34SL7Cx1lm9QWg5wYAOxCVwd42zjapUaGA==}
     peerDependencies:
       '@hocuspocus/provider': '>=2.15.0 <5.0.0'
       '@nanostores/react': '>=0.8.4 <3.0.0'
-      '@tangle-network/brand': ^1.31.12
+      '@tangle-network/brand': ^1.31.14
       '@tiptap/core': '>=3.20.4 <4.0.0'
       '@tiptap/extension-collaboration': '>=3.20.4 <4.0.0'
       '@tiptap/extension-collaboration-caret': '>=3.7.0 <4.0.0'
       '@tiptap/react': '>=3.20.4 <4.0.0'
       '@tiptap/starter-kit': '>=3.20.4 <4.0.0'
+      '@xterm/addon-serialize': '>=0.13.0 <1.0.0'
       '@xterm/xterm': '>=5.5.0 <7.0.0'
       nanostores: '>=0.11.3 <2.0.0'
       pdfjs-dist: '>=6.0.0 <7.0.0'
@@ -2150,6 +2151,8 @@ packages:
       '@tiptap/react':
         optional: true
       '@tiptap/starter-kit':
+        optional: true
+      '@xterm/addon-serialize':
         optional: true
       '@xterm/xterm':
         optional: true
@@ -3587,6 +3590,9 @@ packages:
   micromark-extension-gfm@3.0.0:
     resolution: {integrity: sha512-vsKArQsicm7t0z2GugkCKtZehqUm31oeGBV/KVSorWSy8ZlNAv7ytjFhvaryUiCUJYqs+NoE6AFhpQvBTM6Q4w==}
 
+  micromark-extension-math-extended@3.2.2:
+    resolution: {integrity: sha512-u0Mhvjz2c++9Gd6/rYIYEBrEvZeNa7hIH3roqis+sA9AuP4hKzvuMENMOF0shs44LJkqJv33rXRCCqLzhlBCsQ==}
+
   micromark-extension-math@3.1.0:
     resolution: {integrity: sha512-lvEqd+fHjATVs+2v/8kg9i5Q0AP2k85H0WUOwpIVvUML8BapsMvh1XAogmQjOCsLpoKRCVQqEkQBB3NhVBcsOg==}
 
@@ -3959,6 +3965,9 @@ packages:
 
   remark-stringify@11.0.0:
     resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
+
+  remend@1.5.1:
+    resolution: {integrity: sha512-Mvum2BFoAlLukpqIb5bCzzvjdNQk4w9OasdKEUuVkXTEPlWpiN3pRCbbSgOXWZIxbQFB16YL/s4D7PMnQ3oU5Q==}
 
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
@@ -4649,11 +4658,11 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.2': {}
 
-  '@drewstone/agent-record@file:vendor/drewstone-agent-record-4.0.0.tgz(ad152d5b28f9cb0e7709ed90dd54d1e6)':
+  '@drewstone/agent-record@file:vendor/drewstone-agent-record-4.0.0.tgz(7697915f2535efb5fbf6229043944787)':
     dependencies:
-      '@tangle-network/charts': 4.0.23(@tangle-network/brand@1.31.12(react@19.3.1))(@tangle-network/ui@11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@tangle-network/charts': 4.0.23(@tangle-network/brand@1.31.14(react@19.3.1))(@tangle-network/ui@11.51.61(5fe91564c4249e8135953303a614a12b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/harness-sessions': 0.1.7
-      '@tangle-network/sandbox-ui': 3.0.0(f4c3c0c0aad897eda80f6c35c7bf4e9b)
+      '@tangle-network/sandbox-ui': 3.0.0(a97cafef2ded871a9f56860f5016442e)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       zod: 4.6.6
@@ -5927,14 +5936,14 @@ snapshots:
 
   '@tangle-network/agent-trace-contract@2.2.2': {}
 
-  '@tangle-network/brand@1.31.12(react@19.3.1)':
+  '@tangle-network/brand@1.31.14(react@19.3.1)':
     optionalDependencies:
       react: 19.3.1
 
-  '@tangle-network/charts@4.0.23(@tangle-network/brand@1.31.12(react@19.3.1))(@tangle-network/ui@11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@tangle-network/charts@4.0.23(@tangle-network/brand@1.31.14(react@19.3.1))(@tangle-network/ui@11.51.61(5fe91564c4249e8135953303a614a12b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     optionalDependencies:
-      '@tangle-network/brand': 1.31.12(react@19.3.1)
-      '@tangle-network/ui': 11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b)
+      '@tangle-network/brand': 1.31.14(react@19.3.1)
+      '@tangle-network/ui': 11.51.61(5fe91564c4249e8135953303a614a12b)
       '@xyflow/react': 12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       elkjs: 0.12.0
       react: 19.3.1
@@ -5951,7 +5960,7 @@ snapshots:
     transitivePeerDependencies:
       - '@modelcontextprotocol/sdk'
 
-  '@tangle-network/sandbox-ui@3.0.0(f4c3c0c0aad897eda80f6c35c7bf4e9b)':
+  '@tangle-network/sandbox-ui@3.0.0(a97cafef2ded871a9f56860f5016442e)':
     dependencies:
       '@lobehub/icons-static-svg': 1.98.0
       '@pierre/diffs': 1.6.1(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -5959,8 +5968,8 @@ snapshots:
       '@radix-ui/react-dropdown-menu': 2.2.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@radix-ui/react-select': 2.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/agent-interface': 5.10.20
-      '@tangle-network/brand': 1.31.12(react@19.3.1)
-      '@tangle-network/ui': 11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b)
+      '@tangle-network/brand': 1.31.14(react@19.3.1)
+      '@tangle-network/ui': 11.51.61(5fe91564c4249e8135953303a614a12b)
       diff: 9.0.0
       eventsource-parser: 4.1.2
       katex: 0.19.1
@@ -5975,10 +5984,10 @@ snapshots:
       tailwindcss-animate: 1.0.7(tailwindcss@4.3.3)
       yaml: 2.9.1
     optionalDependencies:
-      '@drewstone/agent-record': file:vendor/drewstone-agent-record-4.0.0.tgz(ad152d5b28f9cb0e7709ed90dd54d1e6)
+      '@drewstone/agent-record': file:vendor/drewstone-agent-record-4.0.0.tgz(7697915f2535efb5fbf6229043944787)
       '@hocuspocus/provider': 4.7.1(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33)
       '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.3.1)
-      '@tangle-network/charts': 4.0.23(@tangle-network/brand@1.31.12(react@19.3.1))(@tangle-network/ui@11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@tangle-network/charts': 4.0.23(@tangle-network/brand@1.31.14(react@19.3.1))(@tangle-network/ui@11.51.61(5fe91564c4249e8135953303a614a12b))(@xyflow/react@12.12.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(elkjs@0.12.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-query': 5.104.5(@types/react@19.3.0)(react@19.3.1)
       '@tiptap/core': 3.32.0(@tiptap/pm@3.32.0)
       '@tiptap/extension-collaboration': 3.32.0(@tiptap/core@3.32.0(@tiptap/pm@3.32.0))(@tiptap/pm@3.32.0)(@tiptap/y-tiptap@3.0.10(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.8)(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33))(yjs@13.6.33)
@@ -6012,7 +6021,7 @@ snapshots:
       - bare-buffer
       - react-native-b4a
 
-  '@tangle-network/ui@11.51.36(5a2b8a43bc34f45842c98fddd9e96c3b)':
+  '@tangle-network/ui@11.51.61(5fe91564c4249e8135953303a614a12b)':
     dependencies:
       '@pierre/theme': 1.1.0
       '@pierre/trees': 1.0.0-beta.6(@pierre/theme@1.1.0)(@shikijs/themes@4.5.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(shiki@4.5.0)
@@ -6035,23 +6044,29 @@ snapshots:
       '@radix-ui/react-tabs': 1.2.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@radix-ui/react-tooltip': 1.4.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tangle-network/agent-interface': 5.10.20
-      '@tangle-network/brand': 1.31.12(react@19.3.1)
+      '@tangle-network/brand': 1.31.14(react@19.3.1)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
       cmdk: 1.1.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       github-slugger: 2.0.0
+      hast-util-to-string: 3.0.1
       lucide-react: 1.61.0(@types/react@19.3.0)(react@19.3.1)
       marked: 18.1.1
+      mdast-util-math: 3.0.0
+      micromark-extension-math-extended: 3.2.2
       motion: 14.6.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       react-markdown: 10.1.0(@types/react@19.3.0)(react@19.3.1)
+      rehype-katex: 7.0.1
       rehype-sanitize: 6.0.0
       rehype-slug: 6.0.0
       remark-gfm: 4.0.1
+      remend: 1.5.1
       shiki: 4.5.0
       tailwind-merge: 3.7.0
       turndown: 7.2.4
+      unist-util-visit: 5.2.0
     optionalDependencies:
       '@hocuspocus/provider': 4.7.1(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33)
       '@nanostores/react': 1.1.0(nanostores@1.5.5)(react@19.3.1)
@@ -7535,6 +7550,16 @@ snapshots:
       micromark-util-combine-extensions: 2.0.1
       micromark-util-types: 2.0.3
 
+  micromark-extension-math-extended@3.2.2:
+    dependencies:
+      '@types/katex': 0.16.8
+      devlop: 1.1.0
+      katex: 0.16.47
+      micromark-factory-space: 2.1.0
+      micromark-util-character: 2.1.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.3
+
   micromark-extension-math@3.1.0:
     dependencies:
       '@types/katex': 0.16.8
@@ -8106,6 +8131,8 @@ snapshots:
       '@types/mdast': 4.0.4
       mdast-util-to-markdown: 2.2.0
       unified: 11.0.5
+
+  remend@1.5.1: {}
 
   require-from-string@2.0.2: {}
 

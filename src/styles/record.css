@@ -374,9 +374,7 @@
 .agent-record .rr-markdown h1 { font-size:18px; }
 .agent-record .rr-markdown h2 { font-size:14px; }
 .agent-record .rr-markdown h3 { font-size:14px; }
-.agent-record .rr-table-scroll { overflow:auto;max-width:100%; }
-.agent-record .rr-markdown table { width:100%;border-collapse:collapse;font-size:var(--ar-text-s); }
-.agent-record .rr-markdown th,.agent-record .rr-markdown td { padding:8px;text-align:left;border:1px solid var(--ar-border); }
+.agent-record .rr-markdown .tangle-data-table { margin:8px 0 16px; }
 .agent-record .rr-media-reference { font-size:var(--ar-text-s);color:var(--ar-fg-muted); }
 .agent-record [data-reduced-motion] *, .agent-record [data-reduced-motion] *::before, .agent-record [data-reduced-motion] *::after { transition:none !important;scroll-behavior:auto !important; }
 @media(prefers-reduced-motion:reduce) { .agent-record *, .agent-record *::before, .agent-record *::after { transition:none !important;scroll-behavior:auto !important; } }
@@ -424,10 +422,6 @@
 .agent-record .rr-unknown { color:var(--ar-fg-muted);font-style:italic; }
 .agent-record .rr-comparable[data-comparable="false"] { color:var(--ar-c-neutral);font-weight:600; }
 .agent-record .rr-data-table { margin:12px 0 20px; }
-.agent-record .rr-data-table figcaption { font-weight:600;margin-bottom:8px; }
-.agent-record .rr-data-table table { border-collapse:collapse;font-size:var(--ar-text-s);min-width:100%; }
-.agent-record .rr-data-table :is(th,td) { padding:8px 12px;text-align:left;border-bottom:1px solid var(--ar-border);vertical-align:top; }
-.agent-record .rr-data-table th { white-space:nowrap;color:var(--ar-fg-muted);font-weight:600; }
 .agent-record .rr-data-table td small { display:block;color:var(--ar-fg-muted);font-size:var(--ar-text-s);max-width:28ch; }
 .agent-record .rr-runs, .agent-record .rr-rules, .agent-record .rr-unknowns { list-style:none;margin:8px 0;padding:0; }
 .agent-record .rr-run { padding:12px 0;border-bottom:1px solid var(--ar-border); }
@@ -537,7 +531,7 @@
 .ar-ws .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .ar-ws .lane { position: relative; display: block; height: 14px; border-radius: 4px; background: color-mix(in srgb, var(--ar-fg-faint) 18%, transparent); }
 
-.ar-ws .rr-markdown code, .ar-ws .rr-markdown pre, .ar-ws .rr-markdown table { font-size: var(--ar-text-s); }
+.ar-ws .rr-markdown code, .ar-ws .rr-markdown pre { font-size: var(--ar-text-s); }
 .ar-ws .rr-markdown h1 { font-size: var(--ar-text-l); }
 .ar-ws .rr-markdown h2, .ar-ws .rr-markdown h3, .ar-ws .rr-markdown h4, .ar-ws .rr-markdown h5, .ar-ws .rr-markdown h6 { font-size: var(--ar-text-m); }
 

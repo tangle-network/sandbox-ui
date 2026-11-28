@@ -3,6 +3,7 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { countPhrase, span, utc, type EpisodeItem, type RecordEpisode, type RecordStep, type RecordStory, type StepOutcome } from '@drewstone/agent-record/story'
 import { PointNumber, SEP } from './RecordSpine.js'
+import { DataTableFrame } from '@tangle-network/ui/primitives'
 
 /** Which episodes, steps and folded runs of quiet episodes the reader has opened. */
 export interface Opened { episodes: Set<string>; steps: Set<string>; folds: Set<string> }
@@ -19,7 +20,7 @@ export function Prose({ text }: { text: string }) {
   return <div className="rv-prose"><Markdown skipHtml remarkPlugins={[remarkGfm]} components={{
     a: ({ href, children }) => /^https?:\/\//i.test(href ?? '') ? <a href={href} target="_blank" rel="noreferrer">{children}</a> : <span>{children}</span>,
     img: ({ alt }) => <span>{alt || 'Image not published'}</span>,
-    table: ({ children }) => <div className="rv-table-scroll" role="region" aria-label="Table" tabIndex={0}><table>{children}</table></div>,
+    table: ({ children }) => <DataTableFrame label="Table" density="compact" className="rv-table">{children}</DataTableFrame>,
   }}>{keepMath(readable(text))}</Markdown></div>
 }
 /** One line of someone's words: code spans and emphasis, nothing else. */

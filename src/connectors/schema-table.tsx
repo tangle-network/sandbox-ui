@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DataTableFrame } from "@tangle-network/ui/primitives";
 
 /**
  * Readable field table for a hub action's JSON input/output schema: one row
@@ -159,54 +160,43 @@ export function SchemaTable({ schema, label }: SchemaTableProps) {
           </pre>
         )
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-border border-b bg-surface-container-high">
-                <th className="px-3 py-1.5 text-left font-medium text-muted-foreground text-xs">
-                  Field
-                </th>
-                <th className="px-3 py-1.5 text-left font-medium text-muted-foreground text-xs">
-                  Type
-                </th>
-                <th className="px-3 py-1.5 text-left font-medium text-muted-foreground text-xs">
-                  Description
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={row.name}
-                  className="border-border border-b last:border-b-0"
+        <DataTableFrame label="Schema fields" density="compact">
+          <thead>
+            <tr>
+              <th scope="col">Field</th>
+              <th scope="col">Type</th>
+              <th scope="col">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.name}>
+                <td
+                  className="whitespace-nowrap align-top font-mono text-foreground text-xs"
+                  style={{ paddingInlineStart: `calc(var(--tangle-dt-pad-x) + ${row.depth}rem)` }}
                 >
-                  <td
-                    className="whitespace-nowrap px-3 py-1.5 align-top font-mono text-foreground text-xs"
-                    style={{ paddingLeft: `${0.75 + row.depth * 1}rem` }}
-                  >
-                    {row.name.split(".").at(-1)}
-                    {row.required && (
-                      <span className="ml-0.5 text-destructive" title="Required">
-                        *<span className="sr-only">required</span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-1.5 align-top font-mono text-muted-foreground text-xs">
-                    {row.type}
-                  </td>
-                  <td className="px-3 py-1.5 align-top text-muted-foreground text-xs">
-                    {row.description}
-                    {row.enumValues && (
-                      <span className={row.description ? "ml-1" : ""}>
-                        One of: {row.enumValues.join(", ")}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  {row.name.split(".").at(-1)}
+                  {row.required && (
+                    <span className="ml-0.5 text-destructive" title="Required">
+                      *<span className="sr-only">required</span>
+                    </span>
+                  )}
+                </td>
+                <td className="whitespace-nowrap align-top font-mono text-muted-foreground text-xs">
+                  {row.type}
+                </td>
+                <td className="align-top text-muted-foreground text-xs">
+                  {row.description}
+                  {row.enumValues && (
+                    <span className={row.description ? "ml-1" : ""}>
+                      One of: {row.enumValues.join(", ")}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </DataTableFrame>
       )}
     </div>
   );
